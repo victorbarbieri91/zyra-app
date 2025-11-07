@@ -1,0 +1,432 @@
+/**
+ * Helpers para gerenciamento de escritórios multi-tenant
+ */
+
+import { createClient } from './client';
+
+export interface Escritorio {
+  id: string;
+  nome: string;
+  cnpj?: string;
+  logo_url?: string;
+  plano: 'free' | 'basic' | 'professional' | 'enterprise';
+  max_usuarios: number;
+  ativo: boolean;
+  owner_id?: string;
+  endereco?: any;
+  config?: any;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UsuarioEscritorio {
+  id: string;
+  user_id: string;
+  escritorio_id: string;
+  role: 'owner' | 'admin' | 'advogado' | 'assistente' | 'readonly';
+  is_owner: boolean;
+  ativo: boolean;
+  ultimo_acesso?: string;
+}
+
+export interface EscritorioComRole extends Escritorio {
+  role: string;
+  is_owner: boolean;
+  ultimo_acesso?: string;
+}
+
+/**
+ * Lista todos os escritórios que o usuário tem acesso
+ */
+export async function getEscritoriosDoUsuario(): Promise<EscritorioComRole[]> {
+  const supabase = createClient();
+
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) {
+    console.error('Erro ao obter usuário:', userError);
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('escritorios_usuarios')
+    .select(`
+      role,
+      is_owner,
+      ultimo_acesso,
+      escritorios:escritorio_id (
+        id,
+        nome,
+        cnpj,
+        logo_url,
+        plano,
+        max_usuarios,
+        ativo,
+        owner_id,
+        created_at,
+        updated_at
+      )
+    `)
+    .eq('user_id', userData.user.id)
+    .eq('ativo', true)
+    .order('ultimo_acesso', { ascending: false, nullsFirst: false });
+
+  if (error) {
+    console.error('Erro ao buscar escritórios:', error.message, error.code);
+    return [];
+  }
+
+  if (!data || data.length === 0) {
+    console.warn('Nenhum escritório encontrado para o usuário');
+    return [];
+  }
+
+  return data
+    .filter((item: any) => item.escritorios) // Filtrar itens sem escritório
+    .map((item: any) => ({
+      ...item.escritorios,
+      role: item.role,
+      is_owner: item.is_owner,
+      ultimo_acesso: item.ultimo_acesso,
+    }));
+}
+
+/**
+ * Obtém o escritório atualmente ativo do usuário
+ */
+export async function getEscritorioAtivo(): Promise<Escritorio | null> {
+  const supabase = createClient();
+
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) {
+    console.error('Erro ao obter usuário:', userError);
+    return null;
+  }
+
+  // Buscar o escritório ativo do usuário
+  const { data: ativoData, error: ativoError } = await supabase
+    .from('escritorios_usuarios_ativo')
+    .select('escritorio_id')
+    .eq('user_id', userData.user.id)
+    .single();
+
+  if (ativoError) {
+    console.error('Erro ao buscar escritório ativo:', ativoError.message, ativoError.code);
+    return null;
+  }
+
+  if (!ativoData || !ativoData.escritorio_id) {
+    console.warn('Nenhum escritório ativo encontrado para o usuário');
+    return null;
+  }
+
+  // Buscar os dados completos do escritório
+  const { data: escritorioData, error: escritorioError } = await supabase
+    .from('escritorios')
+    .select('*')
+    .eq('id', ativoData.escritorio_id)
+    .single();
+
+  if (escritorioError) {
+    console.error('Erro ao buscar dados do escritório:', escritorioError.message, escritorioError.code);
+    return null;
+  }
+
+  return escritorioData as Escritorio;
+}
+
+/**
+ * Troca o escritório ativo do usuário
+ */
+export async function trocarEscritorio(escritorioId: string): Promise<boolean> {
+  const supabase = createClient();
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return false;
+
+  // Chama a function SQL que já valida permissão
+  const { data, error } = await supabase.rpc('set_escritorio_ativo', {
+    user_uuid: userData.user.id,
+    escritorio_uuid: escritorioId,
+  });
+
+  if (error) {
+    console.error('Erro ao trocar escritório:', error);
+    throw error;
+  }
+
+  return data === true;
+}
+
+/**
+ * Cria um novo escritório e define o usuário como owner
+ */
+export async function criarEscritorio(dados: {
+  nome: string;
+  cnpj?: string;
+  endereco?: any;
+}): Promise<Escritorio | null> {
+  const supabase = createClient();
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) throw new Error('Usuário não autenticado');
+
+  // 1. Criar escritório
+  const { data: escritorio, error: errorEscritorio } = await supabase
+    .from('escritorios')
+    .insert({
+      nome: dados.nome,
+      cnpj: dados.cnpj,
+      endereco: dados.endereco,
+      owner_id: userData.user.id,
+      ativo: true,
+      plano: 'free',
+      max_usuarios: 5,
+    })
+    .select()
+    .single();
+
+  if (errorEscritorio || !escritorio) {
+    console.error('Erro ao criar escritório:', errorEscritorio);
+    throw errorEscritorio;
+  }
+
+  // 2. Criar relacionamento usuário-escritório (como owner)
+  const { error: errorRelacao } = await supabase
+    .from('escritorios_usuarios')
+    .insert({
+      user_id: userData.user.id,
+      escritorio_id: escritorio.id,
+      role: 'owner',
+      is_owner: true,
+      ativo: true,
+    });
+
+  if (errorRelacao) {
+    console.error('Erro ao criar relação usuário-escritório:', errorRelacao);
+    throw errorRelacao;
+  }
+
+  // 3. Definir como escritório ativo
+  await trocarEscritorio(escritorio.id);
+
+  return escritorio as Escritorio;
+}
+
+/**
+ * Convida um novo usuário para o escritório
+ */
+export async function convidarUsuario(dados: {
+  email: string;
+  role: 'admin' | 'advogado' | 'assistente' | 'readonly';
+  escritorioId: string;
+}): Promise<{ token: string; expira_em: string }> {
+  const supabase = createClient();
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) throw new Error('Usuário não autenticado');
+
+  const { data, error } = await supabase
+    .from('escritorios_convites')
+    .insert({
+      escritorio_id: dados.escritorioId,
+      email: dados.email,
+      role: dados.role,
+      convidado_por: userData.user.id,
+    })
+    .select('token, expira_em')
+    .single();
+
+  if (error) {
+    console.error('Erro ao criar convite:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Aceita um convite e adiciona usuário ao escritório
+ */
+export async function aceitarConvite(token: string): Promise<boolean> {
+  const supabase = createClient();
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) throw new Error('Usuário não autenticado');
+
+  // 1. Buscar convite
+  const { data: convite, error: errorConvite } = await supabase
+    .from('escritorios_convites')
+    .select('*')
+    .eq('token', token)
+    .eq('aceito', false)
+    .gt('expira_em', new Date().toISOString())
+    .single();
+
+  if (errorConvite || !convite) {
+    throw new Error('Convite inválido ou expirado');
+  }
+
+  // 2. Criar relacionamento usuário-escritório
+  const { error: errorRelacao } = await supabase
+    .from('escritorios_usuarios')
+    .insert({
+      user_id: userData.user.id,
+      escritorio_id: convite.escritorio_id,
+      role: convite.role,
+      is_owner: false,
+      ativo: true,
+      convidado_por: convite.convidado_por,
+    });
+
+  if (errorRelacao) {
+    console.error('Erro ao aceitar convite:', errorRelacao);
+    throw errorRelacao;
+  }
+
+  // 3. Marcar convite como aceito
+  const { error: errorUpdate } = await supabase
+    .from('escritorios_convites')
+    .update({
+      aceito: true,
+      aceito_por: userData.user.id,
+      aceito_em: new Date().toISOString(),
+    })
+    .eq('id', convite.id);
+
+  if (errorUpdate) {
+    console.error('Erro ao atualizar convite:', errorUpdate);
+  }
+
+  // 4. Trocar para o novo escritório
+  await trocarEscritorio(convite.escritorio_id);
+
+  return true;
+}
+
+/**
+ * Lista membros do escritório (apenas para owner/admin)
+ */
+export async function getMembrosEscritorio(
+  escritorioId: string
+): Promise<any[]> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('escritorios_usuarios')
+    .select(`
+      id,
+      role,
+      is_owner,
+      ativo,
+      ultimo_acesso,
+      created_at,
+      profiles:user_id (
+        id,
+        nome_completo,
+        email,
+        oab_numero,
+        oab_uf,
+        avatar_url
+      )
+    `)
+    .eq('escritorio_id', escritorioId)
+    .order('is_owner', { ascending: false })
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Erro ao buscar membros:', error);
+    throw error;
+  }
+
+  // Flatten data para facilitar o uso nos componentes
+  return (data || []).map((item: any) => ({
+    id: item.id,
+    usuario_id: item.profiles?.id || '',
+    role: item.role,
+    is_owner: item.is_owner,
+    ativo: item.ativo,
+    ultimo_acesso: item.ultimo_acesso,
+    created_at: item.created_at,
+    nome_completo: item.profiles?.nome_completo || '',
+    nome: item.profiles?.nome_completo || '', // Alias para compatibilidade
+    email: item.profiles?.email || '',
+    oab_numero: item.profiles?.oab_numero,
+    oab_uf: item.profiles?.oab_uf,
+    avatar_url: item.profiles?.avatar_url,
+  }));
+}
+
+/**
+ * Atualiza role de um membro (apenas owner/admin)
+ */
+export async function atualizarRoleMembro(
+  usuarioEscritorioId: string,
+  novaRole: 'admin' | 'advogado' | 'assistente' | 'readonly'
+): Promise<boolean> {
+  const supabase = createClient();
+
+  const { error } = await supabase
+    .from('escritorios_usuarios')
+    .update({ role: novaRole })
+    .eq('id', usuarioEscritorioId)
+    .eq('is_owner', false); // Não pode mudar role do owner
+
+  if (error) {
+    console.error('Erro ao atualizar role:', error);
+    throw error;
+  }
+
+  return true;
+}
+
+/**
+ * Remove membro do escritório (apenas owner/admin)
+ */
+export async function removerMembroEscritorio(
+  usuarioEscritorioId: string
+): Promise<boolean> {
+  const supabase = createClient();
+
+  const { error } = await supabase
+    .from('escritorios_usuarios')
+    .update({ ativo: false })
+    .eq('id', usuarioEscritorioId)
+    .eq('is_owner', false); // Não pode remover owner
+
+  if (error) {
+    console.error('Erro ao remover membro:', error);
+    throw error;
+  }
+
+  return true;
+}
+
+/**
+ * Verifica se usuário tem permissão específica
+ */
+export async function verificarPermissao(
+  modulo: string,
+  permissao: 'read' | 'write' | 'delete' | 'manage'
+): Promise<boolean> {
+  const supabase = createClient();
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return false;
+
+  const escritorioAtivo = await getEscritorioAtivo();
+  if (!escritorioAtivo) return false;
+
+  const { data, error } = await supabase.rpc('has_permission', {
+    user_uuid: userData.user.id,
+    escritorio_uuid: escritorioAtivo.id,
+    modulo_name: modulo,
+    permission_type: permissao,
+  });
+
+  if (error) {
+    console.error('Erro ao verificar permissão:', error);
+    return false;
+  }
+
+  return data === true;
+}

@@ -1,0 +1,441 @@
+'use client'
+
+import { useState, useMemo } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Calendar,
+  CalendarDays,
+  List,
+  AlertCircle,
+  Clock,
+  Plus,
+  Sparkles,
+  Gavel,
+} from 'lucide-react'
+import { format, isSameDay } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { toast } from 'sonner'
+
+// Components
+import CalendarGrid from '@/components/agenda/CalendarGrid'
+import MiniCalendar from '@/components/agenda/MiniCalendar'
+import EventCard, { EventCardProps } from '@/components/agenda/EventCard'
+import PrazoCard from '@/components/agenda/PrazoCard'
+import EventFilters, { EventFiltersState } from '@/components/agenda/EventFilters'
+import EventModal, { EventFormData } from '@/components/agenda/EventModal'
+import QuickActionButton from '@/components/dashboard/QuickActionButton'
+import InsightCard from '@/components/dashboard/InsightCard'
+
+// Hooks
+import { useEventos } from '@/hooks/useEventos'
+import { usePrazos } from '@/hooks/usePrazos'
+import { useAgenda } from '@/hooks/useAgenda'
+
+export default function AgendaPage() {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [viewMode, setViewMode] = useState<'month' | 'week' | 'day' | 'list'>('month')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [eventoSelecionado, setEventoSelecionado] = useState<EventFormData | undefined>()
+  const [filters, setFilters] = useState<EventFiltersState>({
+    tipos: {
+      compromisso: true,
+      audiencia: true,
+      prazo: true,
+      tarefa: true,
+    },
+    status: {
+      agendado: true,
+      realizado: false,
+      cancelado: false,
+    },
+    responsaveis: [],
+  })
+
+  // Hooks
+  const { eventos, loading: loadingEventos, createEvento, updateEvento, deleteEvento } = useEventos()
+  const { prazos, loading: loadingPrazos, marcarCumprido } = usePrazos()
+  const { feriados, loading: loadingFeriados } = useAgenda()
+
+  // Converter eventos para formato do EventCard
+  const eventosFormatados = useMemo((): EventCardProps[] => {
+    return eventos
+      .filter(e => {
+        // Aplicar filtros de tipo
+        if (!filters.tipos[e.tipo]) return false
+        // Aplicar filtros de status (ignorar 'remarcado' se não estiver no filtro)
+        const statusKey = e.status as 'agendado' | 'realizado' | 'cancelado'
+        if (!(statusKey in filters.status)) return true // Se status não está no filtro, aceitar
+        if (!filters.status[statusKey]) return false
+        return true
+      })
+      .map(e => ({
+        id: e.id,
+        titulo: e.titulo,
+        tipo: e.tipo,
+        data_inicio: new Date(e.data_inicio),
+        data_fim: e.data_fim ? new Date(e.data_fim) : undefined,
+        dia_inteiro: e.dia_inteiro,
+        local: e.local,
+        cliente_nome: e.cliente_nome,
+        processo_numero: e.processo_numero,
+        responsavel_nome: e.responsavel_nome,
+        cor: e.cor,
+        status: e.status,
+        tipo_audiencia: e.tipo_audiencia,
+        modalidade: e.modalidade,
+        prazo_cumprido: e.cumprido,
+        prazo_perdido: e.perdido,
+        prazo_criticidade: e.prazo_criticidade,
+      }))
+  }, [eventos, filters])
+
+  // Prazos formatados
+  const prazosFormatados = useMemo(() => {
+    return prazos.map(p => ({
+      id: p.id,
+      titulo: p.titulo,
+      tipo_prazo: p.tipo_prazo,
+      data_intimacao: new Date(p.data_inicio), // Ajustar conforme necessário
+      data_limite: new Date(p.data_limite),
+      dias_uteis: p.dias_uteis,
+      quantidade_dias: Math.abs(p.dias_restantes),
+      cumprido: p.cumprido,
+      perdido: p.perdido,
+      criticidade: p.criticidade,
+      processo_numero: p.numero_processo,
+      cliente_nome: p.cliente_nome,
+      responsavel_nome: p.responsavel_nome,
+    }))
+  }, [prazos])
+
+  // Eventos do dia selecionado
+  const eventosDoDia = useMemo(() => {
+    return eventosFormatados.filter(e =>
+      isSameDay(e.data_inicio, selectedDate)
+    )
+  }, [eventosFormatados, selectedDate])
+
+  const handleCreateEvent = (date?: Date, tipo?: 'compromisso' | 'audiencia' | 'prazo' | 'tarefa') => {
+    setEventoSelecionado({
+      titulo: '',
+      tipo: tipo || 'compromisso',
+      data_inicio: date || selectedDate,
+      dia_inteiro: false,
+      status: 'agendado',
+      lembretes: [{ tempo_antes_minutos: 15, metodos: ['push'] }],
+    })
+    setModalOpen(true)
+  }
+
+  const handleEventClick = (evento: EventCardProps) => {
+    // Converter para formato do formulário
+    setEventoSelecionado({
+      id: evento.id,
+      titulo: evento.titulo,
+      tipo: evento.tipo,
+      data_inicio: evento.data_inicio,
+      data_fim: evento.data_fim,
+      dia_inteiro: evento.dia_inteiro || false,
+      local: evento.local,
+      descricao: '',
+      cor: evento.cor,
+      status: evento.status || 'agendado',
+      tipo_audiencia: evento.tipo_audiencia,
+      modalidade: evento.modalidade,
+    })
+    setModalOpen(true)
+  }
+
+  const handleSaveEvent = async (data: EventFormData) => {
+    try {
+      if (data.id) {
+        await updateEvento(data.id, data)
+        toast.success('Evento atualizado com sucesso!')
+      } else {
+        await createEvento(data)
+        toast.success('Evento criado com sucesso!')
+      }
+      setModalOpen(false)
+      setEventoSelecionado(undefined)
+    } catch (error) {
+      toast.error('Erro ao salvar evento')
+      console.error(error)
+    }
+  }
+
+  const handleDeleteEvent = async (id: string) => {
+    try {
+      await deleteEvento(id)
+      toast.success('Evento deletado com sucesso!')
+    } catch (error) {
+      toast.error('Erro ao deletar evento')
+      console.error(error)
+    }
+  }
+
+  const handleMarcarPrazoCumprido = async (prazoId: string) => {
+    try {
+      await marcarCumprido(prazoId)
+      toast.success('Prazo marcado como cumprido!')
+    } catch (error) {
+      toast.error('Erro ao marcar prazo')
+      console.error(error)
+    }
+  }
+
+  const loading = loadingEventos || loadingPrazos || loadingFeriados
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6">
+      <div className="max-w-[1800px] mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-[#34495e]">Agenda</h1>
+            <p className="text-sm text-[#6c757d] mt-0.5 font-normal">
+              {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            </p>
+          </div>
+
+          {/* View Mode Selector */}
+          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as typeof viewMode)}>
+            <TabsList className="bg-slate-100">
+              <TabsTrigger value="month" className="text-xs">
+                <Calendar className="w-3.5 h-3.5 mr-1.5" />
+                Mês
+              </TabsTrigger>
+              <TabsTrigger value="week" className="text-xs" disabled>
+                <CalendarDays className="w-3.5 h-3.5 mr-1.5" />
+                Semana
+              </TabsTrigger>
+              <TabsTrigger value="day" className="text-xs" disabled>
+                <Clock className="w-3.5 h-3.5 mr-1.5" />
+                Dia
+              </TabsTrigger>
+              <TabsTrigger value="list" className="text-xs" disabled>
+                <List className="w-3.5 h-3.5 mr-1.5" />
+                Lista
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* Ações Rápidas */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="pb-2 pt-4">
+            <CardTitle className="text-sm font-medium text-[#34495e]">Ações Rápidas</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-2 pb-4">
+            <div className="grid grid-cols-6 gap-2.5">
+              <QuickActionButton
+                icon={Plus}
+                label="Novo Evento"
+                onClick={() => handleCreateEvent()}
+                variant="highlight"
+              />
+              <QuickActionButton
+                icon={Calendar}
+                label="Compromisso"
+                onClick={() => handleCreateEvent(undefined, 'compromisso')}
+              />
+              <QuickActionButton
+                icon={Gavel}
+                label="Audiência"
+                onClick={() => handleCreateEvent(undefined, 'audiencia')}
+              />
+              <QuickActionButton
+                icon={AlertCircle}
+                label="Prazo"
+                onClick={() => handleCreateEvent(undefined, 'prazo')}
+              />
+              <QuickActionButton
+                icon={Clock}
+                label="Tarefa"
+                onClick={() => handleCreateEvent(undefined, 'tarefa')}
+              />
+              <QuickActionButton
+                icon={Sparkles}
+                label="Agendar com IA"
+                onClick={() => toast.info('Funcionalidade em breve!')}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Layout 3 Colunas */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          {/* COLUNA ESQUERDA */}
+          <div className="xl:col-span-3 space-y-6">
+            <MiniCalendar
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+              eventDates={eventosFormatados.map(e => e.data_inicio)}
+            />
+
+            <EventFilters
+              filters={filters}
+              onFiltersChange={setFilters}
+              responsaveisDisponiveis={[]}
+            />
+
+            {feriados.length > 0 && (
+              <Card className="border-purple-200 bg-purple-50/30">
+                <CardHeader className="pb-3 pt-4">
+                  <CardTitle className="text-sm font-medium text-purple-900">
+                    Próximos Feriados
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {feriados.slice(0, 3).map((feriado, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-xs">
+                      <span className="text-purple-700 font-medium">Feriado</span>
+                      <span className="text-purple-600">{format(feriado, 'dd/MM/yyyy')}</span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* COLUNA CENTRAL */}
+          <div className="xl:col-span-6">
+            {loading ? (
+              <Card className="border-slate-200 p-8 text-center">
+                <p className="text-sm text-[#6c757d]">Carregando eventos...</p>
+              </Card>
+            ) : (
+              <CalendarGrid
+                eventos={eventosFormatados}
+                selectedDate={selectedDate}
+                onDateSelect={setSelectedDate}
+                onEventClick={handleEventClick}
+                onCreateEvent={handleCreateEvent}
+                feriados={feriados}
+              />
+            )}
+          </div>
+
+          {/* COLUNA DIREITA */}
+          <div className="xl:col-span-3 space-y-6">
+            <Card className="border-slate-200 shadow-sm bg-gradient-to-br from-white to-slate-50/30">
+              <CardHeader className="pb-3 pt-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 bg-gradient-to-br from-[#89bcbe] to-[#6ba9ab] rounded-lg flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </div>
+                  <CardTitle className="text-sm font-medium text-[#34495e]">
+                    Resumo do Dia
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-[#6c757d] leading-relaxed">
+                  {eventosDoDia.length === 0 ? (
+                    'Nenhum evento agendado para hoje.'
+                  ) : (
+                    <>
+                      Hoje você tem <span className="font-medium text-[#34495e]">{eventosDoDia.length} {eventosDoDia.length === 1 ? 'evento' : 'eventos'}</span> agendados.
+                    </>
+                  )}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-[#89bcbe] shadow-sm">
+              <CardHeader className="pb-3 pt-4">
+                <CardTitle className="text-sm font-medium text-[#34495e]">
+                  Eventos de Hoje
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[300px] pr-2">
+                  <div className="space-y-2.5">
+                    {eventosDoDia.length === 0 ? (
+                      <p className="text-xs text-[#6c757d] text-center py-4">
+                        Nenhum evento para este dia
+                      </p>
+                    ) : (
+                      eventosDoDia.map((evento) => (
+                        <EventCard
+                          key={evento.id}
+                          {...evento}
+                          onClick={() => handleEventClick(evento)}
+                          compact
+                        />
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+
+            <Card className="border-amber-200 shadow-sm">
+              <CardHeader className="pb-3 pt-4">
+                <CardTitle className="text-sm font-medium text-[#34495e]">
+                  Prazos Vencendo
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[400px] pr-2">
+                  <div className="space-y-3">
+                    {prazosFormatados.length === 0 ? (
+                      <p className="text-xs text-[#6c757d] text-center py-4">
+                        Nenhum prazo pendente
+                      </p>
+                    ) : (
+                      prazosFormatados.map((prazo) => (
+                        <PrazoCard
+                          key={prazo.id}
+                          {...prazo}
+                          onMarcarCumprido={() => handleMarcarPrazoCumprido(prazo.id)}
+                          onClick={() => {}}
+                        />
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader className="pb-3 pt-4">
+                <CardTitle className="text-sm font-medium text-[#34495e]">Insights</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2.5">
+                {prazosFormatados.filter(p => p.criticidade === 'critico' || p.criticidade === 'urgente').length > 0 && (
+                  <InsightCard
+                    type="alerta"
+                    title={`${prazosFormatados.filter(p => p.criticidade === 'critico' || p.criticidade === 'urgente').length} prazos urgentes`}
+                    description="Você tem prazos críticos vencendo nos próximos dias."
+                    action={{ label: 'Ver prazos', onClick: () => {} }}
+                  />
+                )}
+                <InsightCard
+                  type="sugestao"
+                  title="Agenda organizada"
+                  description={`${eventos.length} eventos cadastrados no sistema.`}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Modal de Evento */}
+      <EventModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        evento={eventoSelecionado}
+        defaultDate={selectedDate}
+        onSave={handleSaveEvent}
+        onDelete={handleDeleteEvent}
+        clientes={[]}
+        processos={[]}
+        responsaveis={[]}
+      />
+    </div>
+  )
+}

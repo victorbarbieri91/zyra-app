@@ -1,0 +1,425 @@
+'use client'
+
+import { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Calendar,
+  CalendarDays,
+  List,
+  AlertCircle,
+  Clock,
+  Plus,
+  Bell,
+  Sparkles,
+} from 'lucide-react'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+
+// Components
+import CalendarGrid from '@/components/agenda/CalendarGrid'
+import MiniCalendar from '@/components/agenda/MiniCalendar'
+import EventCard, { EventCardProps } from '@/components/agenda/EventCard'
+import PrazoCard, { PrazoCardProps } from '@/components/agenda/PrazoCard'
+import EventFilters, { EventFiltersState } from '@/components/agenda/EventFilters'
+import QuickActionButton from '@/components/dashboard/QuickActionButton'
+import InsightCard from '@/components/dashboard/InsightCard'
+
+export default function AgendaPage() {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [viewMode, setViewMode] = useState<'month' | 'week' | 'day' | 'list'>('month')
+  const [filters, setFilters] = useState<EventFiltersState>({
+    tipos: {
+      compromisso: true,
+      audiencia: true,
+      prazo: true,
+      tarefa: true,
+    },
+    status: {
+      agendado: true,
+      realizado: false,
+      cancelado: false,
+    },
+    responsaveis: [],
+  })
+
+  // Mock data - será substituído por dados reais do Supabase
+  const eventosMock: EventCardProps[] = [
+    {
+      id: '1',
+      titulo: 'Audiência Trabalhista - Silva vs Empresa X',
+      tipo: 'audiencia',
+      data_inicio: new Date(2025, 0, 6, 9, 0),
+      data_fim: new Date(2025, 0, 6, 11, 0),
+      local: 'Fórum Central - Sala 305',
+      cliente_nome: 'João Silva',
+      processo_numero: '1234-56.2024',
+      tipo_audiencia: 'instrucao',
+      modalidade: 'presencial',
+      status: 'agendado',
+    },
+    {
+      id: '2',
+      titulo: 'Reunião com Cliente - Planejamento Tributário',
+      tipo: 'compromisso',
+      data_inicio: new Date(2025, 0, 6, 14, 0),
+      data_fim: new Date(2025, 0, 6, 15, 30),
+      local: 'Escritório',
+      cliente_nome: 'Empresa ABC Ltda',
+      status: 'agendado',
+    },
+    {
+      id: '3',
+      titulo: 'Prazo Recursal - Processo 5678',
+      tipo: 'prazo',
+      data_inicio: new Date(2025, 0, 8, 23, 59),
+      processo_numero: '5678-90.2024',
+      cliente_nome: 'Maria Santos',
+      prazo_criticidade: 'urgente',
+      status: 'agendado',
+    },
+  ]
+
+  const prazosMock: PrazoCardProps[] = [
+    {
+      id: 'p1',
+      titulo: 'Prazo de Recurso - Sentença Desfavorável',
+      tipo_prazo: 'recurso',
+      data_intimacao: new Date(2024, 11, 20),
+      data_limite: new Date(2025, 0, 8),
+      dias_uteis: true,
+      quantidade_dias: 15,
+      criticidade: 'urgente',
+      processo_numero: '5678-90.2024',
+      cliente_nome: 'Maria Santos',
+      responsavel_nome: 'Dr. Silva',
+    },
+    {
+      id: 'p2',
+      titulo: 'Manifestação sobre Perícia',
+      tipo_prazo: 'manifestacao',
+      data_intimacao: new Date(2024, 11, 28),
+      data_limite: new Date(2025, 0, 12),
+      dias_uteis: true,
+      quantidade_dias: 10,
+      criticidade: 'atencao',
+      processo_numero: '1111-22.2024',
+      cliente_nome: 'Pedro Costa',
+      responsavel_nome: 'Dra. Santos',
+    },
+    {
+      id: 'p3',
+      titulo: 'Juntada de Documentos',
+      tipo_prazo: 'juntada',
+      data_intimacao: new Date(2025, 0, 2),
+      data_limite: new Date(2025, 0, 17),
+      dias_uteis: true,
+      quantidade_dias: 10,
+      criticidade: 'normal',
+      processo_numero: '3333-44.2024',
+      cliente_nome: 'Ana Oliveira',
+      responsavel_nome: 'Dr. Silva',
+    },
+  ]
+
+  const handleCreateEvent = (date?: Date) => {
+    console.log('Criar evento para:', date || selectedDate)
+    // Abrir modal de criação
+  }
+
+  const handleEventClick = (evento: EventCardProps) => {
+    console.log('Evento clicado:', evento)
+    // Abrir modal de detalhes/edição
+  }
+
+  const handleMarcarPrazoCumprido = (prazoId: string) => {
+    console.log('Marcar prazo como cumprido:', prazoId)
+    // Chamar API para marcar como cumprido
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6">
+      <div className="max-w-[1800px] mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-[#34495e]">Agenda</h1>
+            <p className="text-sm text-[#6c757d] mt-0.5 font-normal">
+              {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            </p>
+          </div>
+
+          {/* View Mode Selector */}
+          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as typeof viewMode)}>
+            <TabsList className="bg-slate-100">
+              <TabsTrigger value="month" className="text-xs">
+                <Calendar className="w-3.5 h-3.5 mr-1.5" />
+                Mês
+              </TabsTrigger>
+              <TabsTrigger value="week" className="text-xs" disabled>
+                <CalendarDays className="w-3.5 h-3.5 mr-1.5" />
+                Semana
+              </TabsTrigger>
+              <TabsTrigger value="day" className="text-xs" disabled>
+                <Clock className="w-3.5 h-3.5 mr-1.5" />
+                Dia
+              </TabsTrigger>
+              <TabsTrigger value="list" className="text-xs" disabled>
+                <List className="w-3.5 h-3.5 mr-1.5" />
+                Lista
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* Ações Rápidas */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="pb-2 pt-4">
+            <CardTitle className="text-sm font-medium text-[#34495e]">Ações Rápidas</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-2 pb-4">
+            <div className="grid grid-cols-6 gap-2.5">
+              <QuickActionButton
+                icon={Plus}
+                label="Novo Evento"
+                onClick={() => handleCreateEvent()}
+                variant="highlight"
+              />
+              <QuickActionButton
+                icon={Calendar}
+                label="Compromisso"
+                onClick={() => handleCreateEvent()}
+              />
+              <QuickActionButton
+                icon={Gavel}
+                label="Audiência"
+                onClick={() => handleCreateEvent()}
+              />
+              <QuickActionButton
+                icon={AlertCircle}
+                label="Prazo"
+                onClick={() => handleCreateEvent()}
+              />
+              <QuickActionButton
+                icon={Clock}
+                label="Tarefa"
+                onClick={() => handleCreateEvent()}
+              />
+              <QuickActionButton
+                icon={Sparkles}
+                label="Agendar com IA"
+                onClick={() => {}}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Layout 3 Colunas */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          {/* COLUNA ESQUERDA - Mini Calendário + Filtros */}
+          <div className="xl:col-span-3 space-y-6">
+            {/* Mini Calendário */}
+            <MiniCalendar
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+              eventDates={eventosMock.map((e) => new Date(e.data_inicio))}
+            />
+
+            {/* Filtros */}
+            <EventFilters
+              filters={filters}
+              onFiltersChange={setFilters}
+              responsaveisDisponiveis={[
+                { id: '1', nome: 'Dr. Silva' },
+                { id: '2', nome: 'Dra. Santos' },
+                { id: '3', nome: 'Dr. Oliveira' },
+              ]}
+            />
+
+            {/* Próximos Feriados */}
+            <Card className="border-purple-200 bg-purple-50/30">
+              <CardHeader className="pb-3 pt-4">
+                <CardTitle className="text-sm font-medium text-purple-900">
+                  Próximos Feriados
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-purple-700 font-medium">Carnaval</span>
+                  <span className="text-purple-600">03/03/2025</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-purple-700 font-medium">Paixão de Cristo</span>
+                  <span className="text-purple-600">18/04/2025</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-purple-700 font-medium">Tiradentes</span>
+                  <span className="text-purple-600">21/04/2025</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* COLUNA CENTRAL - Calendário Principal */}
+          <div className="xl:col-span-6">
+            {viewMode === 'month' && (
+              <CalendarGrid
+                eventos={eventosMock}
+                selectedDate={selectedDate}
+                onDateSelect={setSelectedDate}
+                onEventClick={handleEventClick}
+                onCreateEvent={handleCreateEvent}
+                feriados={[
+                  new Date(2025, 2, 3),
+                  new Date(2025, 2, 4),
+                  new Date(2025, 3, 18),
+                  new Date(2025, 3, 21),
+                ]}
+              />
+            )}
+
+            {viewMode === 'week' && (
+              <Card className="border-slate-200 p-8 text-center">
+                <p className="text-sm text-[#6c757d]">Visão Semanal em desenvolvimento</p>
+              </Card>
+            )}
+
+            {viewMode === 'day' && (
+              <Card className="border-slate-200 p-8 text-center">
+                <p className="text-sm text-[#6c757d]">Visão Diária em desenvolvimento</p>
+              </Card>
+            )}
+
+            {viewMode === 'list' && (
+              <Card className="border-slate-200 p-8 text-center">
+                <p className="text-sm text-[#6c757d]">Visão Lista em desenvolvimento</p>
+              </Card>
+            )}
+          </div>
+
+          {/* COLUNA DIREITA - Eventos do Dia + Prazos */}
+          <div className="xl:col-span-3 space-y-6">
+            {/* Resumo do Dia (IA) */}
+            <Card className="border-slate-200 shadow-sm bg-gradient-to-br from-white to-slate-50/30">
+              <CardHeader className="pb-3 pt-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 bg-gradient-to-br from-[#89bcbe] to-[#6ba9ab] rounded-lg flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </div>
+                  <CardTitle className="text-sm font-medium text-[#34495e]">
+                    Resumo do Dia
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-[#6c757d] leading-relaxed">
+                  Hoje você tem <span className="font-medium text-[#34495e]">2 eventos</span>{' '}
+                  agendados. Sua próxima atividade é às{' '}
+                  <span className="font-medium text-[#34495e]">09:00</span> - Audiência
+                  Trabalhista.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Eventos de Hoje */}
+            <Card className="border-[#89bcbe] shadow-sm">
+              <CardHeader className="pb-3 pt-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-[#89bcbe]" />
+                    Hoje
+                  </CardTitle>
+                  <Button variant="ghost" size="sm" className="text-xs text-[#89bcbe] h-7">
+                    Ver todos →
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[300px] pr-2">
+                  <div className="space-y-2.5">
+                    {eventosMock
+                      .filter((e) =>
+                        format(new Date(e.data_inicio), 'yyyy-MM-dd') ===
+                        format(selectedDate, 'yyyy-MM-dd')
+                      )
+                      .map((evento) => (
+                        <EventCard
+                          key={evento.id}
+                          {...evento}
+                          onClick={() => handleEventClick(evento)}
+                          compact
+                        />
+                      ))}
+                    {eventosMock.filter(
+                      (e) =>
+                        format(new Date(e.data_inicio), 'yyyy-MM-dd') ===
+                        format(selectedDate, 'yyyy-MM-dd')
+                    ).length === 0 && (
+                      <p className="text-xs text-[#6c757d] text-center py-4">
+                        Nenhum evento para este dia
+                      </p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+
+            {/* Prazos Vencendo */}
+            <Card className="border-amber-200 shadow-sm">
+              <CardHeader className="pb-3 pt-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600" />
+                    Prazos Vencendo
+                  </CardTitle>
+                  <Button variant="ghost" size="sm" className="text-xs text-amber-600 h-7">
+                    Ver todos →
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[400px] pr-2">
+                  <div className="space-y-3">
+                    {prazosMock.map((prazo) => (
+                      <PrazoCard
+                        key={prazo.id}
+                        {...prazo}
+                        onMarcarCumprido={() => handleMarcarPrazoCumprido(prazo.id)}
+                        onClick={() => console.log('Prazo clicado:', prazo)}
+                      />
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+
+            {/* Insights de IA */}
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader className="pb-3 pt-4">
+                <CardTitle className="text-sm font-medium text-[#34495e]">Insights</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2.5">
+                <InsightCard
+                  type="alerta"
+                  title="3 prazos esta semana"
+                  description="Você tem 3 prazos processuais vencendo nos próximos 7 dias."
+                  action={{ label: 'Ver prazos', onClick: () => {} }}
+                />
+                <InsightCard
+                  type="sugestao"
+                  title="Agenda otimizada"
+                  description="Sua agenda está 70% ocupada hoje. Bom equilíbrio!"
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Importar Gavel do lucide-react
+import { Gavel } from 'lucide-react'

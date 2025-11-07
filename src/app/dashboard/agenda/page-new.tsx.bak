@@ -1,0 +1,344 @@
+'use client'
+
+import { useState, useMemo } from 'react'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
+import {
+  Calendar,
+  CalendarDays,
+  List,
+  Clock,
+  Plus,
+} from 'lucide-react'
+import { format, isSameDay } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { toast } from 'sonner'
+
+// Components
+import CalendarGrid from '@/components/agenda/CalendarGrid'
+import CalendarWeekView from '@/components/agenda/CalendarWeekView'
+import CalendarDayView from '@/components/agenda/CalendarDayView'
+import ListView from '@/components/agenda/ListView'
+import SidebarDinamica from '@/components/agenda/SidebarDinamica'
+import ResumoIA from '@/components/agenda/ResumoIA'
+import AgendaFiltersCompact from '@/components/agenda/AgendaFiltersCompact'
+import EventModal, { EventFormData } from '@/components/agenda/EventModal'
+import { EventCardProps } from '@/components/agenda/EventCard'
+
+// Hooks
+import { useEventos } from '@/hooks/useEventos'
+import { usePrazos } from '@/hooks/usePrazos'
+import { useAgenda } from '@/hooks/useAgenda'
+
+export default function AgendaPage() {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [viewMode, setViewMode] = useState<'month' | 'week' | 'day' | 'list'>('month')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [eventoSelecionado, setEventoSelecionado] = useState<EventFormData | undefined>()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [filters, setFilters] = useState({
+    tipos: {
+      compromisso: true,
+      audiencia: true,
+      prazo: true,
+      tarefa: true,
+    },
+    status: {
+      agendado: true,
+      realizado: false,
+      cancelado: false,
+    },
+    responsaveis: [] as string[],
+  })
+
+  // Hooks
+  const { eventos, loading: loadingEventos, createEvento, updateEvento, deleteEvento } = useEventos()
+  const { prazos, loading: loadingPrazos } = usePrazos()
+  const { feriados, loading: loadingFeriados } = useAgenda()
+
+  // Converter eventos para formato do EventCard
+  const eventosFormatados = useMemo((): EventCardProps[] => {
+    return eventos
+      .filter(e => {
+        // Aplicar filtros de tipo
+        if (!filters.tipos[e.tipo]) return false
+        // Aplicar filtros de status
+        const statusKey = e.status as 'agendado' | 'realizado' | 'cancelado'
+        if (!(statusKey in filters.status)) return true
+        if (!filters.status[statusKey]) return false
+        return true
+      })
+      .map(e => ({
+        id: e.id,
+        titulo: e.titulo,
+        tipo: e.tipo,
+        data_inicio: new Date(e.data_inicio),
+        data_fim: e.data_fim ? new Date(e.data_fim) : undefined,
+        dia_inteiro: e.dia_inteiro,
+        local: e.local,
+        cliente_nome: e.cliente_nome,
+        processo_numero: e.processo_numero,
+        responsavel_nome: e.responsavel_nome,
+        cor: e.cor,
+        status: e.status,
+        tipo_audiencia: e.tipo_audiencia,
+        modalidade: e.modalidade,
+        prazo_cumprido: e.cumprido,
+        prazo_perdido: e.perdido,
+        prazo_criticidade: e.prazo_criticidade,
+      }))
+  }, [eventos, filters])
+
+  // Eventos do dia selecionado (para sidebar)
+  const eventosDoDia = useMemo(() => {
+    return eventosFormatados.filter(e =>
+      isSameDay(e.data_inicio, selectedDate)
+    )
+  }, [eventosFormatados, selectedDate])
+
+  // Estatísticas para ResumoIA
+  const eventosCriticos = useMemo(() => {
+    return eventosFormatados.filter(e =>
+      e.tipo === 'prazo' && (e.prazo_criticidade === 'critico' || e.prazo_criticidade === 'urgente')
+    ).length
+  }, [eventosFormatados])
+
+  const proximoEvento = useMemo(() => {
+    const hoje = new Date()
+    const proximosEventos = eventosFormatados
+      .filter(e => e.data_inicio >= hoje)
+      .sort((a, b) => a.data_inicio.getTime() - b.data_inicio.getTime())
+
+    if (proximosEventos.length === 0) return undefined
+
+    return {
+      titulo: proximosEventos[0].titulo,
+      horario: format(proximosEventos[0].data_inicio, 'HH:mm')
+    }
+  }, [eventosFormatados])
+
+  const handleCreateEvent = (date?: Date, tipo?: 'compromisso' | 'audiencia' | 'prazo' | 'tarefa') => {
+    setEventoSelecionado({
+      titulo: '',
+      tipo: tipo || 'compromisso',
+      data_inicio: date || selectedDate,
+      dia_inteiro: false,
+      status: 'agendado',
+      lembretes: [{ tempo_antes_minutos: 15, metodos: ['push'] }],
+    })
+    setModalOpen(true)
+  }
+
+  const handleEventClick = (evento: EventCardProps) => {
+    // Converter para formato do formulário
+    setEventoSelecionado({
+      id: evento.id,
+      titulo: evento.titulo,
+      tipo: evento.tipo,
+      data_inicio: evento.data_inicio,
+      data_fim: evento.data_fim,
+      dia_inteiro: evento.dia_inteiro || false,
+      local: evento.local,
+      descricao: '',
+      cor: evento.cor,
+      status: evento.status || 'agendado',
+      tipo_audiencia: evento.tipo_audiencia,
+      modalidade: evento.modalidade,
+    })
+    setModalOpen(true)
+  }
+
+  const handleSaveEvent = async (data: EventFormData) => {
+    try {
+      if (data.id) {
+        await updateEvento(data.id, data)
+        toast.success('Evento atualizado com sucesso!')
+      } else {
+        await createEvento(data)
+        toast.success('Evento criado com sucesso!')
+      }
+      setModalOpen(false)
+      setEventoSelecionado(undefined)
+    } catch (error) {
+      toast.error('Erro ao salvar evento')
+      console.error(error)
+    }
+  }
+
+  const handleDeleteEvent = async (id: string) => {
+    try {
+      await deleteEvento(id)
+      toast.success('Evento deletado com sucesso!')
+      setModalOpen(false)
+    } catch (error) {
+      toast.error('Erro ao deletar evento')
+      console.error(error)
+    }
+  }
+
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date)
+    // Abrir sidebar apenas na view de mês
+    if (viewMode === 'month') {
+      setSidebarOpen(true)
+    }
+  }
+
+  const loading = loadingEventos || loadingPrazos || loadingFeriados
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6">
+      <div className="max-w-[1800px] mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-[#34495e]">Agenda</h1>
+            <p className="text-sm text-[#6c757d] mt-0.5 font-normal">
+              {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            </p>
+          </div>
+
+          {/* View Mode Selector */}
+          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as typeof viewMode)}>
+            <TabsList className="bg-slate-100">
+              <TabsTrigger value="month" className="text-xs">
+                <Calendar className="w-3.5 h-3.5 mr-1.5" />
+                Mês
+              </TabsTrigger>
+              <TabsTrigger value="week" className="text-xs">
+                <CalendarDays className="w-3.5 h-3.5 mr-1.5" />
+                Semana
+              </TabsTrigger>
+              <TabsTrigger value="day" className="text-xs">
+                <Clock className="w-3.5 h-3.5 mr-1.5" />
+                Dia
+              </TabsTrigger>
+              <TabsTrigger value="list" className="text-xs">
+                <List className="w-3.5 h-3.5 mr-1.5" />
+                Lista
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* Barra de Filtros Compacta */}
+        <AgendaFiltersCompact
+          filters={filters}
+          onFiltersChange={setFilters}
+          responsaveisDisponiveis={[]}
+        />
+
+        {/* Layout Principal */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Área Principal - Calendário/Lista */}
+          <div className="lg:col-span-2">
+            {loading ? (
+              <div className="border border-slate-200 rounded-lg p-8 text-center bg-white">
+                <p className="text-sm text-[#6c757d]">Carregando eventos...</p>
+              </div>
+            ) : (
+              <>
+                {viewMode === 'month' && (
+                  <CalendarGrid
+                    eventos={eventosFormatados}
+                    selectedDate={selectedDate}
+                    onDateSelect={handleDateSelect}
+                    feriados={feriados}
+                  />
+                )}
+
+                {viewMode === 'week' && (
+                  <CalendarWeekView
+                    eventos={eventosFormatados}
+                    selectedDate={selectedDate}
+                    onDateSelect={setSelectedDate}
+                    onEventClick={handleEventClick}
+                    onCreateEvent={handleCreateEvent}
+                  />
+                )}
+
+                {viewMode === 'day' && (
+                  <CalendarDayView
+                    eventos={eventosFormatados}
+                    selectedDate={selectedDate}
+                    onDateSelect={setSelectedDate}
+                    onEventClick={handleEventClick}
+                    onCreateEvent={handleCreateEvent}
+                  />
+                )}
+
+                {viewMode === 'list' && (
+                  <ListView
+                    eventos={eventosFormatados}
+                    onEventClick={handleEventClick}
+                    onCreateEvent={() => handleCreateEvent()}
+                  />
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Sidebar Direita - Resumo IA e Botões Rápidos */}
+          <div className="space-y-6">
+            <ResumoIA
+              viewMode={viewMode}
+              totalEventos={eventosFormatados.length}
+              eventosCriticos={eventosCriticos}
+              proximoEvento={proximoEvento}
+            />
+
+            {/* Botões de Ação Rápida */}
+            <div className="grid grid-cols-1 gap-2">
+              <Button
+                onClick={() => handleCreateEvent(undefined, 'compromisso')}
+                className="w-full justify-start bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200"
+                variant="outline"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Novo Compromisso
+              </Button>
+              <Button
+                onClick={() => handleCreateEvent(undefined, 'audiencia')}
+                className="w-full justify-start bg-[#1E3A8A]/10 hover:bg-[#1E3A8A]/20 text-[#1E3A8A] border border-[#1E3A8A]/20"
+                variant="outline"
+              >
+                <CalendarDays className="w-4 h-4 mr-2" />
+                Nova Audiência
+              </Button>
+              <Button
+                onClick={() => handleCreateEvent()}
+                className="w-full justify-start bg-gradient-to-br from-[#34495e] to-[#46627f] hover:from-[#2c3e50] hover:to-[#34495e] text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Evento
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sidebar Dinâmica (apenas para view de mês) */}
+      <SidebarDinamica
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        selectedDate={selectedDate}
+        eventos={eventosDoDia}
+        onEventClick={handleEventClick}
+        onCreateEvent={handleCreateEvent}
+      />
+
+      {/* Modal de Evento */}
+      <EventModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        evento={eventoSelecionado}
+        defaultDate={selectedDate}
+        onSave={handleSaveEvent}
+        onDelete={handleDeleteEvent}
+        clientes={[]}
+        processos={[]}
+        responsaveis={[]}
+      />
+    </div>
+  )
+}

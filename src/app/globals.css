@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Paleta Zyra Legal com shadcn/ui - Primary: #34495e */
+    --background: 0 0% 100%;
+    --foreground: 210 29% 29%; /* #34495e */
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 29% 29%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 29% 29%;
+
+    /* Primary: Slate #34495e - COR PRINCIPAL */
+    --primary: 210 29% 29%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: Teal #89bcbe */
+    --secondary: 184 26% 64%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 16% 93%;
+    --muted-foreground: 210 10% 56%; /* Lightened to #adb5bd */
+
+    --accent: 184 41% 88%;
+    --accent-foreground: 210 29% 29%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 210 29% 29%; /* #34495e */
+
+    --radius: 0.75rem;
+
+    /* Zyra Legal Design System - Custom Variables */
+    --color-primary: #34495e;
+    --color-secondary: #89bcbe;
+    --color-tertiary: #46627f;
+
+    /* Text Hierarchy */
+    --text-primary: #34495e;
+    --text-secondary: #46627f;
+    --text-body: #6c757d;
+    --text-muted: #adb5bd;
+    --text-light: #ced4da;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 29% 29%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 184 26% 64%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 210 29% 29%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-normal;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Typography Defaults - Lighter weights */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-medium;
+  }
+
+  h1 {
+    @apply text-3xl font-semibold;
+    color: var(--text-primary);
+  }
+
+  h2 {
+    @apply text-xl font-medium;
+    color: var(--text-secondary);
+  }
+
+  h3 {
+    @apply text-lg font-medium;
+    color: var(--text-primary);
+  }
+
+  p {
+    @apply font-normal;
+    color: var(--text-body);
+  }
+}

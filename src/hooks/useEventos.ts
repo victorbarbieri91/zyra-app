@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { formatDateForDB, formatDateTimeForDB } from '@/lib/timezone'
 
 export interface Evento {
   id: string
@@ -13,9 +14,16 @@ export interface Evento {
   descricao?: string | null
   participantes?: string | null
   recorrencia_id?: string | null
+  responsavel_id?: string
+  cor?: string
+  // Vinculações (FK diretas)
+  processo_id?: string | null
+  consultivo_id?: string | null
   created_at?: string
   updated_at?: string
 }
+
+export interface EventoFormData extends Partial<Evento> {}
 
 export function useEventos(escritorioId?: string) {
   const [eventos, setEventos] = useState<Evento[]>([])
@@ -52,9 +60,16 @@ export function useEventos(escritorioId?: string) {
 
   const createEvento = async (data: Partial<Evento>): Promise<Evento> => {
     try {
+      // Formatar datas para o timezone de Brasília antes de enviar ao DB
+      const eventoData = {
+        ...data,
+        data_inicio: data.data_inicio ? formatDateTimeForDB(new Date(data.data_inicio)) : undefined,
+        data_fim: data.data_fim ? formatDateTimeForDB(new Date(data.data_fim)) : undefined,
+      }
+
       const { data: novoEvento, error: eventoError } = await supabase
         .from('agenda_eventos')
-        .insert(data)
+        .insert(eventoData)
         .select()
         .single()
 
@@ -71,9 +86,16 @@ export function useEventos(escritorioId?: string) {
 
   const updateEvento = async (id: string, data: Partial<Evento>): Promise<void> => {
     try {
+      // Formatar datas para o timezone de Brasília antes de enviar ao DB
+      const eventoData = {
+        ...data,
+        data_inicio: data.data_inicio ? formatDateTimeForDB(new Date(data.data_inicio)) : undefined,
+        data_fim: data.data_fim ? formatDateTimeForDB(new Date(data.data_fim)) : undefined,
+      }
+
       const { error } = await supabase
         .from('agenda_eventos')
-        .update(data)
+        .update(eventoData)
         .eq('id', id)
 
       if (error) throw error
@@ -102,7 +124,13 @@ export function useEventos(escritorioId?: string) {
   }
 
   useEffect(() => {
-    loadEventos()
+    // Só carrega se tiver escritorioId definido
+    if (escritorioId) {
+      loadEventos()
+    } else {
+      setLoading(false)
+      setEventos([])
+    }
   }, [escritorioId])
 
   return {

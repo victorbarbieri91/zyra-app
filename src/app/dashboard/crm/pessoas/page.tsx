@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Plus,
@@ -17,6 +17,7 @@ import {
   DollarSign,
   Clock,
   User,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,71 +39,104 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { PessoaWizardModal } from '@/components/crm/PessoaWizardModal';
+import { createClient } from '@/lib/supabase/client';
 import type { PessoaResumo } from '@/types/crm';
-
-// Mock data temporário - simular volume maior
-const mockPessoas: PessoaResumo[] = Array.from({ length: 50 }, (_, i) => ({
-  id: `${i + 1}`,
-  escritorio_id: '1',
-  tipo_pessoa: i % 3 === 0 ? ('pj' as const) : ('pf' as const),
-  tipo_contato: ['cliente', 'prospecto', 'parte_contraria', 'correspondente', 'testemunha', 'perito'][
-    i % 6
-  ] as any,
-  nome_completo:
-    i % 3 === 0
-      ? `Empresa ${String.fromCharCode(65 + (i % 26))} Ltda`
-      : `${['João', 'Maria', 'Pedro', 'Ana', 'Carlos', 'Juliana'][i % 6]} ${
-          ['Silva', 'Santos', 'Costa', 'Souza', 'Oliveira', 'Ferreira'][Math.floor(i / 6) % 6]
-        }`,
-  cpf_cnpj:
-    i % 3 === 0
-      ? `${String(12345678 + i).padStart(8, '0')}000190`
-      : `${String(12345678901 + i).padStart(11, '0')}`,
-  celular: `(11) 9${String(8000 + i).padStart(4, '0')}-${String(1000 + i).padStart(4, '0')}`,
-  email_principal: `pessoa${i}@email.com`,
-  cidade: ['São Paulo', 'Rio de Janeiro', 'Belo Horizonte', 'Curitiba', 'Porto Alegre'][i % 5],
-  uf: ['SP', 'RJ', 'MG', 'PR', 'RS'][i % 5],
-  status: ['ativo', 'prospecto', 'inativo'][Math.floor(Math.random() * 3)] as any,
-  created_at: new Date(2024, 0, i + 1).toISOString(),
-  updated_at: new Date(2024, 0, i + 1).toISOString(),
-  responsavel_nome: 'Dr. João Silva',
-  total_processos: Math.floor(Math.random() * 10),
-  processos_ativos: Math.floor(Math.random() * 5),
-  total_honorarios: Math.random() * 100000,
-  honorarios_pendentes: Math.random() * 30000,
-  honorarios_pagos: Math.random() * 70000,
-  dias_sem_contato: Math.floor(Math.random() * 60),
-  total_interacoes: Math.floor(Math.random() * 30),
-  follow_ups_pendentes: Math.floor(Math.random() * 3),
-  oportunidades_ativas: Math.floor(Math.random() * 2),
-  total_relacionamentos: Math.floor(Math.random() * 5),
-}));
 
 export default function PessoasPage() {
   const router = useRouter();
+  const [pessoas, setPessoas] = useState<PessoaResumo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
   const [busca, setBusca] = useState('');
   const [tipoContato, setTipoContato] = useState<string>('todos');
   const [status, setStatus] = useState<string>('todos');
   const [pessoaSelecionada, setPessoaSelecionada] = useState<PessoaResumo | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [wizardModalOpen, setWizardModalOpen] = useState(false);
   const itemsPerPage = 15;
 
-  const pessoasFiltradas = mockPessoas.filter((pessoa) => {
-    const matchBusca =
-      pessoa.nome_completo.toLowerCase().includes(busca.toLowerCase()) ||
-      pessoa.email_principal?.toLowerCase().includes(busca.toLowerCase()) ||
-      pessoa.cpf_cnpj?.includes(busca.replace(/\D/g, ''));
-    const matchTipo = tipoContato === 'todos' || pessoa.tipo_contato === tipoContato;
-    const matchStatus = status === 'todos' || pessoa.status === status;
+  // Buscar pessoas do banco de dados
+  const fetchPessoas = useCallback(async () => {
+    setLoading(true);
+    try {
+      const supabase = createClient();
 
-    return matchBusca && matchTipo && matchStatus;
-  });
+      let query = supabase
+        .from('crm_pessoas')
+        .select('*', { count: 'exact' })
+        .order('nome_completo', { ascending: true });
 
-  const totalPages = Math.ceil(pessoasFiltradas.length / itemsPerPage);
-  const paginatedPessoas = pessoasFiltradas.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+      // Aplicar filtros
+      if (tipoContato !== 'todos') {
+        query = query.eq('tipo_contato', tipoContato);
+      }
+      if (status !== 'todos') {
+        query = query.eq('status', status);
+      }
+      if (busca.trim()) {
+        const searchTerm = busca.trim();
+        query = query.or(`nome_completo.ilike.%${searchTerm}%,email_principal.ilike.%${searchTerm}%,cpf_cnpj.ilike.%${searchTerm}%`);
+      }
+
+      // Paginação
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
+
+      if (error) throw error;
+
+      // Mapear para o tipo PessoaResumo
+      const pessoasMapeadas: PessoaResumo[] = (data || []).map(p => ({
+        id: p.id,
+        escritorio_id: p.escritorio_id,
+        tipo_pessoa: p.tipo_pessoa,
+        tipo_contato: p.tipo_contato,
+        nome_completo: p.nome_completo,
+        cpf_cnpj: p.cpf_cnpj,
+        celular: p.celular,
+        email_principal: p.email_principal,
+        cidade: p.cidade,
+        uf: p.uf,
+        status: p.status,
+        created_at: p.created_at,
+        updated_at: p.updated_at,
+        responsavel_nome: null,
+        total_processos: 0,
+        processos_ativos: 0,
+        total_honorarios: 0,
+        honorarios_pendentes: 0,
+        honorarios_pagos: 0,
+        dias_sem_contato: null,
+        total_interacoes: 0,
+        follow_ups_pendentes: 0,
+        oportunidades_ativas: 0,
+        total_relacionamentos: 0,
+      }));
+
+      setPessoas(pessoasMapeadas);
+      setTotalCount(count || 0);
+    } catch (error) {
+      console.error('Erro ao buscar pessoas:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [busca, tipoContato, status, currentPage]);
+
+  // Buscar dados quando os filtros mudarem
+  useEffect(() => {
+    fetchPessoas();
+  }, [fetchPessoas]);
+
+  // Resetar página quando filtros mudarem
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [busca, tipoContato, status]);
+
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+  const paginatedPessoas = pessoas;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -126,10 +160,14 @@ export default function PessoasPage() {
     const colors: Record<string, string> = {
       cliente: 'bg-emerald-50 text-emerald-700 border-emerald-200',
       prospecto: 'bg-amber-50 text-amber-700 border-amber-200',
+      parceiro: 'bg-cyan-50 text-cyan-700 border-cyan-200',
       parte_contraria: 'bg-red-50 text-red-700 border-red-200',
       correspondente: 'bg-blue-50 text-blue-700 border-blue-200',
       testemunha: 'bg-purple-50 text-purple-700 border-purple-200',
       perito: 'bg-teal-50 text-teal-700 border-teal-200',
+      juiz: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      promotor: 'bg-violet-50 text-violet-700 border-violet-200',
+      outros: 'bg-slate-50 text-slate-700 border-slate-200',
     };
     return colors[tipo] || 'bg-slate-50 text-slate-700 border-slate-200';
   };
@@ -138,10 +176,14 @@ export default function PessoasPage() {
     const labels: Record<string, string> = {
       cliente: 'Cliente',
       prospecto: 'Prospecto',
+      parceiro: 'Parceiro',
       parte_contraria: 'Parte Contrária',
       correspondente: 'Correspondente',
       testemunha: 'Testemunha',
       perito: 'Perito',
+      juiz: 'Juiz',
+      promotor: 'Promotor',
+      outros: 'Outros',
     };
     return labels[tipo] || tipo;
   };
@@ -190,10 +232,14 @@ export default function PessoasPage() {
                 <SelectItem value="todos">Todos os tipos</SelectItem>
                 <SelectItem value="cliente">Cliente</SelectItem>
                 <SelectItem value="prospecto">Prospecto</SelectItem>
+                <SelectItem value="parceiro">Parceiro</SelectItem>
                 <SelectItem value="parte_contraria">Parte Contrária</SelectItem>
                 <SelectItem value="correspondente">Correspondente</SelectItem>
                 <SelectItem value="testemunha">Testemunha</SelectItem>
                 <SelectItem value="perito">Perito</SelectItem>
+                <SelectItem value="juiz">Juiz</SelectItem>
+                <SelectItem value="promotor">Promotor</SelectItem>
+                <SelectItem value="outros">Outros</SelectItem>
               </SelectContent>
             </Select>
 
@@ -225,7 +271,7 @@ export default function PessoasPage() {
             <Button
               size="sm"
               className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:opacity-90"
-              onClick={() => router.push('/dashboard/crm/pessoas/novo')}
+              onClick={() => setWizardModalOpen(true)}
             >
               <Plus className="w-4 h-4 mr-2" />
               Nova Pessoa
@@ -235,9 +281,7 @@ export default function PessoasPage() {
           {/* Contador de resultados */}
           <div className="mt-3 flex items-center justify-between text-xs text-slate-600">
             <span>
-              {pessoasFiltradas.length} pessoa(s) encontrada(s)
-              {pessoasFiltradas.length !== mockPessoas.length &&
-                ` de ${mockPessoas.length} no total`}
+              {totalCount} pessoa(s) encontrada(s)
             </span>
             {totalPages > 1 && (
               <span>
@@ -249,7 +293,11 @@ export default function PessoasPage() {
 
         {/* Tabela */}
         <div className="bg-white border border-slate-200 rounded-lg flex-1 flex flex-col overflow-hidden">
-          {pessoasFiltradas.length === 0 ? (
+          {loading ? (
+            <div className="flex-1 flex items-center justify-center p-12">
+              <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+            </div>
+          ) : pessoas.length === 0 ? (
             <div className="flex-1 flex items-center justify-center p-12">
               <div className="text-center">
                 <Users className="w-16 h-16 mx-auto mb-4 text-slate-300" />
@@ -475,10 +523,10 @@ export default function PessoasPage() {
                         <div className="text-lg font-bold text-slate-900">
                           {pessoaSelecionada.total_interacoes}
                         </div>
-                        {pessoaSelecionada.dias_sem_contato !== undefined && (
+                        {pessoaSelecionada.dias_sem_contato != null && (
                           <div
                             className={`text-[10px] ${
-                              pessoaSelecionada.dias_sem_contato > 30
+                              (pessoaSelecionada.dias_sem_contato ?? 0) > 30
                                 ? 'text-amber-600'
                                 : 'text-slate-600'
                             }`}
@@ -565,6 +613,17 @@ export default function PessoasPage() {
           </div>
         </div>
       )}
+
+      {/* Modal Wizard para Nova Pessoa */}
+      <PessoaWizardModal
+        open={wizardModalOpen}
+        onOpenChange={setWizardModalOpen}
+        onSave={async (data) => {
+          console.log('Salvando pessoa:', data)
+          // TODO: Integrar com Supabase
+          alert('Pessoa salva com sucesso!')
+        }}
+      />
     </div>
   );
 }

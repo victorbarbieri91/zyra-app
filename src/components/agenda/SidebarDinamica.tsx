@@ -7,15 +7,20 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import EventCard, { EventCardProps } from './EventCard'
+import EventDetailCard from './EventDetailCard'
+import { AgendaItem } from '@/hooks/useAgendaConsolidada'
 
 interface SidebarDinamicaProps {
   isOpen: boolean
   onClose: () => void
   selectedDate?: Date
-  eventos: EventCardProps[]
-  onEventClick: (evento: EventCardProps) => void
+  eventos: AgendaItem[]
+  onEventClick: (evento: AgendaItem) => void
   onCreateEvent: (date: Date) => void
+  onCompleteTask?: (taskId: string) => void
+  onReopenTask?: (taskId: string) => void
+  onProcessoClick?: (processoId: string) => void
+  onConsultivoClick?: (consultivoId: string) => void
   className?: string
 }
 
@@ -26,9 +31,39 @@ export default function SidebarDinamica({
   eventos,
   onEventClick,
   onCreateEvent,
+  onCompleteTask,
+  onReopenTask,
+  onProcessoClick,
+  onConsultivoClick,
   className,
 }: SidebarDinamicaProps) {
   if (!isOpen || !selectedDate) return null
+
+  // Ordenar eventos por prioridade
+  const eventosOrdenados = [...eventos].sort((a, b) => {
+    // 0. Tarefas concluídas vão para o final
+    if (a.tipo_entidade === 'tarefa' && a.status === 'concluida' && b.status !== 'concluida') return 1
+    if (b.tipo_entidade === 'tarefa' && b.status === 'concluida' && a.status !== 'concluida') return -1
+
+    // 1. Audiências primeiro
+    if (a.tipo_entidade === 'audiencia' && b.tipo_entidade !== 'audiencia') return -1
+    if (a.tipo_entidade !== 'audiencia' && b.tipo_entidade === 'audiencia') return 1
+
+    // 2. Compromissos (eventos) em segundo
+    if (a.tipo_entidade === 'evento' && b.tipo_entidade === 'tarefa') return -1
+    if (a.tipo_entidade === 'tarefa' && b.tipo_entidade === 'evento') return 1
+
+    // 3. Para tarefas, ordenar por prioridade
+    if (a.tipo_entidade === 'tarefa' && b.tipo_entidade === 'tarefa') {
+      const prioridadeOrdem = { alta: 1, media: 2, baixa: 3 }
+      const prioA = prioridadeOrdem[a.prioridade] || 999
+      const prioB = prioridadeOrdem[b.prioridade] || 999
+      return prioA - prioB
+    }
+
+    // 4. Manter ordem original para mesmo tipo
+    return 0
+  })
 
   return (
     <>
@@ -100,11 +135,35 @@ export default function SidebarDinamica({
                 <p className="text-xs font-medium text-[#46627f] mb-3">
                   {eventos.length} {eventos.length === 1 ? 'evento' : 'eventos'}
                 </p>
-                {eventos.map((evento) => (
-                  <EventCard
+                {eventosOrdenados.map((evento) => (
+                  <EventDetailCard
                     key={evento.id}
-                    {...evento}
-                    onClick={() => onEventClick(evento)}
+                    id={evento.id}
+                    titulo={evento.titulo}
+                    descricao={evento.descricao}
+                    tipo={evento.tipo_entidade === 'tarefa' ? 'tarefa' : evento.tipo_entidade === 'audiencia' ? 'audiencia' : evento.subtipo === 'prazo_processual' ? 'prazo' : 'compromisso'}
+                    data_inicio={new Date(evento.data_inicio)}
+                    data_fim={evento.data_fim ? new Date(evento.data_fim) : undefined}
+                    dia_inteiro={evento.dia_inteiro}
+                    local={evento.local}
+                    responsavel_nome={evento.responsavel_nome}
+                    status={evento.status}
+                    prioridade={evento.prioridade}
+                    processo_numero={evento.processo_numero}
+                    processo_id={evento.processo_id}
+                    consultivo_titulo={evento.consultivo_titulo}
+                    consultivo_id={evento.consultivo_id}
+                    prazo_data_limite={evento.prazo_data_limite}
+                    prazo_tipo={evento.prazo_tipo}
+                    prazo_cumprido={evento.prazo_cumprido}
+                    subtipo={evento.subtipo}
+                    // Recorrência
+                    recorrencia_id={evento.recorrencia_id}
+                    onViewDetails={() => onEventClick(evento)}
+                    onComplete={() => onCompleteTask?.(evento.id)}
+                    onReopen={() => onReopenTask?.(evento.id)}
+                    onProcessoClick={onProcessoClick}
+                    onConsultivoClick={onConsultivoClick}
                   />
                 ))}
               </div>
@@ -117,21 +176,21 @@ export default function SidebarDinamica({
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
                   <p className="text-xs font-semibold text-[#34495e]">
-                    {eventos.filter(e => e.tipo === 'audiencia').length}
+                    {eventos.filter(e => e.tipo_entidade === 'audiencia').length}
                   </p>
                   <p className="text-[10px] text-[#6c757d]">Audiências</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-[#34495e]">
-                    {eventos.filter(e => e.tipo === 'prazo').length}
+                    {eventos.filter(e => e.tipo_entidade === 'tarefa').length}
                   </p>
-                  <p className="text-[10px] text-[#6c757d]">Prazos</p>
+                  <p className="text-[10px] text-[#6c757d]">Tarefas</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-[#34495e]">
-                    {eventos.filter(e => e.tipo === 'compromisso' || e.tipo === 'tarefa').length}
+                    {eventos.filter(e => e.tipo_entidade === 'evento').length}
                   </p>
-                  <p className="text-[10px] text-[#6c757d]">Outros</p>
+                  <p className="text-[10px] text-[#6c757d]">Eventos</p>
                 </div>
               </div>
             </div>

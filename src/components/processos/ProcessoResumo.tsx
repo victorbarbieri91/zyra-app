@@ -1,12 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Copy,
   Check,
@@ -16,11 +22,29 @@ import {
   FileText,
   Calendar,
   CheckCircle,
-  Plus
+  Plus,
+  ListTodo,
+  Gavel,
+  User,
+  CalendarClock,
+  Tag
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { formatCurrency } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+import { formatBrazilDateTime } from '@/lib/timezone'
+import TarefaWizard from '@/components/agenda/TarefaWizard'
+import EventoWizard from '@/components/agenda/EventoWizard'
+import AudienciaWizard from '@/components/agenda/AudienciaWizard'
+import TarefaDetailModal from '@/components/agenda/TarefaDetailModal'
+import EventoDetailModal from '@/components/agenda/EventoDetailModal'
+import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
+import ProcessoTimelineHorizontal from '@/components/processos/ProcessoTimelineHorizontal'
+import { useRouter } from 'next/navigation'
+import type { TarefaFormData } from '@/hooks/useTarefas'
+import type { EventoFormData } from '@/hooks/useEventos'
+import type { AudienciaFormData } from '@/hooks/useAudiencias'
 
 interface Processo {
   id: string
@@ -79,6 +103,71 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
     descricao: ''
   })
 
+  // Estados para Agenda
+  const [agendaItems, setAgendaItems] = useState<any[]>([])
+  const [loadingAgenda, setLoadingAgenda] = useState(true)
+  const [showTarefaWizard, setShowTarefaWizard] = useState(false)
+  const [showEventoWizard, setShowEventoWizard] = useState(false)
+  const [showAudienciaWizard, setShowAudienciaWizard] = useState(false)
+  const [escritorioId, setEscritorioId] = useState<string | null>(null)
+
+  // Estados para Modais de Detalhes
+  const [selectedTarefa, setSelectedTarefa] = useState<any | null>(null)
+  const [selectedEvento, setSelectedEvento] = useState<any | null>(null)
+  const [selectedAudiencia, setSelectedAudiencia] = useState<any | null>(null)
+  const [tarefaDetailOpen, setTarefaDetailOpen] = useState(false)
+  const [eventoDetailOpen, setEventoDetailOpen] = useState(false)
+  const [audienciaDetailOpen, setAudienciaDetailOpen] = useState(false)
+
+  const supabase = createClient()
+  const router = useRouter()
+
+  // Carregar escritorioId
+  useEffect(() => {
+    const loadEscritorioId = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('escritorio_id')
+          .eq('id', user.id)
+          .single()
+
+        if (profile) {
+          setEscritorioId(profile.escritorio_id)
+        }
+      }
+    }
+    loadEscritorioId()
+  }, [])
+
+  // Carregar agendamentos do processo
+  useEffect(() => {
+    const loadAgendaItems = async () => {
+      try {
+        setLoadingAgenda(true)
+        const { data, error } = await supabase
+          .from('v_agenda_consolidada')
+          .select('*')
+          .eq('processo_id', processo.id)
+          .order('data_inicio', { ascending: true })
+          .limit(5)
+
+        if (!error && data) {
+          setAgendaItems(data)
+        }
+        setLoadingAgenda(false)
+      } catch (error) {
+        console.error('Erro ao carregar agenda:', error)
+        setLoadingAgenda(false)
+      }
+    }
+
+    if (processo.id) {
+      loadAgendaItems()
+    }
+  }, [processo.id])
+
   // Mock data
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([
     {
@@ -101,11 +190,6 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
     }
   ])
 
-  const proximosPrazos = [
-    { tipo: 'Resposta à Impugnação', data: '2025-01-09', diasRestantes: 3, urgente: true },
-    { tipo: 'Contestar Recurso', data: '2025-01-12', diasRestantes: 6, urgente: false },
-    { tipo: 'Juntada de Documentos', data: '2025-01-15', diasRestantes: 9, urgente: false }
-  ]
 
   const copyCNJ = () => {
     navigator.clipboard.writeText(processo.numero_cnj)
@@ -133,7 +217,8 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+    <>
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
 
       {/* Coluna Principal - Ficha (8/12) */}
       <div className="xl:col-span-8 space-y-6">
@@ -385,7 +470,11 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
 
           <CardContent className="space-y-3">
             {movimentacoes.map((mov, index) => (
-              <div key={mov.id} className={`${index !== movimentacoes.length - 1 ? 'pb-3 border-b border-slate-100' : ''}`}>
+              <div
+                key={mov.id}
+                id={`andamento-${mov.id}`}
+                className={`transition-colors duration-300 ${index !== movimentacoes.length - 1 ? 'pb-3 border-b border-slate-100' : ''}`}
+              >
                 <div className="flex gap-3">
                   {/* Data */}
                   <div className="flex-shrink-0 w-20">
@@ -416,10 +505,204 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           </CardContent>
         </Card>
 
+        {/* Timeline Visual Horizontal */}
+        {movimentacoes.length > 0 && (
+          <Card className="border-slate-200 shadow-sm">
+            <CardContent className="pt-4 pb-4">
+              <ProcessoTimelineHorizontal
+                movimentacoes={movimentacoes}
+                onItemClick={(movId) => {
+                  // Scroll to corresponding andamento in list
+                  const element = document.getElementById(`andamento-${movId}`)
+                  if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    element.classList.add('bg-[#89bcbe]/10')
+                    setTimeout(() => element.classList.remove('bg-[#89bcbe]/10'), 2000)
+                  }
+                }}
+              />
+            </CardContent>
+          </Card>
+        )}
+
       </div>
 
       {/* Coluna Lateral (4/12) */}
       <div className="xl:col-span-4 space-y-6">
+
+        {/* Agenda */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2 mb-1">
+                <Calendar className="w-4 h-4 text-[#89bcbe]" />
+                Agenda
+              </CardTitle>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 hover:bg-[#89bcbe] hover:text-white transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => setShowTarefaWizard(true)}>
+                    <ListTodo className="w-4 h-4 mr-2 text-[#34495e]" />
+                    <span className="text-sm">Nova Tarefa</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowEventoWizard(true)}>
+                    <Calendar className="w-4 h-4 mr-2 text-[#89bcbe]" />
+                    <span className="text-sm">Novo Compromisso</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowAudienciaWizard(true)}>
+                    <Gavel className="w-4 h-4 mr-2 text-emerald-600" />
+                    <span className="text-sm">Nova Audiência</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loadingAgenda ? (
+              <div className="text-center py-3">
+                <div className="w-5 h-5 mx-auto border-2 border-teal-200 border-t-teal-500 rounded-full animate-spin"></div>
+              </div>
+            ) : agendaItems.length === 0 ? (
+              <div className="text-center py-4">
+                <p className="text-xs text-slate-500">Nenhum agendamento vinculado</p>
+              </div>
+            ) : (
+              <div className="space-y-3.5">
+                {agendaItems.map((item) => {
+                  const tipoIcons = {
+                    tarefa: ListTodo,
+                    evento: Calendar,
+                    audiencia: Gavel
+                  }
+                  const Icon = tipoIcons[item.tipo_entidade as keyof typeof tipoIcons] || Calendar
+
+                  const iconBg = {
+                    tarefa: 'bg-gradient-to-br from-[#34495e] to-[#46627f]',
+                    evento: 'bg-gradient-to-br from-[#89bcbe] to-[#aacfd0]',
+                    audiencia: 'bg-gradient-to-br from-emerald-500 to-emerald-600'
+                  }[item.tipo_entidade] || 'bg-gradient-to-br from-[#89bcbe] to-[#aacfd0]'
+
+                  const statusConfig: Record<string, { bg: string; text: string }> = {
+                    pendente: { bg: 'bg-amber-100', text: 'text-amber-700' },
+                    em_andamento: { bg: 'bg-blue-100', text: 'text-blue-700' },
+                    concluida: { bg: 'bg-emerald-100', text: 'text-emerald-700' },
+                    agendada: { bg: 'bg-blue-100', text: 'text-blue-700' },
+                  }
+                  const statusStyle = statusConfig[item.status] || statusConfig.pendente
+
+                  const handleClick = async () => {
+                    if (item.tipo_entidade === 'tarefa') {
+                      // Buscar tarefa completa
+                      const { data: tarefa } = await supabase
+                        .from('agenda_tarefas')
+                        .select('*')
+                        .eq('id', item.id)
+                        .single()
+                      if (tarefa) {
+                        setSelectedTarefa(tarefa)
+                        setTarefaDetailOpen(true)
+                      }
+                    } else if (item.tipo_entidade === 'evento') {
+                      // Buscar evento completo
+                      const { data: evento } = await supabase
+                        .from('agenda_eventos')
+                        .select('*')
+                        .eq('id', item.id)
+                        .single()
+                      if (evento) {
+                        setSelectedEvento(evento)
+                        setEventoDetailOpen(true)
+                      }
+                    } else if (item.tipo_entidade === 'audiencia') {
+                      // Buscar audiência completa
+                      const { data: audiencia } = await supabase
+                        .from('agenda_audiencias')
+                        .select('*')
+                        .eq('id', item.id)
+                        .single()
+                      if (audiencia) {
+                        setSelectedAudiencia(audiencia)
+                        setAudienciaDetailOpen(true)
+                      }
+                    }
+                  }
+
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={handleClick}
+                      className="border border-slate-200 rounded-lg p-3.5 hover:border-[#89bcbe] hover:shadow-sm transition-all cursor-pointer"
+                    >
+                      {/* Header com ícone, título e status */}
+                      <div className="flex items-start gap-2.5 mb-2.5">
+                        <div className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 ${iconBg}`}>
+                          <Icon className="w-3 h-3 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-[#34495e] leading-tight truncate">
+                            {item.titulo}
+                          </p>
+                        </div>
+                        <Badge className={`text-[10px] h-4 px-1.5 flex-shrink-0 border ${statusStyle.bg} ${statusStyle.text}`}>
+                          {item.status}
+                        </Badge>
+                      </div>
+
+                      {/* Info adicional */}
+                      <div className="pl-8 space-y-1.5">
+                        {/* Data/Horário */}
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3 h-3 text-[#89bcbe]" />
+                          <span className="text-[10px] text-slate-600">
+                            {formatBrazilDateTime(item.data_inicio)}
+                          </span>
+                        </div>
+
+                        {/* Responsável */}
+                        {item.responsavel_nome && (
+                          <div className="flex items-center gap-1.5">
+                            <User className="w-3 h-3 text-[#89bcbe]" />
+                            <span className="text-[10px] text-slate-600 truncate">
+                              {item.responsavel_nome}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Prazo Fatal (apenas para tarefas) */}
+                        {item.tipo_entidade === 'tarefa' && item.prazo_data_limite && (
+                          <div className="flex items-center gap-1.5">
+                            <CalendarClock className="w-3 h-3 text-red-500" />
+                            <span className="text-[10px] text-red-600 font-medium">
+                              Fatal: {format(new Date(item.prazo_data_limite), "dd/MM/yyyy", { locale: ptBR })}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {agendaItems.length > 0 && (
+              <Button
+                variant="link"
+                className="text-xs text-[#89bcbe] hover:text-[#6ba9ab] p-0 h-auto mt-3 w-full"
+                onClick={() => router.push(`/dashboard/agenda?processo_id=${processo.id}`)}
+              >
+                Ver agenda completa →
+              </Button>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Card Equipe */}
         <Card className="border-slate-200 shadow-sm">
@@ -467,80 +750,167 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           </CardContent>
         </Card>
 
-        {/* Card Próximos Prazos */}
-        <Card className="border-slate-200 shadow-sm">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2 mb-1">
-              <Clock className="w-4 h-4 text-[#89bcbe]" />
-              Próximos Prazos
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {proximosPrazos.map((prazo, index) => (
-              <div key={index} className="flex items-center justify-between gap-2 py-1.5">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-[#34495e] leading-tight truncate">
-                    {prazo.tipo}
-                  </p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">
-                    {format(new Date(prazo.data), "dd/MM/yy", { locale: ptBR })}
-                  </p>
-                </div>
-                <Badge className={`text-[10px] h-4 px-1.5 flex-shrink-0 ${
-                  prazo.urgente
-                    ? 'bg-red-600 text-white'
-                    : prazo.diasRestantes <= 7
-                    ? 'bg-amber-500 text-white'
-                    : 'bg-emerald-500 text-white'
-                }`}>
-                  {prazo.diasRestantes}d
-                </Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Timeline Resumida */}
-        <Card className="border-slate-200 shadow-sm">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2 mb-1">
-              <Calendar className="w-4 h-4 text-[#89bcbe]" />
-              Timeline
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex gap-3">
-                <div className="w-6 h-6 rounded bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-3 h-3 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-[#34495e]">Distribuição</p>
-                  <p className="text-[10px] text-slate-500">
-                    {format(new Date(processo.data_distribuicao), "dd/MM/yyyy", { locale: ptBR })}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <div className="w-6 h-6 rounded bg-teal-100 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="w-3 h-3 text-teal-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-[#34495e]">Citação</p>
-                  <p className="text-[10px] text-slate-500">10/02/2024</p>
-                </div>
-              </div>
-            </div>
-
-            <Button variant="link" className="text-xs text-[#89bcbe] hover:text-[#6ba9ab] p-0 h-auto mt-3 w-full">
-              Ver timeline completa →
-            </Button>
-          </CardContent>
-        </Card>
+      </div>
 
       </div>
 
-    </div>
+      {/* Wizards de Agenda */}
+      {showTarefaWizard && escritorioId && (
+      <TarefaWizard
+        escritorioId={escritorioId}
+        onClose={() => setShowTarefaWizard(false)}
+        onSubmit={async (data: TarefaFormData) => {
+          // Insert direto na tabela
+          const { error } = await supabase
+            .from('agenda_tarefas')
+            .insert(data)
+
+          if (error) {
+            console.error('Erro ao criar tarefa:', error)
+            throw error
+          }
+
+          setShowTarefaWizard(false)
+          // Recarregar agendamentos
+          const { data: agendaData } = await supabase
+            .from('v_agenda_consolidada')
+            .select('*')
+            .eq('processo_id', processo.id)
+            .order('data_inicio', { ascending: true })
+            .limit(5)
+          if (agendaData) setAgendaItems(agendaData)
+        }}
+        initialData={{
+          processo_id: processo.id
+        }}
+      />
+    )}
+
+    {showEventoWizard && escritorioId && (
+      <EventoWizard
+        escritorioId={escritorioId}
+        onClose={() => setShowEventoWizard(false)}
+        onSubmit={async (data: EventoFormData) => {
+          // Insert direto na tabela
+          const { error } = await supabase
+            .from('agenda_eventos')
+            .insert(data)
+
+          if (error) {
+            console.error('Erro ao criar evento:', error)
+            throw error
+          }
+
+          setShowEventoWizard(false)
+          // Recarregar agendamentos
+          const { data: agendaData } = await supabase
+            .from('v_agenda_consolidada')
+            .select('*')
+            .eq('processo_id', processo.id)
+            .order('data_inicio', { ascending: true })
+            .limit(5)
+          if (agendaData) setAgendaItems(agendaData)
+        }}
+        initialData={{
+          processo_id: processo.id
+        }}
+      />
+    )}
+
+    {showAudienciaWizard && escritorioId && (
+      <AudienciaWizard
+        escritorioId={escritorioId}
+        onClose={() => setShowAudienciaWizard(false)}
+        onSubmit={async (data: AudienciaFormData) => {
+          // Insert direto na tabela
+          const { error } = await supabase
+            .from('agenda_audiencias')
+            .insert(data)
+
+          if (error) {
+            console.error('Erro ao criar audiência:', error)
+            throw error
+          }
+
+          setShowAudienciaWizard(false)
+          // Recarregar agendamentos
+          const { data: agendaData } = await supabase
+            .from('v_agenda_consolidada')
+            .select('*')
+            .eq('processo_id', processo.id)
+            .order('data_inicio', { ascending: true })
+            .limit(5)
+          if (agendaData) setAgendaItems(agendaData)
+        }}
+        initialData={{
+          processo_id: processo.id
+        }}
+      />
+      )}
+
+      {/* Modais de Detalhes */}
+      {selectedTarefa && (
+        <TarefaDetailModal
+          open={tarefaDetailOpen}
+          onOpenChange={(open) => {
+            setTarefaDetailOpen(open)
+            if (!open) setSelectedTarefa(null)
+          }}
+          tarefa={selectedTarefa}
+          onUpdate={async () => {
+            // Recarregar agendamentos após atualização
+            const { data } = await supabase
+              .from('v_agenda_consolidada')
+              .select('*')
+              .eq('processo_id', processo.id)
+              .order('data_inicio', { ascending: true })
+              .limit(5)
+            if (data) setAgendaItems(data)
+          }}
+        />
+      )}
+
+      {selectedEvento && (
+        <EventoDetailModal
+          open={eventoDetailOpen}
+          onOpenChange={(open) => {
+            setEventoDetailOpen(open)
+            if (!open) setSelectedEvento(null)
+          }}
+          evento={selectedEvento}
+          onUpdate={async () => {
+            // Recarregar agendamentos após atualização
+            const { data } = await supabase
+              .from('v_agenda_consolidada')
+              .select('*')
+              .eq('processo_id', processo.id)
+              .order('data_inicio', { ascending: true })
+              .limit(5)
+            if (data) setAgendaItems(data)
+          }}
+        />
+      )}
+
+      {selectedAudiencia && (
+        <AudienciaDetailModal
+          open={audienciaDetailOpen}
+          onOpenChange={(open) => {
+            setAudienciaDetailOpen(open)
+            if (!open) setSelectedAudiencia(null)
+          }}
+          audiencia={selectedAudiencia}
+          onUpdate={async () => {
+            // Recarregar agendamentos após atualização
+            const { data } = await supabase
+              .from('v_agenda_consolidada')
+              .select('*')
+              .eq('processo_id', processo.id)
+              .order('data_inicio', { ascending: true })
+              .limit(5)
+            if (data) setAgendaItems(data)
+          }}
+        />
+      )}
+    </>
   )
 }

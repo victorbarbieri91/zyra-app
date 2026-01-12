@@ -225,3 +225,111 @@ const subscription = supabase
 - Queue failed AASP synchronizations for retry
 - Log all Centro de Comando errors with context
 - User-friendly error messages with suggested actions
+
+## Sistema de Timezone
+
+**IMPORTANTE**: Todo o sistema está configurado para usar o **timezone de Brasília (America/Sao_Paulo)** em todas as operações.
+
+### Configuração
+
+```env
+# .env.local
+NEXT_PUBLIC_TIMEZONE=America/Sao_Paulo
+```
+
+### Módulo Centralizado
+
+Todas as operações de timezone estão em `src/lib/timezone.ts`.
+
+### Arquitetura
+
+- **Database**: Armazena datas em UTC (via `timestamptz`)
+- **API**: Envia/recebe datas em UTC (ISO 8601)
+- **Frontend**: Converte e exibe tudo em horário de Brasília
+
+### Funções Principais
+
+#### Exibição (Frontend → Usuário)
+
+```typescript
+import {
+  formatBrazilDate,          // dd/MM/yyyy
+  formatBrazilDateTime,      // dd/MM/yyyy às HH:mm
+  formatBrazilDateLong,      // dd de MMMM de yyyy
+  formatBrazilTime           // HH:mm
+} from '@/lib/timezone'
+
+// Exemplos
+formatBrazilDateTime(date) // "12/01/2025 às 14:30"
+formatBrazilDateLong(date) // "12 de janeiro de 2025"
+```
+
+#### Envio ao Database (Frontend → Backend)
+
+```typescript
+import { formatDateForDB, formatDateTimeForDB } from '@/lib/timezone'
+
+// Para campos DATE (sem hora)
+data_inicio: formatDateForDB("2025-01-20")
+
+// Para campos TIMESTAMPTZ (com hora)
+data_hora: formatDateTimeForDB(new Date())
+```
+
+#### Parse de Strings
+
+```typescript
+import { parseDateInBrazil, toBrazilTime } from '@/lib/timezone'
+
+// Parse string no contexto de Brasília
+const date = parseDateInBrazil("2025-01-20", "yyyy-MM-dd")
+
+// Converter UTC para Brasília
+const dateInBrazil = toBrazilTime(utcDateString)
+```
+
+### ✅ Boas Práticas
+
+```typescript
+// ✅ BOM - Usa funções de timezone
+{formatBrazilDateTime(tarefa.data_inicio)}
+
+// ✅ BOM - Formata para DB
+const { data } = await supabase
+  .from('agenda_tarefas')
+  .insert({
+    data_inicio: formatDateForDB(selectedDate)
+  })
+
+// ✅ BOM - Parse correto
+const date = parseDateInBrazil("2025-01-20")
+```
+
+### ❌ O que NÃO fazer
+
+```typescript
+// ❌ RUIM - pode causar erro de timezone
+const date = new Date("2025-01-20")
+
+// ❌ RUIM - usa timezone do navegador
+date.toLocaleString('pt-BR')
+
+// ❌ RUIM - não garante timezone
+format(new Date(dateString), "dd/MM/yyyy")
+```
+
+### Resolução de Problemas
+
+**Problema**: Data aparece um dia antes
+
+**Causa**: Usando `new Date('YYYY-MM-DD')` que interpreta como UTC
+
+**Solução**: Use `parseDateInBrazil("YYYY-MM-DD")`
+
+---
+
+**Problema**: Hora errada ao salvar
+
+**Causa**: Enviando string sem conversão de timezone
+
+**Solução**: Use `formatDateForDB()` ou `formatDateTimeForDB()`

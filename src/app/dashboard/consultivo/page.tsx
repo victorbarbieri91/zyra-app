@@ -7,6 +7,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   Plus,
   Search,
   Filter,
@@ -18,12 +24,19 @@ import {
   XCircle,
   Timer,
   TrendingUp,
-  Users
+  Users,
+  ListTodo,
+  Calendar
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { format, formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
+import { ConsultaWizardModal } from '@/components/consultivo/ConsultaWizardModal'
+import TarefaWizard from '@/components/agenda/TarefaWizard'
+import EventoWizard from '@/components/agenda/EventoWizard'
+import { useTarefas } from '@/hooks/useTarefas'
+import { useEventos } from '@/hooks/useEventos'
 
 interface Consulta {
   id: string
@@ -47,8 +60,39 @@ export default function ConsultivoPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentView, setCurrentView] = useState<'todas' | 'pendentes' | 'atrasadas' | 'minhas'>('pendentes')
+  const [wizardModalOpen, setWizardModalOpen] = useState(false)
+
+  // Estados para wizards de agenda
+  const [showTarefaWizard, setShowTarefaWizard] = useState(false)
+  const [showEventoWizard, setShowEventoWizard] = useState(false)
+  const [selectedConsultivoId, setSelectedConsultivoId] = useState<string | null>(null)
+  const [escritorioId, setEscritorioId] = useState<string | null>(null)
+
   const router = useRouter()
   const supabase = createClient()
+
+  // Hooks de agenda
+  const { criarTarefa } = useTarefas(escritorioId || '')
+  const { criarEvento } = useEventos(escritorioId || '')
+
+  // Carregar escritórioId do usuário logado
+  useEffect(() => {
+    const loadEscritorioId = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('escritorio_id')
+          .eq('id', user.id)
+          .single()
+
+        if (profile) {
+          setEscritorioId(profile.escritorio_id)
+        }
+      }
+    }
+    loadEscritorioId()
+  }, [])
 
   useEffect(() => {
     loadConsultas()
@@ -166,7 +210,7 @@ export default function ConsultivoPage() {
           </p>
         </div>
         <Button
-          onClick={() => router.push('/dashboard/consultivo/nova')}
+          onClick={() => setWizardModalOpen(true)}
           className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#2c3e50] hover:to-[#34495e] text-white shadow-lg"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -252,8 +296,8 @@ export default function ConsultivoPage() {
               onClick={() => router.push(`/dashboard/consultivo/${consulta.id}`)}
             >
               <CardContent className="pt-4 pb-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
                       <span className="text-xs font-mono text-slate-500">
                         {consulta.numero_interno}
@@ -263,7 +307,7 @@ export default function ConsultivoPage() {
                       {getSLABadge(consulta.status_sla)}
                     </div>
 
-                    <h3 className="text-sm font-semibold text-[#34495e] mb-2">
+                    <h3 className="text-sm font-semibold text-[#34495e] mb-2 truncate">
                       {consulta.assunto}
                     </h3>
 
@@ -289,18 +333,60 @@ export default function ConsultivoPage() {
                     </div>
                   </div>
 
-                  <div className="text-right text-xs text-slate-500">
-                    <div>
-                      {formatDistanceToNow(new Date(consulta.data_recebimento), {
-                        addSuffix: true,
-                        locale: ptBR,
-                      })}
-                    </div>
-                    {consulta.data_conclusao_estimada && (
-                      <div className="mt-1">
-                        Prazo: {format(new Date(consulta.data_conclusao_estimada), 'dd/MM/yyyy')}
+                  <div className="flex items-center gap-2">
+                    <div className="text-right text-xs text-slate-500">
+                      <div>
+                        {formatDistanceToNow(new Date(consulta.data_recebimento), {
+                          addSuffix: true,
+                          locale: ptBR,
+                        })}
                       </div>
-                    )}
+                      {consulta.data_conclusao_estimada && (
+                        <div className="mt-1">
+                          Prazo: {format(new Date(consulta.data_conclusao_estimada), 'dd/MM/yyyy')}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Botão + Agenda */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 text-xs hover:bg-[#89bcbe] hover:text-white transition-colors flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                          }}
+                          title="Criar agendamento para esta consulta"
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-1" />
+                          Agenda
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedConsultivoId(consulta.id)
+                            setShowTarefaWizard(true)
+                          }}
+                        >
+                          <ListTodo className="w-4 h-4 mr-2 text-[#34495e]" />
+                          <span className="text-sm">Nova Tarefa</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedConsultivoId(consulta.id)
+                            setShowEventoWizard(true)
+                          }}
+                        >
+                          <Calendar className="w-4 h-4 mr-2 text-[#89bcbe]" />
+                          <span className="text-sm">Novo Compromisso</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </CardContent>
@@ -308,6 +394,53 @@ export default function ConsultivoPage() {
           ))
         )}
       </div>
+
+      {/* Modal Wizard */}
+      <ConsultaWizardModal
+        open={wizardModalOpen}
+        onOpenChange={setWizardModalOpen}
+        onSave={async (data) => {
+          console.log('Salvando consulta:', data)
+          // TODO: Integrar com Supabase
+          await loadConsultas()
+          alert('Consulta criada com sucesso!')
+        }}
+      />
+
+      {/* Wizards de Agenda vinculados à consulta */}
+      {showTarefaWizard && escritorioId && selectedConsultivoId && (
+        <TarefaWizard
+          escritorioId={escritorioId}
+          onClose={() => {
+            setShowTarefaWizard(false)
+            setSelectedConsultivoId(null)
+          }}
+          onSubmit={async (data) => {
+            await criarTarefa(data)
+            loadConsultas()
+          }}
+          initialData={{
+            consultivo_id: selectedConsultivoId
+          }}
+        />
+      )}
+
+      {showEventoWizard && escritorioId && selectedConsultivoId && (
+        <EventoWizard
+          escritorioId={escritorioId}
+          onClose={() => {
+            setShowEventoWizard(false)
+            setSelectedConsultivoId(null)
+          }}
+          onSubmit={async (data) => {
+            await criarEvento(data)
+            loadConsultas()
+          }}
+          initialData={{
+            consultivo_id: selectedConsultivoId
+          }}
+        />
+      )}
     </div>
   )
 }

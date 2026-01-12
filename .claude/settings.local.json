@@ -24,9 +24,25 @@
       "Bash(git branch:*)",
       "Bash(git remote add:*)",
       "Bash(git push:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(claude mcp add:*)",
+      "Bash(claude mcp remove:*)",
+      "Bash(claude mcp:*)",
+      "Read(//c/Users/victo/.config/**)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Read(//c/Users/victo/**)",
+      "Bash(npx kill-port:*)",
+      "Bash(node:*)",
+      "Bash(mkdir:*)",
+      "Bash(if exist \"node_modules/.cache\" rmdir /s /q \"node_modules/.cache\")",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }

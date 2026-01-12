@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { DollarSign, TrendingUp, TrendingDown, CreditCard, Clock, AlertCircle, FileText, Users, Calendar, ArrowUpRight, ArrowDownRight, Target } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import MetricCard from '@/components/dashboard/MetricCard'
@@ -8,6 +9,7 @@ import InsightCard from '@/components/dashboard/InsightCard'
 import TimelineItem from '@/components/dashboard/TimelineItem'
 import QuickActionButton from '@/components/dashboard/QuickActionButton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/types/database.types'
@@ -31,11 +33,13 @@ interface ContaProxima {
   valor: number
   vencimento: string
   dias_ate_vencimento: number
+  status: 'pendente' | 'atrasado' | 'pago'
 }
 
 export default function FinanceiroDashboard() {
   const { escritorioAtivo } = useEscritorioAtivo()
   const supabase = createClient()
+  const router = useRouter()
 
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     receita_mes: 0,
@@ -86,10 +90,10 @@ export default function FinanceiroDashboard() {
     try {
       // Mock de dados - em produção viria da view v_contas_receber_pagar
       const mockContas: ContaProxima[] = [
-        { id: '1', tipo: 'receber', descricao: 'Honorários - Cliente ABC', valor: 5000, vencimento: '2025-11-10', dias_ate_vencimento: 5 },
-        { id: '2', tipo: 'receber', descricao: 'Fatura #2024-045', valor: 3200, vencimento: '2025-11-08', dias_ate_vencimento: 3 },
-        { id: '3', tipo: 'pagar', descricao: 'Aluguel Escritório', valor: 3500, vencimento: '2025-11-08', dias_ate_vencimento: 3 },
-        { id: '4', tipo: 'pagar', descricao: 'Folha de Pagamento', valor: 12000, vencimento: '2025-11-07', dias_ate_vencimento: 2 },
+        { id: '1', tipo: 'receber', descricao: 'Honorários - Cliente ABC', valor: 5000, vencimento: '2025-11-10', dias_ate_vencimento: 5, status: 'pendente' },
+        { id: '2', tipo: 'receber', descricao: 'Fatura #2024-045', valor: 3200, vencimento: '2025-11-08', dias_ate_vencimento: 3, status: 'pendente' },
+        { id: '3', tipo: 'pagar', descricao: 'Aluguel Escritório', valor: 3500, vencimento: '2025-11-08', dias_ate_vencimento: 3, status: 'pendente' },
+        { id: '4', tipo: 'pagar', descricao: 'Folha de Pagamento', valor: 12000, vencimento: '2025-11-07', dias_ate_vencimento: 2, status: 'atrasado' },
       ]
       setContasProximas(mockContas)
     } catch (error) {
@@ -102,6 +106,29 @@ export default function FinanceiroDashboard() {
       style: 'currency',
       currency: 'BRL',
     }).format(value)
+  }
+
+  const getStatusBadge = (status: 'pendente' | 'atrasado' | 'pago') => {
+    const configs = {
+      pendente: {
+        label: 'Pendente',
+        className: 'bg-amber-100 text-amber-700 border-amber-200',
+      },
+      atrasado: {
+        label: 'Atrasado',
+        className: 'bg-red-100 text-red-700 border-red-200',
+      },
+      pago: {
+        label: 'Pago',
+        className: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+      },
+    }
+    const config = configs[status]
+    return (
+      <Badge className={cn('text-[10px] font-medium border', config.className)}>
+        {config.label}
+      </Badge>
+    )
   }
 
   const margemLucro = metrics.receita_mes > 0
@@ -230,28 +257,28 @@ export default function FinanceiroDashboard() {
               <QuickActionButton
                 icon={FileText}
                 label="Novo Contrato"
-                onClick={() => {}}
+                onClick={() => router.push('/dashboard/financeiro/contratos-honorarios')}
                 variant="highlight"
               />
               <QuickActionButton
                 icon={DollarSign}
                 label="Novo Honorário"
-                onClick={() => {}}
+                onClick={() => router.push('/dashboard/financeiro/contratos-honorarios')}
               />
               <QuickActionButton
                 icon={CreditCard}
                 label="Nova Fatura"
-                onClick={() => {}}
+                onClick={() => router.push('/dashboard/financeiro/faturamento')}
               />
               <QuickActionButton
                 icon={TrendingDown}
                 label="Nova Despesa"
-                onClick={() => {}}
+                onClick={() => router.push('/dashboard/financeiro/receitas-despesas')}
               />
               <QuickActionButton
                 icon={Clock}
                 label="Timesheet"
-                onClick={() => {}}
+                onClick={() => router.push('/dashboard/financeiro/timesheet')}
               />
             </div>
           </CardContent>
@@ -415,11 +442,14 @@ export default function FinanceiroDashboard() {
                         key={conta.id}
                         className="flex items-center justify-between p-2.5 rounded-lg bg-[#f0f9f9]/40 border border-[#89bcbe]/20 hover:bg-[#e8f5f5]/50 transition-colors"
                       >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-[#34495e] truncate">
-                            {conta.descricao}
-                          </p>
-                          <div className="flex items-center gap-1.5 mt-0.5">
+                        <div className="flex-1 min-w-0 pr-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-xs font-semibold text-[#34495e] truncate">
+                              {conta.descricao}
+                            </p>
+                            {getStatusBadge(conta.status)}
+                          </div>
+                          <div className="flex items-center gap-1.5">
                             <Calendar className="h-3 w-3 text-[#89bcbe] flex-shrink-0" />
                             <p className="text-[10px] text-[#46627f]">
                               Vence em {conta.dias_ate_vencimento} {conta.dias_ate_vencimento === 1 ? 'dia' : 'dias'}

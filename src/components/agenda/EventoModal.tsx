@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Bell, Calendar as CalendarIcon, Save, X, ClipboardList, MapPin, Users } from 'lucide-react'
+import { Bell, Calendar as CalendarIcon, Save, X, ClipboardList, MapPin, Users, Link2 } from 'lucide-react'
 import LembretesEditor, { Lembrete } from './LembretesEditor'
+import VinculacaoSelector, { Vinculacao } from './VinculacaoSelector'
 import { useEventos, Evento } from '@/hooks/useEventos'
 
 interface EventoModalProps {
@@ -40,6 +41,9 @@ export default function EventoModal({
   const [local, setLocal] = useState('')
   const [participantes, setParticipantes] = useState('')
 
+  // Vinculação
+  const [vinculacao, setVinculacao] = useState<Vinculacao | null>(null)
+
   // Lembretes
   const [lembretes, setLembretes] = useState<Lembrete[]>([])
 
@@ -67,6 +71,7 @@ export default function EventoModal({
     setDiaInteiro(false)
     setLocal('')
     setParticipantes('')
+    setVinculacao(null)
     setLembretes([])
     setActiveTab('basico')
   }
@@ -95,6 +100,9 @@ export default function EventoModal({
         dia_inteiro: diaInteiro,
         local: local || null,
         participantes: participantes || null,
+        // Vinculação
+        processo_id: vinculacao?.modulo === 'processo' ? vinculacao.modulo_registro_id : null,
+        consultivo_id: vinculacao?.modulo === 'consultivo' ? vinculacao.modulo_registro_id : null,
       }
 
       if (evento?.id) {
@@ -126,10 +134,14 @@ export default function EventoModal({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="basico" className="text-xs">
               <ClipboardList className="w-3.5 h-3.5 mr-1.5" />
               Básico
+            </TabsTrigger>
+            <TabsTrigger value="vinculacoes" className="text-xs">
+              <Link2 className="w-3.5 h-3.5 mr-1.5" />
+              Vínculos
             </TabsTrigger>
             <TabsTrigger value="lembretes" className="text-xs">
               <Bell className="w-3.5 h-3.5 mr-1.5" />
@@ -262,6 +274,14 @@ export default function EventoModal({
                   className="border-slate-200"
                 />
               </div>
+            </TabsContent>
+
+            {/* ABA VINCULAÇÕES */}
+            <TabsContent value="vinculacoes" className="mt-0">
+              <VinculacaoSelector
+                vinculacao={vinculacao}
+                onChange={setVinculacao}
+              />
             </TabsContent>
 
             {/* ABA LEMBRETES */}

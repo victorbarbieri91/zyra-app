@@ -1,74 +1,180 @@
 'use client'
 
-import { useMemo } from 'react'
-import { Card } from '@/components/ui/card'
+import { useMemo, useState } from 'react'
+import { DndContext, DragOverlay, DragEndEvent, DragStartEvent, closestCenter } from '@dnd-kit/core'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, User } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import {
-  format,
-  addDays,
-  subDays,
-  isSameDay,
-  isToday,
-  set,
-  getHours,
-  getMinutes,
-} from 'date-fns'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { format, addDays, subDays, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { EventCardProps } from './EventCard'
+import { cn } from '@/lib/utils'
+import { Tarefa, useTarefas } from '@/hooks/useTarefas'
+import { useAgendaConsolidada, AgendaItem } from '@/hooks/useAgendaConsolidada'
+import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
+import DayViewTimeGrid from './DayViewTimeGrid'
+import DayViewUnscheduledList from './DayViewUnscheduledList'
+import ScheduledTaskCard from './ScheduledTaskCard'
 
 interface CalendarDayViewProps {
-  eventos: EventCardProps[]
+  escritorioId?: string
+  userId?: string
   selectedDate: Date
   onDateSelect: (date: Date) => void
-  onEventClick: (evento: EventCardProps) => void
-  onCreateEvent: (date: Date) => void
+  onEventClick: (evento: AgendaItem) => void
+  onTaskClick: (tarefa: Tarefa) => void
+  onTaskComplete?: (tarefaId: string) => void
   className?: string
 }
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i) // 0h às 23h
-const HALF_HOURS = [0, 30] // Divisões de 30 min
-
 export default function CalendarDayView({
-  eventos,
+  escritorioId,
+  userId,
   selectedDate,
   onDateSelect,
   onEventClick,
-  onCreateEvent,
+  onTaskClick,
+  onTaskComplete,
   className,
 }: CalendarDayViewProps) {
+  const supabase = createClient()
+  const { tarefas: todasTarefas, refreshTarefas } = useTarefas(escritorioId)
+  const { items: todosEventos } = useAgendaConsolidada()
+  const [activeTarefa, setActiveTarefa] = useState<Tarefa | null>(null)
+
   const previousDay = () => onDateSelect(subDays(selectedDate, 1))
   const nextDay = () => onDateSelect(addDays(selectedDate, 1))
   const goToToday = () => onDateSelect(new Date())
 
-  const eventosDoDia = useMemo(() => {
-    return eventos.filter((evento) => isSameDay(new Date(evento.data_inicio), selectedDate))
-  }, [eventos, selectedDate])
-
-  const getEventoPosition = (evento: EventCardProps) => {
-    const hour = getHours(new Date(evento.data_inicio))
-    const minute = getMinutes(new Date(evento.data_inicio))
-    const top = (hour * 60 + minute) * (80 / 60) // 80px por hora
-
-    let height = 80 // Padrão 1 hora
-    if (evento.data_fim) {
-      const endHour = getHours(new Date(evento.data_fim))
-      const endMinute = getMinutes(new Date(evento.data_fim))
-      const duration = (endHour * 60 + endMinute) - (hour * 60 + minute)
-      height = duration * (80 / 60)
+  // Filtrar e categorizar tarefas do dia do usuário logado
+  const { tarefasAgendadas, tarefasSemHorario } = useMemo(() => {
+    if (!todasTarefas) {
+      return {
+        tarefasAgendadas: [],
+        tarefasSemHorario: [],
+      }
     }
 
-    return { top, height: Math.max(height, 40) } // Mínimo 40px
+    // Filtrar tarefas do dia e do usuário
+    const tarefasDoDia = todasTarefas.filter((tarefa) => {
+      const tarefaDate = new Date(tarefa.data_inicio)
+      if (!isSameDay(tarefaDate, selectedDate)) return false
+      if (userId && tarefa.responsavel_id !== userId) return false
+      if (tarefa.status === 'cancelada') return false
+      return true
+    })
+
+    // Separar por horário planejado
+    const agendadas = tarefasDoDia.filter((t) => t.horario_planejado_dia !== null)
+    const semHorario = tarefasDoDia.filter((t) => t.horario_planejado_dia === null)
+
+    return {
+      tarefasAgendadas: agendadas,
+      tarefasSemHorario: semHorario,
+    }
+  }, [todasTarefas, selectedDate, userId])
+
+  // Filtrar eventos fixos do dia (compromissos e audiências)
+  const eventosFixosDoDia = useMemo(() => {
+    if (!todosEventos) return []
+
+    return todosEventos.filter((evento) => {
+      if (!isSameDay(new Date(evento.data_inicio), selectedDate)) return false
+      if (evento.tipo_entidade === 'tarefa') return false // Excluir tarefas
+      if (evento.status === 'cancelada' || evento.status === 'cancelado') return false
+      return true
+    })
+  }, [todosEventos, selectedDate])
+
+  // Handler de Drag Start
+  const handleDragStart = (event: DragStartEvent) => {
+    const tarefaId = event.active.id as string
+    const tarefa = todasTarefas?.find((t) => t.id === tarefaId)
+    setActiveTarefa(tarefa || null)
   }
+
+  // Handler de Drag End
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    setActiveTarefa(null)
+
+    if (!over) return
+
+    const tarefaId = active.id as string
+    const overData = over.data.current
+
+    try {
+      // Caso 1: Soltar em um time slot (agendar tarefa)
+      if (overData?.tipo === 'time-slot') {
+        const { hora, minuto } = overData as { hora: number; minuto: number }
+        const horario = `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}:00`
+
+        // Encontrar a tarefa para preservar a duração existente
+        const tarefa = todasTarefas?.find((t) => t.id === tarefaId)
+        const duracaoAtual = tarefa?.duracao_planejada_minutos || 60 // Default 1h se não tiver
+
+        await supabase
+          .from('agenda_tarefas')
+          .update({
+            horario_planejado_dia: horario,
+            duracao_planejada_minutos: duracaoAtual, // Preserva duração existente ou usa default
+          })
+          .eq('id', tarefaId)
+
+        await refreshTarefas()
+        toast.success(`Tarefa agendada para ${horario.slice(0, 5)}`)
+      }
+
+      // Caso 2: Soltar na lista de não agendadas (desagendar tarefa)
+      else if (overData?.tipo === 'unscheduled-area') {
+        await supabase
+          .from('agenda_tarefas')
+          .update({
+            horario_planejado_dia: null,
+            duracao_planejada_minutos: null,
+          })
+          .eq('id', tarefaId)
+
+        await refreshTarefas()
+        toast.success('Tarefa desagendada')
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar tarefa:', error)
+      toast.error('Erro ao atualizar tarefa')
+    }
+  }
+
+  // Handler de Resize
+  const handleTaskResize = async (tarefaId: string, novaDuracaoMinutos: number) => {
+    try {
+      await supabase
+        .from('agenda_tarefas')
+        .update({ duracao_planejada_minutos: novaDuracaoMinutos })
+        .eq('id', tarefaId)
+
+      await refreshTarefas()
+
+      const duracaoEmHoras = novaDuracaoMinutos / 60
+      const duracaoTexto =
+        duracaoEmHoras >= 1
+          ? `${duracaoEmHoras.toFixed(duracaoEmHoras % 1 === 0 ? 0 : 1)}h`
+          : `${novaDuracaoMinutos}min`
+
+      toast.success(`Duração ajustada para ${duracaoTexto}`)
+    } catch (error) {
+      console.error('Erro ao atualizar duração:', error)
+      toast.error('Erro ao atualizar duração')
+    }
+  }
+
+  const totalTarefas = tarefasAgendadas.length + tarefasSemHorario.length
 
   return (
     <div className={cn('space-y-4', className)}>
       {/* Header de Navegação */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-semibold text-[#34495e] capitalize">
-            {format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+          <h2 className="text-2xl font-semibold text-[#34495e]">
+            {format(selectedDate, "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </h2>
           <div className="flex items-center gap-1">
             <Button
@@ -91,6 +197,17 @@ export default function CalendarDayView({
         </div>
 
         <div className="flex items-center gap-2">
+          {totalTarefas > 0 && (
+            <span className="text-sm text-slate-600">
+              {totalTarefas} {totalTarefas === 1 ? 'tarefa' : 'tarefas'}
+            </span>
+          )}
+          {eventosFixosDoDia.length > 0 && (
+            <span className="text-sm text-slate-600">
+              • {eventosFixosDoDia.length}{' '}
+              {eventosFixosDoDia.length === 1 ? 'compromisso' : 'compromissos'}
+            </span>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -99,155 +216,48 @@ export default function CalendarDayView({
           >
             Hoje
           </Button>
-          <Button
-            size="sm"
-            onClick={() => onCreateEvent(selectedDate)}
-            className="bg-gradient-to-br from-[#34495e] to-[#46627f] hover:from-[#2c3e50] hover:to-[#34495e] text-white text-xs"
-          >
-            <Plus className="w-4 h-4 mr-1.5" />
-            Novo Evento
-          </Button>
         </div>
       </div>
 
-      {/* Timeline do Dia */}
-      <Card className="border-slate-200 shadow-sm overflow-hidden">
-        <div className="grid grid-cols-[80px_1fr]">
-          {/* Coluna de Horários */}
-          <div className="border-r border-slate-200 bg-slate-50">
-            {HOURS.map((hour) => (
-              <div
-                key={hour}
-                className="h-[80px] p-2 text-xs text-[#6c757d] border-b border-slate-100 text-right font-medium"
-              >
-                {String(hour).padStart(2, '0')}:00
-              </div>
-            ))}
-          </div>
+      {/* Layout 2 Colunas */}
+      <DndContext
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="grid grid-cols-[60%_40%] gap-4 h-[calc(100vh-240px)]">
+          {/* Coluna Esquerda: Grade Horária */}
+          <DayViewTimeGrid
+            eventos={eventosFixosDoDia}
+            tarefasAgendadas={tarefasAgendadas}
+            selectedDate={selectedDate}
+            onEventClick={onEventClick}
+            onTaskClick={onTaskClick}
+            onTaskComplete={onTaskComplete}
+            onTaskResize={handleTaskResize}
+          />
 
-          {/* Coluna de Eventos */}
-          <div className="relative bg-white">
-            {/* Linhas de horário */}
-            {HOURS.map((hour) => (
-              <div key={hour}>
-                <div
-                  className="h-[40px] border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors group"
-                  onClick={() => {
-                    const newDate = set(selectedDate, { hours: hour, minutes: 0 })
-                    onCreateEvent(newDate)
-                  }}
-                >
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity p-2 flex items-center gap-2">
-                    <Plus className="w-3 h-3 text-[#89bcbe]" />
-                    <span className="text-xs text-[#6c757d]">Adicionar evento às {String(hour).padStart(2, '0')}:00</span>
-                  </div>
-                </div>
-                <div
-                  className="h-[40px] border-b border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors group"
-                  onClick={() => {
-                    const newDate = set(selectedDate, { hours: hour, minutes: 30 })
-                    onCreateEvent(newDate)
-                  }}
-                >
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity p-2 flex items-center gap-2">
-                    <Plus className="w-3 h-3 text-[#89bcbe]" />
-                    <span className="text-xs text-[#6c757d]">Adicionar evento às {String(hour).padStart(2, '0')}:30</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {/* Eventos Dia Inteiro */}
-            {eventosDoDia.filter(e => e.dia_inteiro).length > 0 && (
-              <div className="absolute top-0 left-0 right-0 z-20 p-3 bg-gradient-to-b from-slate-50 to-transparent">
-                <div className="space-y-2">
-                  {eventosDoDia.filter(e => e.dia_inteiro).map((evento) => (
-                    <div
-                      key={evento.id}
-                      onClick={() => onEventClick(evento)}
-                      className={cn(
-                        'p-3 rounded-lg border cursor-pointer',
-                        'hover:shadow-md transition-all',
-                        evento.tipo === 'audiencia' && 'bg-[#1E3A8A]/10 border-[#1E3A8A]/30',
-                        evento.tipo === 'prazo' && 'bg-amber-100 border-amber-200',
-                        evento.tipo === 'compromisso' && 'bg-blue-100 border-blue-200',
-                        evento.tipo === 'tarefa' && 'bg-slate-100 border-slate-200'
-                      )}
-                    >
-                      <div className="text-sm font-semibold text-[#34495e]">{evento.titulo}</div>
-                      <div className="text-xs text-[#6c757d] mt-1">Dia inteiro</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Eventos com Horário */}
-            {eventosDoDia.filter(e => !e.dia_inteiro).map((evento) => {
-              const { top, height } = getEventoPosition(evento)
-
-              return (
-                <div
-                  key={evento.id}
-                  onClick={() => onEventClick(evento)}
-                  style={{ top: `${top}px`, height: `${height}px` }}
-                  className={cn(
-                    'absolute left-3 right-3 z-10',
-                    'p-3 rounded-lg border cursor-pointer',
-                    'hover:shadow-lg hover:z-20 transition-all overflow-hidden',
-                    evento.tipo === 'audiencia' && 'bg-[#1E3A8A]/10 border-[#1E3A8A]/30',
-                    evento.tipo === 'prazo' && evento.prazo_criticidade === 'critico' && 'bg-red-100 border-red-200',
-                    evento.tipo === 'prazo' && evento.prazo_criticidade !== 'critico' && 'bg-amber-100 border-amber-200',
-                    evento.tipo === 'compromisso' && 'bg-blue-100 border-blue-200',
-                    evento.tipo === 'tarefa' && 'bg-slate-100 border-slate-200'
-                  )}
-                >
-                  {/* Título e Horário */}
-                  <div className="font-semibold text-sm text-[#34495e] truncate">{evento.titulo}</div>
-                  <div className="flex items-center gap-1 text-xs text-[#6c757d] mt-1">
-                    <Clock className="w-3 h-3" />
-                    <span>
-                      {format(new Date(evento.data_inicio), 'HH:mm')}
-                      {evento.data_fim && ` - ${format(new Date(evento.data_fim), 'HH:mm')}`}
-                    </span>
-                  </div>
-
-                  {/* Detalhes adicionais (apenas se houver espaço) */}
-                  {height > 80 && (
-                    <div className="mt-2 space-y-1">
-                      {evento.local && (
-                        <div className="flex items-center gap-1.5 text-xs text-[#6c757d]">
-                          <MapPin className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate">{evento.local}</span>
-                        </div>
-                      )}
-                      {evento.cliente_nome && (
-                        <div className="flex items-center gap-1.5 text-xs text-[#6c757d]">
-                          <User className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate">{evento.cliente_nome}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-
-            {/* Mensagem vazia */}
-            {eventosDoDia.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Clock className="w-8 h-8 text-slate-400" />
-                  </div>
-                  <p className="text-sm text-[#6c757d] mb-1">Nenhum evento neste dia</p>
-                  <p className="text-xs text-slate-400">Clique em um horário para adicionar</p>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Coluna Direita: Lista de Tarefas Sem Horário */}
+          <DayViewUnscheduledList
+            tarefas={tarefasSemHorario}
+            onTaskClick={onTaskClick}
+            onTaskComplete={onTaskComplete}
+          />
         </div>
-      </Card>
+
+        {/* Drag Overlay */}
+        <DragOverlay>
+          {activeTarefa && (
+            <div className="rotate-3">
+              <ScheduledTaskCard
+                tarefa={activeTarefa}
+                onClick={() => {}}
+                isResizable={false}
+              />
+            </div>
+          )}
+        </DragOverlay>
+      </DndContext>
     </div>
   )
 }

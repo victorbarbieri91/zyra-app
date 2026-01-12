@@ -99,8 +99,8 @@ export default function TarefaModal({
   // Checklist
   const [checklist, setChecklist] = useState<ChecklistItem[]>([])
 
-  // Vinculações
-  const [vinculacoes, setVinculacoes] = useState<Vinculacao[]>([])
+  // Vinculação (apenas uma)
+  const [vinculacao, setVinculacao] = useState<Vinculacao | null>(null)
 
   // Lembretes
   const [lembretes, setLembretes] = useState<Lembrete[]>([])
@@ -138,7 +138,7 @@ export default function TarefaModal({
     setPrazoDiasUteis(true)
     setPrazoDataLimite('')
     setChecklist([])
-    setVinculacoes([])
+    setVinculacao(null)
     setLembretes([])
     setActiveTab('basico')
   }
@@ -181,6 +181,9 @@ export default function TarefaModal({
         prazo_quantidade_dias: tipo === 'prazo_processual' ? prazoQuantidadeDias : undefined,
         prazo_dias_uteis: tipo === 'prazo_processual' ? prazoDiasUteis : undefined,
         prazo_data_limite: tipo === 'prazo_processual' ? prazoDataLimite || undefined : undefined,
+        // Vinculação - salvar diretamente como FK
+        processo_id: vinculacao?.modulo === 'processo' ? vinculacao.modulo_registro_id : null,
+        consultivo_id: vinculacao?.modulo === 'consultivo' ? vinculacao.modulo_registro_id : null,
       }
 
       console.log('Dados da tarefa sendo salvos:', tarefaData)
@@ -191,7 +194,7 @@ export default function TarefaModal({
         await createTarefa(tarefaData)
       }
 
-      // TODO: Salvar checklist, vinculações e lembretes separadamente
+      // TODO: Salvar checklist e lembretes separadamente
 
       onOpenChange(false)
       resetForm()
@@ -409,9 +412,8 @@ export default function TarefaModal({
             {/* ABA VINCULAÇÕES */}
             <TabsContent value="vinculacoes" className="mt-0">
               <VinculacaoSelector
-                vinculacoes={vinculacoes}
-                onChange={setVinculacoes}
-                escritorioId={escritorioId}
+                vinculacao={vinculacao}
+                onChange={setVinculacao}
               />
             </TabsContent>
 

@@ -1,0 +1,403 @@
+'use client'
+
+import { cn } from '@/lib/utils'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { formatBrazilTime, formatBrazilDateTime, formatBrazilDate } from '@/lib/timezone'
+import {
+  ListTodo,
+  Gavel,
+  Calendar,
+  AlertCircle,
+  Clock,
+  User,
+  FileText,
+  ExternalLink,
+  CheckCheck,
+  MapPin,
+  Briefcase,
+  PhoneCall,
+  UserCheck,
+  ClipboardList,
+  Zap,
+  RotateCcw,
+  Repeat,
+  ListTree,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+
+export interface EventDetailCardProps {
+  id: string
+  titulo: string
+  descricao?: string
+  tipo: 'compromisso' | 'audiencia' | 'prazo' | 'tarefa'
+  subtipo?: string // Tipo específico da tarefa/evento
+  data_inicio: Date
+  data_fim?: Date
+  dia_inteiro?: boolean
+  local?: string
+  responsavel_nome?: string
+  status: string
+  prioridade?: 'alta' | 'media' | 'baixa'
+  recorrencia_id?: string | null
+
+  // Vinculações
+  processo_numero?: string
+  processo_id?: string
+  consultivo_titulo?: string
+  consultivo_id?: string
+
+  // Prazo específico
+  prazo_data_limite?: string
+  prazo_tipo?: string
+  prazo_cumprido?: boolean
+  prazo_criticidade?: 'vencido' | 'hoje' | 'critico' | 'urgente' | 'atencao' | 'normal'
+
+  // Actions
+  onViewDetails?: () => void
+  onComplete?: () => void
+  onReopen?: () => void
+  onProcessoClick?: (processoId: string) => void
+  onConsultivoClick?: (consultivoId: string) => void
+}
+
+const tipoConfig = {
+  tarefa: {
+    icon: ListTodo,
+    label: 'Tarefa',
+    bg: 'bg-gradient-to-br from-[#34495e] to-[#46627f]',
+    text: 'text-white',
+  },
+  audiencia: {
+    icon: Gavel,
+    label: 'Audiência',
+    bg: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+    text: 'text-white',
+  },
+  prazo: {
+    icon: AlertCircle,
+    label: 'Prazo',
+    bg: 'bg-gradient-to-br from-amber-500 to-amber-600',
+    text: 'text-white',
+  },
+  compromisso: {
+    icon: Calendar,
+    label: 'Compromisso',
+    bg: 'bg-gradient-to-br from-[#89bcbe] to-[#aacfd0]',
+    text: 'text-[#34495e]',
+  },
+}
+
+const criticidadeColors = {
+  vencido: 'bg-red-600 text-white',
+  hoje: 'bg-red-500 text-white',
+  critico: 'bg-orange-500 text-white',
+  urgente: 'bg-amber-500 text-white',
+  atencao: 'bg-yellow-500 text-white',
+  normal: 'bg-slate-400 text-white',
+}
+
+const subtipoTarefaLabels: Record<string, string> = {
+  prazo_processual: 'Prazo Processual',
+  acompanhamento: 'Acompanhamento',
+  follow_up: 'Follow-up',
+  administrativo: 'Administrativo',
+  outro: 'Outro',
+}
+
+const prioridadeConfig = {
+  alta: {
+    color: 'text-red-600',
+    bg: 'bg-red-50',
+    border: 'border-red-200',
+    label: 'Alta',
+  },
+  media: {
+    color: 'text-amber-600',
+    bg: 'bg-amber-50',
+    border: 'border-amber-200',
+    label: 'Média',
+  },
+  baixa: {
+    color: 'text-emerald-600',
+    bg: 'bg-emerald-50',
+    border: 'border-emerald-200',
+    label: 'Baixa',
+  },
+}
+
+export default function EventDetailCard({
+  id,
+  titulo,
+  descricao,
+  tipo,
+  subtipo,
+  data_inicio,
+  data_fim,
+  dia_inteiro,
+  local,
+  responsavel_nome,
+  status,
+  prioridade,
+  recorrencia_id,
+  processo_numero,
+  processo_id,
+  consultivo_titulo,
+  consultivo_id,
+  prazo_data_limite,
+  prazo_tipo,
+  prazo_cumprido,
+  prazo_criticidade,
+  onViewDetails,
+  onComplete,
+  onReopen,
+  onProcessoClick,
+  onConsultivoClick,
+}: EventDetailCardProps) {
+  const config = tipoConfig[tipo]
+  const Icon = config.icon
+
+  const podeSerConcluido = tipo === 'tarefa' && status !== 'concluida'
+  const estaConcluida = tipo === 'tarefa' && status === 'concluida'
+  const subtipoLabel = subtipo ? subtipoTarefaLabels[subtipo] || subtipo : null
+
+  return (
+    <Card
+      className={cn(
+        'border border-slate-200 hover:border-[#89bcbe] transition-all shadow-sm hover:shadow-md cursor-pointer',
+        'bg-white'
+      )}
+      onClick={onViewDetails}
+    >
+      <CardContent className="p-2.5">
+        {/* Header com ícone e tipo */}
+        <div className="flex items-start gap-2 mb-2">
+          <div
+            className={cn(
+              'rounded-md flex items-center justify-center flex-shrink-0 w-7 h-7 shadow-sm',
+              config.bg
+            )}
+          >
+            <Icon className={cn('w-3.5 h-3.5', config.text)} />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <h4 className={cn(
+                'text-xs font-bold text-[#34495e] leading-tight line-clamp-2',
+                tipo === 'tarefa' && status === 'concluida' && 'line-through opacity-60'
+              )}>
+                {titulo}
+              </h4>
+              <Badge
+                variant="outline"
+                className={cn('text-[10px] px-1.5 py-0 h-4 border font-medium flex-shrink-0', config.bg, config.text)}
+              >
+                {config.label}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        {/* Descrição (se houver) */}
+        {descricao && (
+          <p className="text-[11px] text-slate-600 mb-2 line-clamp-2 pl-9">
+            {descricao}
+          </p>
+        )}
+
+        {/* Info grid - 2 colunas compactas */}
+        <div className="space-y-1.5 pl-9">
+          {/* Tipo de Tarefa (só para tarefas) */}
+          {tipo === 'tarefa' && subtipoLabel && (
+            <div className="flex items-center gap-1.5">
+              <ClipboardList className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
+              <span className="text-[11px] text-slate-600 font-medium">{subtipoLabel}</span>
+            </div>
+          )}
+
+          {/* Data de Execução (para tarefas) */}
+          {tipo === 'tarefa' && (
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
+              <span className="text-[11px] text-slate-600">
+                {formatBrazilDate(data_inicio, 'dd/MM/yyyy')}
+              </span>
+            </div>
+          )}
+
+          {/* Prioridade (para tarefas) */}
+          {tipo === 'tarefa' && prioridade && prioridadeConfig[prioridade] && (
+            <div className="flex items-center gap-1.5">
+              <AlertCircle className={cn('w-3 h-3 flex-shrink-0', prioridadeConfig[prioridade].color)} />
+              <Badge
+                variant="outline"
+                className={cn(
+                  'text-[10px] px-1.5 py-0 h-4 font-medium',
+                  prioridadeConfig[prioridade].bg,
+                  prioridadeConfig[prioridade].color,
+                  prioridadeConfig[prioridade].border
+                )}
+              >
+                Prioridade {prioridadeConfig[prioridade].label}
+              </Badge>
+            </div>
+          )}
+
+          {/* Data/Hora (para eventos e audiências) */}
+          {tipo !== 'tarefa' && (
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
+              <span className="text-[11px] text-slate-600">
+                {dia_inteiro ? (
+                  'Dia inteiro'
+                ) : (
+                  <>
+                    {formatBrazilTime(data_inicio)}
+                    {data_fim && ` - ${formatBrazilTime(data_fim)}`}
+                  </>
+                )}
+              </span>
+            </div>
+          )}
+
+          {/* Local */}
+          {local && (
+            <div className="flex items-center gap-1.5">
+              <MapPin className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
+              <span className="text-[11px] text-slate-600 truncate">{local}</span>
+            </div>
+          )}
+
+          {/* Processo Vinculado */}
+          {processo_numero && (
+            <div className="flex items-center gap-1.5">
+              <FileText className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (processo_id) onProcessoClick?.(processo_id)
+                }}
+                className="text-[11px] text-[#1E3A8A] hover:text-[#89bcbe] font-medium truncate flex items-center gap-1 group"
+              >
+                <span className="truncate">{processo_numero}</span>
+                <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+            </div>
+          )}
+
+          {/* Consultivo Vinculado */}
+          {consultivo_titulo && (
+            <div className="flex items-center gap-1.5">
+              <FileText className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (consultivo_id) onConsultivoClick?.(consultivo_id)
+                }}
+                className="text-[11px] text-[#1E3A8A] hover:text-[#89bcbe] font-medium truncate flex items-center gap-1 group"
+              >
+                <span className="truncate">{consultivo_titulo}</span>
+                <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+            </div>
+          )}
+
+          {/* Responsável */}
+          {responsavel_nome && (
+            <div className="flex items-center gap-1.5">
+              <User className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
+              <span className="text-[11px] text-slate-600 truncate">{responsavel_nome}</span>
+            </div>
+          )}
+
+          {/* Badge de Recorrência */}
+          {recorrencia_id && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <Repeat className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 h-4 font-medium bg-blue-50 text-blue-700 border-blue-200"
+              >
+                Evento recorrente
+              </Badge>
+            </div>
+          )}
+
+          {/* Prazo Fatal (se for prazo processual) */}
+          {prazo_data_limite && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <Zap className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
+              <span className="text-[11px] text-slate-600">Prazo Fatal:</span>
+              <span className="text-[11px] font-semibold text-red-600">
+                {formatBrazilDate(prazo_data_limite, 'dd/MM/yyyy')}
+              </span>
+            </div>
+          )}
+
+          {prazo_tipo && (
+            <div className="text-[10px] text-slate-500">
+              Tipo: {prazo_tipo.charAt(0).toUpperCase() + prazo_tipo.slice(1)}
+            </div>
+          )}
+        </div>
+
+        {/* Footer com ações */}
+        {(podeSerConcluido || tipo === 'tarefa') && (
+          <div className="flex items-center justify-between gap-2 mt-2.5 pt-2 border-t border-slate-100 pl-9">
+            {/* Status badge para tarefas */}
+            {tipo === 'tarefa' && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  'text-[10px] px-1.5 py-0 h-4 font-medium',
+                  status === 'concluida' && 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                  status === 'em_andamento' && 'bg-blue-100 text-blue-700 border-blue-200',
+                  status === 'pendente' && 'bg-slate-100 text-slate-700 border-slate-200',
+                  status === 'cancelada' && 'bg-red-100 text-red-700 border-red-200'
+                )}
+              >
+                {status === 'concluida' && 'Concluída'}
+                {status === 'em_andamento' && 'Em andamento'}
+                {status === 'pendente' && 'Pendente'}
+                {status === 'cancelada' && 'Cancelada'}
+              </Badge>
+            )}
+
+            {/* Botão concluir para tarefas pendentes */}
+            {podeSerConcluido && (
+              <Button
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onComplete?.()
+                }}
+                className="h-6 px-2 text-[10px] bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white ml-auto"
+              >
+                <CheckCheck className="w-3 h-3 mr-1" />
+                Concluir
+              </Button>
+            )}
+
+            {/* Botão reabrir para tarefas concluídas */}
+            {estaConcluida && onReopen && (
+              <Button
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onReopen()
+                }}
+                className="h-6 px-2 text-[10px] bg-gradient-to-br from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white ml-auto"
+              >
+                <RotateCcw className="w-3 h-3 mr-1" />
+                Reabrir
+              </Button>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { formatDateTimeForDB } from '@/lib/timezone'
 
 export interface Audiencia {
   id: string
   escritorio_id: string
-  processo_id: string // OBRIGATÓRIO
+  processo_id?: string | null
+  consultivo_id?: string | null
   titulo: string
   descricao?: string
   data_hora: string
@@ -46,6 +48,8 @@ export interface Audiencia {
 
   // Relations (populated)
   processo_numero?: string
+  consultivo_assunto?: string
+  consultivo_numero?: string
   responsavel_nome?: string
   criado_por_nome?: string
 
@@ -54,7 +58,8 @@ export interface Audiencia {
 }
 
 export interface AudienciaFormData extends Partial<Audiencia> {
-  processo_id: string // OBRIGATÓRIO
+  processo_id?: string | null
+  consultivo_id?: string | null
 }
 
 export function useAudiencias(escritorioId?: string) {
@@ -72,9 +77,10 @@ export function useAudiencias(escritorioId?: string) {
         .from('agenda_audiencias')
         .select(`
           *,
-          processo:processos_processos(numero_cnj, numero_interno),
-          responsavel:profiles!responsavel_id(nome_completo),
-          criado_por_user:profiles!criado_por(nome_completo)
+          processo:processos_processos(numero_cnj),
+          consultivo:consultivo_consultas(assunto, numero_interno),
+          responsavel:profiles!agenda_audiencias_responsavel_id_fkey(nome_completo),
+          criado_por_user:profiles!agenda_audiencias_criado_por_fkey(nome_completo)
         `)
         .order('data_hora', { ascending: true })
 
@@ -84,20 +90,38 @@ export function useAudiencias(escritorioId?: string) {
 
       const { data, error: queryError } = await query
 
-      if (queryError) throw queryError
+      if (queryError) {
+        console.error('Erro na query de audiências:', {
+          message: queryError.message,
+          details: queryError.details,
+          hint: queryError.hint,
+          code: queryError.code
+        })
+        throw queryError
+      }
 
       // Transform data
       const audienciasFormatadas = (data || []).map((a: any) => ({
         ...a,
-        processo_numero: a.processo?.numero_cnj || a.processo?.numero_interno,
+        processo_numero: a.processo?.numero_cnj,
+        consultivo_assunto: a.consultivo?.assunto,
+        consultivo_numero: a.consultivo?.numero_interno,
         responsavel_nome: a.responsavel?.nome_completo,
         criado_por_nome: a.criado_por_user?.nome_completo,
       }))
 
       setAudiencias(audienciasFormatadas)
-    } catch (err) {
-      setError(err as Error)
-      console.error('Erro ao carregar audiências:', err)
+    } catch (err: any) {
+      const error = err as Error
+      setError(error)
+      console.error('Erro ao carregar audiências:', {
+        message: err?.message || 'Erro desconhecido',
+        name: err?.name,
+        code: err?.code,
+        details: err?.details,
+        hint: err?.hint,
+        fullError: err
+      })
     } finally {
       setLoading(false)
     }
@@ -105,17 +129,23 @@ export function useAudiencias(escritorioId?: string) {
 
   const createAudiencia = async (data: AudienciaFormData): Promise<Audiencia> => {
     try {
-      if (!data.processo_id) {
-        throw new Error('processo_id é obrigatório para audiências')
+      if (!data.processo_id && !data.consultivo_id) {
+        throw new Error('É obrigatório vincular a um processo ou consultivo')
+      }
+
+      if (!data.escritorio_id) {
+        throw new Error('escritorio_id é obrigatório')
       }
 
       const { data: novaAudiencia, error: audienciaError } = await supabase
         .from('agenda_audiencias')
         .insert({
-          processo_id: data.processo_id,
+          escritorio_id: data.escritorio_id, // CAMPO OBRIGATÓRIO
+          processo_id: data.processo_id || null,
+          consultivo_id: data.consultivo_id || null,
           titulo: data.titulo,
           descricao: data.descricao,
-          data_hora: data.data_hora,
+          data_hora: data.data_hora ? formatDateTimeForDB(new Date(data.data_hora)) : undefined,
           duracao_minutos: data.duracao_minutos || 60,
           tipo_audiencia: data.tipo_audiencia || 'inicial',
           modalidade: data.modalidade || 'presencial',
@@ -143,13 +173,22 @@ export function useAudiencias(escritorioId?: string) {
         .select()
         .single()
 
-      if (audienciaError) throw audienciaError
+      if (audienciaError) {
+        console.error('Erro detalhado ao criar audiência:', JSON.stringify(audienciaError, null, 2))
+        throw audienciaError
+      }
 
       await loadAudiencias()
 
       return novaAudiencia
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao criar audiência:', err)
+      console.error('Detalhes do erro:', {
+        message: err?.message,
+        details: err?.details,
+        hint: err?.hint,
+        code: err?.code
+      })
       throw err
     }
   }
@@ -159,10 +198,11 @@ export function useAudiencias(escritorioId?: string) {
       const { error: audienciaError } = await supabase
         .from('agenda_audiencias')
         .update({
-          processo_id: data.processo_id,
+          processo_id: data.processo_id || null,
+          consultivo_id: data.consultivo_id || null,
           titulo: data.titulo,
           descricao: data.descricao,
-          data_hora: data.data_hora,
+          data_hora: data.data_hora ? formatDateTimeForDB(new Date(data.data_hora)) : undefined,
           duracao_minutos: data.duracao_minutos,
           tipo_audiencia: data.tipo_audiencia,
           modalidade: data.modalidade,
@@ -320,7 +360,13 @@ export function useAudiencias(escritorioId?: string) {
   }
 
   useEffect(() => {
-    loadAudiencias()
+    // Só carrega se tiver escritorioId definido
+    if (escritorioId) {
+      loadAudiencias()
+    } else {
+      setLoading(false)
+      setAudiencias([])
+    }
   }, [escritorioId])
 
   return {

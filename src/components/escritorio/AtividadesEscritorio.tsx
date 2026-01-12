@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { UserPlus, UserMinus, Settings, TrendingUp, Shield, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatBrazilDate } from '@/lib/timezone';
 
 interface Atividade {
   id: string;
@@ -50,12 +51,7 @@ function TimelineItem({ atividade, isLast }: { atividade: Atividade; isLast: boo
   const config = atividadeConfig[atividade.tipo];
   const Icon = config.icon;
 
-  const dataFormatada = new Date(atividade.data).toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const dataFormatada = formatBrazilDate(atividade.data, "dd MMM HH:mm");
 
   return (
     <div className="relative flex gap-3 pb-4">

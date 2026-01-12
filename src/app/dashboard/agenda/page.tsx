@@ -16,34 +16,41 @@ import { toast } from 'sonner'
 import { getEscritorioAtivo } from '@/lib/supabase/escritorio-helpers'
 
 // Components
-import CalendarGrid from '@/components/agenda/CalendarGrid'
-import CalendarWeekView from '@/components/agenda/CalendarWeekView'
+import CalendarGridDnD from '@/components/agenda/CalendarGridDnD'
+import CalendarKanbanView from '@/components/agenda/CalendarKanbanView'
 import CalendarDayView from '@/components/agenda/CalendarDayView'
-import ListView from '@/components/agenda/ListView'
+import CalendarListView from '@/components/agenda/CalendarListView'
 import SidebarDinamica from '@/components/agenda/SidebarDinamica'
 import ResumoIA from '@/components/agenda/ResumoIA'
 import AgendaFiltersCompact from '@/components/agenda/AgendaFiltersCompact'
-import TarefaModal from '@/components/agenda/TarefaModal'
-import TarefaViewModal from '@/components/agenda/TarefaViewModal'
-import AudienciaModal from '@/components/agenda/AudienciaModal'
-import EventoModal from '@/components/agenda/EventoModal'
+import TarefaWizard from '@/components/agenda/TarefaWizard'
+import EventoWizard from '@/components/agenda/EventoWizard'
+import AudienciaWizard from '@/components/agenda/AudienciaWizard'
+import TarefaDetailModal from '@/components/agenda/TarefaDetailModal'
+import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
+import EventoDetailModal from '@/components/agenda/EventoDetailModal'
 import { EventCardProps } from '@/components/agenda/EventCard'
 
 // Hooks
 import { useAgendaConsolidada } from '@/hooks/useAgendaConsolidada'
-import { useTarefas, Tarefa } from '@/hooks/useTarefas'
-import { useAudiencias, Audiencia } from '@/hooks/useAudiencias'
-import { useEventos, Evento } from '@/hooks/useEventos'
+import { useTarefas, Tarefa, TarefaFormData } from '@/hooks/useTarefas'
+import { useAudiencias, Audiencia, AudienciaFormData } from '@/hooks/useAudiencias'
+import { useEventos, Evento, EventoFormData } from '@/hooks/useEventos'
 
 export default function AgendaPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day' | 'list'>('month')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [escritorioId, setEscritorioId] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
 
-  // Modais separados
+  // Modais de visualização (detail)
+  const [tarefaDetailOpen, setTarefaDetailOpen] = useState(false)
+  const [audienciaDetailOpen, setAudienciaDetailOpen] = useState(false)
+  const [eventoDetailOpen, setEventoDetailOpen] = useState(false)
+
+  // Modais de edição (wizards)
   const [tarefaModalOpen, setTarefaModalOpen] = useState(false)
-  const [tarefaViewModalOpen, setTarefaViewModalOpen] = useState(false)
   const [audienciaModalOpen, setAudienciaModalOpen] = useState(false)
   const [eventoModalOpen, setEventoModalOpen] = useState(false)
 
@@ -78,11 +85,22 @@ export default function AgendaPage() {
     loadEscritorio()
   }, [])
 
+  // Buscar usuário logado
+  useEffect(() => {
+    async function loadUser() {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      setUserId(user?.id || null)
+    }
+    loadUser()
+  }, [])
+
   // Hooks - usar agenda consolidada e hooks específicos
   const { items: agendaItems, loading, refreshItems } = useAgendaConsolidada()
-  const { tarefas } = useTarefas(escritorioId || undefined)
-  const { audiencias } = useAudiencias(escritorioId || undefined)
-  const { eventos } = useEventos(escritorioId || undefined)
+  const { tarefas, createTarefa, updateTarefa, concluirTarefa, reabrirTarefa } = useTarefas(escritorioId || undefined)
+  const { audiencias, createAudiencia, updateAudiencia } = useAudiencias(escritorioId || undefined)
+  const { eventos, createEvento, updateEvento } = useEventos(escritorioId || undefined)
 
   // Converter items consolidados para formato do EventCard
   const eventosFormatados = useMemo((): EventCardProps[] => {
@@ -105,15 +123,21 @@ export default function AgendaPage() {
         responsavel_nome: item.responsavel_nome,
         status: item.status || 'agendado',
         prazo_criticidade: item.prioridade === 'alta' ? 'critico' : item.prioridade === 'media' ? 'normal' : 'baixa',
+        // Subtarefas e recorrência
+        parent_id: item.parent_id,
+        tarefa_pai_titulo: item.tarefa_pai_titulo,
+        recorrencia_id: item.recorrencia_id,
+        total_subtarefas: item.total_subtarefas,
+        subtarefas_concluidas: item.subtarefas_concluidas,
       }))
   }, [agendaItems, filters])
 
-  // Eventos do dia selecionado (para sidebar)
+  // Eventos do dia selecionado (para sidebar) - usar agendaItems diretamente
   const eventosDoDia = useMemo(() => {
-    return eventosFormatados.filter(e =>
-      isSameDay(e.data_inicio, selectedDate)
+    return agendaItems.filter(item =>
+      isSameDay(new Date(item.data_inicio), selectedDate)
     )
-  }, [eventosFormatados, selectedDate])
+  }, [agendaItems, selectedDate])
 
   // Estatísticas para ResumoIA
   const eventosCriticos = useMemo(() => {
@@ -152,32 +176,176 @@ export default function AgendaPage() {
   }
 
   const handleEventClick = (evento: EventCardProps) => {
-    // Buscar dados completos do item para visualização
+    console.log('🔵 handleEventClick chamado', evento.tipo, evento.titulo)
+    // Buscar dados completos do item na agenda consolidada (tem mais informações)
+    const itemCompleto = agendaItems.find(item => item.id === evento.id)
+
     if (evento.tipo === 'tarefa') {
       const tarefaCompleta = tarefas.find(t => t.id === evento.id)
       if (tarefaCompleta) {
         setTarefaSelecionada(tarefaCompleta)
+        console.log('🔵 Abrindo TarefaDetailModal')
       }
-      setTarefaViewModalOpen(true) // Abrir modal de visualização
+      setTarefaDetailOpen(true)
     } else if (evento.tipo === 'audiencia') {
       const audienciaCompleta = audiencias.find(a => a.id === evento.id)
       if (audienciaCompleta) {
         setAudienciaSelecionada(audienciaCompleta)
       }
-      setAudienciaModalOpen(true)
+      setAudienciaDetailOpen(true)
     } else {
+      // Para eventos/prazos, montar objeto compatível com EventoDetailModal
       const eventoCompleto = eventos.find(e => e.id === evento.id)
-      if (eventoCompleto) {
-        setEventoSelecionado(eventoCompleto)
+      if (eventoCompleto && itemCompleto) {
+        // Combinar dados do evento e da agenda consolidada
+        setEventoSelecionado({
+          ...eventoCompleto,
+          subtipo: itemCompleto.subtipo,
+          status: itemCompleto.status,
+          processo_numero: itemCompleto.processo_numero,
+          consultivo_titulo: itemCompleto.consultivo_titulo,
+          cliente_nome: itemCompleto.cliente_nome,
+          responsavel_nome: itemCompleto.responsavel_nome,
+          prazo_data_limite: itemCompleto.prazo_data_limite,
+        } as any)
       }
-      setEventoModalOpen(true)
+      setEventoDetailOpen(true)
     }
   }
 
+  // Handler para conclusão rápida de tarefa (toggle)
+  const handleCompleteTask = async (taskId: string) => {
+    try {
+      // Encontrar a tarefa para verificar o status atual
+      const tarefa = tarefas.find(t => t.id === taskId)
+
+      if (tarefa?.status === 'concluida') {
+        // Se já está concluída, reabrir
+        await reabrirTarefa(taskId)
+        await refreshItems()
+        toast.success('Tarefa reaberta com sucesso!')
+      } else {
+        // Se não está concluída, concluir
+        await concluirTarefa(taskId)
+        await refreshItems()
+        toast.success('Tarefa concluída com sucesso!')
+      }
+    } catch (error) {
+      console.error('Erro ao alterar status da tarefa:', error)
+      toast.error('Erro ao alterar status da tarefa')
+    }
+  }
+
+  // Handler para reabrir tarefa
+  const handleReopenTask = async (taskId: string) => {
+    try {
+      await reabrirTarefa(taskId)
+      await refreshItems()
+      toast.success('Tarefa reaberta com sucesso!')
+    } catch (error) {
+      console.error('Erro ao reabrir tarefa:', error)
+      toast.error('Erro ao reabrir tarefa')
+    }
+  }
+
+  // Handler para navegar para processo
+  const handleProcessoClick = (processoId: string) => {
+    // Navegar para página do processo
+    window.location.href = `/dashboard/processos/${processoId}`
+  }
+
+  // Handler para navegar para consultivo
+  const handleConsultivoClick = (consultivoId: string) => {
+    // Navegar para página do consultivo
+    window.location.href = `/dashboard/consultivo/${consultivoId}`
+  }
+
+  // Handlers para editar (fechar detail, abrir wizard)
   const handleEditTarefa = () => {
-    // Fechar modal de visualização e abrir modal de edição
-    setTarefaViewModalOpen(false)
+    console.log('🟡 handleEditTarefa chamado - abrindo TarefaWizard')
+    setTarefaDetailOpen(false)
     setTarefaModalOpen(true)
+  }
+
+  const handleEditAudiencia = () => {
+    setAudienciaDetailOpen(false)
+    setAudienciaModalOpen(true)
+  }
+
+  const handleEditEvento = () => {
+    setEventoDetailOpen(false)
+    setEventoModalOpen(true)
+  }
+
+  // Handlers para deletar
+  const handleDeleteTarefa = async (tarefaId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta tarefa?')) return
+
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+
+      const { error } = await supabase
+        .from('agenda_tarefas')
+        .delete()
+        .eq('id', tarefaId)
+
+      if (error) throw error
+
+      setTarefaDetailOpen(false)
+      setTarefaSelecionada(null)
+      await refreshItems()
+      toast.success('Tarefa excluída com sucesso!')
+    } catch (error) {
+      console.error('Erro ao excluir tarefa:', error)
+      toast.error('Erro ao excluir tarefa')
+    }
+  }
+
+  const handleCancelarAudiencia = async (audienciaId: string) => {
+    if (!confirm('Tem certeza que deseja cancelar esta audiência?')) return
+
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+
+      const { error } = await supabase
+        .from('agenda_audiencias')
+        .update({ status: 'cancelada' })
+        .eq('id', audienciaId)
+
+      if (error) throw error
+
+      setAudienciaDetailOpen(false)
+      await refreshItems()
+      toast.success('Audiência cancelada com sucesso!')
+    } catch (error) {
+      console.error('Erro ao cancelar audiência:', error)
+      toast.error('Erro ao cancelar audiência')
+    }
+  }
+
+  const handleCancelarEvento = async (eventoId: string) => {
+    if (!confirm('Tem certeza que deseja cancelar este evento?')) return
+
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+
+      const { error } = await supabase
+        .from('agenda_eventos')
+        .update({ status: 'cancelado' })
+        .eq('id', eventoId)
+
+      if (error) throw error
+
+      setEventoDetailOpen(false)
+      await refreshItems()
+      toast.success('Evento cancelado com sucesso!')
+    } catch (error) {
+      console.error('Erro ao cancelar evento:', error)
+      toast.error('Erro ao cancelar evento')
+    }
   }
 
   const handleDateSelect = (date: Date) => {
@@ -185,6 +353,77 @@ export default function AgendaPage() {
     // Abrir sidebar apenas na view de mês
     if (viewMode === 'month') {
       setSidebarOpen(true)
+    }
+  }
+
+  const handleEventMove = async (eventId: string, newDate: Date) => {
+    try {
+      // Encontrar o evento nos dados consolidados
+      const evento = agendaItems.find(item => item.id === eventId)
+      if (!evento) {
+        throw new Error('Evento não encontrado')
+      }
+
+      // Pegar a data e hora original
+      const originalDate = new Date(evento.data_inicio)
+      const originalEnd = evento.data_fim ? new Date(evento.data_fim) : null
+
+      // Criar nova data mantendo o horário original
+      const newDateTime = new Date(newDate)
+      newDateTime.setHours(originalDate.getHours())
+      newDateTime.setMinutes(originalDate.getMinutes())
+      newDateTime.setSeconds(originalDate.getSeconds())
+      newDateTime.setMilliseconds(originalDate.getMilliseconds())
+
+      // Se tem data fim, calcular a diferença e aplicar na nova data
+      const newEndDateTime = originalEnd ? (() => {
+        const timeDiff = originalEnd.getTime() - originalDate.getTime()
+        return new Date(newDateTime.getTime() + timeDiff)
+      })() : null
+
+      // Atualizar no banco de dados baseado no tipo
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+
+      let updateResult
+      if (evento.tipo_entidade === 'tarefa') {
+        updateResult = await supabase
+          .from('agenda_tarefas')
+          .update({
+            data_inicio: newDateTime.toISOString(),
+            data_fim: newEndDateTime?.toISOString() || null,
+          })
+          .eq('id', eventId)
+      } else if (evento.tipo_entidade === 'audiencia') {
+        updateResult = await supabase
+          .from('agenda_audiencias')
+          .update({
+            data_hora: newDateTime.toISOString(),
+          })
+          .eq('id', eventId)
+      } else if (evento.tipo_entidade === 'evento') {
+        updateResult = await supabase
+          .from('agenda_eventos')
+          .update({
+            data_inicio: newDateTime.toISOString(),
+            data_fim: newEndDateTime?.toISOString() || null,
+          })
+          .eq('id', eventId)
+      }
+
+      if (updateResult?.error) {
+        throw updateResult.error
+      }
+
+      // Pequeno delay para garantir que o banco foi atualizado
+      await new Promise(resolve => setTimeout(resolve, 300))
+
+      // Atualizar os dados localmente para feedback imediato
+      await refreshItems()
+
+    } catch (error) {
+      console.error('Erro ao mover evento:', error)
+      throw error
     }
   }
 
@@ -246,7 +485,7 @@ export default function AgendaPage() {
                   className="text-sm data-[state=active]:bg-gradient-to-br data-[state=active]:from-[#89bcbe] data-[state=active]:to-[#6ba9ab] data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
                   <CalendarDays className="w-4 h-4 mr-2" />
-                  Semana
+                  Kanban
                 </TabsTrigger>
                 <TabsTrigger
                   value="day"
@@ -275,10 +514,12 @@ export default function AgendaPage() {
         ) : (
           <>
             {viewMode === 'month' && (
-              <CalendarGrid
+              <CalendarGridDnD
                 eventos={eventosFormatados}
                 selectedDate={selectedDate}
                 onDateSelect={handleDateSelect}
+                onEventMove={handleEventMove}
+                onEventClick={handleEventClick}
                 feriados={[]}
                 filters={filters}
                 onFiltersChange={setFilters}
@@ -286,30 +527,78 @@ export default function AgendaPage() {
             )}
 
             {viewMode === 'week' && (
-              <CalendarWeekView
-                eventos={eventosFormatados}
+              <CalendarKanbanView
+                escritorioId={escritorioId || undefined}
+                userId={userId || undefined}
                 selectedDate={selectedDate}
                 onDateSelect={setSelectedDate}
-                onEventClick={handleEventClick}
-                onCreateEvent={handleCreateEvent}
+                onClickTarefa={(tarefa) => {
+                  setTarefaSelecionada(tarefa)
+                  setTarefaDetailOpen(true)
+                }}
+                onCreateTarefa={(status) => {
+                  setTarefaSelecionada(null)
+                  setTarefaModalOpen(true)
+                }}
               />
             )}
 
             {viewMode === 'day' && (
               <CalendarDayView
-                eventos={eventosFormatados}
+                escritorioId={escritorioId || undefined}
+                userId={userId || undefined}
                 selectedDate={selectedDate}
                 onDateSelect={setSelectedDate}
-                onEventClick={handleEventClick}
-                onCreateEvent={handleCreateEvent}
+                onEventClick={(agendaItem) => {
+                  // Identificar o tipo de item e abrir o modal correto
+                  if (agendaItem.tipo_entidade === 'tarefa') {
+                    // Buscar tarefa completa
+                    const tarefa = tarefasFromHook.find(t => t.id === agendaItem.id)
+                    if (tarefa) {
+                      setTarefaSelecionada(tarefa)
+                      setTarefaDetailOpen(true)
+                    }
+                  } else if (agendaItem.tipo_entidade === 'audiencia') {
+                    // Buscar audiência completa
+                    const audiencia = audienciasFromHook.find(a => a.id === agendaItem.id)
+                    if (audiencia) {
+                      setAudienciaSelecionada(audiencia)
+                      setAudienciaDetailOpen(true)
+                    }
+                  } else if (agendaItem.tipo_entidade === 'evento') {
+                    // Buscar evento completo
+                    const evento = eventosFromHook.find(e => e.id === agendaItem.id)
+                    if (evento) {
+                      setEventoSelecionado(evento)
+                      setEventoDetailOpen(true)
+                    }
+                  }
+                }}
+                onTaskClick={(tarefa) => {
+                  setTarefaSelecionada(tarefa)
+                  setTarefaDetailOpen(true)
+                }}
+                onTaskComplete={handleCompleteTask}
               />
             )}
 
             {viewMode === 'list' && (
-              <ListView
-                eventos={eventosFormatados}
-                onEventClick={handleEventClick}
-                onCreateEvent={() => handleCreateEvent()}
+              <CalendarListView
+                escritorioId={escritorioId || undefined}
+                userId={userId || undefined}
+                onTarefaClick={(tarefa) => {
+                  setTarefaSelecionada(tarefa)
+                  setTarefaDetailOpen(true)
+                }}
+                onAudienciaClick={(audiencia) => {
+                  setAudienciaSelecionada(audiencia)
+                  setAudienciaDetailOpen(true)
+                }}
+                onEventoClick={(evento) => {
+                  setEventoSelecionado(evento)
+                  setEventoDetailOpen(true)
+                }}
+                onTaskComplete={handleCompleteTask}
               />
             )}
           </>
@@ -322,61 +611,160 @@ export default function AgendaPage() {
         onClose={() => setSidebarOpen(false)}
         selectedDate={selectedDate}
         eventos={eventosDoDia}
-        onEventClick={handleEventClick}
+        onEventClick={(agendaItem) => {
+          // Converter AgendaItem para EventCardProps para manter compatibilidade
+          const eventoProps: EventCardProps = {
+            id: agendaItem.id,
+            titulo: agendaItem.titulo,
+            tipo: agendaItem.tipo_entidade === 'tarefa' ? 'tarefa' : agendaItem.tipo_entidade === 'audiencia' ? 'audiencia' : agendaItem.subtipo === 'prazo_processual' ? 'prazo' : 'compromisso',
+            data_inicio: new Date(agendaItem.data_inicio),
+            data_fim: agendaItem.data_fim ? new Date(agendaItem.data_fim) : undefined,
+            dia_inteiro: agendaItem.dia_inteiro,
+            local: agendaItem.local,
+            responsavel_nome: agendaItem.responsavel_nome,
+            status: agendaItem.status,
+          }
+          handleEventClick(eventoProps)
+        }}
         onCreateEvent={handleCreateEvent}
+        onCompleteTask={handleCompleteTask}
+        onReopenTask={handleReopenTask}
+        onProcessoClick={handleProcessoClick}
+        onConsultivoClick={handleConsultivoClick}
       />
 
-      {/* Modais Separados */}
-      <TarefaViewModal
-        open={tarefaViewModalOpen}
-        onOpenChange={(open) => {
-          setTarefaViewModalOpen(open)
-          if (!open) {
+      {/* Modais de Detalhes */}
+      {tarefaSelecionada && (
+        <TarefaDetailModal
+          open={tarefaDetailOpen}
+          onOpenChange={(open) => {
+            setTarefaDetailOpen(open)
+            if (!open) {
+              setTarefaSelecionada(null)
+            }
+          }}
+          tarefa={tarefaSelecionada}
+          onEdit={handleEditTarefa}
+          onDelete={() => handleDeleteTarefa(tarefaSelecionada.id)}
+          onConcluir={() => handleCompleteTask(tarefaSelecionada.id)}
+          onReabrir={() => handleReopenTask(tarefaSelecionada.id)}
+          onProcessoClick={handleProcessoClick}
+          onConsultivoClick={handleConsultivoClick}
+          onUpdate={refreshItems}
+        />
+      )}
+
+      {audienciaSelecionada && (
+        <AudienciaDetailModal
+          open={audienciaDetailOpen}
+          onOpenChange={(open) => {
+            setAudienciaDetailOpen(open)
+            if (!open) {
+              setAudienciaSelecionada(null)
+            }
+          }}
+          audiencia={audienciaSelecionada}
+          onEdit={handleEditAudiencia}
+          onCancelar={() => handleCancelarAudiencia(audienciaSelecionada.id)}
+          onProcessoClick={handleProcessoClick}
+        />
+      )}
+
+      {eventoSelecionado && (
+        <EventoDetailModal
+          open={eventoDetailOpen}
+          onOpenChange={(open) => {
+            setEventoDetailOpen(open)
+            if (!open) {
+              setEventoSelecionado(null)
+            }
+          }}
+          evento={eventoSelecionado}
+          onEdit={handleEditEvento}
+          onCancelar={() => handleCancelarEvento(eventoSelecionado.id)}
+          onProcessoClick={handleProcessoClick}
+          onConsultivoClick={handleConsultivoClick}
+        />
+      )}
+
+      {/* Wizards */}
+      {tarefaModalOpen && escritorioId && (
+        <TarefaWizard
+          escritorioId={escritorioId}
+          onClose={() => {
+            setTarefaModalOpen(false)
             setTarefaSelecionada(null)
-          }
-        }}
-        tarefa={tarefaSelecionada}
-        onEdit={handleEditTarefa}
-      />
+          }}
+          onSubmit={async (data: TarefaFormData) => {
+            try {
+              if (tarefaSelecionada) {
+                await updateTarefa(tarefaSelecionada.id, data)
+                toast.success('Tarefa atualizada com sucesso!')
+              } else {
+                await createTarefa(data)
+                toast.success('Tarefa criada com sucesso!')
+              }
+              await refreshItems()
+            } catch (error) {
+              toast.error('Erro ao salvar tarefa')
+              throw error
+            }
+          }}
+          initialData={tarefaSelecionada || undefined}
+        />
+      )}
 
-      <TarefaModal
-        open={tarefaModalOpen}
-        onOpenChange={(open) => {
-          setTarefaModalOpen(open)
-          if (!open) {
-            setTarefaSelecionada(null)
-            refreshItems()
-          }
-        }}
-        tarefa={tarefaSelecionada}
-        escritorioId={escritorioId}
-      />
-
-      <AudienciaModal
-        open={audienciaModalOpen}
-        onOpenChange={(open) => {
-          setAudienciaModalOpen(open)
-          if (!open) {
+      {audienciaModalOpen && escritorioId && (
+        <AudienciaWizard
+          escritorioId={escritorioId}
+          onClose={() => {
+            setAudienciaModalOpen(false)
             setAudienciaSelecionada(null)
-            refreshItems()
-          }
-        }}
-        audiencia={audienciaSelecionada}
-        escritorioId={escritorioId}
-      />
+          }}
+          onSubmit={async (data: AudienciaFormData) => {
+            try {
+              if (audienciaSelecionada) {
+                await updateAudiencia(audienciaSelecionada.id, data)
+                toast.success('Audiência atualizada com sucesso!')
+              } else {
+                await createAudiencia(data)
+                toast.success('Audiência criada com sucesso!')
+              }
+              await refreshItems()
+            } catch (error) {
+              toast.error('Erro ao salvar audiência')
+              throw error
+            }
+          }}
+          initialData={audienciaSelecionada || undefined}
+        />
+      )}
 
-      <EventoModal
-        open={eventoModalOpen}
-        onOpenChange={(open) => {
-          setEventoModalOpen(open)
-          if (!open) {
+      {eventoModalOpen && escritorioId && (
+        <EventoWizard
+          escritorioId={escritorioId}
+          onClose={() => {
+            setEventoModalOpen(false)
             setEventoSelecionado(null)
-            refreshItems()
-          }
-        }}
-        evento={eventoSelecionado}
-        escritorioId={escritorioId}
-      />
+          }}
+          onSubmit={async (data: EventoFormData) => {
+            try {
+              if (eventoSelecionado) {
+                await updateEvento(eventoSelecionado.id, data)
+                toast.success('Compromisso atualizado com sucesso!')
+              } else {
+                await createEvento(data)
+                toast.success('Compromisso criado com sucesso!')
+              }
+              await refreshItems()
+            } catch (error) {
+              toast.error('Erro ao salvar compromisso')
+              throw error
+            }
+          }}
+          initialData={eventoSelecionado || undefined}
+        />
+      )}
     </div>
   )
 }

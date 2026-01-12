@@ -107,14 +107,38 @@ export async function getEscritorioAtivo(): Promise<Escritorio | null> {
     .from('escritorios_usuarios_ativo')
     .select('escritorio_id')
     .eq('user_id', userData.user.id)
-    .single();
+    .maybeSingle();
 
   if (ativoError) {
     console.error('Erro ao buscar escritório ativo:', ativoError.message, ativoError.code);
     return null;
   }
 
-  if (!ativoData || !ativoData.escritorio_id) {
+  // Se não encontrou na tabela de ativo, tentar fallback pelo profile
+  let escritorioId = ativoData?.escritorio_id;
+
+  if (!escritorioId) {
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('escritorio_id')
+      .eq('id', userData.user.id)
+      .maybeSingle();
+
+    escritorioId = profileData?.escritorio_id;
+
+    // Se encontrou pelo profile, criar entrada na tabela de ativo
+    if (escritorioId) {
+      await supabase
+        .from('escritorios_usuarios_ativo')
+        .upsert({
+          user_id: userData.user.id,
+          escritorio_id: escritorioId,
+          updated_at: new Date().toISOString()
+        });
+    }
+  }
+
+  if (!escritorioId) {
     console.warn('Nenhum escritório ativo encontrado para o usuário');
     return null;
   }
@@ -123,7 +147,7 @@ export async function getEscritorioAtivo(): Promise<Escritorio | null> {
   const { data: escritorioData, error: escritorioError } = await supabase
     .from('escritorios')
     .select('*')
-    .eq('id', ativoData.escritorio_id)
+    .eq('id', escritorioId)
     .single();
 
   if (escritorioError) {

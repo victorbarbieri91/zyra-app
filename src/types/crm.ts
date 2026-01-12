@@ -3,7 +3,7 @@
 // =====================================================
 
 export type TipoPessoa = 'pf' | 'pj';
-export type TipoContato = 'cliente' | 'parte_contraria' | 'correspondente' | 'testemunha' | 'perito' | 'juiz' | 'promotor' | 'outros';
+export type TipoContato = 'cliente' | 'prospecto' | 'parceiro' | 'parte_contraria' | 'correspondente' | 'testemunha' | 'perito' | 'juiz' | 'promotor' | 'outros';
 export type StatusPessoa = 'ativo' | 'inativo' | 'prospecto' | 'arquivado';
 export type EstadoCivil = 'solteiro' | 'casado' | 'divorciado' | 'viuvo' | 'uniao_estavel';
 

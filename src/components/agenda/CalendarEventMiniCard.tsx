@@ -3,7 +3,7 @@
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { CheckCircle2, Gavel, Calendar, AlertCircle } from 'lucide-react'
+import { ListTodo, Gavel, Calendar, AlertCircle, Repeat, ListTree } from 'lucide-react'
 
 interface CalendarEventMiniCardProps {
   id: string
@@ -12,6 +12,7 @@ interface CalendarEventMiniCardProps {
   data_inicio: Date
   dia_inteiro?: boolean
   status?: string
+  recorrencia_id?: string | null
   onClick?: () => void
 }
 
@@ -20,13 +21,13 @@ const tipoStyles = {
     bg: 'bg-gradient-to-r from-[#34495e] to-[#46627f]',
     text: 'text-white',
     border: 'border-l-4 border-[#34495e]',
-    icon: CheckCircle2,
+    icon: ListTodo,
     iconBg: 'bg-white/20',
   },
   audiencia: {
-    bg: 'bg-gradient-to-r from-[#1E3A8A] to-blue-700',
+    bg: 'bg-gradient-to-r from-emerald-500 to-emerald-600',
     text: 'text-white',
-    border: 'border-l-4 border-[#1E3A8A]',
+    border: 'border-l-4 border-emerald-500',
     icon: Gavel,
     iconBg: 'bg-white/20',
   },
@@ -53,20 +54,25 @@ export default function CalendarEventMiniCard({
   data_inicio,
   dia_inteiro,
   status,
+  recorrencia_id,
   onClick,
 }: CalendarEventMiniCardProps) {
   const styles = tipoStyles[tipo]
   const Icon = styles.icon
+  const temIndicadorEspecial = !!recorrencia_id
 
   return (
     <div
       onClick={onClick}
       className={cn(
         'group relative rounded-md shadow-sm hover:shadow-md transition-all cursor-pointer mb-1.5 overflow-hidden',
-        styles.bg,
-        styles.border
+        // Se tem indicador especial, usa background azul royal, senão usa o estilo padrão
+        temIndicadorEspecial ? 'bg-[#1E3A8A]' : styles.bg,
+        // Só aplica a borda se NÃO tiver indicador especial
+        !temIndicadorEspecial && styles.border
       )}
     >
+
       <div className="flex items-center gap-1.5 px-2 py-1.5">
         {/* Ícone */}
         <div className={cn('rounded flex items-center justify-center flex-shrink-0 w-5 h-5', styles.iconBg)}>
@@ -84,7 +90,11 @@ export default function CalendarEventMiniCard({
             )}
 
             {/* Título */}
-            <span className={cn('text-[11px] font-semibold truncate leading-tight', styles.text)}>
+            <span className={cn(
+              'text-[11px] font-semibold truncate leading-tight',
+              styles.text,
+              tipo === 'tarefa' && status === 'concluida' && 'line-through opacity-75'
+            )}>
               {titulo}
             </span>
           </div>

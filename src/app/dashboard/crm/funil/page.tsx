@@ -1,27 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, MessageSquare, TrendingUp, GripVertical, User, Calendar, DollarSign } from 'lucide-react';
+import { Plus, MessageSquare, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InteracaoTimeline } from '@/components/crm/InteracaoTimeline';
 import { InteracaoModal } from '@/components/crm/InteracaoModal';
-import {
-  DndContext,
-  DragOverlay,
-  closestCorners,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragStartEvent,
-  DragOverEvent,
-  DragEndEvent,
-  useDroppable,
-} from '@dnd-kit/core';
-import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { KanbanBoard } from '@/components/crm/KanbanBoard';
 
 // Mock data - cores seguindo o gradiente da paleta
 const mockEtapas = [
@@ -124,129 +109,10 @@ const mockInteracoes = [
   },
 ];
 
-// Droppable Column Component
-function DroppableColumn({ children, id }: { children: React.ReactNode; id: string }) {
-  const { setNodeRef, isOver } = useDroppable({ id });
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`flex-1 min-h-[400px] transition-colors ${
-        isOver ? 'bg-slate-50 rounded-lg' : ''
-      }`}
-    >
-      {children}
-    </div>
-  );
-}
-
-// Sortable Card Component
-function SortableCard({ oportunidade, onRegistrarInteracao }: any) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: oportunidade.id,
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-    }).format(date);
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className="bg-white rounded-lg border border-slate-200 p-3 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
-    >
-      {/* Drag Handle + Título */}
-      <div className="flex items-start gap-2 mb-3">
-        <div className="mt-1">
-          <GripVertical className="w-4 h-4 text-slate-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-slate-900 mb-1 line-clamp-2">
-            {oportunidade.titulo}
-          </h3>
-          <div className="flex items-center gap-1 text-xs text-slate-600">
-            <User className="w-3 h-3" />
-            <span className="truncate">{oportunidade.pessoa_nome}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Valor */}
-      {oportunidade.valor_estimado && (
-        <div className="mb-3">
-          <div className="text-[10px] font-medium text-[#89bcbe] mb-0.5">Valor Estimado</div>
-          <div className="text-sm font-semibold text-slate-900">
-            {formatCurrency(oportunidade.valor_estimado)}
-          </div>
-        </div>
-      )}
-
-      {/* Última Interação */}
-      {oportunidade.ultima_interacao && (
-        <div className="mb-3">
-          <div className="text-[10px] font-medium text-[#89bcbe] mb-0.5">Última Interação</div>
-          <div className="text-xs text-slate-900 line-clamp-2">{oportunidade.ultima_interacao.descricao}</div>
-          <div className="text-[10px] text-slate-500 mt-0.5">{formatDate(oportunidade.ultima_interacao.data)}</div>
-        </div>
-      )}
-
-      {/* Próxima Ação */}
-      {oportunidade.proxima_acao && (
-        <div className="mb-3">
-          <div className="text-[10px] font-medium text-[#89bcbe] mb-0.5">Próxima Ação</div>
-          <div className="text-xs text-slate-900 line-clamp-2">{oportunidade.proxima_acao}</div>
-        </div>
-      )}
-
-      {/* Footer */}
-      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-        <div className="flex items-center gap-1 text-xs text-slate-500">
-          <Calendar className="w-3 h-3" />
-          <span>{oportunidade.tempo_na_etapa_dias}d</span>
-        </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-6 text-xs bg-[#34495e] hover:bg-[#46627f] text-white pointer-events-auto"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            onRegistrarInteracao(oportunidade.id, oportunidade.pessoa_id, oportunidade.pessoa_nome);
-          }}
-        >
-          <MessageSquare className="w-3 h-3 mr-1" />
-          Interação
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 export default function FunilPage() {
   const [activeTab, setActiveTab] = useState('funil');
   const [oportunidades, setOportunidades] = useState(initialOportunidades);
-  const [activeId, setActiveId] = useState<string | null>(null);
   const [interacaoModalOpen, setInteracaoModalOpen] = useState(false);
   const [interacaoContext, setInteracaoContext] = useState<{
     oportunidadeId?: string;
@@ -254,65 +120,18 @@ export default function FunilPage() {
     pessoaNome?: string;
   }>({});
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor)
-  );
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
+  const handleOportunidadeMove = (oportunidadeId: string, novaEtapaId: string) => {
+    setOportunidades((items) =>
+      items.map((item) =>
+        item.id === oportunidadeId ? { ...item, etapa_id: novaEtapaId } : item
+      )
+    );
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeId = active.id as string;
-    const overId = over.id as string;
-
-    // Encontrar oportunidade sendo arrastada
-    const activeOportunidade = oportunidades.find((o) => o.id === activeId);
-    if (!activeOportunidade) return;
-
-    // Se soltar sobre uma coluna (etapa)
-    const overEtapa = mockEtapas.find((e) => e.id === overId);
-    if (overEtapa && activeOportunidade.etapa_id !== overEtapa.id) {
-      setOportunidades((items) =>
-        items.map((item) =>
-          item.id === activeId ? { ...item, etapa_id: overEtapa.id } : item
-        )
-      );
-      return;
-    }
-
-    // Se soltar sobre outro card
-    const overOportunidade = oportunidades.find((o) => o.id === overId);
-    if (overOportunidade && overOportunidade.etapa_id !== activeOportunidade.etapa_id) {
-      setOportunidades((items) =>
-        items.map((item) =>
-          item.id === activeId ? { ...item, etapa_id: overOportunidade.etapa_id } : item
-        )
-      );
-    }
+  const handleRegistrarInteracao = (oportunidadeId: string, pessoaId: string, pessoaNome: string) => {
+    setInteracaoContext({ oportunidadeId, pessoaId, pessoaNome });
+    setInteracaoModalOpen(true);
   };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    setActiveId(null);
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const activeOportunidade = oportunidades.find((o) => o.id === activeId);
 
   return (
     <div className="space-y-4">
@@ -359,87 +178,12 @@ export default function FunilPage() {
 
           {/* Tab: Funil de Vendas */}
           <TabsContent value="funil" className="p-6 mt-0">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCorners}
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDragEnd={handleDragEnd}
-            >
-              <div className="grid grid-cols-4 gap-4">
-                {mockEtapas.map((etapa) => {
-                  const oportunidadesEtapa = oportunidades.filter(
-                    (opp) => opp.etapa_id === etapa.id
-                  );
-                  const valorEtapa = oportunidadesEtapa.reduce(
-                    (acc, opp) => acc + (opp.valor_estimado || 0),
-                    0
-                  );
-
-                  return (
-                    <div key={etapa.id} className="flex flex-col h-full">
-                      {/* Header da Coluna */}
-                      <div
-                        className="rounded-lg p-3 mb-3"
-                        style={{ backgroundColor: etapa.cor }}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-sm font-semibold text-white">
-                            {etapa.nome}
-                          </h3>
-                          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-white/20">
-                            <span className="text-xs font-semibold text-white">
-                              {oportunidadesEtapa.length}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-xs text-white/90 flex items-center gap-1 font-medium">
-                          <DollarSign className="w-3.5 h-3.5 text-white/80" />
-                          {formatCurrency(valorEtapa)}
-                        </div>
-                      </div>
-
-                      {/* Drop Zone */}
-                      <DroppableColumn id={etapa.id}>
-                        <SortableContext
-                          items={oportunidadesEtapa.map((o) => o.id)}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          <div className="space-y-2">
-                            {oportunidadesEtapa.map((oportunidade) => (
-                              <SortableCard
-                                key={oportunidade.id}
-                                oportunidade={oportunidade}
-                                onRegistrarInteracao={(oportunidadeId: string, pessoaId: string, pessoaNome: string) => {
-                                  setInteracaoContext({ oportunidadeId, pessoaId, pessoaNome });
-                                  setInteracaoModalOpen(true);
-                                }}
-                              />
-                            ))}
-                          </div>
-                        </SortableContext>
-
-                        {oportunidadesEtapa.length === 0 && (
-                          <div className="h-full flex items-center justify-center border-2 border-dashed border-slate-200 rounded-lg p-4">
-                            <p className="text-xs text-slate-400">Arraste cards aqui</p>
-                          </div>
-                        )}
-                      </DroppableColumn>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <DragOverlay>
-                {activeId && activeOportunidade ? (
-                  <div className="bg-white rounded-lg border-2 border-[#34495e] p-3 shadow-lg rotate-3">
-                    <h3 className="text-sm font-semibold text-slate-900">
-                      {activeOportunidade.titulo}
-                    </h3>
-                  </div>
-                ) : null}
-              </DragOverlay>
-            </DndContext>
+            <KanbanBoard
+              etapas={mockEtapas}
+              oportunidades={oportunidades}
+              onOportunidadeMove={handleOportunidadeMove}
+              onRegistrarInteracao={handleRegistrarInteracao}
+            />
           </TabsContent>
 
           {/* Tab: Todas as Interações */}

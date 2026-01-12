@@ -7,6 +7,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   Plus,
   Search,
   Filter,
@@ -16,12 +22,21 @@ import {
   Paperclip,
   ChevronLeft,
   ChevronRight,
-  MoreVertical
+  MoreVertical,
+  ListTodo,
+  Calendar,
+  Gavel
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import ProcessoWizard from '@/components/processos/ProcessoWizard'
+import TarefaWizard from '@/components/agenda/TarefaWizard'
+import EventoWizard from '@/components/agenda/EventoWizard'
+import AudienciaWizard from '@/components/agenda/AudienciaWizard'
+import { useTarefas } from '@/hooks/useTarefas'
+import { useEventos } from '@/hooks/useEventos'
+import { useAudiencias } from '@/hooks/useAudiencias'
 
 interface Processo {
   id: string
@@ -47,8 +62,40 @@ export default function ProcessosPage() {
   const [currentView, setCurrentView] = useState<'todos' | 'ativos' | 'criticos' | 'meus' | 'arquivados'>('todos')
   const [showFilters, setShowFilters] = useState(false)
   const [showWizard, setShowWizard] = useState(false)
+
+  // Estados para wizards de agenda
+  const [showTarefaWizard, setShowTarefaWizard] = useState(false)
+  const [showEventoWizard, setShowEventoWizard] = useState(false)
+  const [showAudienciaWizard, setShowAudienciaWizard] = useState(false)
+  const [selectedProcessoId, setSelectedProcessoId] = useState<string | null>(null)
+  const [escritorioId, setEscritorioId] = useState<string | null>(null)
+
   const router = useRouter()
   const supabase = createClient()
+
+  // Hooks de agenda
+  const { criarTarefa } = useTarefas(escritorioId || '')
+  const { criarEvento } = useEventos(escritorioId || '')
+  const { criarAudiencia } = useAudiencias(escritorioId || '')
+
+  // Carregar escritórioId do usuário logado
+  useEffect(() => {
+    const loadEscritorioId = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('escritorio_id')
+          .eq('id', user.id)
+          .single()
+
+        if (profile) {
+          setEscritorioId(profile.escritorio_id)
+        }
+      }
+    }
+    loadEscritorioId()
+  }, [])
 
   useEffect(() => {
     loadProcessos()
@@ -82,6 +129,18 @@ export default function ProcessosPage() {
         return
       }
 
+      // Buscar prazos críticos (próximos 7 dias) via view
+      const { data: prazosCriticos } = await supabase
+        .from('v_prazos_criticos')
+        .select('id')
+        .gte('dias_restantes', 0)
+        .lte('dias_restantes', 7)
+        .eq('prazo_cumprido', false)
+
+      const processoComPrazoCritico = new Set(
+        (prazosCriticos || []).map(p => p.id)
+      )
+
       // Transformar dados do banco para o formato da interface
       const processosFormatados: Processo[] = (data || []).map((p: any) => ({
         id: p.id,
@@ -96,7 +155,7 @@ export default function ProcessosPage() {
         status: p.status,
         ultima_movimentacao: p.updated_at,
         movimentacoes_nao_lidas: 0, // TODO: buscar da tabela de movimentações
-        tem_prazo_critico: false, // TODO: buscar da tabela de prazos
+        tem_prazo_critico: processoComPrazoCritico.has(p.id),
         tem_documento_pendente: false // TODO: buscar da tabela de documentos
       }))
 
@@ -315,18 +374,71 @@ export default function ProcessosPage() {
                         {formatTimestamp(processo.ultima_movimentacao)}
                       </span>
                     </td>
-                    <td className="p-3 text-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          // Menu de ações
-                        }}
-                      >
-                        <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
-                      </Button>
+                    <td className="p-3">
+                      <div className="flex items-center justify-center gap-1">
+                        {/* Menu de criar agendamento */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs hover:bg-[#89bcbe] hover:text-white transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                              }}
+                              title="Criar agendamento para este processo"
+                            >
+                              <Plus className="w-3 h-3 mr-1" />
+                              Agenda
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedProcessoId(processo.id)
+                                setShowTarefaWizard(true)
+                              }}
+                            >
+                              <ListTodo className="w-4 h-4 mr-2 text-[#34495e]" />
+                              <span className="text-sm">Nova Tarefa</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedProcessoId(processo.id)
+                                setShowEventoWizard(true)
+                              }}
+                            >
+                              <Calendar className="w-4 h-4 mr-2 text-[#89bcbe]" />
+                              <span className="text-sm">Novo Compromisso</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedProcessoId(processo.id)
+                                setShowAudienciaWizard(true)
+                              }}
+                            >
+                              <Gavel className="w-4 h-4 mr-2 text-emerald-600" />
+                              <span className="text-sm">Nova Audiência</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        {/* Menu de ações */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            // Menu de ações
+                          }}
+                        >
+                          <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -364,6 +476,58 @@ export default function ProcessosPage() {
           router.push(`/dashboard/processos/${processoId}`)
         }}
       />
+
+      {/* Wizards de Agenda vinculados ao processo */}
+      {showTarefaWizard && escritorioId && selectedProcessoId && (
+        <TarefaWizard
+          escritorioId={escritorioId}
+          onClose={() => {
+            setShowTarefaWizard(false)
+            setSelectedProcessoId(null)
+          }}
+          onSubmit={async (data) => {
+            await criarTarefa(data)
+            loadProcessos()
+          }}
+          initialData={{
+            processo_id: selectedProcessoId
+          }}
+        />
+      )}
+
+      {showEventoWizard && escritorioId && selectedProcessoId && (
+        <EventoWizard
+          escritorioId={escritorioId}
+          onClose={() => {
+            setShowEventoWizard(false)
+            setSelectedProcessoId(null)
+          }}
+          onSubmit={async (data) => {
+            await criarEvento(data)
+            loadProcessos()
+          }}
+          initialData={{
+            processo_id: selectedProcessoId
+          }}
+        />
+      )}
+
+      {showAudienciaWizard && escritorioId && selectedProcessoId && (
+        <AudienciaWizard
+          escritorioId={escritorioId}
+          onClose={() => {
+            setShowAudienciaWizard(false)
+            setSelectedProcessoId(null)
+          }}
+          onSubmit={async (data) => {
+            await criarAudiencia(data)
+            loadProcessos()
+          }}
+          initialData={{
+            processo_id: selectedProcessoId
+          }}
+        />
+      )}
     </div>
   )
 }

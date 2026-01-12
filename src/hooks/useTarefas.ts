@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { formatDateForDB, formatDateTimeForDB, getNowInBrazil } from '@/lib/timezone'
 
 export interface Tarefa {
   id: string
@@ -12,8 +13,11 @@ export interface Tarefa {
   data_inicio: string
   data_fim?: string
   data_conclusao?: string
-  progresso_percentual: number
-  parent_id?: string
+
+  // Planejamento de Horário (usado apenas na visualização dia)
+  horario_planejado_dia?: string | null  // time format: '14:30:00'
+  duracao_planejada_minutos?: number | null  // duração em minutos para a grade horária
+
   responsavel_id?: string
   criado_por?: string
 
@@ -25,6 +29,10 @@ export interface Tarefa {
   prazo_tipo?: 'recurso' | 'manifestacao' | 'cumprimento' | 'juntada' | 'pagamento' | 'outro'
   prazo_cumprido?: boolean
   prazo_perdido?: boolean
+
+  // Vinculações (FK diretas)
+  processo_id?: string | null
+  consultivo_id?: string | null
 
   // Metadata
   observacoes?: string
@@ -110,17 +118,20 @@ export function useTarefas(escritorioId?: string) {
           tipo: data.tipo || 'outro',
           prioridade: data.prioridade || 'media',
           status: data.status || 'pendente',
-          data_inicio: data.data_inicio,
-          data_fim: data.data_fim,
+          data_inicio: data.data_inicio ? formatDateForDB(data.data_inicio) : undefined,
+          data_fim: data.data_fim ? formatDateForDB(data.data_fim) : undefined,
           responsavel_id: data.responsavel_id,
-          parent_id: data.parent_id,
           cor: data.cor,
           observacoes: data.observacoes,
           tags: data.tags,
+          // Vinculações
+          processo_id: data.processo_id || null,
+          consultivo_id: data.consultivo_id || null,
           // Prazo processual
           prazo_data_intimacao: data.prazo_data_intimacao,
           prazo_quantidade_dias: data.prazo_quantidade_dias,
           prazo_dias_uteis: data.prazo_dias_uteis,
+          prazo_data_limite: data.prazo_data_limite,
           prazo_tipo: data.prazo_tipo,
         })
         .select()
@@ -190,17 +201,21 @@ export function useTarefas(escritorioId?: string) {
           tipo: data.tipo,
           prioridade: data.prioridade,
           status: data.status,
-          data_inicio: data.data_inicio,
-          data_fim: data.data_fim,
-          data_conclusao: data.data_conclusao,
+          data_inicio: data.data_inicio ? formatDateForDB(data.data_inicio) : undefined,
+          data_fim: data.data_fim ? formatDateForDB(data.data_fim) : undefined,
+          data_conclusao: data.data_conclusao ? formatDateTimeForDB(new Date(data.data_conclusao)) : undefined,
           responsavel_id: data.responsavel_id,
           cor: data.cor,
           observacoes: data.observacoes,
           tags: data.tags,
+          // Vinculações
+          processo_id: data.processo_id !== undefined ? data.processo_id : undefined,
+          consultivo_id: data.consultivo_id !== undefined ? data.consultivo_id : undefined,
           // Prazo processual
           prazo_data_intimacao: data.prazo_data_intimacao,
           prazo_quantidade_dias: data.prazo_quantidade_dias,
           prazo_dias_uteis: data.prazo_dias_uteis,
+          prazo_data_limite: data.prazo_data_limite,
           prazo_tipo: data.prazo_tipo,
           prazo_cumprido: data.prazo_cumprido,
         })
@@ -291,7 +306,7 @@ export function useTarefas(escritorioId?: string) {
         .from('agenda_tarefas_checklist')
         .update({
           concluido,
-          concluido_em: concluido ? new Date().toISOString() : null,
+          concluido_em: concluido ? formatDateTimeForDB(getNowInBrazil()) : null,
         })
         .eq('id', itemId)
 
@@ -328,8 +343,7 @@ export function useTarefas(escritorioId?: string) {
         .from('agenda_tarefas')
         .update({
           status: 'concluida',
-          data_conclusao: new Date().toISOString(),
-          progresso_percentual: 100,
+          data_conclusao: formatDateTimeForDB(getNowInBrazil()),
         })
         .eq('id', id)
 
@@ -342,8 +356,34 @@ export function useTarefas(escritorioId?: string) {
     }
   }
 
+  // Reabrir tarefa (voltar para pendente)
+  const reabrirTarefa = async (id: string): Promise<void> => {
+    try {
+      const { error } = await supabase
+        .from('agenda_tarefas')
+        .update({
+          status: 'pendente',
+          data_conclusao: null,
+        })
+        .eq('id', id)
+
+      if (error) throw error
+
+      await loadTarefas()
+    } catch (err) {
+      console.error('Erro ao reabrir tarefa:', err)
+      throw err
+    }
+  }
+
   useEffect(() => {
-    loadTarefas()
+    // Só carrega se tiver escritorioId definido
+    if (escritorioId) {
+      loadTarefas()
+    } else {
+      setLoading(false)
+      setTarefas([])
+    }
   }, [escritorioId])
 
   return {
@@ -354,6 +394,7 @@ export function useTarefas(escritorioId?: string) {
     updateTarefa,
     deleteTarefa,
     concluirTarefa,
+    reabrirTarefa,
     // Checklist
     loadChecklist,
     addChecklistItem,

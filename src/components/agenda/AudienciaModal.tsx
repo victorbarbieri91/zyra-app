@@ -18,10 +18,12 @@ import {
   X,
   ClipboardList,
   Users,
+  Link2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ChecklistEditor, { ChecklistItem } from './ChecklistEditor'
 import LembretesEditor, { Lembrete } from './LembretesEditor'
+import VinculacaoSelector, { Vinculacao } from './VinculacaoSelector'
 import { useAudiencias, Audiencia } from '@/hooks/useAudiencias'
 
 interface AudienciaModalProps {
@@ -82,6 +84,9 @@ export default function AudienciaModal({
   // Preparação
   const [checklist, setChecklist] = useState<ChecklistItem[]>([])
 
+  // Vinculação
+  const [vinculacao, setVinculacao] = useState<Vinculacao | null>(null)
+
   // Lembretes
   const [lembretes, setLembretes] = useState<Lembrete[]>([])
 
@@ -130,13 +135,16 @@ export default function AudienciaModal({
     setAdvogadoContrario('')
     setTestemunhas('')
     setChecklist([])
+    setVinculacao(null)
     setLembretes([])
     setActiveTab('basico')
   }
 
   const handleSave = async () => {
-    if (!processoId) {
-      alert('Processo é obrigatório')
+    // Validar vinculação ou processoIdPadrao
+    if (!vinculacao && !processoId) {
+      alert('É necessário vincular a um processo ou consultivo')
+      setActiveTab('vinculacoes')
       return
     }
 
@@ -162,7 +170,9 @@ export default function AudienciaModal({
     try {
       const audienciaData: Partial<Audiencia> = {
         escritorio_id: escritorioId,
-        processo_id: processoId,
+        // Vinculação - usar vinculação ou processoId direto (retrocompatibilidade)
+        processo_id: vinculacao?.modulo === 'processo' ? vinculacao.modulo_registro_id : processoId || null,
+        consultivo_id: vinculacao?.modulo === 'consultivo' ? vinculacao.modulo_registro_id : null,
         tipo_audiencia: tipoAudiencia,
         modalidade,
         data_hora: dataHora,
@@ -214,7 +224,7 @@ export default function AudienciaModal({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="grid w-full grid-cols-5 mb-4">
+          <TabsList className="grid w-full grid-cols-6 mb-4">
             <TabsTrigger value="basico" className="text-xs">
               <ClipboardList className="w-3.5 h-3.5 mr-1.5" />
               Básico
@@ -230,6 +240,10 @@ export default function AudienciaModal({
             <TabsTrigger value="participantes" className="text-xs">
               <Users className="w-3.5 h-3.5 mr-1.5" />
               Participantes
+            </TabsTrigger>
+            <TabsTrigger value="vinculacoes" className="text-xs">
+              <Link2 className="w-3.5 h-3.5 mr-1.5" />
+              Vínculos
             </TabsTrigger>
             <TabsTrigger value="preparacao" className="text-xs">
               <CheckSquare className="w-3.5 h-3.5 mr-1.5" />
@@ -543,6 +557,14 @@ export default function AudienciaModal({
                   className="border-slate-200"
                 />
               </div>
+            </TabsContent>
+
+            {/* ABA VINCULAÇÕES */}
+            <TabsContent value="vinculacoes" className="mt-0">
+              <VinculacaoSelector
+                vinculacao={vinculacao}
+                onChange={setVinculacao}
+              />
             </TabsContent>
 
             {/* ABA PREPARAÇÃO */}

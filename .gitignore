@@ -38,3 +38,15 @@ Thumbs.db
 
 # Supabase
 .branches/
+supabase/.temp/
+
+# MCP & Playwright screenshots (dev only)
+.mcp.json
+.playwright-mcp/
+
+# Claude local settings
+.claude/settings.local.json
+
+# Temporary files
+nul
+tsconfig.tsbuildinfo

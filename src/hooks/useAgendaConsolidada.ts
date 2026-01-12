@@ -15,9 +15,20 @@ export interface AgendaItem {
   subtipo: string // Tipo específico (prazo_processual, inicial, compromisso, etc)
   responsavel_id?: string
   responsavel_nome?: string
-  progresso_percentual?: number
   prazo_data_limite?: string
-  prazo_cumprido?: boolean
+
+  // Planejamento de Horário (usado apenas para tarefas na visualização dia)
+  horario_planejado_dia?: string | null
+  duracao_planejada_minutos?: number | null
+
+  local?: string
+  // Vinculações
+  processo_id?: string
+  processo_numero?: string
+  consultivo_id?: string
+  consultivo_titulo?: string
+  // Recorrência
+  recorrencia_id?: string | null
   escritorio_id: string
   created_at: string
   updated_at: string
@@ -76,12 +87,26 @@ export function useAgendaConsolidada(filters?: AgendaFilters) {
 
       const { data, error: queryError } = await query
 
-      if (queryError) throw queryError
+      if (queryError) {
+        console.error('Erro na query de agenda consolidada:', {
+          message: queryError.message,
+          details: queryError.details,
+          hint: queryError.hint,
+          code: queryError.code
+        })
+        throw queryError
+      }
 
       setItems(data || [])
-    } catch (err) {
+    } catch (err: any) {
       setError(err as Error)
-      console.error('Erro ao carregar agenda consolidada:', err)
+      console.error('Erro ao carregar agenda consolidada:', {
+        message: err?.message,
+        details: err?.details,
+        hint: err?.hint,
+        code: err?.code,
+        error: err
+      })
     } finally {
       setLoading(false)
     }

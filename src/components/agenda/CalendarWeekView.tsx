@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
@@ -21,6 +21,7 @@ import {
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { EventCardProps } from './EventCard'
+import AllDayEventsSection from './AllDayEventsSection'
 
 interface CalendarWeekViewProps {
   eventos: EventCardProps[]
@@ -32,6 +33,50 @@ interface CalendarWeekViewProps {
 }
 
 const HOURS = Array.from({ length: 17 }, (_, i) => i + 6) // 6h às 22h
+
+// Componente para linha da hora atual
+function CurrentTimeLine() {
+  const [position, setPosition] = useState(0)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const calcPosition = () => {
+      const now = new Date()
+      const hour = getHours(now)
+      const minute = getMinutes(now)
+
+      // Só mostra se estiver entre 6h e 22h
+      if (hour < 6 || hour >= 22) {
+        setVisible(false)
+        return
+      }
+
+      const top = (hour - 6) * 60 + minute // 60px por hora
+      setPosition(top)
+      setVisible(true)
+    }
+
+    calcPosition()
+    // Atualiza a cada minuto
+    const interval = setInterval(calcPosition, 60000)
+    return () => clearInterval(interval)
+  }, [])
+
+  if (!visible) return null
+
+  return (
+    <>
+      {/* Linha vermelha horizontal */}
+      <div
+        className="absolute left-0 right-0 h-0.5 bg-red-500 z-20 pointer-events-none"
+        style={{ top: `${position}px` }}
+      >
+        {/* Bolinha na esquerda */}
+        <div className="absolute left-0 w-2 h-2 rounded-full bg-red-500 -ml-1 -mt-0.5" />
+      </div>
+    </>
+  )
+}
 
 export default function CalendarWeekView({
   eventos,
@@ -45,12 +90,75 @@ export default function CalendarWeekView({
   const weekEnd = endOfWeek(selectedDate, { locale: ptBR })
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd })
 
+  // Ref para scroll inteligente
+  const gridContainerRef = useRef<HTMLDivElement>(null)
+
+  // Estado de collapse da seção all-day
+  const [isAllDayCollapsed, setIsAllDayCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem('agenda-allday-collapsed') === 'true'
+  })
+
+  const toggleCollapse = () => {
+    const newState = !isAllDayCollapsed
+    setIsAllDayCollapsed(newState)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('agenda-allday-collapsed', String(newState))
+    }
+  }
+
+  // Scroll inteligente para hora atual ao montar
+  useEffect(() => {
+    if (!gridContainerRef.current) return
+
+    const now = new Date()
+    const hour = getHours(now)
+
+    // Centraliza em ~2h antes da hora atual (ou 8h se for muito cedo)
+    const targetHour = Math.max(8, hour - 2)
+    const scrollTop = Math.max(0, (targetHour - 6) * 60)
+
+    setTimeout(() => {
+      gridContainerRef.current?.scrollTo({
+        top: scrollTop,
+        behavior: 'smooth'
+      })
+    }, 100) // Pequeno delay para garantir que o layout foi montado
+  }, [])
+
   const previousWeek = () => onDateSelect(subWeeks(selectedDate, 1))
   const nextWeek = () => onDateSelect(addWeeks(selectedDate, 1))
   const goToToday = () => onDateSelect(new Date())
 
+  // Função helper para verificar se evento tem hora definida
+  const temHoraDefinida = (evento: EventCardProps) => {
+    const hora = getHours(new Date(evento.data_inicio))
+    const minutos = getMinutes(new Date(evento.data_inicio))
+    // Considera que tem hora se não for 00:00 OU se tiver data_fim
+    return (hora !== 0 || minutos !== 0) || evento.data_fim !== undefined
+  }
+
+  // Categorizar eventos em: sem hora, dia inteiro, com hora
+  const eventosCategorized = useMemo(() => {
+    const semHora: EventCardProps[] = []
+    const comHora: EventCardProps[] = []
+
+    eventos.forEach((evento) => {
+      // Eventos de dia inteiro ou sem hora específica vão para a seção all-day
+      if (evento.dia_inteiro || !temHoraDefinida(evento)) {
+        semHora.push(evento)
+      } else {
+        comHora.push(evento)
+      }
+    })
+
+    return { semHora, comHora }
+  }, [eventos])
+
   const getEventosForDay = (day: Date) => {
-    return eventos.filter((evento) => isSameDay(new Date(evento.data_inicio), day))
+    return eventosCategorized.comHora.filter((evento) =>
+      isSameDay(new Date(evento.data_inicio), day)
+    )
   }
 
   const getEventoPosition = (evento: EventCardProps) => {
@@ -142,22 +250,35 @@ export default function CalendarWeekView({
               ))}
             </div>
 
-            {/* Grade de Horários */}
-            <div className="grid grid-cols-8">
-              {/* Coluna de horários */}
-              <div className="border-r border-slate-200">
-                {HOURS.map((hour) => (
-                  <div
-                    key={hour}
-                    className="h-[60px] p-2 text-xs text-[#6c757d] border-b border-slate-100 text-right"
-                  >
-                    {String(hour).padStart(2, '0')}:00
-                  </div>
-                ))}
-              </div>
+            {/* Seção All-Day/Tarefas */}
+            <AllDayEventsSection
+              eventos={eventosCategorized.semHora}
+              dias={weekDays}
+              isCollapsed={isAllDayCollapsed}
+              onToggle={toggleCollapse}
+              onEventClick={onEventClick}
+            />
 
-              {/* Colunas de dias */}
-              {weekDays.map((day) => {
+            {/* Grade de Horários */}
+            <div
+              ref={gridContainerRef}
+              className="overflow-y-auto max-h-[600px]"
+            >
+              <div className="grid grid-cols-8">
+                {/* Coluna de horários */}
+                <div className="border-r border-slate-200">
+                  {HOURS.map((hour) => (
+                    <div
+                      key={hour}
+                      className="h-[60px] p-2 text-xs text-[#6c757d] border-b border-slate-100 text-right"
+                    >
+                      {String(hour).padStart(2, '0')}:00
+                    </div>
+                  ))}
+                </div>
+
+                {/* Colunas de dias */}
+                {weekDays.map((day) => {
                 const eventosDay = getEventosForDay(day)
 
                 return (
@@ -168,6 +289,9 @@ export default function CalendarWeekView({
                       isToday(day) && 'bg-[#f0f9f9]/20'
                     )}
                   >
+                    {/* Linha da hora atual (só aparece na coluna de hoje) */}
+                    {isToday(day) && <CurrentTimeLine />}
+
                     {HOURS.map((hour) => (
                       <div
                         key={hour}
@@ -183,28 +307,8 @@ export default function CalendarWeekView({
                       </div>
                     ))}
 
-                    {/* Eventos Posicionados */}
+                    {/* Eventos Posicionados (apenas com hora) */}
                     {eventosDay.map((evento) => {
-                      if (evento.dia_inteiro) {
-                        return (
-                          <div
-                            key={evento.id}
-                            onClick={() => onEventClick(evento)}
-                            className={cn(
-                              'absolute left-1 right-1 top-1 z-10',
-                              'p-2 rounded border cursor-pointer text-[10px] font-medium',
-                              'hover:shadow-md transition-all truncate',
-                              evento.tipo === 'audiencia' && 'bg-[#1E3A8A]/10 border-[#1E3A8A]/30 text-[#1E3A8A]',
-                              evento.tipo === 'prazo' && 'bg-amber-100 border-amber-200 text-amber-800',
-                              evento.tipo === 'compromisso' && 'bg-blue-100 border-blue-200 text-blue-800',
-                              evento.tipo === 'tarefa' && 'bg-slate-100 border-slate-200 text-slate-800'
-                            )}
-                          >
-                            {evento.titulo}
-                          </div>
-                        )
-                      }
-
                       const { top, height } = getEventoPosition(evento)
 
                       return (
@@ -234,6 +338,7 @@ export default function CalendarWeekView({
                   </div>
                 )
               })}
+              </div>
             </div>
           </div>
         </div>

@@ -7,7 +7,6 @@ import { createClient } from '@/lib/supabase/client';
 
 // Importar componentes
 import { EscritorioOverview } from '@/components/escritorio/EscritorioOverview';
-import { EscritorioStats } from '@/components/escritorio/EscritorioStats';
 import { MembrosList } from '@/components/escritorio/MembrosList';
 import { ConvitesList } from '@/components/escritorio/ConvitesList';
 import { PerformanceMembroTabs } from '@/components/escritorio/PerformanceMembroTabs';
@@ -214,7 +213,7 @@ export default function EscritorioPage() {
 
           {/* COLUNA CENTRAL (40%) */}
           <div className="xl:col-span-5 space-y-6">
-            <EscritorioStats stats={stats} />
+            {/* Removido EscritorioStats - KPIs desnecessários */}
 
             <PerformanceMembroTabs membros={performanceMembros} />
 

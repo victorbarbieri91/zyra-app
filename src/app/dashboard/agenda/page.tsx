@@ -60,8 +60,9 @@ export default function AgendaPage() {
 
   const [filters, setFilters] = useState({
     tipos: {
-      evento: true,
+      compromisso: true,
       audiencia: true,
+      prazo: true,
       tarefa: true,
     },
     status: {
@@ -106,29 +107,28 @@ export default function AgendaPage() {
   const eventosFormatados = useMemo((): EventCardProps[] => {
     return agendaItems
       .filter(item => {
-        // Aplicar filtros de tipo
-        if (!filters.tipos[item.tipo_entidade]) return false
-        // Aplicar filtros de status (se aplicável)
-        // TODO: ajustar quando status estiver disponível
+        // Mapear tipo_entidade para os filtros
+        if (item.tipo_entidade === 'tarefa' && !filters.tipos.tarefa) return false
+        if (item.tipo_entidade === 'audiencia' && !filters.tipos.audiencia) return false
+        if (item.tipo_entidade === 'evento') {
+          const isPrazo = item.subtipo === 'prazo_processual'
+          if (isPrazo && !filters.tipos.prazo) return false
+          if (!isPrazo && !filters.tipos.compromisso) return false
+        }
         return true
       })
       .map(item => ({
         id: item.id,
         titulo: item.titulo,
-        tipo: item.tipo_entidade === 'tarefa' ? 'tarefa' : item.tipo_entidade === 'audiencia' ? 'audiencia' : 'compromisso',
+        tipo: item.tipo_entidade === 'tarefa' ? 'tarefa' : item.tipo_entidade === 'audiencia' ? 'audiencia' : item.subtipo === 'prazo_processual' ? 'prazo' : 'compromisso',
         data_inicio: new Date(item.data_inicio),
         data_fim: item.data_fim ? new Date(item.data_fim) : undefined,
         dia_inteiro: item.dia_inteiro || false,
         local: item.local,
         responsavel_nome: item.responsavel_nome,
-        status: item.status || 'agendado',
-        prazo_criticidade: item.prioridade === 'alta' ? 'critico' : item.prioridade === 'media' ? 'normal' : 'baixa',
-        // Subtarefas e recorrência
-        parent_id: item.parent_id,
-        tarefa_pai_titulo: item.tarefa_pai_titulo,
+        status: (item.status || 'agendado') as EventCardProps['status'],
+        prazo_criticidade: item.prioridade === 'alta' ? 'critico' : item.prioridade === 'media' ? 'atencao' : 'normal',
         recorrencia_id: item.recorrencia_id,
-        total_subtarefas: item.total_subtarefas,
-        subtarefas_concluidas: item.subtarefas_concluidas,
       }))
   }, [agendaItems, filters])
 
@@ -198,15 +198,16 @@ export default function AgendaPage() {
       const eventoCompleto = eventos.find(e => e.id === evento.id)
       if (eventoCompleto && itemCompleto) {
         // Combinar dados do evento e da agenda consolidada
+        const item = itemCompleto as any
         setEventoSelecionado({
           ...eventoCompleto,
-          subtipo: itemCompleto.subtipo,
-          status: itemCompleto.status,
-          processo_numero: itemCompleto.processo_numero,
-          consultivo_titulo: itemCompleto.consultivo_titulo,
-          cliente_nome: itemCompleto.cliente_nome,
-          responsavel_nome: itemCompleto.responsavel_nome,
-          prazo_data_limite: itemCompleto.prazo_data_limite,
+          subtipo: item.subtipo,
+          status: item.status,
+          processo_numero: item.processo_numero,
+          consultivo_titulo: item.consultivo_titulo,
+          cliente_nome: item.cliente_nome,
+          responsavel_nome: item.responsavel_nome,
+          prazo_data_limite: item.prazo_data_limite,
         } as any)
       }
       setEventoDetailOpen(true)
@@ -553,21 +554,21 @@ export default function AgendaPage() {
                   // Identificar o tipo de item e abrir o modal correto
                   if (agendaItem.tipo_entidade === 'tarefa') {
                     // Buscar tarefa completa
-                    const tarefa = tarefasFromHook.find(t => t.id === agendaItem.id)
+                    const tarefa = tarefas.find(t => t.id === agendaItem.id)
                     if (tarefa) {
                       setTarefaSelecionada(tarefa)
                       setTarefaDetailOpen(true)
                     }
                   } else if (agendaItem.tipo_entidade === 'audiencia') {
                     // Buscar audiência completa
-                    const audiencia = audienciasFromHook.find(a => a.id === agendaItem.id)
+                    const audiencia = audiencias.find(a => a.id === agendaItem.id)
                     if (audiencia) {
                       setAudienciaSelecionada(audiencia)
                       setAudienciaDetailOpen(true)
                     }
                   } else if (agendaItem.tipo_entidade === 'evento') {
                     // Buscar evento completo
-                    const evento = eventosFromHook.find(e => e.id === agendaItem.id)
+                    const evento = eventos.find(e => e.id === agendaItem.id)
                     if (evento) {
                       setEventoSelecionado(evento)
                       setEventoDetailOpen(true)
@@ -622,7 +623,7 @@ export default function AgendaPage() {
             dia_inteiro: agendaItem.dia_inteiro,
             local: agendaItem.local,
             responsavel_nome: agendaItem.responsavel_nome,
-            status: agendaItem.status,
+            status: agendaItem.status as EventCardProps['status'],
           }
           handleEventClick(eventoProps)
         }}
@@ -663,7 +664,14 @@ export default function AgendaPage() {
               setAudienciaSelecionada(null)
             }
           }}
-          audiencia={audienciaSelecionada}
+          audiencia={{
+            ...audienciaSelecionada,
+            data_inicio: audienciaSelecionada.data_hora,
+            tipo_audiencia: audienciaSelecionada.tipo_audiencia,
+            status: audienciaSelecionada.status === 'adiada' ? 'remarcada' : audienciaSelecionada.status,
+            juiz_nome: audienciaSelecionada.juiz,
+            promotor_nome: audienciaSelecionada.promotor,
+          } as any}
           onEdit={handleEditAudiencia}
           onCancelar={() => handleCancelarAudiencia(audienciaSelecionada.id)}
           onProcessoClick={handleProcessoClick}
@@ -679,7 +687,7 @@ export default function AgendaPage() {
               setEventoSelecionado(null)
             }
           }}
-          evento={eventoSelecionado}
+          evento={eventoSelecionado as any}
           onEdit={handleEditEvento}
           onCancelar={() => handleCancelarEvento(eventoSelecionado.id)}
           onProcessoClick={handleProcessoClick}

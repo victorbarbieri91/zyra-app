@@ -92,7 +92,7 @@ export default function AudienciaModal({
 
   useEffect(() => {
     if (audiencia) {
-      setProcessoId(audiencia.processo_id)
+      setProcessoId(audiencia.processo_id || '')
       setTipoAudiencia(audiencia.tipo_audiencia)
       setModalidade(audiencia.modalidade)
       setDataHora(audiencia.data_hora?.substring(0, 16) || '')

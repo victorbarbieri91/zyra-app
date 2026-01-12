@@ -74,9 +74,9 @@ export default function ProcessosPage() {
   const supabase = createClient()
 
   // Hooks de agenda
-  const { criarTarefa } = useTarefas(escritorioId || '')
-  const { criarEvento } = useEventos(escritorioId || '')
-  const { criarAudiencia } = useAudiencias(escritorioId || '')
+  const { createTarefa } = useTarefas(escritorioId || '')
+  const { createEvento } = useEventos(escritorioId || '')
+  const { createAudiencia } = useAudiencias(escritorioId || '')
 
   // Carregar escritórioId do usuário logado
   useEffect(() => {
@@ -486,7 +486,7 @@ export default function ProcessosPage() {
             setSelectedProcessoId(null)
           }}
           onSubmit={async (data) => {
-            await criarTarefa(data)
+            await createTarefa(data)
             loadProcessos()
           }}
           initialData={{
@@ -503,7 +503,7 @@ export default function ProcessosPage() {
             setSelectedProcessoId(null)
           }}
           onSubmit={async (data) => {
-            await criarEvento(data)
+            await createEvento(data)
             loadProcessos()
           }}
           initialData={{
@@ -520,7 +520,7 @@ export default function ProcessosPage() {
             setSelectedProcessoId(null)
           }}
           onSubmit={async (data) => {
-            await criarAudiencia(data)
+            await createAudiencia(data)
             loadProcessos()
           }}
           initialData={{

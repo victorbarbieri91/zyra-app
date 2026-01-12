@@ -162,7 +162,7 @@ export default function OnboardingPage() {
                         : isActive
                         ? colors.primary.darkest
                         : '#e2e8f0',
-                      ringColor: isActive ? colors.primary.light : undefined,
+                      outline: isActive ? colors.primary.light : undefined,
                     }}
                   >
                     {isCompleted ? (

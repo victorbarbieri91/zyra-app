@@ -8,10 +8,10 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
-import type { Database } from '@/types/database.types'
+// Types defined locally
 import { cn } from '@/lib/utils'
 
-type TimesheetRow = Database['public']['Views']['v_timesheet_pendente_aprovacao']['Row']
+interface TimesheetRow { id: string; colaborador_id: string; colaborador_nome?: string; data: string; descricao: string; horas: number; processo_id?: string; processo_numero?: string; numero_processo?: string; cliente_nome?: string; status: 'pendente' | 'aprovado' | 'reprovado'; created_at: string; [key: string]: any }
 
 interface TimesheetFilters {
   colaborador: string

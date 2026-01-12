@@ -34,6 +34,9 @@ interface Template {
   total_teses_vinculadas?: number
   total_juris_vinculadas?: number
   created_at: string
+  estrutura?: any
+  variaveis?: any
+  conteudo_template?: string
 }
 
 export default function TemplatesPage() {

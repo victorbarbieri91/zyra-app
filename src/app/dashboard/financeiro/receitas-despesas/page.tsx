@@ -17,10 +17,10 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
-import type { Database } from '@/types/database.types'
+// Types defined locally
 import { cn } from '@/lib/utils'
 
-type Lancamento = Database['public']['Tables']['financeiro_contas_lancamentos']['Row']
+interface Lancamento { id: string; conta_id: string; tipo: string; valor: number; descricao: string; categoria: string; data_lancamento: string; saldo_apos: number; created_at: string }
 
 interface LancamentosFilters {
   tipo: 'entrada' | 'saida' | 'transferencia' | 'todos'
@@ -64,6 +64,7 @@ interface NovaTransferenciaForm {
 interface LancamentoComConta extends Lancamento {
   conta_nome?: string
   conta_banco?: string
+  origem_tipo?: string
 }
 
 export default function ContasPage() {
@@ -374,7 +375,7 @@ export default function ContasPage() {
         observacoes: '',
       })
       setModalReceitaOpen(false)
-      loadContas()
+      loadLancamentos()
     } catch (error) {
       console.error('Erro ao criar receita:', error)
       alert('Erro ao criar receita. Verifique os campos e tente novamente.')
@@ -414,7 +415,7 @@ export default function ContasPage() {
         observacoes: '',
       })
       setModalDespesaOpen(false)
-      loadContas()
+      loadLancamentos()
     } catch (error) {
       console.error('Erro ao criar despesa:', error)
       alert('Erro ao criar despesa. Verifique os campos e tente novamente.')

@@ -72,8 +72,8 @@ export default function ConsultivoPage() {
   const supabase = createClient()
 
   // Hooks de agenda
-  const { criarTarefa } = useTarefas(escritorioId || '')
-  const { criarEvento } = useEventos(escritorioId || '')
+  const { createTarefa } = useTarefas(escritorioId || '')
+  const { createEvento } = useEventos(escritorioId || '')
 
   // Carregar escritórioId do usuário logado
   useEffect(() => {
@@ -416,7 +416,7 @@ export default function ConsultivoPage() {
             setSelectedConsultivoId(null)
           }}
           onSubmit={async (data) => {
-            await criarTarefa(data)
+            await createTarefa(data)
             loadConsultas()
           }}
           initialData={{
@@ -433,7 +433,7 @@ export default function ConsultivoPage() {
             setSelectedConsultivoId(null)
           }}
           onSubmit={async (data) => {
-            await criarEvento(data)
+            await createEvento(data)
             loadConsultas()
           }}
           initialData={{

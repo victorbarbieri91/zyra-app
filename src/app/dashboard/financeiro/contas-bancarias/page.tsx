@@ -10,12 +10,42 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
-import type { Database } from '@/types/database.types'
+// Types defined locally
 import { cn } from '@/lib/utils'
 
-type ContaBancaria = Database['public']['Tables']['financeiro_contas_bancarias']['Row']
-type Lancamento = Database['public']['Tables']['financeiro_contas_lancamentos']['Row']
-type SaldoView = Database['public']['Views']['v_saldos_contas_bancarias']['Row']
+interface ContaBancaria {
+  id: string
+  escritorio_id: string
+  banco: string
+  agencia: string
+  numero_conta: string
+  tipo_conta: 'corrente' | 'poupanca' | 'investimento'
+  titular: string
+  saldo_atual: number
+  ativa: boolean
+  created_at: string
+  updated_at: string
+  // View fields
+  total_entradas?: number
+  total_saidas?: number
+  conta_id?: string
+  nome_conta?: string
+}
+
+interface Lancamento {
+  id: string
+  conta_id: string
+  tipo: 'entrada' | 'saida' | 'transferencia' | 'transferencia_recebida' | 'transferencia_enviada'
+  valor: number
+  descricao: string
+  categoria: string
+  data_lancamento: string
+  saldo_apos: number
+  saldo_apos_lancamento?: number
+  created_at: string
+}
+
+type SaldoView = ContaBancaria
 
 interface TransferDialogData {
   contaOrigem: string

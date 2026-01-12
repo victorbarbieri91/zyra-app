@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
-import type { Database } from '@/types/database.types'
+// Types defined locally
 import { cn } from '@/lib/utils'
 
 interface RelatorioData {

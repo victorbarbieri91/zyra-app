@@ -36,7 +36,8 @@
       "Bash(node:*)",
       "Bash(mkdir:*)",
       "Bash(if exist \"node_modules/.cache\" rmdir /s /q \"node_modules/.cache\")",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(powershell -Command:*)"
     ],
     "deny": [],
     "ask": []

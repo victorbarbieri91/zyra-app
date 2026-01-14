@@ -38,7 +38,7 @@ export default function CalendarDayView({
 }: CalendarDayViewProps) {
   const supabase = createClient()
   const { tarefas: todasTarefas, refreshTarefas } = useTarefas(escritorioId)
-  const { items: todosEventos } = useAgendaConsolidada()
+  const { items: todosEventos } = useAgendaConsolidada(escritorioId)
   const [activeTarefa, setActiveTarefa] = useState<Tarefa | null>(null)
 
   const previousDay = () => onDateSelect(subDays(selectedDate, 1))

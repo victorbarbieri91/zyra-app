@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useUserPreferences } from '@/hooks/useUserPreferences'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard,
@@ -17,7 +18,6 @@ import {
   ChevronRight,
   Sparkles,
   ChevronLeft,
-  Building2,
   Scale,
   UserCircle,
   Briefcase,
@@ -85,6 +85,12 @@ const menuItems: MenuItem[] = [
     group: 'management',
   },
   {
+    title: 'Portfólio',
+    icon: Briefcase,
+    href: '/dashboard/portfolio',
+    group: 'management',
+  },
+  {
     title: 'Financeiro',
     icon: DollarSign,
     href: '/dashboard/financeiro',
@@ -95,20 +101,25 @@ const menuItems: MenuItem[] = [
     icon: FileText,
     href: '/dashboard/pecas-teses',
     group: 'management',
-  },
-  {
-    title: 'Escritório',
-    icon: Building2,
-    href: '/dashboard/escritorio',
-    group: 'settings',
+    disabled: true,
   },
 ]
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(true)
+  const [initialized, setInitialized] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const { preferences, loading: preferencesLoading } = useUserPreferences()
+
+  // Aplica a preferência do usuário quando carrega
+  useEffect(() => {
+    if (!preferencesLoading && !initialized) {
+      setCollapsed(!preferences.sidebar_aberta)
+      setInitialized(true)
+    }
+  }, [preferencesLoading, preferences.sidebar_aberta, initialized])
 
   const handleLogout = async () => {
     try {

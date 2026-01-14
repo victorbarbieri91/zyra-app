@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
-  Newspaper,
   Filter,
   Search,
   RefreshCw,
@@ -16,7 +16,14 @@ import {
   CheckCircle2,
   Clock,
   FileX,
-  Calendar
+  Calendar,
+  Loader2,
+  CalendarPlus,
+  CheckSquare,
+  Gavel,
+  Copy,
+  Check,
+  X
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -28,12 +35,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import MetricCard from '@/components/dashboard/MetricCard'
+import { createClient } from '@/lib/supabase/client'
+import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
+import { useAaspSync } from '@/hooks/useAaspSync'
+import { toast } from 'sonner'
 
 // Tipos
 type StatusPublicacao = 'pendente' | 'em_analise' | 'processada' | 'arquivada'
-type TipoPublicacao = 'intimacao' | 'sentenca' | 'despacho' | 'decisao' | 'acordao'
+type TipoPublicacao = 'intimacao' | 'sentenca' | 'despacho' | 'decisao' | 'acordao' | 'citacao' | 'outro'
 
 interface Publicacao {
   id: string
@@ -42,12 +54,30 @@ interface Publicacao {
   vara?: string
   tipo_publicacao: TipoPublicacao
   numero_processo?: string
+  processo_id?: string
   cliente_nome?: string
   status: StatusPublicacao
   urgente: boolean
-  tem_prazo: boolean
+  tem_prazo?: boolean
   prazo_dias?: number
   processo_numero_cnj?: string
+  texto_completo?: string
+  agendamento_id?: string
+  agendamento_tipo?: 'tarefa' | 'compromisso' | 'audiencia'
+  hash_conteudo?: string
+  duplicata_revisada?: boolean
+}
+
+interface DuplicataGrupo {
+  hash: string
+  publicacoes: Publicacao[]
+}
+
+interface Stats {
+  pendentes: number
+  processadasHoje: number
+  urgentes: number
+  prazosCriados: number
 }
 
 export default function PublicacoesPage() {
@@ -57,16 +87,208 @@ export default function PublicacoesPage() {
     tipo: 'todos',
     apenasUrgentes: false
   })
-
-  // Mock data - será substituído por dados reais do Supabase
-  const mockPublicacoes: Publicacao[] = []
-
-  const mockStats = {
+  const [publicacoes, setPublicacoes] = useState<Publicacao[]>([])
+  const [stats, setStats] = useState<Stats>({
     pendentes: 0,
     processadasHoje: 0,
     urgentes: 0,
     prazosCriados: 0
+  })
+  const [carregando, setCarregando] = useState(true)
+  const [abaAtiva, setAbaAtiva] = useState<'todas' | 'duplicatas'>('todas')
+  const [duplicataGrupos, setDuplicataGrupos] = useState<DuplicataGrupo[]>([])
+
+  const router = useRouter()
+  const supabase = createClient()
+  const { escritorioAtivo } = useEscritorioAtivo()
+  const { sincronizarTodos, sincronizando } = useAaspSync(escritorioAtivo || undefined)
+
+  // Carregar publicações do banco
+  const carregarPublicacoes = useCallback(async () => {
+    if (!escritorioAtivo) return
+
+    setCarregando(true)
+    try {
+      const { data, error } = await supabase
+        .from('publicacoes_publicacoes')
+        .select('*')
+        .eq('escritorio_id', escritorioAtivo)
+        .order('data_publicacao', { ascending: false })
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Erro ao carregar publicações:', error)
+        toast.error('Erro ao carregar publicações')
+        return
+      }
+
+      setPublicacoes(data || [])
+
+      // Calcular estatísticas
+      const hoje = new Date().toISOString().split('T')[0]
+      const pendentes = data?.filter(p => p.status === 'pendente').length || 0
+      const processadasHoje = data?.filter(p => p.status === 'processada' && p.updated_at?.startsWith(hoje)).length || 0
+      const urgentes = data?.filter(p => p.urgente).length || 0
+
+      setStats({
+        pendentes,
+        processadasHoje,
+        urgentes,
+        prazosCriados: 0 // TODO: calcular prazos criados
+      })
+
+      // Detectar possíveis duplicatas (por hash_conteudo ou numero_processo + data)
+      const gruposDuplicatas: DuplicataGrupo[] = []
+      const pubsNaoRevisadas = (data || []).filter(p => !p.duplicata_revisada && p.status !== 'arquivada')
+
+      // Agrupar por hash_conteudo
+      const porHash = new Map<string, Publicacao[]>()
+      pubsNaoRevisadas.forEach(pub => {
+        if (pub.hash_conteudo) {
+          const grupo = porHash.get(pub.hash_conteudo) || []
+          grupo.push(pub)
+          porHash.set(pub.hash_conteudo, grupo)
+        }
+      })
+
+      // Adicionar grupos com mais de uma publicação
+      porHash.forEach((pubs, hash) => {
+        if (pubs.length > 1) {
+          gruposDuplicatas.push({ hash, publicacoes: pubs })
+        }
+      })
+
+      // Também verificar por numero_processo + data_publicacao (se hash diferente)
+      const porProcessoData = new Map<string, Publicacao[]>()
+      pubsNaoRevisadas.forEach(pub => {
+        if (pub.numero_processo && pub.data_publicacao) {
+          const chave = `${pub.numero_processo}-${pub.data_publicacao}`
+          const grupo = porProcessoData.get(chave) || []
+          grupo.push(pub)
+          porProcessoData.set(chave, grupo)
+        }
+      })
+
+      porProcessoData.forEach((pubs, chave) => {
+        // Só adiciona se não já estiver no grupo por hash
+        if (pubs.length > 1) {
+          const hashesNoGrupo = new Set(pubs.map(p => p.hash_conteudo).filter(Boolean))
+          const jaNoGrupoHash = gruposDuplicatas.some(g =>
+            pubs.every(p => p.hash_conteudo === g.hash)
+          )
+          if (!jaNoGrupoHash) {
+            gruposDuplicatas.push({ hash: chave, publicacoes: pubs })
+          }
+        }
+      })
+
+      setDuplicataGrupos(gruposDuplicatas)
+    } finally {
+      setCarregando(false)
+    }
+  }, [escritorioAtivo, supabase])
+
+  useEffect(() => {
+    carregarPublicacoes()
+  }, [carregarPublicacoes])
+
+  // Sincronizar AASP
+  const handleSincronizar = async () => {
+    toast.info('Iniciando sincronização AASP...')
+    const resultado = await sincronizarTodos()
+
+    if (resultado.sucesso) {
+      toast.success(resultado.mensagem)
+      if (resultado.publicacoes_novas && resultado.publicacoes_novas > 0) {
+        toast.info(`${resultado.publicacoes_novas} novas publicações encontradas!`)
+      }
+      // Recarregar publicações após sync
+      await carregarPublicacoes()
+    } else {
+      toast.error(resultado.mensagem)
+    }
   }
+
+  // Marcar publicação como não duplicata (revisada)
+  const marcarComoRevisada = async (pubId: string) => {
+    try {
+      const { error } = await supabase
+        .from('publicacoes_publicacoes')
+        .update({ duplicata_revisada: true })
+        .eq('id', pubId)
+
+      if (error) throw error
+
+      toast.success('Publicação marcada como revisada')
+      await carregarPublicacoes()
+    } catch (err) {
+      console.error('Erro ao marcar como revisada:', err)
+      toast.error('Erro ao atualizar publicação')
+    }
+  }
+
+  // Arquivar duplicata
+  const arquivarDuplicata = async (pubId: string) => {
+    try {
+      const { error } = await supabase
+        .from('publicacoes_publicacoes')
+        .update({ status: 'arquivada', duplicata_revisada: true })
+        .eq('id', pubId)
+
+      if (error) throw error
+
+      toast.success('Duplicata arquivada')
+      await carregarPublicacoes()
+    } catch (err) {
+      console.error('Erro ao arquivar:', err)
+      toast.error('Erro ao arquivar publicação')
+    }
+  }
+
+  // Manter apenas uma publicação (arquiva as outras)
+  const manterApenas = async (pubIdManter: string, grupoHash: string) => {
+    const grupo = duplicataGrupos.find(g => g.hash === grupoHash)
+    if (!grupo) return
+
+    try {
+      const idsArquivar = grupo.publicacoes.filter(p => p.id !== pubIdManter).map(p => p.id)
+
+      const { error } = await supabase
+        .from('publicacoes_publicacoes')
+        .update({ status: 'arquivada', duplicata_revisada: true })
+        .in('id', idsArquivar)
+
+      if (error) throw error
+
+      // Marcar a mantida como revisada também
+      await supabase
+        .from('publicacoes_publicacoes')
+        .update({ duplicata_revisada: true })
+        .eq('id', pubIdManter)
+
+      toast.success('Duplicatas arquivadas com sucesso')
+      await carregarPublicacoes()
+    } catch (err) {
+      console.error('Erro ao arquivar duplicatas:', err)
+      toast.error('Erro ao processar duplicatas')
+    }
+  }
+
+  // Filtrar publicações
+  const publicacoesFiltradas = publicacoes.filter(pub => {
+    if (filtros.busca) {
+      const busca = filtros.busca.toLowerCase()
+      const matchBusca =
+        pub.numero_processo?.toLowerCase().includes(busca) ||
+        pub.tribunal?.toLowerCase().includes(busca) ||
+        pub.texto_completo?.toLowerCase().includes(busca)
+      if (!matchBusca) return false
+    }
+    if (filtros.status !== 'todos' && pub.status !== filtros.status) return false
+    if (filtros.tipo !== 'todos' && pub.tipo_publicacao !== filtros.tipo) return false
+    if (filtros.apenasUrgentes && !pub.urgente) return false
+    return true
+  })
 
   const getStatusBadge = (status: StatusPublicacao) => {
     const variants = {
@@ -91,14 +313,16 @@ export default function PublicacoesPage() {
   }
 
   const getTipoLabel = (tipo: TipoPublicacao) => {
-    const labels = {
+    const labels: Record<TipoPublicacao, string> = {
       intimacao: 'Intimação',
       sentenca: 'Sentença',
       despacho: 'Despacho',
       decisao: 'Decisão',
-      acordao: 'Acórdão'
+      acordao: 'Acórdão',
+      citacao: 'Citação',
+      outro: 'Outro'
     }
-    return labels[tipo]
+    return labels[tipo] || tipo
   }
 
   return (
@@ -106,14 +330,9 @@ export default function PublicacoesPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center shadow-lg">
-              <Newspaper className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-[#34495e]">Publicações & Intimações</h1>
-              <p className="text-sm text-slate-600">Gestão de publicações AASP e intimações</p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold text-[#34495e]">Publicações & Intimações</h1>
+            <p className="text-sm text-slate-600">Gestão de publicações AASP e intimações</p>
           </div>
 
           <div className="flex items-center gap-2.5">
@@ -121,9 +340,15 @@ export default function PublicacoesPage() {
               variant="outline"
               size="sm"
               className="gap-2"
+              onClick={handleSincronizar}
+              disabled={sincronizando}
             >
-              <RefreshCw className="w-4 h-4" />
-              Sincronizar AASP
+              {sincronizando ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              {sincronizando ? 'Sincronizando...' : 'Sincronizar AASP'}
             </Button>
             <Link href="/dashboard/publicacoes/nova">
               <Button size="sm" className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f]">
@@ -145,7 +370,7 @@ export default function PublicacoesPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <MetricCard
           title="Pendentes"
-          value={mockStats.pendentes}
+          value={stats.pendentes}
           subtitle="Aguardando análise"
           icon={Clock}
           gradient="kpi1"
@@ -153,7 +378,7 @@ export default function PublicacoesPage() {
 
         <MetricCard
           title="Processadas Hoje"
-          value={mockStats.processadasHoje}
+          value={stats.processadasHoje}
           subtitle="Nas últimas 24h"
           icon={CheckCircle2}
           gradient="kpi2"
@@ -161,7 +386,7 @@ export default function PublicacoesPage() {
 
         <MetricCard
           title="Urgentes"
-          value={mockStats.urgentes}
+          value={stats.urgentes}
           subtitle="Requerem atenção"
           icon={AlertTriangle}
           gradient="kpi3"
@@ -169,7 +394,7 @@ export default function PublicacoesPage() {
 
         <MetricCard
           title="Prazos Criados"
-          value={mockStats.prazosCriados}
+          value={stats.prazosCriados}
           subtitle="A partir de publicações"
           icon={Calendar}
           gradient="kpi4"
@@ -235,34 +460,74 @@ export default function PublicacoesPage() {
         </div>
       </div>
 
-      {/* Tabela de Publicações */}
-      <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
-        <div className="p-4 border-b border-slate-200">
-          <h2 className="text-sm font-semibold text-slate-700">Publicações Recebidas</h2>
-        </div>
+      {/* Tabs: Todas / Duplicatas */}
+      <Tabs value={abaAtiva} onValueChange={(v) => setAbaAtiva(v as 'todas' | 'duplicatas')} className="mb-4">
+        <TabsList className="bg-slate-100">
+          <TabsTrigger value="todas" className="gap-2">
+            Todas
+            <Badge variant="outline" className="text-[10px] ml-1">{publicacoes.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="duplicatas" className="gap-2">
+            <Copy className="w-3.5 h-3.5" />
+            Possíveis Duplicatas
+            {duplicataGrupos.length > 0 && (
+              <Badge variant="outline" className="text-[10px] ml-1 bg-amber-100 text-amber-700 border-amber-200">
+                {duplicataGrupos.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-        {mockPublicacoes.length === 0 ? (
+      {/* Conteúdo baseado na aba ativa */}
+      {abaAtiva === 'todas' ? (
+        /* Tabela de Publicações */
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
+          <div className="p-4 border-b border-slate-200">
+            <h2 className="text-sm font-semibold text-slate-700">Publicações Recebidas</h2>
+          </div>
+
+        {carregando ? (
+          <div className="p-12 text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-slate-400 mx-auto mb-4" />
+            <p className="text-sm text-slate-500">Carregando publicações...</p>
+          </div>
+        ) : publicacoesFiltradas.length === 0 ? (
           <div className="p-12 text-center">
             <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
               <FileX className="w-8 h-8 text-slate-400" />
             </div>
             <h3 className="text-sm font-semibold text-slate-700 mb-1">Nenhuma publicação encontrada</h3>
             <p className="text-xs text-slate-500 mb-4">
-              Não há publicações recebidas ainda. Configure a integração com AASP ou adicione manualmente.
+              {publicacoes.length === 0
+                ? 'Não há publicações recebidas ainda. Configure a integração com AASP ou adicione manualmente.'
+                : 'Nenhuma publicação corresponde aos filtros selecionados.'}
             </p>
             <div className="flex items-center gap-2 justify-center">
-              <Link href="/dashboard/publicacoes/config">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Settings className="w-4 h-4" />
-                  Configurar AASP
+              {publicacoes.length === 0 ? (
+                <>
+                  <Link href="/dashboard/publicacoes/config">
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Settings className="w-4 h-4" />
+                      Configurar AASP
+                    </Button>
+                  </Link>
+                  <Link href="/dashboard/publicacoes/nova">
+                    <Button size="sm" className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f]">
+                      <Plus className="w-4 h-4" />
+                      Adicionar Manual
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFiltros({ busca: '', status: 'todos', tipo: 'todos', apenasUrgentes: false })}
+                >
+                  Limpar Filtros
                 </Button>
-              </Link>
-              <Link href="/dashboard/publicacoes/nova">
-                <Button size="sm" className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f]">
-                  <Plus className="w-4 h-4" />
-                  Adicionar Manual
-                </Button>
-              </Link>
+              )}
             </div>
           </div>
         ) : (
@@ -281,26 +546,38 @@ export default function PublicacoesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {mockPublicacoes.map((pub) => (
-                  <tr key={pub.id} className="hover:bg-slate-50 transition-colors">
+                {publicacoesFiltradas.map((pub) => (
+                  <tr
+                    key={pub.id}
+                    className="hover:bg-slate-50 transition-colors cursor-pointer"
+                    onClick={() => router.push(`/dashboard/publicacoes/${pub.id}`)}
+                  >
                     <td className="p-3">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {getStatusBadge(pub.status)}
                         {pub.urgente && (
                           <Badge variant="outline" className="text-[10px] bg-red-50 text-red-700 border-red-200">
                             Urgente
                           </Badge>
                         )}
+                        {pub.agendamento_tipo && (
+                          <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">
+                            {pub.agendamento_tipo === 'tarefa' && <CheckSquare className="w-3 h-3 mr-1" />}
+                            {pub.agendamento_tipo === 'compromisso' && <Calendar className="w-3 h-3 mr-1" />}
+                            {pub.agendamento_tipo === 'audiencia' && <Gavel className="w-3 h-3 mr-1" />}
+                            Agendado
+                          </Badge>
+                        )}
                       </div>
                     </td>
                     <td className="p-3">
                       <span className="text-sm text-slate-700">
-                        {new Date(pub.data_publicacao).toLocaleDateString('pt-BR')}
+                        {new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}
                       </span>
                     </td>
                     <td className="p-3">
                       <div>
-                        <div className="text-sm font-medium text-slate-700">{pub.tribunal}</div>
+                        <div className="text-sm font-medium text-slate-700 truncate max-w-[200px]" title={pub.tribunal}>{pub.tribunal}</div>
                         {pub.vara && <div className="text-xs text-slate-500">{pub.vara}</div>}
                       </div>
                     </td>
@@ -308,13 +585,26 @@ export default function PublicacoesPage() {
                       <span className="text-sm text-slate-700">{getTipoLabel(pub.tipo_publicacao)}</span>
                     </td>
                     <td className="p-3">
-                      {pub.processo_numero_cnj ? (
-                        <Link
-                          href={`/dashboard/processos/${pub.id}`}
-                          className="text-sm text-[#1E3A8A] hover:underline"
-                        >
-                          {pub.processo_numero_cnj}
-                        </Link>
+                      {pub.numero_processo ? (
+                        pub.processo_id ? (
+                          <span
+                            className="text-sm text-[#1E3A8A] font-mono hover:underline"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              router.push(`/dashboard/processos/${pub.processo_id}`)
+                            }}
+                          >
+                            {pub.numero_processo}
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-mono text-slate-700">{pub.numero_processo}</span>
+                            <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                              <AlertTriangle className="w-3 h-3 mr-1" />
+                              Sem pasta
+                            </Badge>
+                          </div>
+                        )
                       ) : (
                         <span className="text-sm text-slate-400">-</span>
                       )}
@@ -332,17 +622,23 @@ export default function PublicacoesPage() {
                       )}
                     </td>
                     <td className="p-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <Link href={`/dashboard/publicacoes/${pub.id}`}>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <Eye className="w-3.5 h-3.5" />
-                          </Button>
-                        </Link>
-                        <Link href={`/dashboard/publicacoes/processar/${pub.id}`}>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <Play className="w-3.5 h-3.5" />
-                          </Button>
-                        </Link>
+                      <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => router.push(`/dashboard/publicacoes/${pub.id}`)}
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => router.push(`/dashboard/publicacoes/processar/${pub.id}`)}
+                        >
+                          <Play className="w-3.5 h-3.5" />
+                        </Button>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <Archive className="w-3.5 h-3.5" />
                         </Button>
@@ -354,7 +650,149 @@ export default function PublicacoesPage() {
             </table>
           </div>
         )}
-      </div>
+        </div>
+      ) : (
+        /* Aba de Duplicatas */
+        <div className="space-y-4">
+          {duplicataGrupos.length === 0 ? (
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-12 text-center">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                <Check className="w-8 h-8 text-emerald-600" />
+              </div>
+              <h3 className="text-sm font-semibold text-slate-700 mb-1">Nenhuma duplicata encontrada</h3>
+              <p className="text-xs text-slate-500">
+                Todas as publicações foram revisadas ou não há duplicatas detectadas.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="text-sm font-semibold text-amber-800">
+                      {duplicataGrupos.length} grupo{duplicataGrupos.length > 1 ? 's' : ''} de possíveis duplicatas
+                    </h3>
+                    <p className="text-xs text-amber-700 mt-1">
+                      Revise cada grupo e decida qual publicação manter. As duplicatas serão arquivadas.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {duplicataGrupos.map((grupo, index) => (
+                <div key={grupo.hash} className="bg-white rounded-lg border border-slate-200 shadow-sm">
+                  <div className="p-4 border-b border-slate-200 bg-slate-50">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-slate-700">
+                        Grupo {index + 1}: {grupo.publicacoes.length} publicações similares
+                      </h3>
+                      <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                        <Copy className="w-3 h-3 mr-1" />
+                        Possível duplicata
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {grupo.publicacoes.map((pub) => (
+                        <div
+                          key={pub.id}
+                          className="border border-slate-200 rounded-lg p-4 hover:border-slate-300 transition-colors"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                {getStatusBadge(pub.status)}
+                                {pub.urgente && (
+                                  <Badge variant="outline" className="text-[10px] bg-red-50 text-red-700 border-red-200">
+                                    Urgente
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                {new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2 mb-4">
+                            <div>
+                              <div className="text-xs text-slate-500">Tribunal</div>
+                              <div className="text-sm font-medium text-slate-700">{pub.tribunal}</div>
+                            </div>
+                            {pub.numero_processo && (
+                              <div>
+                                <div className="text-xs text-slate-500">Processo</div>
+                                <div className="text-sm font-mono text-slate-700">{pub.numero_processo}</div>
+                              </div>
+                            )}
+                            <div>
+                              <div className="text-xs text-slate-500">Tipo</div>
+                              <div className="text-sm text-slate-700">{getTipoLabel(pub.tipo_publicacao)}</div>
+                            </div>
+                            {pub.texto_completo && (
+                              <div>
+                                <div className="text-xs text-slate-500">Trecho</div>
+                                <div className="text-xs text-slate-600 line-clamp-3 bg-slate-50 p-2 rounded">
+                                  {pub.texto_completo.substring(0, 200)}...
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+                            <Button
+                              size="sm"
+                              className="flex-1 gap-2 bg-gradient-to-r from-[#1E3A8A] to-[#3B82F6]"
+                              onClick={() => manterApenas(pub.id, grupo.hash)}
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              Manter Esta
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-2"
+                              onClick={() => router.push(`/dashboard/publicacoes/${pub.id}`)}
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => arquivarDuplicata(pub.id)}
+                            >
+                              <Archive className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-slate-200 flex justify-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => {
+                          // Marcar todas como revisadas (manter todas)
+                          grupo.publicacoes.forEach(pub => marcarComoRevisada(pub.id))
+                        }}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Não são duplicatas - Manter todas
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -18,6 +18,10 @@ interface EventoModalProps {
   onOpenChange: (open: boolean) => void
   evento?: Evento | null
   escritorioId: string | null
+  // Props de pré-preenchimento (para criar novo evento com dados iniciais)
+  tituloPadrao?: string
+  descricaoPadrao?: string
+  processoIdPadrao?: string
 }
 
 export default function EventoModal({
@@ -25,6 +29,9 @@ export default function EventoModal({
   onOpenChange,
   evento,
   escritorioId,
+  tituloPadrao,
+  descricaoPadrao,
+  processoIdPadrao,
 }: EventoModalProps) {
   const { createEvento, updateEvento } = useEventos()
 
@@ -59,8 +66,14 @@ export default function EventoModal({
       setParticipantes(evento.participantes || '')
     } else {
       resetForm()
+      // Aplicar valores padrão se fornecidos
+      if (tituloPadrao) setTitulo(tituloPadrao)
+      if (descricaoPadrao) setDescricao(descricaoPadrao)
+      if (processoIdPadrao) {
+        setVinculacao({ modulo: 'processo', modulo_registro_id: processoIdPadrao })
+      }
     }
-  }, [evento])
+  }, [evento, tituloPadrao, descricaoPadrao, processoIdPadrao])
 
   const resetForm = () => {
     setTitulo('')

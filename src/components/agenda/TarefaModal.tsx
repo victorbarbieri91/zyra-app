@@ -35,6 +35,10 @@ interface TarefaModalProps {
   onOpenChange: (open: boolean) => void
   tarefa?: Tarefa | null
   escritorioId: string | null
+  // Props de pré-preenchimento (para criar nova tarefa com dados iniciais)
+  tituloPadrao?: string
+  descricaoPadrao?: string
+  processoIdPadrao?: string
 }
 
 const TIPO_CONFIG = {
@@ -75,6 +79,9 @@ export default function TarefaModal({
   onOpenChange,
   tarefa,
   escritorioId,
+  tituloPadrao,
+  descricaoPadrao,
+  processoIdPadrao,
 }: TarefaModalProps) {
   const { createTarefa, updateTarefa } = useTarefas()
 
@@ -105,7 +112,7 @@ export default function TarefaModal({
   // Lembretes
   const [lembretes, setLembretes] = useState<Lembrete[]>([])
 
-  // Carregar dados da tarefa se estiver editando
+  // Carregar dados da tarefa se estiver editando ou aplicar valores padrão
   useEffect(() => {
     if (tarefa) {
       setTipo(tarefa.tipo)
@@ -122,8 +129,14 @@ export default function TarefaModal({
       // TODO: Carregar checklist, vinculações e lembretes
     } else {
       resetForm()
+      // Aplicar valores padrão se fornecidos
+      if (tituloPadrao) setTitulo(tituloPadrao)
+      if (descricaoPadrao) setDescricao(descricaoPadrao)
+      if (processoIdPadrao) {
+        setVinculacao({ modulo: 'processo', modulo_registro_id: processoIdPadrao })
+      }
     }
-  }, [tarefa])
+  }, [tarefa, tituloPadrao, descricaoPadrao, processoIdPadrao])
 
   const resetForm = () => {
     setTipo('prazo_processual')

@@ -57,11 +57,9 @@ export function StepValidacao({ state, updateState, goToStep, setJob }: Props) {
 
       // Navegar baseado no status
       if (job.status === 'aguardando_revisao') {
-        if (job.linhas_com_erro > 0 || job.linhas_duplicadas > 0) {
-          goToStep('revisao')
-        } else {
-          goToStep('confirmacao')
-        }
+        // Sempre ir para revisão para mostrar preview de normalização
+        // mesmo quando não há erros ou duplicatas
+        goToStep('revisao')
       } else if (job.status === 'importando' || job.status === 'concluido') {
         // Se está importando ou concluído, ir para tela de conclusão
         goToStep('conclusao')

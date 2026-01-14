@@ -31,7 +31,9 @@ interface AudienciaModalProps {
   onOpenChange: (open: boolean) => void
   audiencia?: Audiencia | null
   escritorioId: string | null
-  processoIdPadrao?: string // Se vier de um processo específico
+  // Props de pré-preenchimento (para criar nova audiência com dados iniciais)
+  processoIdPadrao?: string
+  descricaoPadrao?: string
 }
 
 const TIPO_AUDIENCIA_CONFIG = {
@@ -49,6 +51,7 @@ export default function AudienciaModal({
   audiencia,
   escritorioId,
   processoIdPadrao,
+  descricaoPadrao,
 }: AudienciaModalProps) {
   const { createAudiencia, updateAudiencia } = useAudiencias()
 
@@ -112,8 +115,10 @@ export default function AudienciaModal({
       setTestemunhas(audiencia.testemunhas || '')
     } else {
       resetForm()
+      // Aplicar valores padrão se fornecidos
+      if (descricaoPadrao) setObservacoes(descricaoPadrao)
     }
-  }, [audiencia])
+  }, [audiencia, descricaoPadrao])
 
   const resetForm = () => {
     setProcessoId(processoIdPadrao || '')

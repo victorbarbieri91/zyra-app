@@ -49,8 +49,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // Fallback: mapeamento heurístico
-    const resultado = mapeamentoHeuristico(headers, schema)
+    // Fallback: mapeamento heurístico com análise de dados
+    const resultado = mapeamentoHeuristico(headers, amostra, schema)
     return NextResponse.json(resultado)
 
   } catch (error) {
@@ -72,34 +72,58 @@ async function analisarComOpenAI(
 ) {
   const prompt = `Você é um assistente especializado em mapeamento de dados para sistemas jurídicos brasileiros.
 
-Analise os headers e amostra de dados de uma planilha e sugira o mapeamento para os campos do sistema.
+IMPORTANTE: Analise PRINCIPALMENTE os DADOS de cada coluna, não apenas os nomes dos headers!
 
 ## Headers da Planilha:
 ${JSON.stringify(headers)}
 
 ## Amostra de Dados (primeiras linhas):
-${JSON.stringify(amostra.slice(0, 3), null, 2)}
+${JSON.stringify(amostra.slice(0, 5), null, 2)}
 
 ## Campos do Sistema (${modulo.toUpperCase()}):
 ${JSON.stringify(schema.map(c => ({
   campo: c.campo,
   tipo: c.tipo,
   obrigatorio: c.obrigatorio,
-  descricao: c.descricao
+  descricao: c.descricao,
+  valores: c.valores
 })), null, 2)}
 
-## Regras:
-1. Mapeie cada header para o campo mais apropriado do sistema
-2. Se não houver correspondência clara, retorne null para esse header
-3. Considere variações comuns em português:
-   - "Nome", "Nome Completo", "Cliente", "Razão Social" → nome_completo
-   - "CPF", "CNPJ", "CPF/CNPJ", "Documento" → cpf_cnpj
-   - "E-mail", "Email", "Correio Eletrônico" → email_principal
-   - "Telefone", "Tel", "Fone" → telefone_principal
-   - "Celular", "WhatsApp", "Cel" → celular
-   - "Processo", "Nº Processo", "Número CNJ" → numero_cnj
-4. Analise os dados de amostra para inferir o tipo (ex: formato de CPF, data, etc.)
-5. Retorne o nível de confiança (0-100) para cada mapeamento
+## REGRAS CRÍTICAS DE ANÁLISE:
+
+### 1. NÚMERO CNJ (numero_cnj) - PRIORIDADE MÁXIMA
+- Padrão CNJ: NNNNNNN-DD.AAAA.J.TR.OOOO (ex: 5005161-16.2020.4.03.6100)
+- Se os DADOS contêm esse padrão, mesmo com prefixos como "CNJ:", "Processo:", "Nº", mapear para numero_cnj
+- O sistema vai limpar os prefixos automaticamente
+- Exemplo: "CNJ: 5005161-16.2020.4.03.6100" → deve mapear para numero_cnj
+
+### 2. CLIENTE/NOME (cliente_ref para processos, nome_completo para CRM)
+- Procure colunas com nomes de pessoas ou empresas
+- Headers como: "Autor", "Réu", "Parte", "Cliente", "Polo do cliente", "Nome"
+- Se for módulo PROCESSOS e houver coluna "Autor" ou "Polo do cliente" com nomes, mapear para cliente_ref
+
+### 3. ANÁLISE POR TIPO DE DADO:
+- CPF: 11 dígitos ou XXX.XXX.XXX-XX → cpf_cnpj
+- CNPJ: 14 dígitos ou XX.XXX.XXX/XXXX-XX → cpf_cnpj
+- Datas: DD/MM/YYYY ou YYYY-MM-DD → campos de data
+- E-mail: contém @ → email_principal
+- Valores monetários: R$, números decimais → valor_causa, valor_total
+- UF: 2 letras maiúsculas (SP, RJ, MG...) → uf
+
+### 4. MAPEAMENTOS COMUNS EM PLANILHAS JURÍDICAS:
+- "Número", "Nº", "N°" com dados tipo CNJ → numero_cnj
+- "Área", "Matéria" → area
+- "Comarca", "Foro" → comarca
+- "Vara", "Juízo" → vara
+- "Tribunal", "Órgão Julgador" → tribunal
+- "Situação do Processo", "Status" → status
+- "Polo", "Posição" → polo_cliente
+- "Parte Contrária", "Réu", "Autor" (oposto ao cliente) → parte_contraria
+- "Advogado responsável", "Responsável" → responsavel_ref
+- "Valor da causa", "Valor" → valor_causa
+
+### 5. REGRA DE OURO:
+Se o nome do header não combina mas os DADOS claramente pertencem a um campo, USE OS DADOS para decidir!
 
 ## Resposta esperada (JSON válido):
 {
@@ -141,11 +165,64 @@ ${JSON.stringify(schema.map(c => ({
   return JSON.parse(content)
 }
 
-// Mapeamento heurístico (fallback)
-function mapeamentoHeuristico(headers: string[], schema: CampoSchema[]) {
+// Mapeamento heurístico (fallback) com análise de dados
+function mapeamentoHeuristico(headers: string[], amostra: Record<string, unknown>[], schema: CampoSchema[]) {
   const mapeamento: Record<string, string | null> = {}
   const confianca: Record<string, number> = {}
   const sugestoes: string[] = []
+
+  // Funções de detecção de padrões nos dados
+  const padroes = {
+    // Padrão CNJ: NNNNNNN-DD.AAAA.J.TR.OOOO (pode ter prefixos)
+    cnj: (valor: string) => /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/.test(valor),
+    // UF: exatamente 2 letras maiúsculas
+    uf: (valor: string) => /^[A-Z]{2}$/.test(valor.trim()),
+    // CPF: 11 dígitos
+    cpf: (valor: string) => /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(valor.replace(/\s/g, '')),
+    // CNPJ: 14 dígitos
+    cnpj: (valor: string) => /^\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}$/.test(valor.replace(/\s/g, '')),
+    // Email
+    email: (valor: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor),
+    // Data brasileira
+    data: (valor: string) => /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(valor),
+    // Valor monetário
+    valor: (valor: string) => /^R?\$?\s*[\d.,]+$/.test(valor),
+  }
+
+  // Analisar dados de cada coluna para detectar padrões
+  const detectarPadraoDados = (header: string): { campo: string; confianca: number } | null => {
+    const valores = amostra
+      .map(row => String(row[header] || '').trim())
+      .filter(v => v && v !== '-')
+
+    if (valores.length === 0) return null
+
+    // Verificar padrão CNJ (prioridade máxima)
+    const temCNJ = valores.some(v => padroes.cnj(v))
+    if (temCNJ) {
+      return { campo: 'numero_cnj', confianca: 95 }
+    }
+
+    // Verificar UF (exatamente 2 letras em todos os valores)
+    const todosUF = valores.every(v => padroes.uf(v) || v === '')
+    if (todosUF && valores.some(v => padroes.uf(v))) {
+      return { campo: 'uf', confianca: 90 }
+    }
+
+    // Verificar CPF/CNPJ
+    const temDocumento = valores.some(v => padroes.cpf(v) || padroes.cnpj(v))
+    if (temDocumento) {
+      return { campo: 'cpf_cnpj', confianca: 90 }
+    }
+
+    // Verificar email
+    const temEmail = valores.some(v => padroes.email(v))
+    if (temEmail) {
+      return { campo: 'email_principal', confianca: 90 }
+    }
+
+    return null
+  }
 
   // Mapeamentos conhecidos
   const mapeamentosConhecidos: Record<string, { campo: string; confianca: number }[]> = {
@@ -215,15 +292,186 @@ function mapeamentoHeuristico(headers: string[], schema: CampoSchema[]) {
     'status': [{ campo: 'status', confianca: 85 }],
     'situação': [{ campo: 'status', confianca: 80 }],
     'situacao': [{ campo: 'status', confianca: 80 }],
+
+    // Tipo de contato
+    'tipo': [{ campo: 'tipo_contato', confianca: 90 }],
+    'type': [{ campo: 'tipo_contato', confianca: 85 }],
+    'tipo_contato': [{ campo: 'tipo_contato', confianca: 95 }],
+    'tipo contato': [{ campo: 'tipo_contato', confianca: 95 }],
+    'categoria': [{ campo: 'tipo_contato', confianca: 85 }],
+    'classificação': [{ campo: 'tipo_contato', confianca: 85 }],
+    'classificacao': [{ campo: 'tipo_contato', confianca: 85 }],
+
+    // Data de nascimento
+    'nascimento': [{ campo: 'data_nascimento', confianca: 90 }],
+    'data nascimento': [{ campo: 'data_nascimento', confianca: 95 }],
+    'data_nascimento': [{ campo: 'data_nascimento', confianca: 95 }],
+    'dt nascimento': [{ campo: 'data_nascimento', confianca: 85 }],
+    'dt. nascimento': [{ campo: 'data_nascimento', confianca: 85 }],
+
+    // Profissão
+    'profissão': [{ campo: 'profissao', confianca: 95 }],
+    'profissao': [{ campo: 'profissao', confianca: 95 }],
+    'ocupação': [{ campo: 'profissao', confianca: 85 }],
+    'ocupacao': [{ campo: 'profissao', confianca: 85 }],
+
+    // ========================================
+    // PROCESSOS
+    // ========================================
+
+    // Tipo de processo
+    'tipo processo': [{ campo: 'tipo', confianca: 95 }],
+    'tipo_processo': [{ campo: 'tipo', confianca: 95 }],
+    'natureza': [{ campo: 'tipo', confianca: 80 }],
+
+    // Fase processual
+    'fase': [{ campo: 'fase', confianca: 95 }],
+    'fase processual': [{ campo: 'fase', confianca: 95 }],
+    'fase_processual': [{ campo: 'fase', confianca: 95 }],
+    'etapa': [{ campo: 'fase', confianca: 80 }],
+
+    // Instância
+    'instância': [{ campo: 'instancia', confianca: 95 }],
+    'instancia': [{ campo: 'instancia', confianca: 95 }],
+    'grau': [{ campo: 'instancia', confianca: 85 }],
+    'grau jurisdicional': [{ campo: 'instancia', confianca: 90 }],
+
+    // Tribunal
+    'tribunal': [{ campo: 'tribunal', confianca: 95 }],
+    'órgão julgador': [{ campo: 'tribunal', confianca: 85 }],
+    'orgao julgador': [{ campo: 'tribunal', confianca: 85 }],
+
+    // Comarca
+    'comarca': [{ campo: 'comarca', confianca: 95 }],
+    'foro': [{ campo: 'comarca', confianca: 85 }],
+    'circunscrição': [{ campo: 'comarca', confianca: 80 }],
+
+    // Vara
+    'vara': [{ campo: 'vara', confianca: 95 }],
+    'juízo': [{ campo: 'vara', confianca: 85 }],
+    'juizo': [{ campo: 'vara', confianca: 85 }],
+
+    // Juiz
+    'juiz': [{ campo: 'juiz', confianca: 95 }],
+    'juíz': [{ campo: 'juiz', confianca: 95 }],
+    'magistrado': [{ campo: 'juiz', confianca: 90 }],
+    'relator': [{ campo: 'juiz', confianca: 80 }],
+
+    // Polo do cliente
+    'polo': [{ campo: 'polo_cliente', confianca: 90 }],
+    'polo cliente': [{ campo: 'polo_cliente', confianca: 95 }],
+    'polo_cliente': [{ campo: 'polo_cliente', confianca: 95 }],
+    'posição processual': [{ campo: 'polo_cliente', confianca: 85 }],
+
+    // Cliente em processos (referência)
+    'polo do cliente': [{ campo: 'cliente_ref', confianca: 90 }],
+    'nome do cliente': [{ campo: 'cliente_ref', confianca: 95 }],
+    'cliente_ref': [{ campo: 'cliente_ref', confianca: 95 }],
+    'parte ativa': [{ campo: 'cliente_ref', confianca: 70 }],
+    'parte passiva': [{ campo: 'cliente_ref', confianca: 70 }],
+
+    // Parte contrária
+    'parte contrária': [{ campo: 'parte_contraria', confianca: 95 }],
+    'parte contraria': [{ campo: 'parte_contraria', confianca: 95 }],
+    'parte_contraria': [{ campo: 'parte_contraria', confianca: 95 }],
+    'réu': [{ campo: 'parte_contraria', confianca: 80 }],
+    'reu': [{ campo: 'parte_contraria', confianca: 80 }],
+    'autor': [{ campo: 'parte_contraria', confianca: 75 }],
+    'terceiro(s)': [{ campo: 'parte_contraria', confianca: 70 }],
+    'adversário': [{ campo: 'parte_contraria', confianca: 85 }],
+    'adversario': [{ campo: 'parte_contraria', confianca: 85 }],
+
+    // Rito
+    'rito': [{ campo: 'rito', confianca: 95 }],
+    'procedimento': [{ campo: 'rito', confianca: 85 }],
+    'rito processual': [{ campo: 'rito', confianca: 95 }],
+
+    // Responsável
+    'responsável': [{ campo: 'responsavel_ref', confianca: 90 }],
+    'responsavel': [{ campo: 'responsavel_ref', confianca: 90 }],
+    'advogado responsável': [{ campo: 'responsavel_ref', confianca: 95 }],
+    'advogado responsavel': [{ campo: 'responsavel_ref', confianca: 95 }],
+    'advogado': [{ campo: 'responsavel_ref', confianca: 80 }],
+
+    // Número da pasta
+    'pasta': [{ campo: 'numero_pasta', confianca: 90 }],
+    'número pasta': [{ campo: 'numero_pasta', confianca: 95 }],
+    'numero pasta': [{ campo: 'numero_pasta', confianca: 95 }],
+    'numero_pasta': [{ campo: 'numero_pasta', confianca: 95 }],
+    'código interno': [{ campo: 'numero_pasta', confianca: 85 }],
+
+    // Valor da causa
+    'valor causa': [{ campo: 'valor_causa', confianca: 95 }],
+    'valor_causa': [{ campo: 'valor_causa', confianca: 95 }],
+    'valor da causa': [{ campo: 'valor_causa', confianca: 95 }],
+
+    // Valor do acordo
+    'valor acordo': [{ campo: 'valor_acordo', confianca: 95 }],
+    'valor_acordo': [{ campo: 'valor_acordo', confianca: 95 }],
+    'acordo': [{ campo: 'valor_acordo', confianca: 75 }],
+
+    // Valor da condenação
+    'valor condenação': [{ campo: 'valor_condenacao', confianca: 95 }],
+    'valor condenacao': [{ campo: 'valor_condenacao', confianca: 95 }],
+    'valor_condenacao': [{ campo: 'valor_condenacao', confianca: 95 }],
+    'condenação': [{ campo: 'valor_condenacao', confianca: 80 }],
+
+    // Data de distribuição
+    'data distribuição': [{ campo: 'data_distribuicao', confianca: 95 }],
+    'data distribuicao': [{ campo: 'data_distribuicao', confianca: 95 }],
+    'data_distribuicao': [{ campo: 'data_distribuicao', confianca: 95 }],
+    'distribuição': [{ campo: 'data_distribuicao', confianca: 85 }],
+    'distribuicao': [{ campo: 'data_distribuicao', confianca: 85 }],
+    'dt. distribuição': [{ campo: 'data_distribuicao', confianca: 90 }],
+
+    // Objeto da ação
+    'objeto': [{ campo: 'objeto_acao', confianca: 85 }],
+    'objeto ação': [{ campo: 'objeto_acao', confianca: 95 }],
+    'objeto acao': [{ campo: 'objeto_acao', confianca: 95 }],
+    'objeto_acao': [{ campo: 'objeto_acao', confianca: 95 }],
+    'pedido': [{ campo: 'objeto_acao', confianca: 80 }],
+
+    // Link do tribunal
+    'link': [{ campo: 'link_tribunal', confianca: 75 }],
+    'link tribunal': [{ campo: 'link_tribunal', confianca: 95 }],
+    'link_tribunal': [{ campo: 'link_tribunal', confianca: 95 }],
+    'url': [{ campo: 'link_tribunal', confianca: 80 }],
+    'consulta pública': [{ campo: 'link_tribunal', confianca: 85 }],
+
+    // Área do direito (processos)
+    'área': [{ campo: 'area', confianca: 90 }],
+    'area': [{ campo: 'area', confianca: 90 }],
+    'área do direito': [{ campo: 'area', confianca: 95 }],
+    'area do direito': [{ campo: 'area', confianca: 95 }],
+    'matéria': [{ campo: 'area', confianca: 85 }],
+    'materia': [{ campo: 'area', confianca: 85 }],
+
+    // UF / Estado (adicional)
+    'unidade federativa': [{ campo: 'uf', confianca: 95 }],
   }
 
   const camposSchema = schema.map(c => c.campo)
   const camposUsados = new Set<string>()
 
+  // FASE 1: Detectar padrões nos DADOS (prioridade alta para CNJ)
   for (const header of headers) {
+    const padrao = detectarPadraoDados(header)
+    if (padrao && camposSchema.includes(padrao.campo) && !camposUsados.has(padrao.campo)) {
+      mapeamento[header] = padrao.campo
+      confianca[header] = padrao.confianca
+      camposUsados.add(padrao.campo)
+      sugestoes.push(`Campo "${header}" mapeado para ${padrao.campo} por análise de dados`)
+    }
+  }
+
+  // FASE 2: Para campos não mapeados, usar mapeamento por nome
+  for (const header of headers) {
+    // Pular se já foi mapeado
+    if (mapeamento[header] !== undefined) continue
+
     const headerNormalizado = header.toLowerCase().trim()
 
-    // Buscar mapeamento conhecido
+    // Buscar mapeamento conhecido por nome exato
     const matches = mapeamentosConhecidos[headerNormalizado]
 
     if (matches) {
@@ -240,7 +488,8 @@ function mapeamentoHeuristico(headers: string[], schema: CampoSchema[]) {
       }
     }
 
-    // Busca parcial
+    // Busca parcial por nome
+    let encontrou = false
     for (const [key, matches] of Object.entries(mapeamentosConhecidos)) {
       if (headerNormalizado.includes(key) || key.includes(headerNormalizado)) {
         const match = matches.find(m =>
@@ -249,15 +498,16 @@ function mapeamentoHeuristico(headers: string[], schema: CampoSchema[]) {
 
         if (match) {
           mapeamento[header] = match.campo
-          confianca[header] = Math.max(match.confianca - 20, 50) // Reduzir confiança para match parcial
+          confianca[header] = Math.max(match.confianca - 20, 50)
           camposUsados.add(match.campo)
+          encontrou = true
           break
         }
       }
     }
 
     // Se não encontrou, marcar como null
-    if (mapeamento[header] === undefined) {
+    if (!encontrou) {
       mapeamento[header] = null
       sugestoes.push(`Campo "${header}" não foi mapeado automaticamente`)
     }

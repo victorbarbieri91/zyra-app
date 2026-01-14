@@ -357,26 +357,31 @@ async function validarLinhas(supabase: any, job: any, linhas: Record<string, any
 function aplicarMapeamento(
   linha: Record<string, any>,
   mapeamento: Record<string, string | null>,
-  camposExtras: string[]
+  _camposExtras: string[] // Não usado mais, mantido para compatibilidade
 ): Record<string, any> {
   const resultado: Record<string, any> = {}
   const observacoesExtras: string[] = []
 
   // Aplicar mapeamento
   for (const [header, campo] of Object.entries(mapeamento)) {
-    if (campo && linha[header] !== undefined) {
-      resultado[campo] = linha[header]
-    }
-  }
-
-  // Concatenar campos extras nas observações
-  for (const header of camposExtras) {
     const valor = linha[header]
-    if (valor && String(valor).trim()) {
-      observacoesExtras.push(`${header}: ${valor}`)
+
+    // Valor nulo ou vazio? Pular
+    if (valor === undefined || valor === null || String(valor).trim() === '') {
+      continue
     }
+
+    if (campo === '__observacoes__') {
+      // Adicionar às observações
+      observacoesExtras.push(`${header}: ${valor}`)
+    } else if (campo && campo !== '__excluir__') {
+      // Mapear para o campo do sistema
+      resultado[campo] = valor
+    }
+    // Se campo é null ou '__excluir__', ignorar completamente
   }
 
+  // Concatenar observações extras
   if (observacoesExtras.length > 0) {
     resultado.observacoes = [
       resultado.observacoes || '',
@@ -536,7 +541,40 @@ function validarEmail(email: string): boolean {
 
 function validarNumeroCNJ(numero: string): boolean {
   if (!numero) return false
-  return /^\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$/.test(numero.trim())
+  // Normaliza primeiro para remover prefixos
+  const normalizado = normalizarNumeroCNJ(numero)
+  return /^\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$/.test(normalizado)
+}
+
+/**
+ * Normaliza número CNJ removendo prefixos comuns
+ * "CNJ 0000000-00.0000.0.00.0000" → "0000000-00.0000.0.00.0000"
+ * "Processo: 0000000-00.0000.0.00.0000" → "0000000-00.0000.0.00.0000"
+ * "Nº 0000000-00.0000.0.00.0000" → "0000000-00.0000.0.00.0000"
+ */
+function normalizarNumeroCNJ(numero: string): string {
+  if (!numero) return ''
+
+  let normalizado = numero.trim()
+
+  // Remove prefixos comuns (case insensitive)
+  const prefixos = [
+    /^cnj\s*:?\s*/i,
+    /^processo\s*:?\s*/i,
+    /^proc\s*\.?\s*:?\s*/i,
+    /^n[º°]?\s*:?\s*/i,
+    /^número\s*:?\s*/i,
+    /^numero\s*:?\s*/i,
+    /^num\s*\.?\s*:?\s*/i,
+    /^autos\s*:?\s*/i,
+    /^ref\s*\.?\s*:?\s*/i,
+  ]
+
+  for (const prefixo of prefixos) {
+    normalizado = normalizado.replace(prefixo, '')
+  }
+
+  return normalizado.trim()
 }
 
 // ============================================
@@ -572,11 +610,12 @@ async function checarDuplicata(
 
     case 'processos':
       if (registro.numero_cnj) {
+        const numeroCnjNormalizado = normalizarNumeroCNJ(registro.numero_cnj)
         const { data } = await supabase
           .from('processos_processos')
           .select('id, numero_cnj')
           .eq('escritorio_id', escritorioId)
-          .eq('numero_cnj', registro.numero_cnj.trim())
+          .eq('numero_cnj', numeroCnjNormalizado)
           .limit(1)
 
         if (data?.length > 0) {
@@ -709,9 +748,9 @@ async function inserirCRM(supabase: any, batch: any[], escritorioId: string) {
 
     return {
       escritorio_id: escritorioId,
-      nome_completo: dados.nome_completo,
+      nome_completo: normalizarNome(dados.nome_completo),
       tipo_pessoa: doc.length === 14 ? 'pj' : 'pf',
-      tipo_contato: dados.tipo_contato || 'cliente',
+      tipo_contato: normalizarTipoContato(dados.tipo_contato),
       cpf_cnpj: formatarDocumento(dados.cpf_cnpj),
       email_principal: dados.email_principal || null,
       telefone_principal: dados.telefone_principal || null,
@@ -739,29 +778,161 @@ async function inserirProcessos(supabase: any, batch: any[], escritorioId: strin
     // Resolver cliente_id
     const clienteId = await resolverClienteId(supabase, dados.cliente_ref, escritorioId)
 
+    // Resolver responsável (se informado, senão usa o usuário atual)
+    const responsavelId = await resolverResponsavelId(
+      supabase,
+      dados.responsavel_ref,
+      escritorioId,
+      userId
+    )
+
+    // Normalizar campos enum
+    const tipo = normalizarTipoProcesso(dados.tipo)
+    const fase = normalizarFaseProcesso(dados.fase)
+    const instancia = normalizarInstancia(dados.instancia)
+    const rito = normalizarRito(dados.rito)
+    const polo = normalizarPolo(dados.polo_cliente)
+    const status = normalizarStatusProcesso(dados.status)
+
     const registro = {
       escritorio_id: escritorioId,
-      numero_cnj: dados.numero_cnj,
+      numero_cnj: normalizarNumeroCNJ(dados.numero_cnj),
+      numero_pasta: dados.numero_pasta || null,
       cliente_id: clienteId,
-      polo_cliente: dados.polo_cliente || 'ativo',
-      area: dados.area || 'civel',
+      tipo: tipo,
+      area: normalizarArea(dados.area),
+      fase: fase,
+      instancia: instancia,
+      rito: rito,
       tribunal: dados.tribunal || null,
-      vara: dados.vara || null,
+      uf: normalizarUF(dados.uf),
       comarca: dados.comarca || null,
-      valor_causa: parseValor(dados.valor_causa),
+      vara: dados.vara || null,
+      juiz: dados.juiz || null,
+      polo_cliente: polo,
+      parte_contraria: dados.parte_contraria || null,
+      responsavel_id: responsavelId,
       data_distribuicao: parseData(dados.data_distribuicao),
+      valor_causa: parseValor(dados.valor_causa),
+      valor_acordo: parseValor(dados.valor_acordo),
+      valor_condenacao: parseValor(dados.valor_condenacao),
       objeto_acao: dados.objeto_acao || null,
+      status: status,
+      link_tribunal: dados.link_tribunal || null,
       observacoes: dados.observacoes || null,
-      status: dados.status || 'ativo',
-      tipo: 'judicial',
-      fase: 'conhecimento',
-      instancia: '1a',
-      responsavel_id: userId
+      created_by: userId
     }
 
     const { error } = await supabase.from('processos_processos').insert(registro)
     if (error) throw error
   }
+}
+
+// Normalizadores para campos enum de processos
+function normalizarTipoProcesso(valor: string | null | undefined): string {
+  if (!valor) return 'judicial'
+  const limpo = valor.toString().trim().toLowerCase()
+  const mapa: Record<string, string> = {
+    'judicial': 'judicial',
+    'administrativo': 'administrativo',
+    'admin': 'administrativo',
+    'arbitragem': 'arbitragem',
+    'arbitral': 'arbitragem'
+  }
+  return mapa[limpo] || 'judicial'
+}
+
+function normalizarFaseProcesso(valor: string | null | undefined): string | null {
+  if (!valor) return null
+  const limpo = valor.toString().trim().toLowerCase()
+  const mapa: Record<string, string> = {
+    'conhecimento': 'conhecimento',
+    'recurso': 'recurso',
+    'recursal': 'recurso',
+    'execução': 'execucao',
+    'execucao': 'execucao',
+    'cumprimento': 'cumprimento_sentenca',
+    'cumprimento_sentenca': 'cumprimento_sentenca',
+    'cumprimento de sentença': 'cumprimento_sentenca'
+  }
+  return mapa[limpo] || null
+}
+
+function normalizarInstancia(valor: string | null | undefined): string | null {
+  if (!valor) return null
+  const limpo = valor.toString().trim().toLowerCase()
+  const mapa: Record<string, string> = {
+    '1': '1a', '1a': '1a', '1ª': '1a', 'primeira': '1a',
+    '2': '2a', '2a': '2a', '2ª': '2a', 'segunda': '2a',
+    '3': '3a', '3a': '3a', '3ª': '3a', 'terceira': '3a',
+    'stj': 'stj', 'stf': 'stf', 'tst': 'tst',
+    'administrativa': 'administrativa', 'admin': 'administrativa'
+  }
+  return mapa[limpo] || null
+}
+
+function normalizarRito(valor: string | null | undefined): string | null {
+  if (!valor) return null
+  const limpo = valor.toString().trim().toLowerCase()
+  const mapa: Record<string, string> = {
+    'ordinário': 'ordinario', 'ordinario': 'ordinario',
+    'sumário': 'sumario', 'sumario': 'sumario',
+    'especial': 'especial',
+    'sumaríssimo': 'sumarissimo', 'sumarissimo': 'sumarissimo'
+  }
+  return mapa[limpo] || null
+}
+
+function normalizarPolo(valor: string | null | undefined): string {
+  if (!valor) return 'ativo'
+  const limpo = valor.toString().trim().toLowerCase()
+  const mapa: Record<string, string> = {
+    'ativo': 'ativo', 'autor': 'ativo', 'requerente': 'ativo', 'reclamante': 'ativo',
+    'passivo': 'passivo', 'réu': 'passivo', 'reu': 'passivo', 'requerido': 'passivo', 'reclamado': 'passivo',
+    'terceiro': 'terceiro', 'interessado': 'terceiro', 'assistente': 'terceiro'
+  }
+  return mapa[limpo] || 'ativo'
+}
+
+function normalizarStatusProcesso(valor: string | null | undefined): string {
+  if (!valor) return 'ativo'
+  const limpo = valor.toString().trim().toLowerCase()
+  const mapa: Record<string, string> = {
+    'ativo': 'ativo', 'em andamento': 'ativo', 'em curso': 'ativo',
+    'suspenso': 'suspenso', 'sobrestado': 'suspenso',
+    'arquivado': 'arquivado',
+    'baixado': 'baixado',
+    'trânsito em julgado': 'transito_julgado', 'transito em julgado': 'transito_julgado',
+    'transito_julgado': 'transito_julgado', 'transitado': 'transito_julgado',
+    'acordo': 'acordo', 'conciliado': 'acordo'
+  }
+  return mapa[limpo] || 'ativo'
+}
+
+function normalizarArea(valor: string | null | undefined): string {
+  if (!valor) return 'civel'
+  const limpo = valor.toString().trim().toLowerCase()
+  const mapa: Record<string, string> = {
+    'cível': 'civel', 'civel': 'civel', 'civil': 'civel',
+    'trabalhista': 'trabalhista', 'trabalho': 'trabalhista',
+    'tributária': 'tributaria', 'tributaria': 'tributaria', 'fiscal': 'tributaria',
+    'família': 'familia', 'familia': 'familia',
+    'criminal': 'criminal', 'penal': 'criminal',
+    'previdenciária': 'previdenciaria', 'previdenciaria': 'previdenciaria', 'inss': 'previdenciaria',
+    'consumidor': 'consumidor',
+    'empresarial': 'empresarial', 'comercial': 'empresarial',
+    'ambiental': 'ambiental',
+    'outra': 'outra', 'outro': 'outra', 'outros': 'outra'
+  }
+  return mapa[limpo] || 'civel'
+}
+
+function normalizarUF(valor: string | null | undefined): string | null {
+  if (!valor) return null
+  // Pegar apenas os 2 primeiros caracteres depois de limpar
+  const limpo = valor.toString().trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2)
+  const ufsValidas = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']
+  return ufsValidas.includes(limpo) ? limpo : null
 }
 
 async function inserirConsultivo(supabase: any, batch: any[], escritorioId: string, userId: string) {
@@ -900,14 +1071,45 @@ async function resolverClienteId(supabase: any, referencia: string, escritorioId
 async function resolverProcessoId(supabase: any, referencia: string, escritorioId: string): Promise<string | null> {
   if (!referencia) return null
 
+  // Normaliza o número CNJ para remover prefixos como "CNJ", "Processo:", etc.
+  const numeroCnjNormalizado = normalizarNumeroCNJ(referencia)
+
   const { data } = await supabase
     .from('processos_processos')
     .select('id')
     .eq('escritorio_id', escritorioId)
-    .eq('numero_cnj', referencia.trim())
+    .eq('numero_cnj', numeroCnjNormalizado)
     .limit(1)
 
   return data?.[0]?.id || null
+}
+
+async function resolverResponsavelId(supabase: any, referencia: string, escritorioId: string, fallbackUserId: string): Promise<string> {
+  if (!referencia) return fallbackUserId
+
+  const referenciaLimpa = referencia.trim().toLowerCase()
+
+  // Tentar por email
+  if (referenciaLimpa.includes('@')) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('escritorio_id', escritorioId)
+      .ilike('email', referenciaLimpa)
+      .limit(1)
+
+    if (data?.length > 0) return data[0].id
+  }
+
+  // Tentar por nome
+  const { data } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('escritorio_id', escritorioId)
+    .ilike('nome', `%${referencia}%`)
+    .limit(1)
+
+  return data?.[0]?.id || fallbackUserId
 }
 
 function formatarDocumento(doc: string | null): string | null {
@@ -924,6 +1126,178 @@ function formatarDocumento(doc: string | null): string | null {
   }
 
   return doc
+}
+
+// Siglas empresariais que devem ser preservadas
+const SIGLAS_EMPRESARIAIS = [
+  'S/A', 'S.A.', 'SA', 'LTDA', 'ME', 'EPP', 'EIRELI', 'CIA', 'CIA.',
+  'SS', 'S/S', 'SIMPLES', 'MEI', 'LTDA.'
+]
+
+// Preposições e artigos que ficam em minúsculo
+const PALAVRAS_MINUSCULAS = ['da', 'de', 'do', 'dos', 'das', 'e', 'o', 'a', 'os', 'as']
+
+// Prefixos de tratamento
+const PREFIXOS_TRATAMENTO: Record<string, string> = {
+  'dr': 'Dr.', 'dr.': 'Dr.', 'dra': 'Dra.', 'dra.': 'Dra.',
+  'sr': 'Sr.', 'sr.': 'Sr.', 'sra': 'Sra.', 'sra.': 'Sra.',
+  'prof': 'Prof.', 'prof.': 'Prof.',
+}
+
+/**
+ * Normaliza nome para Title Case preservando siglas e abreviações
+ */
+function normalizarNome(nome: string | null): string {
+  if (!nome) return ''
+
+  // Verificar se precisa normalizar
+  const temMinusculas = /[a-záàâãéèêíìîóòôõúùûç]/.test(nome)
+  const temMaiusculas = /[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ]/.test(nome)
+
+  if (temMinusculas && temMaiusculas) {
+    const palavras = nome.trim().split(/\s+/)
+    const primeiraLetraMaiuscula = palavras.some(p => /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ]/.test(p))
+    if (primeiraLetraMaiuscula) {
+      return nome.trim()
+    }
+  }
+
+  const palavras = nome.trim().split(/\s+/)
+
+  const resultado = palavras.map((palavra, index) => {
+    const palavraLower = palavra.toLowerCase()
+    const palavraUpper = palavra.toUpperCase()
+
+    // Verificar sigla empresarial
+    const sigla = SIGLAS_EMPRESARIAIS.find(s =>
+      palavraUpper === s.toUpperCase() ||
+      palavraUpper === s.replace(/[./]/g, '').toUpperCase()
+    )
+    if (sigla) return sigla
+
+    // Verificar prefixo de tratamento
+    const prefixo = PREFIXOS_TRATAMENTO[palavraLower]
+    if (prefixo) return prefixo
+
+    // Preposição/artigo (minúsculo se não for primeira palavra)
+    if (index > 0 && PALAVRAS_MINUSCULAS.includes(palavraLower)) {
+      return palavraLower
+    }
+
+    if (palavra.length === 0) return ''
+
+    // Palavras com hífen
+    if (palavra.includes('-')) {
+      return palavra.split('-')
+        .map(parte => parte.charAt(0).toUpperCase() + parte.slice(1).toLowerCase())
+        .join('-')
+    }
+
+    return palavra.charAt(0).toUpperCase() + palavra.slice(1).toLowerCase()
+  })
+
+  return resultado.join(' ')
+}
+
+// Valores válidos de tipo_contato
+const TIPOS_CONTATO_VALIDOS = [
+  'cliente', 'prospecto', 'parte_contraria', 'correspondente',
+  'testemunha', 'perito', 'juiz', 'promotor', 'outros'
+]
+
+// Mapeamento de variações para valores padrão
+const MAPEAMENTO_TIPO_CONTATO: Record<string, string> = {
+  // Cliente
+  'cliente': 'cliente', 'clientes': 'cliente', 'client': 'cliente', 'cli': 'cliente',
+  // Prospecto / Lead
+  'prospecto': 'prospecto', 'prospectos': 'prospecto', 'prospect': 'prospecto',
+  'lead': 'prospecto', 'leads': 'prospecto', 'potencial': 'prospecto', 'interessado': 'prospecto',
+  // Parte Contrária
+  'parte_contraria': 'parte_contraria', 'parte contraria': 'parte_contraria',
+  'parte contrária': 'parte_contraria', 'parte_contrária': 'parte_contraria',
+  'partecontraria': 'parte_contraria', 'adversario': 'parte_contraria', 'adversário': 'parte_contraria',
+  'reu': 'parte_contraria', 'réu': 'parte_contraria', 'reclamado': 'parte_contraria',
+  'reclamada': 'parte_contraria', 'executado': 'parte_contraria', 'executada': 'parte_contraria',
+  'devedor': 'parte_contraria', 'devedora': 'parte_contraria', 'banco': 'parte_contraria',
+  'empresa': 'parte_contraria', 'instituicao': 'parte_contraria', 'instituição': 'parte_contraria',
+  // Correspondente
+  'correspondente': 'correspondente', 'correspondentes': 'correspondente', 'corresp': 'correspondente',
+  'parceiro': 'correspondente', 'parceira': 'correspondente',
+  // Testemunha
+  'testemunha': 'testemunha', 'testemunhas': 'testemunha',
+  // Perito
+  'perito': 'perito', 'peritos': 'perito', 'perita': 'perito', 'expert': 'perito', 'especialista': 'perito',
+  // Juiz
+  'juiz': 'juiz', 'juiza': 'juiz', 'juíza': 'juiz', 'magistrado': 'juiz', 'magistrada': 'juiz',
+  'desembargador': 'juiz', 'desembargadora': 'juiz', 'ministro': 'juiz', 'ministra': 'juiz',
+  // Promotor
+  'promotor': 'promotor', 'promotora': 'promotor', 'mp': 'promotor',
+  'procurador': 'promotor', 'procuradora': 'promotor',
+  // Outros
+  'outros': 'outros', 'outro': 'outros', 'other': 'outros', 'diverso': 'outros',
+  'indefinido': 'outros', 'n/a': 'outros', 'na': 'outros', '-': 'outros', '': 'outros',
+}
+
+/**
+ * Normaliza valor de tipo_contato para um dos valores válidos
+ */
+function normalizarTipoContato(valor: string | null | undefined): string {
+  if (!valor) return 'cliente'
+
+  // Limpar o valor
+  let limpo = valor
+    .toString()
+    .trim()
+    .toLowerCase()
+    // Remover caracteres especiais no início/fim (|, /, \, etc.)
+    .replace(/^[|/\\,;:\-_\s]+/, '')
+    .replace(/[|/\\,;:\-_\s]+$/, '')
+    .replace(/\s+/g, ' ')
+    .replace(/[_-]/g, ' ')
+    .trim()
+
+  if (!limpo) return 'cliente'
+
+  // Busca direta
+  if (MAPEAMENTO_TIPO_CONTATO[limpo]) return MAPEAMENTO_TIPO_CONTATO[limpo]
+
+  // Sem espaços
+  const semEspacos = limpo.replace(/\s/g, '')
+  if (MAPEAMENTO_TIPO_CONTATO[semEspacos]) return MAPEAMENTO_TIPO_CONTATO[semEspacos]
+
+  // Com underscore
+  const comUnderscore = limpo.replace(/\s/g, '_')
+  if (MAPEAMENTO_TIPO_CONTATO[comUnderscore]) return MAPEAMENTO_TIPO_CONTATO[comUnderscore]
+
+  // Busca parcial
+  for (const [chave, tipo] of Object.entries(MAPEAMENTO_TIPO_CONTATO)) {
+    if (limpo.includes(chave) || chave.includes(limpo)) {
+      return tipo
+    }
+  }
+
+  // Heurísticas para parte_contraria (bancos, empresas, órgãos)
+  const PALAVRAS_PARTE_CONTRARIA = [
+    'santander', 'itau', 'itaú', 'bradesco', 'caixa', 'bb', 'brasil',
+    'nubank', 'inter', 'original', 'pan', 'bmg', 'safra', 'votorantim',
+    'telefonica', 'claro', 'vivo', 'tim', 'oi', 'net', 'sky',
+    'enel', 'cpfl', 'light', 'cemig', 'copel', 'celesc',
+    'sabesp', 'sanepar', 'copasa', 'cedae',
+    'inss', 'prefeitura', 'estado', 'união', 'municipio', 'município',
+    'detran', 'receita', 'fazenda',
+    's/a', 's.a.', 'sa', 'ltda', 'eireli', 'me', 'epp',
+  ]
+
+  for (const palavra of PALAVRAS_PARTE_CONTRARIA) {
+    if (limpo.includes(palavra)) {
+      return 'parte_contraria'
+    }
+  }
+
+  // Se é um valor válido direto (já normalizado)
+  if (TIPOS_CONTATO_VALIDOS.includes(limpo)) return limpo
+
+  return 'outros'
 }
 
 function parseValor(valor: any): number | null {

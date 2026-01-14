@@ -71,6 +71,16 @@ export default function ConsultivoPage() {
   const router = useRouter()
   const supabase = createClient()
 
+  // Abrir wizard automaticamente se ?novo=true
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('novo') === 'true') {
+      setWizardModalOpen(true)
+      // Limpar o query param da URL
+      window.history.replaceState({}, '', '/dashboard/consultivo')
+    }
+  }, [])
+
   // Hooks de agenda
   const { createTarefa } = useTarefas(escritorioId || '')
   const { createEvento } = useEventos(escritorioId || '')

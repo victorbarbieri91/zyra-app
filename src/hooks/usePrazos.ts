@@ -28,14 +28,22 @@ export function usePrazos(escritorioId?: string) {
   const supabase = createClient()
 
   const loadPrazos = async () => {
+    // Se nao tem escritorioId, nao carrega nada (seguranca)
+    if (!escritorioId) {
+      setPrazos([])
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
 
-      // Query usando a view de prazos vencendo
+      // Query usando a view de prazos vencendo COM filtro de escritorio
       const { data, error: queryError } = await supabase
         .from('v_prazos_vencendo')
         .select('*')
+        .eq('escritorio_id', escritorioId) // SEGURANCA: Filtrar por escritorio
         .order('data_limite', { ascending: true })
 
       if (queryError) throw queryError

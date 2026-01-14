@@ -37,7 +37,18 @@
       "Bash(mkdir:*)",
       "Bash(if exist \"node_modules/.cache\" rmdir /s /q \"node_modules/.cache\")",
       "Bash(git checkout:*)",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(npm view:*)",
+      "Bash(grep:*)",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__get_advisors",
+      "mcp__supabase__list_migrations",
+      "mcp__supabase__deploy_edge_function",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "mcp__supabase__list_edge_functions"
     ],
     "deny": [],
     "ask": []

@@ -73,7 +73,7 @@ export const SCHEMAS: Record<ModuloMigracao, CampoSchema[]> = {
   crm: [
     { campo: 'nome_completo', tipo: 'texto', obrigatorio: true, descricao: 'Nome completo ou razão social' },
     { campo: 'cpf_cnpj', tipo: 'documento', obrigatorio: false, descricao: 'CPF (11 dígitos) ou CNPJ (14 dígitos)' },
-    { campo: 'tipo_contato', tipo: 'enum', obrigatorio: false, valores: ['cliente', 'prospecto', 'parte_contraria', 'correspondente', 'outros'], descricao: 'Tipo de contato' },
+    { campo: 'tipo_contato', tipo: 'enum', obrigatorio: false, valores: ['cliente', 'prospecto', 'parte_contraria', 'correspondente', 'testemunha', 'perito', 'juiz', 'promotor', 'outros'], descricao: 'Tipo de contato' },
     { campo: 'email_principal', tipo: 'email', obrigatorio: false, descricao: 'E-mail principal' },
     { campo: 'telefone_principal', tipo: 'telefone', obrigatorio: false, descricao: 'Telefone fixo' },
     { campo: 'celular', tipo: 'telefone', obrigatorio: false, descricao: 'Celular/WhatsApp' },
@@ -89,17 +89,31 @@ export const SCHEMAS: Record<ModuloMigracao, CampoSchema[]> = {
     { campo: 'observacoes', tipo: 'texto_longo', obrigatorio: false, descricao: 'Observações gerais' }
   ],
   processos: [
+    // Campos obrigatórios
     { campo: 'numero_cnj', tipo: 'texto', obrigatorio: true, descricao: 'Número CNJ (NNNNNNN-DD.AAAA.J.TR.OOOO)' },
     { campo: 'cliente_ref', tipo: 'texto', obrigatorio: true, descricao: 'Nome ou CPF/CNPJ do cliente' },
-    { campo: 'polo_cliente', tipo: 'enum', obrigatorio: false, valores: ['ativo', 'passivo', 'terceiro'], descricao: 'Polo do cliente' },
-    { campo: 'area', tipo: 'enum', obrigatorio: false, valores: ['civel', 'trabalhista', 'tributaria', 'familia', 'criminal', 'previdenciaria', 'consumidor', 'empresarial', 'ambiental', 'outra'], descricao: 'Área do direito' },
+    { campo: 'tipo', tipo: 'enum', obrigatorio: true, valores: ['judicial', 'administrativo', 'arbitragem'], descricao: 'Tipo de processo' },
+    { campo: 'area', tipo: 'enum', obrigatorio: true, valores: ['civel', 'trabalhista', 'tributaria', 'familia', 'criminal', 'previdenciaria', 'consumidor', 'empresarial', 'ambiental', 'outra'], descricao: 'Área do direito' },
+    { campo: 'polo_cliente', tipo: 'enum', obrigatorio: true, valores: ['ativo', 'passivo', 'terceiro'], descricao: 'Polo do cliente' },
+    { campo: 'data_distribuicao', tipo: 'data', obrigatorio: true, descricao: 'Data de distribuição' },
+    { campo: 'responsavel_ref', tipo: 'texto', obrigatorio: true, descricao: 'E-mail do advogado responsável' },
+    // Campos opcionais
+    { campo: 'numero_pasta', tipo: 'texto', obrigatorio: false, descricao: 'Número interno da pasta' },
+    { campo: 'fase', tipo: 'enum', obrigatorio: false, valores: ['conhecimento', 'recurso', 'execucao', 'cumprimento_sentenca'], descricao: 'Fase processual' },
+    { campo: 'instancia', tipo: 'enum', obrigatorio: false, valores: ['1a', '2a', '3a', 'stj', 'stf', 'tst', 'administrativa'], descricao: 'Instância atual' },
     { campo: 'tribunal', tipo: 'texto', obrigatorio: false, descricao: 'Ex: TJSP, TRT-2, STJ' },
-    { campo: 'vara', tipo: 'texto', obrigatorio: false, descricao: 'Vara' },
+    { campo: 'uf', tipo: 'texto', obrigatorio: false, descricao: 'Estado (2 letras: SP, RJ, MG...)' },
+    { campo: 'rito', tipo: 'enum', obrigatorio: false, valores: ['ordinario', 'sumario', 'especial', 'sumarissimo'], descricao: 'Rito processual' },
     { campo: 'comarca', tipo: 'texto', obrigatorio: false, descricao: 'Comarca' },
+    { campo: 'vara', tipo: 'texto', obrigatorio: false, descricao: 'Vara' },
+    { campo: 'juiz', tipo: 'texto', obrigatorio: false, descricao: 'Nome do juiz' },
+    { campo: 'parte_contraria', tipo: 'texto', obrigatorio: false, descricao: 'Nome da parte contrária' },
     { campo: 'valor_causa', tipo: 'numero', obrigatorio: false, descricao: 'Valor da causa' },
-    { campo: 'data_distribuicao', tipo: 'data', obrigatorio: false, descricao: 'Data de distribuição' },
+    { campo: 'valor_acordo', tipo: 'numero', obrigatorio: false, descricao: 'Valor do acordo (se houver)' },
+    { campo: 'valor_condenacao', tipo: 'numero', obrigatorio: false, descricao: 'Valor da condenação (se houver)' },
     { campo: 'objeto_acao', tipo: 'texto_longo', obrigatorio: false, descricao: 'Objeto/pedido da ação' },
-    { campo: 'status', tipo: 'enum', obrigatorio: false, valores: ['ativo', 'suspenso', 'arquivado', 'baixado'], descricao: 'Status do processo' },
+    { campo: 'status', tipo: 'enum', obrigatorio: false, valores: ['ativo', 'suspenso', 'arquivado', 'baixado', 'transito_julgado', 'acordo'], descricao: 'Status do processo' },
+    { campo: 'link_tribunal', tipo: 'texto', obrigatorio: false, descricao: 'Link para consulta no tribunal' },
     { campo: 'observacoes', tipo: 'texto_longo', obrigatorio: false, descricao: 'Observações' }
   ],
   consultivo: [

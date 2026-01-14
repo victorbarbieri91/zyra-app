@@ -43,8 +43,18 @@ async function parseCSV(file: File): Promise<ParseResult> {
       transformHeader: (header) => header.trim(),
       transform: (value) => value?.trim() || '',
       complete: (results) => {
-        const headers = results.meta.fields || []
-        const amostra = results.data.slice(0, 10) as Record<string, unknown>[]
+        // Filtrar headers vazios
+        const allHeaders = results.meta.fields || []
+        const headers = allHeaders.filter(h => h && h.trim())
+
+        // Filtrar dados para incluir apenas campos com headers válidos
+        const amostra = results.data.slice(0, 10).map(row => {
+          const obj: Record<string, unknown> = {}
+          headers.forEach(header => {
+            obj[header] = (row as Record<string, unknown>)[header]
+          })
+          return obj
+        })
 
         resolve({
           headers,
@@ -83,15 +93,25 @@ async function parseExcel(file: File): Promise<ParseResult> {
     // Detectar linha de headers (pular linhas de título)
     const headerRowIndex = encontrarLinhaHeaders(data)
 
-    // Headers são da linha detectada
-    const headers = (data[headerRowIndex] as string[]).map(h => String(h).trim()).filter(Boolean)
+    // Headers são da linha detectada - manter mapeamento de índices
+    const rawHeaders = (data[headerRowIndex] as string[]).map(h => String(h).trim())
+
+    // Criar mapeamento: índice do header válido → índice original na planilha
+    const headerMapping: { header: string; originalIndex: number }[] = []
+    rawHeaders.forEach((header, originalIndex) => {
+      if (header) { // Apenas headers não vazios
+        headerMapping.push({ header, originalIndex })
+      }
+    })
+
+    const headers = headerMapping.map(h => h.header)
     const rows = data.slice(headerRowIndex + 1).filter(row => (row as unknown[]).some(cell => cell !== ''))
 
-    // Converter para objetos
+    // Converter para objetos usando mapeamento correto de índices
     const amostra = rows.slice(0, 10).map(row => {
       const obj: Record<string, unknown> = {}
-      headers.forEach((header, i) => {
-        let value = (row as unknown[])[i]
+      headerMapping.forEach(({ header, originalIndex }) => {
+        let value = (row as unknown[])[originalIndex] // Usar índice original!
 
         // Converter Date para string
         if (value instanceof Date) {

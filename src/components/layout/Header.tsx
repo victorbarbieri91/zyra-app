@@ -6,7 +6,6 @@ import {
   Search,
   User,
   ChevronDown,
-  Settings,
   HelpCircle,
   LogOut,
   Building2,
@@ -226,13 +225,15 @@ export default function Header() {
                 </div>
 
                 <div className="p-2">
-                  <button className="w-full flex items-center gap-2.5 px-3 py-2 text-[#46627f] hover:bg-slate-50 rounded-md transition-all group">
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      router.push('/dashboard/perfil');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-[#46627f] hover:bg-slate-50 rounded-md transition-all group"
+                  >
                     <User className="w-3.5 h-3.5" />
                     <span className="text-xs font-semibold">Meu Perfil</span>
-                  </button>
-                  <button className="w-full flex items-center gap-2.5 px-3 py-2 text-[#46627f] hover:bg-slate-50 rounded-md transition-all group">
-                    <Settings className="w-3.5 h-3.5 group-hover:rotate-90 transition-transform" />
-                    <span className="text-xs font-semibold">Configurações</span>
                   </button>
                   <button
                     onClick={() => {
@@ -243,6 +244,16 @@ export default function Header() {
                   >
                     <Upload className="w-3.5 h-3.5" />
                     <span className="text-xs font-semibold">Migração de Dados</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      router.push('/dashboard/escritorio');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-[#46627f] hover:bg-slate-50 rounded-md transition-all group"
+                  >
+                    <Building2 className="w-3.5 h-3.5" />
+                    <span className="text-xs font-semibold">Gestão do Escritório</span>
                   </button>
                   <button className="w-full flex items-center gap-2.5 px-3 py-2 text-[#46627f] hover:bg-slate-50 rounded-md transition-all group">
                     <HelpCircle className="w-3.5 h-3.5" />

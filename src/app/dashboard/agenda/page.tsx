@@ -36,13 +36,18 @@ import { useAgendaConsolidada } from '@/hooks/useAgendaConsolidada'
 import { useTarefas, Tarefa, TarefaFormData } from '@/hooks/useTarefas'
 import { useAudiencias, Audiencia, AudienciaFormData } from '@/hooks/useAudiencias'
 import { useEventos, Evento, EventoFormData } from '@/hooks/useEventos'
+import { useUserPreferences } from '@/hooks/useUserPreferences'
 
 export default function AgendaPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day' | 'list'>('month')
+  const [viewInitialized, setViewInitialized] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [escritorioId, setEscritorioId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
+
+  // Preferências do usuário
+  const { preferences, loading: preferencesLoading } = useUserPreferences()
 
   // Modais de visualização (detail)
   const [tarefaDetailOpen, setTarefaDetailOpen] = useState(false)
@@ -73,6 +78,14 @@ export default function AgendaPage() {
     responsaveis: [] as string[],
   })
 
+  // Aplicar preferência de view do usuário
+  useEffect(() => {
+    if (!preferencesLoading && !viewInitialized) {
+      setViewMode(preferences.agenda_view_padrao)
+      setViewInitialized(true)
+    }
+  }, [preferencesLoading, preferences.agenda_view_padrao, viewInitialized])
+
   // Buscar escritório ativo ao carregar
   useEffect(() => {
     async function loadEscritorio() {
@@ -98,7 +111,7 @@ export default function AgendaPage() {
   }, [])
 
   // Hooks - usar agenda consolidada e hooks específicos
-  const { items: agendaItems, loading, refreshItems } = useAgendaConsolidada()
+  const { items: agendaItems, loading, refreshItems } = useAgendaConsolidada(escritorioId || undefined)
   const { tarefas, createTarefa, updateTarefa, concluirTarefa, reabrirTarefa } = useTarefas(escritorioId || undefined)
   const { audiencias, createAudiencia, updateAudiencia } = useAudiencias(escritorioId || undefined)
   const { eventos, createEvento, updateEvento } = useEventos(escritorioId || undefined)

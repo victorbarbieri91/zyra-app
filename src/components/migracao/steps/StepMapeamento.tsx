@@ -23,7 +23,9 @@ import {
   ArrowLeft,
   RefreshCw,
   CheckCircle,
-  XCircle
+  XCircle,
+  FileText,
+  Trash2
 } from 'lucide-react'
 import { MigracaoState, StepMigracao } from '@/types/migracao'
 import { getSchemaCampos } from '@/lib/migracao/constants'
@@ -217,16 +219,35 @@ export function StepMapeamento({
 
                 {/* Select de campo */}
                 <Select
-                  value={campoAtual || '__ignorar__'}
-                  onValueChange={(v) => setMapeamentoCampo(header, v === '__ignorar__' ? null : v)}
+                  value={campoAtual || '__excluir__'}
+                  onValueChange={(v) => setMapeamentoCampo(header, v === '__excluir__' ? null : v)}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Selecione um campo..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__ignorar__">
-                      <span className="text-slate-400">-- Adicionar às observações --</span>
+                    {/* Opções para colunas não mapeadas */}
+                    <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 bg-slate-50">
+                      Opções para coluna não mapeada
+                    </div>
+                    <SelectItem value="__observacoes__">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-3.5 h-3.5 text-blue-500" />
+                        <span className="text-blue-600">Adicionar às Observações</span>
+                      </div>
                     </SelectItem>
+                    <SelectItem value="__excluir__">
+                      <div className="flex items-center gap-2">
+                        <Trash2 className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="text-slate-500">Ignorar / Excluir Coluna</span>
+                      </div>
+                    </SelectItem>
+
+                    {/* Separador */}
+                    <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 bg-slate-50 mt-1">
+                      Campos do Sistema
+                    </div>
+
                     {campos.map(campo => {
                       const jaMapeado = camposMapeados.includes(campo.campo) && campoAtual !== campo.campo
 
@@ -294,12 +315,22 @@ export function StepMapeamento({
         </div>
       )}
 
-      {/* Info sobre campos não mapeados */}
-      <div className="bg-slate-50 rounded-lg p-4 text-sm text-slate-600">
-        <p>
-          <strong>Campos não mapeados</strong> serão concatenados automaticamente
-          no campo &quot;observações&quot; do registro.
-        </p>
+      {/* Info sobre opções de coluna */}
+      <div className="bg-slate-50 rounded-lg p-4 text-sm text-slate-600 space-y-2">
+        <div className="flex items-start gap-2">
+          <FileText className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+          <p>
+            <strong className="text-blue-600">Adicionar às Observações:</strong> Os dados desta coluna
+            serão concatenados no campo &quot;observações&quot; do registro.
+          </p>
+        </div>
+        <div className="flex items-start gap-2">
+          <Trash2 className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+          <p>
+            <strong className="text-slate-500">Ignorar / Excluir:</strong> Os dados desta coluna
+            serão descartados e não serão importados.
+          </p>
+        </div>
       </div>
 
       {/* Botões de navegação */}

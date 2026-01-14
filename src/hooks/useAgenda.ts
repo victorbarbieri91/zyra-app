@@ -84,11 +84,22 @@ export function useAgenda() {
     }
   }
 
-  const getDisponibilidadeEquipe = async (dataInicio: Date, dataFim: Date) => {
+  const getDisponibilidadeEquipe = async (
+    dataInicio: Date,
+    dataFim: Date,
+    escritorioId?: string
+  ) => {
+    // SEGURANCA: Sem escritorioId, nao retorna dados
+    if (!escritorioId) {
+      console.warn('getDisponibilidadeEquipe chamado sem escritorioId')
+      return []
+    }
+
     try {
       const { data, error } = await supabase
         .from('v_disponibilidade_equipe')
         .select('*')
+        .eq('escritorio_id', escritorioId) // SEGURANCA: Filtrar por escritorio
         .gte('data', dataInicio.toISOString().split('T')[0])
         .lte('data', dataFim.toISOString().split('T')[0])
         .order('data', { ascending: true })

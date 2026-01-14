@@ -1,0 +1,184 @@
+'use client';
+
+import { useState, useCallback } from 'react';
+import { createClient } from '@/lib/supabase/client';
+
+export interface SyncLog {
+  id: string;
+  escritorio_id: string;
+  associado_id: string | null;
+  tipo: 'automatica' | 'manual';
+  data_inicio: string;
+  data_fim: string | null;
+  publicacoes_novas: number;
+  publicacoes_atualizadas: number;
+  sucesso: boolean;
+  erro_mensagem: string | null;
+  triggered_by: string | null;
+  created_at: string;
+}
+
+export interface SyncResult {
+  sucesso: boolean;
+  mensagem: string;
+  publicacoes_novas?: number;
+  publicacoes_atualizadas?: number;
+  erros?: string[];
+}
+
+interface UseAaspSyncReturn {
+  sincronizando: boolean;
+  ultimaSync: SyncLog | null;
+  historicoSync: SyncLog[];
+  carregandoHistorico: boolean;
+  sincronizarTodos: () => Promise<SyncResult>;
+  sincronizarAssociado: (associadoId: string) => Promise<SyncResult>;
+  getHistorico: (limit?: number) => Promise<SyncLog[]>;
+}
+
+export function useAaspSync(escritorioId: string | undefined): UseAaspSyncReturn {
+  const [sincronizando, setSincronizando] = useState(false);
+  const [ultimaSync, setUltimaSync] = useState<SyncLog | null>(null);
+  const [historicoSync, setHistoricoSync] = useState<SyncLog[]>([]);
+  const [carregandoHistorico, setCarregandoHistorico] = useState(false);
+
+  const supabase = createClient();
+
+  const getHistorico = useCallback(async (limit: number = 10): Promise<SyncLog[]> => {
+    if (!escritorioId) return [];
+
+    setCarregandoHistorico(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('publicacoes_sincronizacoes')
+        .select('*')
+        .eq('escritorio_id', escritorioId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error('Erro ao buscar histórico:', error);
+        return [];
+      }
+
+      const logs = data || [];
+      setHistoricoSync(logs);
+
+      if (logs.length > 0) {
+        setUltimaSync(logs[0]);
+      }
+
+      return logs;
+    } finally {
+      setCarregandoHistorico(false);
+    }
+  }, [escritorioId, supabase]);
+
+  const sincronizarTodos = useCallback(async (): Promise<SyncResult> => {
+    console.log('[useAaspSync] sincronizarTodos chamado')
+    console.log('[useAaspSync] escritorioId:', escritorioId)
+
+    if (!escritorioId) {
+      console.log('[useAaspSync] Erro: escritorioId não definido')
+      return {
+        sucesso: false,
+        mensagem: 'Escritório não identificado'
+      };
+    }
+
+    setSincronizando(true);
+    console.log('[useAaspSync] Chamando Edge Function aasp-sync...')
+
+    try {
+      const { data, error } = await supabase.functions.invoke('aasp-sync', {
+        body: {
+          action: 'sync_all',
+          escritorio_id: escritorioId
+        }
+      });
+
+      console.log('[useAaspSync] Resposta da Edge Function:', { data, error });
+
+      if (error) {
+        return {
+          sucesso: false,
+          mensagem: error.message || 'Erro na sincronização'
+        };
+      }
+
+      // Recarregar histórico após sync
+      await getHistorico();
+
+      return {
+        sucesso: data?.sucesso ?? false,
+        mensagem: data?.mensagem || 'Sincronização concluída',
+        publicacoes_novas: data?.publicacoes_novas,
+        publicacoes_atualizadas: data?.publicacoes_atualizadas,
+        erros: data?.erros
+      };
+    } catch (err: any) {
+      return {
+        sucesso: false,
+        mensagem: err.message || 'Erro de conexão'
+      };
+    } finally {
+      setSincronizando(false);
+    }
+  }, [escritorioId, supabase, getHistorico]);
+
+  const sincronizarAssociado = useCallback(async (associadoId: string): Promise<SyncResult> => {
+    if (!escritorioId) {
+      return {
+        sucesso: false,
+        mensagem: 'Escritório não identificado'
+      };
+    }
+
+    setSincronizando(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('aasp-sync', {
+        body: {
+          action: 'sync_one',
+          escritorio_id: escritorioId,
+          associado_id: associadoId
+        }
+      });
+
+      if (error) {
+        return {
+          sucesso: false,
+          mensagem: error.message || 'Erro na sincronização'
+        };
+      }
+
+      // Recarregar histórico após sync
+      await getHistorico();
+
+      return {
+        sucesso: data?.sucesso ?? false,
+        mensagem: data?.mensagem || 'Sincronização concluída',
+        publicacoes_novas: data?.publicacoes_novas,
+        publicacoes_atualizadas: data?.publicacoes_atualizadas
+      };
+    } catch (err: any) {
+      return {
+        sucesso: false,
+        mensagem: err.message || 'Erro de conexão'
+      };
+    } finally {
+      setSincronizando(false);
+    }
+  }, [escritorioId, supabase, getHistorico]);
+
+  return {
+    sincronizando,
+    ultimaSync,
+    historicoSync,
+    carregandoHistorico,
+    sincronizarTodos,
+    sincronizarAssociado,
+    getHistorico,
+  };
+}

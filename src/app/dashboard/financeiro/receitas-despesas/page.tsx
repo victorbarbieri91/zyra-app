@@ -88,6 +88,19 @@ export default function ContasPage() {
   const [modalDespesaOpen, setModalDespesaOpen] = useState(false)
   const [modalTransferenciaOpen, setModalTransferenciaOpen] = useState(false)
 
+  // Abrir modal automaticamente se ?tipo=despesa ou ?tipo=receita
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const tipo = params.get('tipo')
+    if (tipo === 'despesa') {
+      setModalDespesaOpen(true)
+      window.history.replaceState({}, '', '/dashboard/financeiro/receitas-despesas')
+    } else if (tipo === 'receita') {
+      setModalReceitaOpen(true)
+      window.history.replaceState({}, '', '/dashboard/financeiro/receitas-despesas')
+    }
+  }, [])
+
   // Estados dos formulários
   const [receitaForm, setReceitaForm] = useState<NovaReceitaForm>({
     cliente_id: '',

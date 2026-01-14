@@ -69,8 +69,11 @@ export function useMigracaoJob(jobId: string | null): UseMigracaoJobResult {
           filter: `id=eq.${jobId}`
         },
         (payload) => {
-          console.log('Real-time update:', payload.new)
-          setJob(payload.new as MigracaoJob)
+          console.log('Real-time update received, refetching full data...')
+          // IMPORTANTE: Não usar payload.new diretamente pois campos JSONB grandes
+          // (como resultado_final) podem ser truncados no evento realtime.
+          // Em vez disso, fazemos um refetch completo dos dados.
+          fetchJob()
         }
       )
       .subscribe((status) => {
@@ -80,7 +83,7 @@ export function useMigracaoJob(jobId: string | null): UseMigracaoJobResult {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [jobId])
+  }, [jobId, fetchJob])
 
   // Polling fallback - verifica a cada 2 segundos se o job ainda está processando
   useEffect(() => {

@@ -43,21 +43,29 @@ export interface AgendaFilters {
   data_fim?: string
 }
 
-export function useAgendaConsolidada(filters?: AgendaFilters) {
+export function useAgendaConsolidada(escritorioId: string | undefined, filters?: AgendaFilters) {
   const [items, setItems] = useState<AgendaItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const supabase = createClient()
 
   const loadItems = async () => {
+    // SEGURANCA: Sem escritorioId, nao carrega nada
+    if (!escritorioId) {
+      setItems([])
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
 
-      // Buscar da view consolidada
+      // Buscar da view consolidada COM filtro de escritorio
       let query = supabase
         .from('v_agenda_consolidada')
         .select('*')
+        .eq('escritorio_id', escritorioId) // SEGURANCA: Filtrar por escritorio
         .order('data_inicio', { ascending: true })
 
       // Aplicar filtros
@@ -114,12 +122,16 @@ export function useAgendaConsolidada(filters?: AgendaFilters) {
 
   // Carregar items de um dia específico
   const loadItemsDoDia = async (data: Date): Promise<AgendaItem[]> => {
+    // SEGURANCA: Sem escritorioId, retorna vazio
+    if (!escritorioId) return []
+
     try {
       const dataStr = data.toISOString().split('T')[0]
 
       const { data: items, error: queryError } = await supabase
         .from('v_agenda_consolidada')
         .select('*')
+        .eq('escritorio_id', escritorioId) // SEGURANCA: Filtrar por escritorio
         .gte('data_inicio', `${dataStr}T00:00:00`)
         .lte('data_inicio', `${dataStr}T23:59:59`)
         .order('data_inicio', { ascending: true })
@@ -135,10 +147,14 @@ export function useAgendaConsolidada(filters?: AgendaFilters) {
 
   // Carregar items de um intervalo (semana, mês)
   const loadItemsIntervalo = async (dataInicio: Date, dataFim: Date): Promise<AgendaItem[]> => {
+    // SEGURANCA: Sem escritorioId, retorna vazio
+    if (!escritorioId) return []
+
     try {
       const { data: items, error: queryError } = await supabase
         .from('v_agenda_consolidada')
         .select('*')
+        .eq('escritorio_id', escritorioId) // SEGURANCA: Filtrar por escritorio
         .gte('data_inicio', dataInicio.toISOString())
         .lte('data_inicio', dataFim.toISOString())
         .order('data_inicio', { ascending: true })
@@ -180,7 +196,7 @@ export function useAgendaConsolidada(filters?: AgendaFilters) {
 
   useEffect(() => {
     loadItems()
-  }, [filters])
+  }, [escritorioId, filters])
 
   return {
     items,

@@ -73,6 +73,16 @@ export default function ProcessosPage() {
   const router = useRouter()
   const supabase = createClient()
 
+  // Abrir wizard automaticamente se ?novo=true
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('novo') === 'true') {
+      setShowWizard(true)
+      // Limpar o query param da URL
+      window.history.replaceState({}, '', '/dashboard/processos')
+    }
+  }, [])
+
   // Hooks de agenda
   const { createTarefa } = useTarefas(escritorioId || '')
   const { createEvento } = useEventos(escritorioId || '')

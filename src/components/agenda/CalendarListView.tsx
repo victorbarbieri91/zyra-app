@@ -69,8 +69,8 @@ export default function CalendarListView({
     }
   }, [periodoSelecionado])
 
-  // Carregar dados (sem filtros no hook para evitar problemas)
-  const { items, loading } = useAgendaConsolidada()
+  // Carregar dados COM filtro de escritorio (seguranca)
+  const { items, loading } = useAgendaConsolidada(escritorioId)
 
   // Filtrar items
   const itemsFiltrados = useMemo(() => {

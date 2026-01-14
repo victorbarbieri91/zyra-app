@@ -6,7 +6,7 @@ interface TimelineItemProps {
   title: string
   description: string
   time: string
-  colorScheme?: 'teal' | 'blue' | 'purple' | 'emerald' | 'amber'
+  colorScheme?: 'teal' | 'blue' | 'purple' | 'emerald' | 'amber' | 'red'
   action?: {
     label: string
     onClick: () => void
@@ -38,6 +38,11 @@ const colorSchemes = {
     iconBg: 'bg-amber-100',
     iconColor: 'text-amber-600',
     dot: 'bg-amber-500',
+  },
+  red: {
+    iconBg: 'bg-red-100',
+    iconColor: 'text-red-600',
+    dot: 'bg-red-500',
   },
 }
 

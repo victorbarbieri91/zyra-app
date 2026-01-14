@@ -30,13 +30,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UserPlus, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
-import { convidarUsuario } from '@/lib/supabase/escritorio-helpers';
+import { createClient } from '@/lib/supabase/client';
+import { Cargo } from '@/types/escritorio';
 
 const conviteSchema = z.object({
-  email: z.string().email('Email inválido'),
-  role: z.enum(['admin', 'advogado', 'assistente'], {
-    message: 'Selecione uma função',
-  }),
+  email: z.string().email('Email invalido'),
+  cargo_id: z.string().min(1, 'Selecione um cargo'),
 });
 
 type ConviteFormData = z.infer<typeof conviteSchema>;
@@ -45,6 +44,7 @@ interface ModalConvidarMembroProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   escritorioId: string;
+  cargos: Cargo[];
   onSuccess?: () => void;
 }
 
@@ -52,17 +52,28 @@ export function ModalConvidarMembro({
   open,
   onOpenChange,
   escritorioId,
+  cargos,
   onSuccess,
 }: ModalConvidarMembroProps) {
   const [enviando, setEnviando] = useState(false);
   const [linkConvite, setLinkConvite] = useState<string | null>(null);
   const [linkCopiado, setLinkCopiado] = useState(false);
 
+  const supabase = createClient();
+
+  // Filtrar cargos disponiveis (excluir dono)
+  const cargosDisponiveis = cargos
+    .filter((c) => c.nome !== 'dono')
+    .sort((a, b) => a.nivel - b.nivel);
+
+  // Cargo padrao: pleno
+  const cargoPadrao = cargosDisponiveis.find((c) => c.nome === 'pleno')?.id || '';
+
   const form = useForm<ConviteFormData>({
     resolver: zodResolver(conviteSchema),
     defaultValues: {
       email: '',
-      role: 'advogado',
+      cargo_id: cargoPadrao,
     },
   });
 
@@ -72,7 +83,7 @@ export function ModalConvidarMembro({
     try {
       await navigator.clipboard.writeText(linkConvite);
       setLinkCopiado(true);
-      toast.success('Link copiado para a área de transferência');
+      toast.success('Link copiado para a area de transferencia');
       setTimeout(() => setLinkCopiado(false), 2000);
     } catch (error) {
       toast.error('Erro ao copiar link');
@@ -82,17 +93,36 @@ export function ModalConvidarMembro({
   const onSubmit = async (data: ConviteFormData) => {
     setEnviando(true);
     try {
-      const resultado = await convidarUsuario({
-        escritorioId,
-        email: data.email,
-        role: data.role,
-      });
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('Usuario nao autenticado');
 
-      if (resultado.token) {
+      // Buscar cargo selecionado para pegar o role antigo (compatibilidade)
+      const cargoSelecionado = cargos.find((c) => c.id === data.cargo_id);
+      const roleLegacy = cargoSelecionado?.nome === 'socio' ? 'admin' :
+                         cargoSelecionado?.nome === 'gerente' ? 'admin' :
+                         cargoSelecionado?.nome === 'senior' ? 'advogado' :
+                         cargoSelecionado?.nome === 'pleno' ? 'advogado' :
+                         cargoSelecionado?.nome === 'junior' ? 'assistente' :
+                         'assistente';
+
+      const { data: conviteData, error } = await supabase
+        .from('escritorios_convites')
+        .insert({
+          escritorio_id: escritorioId,
+          email: data.email,
+          cargo_id: data.cargo_id,
+          role: roleLegacy,
+          convidado_por: userData.user.id,
+        })
+        .select('token, expira_em')
+        .single();
+
+      if (error) throw error;
+
+      if (conviteData?.token) {
         toast.success('Convite enviado com sucesso');
-        // Gerar link do convite
-        const linkConvite = `${window.location.origin}/convite/${resultado.token}`;
-        setLinkConvite(linkConvite);
+        const link = `${window.location.origin}/convite/${conviteData.token}`;
+        setLinkConvite(link);
       }
     } catch (error) {
       console.error('Erro ao enviar convite:', error);
@@ -103,11 +133,14 @@ export function ModalConvidarMembro({
   };
 
   const handleClose = () => {
-    form.reset();
+    form.reset({
+      email: '',
+      cargo_id: cargoPadrao,
+    });
     setLinkConvite(null);
     setLinkCopiado(false);
     onOpenChange(false);
-    if (onSuccess) onSuccess();
+    if (linkConvite && onSuccess) onSuccess();
   };
 
   return (
@@ -121,7 +154,7 @@ export function ModalConvidarMembro({
           <DialogDescription className="text-[#6c757d]">
             {linkConvite
               ? 'Convite enviado! Compartilhe o link abaixo com o novo membro.'
-              : 'Envie um convite por email para adicionar um novo membro ao escritório.'}
+              : 'Envie um convite por email para adicionar um novo membro ao escritorio.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -148,23 +181,31 @@ export function ModalConvidarMembro({
                 )}
               />
 
-              {/* Role */}
+              {/* Cargo */}
               <FormField
                 control={form.control}
-                name="role"
+                name="cargo_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[#34495e]">Função</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormLabel className="text-[#34495e]">Cargo</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="border-slate-200 focus:ring-[#89bcbe]">
-                          <SelectValue placeholder="Selecione uma função" />
+                          <SelectValue placeholder="Selecione um cargo" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                        <SelectItem value="advogado">Advogado</SelectItem>
-                        <SelectItem value="assistente">Assistente</SelectItem>
+                        {cargosDisponiveis.map((cargo) => (
+                          <SelectItem key={cargo.id} value={cargo.id}>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: cargo.cor || '#64748b' }}
+                              />
+                              {cargo.nome_display}
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -172,7 +213,7 @@ export function ModalConvidarMembro({
                 )}
               />
 
-              {/* Botões */}
+              {/* Botoes */}
               <div className="flex gap-3 pt-2">
                 <Button
                   type="button"
@@ -201,7 +242,7 @@ export function ModalConvidarMembro({
               <p className="text-sm text-[#34495e] break-all font-mono">{linkConvite}</p>
             </div>
 
-            {/* Botões */}
+            {/* Botoes */}
             <div className="flex gap-3">
               <Button
                 onClick={handleCopiarLink}

@@ -19,9 +19,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { X, ChevronLeft, ChevronRight, Check } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, Check, Search, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import type { ProcessoDataJud } from '@/types/datajud'
 
 interface ProcessoWizardProps {
   open: boolean
@@ -97,7 +98,89 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
   const [formData, setFormData] = useState<FormData>(initialFormData)
   const [loading, setLoading] = useState(false)
   const [newTag, setNewTag] = useState('')
+  const [consultandoCNJ, setConsultandoCNJ] = useState(false)
   const supabase = createClient()
+
+  // Funcao para inferir area juridica pela classe processual
+  const inferirArea = (classe: string, assuntos?: string[]): string | null => {
+    const textoBusca = [classe, ...(assuntos || [])].join(' ').toLowerCase()
+    if (textoBusca.includes('trabalhista') || textoBusca.includes('reclamacao') || textoBusca.includes('clt')) return 'Trabalhista'
+    if (textoBusca.includes('familia') || textoBusca.includes('divorcio') || textoBusca.includes('alimentos')) return 'Família'
+    if (textoBusca.includes('criminal') || textoBusca.includes('penal') || textoBusca.includes('crime')) return 'Criminal'
+    if (textoBusca.includes('tributar') || textoBusca.includes('fiscal')) return 'Tributária'
+    if (textoBusca.includes('consumidor') || textoBusca.includes('cdc')) return 'Consumidor'
+    if (textoBusca.includes('empresar') || textoBusca.includes('falencia')) return 'Empresarial'
+    return 'Cível'
+  }
+
+  // Funcao para mapear instancia do DataJud para o formato do sistema
+  const mapearInstancia = (instancia: string): string => {
+    const mapa: Record<string, string> = {
+      '1a': '1ª',
+      '2a': '2ª',
+      'stj': 'STJ',
+      'stf': 'STF',
+      'tst': 'TST'
+    }
+    return mapa[instancia] || '1ª'
+  }
+
+  // Funcao para buscar dados no DataJud
+  const handleBuscarDataJud = async () => {
+    if (!formData.numero_cnj.trim()) {
+      toast.error('Digite o número CNJ primeiro')
+      return
+    }
+
+    setConsultandoCNJ(true)
+    try {
+      const response = await fetch('/api/datajud/consultar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ numero_cnj: formData.numero_cnj })
+      })
+
+      const result = await response.json()
+      console.log('[DataJud] Resposta:', response.status, result)
+
+      if (!response.ok) {
+        // Mostrar erro específico da validação
+        toast.error(result.error || `Erro ${response.status}: Falha na consulta`)
+        return
+      }
+
+      if (result.sucesso && result.dados) {
+        const dados: ProcessoDataJud = result.dados
+
+        // Preencher campos automaticamente
+        updateField('tribunal', dados.tribunal)
+        updateField('vara', dados.orgao_julgador)
+        if (dados.data_ajuizamento) {
+          updateField('data_distribuicao', dados.data_ajuizamento.split('T')[0])
+        }
+        updateField('instancia', mapearInstancia(dados.instancia))
+        updateField('objeto_acao', dados.objeto_acao)
+
+        // Inferir area pela classe
+        const area = inferirArea(dados.classe, dados.assuntos)
+        if (area) updateField('area', area)
+
+        const fonte = result.fonte === 'cache' ? ' (cache)' : ''
+        toast.success(`Dados encontrados e preenchidos!${fonte}`)
+      } else {
+        toast.error(result.error || 'Processo não encontrado no DataJud')
+      }
+    } catch (error) {
+      console.error('Erro ao consultar DataJud:', error)
+      if (error instanceof SyntaxError) {
+        toast.error('Erro ao processar resposta do servidor')
+      } else {
+        toast.error('Erro de conexão ao consultar DataJud')
+      }
+    } finally {
+      setConsultandoCNJ(false)
+    }
+  }
 
   const steps = [
     { number: 1, title: 'Dados Básicos' },
@@ -283,14 +366,31 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <Label htmlFor="numero_cnj">Número CNJ *</Label>
-                  <Input
-                    id="numero_cnj"
-                    placeholder="1234567-12.2024.8.26.0100"
-                    value={formData.numero_cnj}
-                    onChange={(e) => updateField('numero_cnj', e.target.value)}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="numero_cnj"
+                      placeholder="1234567-12.2024.8.26.0100"
+                      value={formData.numero_cnj}
+                      onChange={(e) => updateField('numero_cnj', e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleBuscarDataJud}
+                      disabled={!formData.numero_cnj.trim() || consultandoCNJ}
+                      className="shrink-0 gap-2"
+                    >
+                      {consultandoCNJ ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Search className="w-4 h-4" />
+                      )}
+                      {consultandoCNJ ? 'Buscando...' : 'Buscar DataJud'}
+                    </Button>
+                  </div>
                   <p className="text-xs text-slate-500 mt-1">
-                    Formato: NNNNNNN-DD.AAAA.J.TT.OOOO
+                    Formato: NNNNNNN-DD.AAAA.J.TT.OOOO - Clique em "Buscar DataJud" para preencher automaticamente
                   </p>
                 </div>
 

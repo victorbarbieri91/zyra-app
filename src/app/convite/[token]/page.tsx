@@ -5,337 +5,453 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { aceitarConvite } from '@/lib/supabase/escritorio-helpers'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Loader2,
-  Building2,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  UserPlus,
-  AlertCircle
-} from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Loader2, Eye, EyeOff } from 'lucide-react'
 
 interface ConviteInfo {
   id: string
   email: string
-  role: string
   expira_em: string
+  escritorio_id: string
   escritorio_nome: string
-  convidado_por_nome: string
+  cargo_nome: string
+  cargo_cor: string
 }
+
+type FormMode = 'register' | 'login'
 
 export default function ConvitePage() {
   const params = useParams()
   const router = useRouter()
   const token = params.token as string
+  const supabase = createClient()
 
+  // States
   const [loading, setLoading] = useState(true)
-  const [accepting, setAccepting] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [convite, setConvite] = useState<ConviteInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [formMode, setFormMode] = useState<FormMode>('register')
 
-  const supabase = createClient()
+  // Form fields
+  const [nome, setNome] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
-    checkAuthAndLoadConvite()
+    loadConvite()
   }, [token])
 
-  async function checkAuthAndLoadConvite() {
+  async function loadConvite() {
     setLoading(true)
     setError(null)
 
     try {
-      // Check if user is logged in
-      const { data: { user } } = await supabase.auth.getUser()
-      setIsLoggedIn(!!user)
-      setUserEmail(user?.email || null)
-
-      // Load invite details (basic query without joins that might fail due to RLS)
+      // Load invite with cargo details
       const { data: conviteData, error: conviteError } = await supabase
         .from('escritorios_convites')
-        .select('id, email, role, expira_em, aceito, escritorio_id, convidado_por')
+        .select(`
+          id,
+          email,
+          expira_em,
+          aceito,
+          escritorio_id,
+          cargo:cargo_id (
+            nome_display,
+            cor
+          )
+        `)
         .eq('token', token)
         .single()
 
       if (conviteError || !conviteData) {
-        console.error('Erro ao buscar convite:', conviteError)
         setError('Convite não encontrado. Verifique se o link está correto.')
         return
       }
 
-      // Check if already accepted
       if (conviteData.aceito) {
-        setError('Este convite já foi aceito.')
+        setError('Este convite já foi utilizado.')
         return
       }
 
-      // Check if expired
       if (new Date(conviteData.expira_em) < new Date()) {
-        setError('Este convite expirou. Solicite um novo convite ao administrador do escritório.')
+        setError('Este convite expirou. Solicite um novo ao administrador.')
         return
       }
 
-      // Try to get additional details (might fail for unauthenticated users due to RLS)
+      // Get escritorio name
       let escritorioNome = 'Escritório'
-      let convidadorNome = 'Administrador'
+      const { data: escritorioData } = await supabase
+        .from('escritorios')
+        .select('nome')
+        .eq('id', conviteData.escritorio_id)
+        .single()
 
-      // Try to fetch escritorio name
-      if (conviteData.escritorio_id) {
-        const { data: escritorioData } = await supabase
-          .from('escritorios')
-          .select('nome')
-          .eq('id', conviteData.escritorio_id)
-          .single()
-
-        if (escritorioData?.nome) {
-          escritorioNome = escritorioData.nome
-        }
+      if (escritorioData?.nome) {
+        escritorioNome = escritorioData.nome
       }
 
-      // Try to fetch inviter name
-      if (conviteData.convidado_por) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('nome_completo')
-          .eq('id', conviteData.convidado_por)
-          .single()
-
-        if (profileData?.nome_completo) {
-          convidadorNome = profileData.nome_completo
-        }
-      }
-
+      const cargoData = conviteData.cargo as any
       setConvite({
         id: conviteData.id,
         email: conviteData.email,
-        role: conviteData.role,
         expira_em: conviteData.expira_em,
+        escritorio_id: conviteData.escritorio_id,
         escritorio_nome: escritorioNome,
-        convidado_por_nome: convidadorNome
+        cargo_nome: cargoData?.nome_display || 'Membro',
+        cargo_cor: cargoData?.cor || '#64748b'
       })
     } catch (err) {
       console.error('Erro ao carregar convite:', err)
-      setError('Erro ao carregar informações do convite.')
+      setError('Erro ao carregar convite.')
     } finally {
       setLoading(false)
     }
   }
 
-  async function handleAcceptInvite() {
-    if (!isLoggedIn) {
-      // Save token in sessionStorage and redirect to login
-      sessionStorage.setItem('pendingInviteToken', token)
-      router.push('/login')
-      return
-    }
+  async function handleRegister(e: React.FormEvent) {
+    e.preventDefault()
+    if (!convite) return
 
-    setAccepting(true)
+    setSubmitting(true)
     setError(null)
 
     try {
+      // Try to create account
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: convite.email,
+        password,
+        options: {
+          data: { nome_completo: nome }
+        }
+      })
+
+      // Check if user already exists
+      if (signUpError?.message?.toLowerCase().includes('already registered') ||
+          signUpError?.message?.toLowerCase().includes('already exists')) {
+        setError('Este email já possui uma conta. Faça login abaixo.')
+        setFormMode('login')
+        setSubmitting(false)
+        return
+      }
+
+      if (signUpError) {
+        throw signUpError
+      }
+
+      // Wait a moment for profile trigger to create profile
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
+      // Accept invite (links to office)
       await aceitarConvite(token)
+
       setSuccess(true)
-
-      // Redirect to dashboard after 2 seconds
-      setTimeout(() => {
-        router.push('/dashboard')
-      }, 2000)
+      setTimeout(() => router.push('/dashboard'), 1500)
     } catch (err: any) {
-      console.error('Erro ao aceitar convite:', err)
-      setError(err.message || 'Erro ao aceitar convite. Tente novamente.')
+      console.error('Erro no cadastro:', err)
+      setError(err.message || 'Erro ao criar conta. Tente novamente.')
     } finally {
-      setAccepting(false)
+      setSubmitting(false)
     }
   }
 
-  function getRoleDisplay(role: string) {
-    const roles: Record<string, string> = {
-      'owner': 'Proprietário',
-      'admin': 'Administrador',
-      'advogado': 'Advogado',
-      'assistente': 'Assistente',
-      'readonly': 'Somente Leitura'
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault()
+    if (!convite) return
+
+    setSubmitting(true)
+    setError(null)
+
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: convite.email,
+        password,
+      })
+
+      if (signInError) throw signInError
+
+      // Accept invite (links to office)
+      await aceitarConvite(token)
+
+      setSuccess(true)
+      setTimeout(() => router.push('/dashboard'), 1500)
+    } catch (err: any) {
+      console.error('Erro no login:', err)
+      setError(err.message || 'Erro ao fazer login. Verifique sua senha.')
+    } finally {
+      setSubmitting(false)
     }
-    return roles[role] || role
   }
 
-  function formatDate(dateStr: string) {
+  function formatExpiryDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric'
     })
   }
 
+  // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-white via-slate-50/30 to-[#f0f9f9]/40 flex items-center justify-center">
-        <Card className="w-full max-w-md mx-4">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="w-10 h-10 text-[#89bcbe] animate-spin mb-4" />
-            <p className="text-slate-600">Carregando convite...</p>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 text-[#89bcbe] animate-spin mx-auto mb-3" />
+          <p className="text-slate-500 text-sm">Carregando convite...</p>
+        </div>
       </div>
     )
   }
 
+  // Success state
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-white via-slate-50/30 to-[#f0f9f9]/40 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle2 className="w-10 h-10 text-emerald-600" />
-            </div>
-            <h2 className="text-xl font-semibold text-[#34495e] mb-2">Convite aceito!</h2>
-            <p className="text-slate-600 text-center mb-4">
-              Você agora faz parte de <strong>{convite?.escritorio_nome}</strong>
-            </p>
-            <p className="text-sm text-slate-500">Redirecionando para o dashboard...</p>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md text-center">
+          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-semibold text-[#34495e] mb-2">
+            Bem-vindo ao {convite?.escritorio_nome}!
+          </h1>
+          <p className="text-slate-500 text-sm">Redirecionando...</p>
+        </div>
       </div>
     )
   }
 
-  if (error) {
+  // Error state (invalid/expired invite)
+  if (error && !convite) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-white via-slate-50/30 to-[#f0f9f9]/40 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-              <XCircle className="w-10 h-10 text-red-600" />
-            </div>
-            <h2 className="text-xl font-semibold text-[#34495e] mb-2">Convite inválido</h2>
-            <p className="text-slate-600 text-center mb-6">{error}</p>
-            <Button
-              variant="outline"
-              onClick={() => router.push('/login')}
-              className="border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
-            >
-              Ir para o login
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-semibold text-[#34495e] mb-2">Convite inválido</h1>
+          <p className="text-slate-500 text-sm mb-6">{error}</p>
+          <Button
+            variant="outline"
+            onClick={() => router.push('/login')}
+            className="border-slate-300"
+          >
+            Ir para o login
+          </Button>
+        </div>
       </div>
     )
   }
 
+  // Main form
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50/30 to-[#f0f9f9]/40 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-8">
           <img
             src="/zyra.logo.png"
             alt="Zyra Legal"
-            className="h-16 w-auto mx-auto"
+            className="h-12 w-auto mx-auto"
           />
         </div>
 
-        <Card className="shadow-xl border-slate-200/50">
-          <CardHeader className="text-center pb-2">
-            <div className="w-14 h-14 bg-[#89bcbe]/10 rounded-full flex items-center justify-center mx-auto mb-3">
-              <UserPlus className="w-7 h-7 text-[#89bcbe]" />
-            </div>
-            <CardTitle className="text-xl text-[#34495e]">Convite para o escritório</CardTitle>
-            <CardDescription>
-              Você foi convidado para fazer parte de uma equipe
-            </CardDescription>
-          </CardHeader>
+        {/* Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          {/* Header */}
+          <div className="px-6 pt-6 pb-4 text-center border-b border-slate-100">
+            <p className="text-slate-500 text-sm mb-1">Você foi convidado para</p>
+            <h1 className="text-xl font-semibold text-[#34495e] mb-3">
+              {convite?.escritorio_nome}
+            </h1>
+            <span
+              className="inline-block px-3 py-1 rounded-full text-sm font-medium text-white"
+              style={{ backgroundColor: convite?.cargo_cor }}
+            >
+              {convite?.cargo_nome}
+            </span>
+          </div>
 
-          <CardContent className="space-y-4">
-            {/* Office info */}
-            <div className="bg-slate-50 rounded-xl p-4 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#34495e]/10 rounded-lg flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-[#34495e]" />
+          {/* Form */}
+          <div className="p-6">
+            {formMode === 'register' ? (
+              <form onSubmit={handleRegister} className="space-y-4">
+                {/* Email (readonly) */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm text-slate-600">Email</Label>
+                  <Input
+                    type="email"
+                    value={convite?.email || ''}
+                    disabled
+                    className="h-11 bg-slate-50 text-slate-600"
+                  />
                 </div>
-                <div>
-                  <p className="text-sm text-slate-500">Escritório</p>
-                  <p className="font-semibold text-[#34495e]">{convite?.escritorio_nome}</p>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
-                <div>
-                  <p className="text-xs text-slate-500">Cargo</p>
-                  <p className="text-sm font-medium text-[#34495e]">{getRoleDisplay(convite?.role || '')}</p>
+                {/* Nome */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm text-slate-600">Nome completo</Label>
+                  <Input
+                    type="text"
+                    placeholder="Seu nome"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    required
+                    disabled={submitting}
+                    className="h-11"
+                  />
                 </div>
-                <div>
-                  <p className="text-xs text-slate-500">Convidado por</p>
-                  <p className="text-sm font-medium text-[#34495e]">{convite?.convidado_por_nome}</p>
+
+                {/* Senha */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm text-slate-600">Criar senha</Label>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Mínimo 6 caracteres"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                      disabled={submitting}
+                      className="h-11 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2 text-xs text-slate-500 pt-2 border-t border-slate-200">
-                <Clock className="w-3.5 h-3.5" />
-                <span>Expira em {formatDate(convite?.expira_em || '')}</span>
-              </div>
-            </div>
-
-            {/* Email mismatch warning */}
-            {isLoggedIn && userEmail && convite?.email && userEmail !== convite.email && (
-              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                <div className="text-sm">
-                  <p className="font-medium text-amber-800">Email diferente</p>
-                  <p className="text-amber-700 text-xs mt-0.5">
-                    O convite foi enviado para <strong>{convite.email}</strong>,
-                    mas você está logado como <strong>{userEmail}</strong>.
+                {/* Error */}
+                {error && (
+                  <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                    {error}
                   </p>
-                </div>
-              </div>
-            )}
-
-            {/* Login notice */}
-            {!isLoggedIn && (
-              <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                <div className="text-sm">
-                  <p className="font-medium text-blue-800">Login necessário</p>
-                  <p className="text-blue-700 text-xs mt-0.5">
-                    Você precisa fazer login ou criar uma conta para aceitar este convite.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Action buttons */}
-            <div className="flex gap-3 pt-2">
-              <Button
-                variant="outline"
-                className="flex-1 border-slate-300 hover:bg-slate-50"
-                onClick={() => router.push('/login')}
-              >
-                {isLoggedIn ? 'Voltar' : 'Criar conta'}
-              </Button>
-              <Button
-                className="flex-1 bg-gradient-to-r from-[#89bcbe] to-[#6ba9ab] hover:from-[#6ba9ab] hover:to-[#89bcbe] text-white"
-                onClick={handleAcceptInvite}
-                disabled={accepting}
-              >
-                {accepting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Aceitando...
-                  </>
-                ) : isLoggedIn ? (
-                  'Aceitar convite'
-                ) : (
-                  'Fazer login'
                 )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+
+                {/* Submit */}
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full h-11 bg-[#34495e] hover:bg-[#2c3e50] text-white font-medium"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Criando conta...
+                    </>
+                  ) : (
+                    'Criar conta e entrar'
+                  )}
+                </Button>
+
+                {/* Switch to login */}
+                <p className="text-center text-sm text-slate-500">
+                  Já tem conta?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormMode('login')
+                      setError(null)
+                      setPassword('')
+                    }}
+                    className="text-[#89bcbe] hover:text-[#6ba9ab] font-medium"
+                  >
+                    Fazer login
+                  </button>
+                </p>
+              </form>
+            ) : (
+              <form onSubmit={handleLogin} className="space-y-4">
+                {/* Email (readonly) */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm text-slate-600">Email</Label>
+                  <Input
+                    type="email"
+                    value={convite?.email || ''}
+                    disabled
+                    className="h-11 bg-slate-50 text-slate-600"
+                  />
+                </div>
+
+                {/* Senha */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm text-slate-600">Senha</Label>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Sua senha"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      disabled={submitting}
+                      className="h-11 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Error */}
+                {error && (
+                  <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                    {error}
+                  </p>
+                )}
+
+                {/* Submit */}
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full h-11 bg-[#34495e] hover:bg-[#2c3e50] text-white font-medium"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Entrando...
+                    </>
+                  ) : (
+                    'Entrar e aceitar convite'
+                  )}
+                </Button>
+
+                {/* Switch to register */}
+                <p className="text-center text-sm text-slate-500">
+                  Não tem conta?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormMode('register')
+                      setError(null)
+                      setPassword('')
+                    }}
+                    className="text-[#89bcbe] hover:text-[#6ba9ab] font-medium"
+                  >
+                    Criar conta
+                  </button>
+                </p>
+              </form>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <p className="text-center text-xs text-slate-400 mt-4">
+          Convite válido até {formatExpiryDate(convite?.expira_em || '')}
+        </p>
       </div>
     </div>
   )

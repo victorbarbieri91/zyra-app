@@ -321,7 +321,18 @@ export async function aceitarConvite(token: string): Promise<boolean> {
     console.error('Erro ao atualizar convite:', errorUpdate);
   }
 
-  // 4. Trocar para o novo escritório
+  // 4. Atualizar profile para vincular ao escritório e pular onboarding
+  await supabase
+    .from('profiles')
+    .update({
+      escritorio_id: convite.escritorio_id,
+      primeiro_acesso: false,
+      onboarding_completo: true,
+      onboarding_completado_em: new Date().toISOString(),
+    })
+    .eq('id', userData.user.id);
+
+  // 5. Trocar para o novo escritório
   await trocarEscritorio(convite.escritorio_id);
 
   return true;

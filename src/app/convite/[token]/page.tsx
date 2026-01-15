@@ -54,26 +54,15 @@ export default function ConvitePage() {
       setIsLoggedIn(!!user)
       setUserEmail(user?.email || null)
 
-      // Load invite details
+      // Load invite details (basic query without joins that might fail due to RLS)
       const { data: conviteData, error: conviteError } = await supabase
         .from('escritorios_convites')
-        .select(`
-          id,
-          email,
-          role,
-          expira_em,
-          aceito,
-          escritorio:escritorio_id (
-            nome
-          ),
-          convidador:convidado_por (
-            nome_completo
-          )
-        `)
+        .select('id, email, role, expira_em, aceito, escritorio_id, convidado_por')
         .eq('token', token)
         .single()
 
       if (conviteError || !conviteData) {
+        console.error('Erro ao buscar convite:', conviteError)
         setError('Convite não encontrado. Verifique se o link está correto.')
         return
       }
@@ -90,13 +79,43 @@ export default function ConvitePage() {
         return
       }
 
+      // Try to get additional details (might fail for unauthenticated users due to RLS)
+      let escritorioNome = 'Escritório'
+      let convidadorNome = 'Administrador'
+
+      // Try to fetch escritorio name
+      if (conviteData.escritorio_id) {
+        const { data: escritorioData } = await supabase
+          .from('escritorios')
+          .select('nome')
+          .eq('id', conviteData.escritorio_id)
+          .single()
+
+        if (escritorioData?.nome) {
+          escritorioNome = escritorioData.nome
+        }
+      }
+
+      // Try to fetch inviter name
+      if (conviteData.convidado_por) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('nome_completo')
+          .eq('id', conviteData.convidado_por)
+          .single()
+
+        if (profileData?.nome_completo) {
+          convidadorNome = profileData.nome_completo
+        }
+      }
+
       setConvite({
         id: conviteData.id,
         email: conviteData.email,
         role: conviteData.role,
         expira_em: conviteData.expira_em,
-        escritorio_nome: (conviteData.escritorio as any)?.nome || 'Escritório',
-        convidado_por_nome: (conviteData.convidador as any)?.nome_completo || 'Administrador'
+        escritorio_nome: escritorioNome,
+        convidado_por_nome: convidadorNome
       })
     } catch (err) {
       console.error('Erro ao carregar convite:', err)

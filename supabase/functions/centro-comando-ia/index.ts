@@ -3,11 +3,13 @@
 // ============================================
 // Interface conversacional que permite ao usuário
 // consultar e modificar dados usando linguagem natural.
-// Utiliza GPT-5 com function calling para interpretar
+// Utiliza DeepSeek Reasoner com function calling para interpretar
 // comandos e executar queries seguras no banco.
 //
 // MODO STREAMING: Envia eventos em tempo real mostrando
 // o que a IA está fazendo, como se estivesse "pensando em voz alta".
+// O DeepSeek Reasoner possui chain-of-thought nativo que é
+// exibido como "reasoning" antes da resposta final.
 //
 // SEGURANÇA:
 // - SELECT: executa direto
@@ -34,31 +36,37 @@ const MENSAGENS_TOOL: Record<string, { inicio: string; fim: (resultado: any) => 
   consultar_schema: {
     inicio: '📖 Verificando estrutura da tabela...',
     fim: (r) => r.erro
-      ? `❌ Erro ao consultar estrutura: ${r.erro}`
+      ? `❌ Erro ao consultar estrutura: ${r.erro || 'Erro desconhecido'}`
       : `📝 Tabela ${r.tabela} tem ${r.total || 0} campos.`,
   },
   consultar_dados: {
     inicio: '🔎 Buscando dados no banco...',
     fim: (r) => r.erro
-      ? `❌ Erro na consulta: ${r.erro}`
+      ? `❌ Erro na consulta: ${r.erro || 'Erro desconhecido'}`
       : `✅ Encontrei ${r.total || 0} ${r.total === 1 ? 'registro' : 'registros'}.`,
   },
   preparar_cadastro: {
     inicio: '✏️ Preparando o cadastro...',
     fim: (r) => r.erro
-      ? `❌ Erro: ${r.erro}`
+      ? `❌ Erro: ${r.erro || 'Erro ao preparar cadastro'}`
       : `📋 Cadastro preparado! Aguardando sua confirmação.`,
   },
   preparar_alteracao: {
     inicio: '✏️ Preparando a alteração...',
     fim: (r) => r.erro
-      ? `❌ Erro: ${r.erro}`
+      ? `❌ Erro: ${r.erro || 'Erro ao preparar alteração'}`
       : `📋 Alteração preparada! Revise e confirme.`,
+  },
+  preparar_alteracao_em_massa: {
+    inicio: '⚙️ Preparando alteração em massa...',
+    fim: (r) => r.erro
+      ? `❌ Erro: ${r.erro || 'Erro ao preparar alteração em massa'}`
+      : `📋 Alteração em ${r.total_afetados || 0} registros preparada! Aguardando confirmação.`,
   },
   preparar_exclusao: {
     inicio: '⚠️ Preparando exclusão...',
     fim: (r) => r.erro
-      ? `❌ Erro: ${r.erro}`
+      ? `❌ Erro: ${r.erro || 'Erro ao preparar exclusão'}`
       : `🗑️ Exclusão preparada! Requer dupla confirmação.`,
   },
   pedir_informacao: {
@@ -89,6 +97,79 @@ const TABELAS_PERMITIDAS = [
   'v_lancamentos_prontos_faturar',
   'v_prazos_vencendo',
 ]
+
+// ============================================
+// SCHEMA PRÉ-CARREGADO DAS TABELAS PRINCIPAIS
+// ============================================
+// Isso ELIMINA a necessidade de chamar listar_tabelas e consultar_schema
+// para as operações mais comuns, economizando 2-3 iterações por request.
+const SCHEMA_PRINCIPAIS = `
+### TABELAS DISPONÍVEIS (use diretamente, não precisa listar_tabelas):
+
+1. **processos_processos** - Processos judiciais
+   Campos: id, numero_cnj, numero_pasta, tipo, area, fase, tribunal, comarca, vara, juiz,
+   data_distribuicao, cliente_id, responsavel_id, status, valor_causa, objeto_acao, autor, reu, tags
+   Filtros comuns: status='ativo', area='trabalhista'/'civel'/'criminal'
+
+2. **crm_pessoas** - Clientes e contatos
+   Campos: id, nome, tipo_pessoa, cpf_cnpj, email, telefone, endereco, tipo (cliente/contato/adverso)
+   Filtros comuns: tipo='cliente'
+
+3. **agenda_tarefas** - Tarefas e afazeres
+   Campos: id, titulo, descricao, data_inicio, data_limite, status, prioridade, responsavel_id, processo_id
+   Filtros comuns: status='pendente', data_limite >= CURRENT_DATE
+
+4. **agenda_eventos** - Eventos e compromissos
+   Campos: id, titulo, descricao, data_inicio, data_fim, tipo, local, responsavel_id, processo_id
+
+5. **agenda_audiencias** - Audiências judiciais
+   Campos: id, data_hora, tipo, local, vara, processo_id, responsavel_id, status
+
+6. **financeiro_timesheet** - Registro de horas
+   Campos: id, data, horas, descricao, processo_id, usuario_id, valor_hora, faturado
+
+7. **financeiro_honorarios** - Lançamentos financeiros
+   Campos: id, descricao, valor, data_vencimento, data_pagamento, status, processo_id, cliente_id
+
+8. **v_agenda_consolidada** - View: agenda unificada (LEITURA)
+   Campos: id, tipo_entidade, titulo, descricao, data_inicio, data_fim, status, prioridade, responsavel_nome, processo_numero
+
+### REGRA DE OURO: SEMPRE inclua WHERE escritorio_id = '{escritorio_id}'
+`
+
+// ============================================
+// EXEMPLOS DE QUERIES PARA OPERAÇÕES COMUNS
+// ============================================
+const EXEMPLOS_QUERIES = `
+### EXEMPLOS DE QUERIES (copie e adapte):
+
+-- Todos os processos ativos
+SELECT id, numero_cnj, tipo, area, fase, tribunal, status, data_distribuicao, autor, reu
+FROM processos_processos
+WHERE escritorio_id = '{escritorio_id}' AND status = 'ativo'
+ORDER BY data_distribuicao DESC;
+
+-- Processos trabalhistas
+SELECT * FROM processos_processos
+WHERE escritorio_id = '{escritorio_id}' AND status = 'ativo' AND LOWER(area) = 'trabalhista';
+
+-- Tarefas pendentes para hoje
+SELECT id, titulo, data_limite, prioridade, status
+FROM agenda_tarefas
+WHERE escritorio_id = '{escritorio_id}' AND status = 'pendente' AND data_limite <= CURRENT_DATE;
+
+-- Tarefas da semana
+SELECT * FROM agenda_tarefas
+WHERE escritorio_id = '{escritorio_id}' AND data_limite BETWEEN CURRENT_DATE AND CURRENT_DATE + 7;
+
+-- Clientes ativos
+SELECT id, nome, email, telefone FROM crm_pessoas
+WHERE escritorio_id = '{escritorio_id}' AND tipo = 'cliente';
+
+-- Horas do mês
+SELECT SUM(horas) as total_horas FROM financeiro_timesheet
+WHERE escritorio_id = '{escritorio_id}' AND DATE_TRUNC('month', data) = DATE_TRUNC('month', CURRENT_DATE);
+`
 
 // ============================================
 // CACHE DE SCHEMA POR SESSÃO (in-memory)
@@ -211,7 +292,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "listar_tabelas",
-      description: "Lista todas as tabelas disponíveis no sistema. Use PRIMEIRO para descobrir quais tabelas existem antes de fazer qualquer operação.",
+      description: "⚠️ RARAMENTE NECESSÁRIO. O schema das tabelas principais já está no prompt. Use APENAS para descobrir tabelas não documentadas.",
       parameters: {
         type: "object",
         properties: {},
@@ -223,7 +304,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "consultar_schema",
-      description: "Retorna a estrutura completa de uma tabela: colunas, tipos, constraints, valores permitidos. Use para entender como inserir ou alterar dados.",
+      description: "⚠️ RARAMENTE NECESSÁRIO. Os campos das tabelas principais já estão documentados no prompt. Use APENAS para campos não documentados ou tabelas menos comuns.",
       parameters: {
         type: "object",
         properties: {
@@ -240,17 +321,17 @@ const TOOLS = [
     type: "function",
     function: {
       name: "consultar_dados",
-      description: "Executa uma consulta SELECT no banco de dados para buscar informações. Use para qualquer tipo de leitura de dados.",
+      description: "✅ USE ESTA TOOL para qualquer consulta. Você já conhece o schema - vá direto para a query SQL.",
       parameters: {
         type: "object",
         properties: {
           query: {
             type: "string",
-            description: "Query SQL SELECT. OBRIGATÓRIO incluir WHERE escritorio_id = '{escritorio_id}' que será substituído automaticamente."
+            description: "Query SQL SELECT. SEMPRE inclua WHERE escritorio_id = '{escritorio_id}'."
           },
           explicacao: {
             type: "string",
-            description: "Explicação em português do que a consulta faz e o que vai retornar."
+            description: "Breve explicação do que a consulta retorna."
           }
         },
         required: ["query", "explicacao"]
@@ -261,21 +342,21 @@ const TOOLS = [
     type: "function",
     function: {
       name: "preparar_cadastro",
-      description: "Prepara a criação de um novo registro. NÃO executa diretamente - requer confirmação do usuário.",
+      description: "✅ Para INSERT de UM registro. Chame MÚLTIPLAS VEZES para criar vários registros (uma chamada por registro). NÃO use arrays ou 'registros'. Requer confirmação.",
       parameters: {
         type: "object",
         properties: {
           tabela: {
             type: "string",
-            description: "Nome da tabela onde inserir (ex: agenda_tarefas, crm_pessoas)"
+            description: "Nome da tabela (ex: agenda_tarefas)"
           },
           dados: {
             type: "object",
-            description: "Objeto com os campos e valores a inserir. NÃO incluir id, escritorio_id, created_at."
+            description: "Campos e valores SIMPLES do registro. NÃO incluir id, escritorio_id. NÃO usar arrays ou objetos aninhados."
           },
           explicacao: {
             type: "string",
-            description: "Explicação do que será criado para o usuário confirmar."
+            description: "O que será criado (ex: Criar tarefa: Revisar contrato)"
           }
         },
         required: ["tabela", "dados", "explicacao"]
@@ -286,25 +367,25 @@ const TOOLS = [
     type: "function",
     function: {
       name: "preparar_alteracao",
-      description: "Prepara a alteração de um registro existente. NÃO executa diretamente - requer confirmação do usuário.",
+      description: "✅ Para UPDATE. Precisa do registro_id. Requer confirmação.",
       parameters: {
         type: "object",
         properties: {
           tabela: {
             type: "string",
-            description: "Nome da tabela a alterar"
+            description: "Nome da tabela"
           },
           registro_id: {
             type: "string",
-            description: "UUID do registro a alterar"
+            description: "UUID do registro"
           },
           alteracoes: {
             type: "object",
-            description: "Objeto com os campos e novos valores. NÃO incluir id, escritorio_id, created_at."
+            description: "Campos a alterar"
           },
           explicacao: {
             type: "string",
-            description: "Explicação do que será alterado para o usuário confirmar."
+            description: "O que será alterado"
           }
         },
         required: ["tabela", "registro_id", "alteracoes", "explicacao"]
@@ -315,22 +396,13 @@ const TOOLS = [
     type: "function",
     function: {
       name: "preparar_exclusao",
-      description: "Prepara a exclusão de um registro. NÃO executa diretamente - requer DUPLA confirmação do usuário.",
+      description: "✅ Para DELETE. Requer DUPLA confirmação.",
       parameters: {
         type: "object",
         properties: {
-          tabela: {
-            type: "string",
-            description: "Nome da tabela"
-          },
-          registro_id: {
-            type: "string",
-            description: "UUID do registro a excluir"
-          },
-          explicacao: {
-            type: "string",
-            description: "Explicação do que será excluído (ATENÇÃO: ação irreversível)."
-          }
+          tabela: { type: "string", description: "Nome da tabela" },
+          registro_id: { type: "string", description: "UUID do registro" },
+          explicacao: { type: "string", description: "O que será excluído" }
         },
         required: ["tabela", "registro_id", "explicacao"]
       }
@@ -339,29 +411,56 @@ const TOOLS = [
   {
     type: "function",
     function: {
+      name: "preparar_alteracao_em_massa",
+      description: "✅ Para UPDATE em múltiplos registros. Use APÓS o usuário confirmar 'Sim'. Requer confirmação final.",
+      parameters: {
+        type: "object",
+        properties: {
+          tabela: {
+            type: "string",
+            description: "Nome da tabela (ex: processos_processos)"
+          },
+          query_update: {
+            type: "string",
+            description: "Query SQL UPDATE completa. DEVE incluir WHERE escritorio_id = '{escritorio_id}'"
+          },
+          total_afetados: {
+            type: "number",
+            description: "Quantidade de registros que serão alterados"
+          },
+          explicacao: {
+            type: "string",
+            description: "Descrição clara do que será alterado"
+          }
+        },
+        required: ["tabela", "query_update", "total_afetados", "explicacao"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
       name: "pedir_informacao",
-      description: "Solicita informações adicionais ao usuário quando os dados fornecidos são insuficientes para executar a ação.",
+      description: "✅ USE ESTA TOOL para: 1) Coletar dados do usuário 2) CONFIRMAÇÕES (Sim/Não) 3) Escolhas entre opções. NUNCA faça perguntas no texto - use esta tool!",
       parameters: {
         type: "object",
         properties: {
           campos_necessarios: {
             type: "array",
+            description: "Lista de campos. Para confirmação: [{campo:'confirmacao', tipo:'selecao', opcoes:['Sim','Não']}]",
             items: {
               type: "object",
               properties: {
-                campo: { type: "string" },
-                descricao: { type: "string" },
+                campo: { type: "string", description: "Nome do campo (ex: 'titulo', 'confirmacao')" },
+                descricao: { type: "string", description: "Texto amigável para o usuário" },
                 obrigatorio: { type: "boolean" },
                 tipo: { type: "string", enum: ["texto", "data", "numero", "selecao"] },
-                opcoes: { type: "array", items: { type: "string" } }
-              }
-            },
-            description: "Lista de campos que precisam ser informados"
+                opcoes: { type: "array", items: { type: "string" }, description: "Obrigatório se tipo='selecao'" }
+              },
+              required: ["campo", "descricao", "obrigatorio", "tipo"]
+            }
           },
-          contexto: {
-            type: "string",
-            description: "Explicação do que está sendo criado/alterado"
-          }
+          contexto: { type: "string", description: "Explicação curta do que está sendo perguntado" }
         },
         required: ["campos_necessarios", "contexto"]
       }
@@ -371,22 +470,13 @@ const TOOLS = [
     type: "function",
     function: {
       name: "navegar_pagina",
-      description: "Sugere navegação para uma página específica do sistema.",
+      description: "Sugere ir para outra tela do sistema.",
       parameters: {
         type: "object",
         properties: {
-          caminho: {
-            type: "string",
-            description: "Caminho da página (ex: /dashboard/processos, /dashboard/agenda)"
-          },
-          filtros: {
-            type: "object",
-            description: "Parâmetros de query string para filtrar a página"
-          },
-          explicacao: {
-            type: "string",
-            description: "Explicação de para onde está direcionando"
-          }
+          caminho: { type: "string", description: "Ex: /dashboard/processos" },
+          filtros: { type: "object", description: "Query params" },
+          explicacao: { type: "string", description: "Para onde vai" }
         },
         required: ["caminho", "explicacao"]
       }
@@ -466,10 +556,10 @@ serve(async (req) => {
       content: mensagem,
     })
 
-    // Buscar chave OpenAI
-    const openaiKey = Deno.env.get('OPENAI_API_KEY')
-    if (!openaiKey) {
-      return errorResponse('Chave OpenAI não configurada no servidor', 500)
+    // Buscar chave DeepSeek
+    const deepseekKey = Deno.env.get('DEEPSEEK_API_KEY')
+    if (!deepseekKey) {
+      return errorResponse('Chave DeepSeek não configurada no servidor', 500)
     }
 
     // Buscar informações do usuário
@@ -515,94 +605,110 @@ ${Object.entries(sessionContext.schemasConsultados).map(([tabela, campos]) =>
       }
     }
 
-    const systemPrompt = `Você é Zyra, assistente inteligente do sistema jurídico Zyra Legal.
-Usuário: ${userProfile?.nome_completo || 'Usuário'} (${userProfile?.role || 'advogado'})
-Escritório ID: ${escritorio_id}
-Data de hoje: ${hoje}
-Data de amanhã: ${amanha}
+    const systemPrompt = `Você é Zyra, assistente jurídica do Zyra Legal.
+Usuário: ${userProfile?.nome_completo || 'Usuário'} | Escritório: ${escritorio_id}
+Hoje: ${hoje} | Amanhã: ${amanha}
+
+## REGRAS ABSOLUTAS
+
+1. **SEJA CONCISA**: Máximo 2 frases.
+2. **UMA CONSULTA** por vez.
+3. **DETECTE CONFIRMAÇÕES**: Se o usuário disse "Sim", "confirmar", "aplicar" → EXECUTE a ação!
+
+## ⚡ DETECTAR RESPOSTA DO USUÁRIO
+
+Quando a mensagem contiver:
+- "Sim", "sim, aplicar", "confirmar", "pode aplicar", "seguir" → É CONFIRMAÇÃO! Use preparar_alteracao_em_massa
+- "Não", "cancelar" → Cancelar operação
+
+## TOOLS
+
+| Tool | Quando |
+|------|--------|
+| consultar_dados | Buscar dados |
+| pedir_informacao | Perguntar ao usuário (coleta de dados, confirmação inicial) |
+| preparar_alteracao_em_massa | APÓS usuário confirmar "Sim" - executa UPDATE em múltiplos registros |
+| preparar_cadastro | INSERT de UM registro (para criar 5 tarefas, chame 5 vezes) |
+| preparar_alteracao | UPDATE único (precisa registro_id) |
+| preparar_exclusao | DELETE único |
+
+## ⚠️ CRIAR MÚLTIPLOS REGISTROS
+
+Para criar N registros (ex: 5 tarefas), chame preparar_cadastro N VEZES em paralelo:
+- Cada chamada cria UM registro
+- NÃO use arrays ou "registros" dentro de dados
+- dados deve ser um objeto SIMPLES: {titulo: "...", descricao: "...", ...}
+
+## FLUXO ALTERAÇÃO EM MASSA (CRÍTICO!)
+
+### Etapa 1: Usuário pede alteração
+Usuário: "Remova os prefixos dos autores"
+→ Use consultar_dados para contar registros
+→ Use pedir_informacao para perguntar
+
+### Etapa 2: Usuário confirma "Sim"
+Quando receber "Sim, aplicar" ou similar:
+→ NÃO pergunte de novo!
+→ Use preparar_alteracao_em_massa com a query SQL
+
+Exemplo preparar_alteracao_em_massa:
+\`\`\`json
+{
+  "tabela": "processos_processos",
+  "query_update": "UPDATE processos_processos SET autor = TRIM(REGEXP_REPLACE(autor, '^[^:]+:\\s*', '')) WHERE escritorio_id = '{escritorio_id}' AND autor ~ '^[A-Za-zÀ-ú]+:'",
+  "total_afetados": 158,
+  "explicacao": "Remover prefixos como 'Autor:', 'Reclamante:' do campo autor"
+}
+\`\`\`
+
+## Para coleta de dados:
+\`\`\`json
+{
+  "campos_necessarios": [
+    {"campo": "titulo", "descricao": "Título", "obrigatorio": true, "tipo": "texto"},
+    {"campo": "data", "descricao": "Data", "obrigatorio": true, "tipo": "data"}
+  ],
+  "contexto": "Preciso das informações para criar a tarefa"
+}
+\`\`\`
+
+${SCHEMA_PRINCIPAIS}
+${EXEMPLOS_QUERIES}
 ${memoriaSection}
-## 🎯 PRINCÍPIO FUNDAMENTAL: MEMÓRIA E CONTINUIDADE
 
-VOCÊ TEM MEMÓRIA! Você pode ver o histórico da conversa acima. Use-o!
-- Se JÁ listou tabelas na conversa → NÃO liste de novo
-- Se JÁ consultou o schema de uma tabela → NÃO consulte de novo
-- Se JÁ fez uma consulta → Use os resultados, não refaça
-- Se ofereceu OPÇÕES ao usuário (1, 2, 3...) e ele respondeu "opção X" ou apenas "X" → EXECUTE essa opção diretamente
+## SQL
 
-## 🔢 RESPOSTAS DE OPÇÃO DO USUÁRIO
-
-MUITO IMPORTANTE: Quando você oferece opções numeradas (1, 2, 3, 4...) e o usuário responde:
-- "opção 2", "2", "a segunda", "a 2" → Execute a opção 2 que você ofereceu
-- "sim", "ok", "confirma" → Execute a opção recomendada ou a primeira
-- "não", "cancela" → Não execute nada, pergunte o que deseja fazer
-
-Exemplo do contexto:
-- Você ofereceu: "1) Pré-visualização 2) Preparar alterações 3) Adicionar tag 4) Cancelar"
-- Usuário disse: "opção 2" ou "2"
-- Você DEVE: Executar a opção 2 (preparar alterações) SEM refazer consultas anteriores
-
-## FERRAMENTAS DISPONÍVEIS
-
-### 1. listar_tabelas
-Retorna todas as tabelas disponíveis no sistema.
-⚠️ SÓ use se NUNCA listou antes nesta conversa.
-
-### 2. consultar_schema
-Retorna estrutura completa de uma tabela.
-⚠️ SÓ use se NUNCA consultou essa tabela nesta conversa.
-
-### 3. consultar_dados
-Executa SELECT no banco. Sempre inclua WHERE escritorio_id = '{escritorio_id}'.
-Os dados retornados são exibidos automaticamente em tabela - NÃO repita na resposta.
-
-### 4. preparar_cadastro
-Prepara INSERT para confirmação do usuário.
-
-### 5. preparar_alteracao
-Prepara UPDATE para confirmação.
-
-### 6. preparar_exclusao
-Prepara DELETE com dupla confirmação.
-
-### 7. pedir_informacao
-Solicita dados faltantes ao usuário.
-
-### 8. navegar_pagina
-Sugere navegação para outra página do sistema.
-
-## FLUXO INTELIGENTE COM MEMÓRIA
-
-Para CONSULTAS:
-1. VERIFIQUE A MEMÓRIA: já conheço as tabelas? já conheço o schema?
-2. Se SIM → pule direto para a consulta
-3. Se NÃO → descubra o necessário (mas só o necessário!)
-4. Se der erro → analise, corrija e tente novamente
-
-Para AÇÕES (criar/alterar/excluir):
-1. VERIFIQUE A MEMÓRIA: já tenho o schema? já tenho os dados necessários?
-2. Se o usuário respondeu uma opção → execute diretamente
-3. Se precisar de mais dados → use pedir_informacao
-
-## REGRAS IMPORTANTES
-
-1. TODAS as queries devem filtrar por escritorio_id = '${escritorio_id}'
-2. Datas usam formato YYYY-MM-DD (hoje = ${hoje}, amanhã = ${amanha})
-3. Dados retornados de consultas aparecem em tabela - apenas COMENTE, não liste
-4. ⚠️ NÃO REPITA operações já feitas na conversa
-5. Para múltiplas ações, execute uma de cada vez`
+- SEMPRE: WHERE escritorio_id = '${escritorio_id}'
+- Strings: ILIKE ou LOWER()
+- Datas: YYYY-MM-DD
+- Resultados vão para tabela - não liste na resposta`
 
     // Montar histórico de mensagens para contexto
     const mensagensParaIA: Array<{role: string, content: string}> = [
       { role: 'system', content: systemPrompt }
     ]
 
-    // Adicionar histórico se fornecido
+    // Adicionar histórico se fornecido - COM tool_results resumidos
     if (historico_mensagens && Array.isArray(historico_mensagens)) {
       for (const msg of historico_mensagens.slice(-10)) { // Últimas 10 mensagens
         if (msg.role && msg.content) {
+          let content = msg.content
+
+          // Se é mensagem do assistente e tem tool_results, adicionar resumo
+          if (msg.role === 'assistant' && msg.tool_results && Array.isArray(msg.tool_results)) {
+            const resumos = msg.tool_results
+              .map((r: any) => resumirToolResult(r))
+              .filter((r: string) => r)
+              .join('\n')
+
+            if (resumos) {
+              content = `${msg.content}\n\n[RESULTADOS DAS FERRAMENTAS EXECUTADAS:]\n${resumos}`
+            }
+          }
+
           mensagensParaIA.push({
             role: msg.role === 'user' ? 'user' : 'assistant',
-            content: msg.content
+            content
           })
         }
       }
@@ -617,7 +723,7 @@ Para AÇÕES (criar/alterar/excluir):
     if (streaming) {
       return handleStreamingRequest(
         supabase,
-        openaiKey,
+        deepseekKey,
         mensagensParaIA,
         escritorio_id,
         user_id,
@@ -630,7 +736,7 @@ Para AÇÕES (criar/alterar/excluir):
     // ========================================
     return handleNonStreamingRequest(
       supabase,
-      openaiKey,
+      deepseekKey,
       mensagensParaIA,
       escritorio_id,
       user_id,
@@ -648,7 +754,7 @@ Para AÇÕES (criar/alterar/excluir):
 // ============================================
 async function handleStreamingRequest(
   supabase: any,
-  openaiKey: string,
+  deepseekKey: string,
   mensagensParaIA: Array<{role: string, content: string}>,
   escritorioId: string,
   userId: string,
@@ -684,25 +790,25 @@ async function handleStreamingRequest(
           iteracao++
           console.log(`[Centro Comando SSE] Iteração ${iteracao}/${MAX_ITERACOES}`)
 
-          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          const response = await fetch('https://api.deepseek.com/chat/completions', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${openaiKey}`,
+              'Authorization': `Bearer ${deepseekKey}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'gpt-5-mini',
+              model: 'deepseek-reasoner',
               messages: mensagensAtual,
               tools: TOOLS,
               tool_choice: 'auto',
-              max_completion_tokens: 2000,
+              max_tokens: 4000,
             }),
           })
 
           if (!response.ok) {
             const errorText = await response.text()
-            console.error('[Centro Comando SSE] Erro OpenAI:', response.status, errorText)
-            throw new Error(`Erro na API OpenAI: ${response.status}`)
+            console.error('[Centro Comando SSE] Erro DeepSeek:', response.status, errorText)
+            throw new Error(`Erro na API DeepSeek: ${response.status}`)
           }
 
           const aiResponse = await response.json()
@@ -712,16 +818,29 @@ async function handleStreamingRequest(
           tokensInput += aiResponse.usage?.prompt_tokens || 0
           tokensOutput += aiResponse.usage?.completion_tokens || 0
 
+          // 📢 Se o DeepSeek retornou reasoning_content (chain-of-thought), mostrar
+          if (choice.message.reasoning_content) {
+            sendEvent('thinking', {
+              message: '💭 ' + choice.message.reasoning_content.substring(0, 200) + '...',
+              reasoning: choice.message.reasoning_content
+            })
+          }
+
           // Se a IA retornou tool_calls, processar com feedback
           if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
             ultimoToolCalls = choice.message.tool_calls
 
             // Adicionar mensagem do assistente com tool_calls ao histórico
-            mensagensAtual.push({
+            // IMPORTANTE: Incluir reasoning_content para que o DeepSeek continue o raciocínio
+            const assistantMessage: any = {
               role: 'assistant',
               content: choice.message.content || null,
               tool_calls: choice.message.tool_calls,
-            } as any)
+            }
+            if (choice.message.reasoning_content) {
+              assistantMessage.reasoning_content = choice.message.reasoning_content
+            }
+            mensagensAtual.push(assistantMessage)
 
             // Processar cada tool call COM FEEDBACK EM TEMPO REAL
             for (const toolCall of choice.message.tool_calls) {
@@ -777,6 +896,15 @@ async function handleStreamingRequest(
               } as any)
             }
 
+            // VERIFICAR SE ALGUMA TOOL RETORNOU aguardando_input
+            // Se sim, PARAR o loop e esperar resposta do usuário
+            const temInputPendente = toolResults.some(r => r.aguardando_input === true)
+            if (temInputPendente) {
+              console.log('[Centro Comando SSE] Input pendente detectado - parando loop')
+              respostaTexto = '' // Deixar vazio para não sobrescrever
+              break
+            }
+
             // Se ainda tem mais iterações, mostrar que está processando
             if (iteracao < MAX_ITERACOES) {
               sendEvent('thinking', { message: '💭 Processando resultados...' })
@@ -801,7 +929,13 @@ async function handleStreamingRequest(
 
         // Se a IA não retornou texto, gerar resposta automática baseada no contexto
         if (!respostaTexto) {
-          if (toolResults.length > 0) {
+          // Verificar se há input pendente - NÃO gerar texto, deixar o card falar por si
+          const resultadoInputPendente = toolResults.find(r => r.aguardando_input === true)
+
+          if (resultadoInputPendente) {
+            // Deixar vazio ou mensagem curta - o FormularioPendente já mostra as informações
+            respostaTexto = ''
+          } else if (toolResults.length > 0) {
             const resultadoComDados = toolResults.find(r => r.dados && r.total !== undefined)
             const resultadoComErro = toolResults.find(r => r.erro)
 
@@ -809,9 +943,9 @@ async function handleStreamingRequest(
               respostaTexto = `Houve um erro ao executar a consulta: ${resultadoComErro.erro}`
             } else if (resultadoComDados) {
               if (resultadoComDados.total === 0) {
-                respostaTexto = `Não encontrei nenhum registro com os critérios especificados. Deseja ajustar a busca?`
+                respostaTexto = `Não encontrei nenhum registro com os critérios especificados.`
               } else {
-                respostaTexto = `Encontrei ${resultadoComDados.total} registro${resultadoComDados.total > 1 ? 's' : ''}. Os dados estão exibidos na tabela acima.`
+                respostaTexto = `Encontrei ${resultadoComDados.total} registro${resultadoComDados.total > 1 ? 's' : ''}.`
               }
             } else {
               respostaTexto = 'Consulta executada com sucesso.'
@@ -872,7 +1006,7 @@ async function handleStreamingRequest(
 // ============================================
 async function handleNonStreamingRequest(
   supabase: any,
-  openaiKey: string,
+  deepseekKey: string,
   mensagensParaIA: Array<{role: string, content: string}>,
   escritorioId: string,
   userId: string,
@@ -894,25 +1028,25 @@ async function handleNonStreamingRequest(
     iteracao++
     console.log(`[Centro Comando] Iteração ${iteracao}/${MAX_ITERACOES}`)
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openaiKey}`,
+        'Authorization': `Bearer ${deepseekKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-mini',
+        model: 'deepseek-reasoner',
         messages: mensagensAtual,
         tools: TOOLS,
         tool_choice: 'auto',
-        max_completion_tokens: 2000,
+        max_tokens: 4000,
       }),
     })
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('[Centro Comando] Erro OpenAI:', response.status, errorText)
-      throw new Error(`Erro na API OpenAI: ${response.status}`)
+      console.error('[Centro Comando] Erro DeepSeek:', response.status, errorText)
+      throw new Error(`Erro na API DeepSeek: ${response.status}`)
     }
 
     const aiResponse = await response.json()
@@ -938,11 +1072,16 @@ async function handleNonStreamingRequest(
       ultimoToolCalls = choice.message.tool_calls
 
       // Adicionar mensagem do assistente com tool_calls ao histórico
-      mensagensAtual.push({
+      // IMPORTANTE: Incluir reasoning_content para que o DeepSeek continue o raciocínio
+      const assistantMessage: any = {
         role: 'assistant',
         content: choice.message.content || null,
         tool_calls: choice.message.tool_calls,
-      } as any)
+      }
+      if (choice.message.reasoning_content) {
+        assistantMessage.reasoning_content = choice.message.reasoning_content
+      }
+      mensagensAtual.push(assistantMessage)
 
       // Processar cada tool call
       for (const toolCall of choice.message.tool_calls) {
@@ -980,6 +1119,15 @@ async function handleNonStreamingRequest(
         } as any)
       }
 
+      // VERIFICAR SE ALGUMA TOOL RETORNOU aguardando_input
+      // Se sim, PARAR o loop e esperar resposta do usuário
+      const temInputPendente = toolResults.some(r => r.aguardando_input === true)
+      if (temInputPendente) {
+        console.log('[Centro Comando] Input pendente detectado - parando loop')
+        respostaTexto = '' // Deixar vazio para não sobrescrever
+        break
+      }
+
       // Continuar o loop para a IA processar os resultados
       continue
     }
@@ -1000,7 +1148,13 @@ async function handleNonStreamingRequest(
 
   // Se a IA não retornou texto, gerar resposta automática baseada no contexto
   if (!respostaTexto) {
-    if (toolResults.length > 0) {
+    // Verificar se há input pendente - NÃO gerar texto, deixar o card falar por si
+    const resultadoInputPendente = toolResults.find(r => r.aguardando_input === true)
+
+    if (resultadoInputPendente) {
+      // Deixar vazio - o FormularioPendente já mostra as informações
+      respostaTexto = ''
+    } else if (toolResults.length > 0) {
       // Tem resultados de tools
       const resultadoComDados = toolResults.find(r => r.dados && r.total !== undefined)
       const resultadoComErro = toolResults.find(r => r.erro)
@@ -1009,9 +1163,9 @@ async function handleNonStreamingRequest(
         respostaTexto = `Houve um erro ao executar a consulta: ${resultadoComErro.erro}`
       } else if (resultadoComDados) {
         if (resultadoComDados.total === 0) {
-          respostaTexto = `Não encontrei nenhum registro com os critérios especificados. Deseja ajustar a busca?`
+          respostaTexto = `Não encontrei nenhum registro com os critérios especificados.`
         } else {
-          respostaTexto = `Encontrei ${resultadoComDados.total} registro${resultadoComDados.total > 1 ? 's' : ''}. Os dados estão exibidos na tabela acima.`
+          respostaTexto = `Encontrei ${resultadoComDados.total} registro${resultadoComDados.total > 1 ? 's' : ''}.`
         }
       } else {
         respostaTexto = 'Consulta executada com sucesso.'
@@ -1093,9 +1247,29 @@ async function executarTool(
       if (!TABELAS_PERMITIDAS.includes(tabela)) {
         return { tool: name, erro: `Tabela "${tabela}" não permitida.` }
       }
+
+      // Verificar cache primeiro
+      const cachedSchema = getCachedSchema(tabela)
+      if (cachedSchema) {
+        console.log(`[Centro Comando] Schema de ${tabela} retornado do cache`)
+        return {
+          tool: name,
+          tabela,
+          colunas: cachedSchema.colunas || [],
+          total: cachedSchema.colunas?.length || 0,
+          explicacao: `Estrutura da tabela ${tabela} (do cache)`,
+          dica: 'Não inclua id, escritorio_id, created_at, updated_at ao inserir.',
+          fromCache: true,
+        }
+      }
+
       try {
         const { data: schema, error } = await supabase.rpc('get_table_schema', { tabela_nome: tabela })
         if (error) throw error
+
+        // Guardar no cache
+        setCachedSchema(tabela, schema)
+
         return {
           tool: name,
           tabela,
@@ -1105,7 +1279,7 @@ async function executarTool(
           dica: 'Não inclua id, escritorio_id, created_at, updated_at ao inserir.'
         }
       } catch (err: any) {
-        return { tool: name, erro: `Erro ao consultar schema: ${err.message}` }
+        return { tool: name, erro: `Erro ao consultar schema: ${err?.message || String(err) || 'Erro desconhecido'}` }
       }
     }
 
@@ -1129,7 +1303,7 @@ async function executarTool(
       } catch (err: any) {
         return {
           tool: name,
-          erro: `Erro ao executar query: ${err.message}`,
+          erro: `Erro ao executar query: ${err?.message || String(err) || 'Erro desconhecido'}`,
           query_debug: query,
         }
       }
@@ -1140,12 +1314,28 @@ async function executarTool(
         return { tool: name, erro: 'Campo "tabela" é obrigatório.' }
       }
       if (!args.dados || typeof args.dados !== 'object' || Object.keys(args.dados).length === 0) {
-        return { tool: name, erro: 'Campo "dados" é obrigatório e deve ser um objeto JSON.' }
+        return { tool: name, erro: 'Campo "dados" é obrigatório e deve ser um objeto JSON com os campos do registro.' }
+      }
+      // Validar que dados não é uma estrutura aninhada (bulk insert não suportado)
+      if (args.dados.registros || Array.isArray(args.dados)) {
+        return {
+          tool: name,
+          erro: 'ERRO: preparar_cadastro aceita apenas UM registro por vez. Para criar múltiplos registros, chame preparar_cadastro uma vez para cada registro individualmente.'
+        }
+      }
+      // Validar que os dados são campos simples, não objetos aninhados
+      const camposInvalidos = Object.entries(args.dados).filter(([_, v]) => typeof v === 'object' && v !== null)
+      if (camposInvalidos.length > 0) {
+        return {
+          tool: name,
+          erro: `ERRO: Os campos devem ser valores simples (texto, número, data). Campos inválidos: ${camposInvalidos.map(([k]) => k).join(', ')}`
+        }
       }
       if (!TABELAS_PERMITIDAS.includes(args.tabela)) {
         return { tool: name, erro: `Tabela "${args.tabela}" não permitida.` }
       }
       try {
+        console.log('[preparar_cadastro] Inserindo ação pendente:', { tabela: args.tabela, dados: args.dados })
         const { data: acao, error } = await supabase
           .from('centro_comando_acoes_pendentes')
           .insert({
@@ -1159,7 +1349,20 @@ async function executarTool(
           })
           .select()
           .single()
-        if (error) throw error
+
+        if (error) {
+          console.error('[preparar_cadastro] Erro Supabase:', error)
+          return {
+            tool: name,
+            erro: `Erro ao salvar ação: ${error.message || error.code || JSON.stringify(error)}`
+          }
+        }
+
+        if (!acao || !acao.id) {
+          console.error('[preparar_cadastro] Ação criada mas sem ID:', acao)
+          return { tool: name, erro: 'Erro: ação criada mas sem ID retornado' }
+        }
+
         return {
           tool: name,
           acao_pendente: true,
@@ -1170,7 +1373,9 @@ async function executarTool(
           preview: args.dados,
         }
       } catch (err: any) {
-        return { tool: name, erro: `Erro ao preparar cadastro: ${err.message}` }
+        console.error('[preparar_cadastro] Exceção:', err)
+        const errorMsg = err?.message || (err ? String(err) : 'Erro desconhecido ao preparar cadastro')
+        return { tool: name, erro: errorMsg }
       }
     }
 
@@ -1212,7 +1417,56 @@ async function executarTool(
           alteracoes: args.alteracoes,
         }
       } catch (err: any) {
-        return { tool: name, erro: err.message }
+        return { tool: name, erro: err?.message || String(err) || 'Erro ao preparar alteração' }
+      }
+    }
+
+    case 'preparar_alteracao_em_massa': {
+      if (!args.tabela || !args.query_update || !args.total_afetados) {
+        return { tool: name, erro: 'Campos tabela, query_update e total_afetados são obrigatórios.' }
+      }
+
+      // Validar que a query tem WHERE escritorio_id
+      if (!args.query_update.toLowerCase().includes('escritorio_id')) {
+        return { tool: name, erro: 'Query DEVE incluir WHERE escritorio_id para segurança.' }
+      }
+
+      // Substituir placeholder pelo ID real
+      const queryFinal = args.query_update.replace(/\{escritorio_id\}/g, escritorioId)
+
+      try {
+        // Salvar ação pendente
+        const { data: acao, error } = await supabase
+          .from('centro_comando_acoes_pendentes')
+          .insert({
+            sessao_id: sessaoId,
+            user_id: userId,
+            escritorio_id: escritorioId,
+            tipo_acao: 'update_em_massa',
+            tabela: args.tabela,
+            dados: {
+              query: queryFinal,
+              total_afetados: args.total_afetados,
+            },
+            explicacao: args.explicacao,
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+
+        return {
+          tool: name,
+          acao_pendente: true,
+          acao_id: acao.id,
+          tipo: 'update_em_massa',
+          explicacao: args.explicacao,
+          total_afetados: args.total_afetados,
+          preview: `UPDATE em ${args.total_afetados} registros na tabela ${args.tabela}`,
+          aviso: `⚠️ Esta ação alterará ${args.total_afetados} registros!`,
+        }
+      } catch (err: any) {
+        return { tool: name, erro: `Erro ao preparar alteração em massa: ${err?.message || String(err) || 'Erro desconhecido'}` }
       }
     }
 
@@ -1255,7 +1509,7 @@ async function executarTool(
           requer_dupla_confirmacao: true,
         }
       } catch (err: any) {
-        return { tool: name, erro: err.message }
+        return { tool: name, erro: err?.message || String(err) || 'Erro ao preparar exclusão' }
       }
     }
 
@@ -1377,7 +1631,7 @@ async function processarToolCalls(
         } catch (err: any) {
           resultados.push({
             tool: name,
-            erro: `Erro ao consultar schema: ${err.message}`,
+            erro: `Erro ao consultar schema: ${err?.message || String(err) || 'Erro desconhecido'}`,
           })
         }
         break
@@ -1420,7 +1674,7 @@ async function processarToolCalls(
           console.error('[Centro Comando] Query com erro:', query)
           resultados.push({
             tool: name,
-            erro: `Erro ao executar query: ${err.message}`,
+            erro: `Erro ao executar query: ${err?.message || String(err) || 'Erro desconhecido'}`,
             explicacao: args.explicacao,
             query_debug: query, // Para debug
           })
@@ -1472,7 +1726,7 @@ async function processarToolCalls(
         if (error) {
           resultados.push({
             tool: name,
-            erro: `Erro ao preparar cadastro: ${error.message}`,
+            erro: `Erro ao preparar cadastro: ${error?.message || error?.code || 'Erro desconhecido'}`,
           })
         } else {
           acoesPendentes.push({
@@ -1532,7 +1786,7 @@ async function processarToolCalls(
         if (error) {
           resultados.push({
             tool: name,
-            erro: error.message,
+            erro: error?.message || error?.code || 'Erro ao preparar alteração',
           })
         } else {
           acoesPendentes.push({
@@ -1594,7 +1848,7 @@ async function processarToolCalls(
         if (error) {
           resultados.push({
             tool: name,
-            erro: error.message,
+            erro: error?.message || error?.code || 'Erro ao preparar exclusão',
           })
         } else {
           acoesPendentes.push({
@@ -1614,6 +1868,72 @@ async function processarToolCalls(
             registro: registro,
             aviso: 'ATENÇÃO: Esta ação é irreversível!',
             requer_dupla_confirmacao: true,
+          })
+        }
+        break
+      }
+
+      case 'preparar_alteracao_em_massa': {
+        if (!args.tabela || !args.query_update || !args.total_afetados) {
+          resultados.push({
+            tool: name,
+            erro: 'Campos tabela, query_update e total_afetados são obrigatórios.',
+          })
+          break
+        }
+
+        // Validar que a query tem WHERE escritorio_id
+        if (!args.query_update.toLowerCase().includes('escritorio_id')) {
+          resultados.push({
+            tool: name,
+            erro: 'Query DEVE incluir WHERE escritorio_id para segurança.',
+          })
+          break
+        }
+
+        // Substituir placeholder pelo ID real
+        const queryFinal = args.query_update.replace(/\{escritorio_id\}/g, escritorioId)
+
+        // Criar ação pendente
+        const { data: acao, error } = await supabase
+          .from('centro_comando_acoes_pendentes')
+          .insert({
+            sessao_id: sessaoId,
+            user_id: userId,
+            escritorio_id: escritorioId,
+            tipo_acao: 'update_em_massa',
+            tabela: args.tabela,
+            dados: {
+              query: queryFinal,
+              total_afetados: args.total_afetados,
+            },
+            explicacao: args.explicacao,
+          })
+          .select()
+          .single()
+
+        if (error) {
+          resultados.push({
+            tool: name,
+            erro: error?.message || error?.code || 'Erro ao preparar alteração em massa',
+          })
+        } else {
+          acoesPendentes.push({
+            id: acao.id,
+            tipo: 'update_em_massa',
+            tabela: args.tabela,
+            total_afetados: args.total_afetados,
+            explicacao: args.explicacao,
+          })
+          resultados.push({
+            tool: name,
+            acao_pendente: true,
+            acao_id: acao.id,
+            tipo: 'update_em_massa',
+            explicacao: args.explicacao,
+            total_afetados: args.total_afetados,
+            preview: `UPDATE em ${args.total_afetados} registros na tabela ${args.tabela}`,
+            aviso: `⚠️ Esta ação alterará ${args.total_afetados} registros!`,
           })
         }
         break
@@ -1714,6 +2034,30 @@ async function executarAcaoConfirmada(
         break
       }
 
+      case 'update_em_massa': {
+        // Executar query de UPDATE em massa
+        const query = acao.dados.query
+
+        // Verificar segurança - deve ter WHERE escritorio_id
+        if (!query.toLowerCase().includes('escritorio_id')) {
+          throw new Error('Query de UPDATE em massa deve incluir filtro de escritorio_id')
+        }
+
+        // Executar via RPC para garantir segurança
+        const { data, error } = await supabase.rpc('execute_raw_sql', {
+          sql_query: query,
+        })
+
+        if (error) throw error
+
+        resultado = {
+          sucesso: true,
+          total_afetados: acao.dados.total_afetados,
+          query_executada: query,
+        }
+        break
+      }
+
       case 'delete': {
         // Verificar dupla confirmação para delete
         if (!dadosAdicionais?.dupla_confirmacao) {
@@ -1749,9 +2093,17 @@ async function executarAcaoConfirmada(
       })
       .eq('id', acaoId)
 
+    // Mensagem de sucesso baseada no tipo
+    const mensagens: Record<string, string> = {
+      'insert': 'Registro criado com sucesso',
+      'update': 'Registro atualizado com sucesso',
+      'update_em_massa': `${resultado?.total_afetados || acao.dados?.total_afetados || 'Múltiplos'} registros atualizados com sucesso`,
+      'delete': 'Registro excluído com sucesso',
+    }
+
     return {
       sucesso: resultado?.sucesso !== false,
-      mensagem: `${acao.tipo_acao === 'insert' ? 'Registro criado' : acao.tipo_acao === 'update' ? 'Registro atualizado' : 'Registro excluído'} com sucesso`,
+      mensagem: mensagens[acao.tipo_acao] || 'Ação executada com sucesso',
       dados: resultado,
     }
 

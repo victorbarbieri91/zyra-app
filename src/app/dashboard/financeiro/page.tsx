@@ -85,7 +85,7 @@ export default function FinanceiroDashboard() {
         setMetrics(cacheData.dados_extras as any)
       }
     } catch (error) {
-      console.error('Erro ao carregar métricas:', error)
+      console.error('Erro ao carregar métricas:', error instanceof Error ? error.message : error)
     } finally {
       setLoading(false)
     }
@@ -129,7 +129,7 @@ export default function FinanceiroDashboard() {
 
       setContasProximas(contas)
     } catch (error) {
-      console.error('Erro ao carregar contas próximas:', error)
+      console.error('Erro ao carregar contas próximas:', error instanceof Error ? error.message : error)
       setContasProximas([])
     } finally {
       setLoadingContas(false)
@@ -141,45 +141,55 @@ export default function FinanceiroDashboard() {
 
     setLoadingChart(true)
     try {
-      // Buscar dados do DRE dos últimos 6 meses
+      // Buscar lançamentos dos últimos 6 meses
+      const dataInicio = new Date()
+      dataInicio.setMonth(dataInicio.getMonth() - 6)
+      const dataInicioStr = dataInicio.toISOString().split('T')[0]
+
       const { data, error } = await supabase
-        .from('v_dre')
-        .select('mes_referencia, receita_bruta, despesas_totais')
+        .from('financeiro_contas_lancamentos')
+        .select('tipo, valor, data_lancamento')
         .eq('escritorio_id', escritorioAtivo)
-        .order('mes_referencia', { ascending: true })
-        .limit(6)
+        .gte('data_lancamento', dataInicioStr)
+        .order('data_lancamento', { ascending: true })
 
       if (error) throw error
 
-      const formatted = (data || []).map((d) => ({
-        mes: d.mes_referencia
-          ? format(parseISO(d.mes_referencia), 'MMM', { locale: ptBR })
-          : '',
-        receitas: Number(d.receita_bruta) || 0,
-        despesas: Number(d.despesas_totais) || 0,
-      }))
+      // Agrupar por mês
+      const porMes: Record<string, { receitas: number; despesas: number }> = {}
 
-      // Se não houver dados suficientes, adicionar meses vazios
-      if (formatted.length < 6) {
-        const mesesFaltando = 6 - formatted.length
-        const ultimoMes = formatted.length > 0
-          ? parseISO(data![data!.length - 1].mes_referencia)
-          : new Date()
-
-        for (let i = 1; i <= mesesFaltando; i++) {
-          const mesAnterior = new Date(ultimoMes)
-          mesAnterior.setMonth(mesAnterior.getMonth() - i)
-          formatted.unshift({
-            mes: format(mesAnterior, 'MMM', { locale: ptBR }),
-            receitas: 0,
-            despesas: 0,
-          })
-        }
+      // Inicializar últimos 6 meses
+      for (let i = 5; i >= 0; i--) {
+        const mes = new Date()
+        mes.setMonth(mes.getMonth() - i)
+        const chave = format(mes, 'yyyy-MM')
+        porMes[chave] = { receitas: 0, despesas: 0 }
       }
+
+      // Somar valores por mês
+      (data || []).forEach((lancamento) => {
+        if (!lancamento.data_lancamento) return
+        const chave = lancamento.data_lancamento.substring(0, 7) // yyyy-MM
+        if (porMes[chave]) {
+          const valor = Number(lancamento.valor) || 0
+          if (lancamento.tipo === 'entrada') {
+            porMes[chave].receitas += valor
+          } else if (lancamento.tipo === 'saida') {
+            porMes[chave].despesas += valor
+          }
+        }
+      })
+
+      // Formatar para o gráfico
+      const formatted = Object.entries(porMes).map(([chave, valores]) => ({
+        mes: format(parseISO(chave + '-01'), 'MMM', { locale: ptBR }),
+        receitas: valores.receitas,
+        despesas: valores.despesas,
+      }))
 
       setChartData(formatted)
     } catch (error) {
-      console.error('Erro ao carregar dados do gráfico:', error)
+      console.error('Erro ao carregar dados do gráfico:', error instanceof Error ? error.message : error)
       setChartData([])
     } finally {
       setLoadingChart(false)
@@ -192,15 +202,9 @@ export default function FinanceiroDashboard() {
     try {
       // Buscar parcelas pendentes e atrasadas
       const { data: parcelas, error } = await supabase
-        .from('honorarios_parcelas')
-        .select(`
-          valor,
-          status,
-          honorarios!inner (
-            escritorio_id
-          )
-        `)
-        .eq('honorarios.escritorio_id', escritorioAtivo)
+        .from('financeiro_honorarios_parcelas')
+        .select('valor, status')
+        .eq('escritorio_id', escritorioAtivo)
         .in('status', ['pendente', 'atrasado'])
 
       if (error) throw error
@@ -219,7 +223,7 @@ export default function FinanceiroDashboard() {
         pendente_receber: totalPendente,
       }))
     } catch (error) {
-      console.error('Erro ao carregar inadimplência:', error)
+      console.error('Erro ao carregar inadimplência:', error instanceof Error ? error.message : error)
     }
   }
 

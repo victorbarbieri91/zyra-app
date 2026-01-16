@@ -12,8 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { AlertTriangle, Check, X, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { AcaoPendente } from '@/types/centro-comando'
 
 interface ConfirmationDialogProps {
@@ -39,7 +38,7 @@ export function ConfirmationDialog({
 
   const handleConfirm = () => {
     if (isDelete && !duplaConfirmacao) {
-      return // Não permite confirmar delete sem checkbox
+      return
     }
     onConfirm(isDelete ? true : undefined)
     setDuplaConfirmacao(false)
@@ -62,72 +61,54 @@ export function ConfirmationDialog({
   const renderPreview = () => {
     if (isInsert && acao.dados) {
       return (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-          <div className="text-xs font-medium text-green-700 mb-2">
-            Dados a serem criados:
-          </div>
-          <div className="space-y-1">
-            {Object.entries(acao.dados).map(([key, value]) => (
-              <div key={key} className="flex text-xs">
-                <span className="text-slate-500 w-32">{key}:</span>
-                <span className="text-slate-700">{formatValue(value)}</span>
-              </div>
-            ))}
-          </div>
+        <div className="bg-slate-50 rounded-lg p-3 space-y-1">
+          {Object.entries(acao.dados).map(([key, value]) => (
+            <div key={key} className="flex text-xs">
+              <span className="text-slate-400 w-32">{key}:</span>
+              <span className="text-slate-600">{formatValue(value)}</span>
+            </div>
+          ))}
         </div>
       )
     }
 
     if (isUpdate && acao.antes && acao.depois) {
-      // Encontrar campos alterados
       const changedFields = Object.keys(acao.depois).filter(
         key => JSON.stringify(acao.antes[key]) !== JSON.stringify(acao.depois[key])
       )
 
       return (
-        <div className="space-y-3">
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <div className="text-xs font-medium text-amber-700 mb-2">
-              Alterações:
+        <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+          {changedFields.map(field => (
+            <div key={field} className="text-xs">
+              <span className="text-slate-400">{field}</span>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="px-2 py-1 bg-white text-slate-500 rounded border border-slate-200 line-through">
+                  {formatValue(acao.antes[field])}
+                </span>
+                <ArrowRight className="w-3 h-3 text-slate-300" />
+                <span className="px-2 py-1 bg-white text-slate-700 rounded border border-[#89bcbe]/30">
+                  {formatValue(acao.depois[field])}
+                </span>
+              </div>
             </div>
-            <div className="space-y-2">
-              {changedFields.map(field => (
-                <div key={field} className="text-xs">
-                  <span className="text-slate-500">{field}:</span>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="px-2 py-1 bg-red-100 text-red-700 rounded line-through">
-                      {formatValue(acao.antes[field])}
-                    </span>
-                    <ArrowRight className="w-3 h-3 text-slate-400" />
-                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
-                      {formatValue(acao.depois[field])}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
       )
     }
 
     if (isDelete && acao.registro) {
       return (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-          <div className="text-xs font-medium text-red-700 mb-2">
-            Registro a ser excluído:
-          </div>
-          <div className="space-y-1">
-            {Object.entries(acao.registro)
-              .filter(([key]) => !['id', 'escritorio_id', 'created_at', 'updated_at'].includes(key))
-              .slice(0, 5)
-              .map(([key, value]) => (
-                <div key={key} className="flex text-xs">
-                  <span className="text-slate-500 w-32">{key}:</span>
-                  <span className="text-slate-700">{formatValue(value)}</span>
-                </div>
-              ))}
-          </div>
+        <div className="bg-red-50/50 rounded-lg p-3 space-y-1">
+          {Object.entries(acao.registro)
+            .filter(([key]) => !['id', 'escritorio_id', 'created_at', 'updated_at'].includes(key))
+            .slice(0, 5)
+            .map(([key, value]) => (
+              <div key={key} className="flex text-xs">
+                <span className="text-slate-400 w-32">{key}:</span>
+                <span className="text-slate-600">{formatValue(value)}</span>
+              </div>
+            ))}
         </div>
       )
     }
@@ -135,38 +116,29 @@ export function ConfirmationDialog({
     return null
   }
 
+  const getTitle = () => {
+    if (isDelete) return 'Confirmar exclusão'
+    if (isUpdate) return 'Confirmar alteração'
+    return 'Confirmar criação'
+  }
+
   return (
     <Dialog open={!!acao} onOpenChange={() => handleCancel()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {isDelete ? (
-              <>
-                <AlertTriangle className="w-5 h-5 text-red-500" />
-                <span>Confirmar Exclusão</span>
-              </>
-            ) : isUpdate ? (
-              <>
-                <AlertTriangle className="w-5 h-5 text-amber-500" />
-                <span>Confirmar Alteração</span>
-              </>
-            ) : (
-              <>
-                <Check className="w-5 h-5 text-green-500" />
-                <span>Confirmar Criação</span>
-              </>
-            )}
+          <DialogTitle className="text-lg font-medium text-[#34495e]">
+            {getTitle()}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm text-slate-500">
             {acao.explicacao}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
-          {/* Badge da tabela */}
+        <div className="py-3">
+          {/* Tabela afetada */}
           <div className="mb-3">
-            <span className="text-xs text-slate-500">Tabela: </span>
-            <Badge variant="secondary">{acao.tabela}</Badge>
+            <span className="text-xs text-slate-400">Tabela: </span>
+            <span className="text-xs text-slate-600">{acao.tabela}</span>
           </div>
 
           {/* Preview dos dados */}
@@ -174,13 +146,9 @@ export function ConfirmationDialog({
 
           {/* Checkbox de dupla confirmação para DELETE */}
           {isDelete && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-center gap-2 text-red-700 mb-2">
-                <AlertTriangle className="w-4 h-4" />
-                <span className="text-sm font-medium">Atenção!</span>
-              </div>
+            <div className="mt-4 p-3 bg-red-50/50 border border-red-100 rounded-lg">
               <p className="text-xs text-red-600 mb-3">
-                Esta ação é irreversível. O registro será permanentemente excluído.
+                Esta ação é irreversível.
               </p>
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -190,9 +158,9 @@ export function ConfirmationDialog({
                 />
                 <Label
                   htmlFor="dupla-confirmacao"
-                  className="text-sm text-red-700 cursor-pointer"
+                  className="text-xs text-red-600 cursor-pointer"
                 >
-                  Eu entendo e desejo excluir permanentemente
+                  Confirmo a exclusão permanente
                 </Label>
               </div>
             </div>
@@ -200,22 +168,25 @@ export function ConfirmationDialog({
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={handleCancel} disabled={loading}>
-            <X className="w-4 h-4 mr-2" />
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            disabled={loading}
+            size="sm"
+            className="text-xs"
+          >
             Cancelar
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={loading || (isDelete && !duplaConfirmacao)}
-            className={
+            size="sm"
+            className={`text-xs ${
               isDelete
                 ? 'bg-red-600 hover:bg-red-700'
-                : isUpdate
-                ? 'bg-amber-600 hover:bg-amber-700'
-                : 'bg-green-600 hover:bg-green-700'
-            }
+                : 'bg-[#34495e] hover:bg-[#46627f]'
+            }`}
           >
-            <Check className="w-4 h-4 mr-2" />
             {loading ? 'Executando...' : 'Confirmar'}
           </Button>
         </DialogFooter>

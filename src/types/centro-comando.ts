@@ -153,46 +153,70 @@ export interface StreamEvent {
 export interface ComandoSugestao {
   texto: string
   descricao: string
-  categoria: 'consulta' | 'criacao' | 'alteracao' | 'navegacao'
-  icone?: string
+  modulo: 'processos' | 'agenda' | 'financeiro' | 'crm' | 'geral'
 }
 
-// Comandos sugeridos padrão
-export const COMANDOS_SUGERIDOS: ComandoSugestao[] = [
+// Categoria do menu de sugestões
+export interface CategoriaMenu {
+  id: string
+  nome: string
+  icone: string
+  comandos: ComandoSugestao[]
+}
+
+// Menu de sugestões organizado por módulos
+export const MENU_SUGESTOES: CategoriaMenu[] = [
   {
-    texto: 'Mostre meus processos ativos',
-    descricao: 'Lista todos os processos em andamento',
-    categoria: 'consulta',
+    id: 'processos',
+    nome: 'Processos',
     icone: 'scale',
+    comandos: [
+      { texto: 'Mostre meus processos ativos', descricao: 'Lista processos em andamento', modulo: 'processos' },
+      { texto: 'Processos com prazos essa semana', descricao: 'Prazos próximos de vencer', modulo: 'processos' },
+      { texto: 'Movimentações recentes', descricao: 'Últimas atualizações', modulo: 'processos' },
+    ],
   },
   {
-    texto: 'Quais tarefas tenho para hoje?',
-    descricao: 'Tarefas pendentes para o dia',
-    categoria: 'consulta',
-    icone: 'check-square',
+    id: 'agenda',
+    nome: 'Agenda',
+    icone: 'calendar',
+    comandos: [
+      { texto: 'Quais tarefas tenho para hoje?', descricao: 'Tarefas do dia', modulo: 'agenda' },
+      { texto: 'Meus compromissos da semana', descricao: 'Agenda dos próximos 7 dias', modulo: 'agenda' },
+      { texto: 'Audiências marcadas', descricao: 'Próximas audiências', modulo: 'agenda' },
+    ],
   },
   {
-    texto: 'Quantas horas trabalhei esse mês?',
-    descricao: 'Total de horas registradas',
-    categoria: 'consulta',
-    icone: 'clock',
+    id: 'financeiro',
+    nome: 'Financeiro',
+    icone: 'dollar-sign',
+    comandos: [
+      { texto: 'Quantas horas trabalhei esse mês?', descricao: 'Total de horas registradas', modulo: 'financeiro' },
+      { texto: 'Honorários pendentes de pagamento', descricao: 'Valores a receber', modulo: 'financeiro' },
+      { texto: 'Faturamento do mês', descricao: 'Resumo financeiro', modulo: 'financeiro' },
+    ],
   },
   {
-    texto: 'Criar tarefa para amanhã',
-    descricao: 'Adiciona uma nova tarefa',
-    categoria: 'criacao',
-    icone: 'plus',
-  },
-  {
-    texto: 'Processos com prazos essa semana',
-    descricao: 'Prazos vencendo nos próximos 7 dias',
-    categoria: 'consulta',
-    icone: 'alert-triangle',
-  },
-  {
-    texto: 'Clientes sem interação há 30 dias',
-    descricao: 'Clientes que precisam de atenção',
-    categoria: 'consulta',
+    id: 'crm',
+    nome: 'Clientes',
     icone: 'users',
+    comandos: [
+      { texto: 'Meus clientes ativos', descricao: 'Lista de clientes', modulo: 'crm' },
+      { texto: 'Clientes sem interação há 30 dias', descricao: 'Precisam de atenção', modulo: 'crm' },
+      { texto: 'Oportunidades abertas', descricao: 'Pipeline de vendas', modulo: 'crm' },
+    ],
+  },
+  {
+    id: 'acoes',
+    nome: 'Ações',
+    icone: 'zap',
+    comandos: [
+      { texto: 'Criar tarefa para amanhã', descricao: 'Nova tarefa', modulo: 'geral' },
+      { texto: 'Registrar horas trabalhadas', descricao: 'Novo timesheet', modulo: 'geral' },
+      { texto: 'Criar novo processo', descricao: 'Novo cadastro', modulo: 'geral' },
+    ],
   },
 ]
+
+// Comandos sugeridos padrão (compatibilidade)
+export const COMANDOS_SUGERIDOS: ComandoSugestao[] = MENU_SUGESTOES.flatMap(cat => cat.comandos)

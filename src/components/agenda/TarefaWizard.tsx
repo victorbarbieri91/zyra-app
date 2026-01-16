@@ -589,14 +589,14 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, initialD
               <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
                 <span className="text-slate-500">Execução</span>
                 <span className="text-[#34495e] font-medium">
-                  {formatBrazilDateLong(parseDateInBrazil(dataExecucao, 'yyyy-MM-dd'))}
+                  {dataExecucao ? formatBrazilDateLong(parseDateInBrazil(dataExecucao, 'yyyy-MM-dd')) : 'Não definida'}
                 </span>
 
                 {prazoFatal && (
                   <>
                     <span className="text-slate-500">Prazo Fatal</span>
                     <span className="text-red-600 font-medium">
-                      {formatBrazilDateLong(parseDateInBrazil(prazoFatal, 'yyyy-MM-dd'))}
+                      {prazoFatal ? formatBrazilDateLong(parseDateInBrazil(prazoFatal, 'yyyy-MM-dd')) : 'Não definido'}
                     </span>
                   </>
                 )}

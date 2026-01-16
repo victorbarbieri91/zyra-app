@@ -199,52 +199,67 @@ export default function DashboardPage() {
           <div className="xl:col-span-3 space-y-6">
 
             {/* Agenda de Hoje */}
-            <Card className="border-[#89bcbe] shadow-lg bg-gradient-to-br from-white to-[#f0f9f9]/30">
-              <CardHeader className="pb-3">
+            <Card className="border-[#89bcbe] shadow-sm bg-gradient-to-br from-white to-[#f0f9f9]/30">
+              <CardHeader className="pb-1 pt-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2 text-[#34495e]">
-                    <div className="w-7 h-7 bg-gradient-to-br from-[#89bcbe] to-[#6ba9ab] rounded-lg flex items-center justify-center">
-                      <Calendar className="w-4 h-4 text-white" />
-                    </div>
+                  <CardTitle className="text-sm flex items-center gap-2 text-[#34495e]">
+                    <Calendar className="w-4 h-4 text-[#89bcbe]" />
                     Agenda de Hoje
-                    {!loadingAgenda && agendaItems.length > 0 && (
-                      <span className="text-xs font-normal text-[#6c757d]">({agendaItems.length})</span>
-                    )}
                   </CardTitle>
                   <Link href="/dashboard/agenda">
-                    <Button variant="ghost" size="sm" className="text-xs text-[#89bcbe] hover:text-[#6ba9ab] h-7">
+                    <Button variant="ghost" size="sm" className="text-[10px] text-[#89bcbe] hover:text-[#6ba9ab] h-5 px-1.5">
                       Ver →
                     </Button>
                   </Link>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="pt-1 pb-2">
                 {loadingAgenda ? (
-                  <div className="flex justify-center py-4">
-                    <Loader2 className="w-5 h-5 text-[#89bcbe] animate-spin" />
+                  <div className="flex justify-center py-3">
+                    <Loader2 className="w-4 h-4 text-[#89bcbe] animate-spin" />
                   </div>
                 ) : isAgendaEmpty ? (
-                  <EmptyState
-                    icon={Calendar}
-                    title="Agenda livre"
-                    description="Nenhum compromisso para hoje"
-                    actionLabel="Agendar"
-                    actionHref="/dashboard/agenda"
-                    variant="compact"
-                  />
+                  <p className="text-[11px] text-[#9ca3af] text-center py-3">Nenhum compromisso pendente</p>
                 ) : (
-                  agendaItems.slice(0, 4).map((event) => (
-                    <div key={event.id} className="flex items-start gap-2 p-2.5 hover:bg-[#f0f9f9] rounded-lg transition-colors border border-slate-100">
-                      <div className="text-xs font-bold text-[#46627f] tabular-nums min-w-[40px] mt-0.5">
-                        {event.time}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-[#34495e] leading-tight">{event.title}</p>
-                        <p className="text-[10px] text-[#6c757d] mt-0.5 leading-tight">{event.subtitle}</p>
-                      </div>
-                      <div className={`w-1.5 h-1.5 rounded-full ${event.color} mt-1.5 flex-shrink-0`} />
-                    </div>
-                  ))
+                  <div className="divide-y divide-slate-100">
+                    {agendaItems.slice(0, 6).map((event) => {
+                      // Config por tipo
+                      const tipoConfig: Record<string, { label: string; color: string }> = {
+                        audiencia: { label: 'Aud', color: 'text-red-600' },
+                        prazo: { label: 'Prazo', color: 'text-amber-600' },
+                        tarefa: { label: 'Tarefa', color: 'text-slate-500' },
+                        evento: { label: 'Comp', color: 'text-blue-600' },
+                      }
+                      const config = tipoConfig[event.tipo] || tipoConfig.evento
+                      const temHorario = event.tipo !== 'tarefa' && event.time && event.time !== 'Dia todo'
+
+                      return (
+                        <div
+                          key={event.id}
+                          className="flex items-center gap-2 py-1.5 hover:bg-slate-50 -mx-1 px-1 rounded cursor-pointer"
+                        >
+                          <span className={`text-[9px] font-semibold w-[34px] flex-shrink-0 ${config.color}`}>
+                            {config.label}
+                          </span>
+                          <p className="text-[11px] text-[#34495e] flex-1 truncate leading-tight">
+                            {event.title}
+                          </p>
+                          {temHorario && (
+                            <span className="text-[9px] text-[#adb5bd] tabular-nums flex-shrink-0">
+                              {event.time}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
+                    {agendaItems.length > 6 && (
+                      <Link href="/dashboard/agenda" className="block pt-1.5">
+                        <p className="text-[10px] text-[#89bcbe] hover:text-[#6ba9ab]">
+                          +{agendaItems.length - 6} mais →
+                        </p>
+                      </Link>
+                    )}
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -514,14 +529,9 @@ export default function DashboardPage() {
             <Card className="border-slate-200 shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2 text-[#34495e]">
-                    <Bell className="w-5 h-5 text-[#89bcbe]" />
+                  <CardTitle className="text-base flex items-center gap-2 text-[#34495e]">
+                    <Bell className="w-4 h-4 text-[#89bcbe]" />
                     Publicações Recentes
-                    {!loadingPublicacoes && publicacoesUrgentes > 0 && (
-                      <span className="text-xs font-bold text-red-600 bg-red-100 px-1.5 py-0.5 rounded">
-                        {publicacoesUrgentes} urgente{publicacoesUrgentes > 1 ? 's' : ''}
-                      </span>
-                    )}
                   </CardTitle>
                   <Link href="/dashboard/publicacoes">
                     <Button variant="ghost" size="sm" className="text-xs text-[#89bcbe] hover:text-[#6ba9ab] h-7">
@@ -530,7 +540,7 @@ export default function DashboardPage() {
                   </Link>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-1.5">
                 {loadingPublicacoes ? (
                   <div className="flex justify-center py-4">
                     <Loader2 className="w-5 h-5 text-[#89bcbe] animate-spin" />
@@ -545,25 +555,27 @@ export default function DashboardPage() {
                     variant="compact"
                   />
                 ) : (
-                  publicacoes.slice(0, 4).map((pub) => (
-                    <div key={pub.id} className={`p-2.5 rounded-lg border transition-colors ${pub.urgente ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-100 hover:bg-slate-100'}`}>
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-xs font-bold leading-tight ${pub.urgente ? 'text-red-900' : 'text-[#34495e]'}`}>
-                            Processo {pub.processo}
-                          </p>
-                          <p className={`text-[10px] font-semibold mt-0.5 ${pub.urgente ? 'text-red-700' : 'text-[#6c757d]'}`}>{pub.tipo}</p>
-                        </div>
-                        {pub.prazo && (
-                          <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap ${pub.urgente ? 'bg-red-600 text-white' : 'bg-slate-300 text-slate-700'}`}>
-                            {pub.prazo}
+                  publicacoes.slice(0, 5).map((pub) => (
+                    <Link key={pub.id} href={`/dashboard/publicacoes/${pub.id}`} className="block">
+                      <div className="p-2.5 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-200 transition-all cursor-pointer">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-[#34495e] leading-tight truncate">
+                              {pub.processo}
+                            </p>
+                            <p className="text-[10px] text-[#6c757d] mt-0.5 capitalize">{pub.tipo}</p>
                           </div>
-                        )}
+                          {pub.urgente && (
+                            <span className="text-[9px] font-medium text-red-600 bg-red-50 px-1.5 py-0.5 rounded flex-shrink-0">
+                              Urgente
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-[#6c757d] leading-relaxed line-clamp-1">
+                          {pub.conteudo}
+                        </p>
                       </div>
-                      <p className={`text-[10px] leading-tight ${pub.urgente ? 'text-red-600' : 'text-[#6c757d]'}`}>
-                        {pub.conteudo}
-                      </p>
-                    </div>
+                    </Link>
                   ))
                 )}
               </CardContent>

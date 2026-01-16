@@ -3,71 +3,88 @@
 import { cn } from '@/lib/utils'
 import { formatBrazilDateTime } from '@/lib/timezone'
 import { CentroComandoMensagem, ToolResult } from '@/types/centro-comando'
-import { User, Bot, AlertCircle, Loader2, Table, ArrowRight } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ResultsTable } from './ResultsTable'
+import { FormularioPendente } from './FormularioPendente'
 
 interface ChatMessageProps {
   mensagem: CentroComandoMensagem
   onNavigate?: (path: string) => void
+  onOpenInputDialog?: (result: ToolResult) => void
 }
 
-export function ChatMessage({ mensagem, onNavigate }: ChatMessageProps) {
+// Filtrar resultados de ferramentas:
+// - Se houver resultados com dados bem sucedidos, esconde erros intermediários
+// - Mantém erros apenas se TODOS os resultados falharam
+function filterToolResults(results: ToolResult[]): ToolResult[] {
+  // Verificar se há algum resultado bem sucedido (com dados ou ação pendente)
+  const temSucesso = results.some(r =>
+    (r.dados && r.dados.length >= 0 && !r.erro) ||
+    r.acao_pendente ||
+    r.aguardando_input ||
+    (r.tipo === 'navegacao' && r.caminho)
+  )
+
+  // Se tem sucesso, filtrar apenas os erros (manter os sucessos)
+  if (temSucesso) {
+    return results.filter(r => !r.erro)
+  }
+
+  // Se não tem sucesso, mostrar tudo (incluindo erros)
+  return results
+}
+
+export function ChatMessage({ mensagem, onNavigate, onOpenInputDialog }: ChatMessageProps) {
   const isUser = mensagem.role === 'user'
   const isSystem = mensagem.role === 'system'
   const isLoading = mensagem.loading
 
-  return (
-    <div
-      className={cn(
-        'flex gap-3 p-4 rounded-lg',
-        isUser ? 'bg-slate-100' : 'bg-white border border-slate-200',
-        isSystem && 'bg-blue-50 border-blue-200',
-        mensagem.erro && 'bg-red-50 border-red-200'
-      )}
-    >
-      {/* Avatar */}
-      <div
-        className={cn(
-          'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center',
-          isUser ? 'bg-[#34495e]' : 'bg-[#89bcbe]',
-          isSystem && 'bg-blue-500',
-          mensagem.erro && 'bg-red-500'
-        )}
-      >
-        {isUser ? (
-          <User className="w-4 h-4 text-white" />
-        ) : mensagem.erro ? (
-          <AlertCircle className="w-4 h-4 text-white" />
-        ) : (
-          <Bot className="w-4 h-4 text-white" />
-        )}
+  // Mensagem do usuário - alinhada à direita
+  if (isUser) {
+    return (
+      <div className="flex justify-end mb-4">
+        <div className="max-w-[80%] bg-[#34495e] text-white rounded-2xl rounded-br-md px-4 py-3">
+          <div className="text-sm leading-relaxed whitespace-pre-wrap">
+            {mensagem.content}
+          </div>
+        </div>
       </div>
+    )
+  }
 
-      {/* Conteúdo */}
-      <div className="flex-1 min-w-0">
-        {/* Header */}
+  // Mensagem da Zyra ou sistema
+  return (
+    <div className="flex mb-4">
+      <div className="max-w-[85%]">
+        {/* Header com nome e timestamp */}
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-sm font-medium text-slate-700">
-            {isUser ? 'Você' : isSystem ? 'Sistema' : 'Zyra'}
+          <span className="text-xs font-medium text-[#89bcbe]">
+            {isSystem ? 'Sistema' : 'Zyra'}
           </span>
-          <span className="text-xs text-slate-400">
+          <span className="text-[10px] text-slate-400">
             {formatBrazilDateTime(mensagem.timestamp)}
           </span>
         </div>
 
-        {/* Mensagem */}
+        {/* Conteúdo */}
         {isLoading ? (
-          <div className="flex items-center gap-2 text-slate-500">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm">Pensando...</span>
+          <div className="flex items-center gap-2 text-slate-400 py-2">
+            <div className="flex items-center gap-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#89bcbe] animate-pulse" />
+              <div className="w-1.5 h-1.5 rounded-full bg-[#89bcbe] animate-pulse [animation-delay:0.2s]" />
+              <div className="w-1.5 h-1.5 rounded-full bg-[#89bcbe] animate-pulse [animation-delay:0.4s]" />
+            </div>
+            <span className="text-xs">Processando...</span>
           </div>
         ) : (
           <>
             {/* Texto da mensagem */}
             {mensagem.content && (
-              <div className="text-sm text-slate-600 whitespace-pre-wrap">
+              <div className={cn(
+                'text-sm text-slate-700 leading-relaxed whitespace-pre-wrap',
+                mensagem.erro && 'text-red-600'
+              )}>
                 {mensagem.content}
               </div>
             )}
@@ -75,11 +92,12 @@ export function ChatMessage({ mensagem, onNavigate }: ChatMessageProps) {
             {/* Resultados de ferramentas */}
             {mensagem.tool_results && mensagem.tool_results.length > 0 && (
               <div className="mt-3 space-y-3">
-                {mensagem.tool_results.map((result, index) => (
+                {filterToolResults(mensagem.tool_results).map((result, index) => (
                   <ToolResultDisplay
                     key={index}
                     result={result}
                     onNavigate={onNavigate}
+                    onOpenInputDialog={onOpenInputDialog}
                   />
                 ))}
               </div>
@@ -87,8 +105,8 @@ export function ChatMessage({ mensagem, onNavigate }: ChatMessageProps) {
 
             {/* Erro */}
             {mensagem.erro && (
-              <div className="mt-2 p-2 bg-red-100 rounded text-xs text-red-700">
-                Erro técnico: {mensagem.erro}
+              <div className="mt-2 px-3 py-2 bg-red-50 border border-red-100 rounded-lg text-xs text-red-600">
+                {mensagem.erro}
               </div>
             )}
           </>
@@ -104,29 +122,24 @@ export function ChatMessage({ mensagem, onNavigate }: ChatMessageProps) {
 function ToolResultDisplay({
   result,
   onNavigate,
+  onOpenInputDialog,
 }: {
   result: ToolResult
   onNavigate?: (path: string) => void
+  onOpenInputDialog?: (result: ToolResult) => void
 }) {
   // Consulta com dados
   if (result.tool === 'consultar_dados' && result.dados) {
     return (
       <div className="border border-slate-200 rounded-lg overflow-hidden">
-        <div className="bg-slate-50 px-3 py-2 border-b border-slate-200 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Table className="w-4 h-4 text-slate-500" />
-            <span className="text-xs font-medium text-slate-600">
-              {result.explicacao}
-            </span>
-          </div>
-          <Badge variant="secondary" className="text-xs">
-            {result.total} {result.total === 1 ? 'registro' : 'registros'}
-          </Badge>
+        <div className="px-3 py-2 bg-slate-50 border-b border-slate-100">
+          <span className="text-xs text-slate-500">{result.explicacao}</span>
+          <span className="text-xs text-slate-400 ml-2">• {result.total} registros</span>
         </div>
         {result.dados.length > 0 ? (
           <ResultsTable data={result.dados} />
         ) : (
-          <div className="p-4 text-center text-sm text-slate-500">
+          <div className="p-4 text-center text-sm text-slate-400">
             Nenhum registro encontrado
           </div>
         )}
@@ -137,12 +150,8 @@ function ToolResultDisplay({
   // Erro
   if (result.erro) {
     return (
-      <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-        <div className="flex items-center gap-2 text-red-700">
-          <AlertCircle className="w-4 h-4" />
-          <span className="text-sm font-medium">Erro</span>
-        </div>
-        <p className="text-sm text-red-600 mt-1">{result.erro}</p>
+      <div className="px-3 py-2 bg-red-50 border border-red-100 rounded-lg">
+        <p className="text-sm text-red-600">{result.erro || 'Erro ao processar solicitação'}</p>
       </div>
     )
   }
@@ -150,16 +159,16 @@ function ToolResultDisplay({
   // Navegação
   if (result.tipo === 'navegacao' && result.caminho) {
     return (
-      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-sm text-blue-700 mb-2">{result.explicacao}</p>
+      <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+        <p className="text-sm text-slate-600 flex-1">{result.explicacao}</p>
         <Button
           size="sm"
           variant="outline"
-          className="text-blue-600 border-blue-300"
+          className="text-slate-600 border-slate-300 text-xs"
           onClick={() => onNavigate?.(result.caminho!)}
         >
-          <ArrowRight className="w-4 h-4 mr-2" />
-          Ir para página
+          <ArrowRight className="w-3.5 h-3.5 mr-1" />
+          Ir
         </Button>
       </div>
     )
@@ -168,33 +177,23 @@ function ToolResultDisplay({
   // Ação pendente (preview)
   if (result.acao_pendente) {
     return (
-      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-        <div className="flex items-center gap-2 text-amber-700 mb-2">
-          <AlertCircle className="w-4 h-4" />
-          <span className="text-sm font-medium">Aguardando confirmação</span>
-        </div>
-        <p className="text-sm text-amber-600">{result.explicacao}</p>
+      <div className="p-3 bg-amber-50/50 border border-amber-200/50 rounded-lg">
+        <p className="text-sm text-amber-700">{result.explicacao}</p>
         {result.aviso && (
-          <p className="text-xs text-red-600 mt-2 font-medium">{result.aviso}</p>
+          <p className="text-xs text-red-500 mt-2">{result.aviso}</p>
         )}
       </div>
     )
   }
 
-  // Campos necessários
+  // Campos necessarios - abre modal de coleta
   if (result.aguardando_input && result.campos_necessarios) {
     return (
-      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-sm text-blue-700 mb-2">{result.contexto}</p>
-        <div className="space-y-2">
-          {result.campos_necessarios.map((campo, i) => (
-            <div key={i} className="text-xs text-blue-600">
-              • <span className="font-medium">{campo.descricao}</span>
-              {campo.obrigatorio && <span className="text-red-500">*</span>}
-            </div>
-          ))}
-        </div>
-      </div>
+      <FormularioPendente
+        contexto={result.contexto}
+        campos={result.campos_necessarios}
+        onAbrirFormulario={() => onOpenInputDialog?.(result)}
+      />
     )
   }
 

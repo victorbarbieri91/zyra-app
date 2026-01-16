@@ -2,15 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import {
-  MessageSquareCode,
-  Sparkles,
   History,
-  Star,
-  Trash2,
   Plus,
-  Bot,
-  ChevronRight,
   MessageCircle,
   Loader2,
 } from 'lucide-react'
@@ -21,9 +16,10 @@ import { useCentroComando } from '@/hooks/useCentroComando'
 import { ChatMessage } from '@/components/centro-comando/ChatMessage'
 import { ChatInput } from '@/components/centro-comando/ChatInput'
 import { ConfirmationDialog } from '@/components/centro-comando/ConfirmationDialog'
+import { InformationCollectionDialog } from '@/components/centro-comando/InformationCollectionDialog'
 import { ThinkingSteps } from '@/components/centro-comando/ThinkingSteps'
-import { COMANDOS_SUGERIDOS } from '@/types/centro-comando'
 import { formatBrazilDateTime } from '@/lib/timezone'
+
 
 export default function CentroComandoPage() {
   const router = useRouter()
@@ -35,11 +31,15 @@ export default function CentroComandoPage() {
     sessoes,
     carregandoSessoes,
     sessaoId,
+    camposPendentes,
     enviarMensagem,
     confirmarAcao,
     cancelarAcao,
     limparChat,
     trocarSessao,
+    abrirFormularioInput,
+    fecharFormularioInput,
+    responderCamposNecessarios,
     messagesEndRef,
   } = useCentroComando()
 
@@ -90,18 +90,13 @@ export default function CentroComandoPage() {
       {/* Header */}
       <div className="flex-shrink-0 bg-white border-b border-slate-200 px-6 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center">
-              <MessageSquareCode className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold text-[#34495e]">
-                Centro de Comando
-              </h1>
-              <p className="text-xs text-slate-500">
-                Converse com a Zyra para gerenciar seus processos, clientes e agenda
-              </p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-[#34495e]">
+              Centro de Comando
+            </h1>
+            <p className="text-sm text-slate-600 mt-0.5">
+              Converse com a Zyra para gerenciar seus processos
+            </p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -113,11 +108,6 @@ export default function CentroComandoPage() {
             >
               <History className="w-3.5 h-3.5 mr-1.5" />
               Histórico
-              {sessoes.length > 0 && (
-                <Badge variant="secondary" className="ml-1.5 text-[10px]">
-                  {sessoes.length}
-                </Badge>
-              )}
             </Button>
             <Button variant="outline" size="sm" className="text-xs" onClick={limparChat}>
               <Plus className="w-3.5 h-3.5 mr-1.5" />
@@ -186,49 +176,49 @@ export default function CentroComandoPage() {
           </div>
         )}
 
-        {/* Área do chat */}
+        {/* Área do chat - Layout condicional */}
         <div className="flex-1 flex flex-col">
-          {/* Mensagens */}
-          <ScrollArea className="flex-1 p-4">
-            {mensagens.length === 0 ? (
-              <WelcomeScreen onSelectCommand={enviarMensagem} />
-            ) : (
-              <div className="space-y-4 max-w-4xl mx-auto">
-                {mensagens.map((msg) => (
-                  <ChatMessage
-                    key={msg.id}
-                    mensagem={msg}
-                    onNavigate={handleNavigate}
-                  />
-                ))}
-                {/* Passos do thinking em tempo real */}
-                {passos.length > 0 && (
-                  <ThinkingSteps passos={passos} />
-                )}
-                <div ref={messagesEndRef} />
+          {mensagens.length === 0 ? (
+            /* Tela inicial - Input centralizado (estilo ChatGPT/Claude) */
+            <WelcomeScreen
+              onSend={enviarMensagem}
+              disabled={carregando}
+            />
+          ) : (
+            /* Conversa ativa - Input no rodapé */
+            <>
+              {/* Mensagens */}
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="space-y-4 max-w-4xl mx-auto">
+                  {mensagens.map((msg) => (
+                    <ChatMessage
+                      key={msg.id}
+                      mensagem={msg}
+                      onNavigate={handleNavigate}
+                      onOpenInputDialog={abrirFormularioInput}
+                    />
+                  ))}
+                  {/* Passos do thinking em tempo real */}
+                  {passos.length > 0 && (
+                    <ThinkingSteps passos={passos} />
+                  )}
+                  <div ref={messagesEndRef} className="h-1" />
+                </div>
               </div>
-            )}
-          </ScrollArea>
 
-          {/* Input */}
-          <div className="flex-shrink-0 p-4 bg-white border-t border-slate-200">
-            <div className="max-w-4xl mx-auto">
-              <ChatInput
-                onSend={enviarMensagem}
-                disabled={carregando}
-                placeholder="O que você gostaria de fazer? Ex: Mostre meus processos trabalhistas..."
-              />
-            </div>
-          </div>
+              {/* Input no rodapé */}
+              <div className="flex-shrink-0 p-4 bg-white border-t border-slate-200">
+                <div className="max-w-4xl mx-auto">
+                  <ChatInput
+                    onSend={enviarMensagem}
+                    disabled={carregando}
+                    placeholder="Continue a conversa..."
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </div>
-
-        {/* Sidebar direita (opcional - pode ser habilitada depois) */}
-        {/* <div className="w-72 border-l border-slate-200 bg-white p-4">
-          <h3 className="text-sm font-medium text-slate-700 mb-3 flex items-center gap-2">
-            <Star className="w-4 h-4 text-amber-500" />
-            Comandos favoritos
-          </h3>
-        </div> */}
       </div>
 
       {/* Diálogo de confirmação */}
@@ -238,58 +228,64 @@ export default function CentroComandoPage() {
         onCancel={handleCancel}
         loading={carregando}
       />
+
+      {/* Diálogo de coleta de informações */}
+      <InformationCollectionDialog
+        toolResult={camposPendentes}
+        onSubmit={responderCamposNecessarios}
+        onCancel={fecharFormularioInput}
+        loading={carregando}
+      />
     </div>
   )
 }
 
 // ============================================
-// TELA DE BOAS-VINDAS
+// TELA DE BOAS-VINDAS - Estilo ChatGPT/Claude
 // ============================================
-function WelcomeScreen({ onSelectCommand }: { onSelectCommand: (cmd: string) => void }) {
+interface WelcomeScreenProps {
+  onSend: (message: string) => void
+  disabled?: boolean
+}
+
+function WelcomeScreen({ onSend, disabled }: WelcomeScreenProps) {
   return (
-    <div className="h-full flex flex-col items-center justify-center text-center px-4">
-      {/* Logo/Ícone */}
-      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center mb-6 shadow-lg">
-        <Bot className="w-10 h-10 text-white" />
-      </div>
-
-      {/* Título */}
-      <h2 className="text-2xl font-bold text-[#34495e] mb-2">
-        Olá! Sou a Zyra
-      </h2>
-      <p className="text-slate-500 mb-8 max-w-md">
-        Sua assistente jurídica inteligente. Posso ajudar você a consultar processos,
-        criar tarefas, registrar horas e muito mais usando linguagem natural.
-      </p>
-
-      {/* Sugestões */}
+    <div className="h-full flex flex-col items-center justify-center px-4">
+      {/* Container principal centralizado */}
       <div className="w-full max-w-2xl">
-        <p className="text-sm text-slate-400 mb-4 flex items-center justify-center gap-2">
-          <Sparkles className="w-4 h-4" />
-          Experimente um destes comandos:
-        </p>
+        {/* Logo e saudação */}
+        <div className="text-center mb-8">
+          {/* Logo Zyra */}
+          <div className="flex justify-center mb-6">
+            <Image
+              src="/zyra.logo.png"
+              alt="Zyra"
+              width={130}
+              height={130}
+              className="rounded-2xl"
+              priority
+            />
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {COMANDOS_SUGERIDOS.map((sugestao, index) => (
-            <button
-              key={index}
-              onClick={() => onSelectCommand(sugestao.texto)}
-              className="text-left p-4 bg-white border border-slate-200 rounded-lg hover:border-[#89bcbe] hover:shadow-md transition-all group"
-            >
-              <div className="text-sm font-medium text-slate-700 group-hover:text-[#34495e]">
-                {sugestao.texto}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">
-                {sugestao.descricao}
-              </div>
-            </button>
-          ))}
+          {/* Saudação única */}
+          <h2 className="text-2xl font-semibold text-[#34495e]">
+            Como posso ajudar?
+          </h2>
         </div>
-      </div>
 
-      {/* Dica */}
-      <div className="mt-8 text-xs text-slate-400">
-        Dica: Você pode usar <kbd className="px-1.5 py-0.5 bg-slate-100 rounded">Ctrl+K</kbd> para abrir o Centro de Comando de qualquer página
+        {/* Input centralizado - clean */}
+        <div className="w-full">
+          <ChatInput
+            onSend={onSend}
+            disabled={disabled}
+            placeholder="Digite sua mensagem ou escolha uma sugestão..."
+          />
+        </div>
+
+        {/* Dica sutil */}
+        <p className="text-center text-xs text-slate-400 mt-4">
+          Pressione <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-500 font-mono text-[10px]">Enter</kbd> para enviar
+        </p>
       </div>
     </div>
   )

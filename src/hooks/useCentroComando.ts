@@ -10,6 +10,7 @@ import {
   CentroComandoState,
   ConfirmarAcaoParams,
   PassoThinking,
+  ToolResult,
 } from '@/types/centro-comando'
 
 // ============================================
@@ -43,6 +44,9 @@ export function useCentroComando() {
   const [sessoes, setSessoes] = useState<Sessao[]>([])
   const [carregandoSessoes, setCarregandoSessoes] = useState(true)
 
+  // Estado para campos pendentes (modal de coleta de informacoes)
+  const [camposPendentes, setCamposPendentes] = useState<ToolResult | null>(null)
+
   // Ref para scroll automático
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -51,13 +55,16 @@ export function useCentroComando() {
 
   // Scroll para última mensagem
   const scrollParaFim = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    // Usar setTimeout para garantir que o DOM foi atualizado
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, 50)
   }, [])
 
-  // Efeito para scroll automático
+  // Efeito para scroll automático - reage a mensagens E passos
   useEffect(() => {
     scrollParaFim()
-  }, [state.mensagens, scrollParaFim])
+  }, [state.mensagens, state.passos, scrollParaFim])
 
   // ========================================
   // CARREGAR SESSÕES AO MONTAR
@@ -189,13 +196,14 @@ export function useCentroComando() {
     }))
 
     try {
-      // Preparar histórico para contexto
+      // Preparar histórico para contexto - INCLUINDO tool_results para memória
       const historicoParaEnviar = state.mensagens
         .filter(m => !m.loading)
         .slice(-10)
         .map(m => ({
           role: m.role,
           content: m.content,
+          tool_results: m.tool_results, // ✅ Incluir para a IA ter memória
         }))
 
       // Buscar token de autenticação
@@ -609,6 +617,41 @@ export function useCentroComando() {
     }
   }, [escritorioAtivo, supabase])
 
+  // ========================================
+  // ABRIR FORMULARIO DE COLETA DE INFORMACOES
+  // ========================================
+  const abrirFormularioInput = useCallback((result: ToolResult) => {
+    setCamposPendentes(result)
+  }, [])
+
+  // ========================================
+  // FECHAR FORMULARIO DE COLETA
+  // ========================================
+  const fecharFormularioInput = useCallback(() => {
+    setCamposPendentes(null)
+  }, [])
+
+  // ========================================
+  // RESPONDER CAMPOS NECESSARIOS
+  // ========================================
+  const responderCamposNecessarios = useCallback(async (dados: Record<string, any>) => {
+    if (!camposPendentes) return
+
+    // Formatar os dados como mensagem do usuario
+    const textoResposta = Object.entries(dados)
+      .map(([campo, valor]) => {
+        const campoInfo = camposPendentes.campos_necessarios?.find(c => c.campo === campo)
+        return `${campoInfo?.descricao || campo}: ${valor}`
+      })
+      .join('\n')
+
+    // Fechar o dialog
+    setCamposPendentes(null)
+
+    // Enviar como nova mensagem
+    await enviarMensagem(`Aqui estao as informacoes:\n${textoResposta}`)
+  }, [camposPendentes, enviarMensagem])
+
   return {
     // Estado
     mensagens: state.mensagens,
@@ -622,6 +665,9 @@ export function useCentroComando() {
     sessoes,
     carregandoSessoes,
 
+    // Campos pendentes (formulario de coleta)
+    camposPendentes,
+
     // Ações
     enviarMensagem,
     confirmarAcao,
@@ -630,6 +676,11 @@ export function useCentroComando() {
     carregarHistorico,
     novaSessao,
     trocarSessao,
+
+    // Coleta de informacoes
+    abrirFormularioInput,
+    fecharFormularioInput,
+    responderCamposNecessarios,
 
     // Refs
     messagesEndRef,

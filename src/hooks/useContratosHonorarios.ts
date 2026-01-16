@@ -15,6 +15,7 @@ export interface ContratoHonorario {
   cliente_nome?: string
   tipo_servico: 'processo' | 'consultoria' | 'avulso' | 'misto'
   forma_cobranca: FormaCobranca
+  formas_disponiveis?: FormaCobranca[] // TODAS as formas configuradas
   ativo: boolean
   data_inicio: string
   data_fim?: string | null
@@ -152,7 +153,7 @@ export function useContratosHonorarios() {
     setError(null)
 
     try {
-      // Buscar contratos com join em crm_pessoas (clientes)
+      // Buscar contratos com join em crm_pessoas (clientes) e formas
       const { data: contratosData, error: contratosError } = await supabase
         .from('financeiro_contratos_honorarios')
         .select(`
@@ -168,6 +169,11 @@ export function useContratosHonorarios() {
             valor_por_processo,
             dia_cobranca,
             descricao
+          ),
+          financeiro_contratos_formas (
+            forma_cobranca,
+            ativo,
+            ordem
           )
         `)
         .eq('escritorio_id', escritorioAtivo)
@@ -256,6 +262,12 @@ export function useContratosHonorarios() {
             valorPendente = valorTotal
           }
 
+          // Extrair todas as formas de cobrança configuradas
+          const formasDisponiveis: FormaCobranca[] = contrato.financeiro_contratos_formas
+            ?.filter((f: { ativo: boolean }) => f.ativo)
+            ?.sort((a: { ordem: number }, b: { ordem: number }) => (a.ordem || 0) - (b.ordem || 0))
+            ?.map((f: { forma_cobranca: FormaCobranca }) => f.forma_cobranca) || [contrato.forma_cobranca]
+
           return {
             id: contrato.id,
             escritorio_id: contrato.escritorio_id,
@@ -264,6 +276,7 @@ export function useContratosHonorarios() {
             cliente_nome: contrato.crm_pessoas?.nome_completo || 'Cliente não encontrado',
             tipo_servico: contrato.tipo_contrato, // mapeia tipo_contrato do DB para tipo_servico da interface
             forma_cobranca: contrato.forma_cobranca,
+            formas_disponiveis: formasDisponiveis.length > 0 ? formasDisponiveis : [contrato.forma_cobranca],
             ativo: contrato.ativo,
             data_inicio: contrato.data_inicio,
             data_fim: contrato.data_fim,
@@ -438,14 +451,14 @@ export function useContratosHonorarios() {
           if (configError) throw configError
         }
 
-        // Por Cargo - inserir valores negociados
+        // Por Cargo - inserir valores negociados (usa valor_padrao como fallback)
         if (formas.includes('por_cargo') && data.valores_por_cargo) {
           const valoresCargo = data.valores_por_cargo
-            .filter((v) => v.valor_negociado !== null && v.valor_negociado !== undefined)
+            .filter((v) => (v.valor_negociado ?? v.valor_padrao) !== null)
             .map((v) => ({
               contrato_id: novoContrato.id,
               cargo_id: v.cargo_id,
-              valor_hora_negociado: v.valor_negociado,
+              valor_hora_negociado: v.valor_negociado ?? v.valor_padrao,
             }))
 
           if (valoresCargo.length > 0) {
@@ -693,14 +706,14 @@ export function useContratosHonorarios() {
             throw deleteCargoError
           }
 
-          // Inserir novos valores
+          // Inserir novos valores (usa valor_padrao como fallback)
           if (data.valores_por_cargo && data.valores_por_cargo.length > 0) {
             const valoresCargo = data.valores_por_cargo
-              .filter((v) => v.valor_negociado !== null && v.valor_negociado !== undefined)
+              .filter((v) => (v.valor_negociado ?? v.valor_padrao) !== null)
               .map((v) => ({
                 contrato_id: id,
                 cargo_id: v.cargo_id,
-                valor_hora_negociado: v.valor_negociado,
+                valor_hora_negociado: v.valor_negociado ?? v.valor_padrao,
               }))
 
             if (valoresCargo.length > 0) {

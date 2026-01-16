@@ -148,14 +148,14 @@ export default function ContratoDetailModal({
             ato_tipo_id,
             percentual_valor_causa,
             valor_fixo,
-            financeiro_atos_tipos (nome)
+            financeiro_atos_processuais_tipos (nome)
           `)
           .eq('contrato_id', contrato.id)
 
         setAtos(
           (atosData || []).map(a => ({
             ato_tipo_id: a.ato_tipo_id,
-            ato_nome: (a.financeiro_atos_tipos as { nome: string } | null)?.nome || 'Ato',
+            ato_nome: (a.financeiro_atos_processuais_tipos as { nome: string } | null)?.nome || 'Ato',
             percentual_valor_causa: a.percentual_valor_causa,
             valor_fixo: a.valor_fixo,
           }))

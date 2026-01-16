@@ -250,6 +250,10 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave }: Contrato
           etapas_valores: {},
           percentual_exito: undefined,
           valor_minimo_exito: undefined,
+          // Campos para por_cargo e por_ato
+          valores_por_cargo: [],
+          area_juridica: 'civel',
+          atos_configurados: [],
         })
         setSelectedCliente(null)
         setStep(1)
@@ -475,7 +479,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave }: Contrato
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-[#34495e]">
             <FileText className="h-5 w-5 text-[#89bcbe]" />
@@ -724,276 +728,277 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave }: Contrato
         {/* Step 3: Valores */}
         {step === 3 && (
           <div className="space-y-4 py-4">
-            {/* Valor Fixo */}
-            {((formData.formas_selecionadas || []).includes('fixo') || (formData.formas_selecionadas || []).includes('misto')) && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-[#89bcbe]" />
-                    Valor Fixo
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="valor_fixo">Valor Total do Contrato</Label>
-                    <Input
-                      id="valor_fixo"
-                      type="number"
-                      placeholder="0,00"
-                      value={formData.valor_fixo || ''}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          valor_fixo: e.target.value ? parseFloat(e.target.value) : undefined,
-                        }))
-                      }
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Por Hora */}
-            {((formData.formas_selecionadas || []).includes('por_hora') || (formData.formas_selecionadas || []).includes('misto')) && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-[#89bcbe]" />
-                    Valor por Hora
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="valor_hora">Valor/Hora (R$)</Label>
+            {/* Grid para cards pequenos lado a lado */}
+            {(((formData.formas_selecionadas || []).includes('fixo') || (formData.formas_selecionadas || []).includes('misto')) ||
+              ((formData.formas_selecionadas || []).includes('por_hora') || (formData.formas_selecionadas || []).includes('misto'))) && (
+              <div className="grid grid-cols-2 gap-4">
+                {/* Valor Fixo */}
+                {((formData.formas_selecionadas || []).includes('fixo') || (formData.formas_selecionadas || []).includes('misto')) && (
+                  <Card>
+                    <CardHeader className="pb-2 pt-3">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <DollarSign className="h-4 w-4 text-[#89bcbe]" />
+                        Valor Fixo
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pb-3">
+                      <Label htmlFor="valor_fixo" className="text-xs">Valor Total (R$)</Label>
                       <Input
-                        id="valor_hora"
+                        id="valor_fixo"
                         type="number"
                         placeholder="0,00"
-                        value={formData.valor_hora || ''}
+                        value={formData.valor_fixo || ''}
                         onChange={(e) =>
                           setFormData((prev) => ({
                             ...prev,
-                            valor_hora: e.target.value ? parseFloat(e.target.value) : undefined,
+                            valor_fixo: e.target.value ? parseFloat(e.target.value) : undefined,
                           }))
                         }
+                        className="mt-1"
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="horas_estimadas">Horas Estimadas</Label>
-                      <Input
-                        id="horas_estimadas"
-                        type="number"
-                        placeholder="0"
-                        value={formData.horas_estimadas || ''}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            horas_estimadas: e.target.value
-                              ? parseFloat(e.target.value)
-                              : undefined,
-                          }))
-                        }
-                      />
-                    </div>
-                  </div>
-                  {formData.valor_hora && formData.horas_estimadas && (
-                    <p className="text-sm text-slate-600">
-                      Valor estimado:{' '}
-                      <span className="font-semibold text-[#34495e]">
-                        {formatCurrency(formData.valor_hora * formData.horas_estimadas)}
-                      </span>
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Por Hora */}
+                {((formData.formas_selecionadas || []).includes('por_hora') || (formData.formas_selecionadas || []).includes('misto')) && (
+                  <Card>
+                    <CardHeader className="pb-2 pt-3">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-[#89bcbe]" />
+                        Por Hora
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pb-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label htmlFor="valor_hora" className="text-xs">Valor/h</Label>
+                          <Input
+                            id="valor_hora"
+                            type="number"
+                            placeholder="0,00"
+                            value={formData.valor_hora || ''}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                valor_hora: e.target.value ? parseFloat(e.target.value) : undefined,
+                              }))
+                            }
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="horas_estimadas" className="text-xs">Horas Est.</Label>
+                          <Input
+                            id="horas_estimadas"
+                            type="number"
+                            placeholder="0"
+                            value={formData.horas_estimadas || ''}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                horas_estimadas: e.target.value ? parseFloat(e.target.value) : undefined,
+                              }))
+                            }
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                      {formData.valor_hora && formData.horas_estimadas && (
+                        <p className="text-xs text-slate-600 mt-2">
+                          Est.: <span className="font-semibold text-[#34495e]">{formatCurrency(formData.valor_hora * formData.horas_estimadas)}</span>
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             )}
 
-            {/* Por Etapa */}
+            {/* Grid para Pasta + Êxito */}
+            {((formData.formas_selecionadas || []).includes('por_pasta') || (formData.formas_selecionadas || []).includes('misto')) && (
+              <div className="grid grid-cols-2 gap-4">
+                {/* Por Pasta Mensal */}
+                {(formData.formas_selecionadas || []).includes('por_pasta') && (
+                  <Card>
+                    <CardHeader className="pb-2 pt-3">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Folders className="h-4 w-4 text-[#89bcbe]" />
+                        Por Pasta
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pb-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label htmlFor="valor_por_processo" className="text-xs">R$/Processo</Label>
+                          <Input
+                            id="valor_por_processo"
+                            type="number"
+                            placeholder="0,00"
+                            value={formData.valor_por_processo || ''}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                valor_por_processo: e.target.value ? parseFloat(e.target.value) : undefined,
+                              }))
+                            }
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="dia_cobranca" className="text-xs">Dia Cobrança</Label>
+                          <Select
+                            value={formData.dia_cobranca?.toString() || ''}
+                            onValueChange={(value) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                dia_cobranca: value ? parseInt(value) : undefined,
+                              }))
+                            }
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="Dia" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 28 }, (_, i) => i + 1).map((dia) => (
+                                <SelectItem key={dia} value={dia.toString()}>
+                                  Dia {dia}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Êxito */}
+                {(formData.formas_selecionadas || []).includes('misto') && (
+                  <Card>
+                    <CardHeader className="pb-2 pt-3">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Percent className="h-4 w-4 text-[#89bcbe]" />
+                        Êxito
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pb-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label htmlFor="percentual_exito" className="text-xs">Percentual</Label>
+                          <Input
+                            id="percentual_exito"
+                            type="number"
+                            placeholder="0%"
+                            max="100"
+                            value={formData.percentual_exito || ''}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                percentual_exito: e.target.value ? parseFloat(e.target.value) : undefined,
+                              }))
+                            }
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="valor_minimo_exito" className="text-xs">Mínimo (R$)</Label>
+                          <Input
+                            id="valor_minimo_exito"
+                            type="number"
+                            placeholder="0,00"
+                            value={formData.valor_minimo_exito || ''}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                valor_minimo_exito: e.target.value ? parseFloat(e.target.value) : undefined,
+                              }))
+                            }
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            {/* Por Etapa - Grid 2x2 */}
             {((formData.formas_selecionadas || []).includes('por_etapa') || (formData.formas_selecionadas || []).includes('misto')) && (
               <Card>
-                <CardHeader className="pb-2">
+                <CardHeader className="pb-2 pt-3">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-[#89bcbe]" />
                     Valores por Etapa
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {ETAPAS_PADRAO.map((etapa) => (
-                    <div key={etapa.key} className="flex items-center gap-3">
-                      <Label className="w-32 flex-shrink-0">{etapa.label}</Label>
-                      <Input
-                        type="number"
-                        placeholder="0,00"
-                        value={formData.etapas_valores?.[etapa.key] || ''}
-                        onChange={(e) => {
-                          const newValue = e.target.value ? parseFloat(e.target.value) : 0
-                          setFormData((prev) => ({
-                            ...prev,
-                            etapas_valores: {
-                              ...prev.etapas_valores,
-                              [etapa.key]: newValue,
-                            },
-                          }))
-                        }}
-                      />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Êxito */}
-            {(formData.formas_selecionadas || []).includes('misto') && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Percent className="h-4 w-4 text-[#89bcbe]" />
-                    Honorário de Êxito
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="percentual_exito">Percentual (%)</Label>
-                      <Input
-                        id="percentual_exito"
-                        type="number"
-                        placeholder="0"
-                        max="100"
-                        value={formData.percentual_exito || ''}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            percentual_exito: e.target.value
-                              ? parseFloat(e.target.value)
-                              : undefined,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="valor_minimo_exito">Valor Mínimo (R$)</Label>
-                      <Input
-                        id="valor_minimo_exito"
-                        type="number"
-                        placeholder="0,00"
-                        value={formData.valor_minimo_exito || ''}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            valor_minimo_exito: e.target.value
-                              ? parseFloat(e.target.value)
-                              : undefined,
-                          }))
-                        }
-                      />
-                    </div>
+                <CardContent className="pb-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    {ETAPAS_PADRAO.map((etapa) => (
+                      <div key={etapa.key} className="flex items-center gap-2">
+                        <Label className="w-24 flex-shrink-0 text-xs">{etapa.label}</Label>
+                        <Input
+                          type="number"
+                          placeholder="0,00"
+                          value={formData.etapas_valores?.[etapa.key] || ''}
+                          onChange={(e) => {
+                            const newValue = e.target.value ? parseFloat(e.target.value) : 0
+                            setFormData((prev) => ({
+                              ...prev,
+                              etapas_valores: {
+                                ...prev.etapas_valores,
+                                [etapa.key]: newValue,
+                              },
+                            }))
+                          }}
+                          className="h-8"
+                        />
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Por Pasta Mensal */}
-            {(formData.formas_selecionadas || []).includes('por_pasta') && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Folders className="h-4 w-4 text-[#89bcbe]" />
-                    Cobrança por Pasta Mensal
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-xs text-slate-500 mb-2">
-                    Valor mensal = Valor por processo × Qtde de processos ativos
-                  </p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="valor_por_processo">Valor por Processo (R$)</Label>
-                      <Input
-                        id="valor_por_processo"
-                        type="number"
-                        placeholder="0,00"
-                        value={formData.valor_por_processo || ''}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            valor_por_processo: e.target.value ? parseFloat(e.target.value) : undefined,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="dia_cobranca">Dia da Cobrança Mensal</Label>
-                      <Select
-                        value={formData.dia_cobranca?.toString() || ''}
-                        onValueChange={(value) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            dia_cobranca: value ? parseInt(value) : undefined,
-                          }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o dia" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 28 }, (_, i) => i + 1).map((dia) => (
-                            <SelectItem key={dia} value={dia.toString()}>
-                              Dia {dia}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Por Cargo/Timesheet */}
+            {/* Por Cargo/Timesheet - Grid 2 colunas */}
             {(formData.formas_selecionadas || []).includes('por_cargo') && (
               <Card>
-                <CardHeader className="pb-2">
+                <CardHeader className="pb-2 pt-3">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Users className="h-4 w-4 text-[#89bcbe]" />
                     Valores por Cargo (Timesheet)
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-xs text-slate-500 mb-2">
-                    Defina valores negociados ou use os padrões do escritório
-                  </p>
+                <CardContent className="pb-3">
                   {loadingCargos ? (
-                    <div className="flex items-center justify-center py-4">
+                    <div className="flex items-center justify-center py-3">
                       <Loader2 className="h-5 w-5 animate-spin text-[#89bcbe]" />
                     </div>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
                       {formData.valores_por_cargo?.map((valorCargo, index) => (
-                        <div key={valorCargo.cargo_id} className="flex items-center gap-3 p-2 rounded bg-slate-50">
-                          <span className="text-sm font-medium text-[#34495e] w-28">
-                            {valorCargo.cargo_nome}
-                          </span>
-                          <span className="text-xs text-slate-500">
-                            Padrão: {valorCargo.valor_padrao ? formatCurrency(valorCargo.valor_padrao) : '—'}
-                          </span>
-                          <div className="flex-1">
-                            <Input
-                              type="number"
-                              placeholder="Valor negociado (opcional)"
-                              value={valorCargo.valor_negociado || ''}
-                              onChange={(e) => {
-                                const newValores = [...(formData.valores_por_cargo || [])]
-                                newValores[index] = {
-                                  ...newValores[index],
-                                  valor_negociado: e.target.value ? parseFloat(e.target.value) : null,
-                                }
-                                setFormData((prev) => ({ ...prev, valores_por_cargo: newValores }))
-                              }}
-                              className="h-8"
-                            />
+                        <div key={valorCargo.cargo_id} className="flex items-center gap-2 p-2 rounded bg-slate-50">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-[#34495e] truncate">{valorCargo.cargo_nome}</p>
+                            <p className="text-[10px] text-slate-400">
+                              Padrão: {valorCargo.valor_padrao ? formatCurrency(valorCargo.valor_padrao) : '—'}
+                            </p>
                           </div>
+                          <Input
+                            type="number"
+                            placeholder="R$/h"
+                            value={valorCargo.valor_negociado ?? valorCargo.valor_padrao ?? ''}
+                            onChange={(e) => {
+                              const newValores = [...(formData.valores_por_cargo || [])]
+                              newValores[index] = {
+                                ...newValores[index],
+                                valor_negociado: e.target.value ? parseFloat(e.target.value) : null,
+                              }
+                              setFormData((prev) => ({ ...prev, valores_por_cargo: newValores }))
+                            }}
+                            className="h-7 w-24"
+                          />
                         </div>
                       ))}
                     </div>
@@ -1002,18 +1007,15 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave }: Contrato
               </Card>
             )}
 
-            {/* Por Ato Processual */}
+            {/* Por Ato Processual - Otimizado */}
             {(formData.formas_selecionadas || []).includes('por_ato') && (
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Gavel className="h-4 w-4 text-[#89bcbe]" />
-                    Cobrança por Ato Processual
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Área Jurídica</Label>
+                <CardHeader className="pb-2 pt-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Gavel className="h-4 w-4 text-[#89bcbe]" />
+                      Cobrança por Ato Processual
+                    </CardTitle>
                     <Select
                       value={formData.area_juridica || 'civel'}
                       onValueChange={(value) =>
@@ -1023,8 +1025,8 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave }: Contrato
                         }))
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a área" />
+                      <SelectTrigger className="w-32 h-7 text-xs">
+                        <SelectValue placeholder="Área" />
                       </SelectTrigger>
                       <SelectContent>
                         {AREAS_JURIDICAS.map((area) => (
@@ -1035,89 +1037,73 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave }: Contrato
                       </SelectContent>
                     </Select>
                   </div>
-
-                  <Separator />
-
-                  <div>
-                    <Label className="mb-2 block">Valores por Ato (% do valor da causa)</Label>
-                    <p className="text-xs text-slate-500 mb-3">
-                      Clique no X para remover atos que não serão usados neste contrato
-                    </p>
-                    {loadingAtos ? (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="h-5 w-5 animate-spin text-[#89bcbe]" />
-                      </div>
-                    ) : formData.atos_configurados?.filter(a => a.ativo !== false).length === 0 ? (
-                      <div className="text-center py-4 text-slate-500">
-                        <p className="text-sm">Nenhum ato processual cadastrado para esta área</p>
-                        <p className="text-xs mt-1">Configure os atos em Gestão do Escritório</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {formData.atos_configurados?.filter(a => a.ativo !== false).map((ato, index) => {
-                          const realIndex = formData.atos_configurados?.findIndex(a => a.ato_tipo_id === ato.ato_tipo_id) ?? index
-                          return (
-                            <div key={ato.ato_tipo_id} className="flex items-center gap-3 p-2 rounded bg-slate-50">
-                              <span className="text-sm font-medium text-[#34495e] w-36 truncate" title={ato.ato_nome}>
-                                {ato.ato_nome}
-                              </span>
-                              <div className="flex items-center gap-2 flex-1">
-                                <div className="flex-1">
-                                  <Input
-                                    type="number"
-                                    placeholder="% valor causa"
-                                    value={ato.percentual_valor_causa || ''}
-                                    onChange={(e) => {
-                                      const newAtos = [...(formData.atos_configurados || [])]
-                                      newAtos[realIndex] = {
-                                        ...newAtos[realIndex],
-                                        percentual_valor_causa: e.target.value ? parseFloat(e.target.value) : undefined,
-                                      }
-                                      setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
-                                    }}
-                                    className="h-8"
-                                  />
-                                </div>
-                                <span className="text-xs text-slate-400">%</span>
-                                <span className="text-xs text-slate-400 mx-1">ou</span>
-                                <div className="flex-1">
-                                  <Input
-                                    type="number"
-                                    placeholder="Valor fixo"
-                                    value={ato.valor_fixo || ''}
-                                    onChange={(e) => {
-                                      const newAtos = [...(formData.atos_configurados || [])]
-                                      newAtos[realIndex] = {
-                                        ...newAtos[realIndex],
-                                        valor_fixo: e.target.value ? parseFloat(e.target.value) : undefined,
-                                      }
-                                      setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
-                                    }}
-                                    className="h-8"
-                                  />
-                                </div>
-                                <span className="text-xs text-slate-400">R$</span>
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 text-slate-400 hover:text-red-500 hover:bg-red-50"
-                                onClick={() => {
-                                  const newAtos = [...(formData.atos_configurados || [])]
-                                  newAtos[realIndex] = { ...newAtos[realIndex], ativo: false }
-                                  setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
-                                }}
-                                title="Remover este ato"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
+                </CardHeader>
+                <CardContent className="pb-3">
+                  {loadingAtos ? (
+                    <div className="flex items-center justify-center py-3">
+                      <Loader2 className="h-5 w-5 animate-spin text-[#89bcbe]" />
+                    </div>
+                  ) : formData.atos_configurados?.filter(a => a.ativo !== false).length === 0 ? (
+                    <div className="text-center py-3 text-slate-500">
+                      <p className="text-xs">Nenhum ato cadastrado para esta área</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      {formData.atos_configurados?.filter(a => a.ativo !== false).map((ato, index) => {
+                        const realIndex = formData.atos_configurados?.findIndex(a => a.ato_tipo_id === ato.ato_tipo_id) ?? index
+                        return (
+                          <div key={ato.ato_tipo_id} className="flex items-center gap-1.5 p-2 rounded bg-slate-50">
+                            <span className="text-xs font-medium text-[#34495e] w-24 truncate" title={ato.ato_nome}>
+                              {ato.ato_nome}
+                            </span>
+                            <Input
+                              type="number"
+                              placeholder="%"
+                              value={ato.percentual_valor_causa || ''}
+                              onChange={(e) => {
+                                const newAtos = [...(formData.atos_configurados || [])]
+                                newAtos[realIndex] = {
+                                  ...newAtos[realIndex],
+                                  percentual_valor_causa: e.target.value ? parseFloat(e.target.value) : undefined,
+                                }
+                                setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
+                              }}
+                              className="h-7 w-14"
+                            />
+                            <span className="text-[10px] text-slate-400">%</span>
+                            <span className="text-[10px] text-slate-300">|</span>
+                            <Input
+                              type="number"
+                              placeholder="R$"
+                              value={ato.valor_fixo || ''}
+                              onChange={(e) => {
+                                const newAtos = [...(formData.atos_configurados || [])]
+                                newAtos[realIndex] = {
+                                  ...newAtos[realIndex],
+                                  valor_fixo: e.target.value ? parseFloat(e.target.value) : undefined,
+                                }
+                                setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
+                              }}
+                              className="h-7 w-16"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-slate-300 hover:text-red-500 hover:bg-red-50"
+                              onClick={() => {
+                                const newAtos = [...(formData.atos_configurados || [])]
+                                newAtos[realIndex] = { ...newAtos[realIndex], ativo: false }
+                                setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -1261,7 +1247,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave }: Contrato
                           .filter((a) => a.percentual_valor_causa || a.valor_fixo)
                           .map((a) => (
                             <div key={a.ato_tipo_id} className="flex justify-between text-sm">
-                              <span className="text-slate-600">{a.nome}:</span>
+                              <span className="text-slate-600">{a.ato_nome}:</span>
                               <span className="font-medium">
                                 {a.percentual_valor_causa ? `${a.percentual_valor_causa}%` : ''}
                                 {a.percentual_valor_causa && a.valor_fixo ? ' ou ' : ''}

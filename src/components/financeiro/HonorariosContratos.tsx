@@ -31,21 +31,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Progress } from '@/components/ui/progress'
 import {
   FileText,
   Plus,
   Search,
   Filter,
   Calendar,
-  DollarSign,
   Clock,
   CheckCircle,
   AlertCircle,
   XCircle,
   Edit,
   Eye,
-  Download,
   Send,
   TrendingUp,
   AlertTriangle,
@@ -128,14 +125,6 @@ const getStatusBadge = (ativo: boolean, inadimplente?: boolean) => {
     class: 'bg-gray-100 text-gray-700',
     icon: <XCircle className="w-3 h-3" />,
   }
-}
-
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 0,
-  }).format(value)
 }
 
 export default function HonorariosContratos({ escritorioId }: HonorariosContratosProps) {
@@ -383,7 +372,6 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
           {viewMode === 'cards' ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredContratos.map((contrato) => {
-                const tipoBadge = getTipoBadge(contrato.forma_cobranca)
                 const statusBadge = getStatusBadge(contrato.ativo, contrato.inadimplente)
 
                 return (
@@ -406,10 +394,22 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                           </h4>
                         </div>
                         <div className="flex flex-col gap-1 items-end">
-                          <Badge className={cn('text-[10px]', tipoBadge.class)}>
-                            {tipoBadge.icon}
-                            <span className="ml-1">{tipoBadge.label}</span>
-                          </Badge>
+                          {/* Múltiplas formas de cobrança */}
+                          <div className="flex flex-wrap gap-1 justify-end max-w-[180px]">
+                            {(contrato.formas_disponiveis || [contrato.forma_cobranca]).slice(0, 3).map((forma) => {
+                              const badge = getTipoBadge(forma)
+                              return (
+                                <Badge key={forma} className={cn('text-[10px] px-1.5 py-0', badge.class)}>
+                                  {badge.label}
+                                </Badge>
+                              )
+                            })}
+                            {(contrato.formas_disponiveis || []).length > 3 && (
+                              <Badge className="text-[10px] px-1.5 py-0 bg-slate-100 text-slate-600">
+                                +{(contrato.formas_disponiveis || []).length - 3}
+                              </Badge>
+                            )}
+                          </div>
                           <Badge className={cn('text-[10px]', statusBadge.class)}>
                             {statusBadge.icon}
                             <span className="ml-1">{statusBadge.label}</span>
@@ -417,43 +417,19 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                         </div>
                       </div>
 
-                      {/* Valores */}
-                      <div className="space-y-2 mb-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-slate-600">Valor Total</span>
-                          <span className="text-sm font-semibold text-[#34495e]">
-                            {formatCurrency(contrato.valor_total || 0)}
+                      {/* Info da Vigência */}
+                      {contrato.data_inicio && (
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mb-3">
+                          <Calendar className="w-3 h-3" />
+                          <span>
+                            Vigência: {formatBrazilDate(parseDateInBrazil(contrato.data_inicio))}
+                            {contrato.data_fim && ` até ${formatBrazilDate(parseDateInBrazil(contrato.data_fim))}`}
                           </span>
-                        </div>
-
-                        {contrato.total_parcelas && contrato.total_parcelas > 0 && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs text-slate-600">Parcelas</span>
-                            <span className="text-xs font-medium text-[#34495e]">
-                              {contrato.parcelas_pagas}/{contrato.total_parcelas}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Progress */}
-                      {(contrato.valor_total || 0) > 0 && (
-                        <div className="mb-3">
-                          <div className="flex justify-between text-xs mb-1">
-                            <span className="text-slate-600">Recebido</span>
-                            <span className="font-medium text-green-600">
-                              {formatCurrency(contrato.valor_recebido || 0)}
-                            </span>
-                          </div>
-                          <Progress
-                            value={((contrato.valor_recebido || 0) / (contrato.valor_total || 1)) * 100}
-                            className="h-2"
-                          />
                         </div>
                       )}
 
-                      {/* Próxima Parcela ou Alerta */}
-                      {contrato.inadimplente ? (
+                      {/* Alerta de Inadimplência (sem valores) */}
+                      {contrato.inadimplente && (
                         <div className="bg-red-100 border border-red-200 rounded-md p-2">
                           <div className="flex items-center gap-2">
                             <AlertTriangle className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />
@@ -465,21 +441,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                             </div>
                           </div>
                         </div>
-                      ) : contrato.proxima_parcela ? (
-                        <div className="bg-blue-50 border border-blue-200 rounded-md p-2">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-[10px] text-blue-600 font-medium">Próximo Vencimento</p>
-                              <p className="text-xs font-semibold text-blue-700">
-                                {formatBrazilDate(parseDateInBrazil(contrato.proxima_parcela.vencimento))}
-                              </p>
-                            </div>
-                            <p className="text-xs font-bold text-blue-700">
-                              {formatCurrency(contrato.proxima_parcela.valor)}
-                            </p>
-                          </div>
-                        </div>
-                      ) : null}
+                      )}
 
                       {/* Actions */}
                       <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
@@ -556,17 +518,14 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                   <TableRow>
                     <TableHead className="text-xs">Contrato</TableHead>
                     <TableHead className="text-xs">Cliente</TableHead>
-                    <TableHead className="text-xs">Tipo</TableHead>
-                    <TableHead className="text-xs">Valor Total</TableHead>
-                    <TableHead className="text-xs">Recebido</TableHead>
+                    <TableHead className="text-xs">Tipo de Cobrança</TableHead>
+                    <TableHead className="text-xs">Vigência</TableHead>
                     <TableHead className="text-xs">Status</TableHead>
-                    <TableHead className="text-xs">Próx. Vencimento</TableHead>
                     <TableHead className="text-xs text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredContratos.map((contrato) => {
-                    const tipoBadge = getTipoBadge(contrato.forma_cobranca)
                     const statusBadge = getStatusBadge(contrato.ativo, contrato.inadimplente)
 
                     return (
@@ -586,51 +545,41 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                           {contrato.cliente_nome}
                         </TableCell>
                         <TableCell>
-                          <Badge className={cn('text-[10px]', tipoBadge.class)}>
-                            {tipoBadge.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs font-semibold text-[#34495e]">
-                          {formatCurrency(contrato.valor_total || 0)}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <div className="flex items-center gap-2">
-                            <Progress
-                              value={
-                                (contrato.valor_total || 0) > 0
-                                  ? ((contrato.valor_recebido || 0) / (contrato.valor_total || 1)) * 100
-                                  : 0
-                              }
-                              className="h-1.5 w-16"
-                            />
-                            <span className="text-green-600 font-medium">
-                              {formatCurrency(contrato.valor_recebido || 0)}
-                            </span>
+                          <div className="flex flex-wrap gap-1 max-w-[200px]">
+                            {(contrato.formas_disponiveis || [contrato.forma_cobranca]).slice(0, 3).map((forma) => {
+                              const badge = getTipoBadge(forma)
+                              return (
+                                <Badge key={forma} className={cn('text-[10px] px-1.5 py-0', badge.class)}>
+                                  {badge.label}
+                                </Badge>
+                              )
+                            })}
+                            {(contrato.formas_disponiveis || []).length > 3 && (
+                              <Badge className="text-[10px] px-1.5 py-0 bg-slate-100 text-slate-600">
+                                +{(contrato.formas_disponiveis || []).length - 3}
+                              </Badge>
+                            )}
                           </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-600">
+                          {contrato.data_inicio ? (
+                            <div>
+                              <p>{formatBrazilDate(parseDateInBrazil(contrato.data_inicio))}</p>
+                              {contrato.data_fim && (
+                                <p className="text-[10px] text-slate-400">
+                                  até {formatBrazilDate(parseDateInBrazil(contrato.data_fim))}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400">Indeterminado</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge className={cn('text-[10px]', statusBadge.class)}>
-                            {statusBadge.label}
+                            {statusBadge.icon}
+                            <span className="ml-1">{statusBadge.label}</span>
                           </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {contrato.inadimplente ? (
-                            <div className="flex items-center gap-1 text-red-600">
-                              <AlertTriangle className="w-3 h-3" />
-                              <span className="font-medium">{contrato.dias_atraso}d atraso</span>
-                            </div>
-                          ) : contrato.proxima_parcela ? (
-                            <div>
-                              <p className="font-medium text-[#34495e]">
-                                {formatBrazilDate(parseDateInBrazil(contrato.proxima_parcela.vencimento))}
-                              </p>
-                              <p className="text-[10px] text-slate-500">
-                                {formatCurrency(contrato.proxima_parcela.valor)}
-                              </p>
-                            </div>
-                          ) : (
-                            <span className="text-slate-400">-</span>
-                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">

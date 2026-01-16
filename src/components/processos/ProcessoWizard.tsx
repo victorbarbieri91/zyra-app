@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { X, ChevronLeft, ChevronRight, Check, Search, Loader2, FileText, DollarSign, Clock, AlertTriangle } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, Check, Search, Loader2, FileText, DollarSign, Clock, AlertTriangle, Plus, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { ProcessoDataJud } from '@/types/datajud'
@@ -27,13 +27,21 @@ import ModalidadeSelector from '@/components/financeiro/ModalidadeSelector'
 
 interface ProcessoWizardProps {
   open: boolean
-  onOpenChange: (open: boolean) => void
+  onOpenChange?: (open: boolean) => void
+  onClose?: () => void
   onSuccess?: (processoId: string) => void
+  onProcessoCriado?: () => void
+}
+
+interface OutroNumero {
+  tipo: string  // Ex: "Processo Administrativo", "Número Interno", "Protocolo"
+  numero: string
 }
 
 interface FormData {
   // Step 1: Dados Básicos
-  numero_cnj: string
+  numero_cnj: string  // Opcional para processos administrativos
+  outros_numeros: OutroNumero[]  // Para números não-CNJ
   tipo: string
   area: string
   fase: string
@@ -54,7 +62,6 @@ interface FormData {
   tribunal: string
   comarca: string
   vara: string
-  juiz: string
 
   // Step 4: Gestão
   responsavel_id: string
@@ -93,6 +100,7 @@ interface ContratoOption {
 
 const initialFormData: FormData = {
   numero_cnj: '',
+  outros_numeros: [],
   tipo: 'judicial',
   area: '',
   fase: 'conhecimento',
@@ -109,7 +117,6 @@ const initialFormData: FormData = {
   tribunal: '',
   comarca: '',
   vara: '',
-  juiz: '',
   responsavel_id: '',
   colaboradores_ids: [],
   tags: [],
@@ -130,7 +137,13 @@ const FORMA_COBRANCA_LABELS: Record<string, string> = {
   por_cargo: 'Por Cargo/Timesheet',
 }
 
-export default function ProcessoWizard({ open, onOpenChange, onSuccess }: ProcessoWizardProps) {
+export default function ProcessoWizard({
+  open,
+  onOpenChange,
+  onClose,
+  onSuccess,
+  onProcessoCriado
+}: ProcessoWizardProps) {
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState<FormData>(initialFormData)
   const [loading, setLoading] = useState(false)
@@ -139,6 +152,12 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
   const [contratos, setContratos] = useState<ContratoOption[]>([])
   const [loadingContratos, setLoadingContratos] = useState(false)
   const supabase = createClient()
+
+  // Handler unificado para fechar
+  const handleClose = () => {
+    onClose?.()
+    onOpenChange?.(false)
+  }
 
   // Carregar contratos quando cliente é selecionado
   const loadContratosCliente = async (clienteId: string) => {
@@ -349,6 +368,8 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
     { number: 5, title: 'Valores' },
   ]
 
+  const totalSteps = 5
+
   const updateField = (field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
@@ -367,16 +388,24 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
-        if (!formData.numero_cnj.trim()) {
-          toast.error('Número CNJ é obrigatório')
+        // Precisa ter pelo menos um número: CNJ ou outro número
+        const temCNJ = formData.numero_cnj.trim().length > 0
+        const temOutrosNumeros = formData.outros_numeros.some(n => n.numero.trim().length > 0)
+
+        if (!temCNJ && !temOutrosNumeros) {
+          toast.error('Informe o número CNJ ou adicione outro número identificador')
           return false
         }
-        // Validar formato CNJ: NNNNNNN-DD.AAAA.J.TT.OOOO
-        const cnjRegex = /^\d{7}-\d{2}\.\d{4}\.\d{1}\.\d{2}\.\d{4}$/
-        if (!cnjRegex.test(formData.numero_cnj)) {
-          toast.error('Formato do número CNJ inválido. Use: 1234567-12.2024.8.26.0100')
-          return false
+
+        // Se tiver CNJ, validar formato
+        if (temCNJ) {
+          const cnjRegex = /^\d{7}-\d{2}\.\d{4}\.\d{1}\.\d{2}\.\d{4}$/
+          if (!cnjRegex.test(formData.numero_cnj)) {
+            toast.error('Formato do número CNJ inválido. Use: 1234567-12.2024.8.26.0100')
+            return false
+          }
         }
+
         if (!formData.area) {
           toast.error('Área jurídica é obrigatória')
           return false
@@ -415,7 +444,7 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 5))
+      setCurrentStep(prev => Math.min(prev + 1, totalSteps))
     }
   }
 
@@ -429,9 +458,12 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
     try {
       setLoading(true)
 
-      // Converter valores para números
+      // Converter valores para números e filtrar outros_numeros vazios
+      const outrosNumerosValidos = formData.outros_numeros.filter(n => n.numero.trim().length > 0)
+
       const processData = {
-        numero_cnj: formData.numero_cnj,
+        numero_cnj: formData.numero_cnj.trim() || null,
+        outros_numeros: outrosNumerosValidos.length > 0 ? outrosNumerosValidos : [],
         tipo: formData.tipo,
         area: formData.area,
         fase: formData.fase,
@@ -448,7 +480,6 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
         tribunal: formData.tribunal,
         comarca: formData.comarca || null,
         vara: formData.vara || null,
-        juiz: formData.juiz || null,
         responsavel_id: formData.responsavel_id,
         colaboradores_ids: formData.colaboradores_ids,
         tags: formData.tags,
@@ -459,18 +490,18 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
         provisao_sugerida: formData.provisao_sugerida ? parseFloat(formData.provisao_sugerida) : null,
       }
 
-      // Aqui chamaria a function create_processo() do Supabase
-      // Por enquanto simulando sucesso
+      // TODO: Aqui chamaria a function create_processo() do Supabase
       console.log('Dados do processo:', processData)
 
       toast.success('Processo criado com sucesso!')
       setFormData(initialFormData)
       setCurrentStep(1)
-      onOpenChange(false)
+      handleClose()
 
       if (onSuccess) {
         onSuccess('mock-id-123')
       }
+      onProcessoCriado?.()
     } catch (error) {
       console.error('Erro ao criar processo:', error)
       toast.error('Erro ao criar processo. Tente novamente.')
@@ -480,7 +511,7 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-[#34495e]">
@@ -533,8 +564,12 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
           {currentStep === 1 && (
             <>
               <div className="grid grid-cols-2 gap-4">
+                {/* Número CNJ - opcional para processos administrativos */}
                 <div className="col-span-2">
-                  <Label htmlFor="numero_cnj">Número CNJ *</Label>
+                  <Label htmlFor="numero_cnj">
+                    Número CNJ
+                    <span className="text-slate-400 font-normal ml-1">(opcional para processos administrativos)</span>
+                  </Label>
                   <div className="flex gap-2">
                     <Input
                       id="numero_cnj"
@@ -561,6 +596,81 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
                   <p className="text-xs text-slate-500 mt-1">
                     Formato: NNNNNNN-DD.AAAA.J.TT.OOOO - Clique em "Buscar DataJud" para preencher automaticamente
                   </p>
+                </div>
+
+                {/* Outros Números - para processos sem CNJ */}
+                <div className="col-span-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <Label>
+                      Outros Números
+                      <span className="text-slate-400 font-normal ml-1">(para processos administrativos, internos, etc.)</span>
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateField('outros_numeros', [...formData.outros_numeros, { tipo: '', numero: '' }])}
+                      className="gap-1.5 h-7"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Adicionar
+                    </Button>
+                  </div>
+
+                  {formData.outros_numeros.length === 0 ? (
+                    <p className="text-xs text-slate-500 py-2">
+                      Nenhum número adicional. Clique em "Adicionar" para incluir números de processos administrativos, protocolos, etc.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {formData.outros_numeros.map((item, index) => (
+                        <div key={index} className="flex gap-2 items-start">
+                          <Select
+                            value={item.tipo}
+                            onValueChange={(v) => {
+                              const updated = [...formData.outros_numeros]
+                              updated[index] = { ...updated[index], tipo: v }
+                              updateField('outros_numeros', updated)
+                            }}
+                          >
+                            <SelectTrigger className="w-48">
+                              <SelectValue placeholder="Tipo..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="processo_administrativo">Processo Administrativo</SelectItem>
+                              <SelectItem value="protocolo">Protocolo</SelectItem>
+                              <SelectItem value="numero_interno">Número Interno</SelectItem>
+                              <SelectItem value="inquerito">Inquérito</SelectItem>
+                              <SelectItem value="auto_infracao">Auto de Infração</SelectItem>
+                              <SelectItem value="outro">Outro</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            placeholder="Número..."
+                            value={item.numero}
+                            onChange={(e) => {
+                              const updated = [...formData.outros_numeros]
+                              updated[index] = { ...updated[index], numero: e.target.value }
+                              updateField('outros_numeros', updated)
+                            }}
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              const updated = formData.outros_numeros.filter((_, i) => i !== index)
+                              updateField('outros_numeros', updated)
+                            }}
+                            className="text-slate-400 hover:text-red-500"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -900,16 +1010,6 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
                     onChange={(e) => updateField('vara', e.target.value)}
                   />
                 </div>
-
-                <div className="col-span-2">
-                  <Label htmlFor="juiz">Juiz/Desembargador</Label>
-                  <Input
-                    id="juiz"
-                    placeholder="Nome do magistrado..."
-                    value={formData.juiz}
-                    onChange={(e) => updateField('juiz', e.target.value)}
-                  />
-                </div>
               </div>
             </>
           )}
@@ -1051,6 +1151,7 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
               </div>
             </>
           )}
+
         </div>
 
         {/* Navigation Buttons */}
@@ -1066,10 +1167,10 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
           </Button>
 
           <div className="text-xs text-slate-500">
-            Passo {currentStep} de {steps.length}
+            Passo {currentStep} de {totalSteps}
           </div>
 
-          {currentStep < steps.length ? (
+          {currentStep < totalSteps ? (
             <Button
               type="button"
               onClick={handleNext}
@@ -1085,7 +1186,7 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
               disabled={loading}
               className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white"
             >
-              {loading ? 'Salvando...' : 'Salvar Processo'}
+              {loading ? 'Salvando...' : 'Criar Processo'}
               <Check className="w-4 h-4 ml-2" />
             </Button>
           )}

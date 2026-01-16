@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Plus,
   Search,
@@ -25,12 +32,13 @@ import {
   MoreVertical,
   ListTodo,
   Calendar,
-  Gavel
+  Gavel,
+  Loader2
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import ProcessoWizard from '@/components/processos/ProcessoWizard'
+import { NovoProcessoDropdown } from '@/components/processos/NovoProcessoDropdown'
 import TarefaWizard from '@/components/agenda/TarefaWizard'
 import EventoWizard from '@/components/agenda/EventoWizard'
 import AudienciaWizard from '@/components/agenda/AudienciaWizard'
@@ -55,13 +63,21 @@ interface Processo {
   tem_documento_pendente: boolean
 }
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
+const DEFAULT_PAGE_SIZE = 20
+
 export default function ProcessosPage() {
   const [processos, setProcessos] = useState<Processo[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [currentView, setCurrentView] = useState<'todos' | 'ativos' | 'criticos' | 'meus' | 'arquivados'>('todos')
   const [showFilters, setShowFilters] = useState(false)
-  const [showWizard, setShowWizard] = useState(false)
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+  const [totalCount, setTotalCount] = useState(0)
 
   // Estados para wizards de agenda
   const [showTarefaWizard, setShowTarefaWizard] = useState(false)
@@ -69,30 +85,28 @@ export default function ProcessosPage() {
   const [showAudienciaWizard, setShowAudienciaWizard] = useState(false)
   const [selectedProcessoId, setSelectedProcessoId] = useState<string | null>(null)
   const [escritorioId, setEscritorioId] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+
+  // Debounce timer ref
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const router = useRouter()
   const supabase = createClient()
 
-  // Abrir wizard automaticamente se ?novo=true
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('novo') === 'true') {
-      setShowWizard(true)
-      // Limpar o query param da URL
-      window.history.replaceState({}, '', '/dashboard/processos')
-    }
-  }, [])
+  // TODO: Se precisar abrir wizard automaticamente via ?novo=true,
+  // implementar com ref no NovoProcessoDropdown
 
   // Hooks de agenda
   const { createTarefa } = useTarefas(escritorioId || '')
   const { createEvento } = useEventos(escritorioId || '')
   const { createAudiencia } = useAudiencias(escritorioId || '')
 
-  // Carregar escritórioId do usuário logado
+  // Carregar escritórioId e userId do usuário logado
   useEffect(() => {
-    const loadEscritorioId = async () => {
+    const loadUserData = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        setUserId(user.id)
         const { data: profile } = await supabase
           .from('profiles')
           .select('escritorio_id')
@@ -104,19 +118,38 @@ export default function ProcessosPage() {
         }
       }
     }
-    loadEscritorioId()
+    loadUserData()
   }, [])
 
+  // Debounce search input
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+      setCurrentPage(1) // Reset to first page on new search
+    }, 300)
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  }, [searchQuery])
+
+  // Load processos when filters change
   useEffect(() => {
     loadProcessos()
-  }, [currentView, searchQuery])
+  }, [currentView, debouncedSearch, currentPage, pageSize])
 
   const loadProcessos = async () => {
     try {
       setLoading(true)
 
-      // Buscar processos do Supabase com join de clientes e responsável
-      const { data, error } = await supabase
+      // Build base query
+      let query = supabase
         .from('processos_processos')
         .select(`
           id,
@@ -128,16 +161,44 @@ export default function ProcessosPage() {
           instancia,
           status,
           updated_at,
+          responsavel_id,
           cliente:crm_pessoas!processos_processos_cliente_id_fkey(nome_completo),
           responsavel:profiles!processos_processos_responsavel_id_fkey(nome_completo)
-        `)
+        `, { count: 'exact' })
+
+      // Apply search filter
+      if (debouncedSearch.trim()) {
+        const searchTerm = `%${debouncedSearch.trim()}%`
+        query = query.or(`numero_cnj.ilike.${searchTerm},numero_pasta.ilike.${searchTerm},parte_contraria.ilike.${searchTerm}`)
+      }
+
+      // Apply view filter
+      if (currentView === 'ativos') {
+        query = query.eq('status', 'ativo')
+      } else if (currentView === 'arquivados') {
+        query = query.eq('status', 'arquivado')
+      } else if (currentView === 'meus' && userId) {
+        query = query.eq('responsavel_id', userId)
+      }
+
+      // Get total count first (for pagination)
+      const { count } = await query
+
+      // Apply pagination and ordering
+      const from = (currentPage - 1) * pageSize
+      const to = from + pageSize - 1
+
+      const { data, error } = await query
         .order('numero_pasta', { ascending: false })
+        .range(from, to)
 
       if (error) {
         console.error('Erro ao carregar processos:', error)
         setLoading(false)
         return
       }
+
+      setTotalCount(count || 0)
 
       // Buscar prazos críticos (próximos 7 dias) via view
       const { data: prazosCriticos } = await supabase
@@ -255,20 +316,22 @@ export default function ProcessosPage() {
     }
   }
 
-  const viewCounts = {
-    todos: processos.length,
-    ativos: processos.filter(p => p.status === 'ativo').length,
-    criticos: processos.filter(p => p.tem_prazo_critico || p.movimentacoes_nao_lidas > 0).length,
-    meus: processos.filter(p => p.responsavel_nome === 'Dr. Carlos').length,
-    arquivados: processos.filter(p => p.status === 'arquivado').length
+  // Calculate pagination info
+  const totalPages = Math.ceil(totalCount / pageSize)
+  const startItem = totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0
+  const endItem = Math.min(currentPage * pageSize, totalCount)
+
+  // Handler for page size change
+  const handlePageSizeChange = (newSize: string) => {
+    setPageSize(parseInt(newSize))
+    setCurrentPage(1) // Reset to first page
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-12 h-12 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin"></div>
-      </div>
-    )
+  // Handler for page navigation
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page)
+    }
   }
 
   return (
@@ -279,16 +342,10 @@ export default function ProcessosPage() {
           <div>
             <h1 className="text-2xl font-semibold text-[#34495e]">Processos</h1>
             <p className="text-sm text-slate-600 mt-0.5 font-normal">
-              {processos.length} {processos.length === 1 ? 'processo' : 'processos'} encontrados
+              {loading ? 'Carregando...' : `${totalCount} ${totalCount === 1 ? 'processo' : 'processos'} encontrados`}
             </p>
           </div>
-          <Button
-            className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e] text-white"
-            onClick={() => setShowWizard(true)}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Processo
-          </Button>
+          <NovoProcessoDropdown onProcessoCriado={loadProcessos} />
         </div>
 
         {/* Busca e Filtros */}
@@ -296,9 +353,13 @@ export default function ProcessosPage() {
           <CardContent className="p-4">
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                {loading && searchQuery ? (
+                  <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 animate-spin" />
+                ) : (
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                )}
                 <Input
-                  placeholder="Buscar por número CNJ, pasta, cliente ou comarca..."
+                  placeholder="Buscar por número CNJ, pasta ou parte contrária..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -308,14 +369,17 @@ export default function ProcessosPage() {
               {/* Dropdown Visualização */}
               <select
                 value={currentView}
-                onChange={(e) => setCurrentView(e.target.value as typeof currentView)}
-                className="px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#89bcbe] min-w-[180px]"
+                onChange={(e) => {
+                  setCurrentView(e.target.value as typeof currentView)
+                  setCurrentPage(1) // Reset page on view change
+                }}
+                className="px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#89bcbe] min-w-[160px]"
               >
-                <option value="todos">Todos ({viewCounts.todos})</option>
-                <option value="ativos">Ativos ({viewCounts.ativos})</option>
-                <option value="criticos">Críticos ({viewCounts.criticos})</option>
-                <option value="meus">Meus Processos ({viewCounts.meus})</option>
-                <option value="arquivados">Arquivados ({viewCounts.arquivados})</option>
+                <option value="todos">Todos</option>
+                <option value="ativos">Ativos</option>
+                <option value="criticos">Críticos</option>
+                <option value="meus">Meus Processos</option>
+                <option value="arquivados">Arquivados</option>
               </select>
 
               <Button
@@ -346,7 +410,43 @@ export default function ProcessosPage() {
                   <th className="text-center p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Ações</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className={loading ? 'opacity-50' : ''}>
+                {/* Loading state */}
+                {loading && processos.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="p-8 text-center">
+                      <div className="flex items-center justify-center gap-3">
+                        <Loader2 className="w-5 h-5 text-[#34495e] animate-spin" />
+                        <span className="text-sm text-slate-600">Carregando processos...</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+
+                {/* Empty state */}
+                {!loading && processos.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="p-8 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <FileText className="w-10 h-10 text-slate-300" />
+                        <p className="text-sm text-slate-600">
+                          {debouncedSearch ? 'Nenhum processo encontrado para esta busca' : 'Nenhum processo cadastrado'}
+                        </p>
+                        {debouncedSearch && (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={() => setSearchQuery('')}
+                            className="text-[#34495e]"
+                          >
+                            Limpar busca
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+
                 {processos.map((processo) => (
                   <tr
                     key={processo.id}
@@ -463,32 +563,122 @@ export default function ProcessosPage() {
 
           {/* Paginação */}
           <div className="flex items-center justify-between p-4 border-t border-slate-200">
-            <div className="text-xs text-slate-600">
-              Mostrando <span className="font-semibold">{processos.length}</span> de <span className="font-semibold">{processos.length}</span> processos
+            <div className="flex items-center gap-4">
+              <div className="text-xs text-slate-600">
+                {loading ? (
+                  'Carregando...'
+                ) : totalCount > 0 ? (
+                  <>Mostrando <span className="font-semibold">{startItem}</span> a <span className="font-semibold">{endItem}</span> de <span className="font-semibold">{totalCount}</span> processos</>
+                ) : (
+                  'Nenhum processo encontrado'
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">Por página:</span>
+                <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+                  <SelectTrigger className="w-[70px] h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZE_OPTIONS.map(size => (
+                      <SelectItem key={size} value={size.toString()}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1 || loading}
+              >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <Button variant="outline" size="sm" className="bg-[#34495e] text-white">
-                1
-              </Button>
-              <Button variant="outline" size="sm" disabled>
+
+              {/* Page numbers */}
+              {totalPages > 0 && (
+                <>
+                  {/* First page */}
+                  {currentPage > 2 && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => goToPage(1)}
+                        className="min-w-[32px]"
+                      >
+                        1
+                      </Button>
+                      {currentPage > 3 && <span className="text-slate-400 px-1">...</span>}
+                    </>
+                  )}
+
+                  {/* Previous page */}
+                  {currentPage > 1 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => goToPage(currentPage - 1)}
+                      className="min-w-[32px]"
+                    >
+                      {currentPage - 1}
+                    </Button>
+                  )}
+
+                  {/* Current page */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-[#34495e] text-white min-w-[32px]"
+                    disabled
+                  >
+                    {currentPage}
+                  </Button>
+
+                  {/* Next page */}
+                  {currentPage < totalPages && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => goToPage(currentPage + 1)}
+                      className="min-w-[32px]"
+                    >
+                      {currentPage + 1}
+                    </Button>
+                  )}
+
+                  {/* Last page */}
+                  {currentPage < totalPages - 1 && (
+                    <>
+                      {currentPage < totalPages - 2 && <span className="text-slate-400 px-1">...</span>}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => goToPage(totalPages)}
+                        className="min-w-[32px]"
+                      >
+                        {totalPages}
+                      </Button>
+                    </>
+                  )}
+                </>
+              )}
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages || totalPages === 0 || loading}
+              >
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
           </div>
         </Card>
-
-      {/* Wizard de Cadastro */}
-      <ProcessoWizard
-        open={showWizard}
-        onOpenChange={setShowWizard}
-        onSuccess={(processoId) => {
-          loadProcessos()
-          router.push(`/dashboard/processos/${processoId}`)
-        }}
-      />
 
       {/* Wizards de Agenda vinculados ao processo */}
       {showTarefaWizard && escritorioId && selectedProcessoId && (

@@ -79,6 +79,13 @@ export interface ContratoInfo {
   }
 }
 
+export interface ProcessoInfo {
+  id: string
+  cliente_id: string | null
+  cliente_nome?: string
+  contrato_id: string | null
+}
+
 interface TimesheetData {
   data_trabalho: string
   horas: number
@@ -111,6 +118,7 @@ export function useProcessoFinanceiro(processoId: string | null) {
   const [despesas, setDespesas] = useState<Despesa[]>([])
   const [timesheet, setTimesheet] = useState<TimesheetEntry[]>([])
   const [contratoInfo, setContratoInfo] = useState<ContratoInfo | null>(null)
+  const [processoInfo, setProcessoInfo] = useState<ProcessoInfo | null>(null)
   const [resumo, setResumo] = useState<ResumoFinanceiro>({
     totalHonorarios: 0,
     totalHonorariosPagos: 0,
@@ -137,9 +145,13 @@ export function useProcessoFinanceiro(processoId: string | null) {
       const { data: processoData } = await supabase
         .from('processos_processos')
         .select(`
+          id,
           contrato_id,
           modalidade_cobranca,
           cliente_id,
+          crm_pessoas:cliente_id (
+            nome_completo
+          ),
           financeiro_contratos_honorarios (
             id,
             numero_contrato,
@@ -155,6 +167,16 @@ export function useProcessoFinanceiro(processoId: string | null) {
         `)
         .eq('id', processoId)
         .single()
+
+      // Atualizar info do processo
+      if (processoData) {
+        setProcessoInfo({
+          id: processoData.id,
+          cliente_id: processoData.cliente_id,
+          cliente_nome: (processoData.crm_pessoas as any)?.nome_completo || undefined,
+          contrato_id: processoData.contrato_id,
+        })
+      }
 
       if (processoData?.financeiro_contratos_honorarios) {
         const contrato = processoData.financeiro_contratos_honorarios as any
@@ -455,6 +477,7 @@ export function useProcessoFinanceiro(processoId: string | null) {
     despesas,
     timesheet,
     contratoInfo,
+    processoInfo,
     resumo,
     despesasReembolsaveisPendentes,
     loading,

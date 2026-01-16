@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,6 @@ import {
   Clock,
   Receipt,
   AlertTriangle,
-  Plus,
   ArrowRight,
   FileText,
   Loader2,
@@ -19,6 +18,7 @@ import {
 import { formatCurrency } from '@/lib/utils'
 import { useProcessoFinanceiro } from '@/hooks/useProcessoFinanceiro'
 import { useRouter } from 'next/navigation'
+import VincularContratoModal from './VincularContratoModal'
 
 interface ProcessoFinanceiroCardProps {
   processoId: string
@@ -56,12 +56,16 @@ export default function ProcessoFinanceiroCard({
   const router = useRouter()
   const {
     contratoInfo,
+    processoInfo,
     resumo,
     despesasReembolsaveisPendentes,
     loading,
     podelancarHoras,
     loadDados,
   } = useProcessoFinanceiro(processoId)
+
+  // Estado para modal de vincular contrato
+  const [vincularModalOpen, setVincularModalOpen] = useState(false)
 
   useEffect(() => {
     if (processoId) {
@@ -84,31 +88,43 @@ export default function ProcessoFinanceiroCard({
   // Se não tem contrato vinculado
   if (!contratoInfo) {
     return (
-      <Card className="border-slate-200 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-[#89bcbe]" />
-            Financeiro
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-4">
-            <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-            <p className="text-xs text-slate-600 mb-3">
-              Nenhum contrato vinculado
-            </p>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-xs h-7"
-              onClick={() => router.push('/dashboard/financeiro?tab=contratos')}
-            >
-              <LinkIcon className="w-3 h-3 mr-1.5" />
-              Vincular Contrato
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <>
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-[#89bcbe]" />
+              Financeiro
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-4">
+              <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+              <p className="text-xs text-slate-600 mb-3">
+                Nenhum contrato vinculado
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs h-7"
+                onClick={() => setVincularModalOpen(true)}
+              >
+                <LinkIcon className="w-3 h-3 mr-1.5" />
+                Vincular Contrato
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Modal para vincular contrato */}
+        <VincularContratoModal
+          open={vincularModalOpen}
+          onOpenChange={setVincularModalOpen}
+          processoId={processoId}
+          clienteId={processoInfo?.cliente_id || null}
+          clienteNome={processoInfo?.cliente_nome}
+          onSuccess={() => loadDados()}
+        />
+      </>
     )
   }
 

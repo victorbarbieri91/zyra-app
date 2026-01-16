@@ -54,6 +54,7 @@ export function useDashboardAgenda() {
         .eq('escritorio_id', escritorioAtivo)
         .gte('data_inicio', inicioHoje.toISOString())
         .lte('data_inicio', fimHoje.toISOString())
+        .neq('status', 'concluida') // Mostrar apenas itens pendentes
         .order('data_inicio', { ascending: true })
         .limit(8)
 

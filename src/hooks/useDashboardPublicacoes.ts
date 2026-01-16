@@ -33,6 +33,7 @@ export function useDashboardPublicacoes() {
       setError(null)
 
       // Buscar publicações urgentes primeiro, depois as pendentes
+      // Junta com publicacoes_analises para obter data_limite e prazo_dias
       const { data, error: queryError } = await supabase
         .from('publicacoes_publicacoes')
         .select(`
@@ -42,9 +43,11 @@ export function useDashboardPublicacoes() {
           texto_completo,
           urgente,
           data_publicacao,
-          data_limite,
-          prazo_dias,
-          status
+          status,
+          publicacoes_analises (
+            data_limite,
+            prazo_dias
+          )
         `)
         .eq('escritorio_id', escritorioAtivo)
         .in('status', ['pendente', 'em_analise'])
@@ -56,10 +59,13 @@ export function useDashboardPublicacoes() {
 
       // Transformar para formato do dashboard
       const items: PublicacaoDashboard[] = (data || []).map(pub => {
+        // Extrair dados da análise (pode ter múltiplas, pegamos a primeira)
+        const analise = pub.publicacoes_analises?.[0]
+
         // Calcular prazo
         let prazo = ''
-        if (pub.data_limite) {
-          const dataLimite = new Date(pub.data_limite)
+        if (analise?.data_limite) {
+          const dataLimite = new Date(analise.data_limite)
           const hoje = new Date()
           const diffDias = Math.ceil((dataLimite.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24))
 
@@ -72,8 +78,8 @@ export function useDashboardPublicacoes() {
           } else {
             prazo = `${diffDias} dias`
           }
-        } else if (pub.prazo_dias) {
-          prazo = `${pub.prazo_dias} dias`
+        } else if (analise?.prazo_dias) {
+          prazo = `${analise.prazo_dias} dias`
         }
 
         // Extrair tipo de publicação
@@ -104,8 +110,13 @@ export function useDashboardPublicacoes() {
 
       setPublicacoes(items)
     } catch (err) {
-      console.error('Erro ao carregar publicações do dashboard:', err)
-      setError(err as Error)
+      const errorMessage = err instanceof Error
+        ? err.message
+        : typeof err === 'object' && err !== null
+          ? JSON.stringify(err)
+          : String(err)
+      console.error('Erro ao carregar publicações do dashboard:', errorMessage)
+      setError(err instanceof Error ? err : new Error(errorMessage))
     } finally {
       setLoading(false)
     }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Clock, X, Plus, ChevronDown, ChevronUp, Zap, History } from 'lucide-react';
+import { Clock, X, Plus, Zap, History } from 'lucide-react';
 import { useTimer } from '@/contexts/TimerContext';
 import { TimerDisplay } from './TimerDisplay';
 import { TimerCard } from './TimerCard';
@@ -30,6 +30,59 @@ export function FloatingTimerWidget() {
   const [showRetroativo, setShowRetroativo] = useState(false);
   const [showNovoTimer, setShowNovoTimer] = useState(false);
   const widgetRef = useRef<HTMLDivElement>(null);
+
+  // Estado para drag
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [hasDragged, setHasDragged] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
+
+  // Handlers de drag
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Só inicia drag com botão esquerdo
+    if (e.button !== 0) return;
+
+    setIsDragging(true);
+    setHasDragged(false);
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      posX: position.x,
+      posY: position.y,
+    };
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = dragStartRef.current.x - e.clientX;
+      const deltaY = dragStartRef.current.y - e.clientY;
+
+      // Só considera como arraste se moveu mais de 5px
+      if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+        setHasDragged(true);
+      }
+
+      setPosition({
+        x: dragStartRef.current.posX + deltaX,
+        y: dragStartRef.current.posY + deltaY,
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
 
   // Fechar widget ao clicar fora
   useEffect(() => {
@@ -80,13 +133,20 @@ export function FloatingTimerWidget() {
   if (!widgetExpandido) {
     return (
       <button
-        onClick={() => setWidgetExpandido(true)}
-        className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-5 py-3.5 rounded-full shadow-xl transition-all hover:scale-105 hover:shadow-2xl ${
+        onClick={() => !hasDragged && setWidgetExpandido(true)}
+        onMouseDown={handleMouseDown}
+        style={{
+          right: `calc(1.5rem + ${position.x}px)`,
+          bottom: `calc(1.5rem + ${position.y}px)`,
+        }}
+        className={`fixed z-50 flex items-center gap-2.5 px-5 py-3.5 rounded-full shadow-xl transition-shadow hover:shadow-2xl ${
+          isDragging ? 'cursor-grabbing scale-105' : 'cursor-grab hover:scale-105'
+        } ${
           timersRodando > 0
             ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white animate-pulse'
             : 'bg-gradient-to-r from-[#34495e] to-[#46627f] text-white'
         }`}
-        title="Controle de Horas (Alt+T)"
+        title="Controle de Horas (Alt+T) • Arraste para mover"
       >
         <div className={`p-1.5 rounded-full ${timersRodando > 0 ? 'bg-white/20' : 'bg-white/10'}`}>
           <Clock className="w-4 h-4" />
@@ -110,10 +170,19 @@ export function FloatingTimerWidget() {
     <>
       <div
         ref={widgetRef}
-        className="fixed bottom-6 right-6 z-50 w-96 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden"
+        style={{
+          right: `calc(1.5rem + ${position.x}px)`,
+          bottom: `calc(1.5rem + ${position.y}px)`,
+        }}
+        className="fixed z-50 w-96 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200">
+        {/* Header - arrastável */}
+        <div
+          onMouseDown={handleMouseDown}
+          className={`flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200 ${
+            isDragging ? 'cursor-grabbing' : 'cursor-grab'
+          }`}
+        >
           <div className="flex items-center gap-2">
             <Clock className="w-5 h-5 text-[#34495e]" />
             <h3 className="text-sm font-semibold text-[#34495e]">Controle de Horas</h3>

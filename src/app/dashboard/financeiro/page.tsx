@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, Clock, AlertCircle, FileText, Users, Calendar, ArrowUpRight, ArrowDownRight, Target } from 'lucide-react'
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, Clock, AlertCircle, FileText, Users, Calendar, ArrowUpRight, ArrowDownRight, Target, Loader2 } from 'lucide-react'
+import { differenceInDays, parseISO, format, addDays } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import MetricCard from '@/components/dashboard/MetricCard'
 import InsightCard from '@/components/dashboard/InsightCard'
@@ -49,16 +51,21 @@ export default function FinanceiroDashboard() {
     lucro_mes: 0,
     variacao_receita: 0,
     variacao_lucro: 0,
-    taxa_inadimplencia: 3.2,
+    taxa_inadimplencia: 0,
   })
 
   const [contasProximas, setContasProximas] = useState<ContaProxima[]>([])
+  const [chartData, setChartData] = useState<{ mes: string; receitas: number; despesas: number }[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingContas, setLoadingContas] = useState(true)
+  const [loadingChart, setLoadingChart] = useState(true)
 
   useEffect(() => {
     if (escritorioAtivo) {
       loadMetrics()
       loadContasProximas()
+      loadChartData()
+      loadInadimplencia()
     }
   }, [escritorioAtivo])
 
@@ -87,17 +94,132 @@ export default function FinanceiroDashboard() {
   const loadContasProximas = async () => {
     if (!escritorioAtivo) return
 
+    setLoadingContas(true)
     try {
-      // Mock de dados - em produção viria da view v_contas_receber_pagar
-      const mockContas: ContaProxima[] = [
-        { id: '1', tipo: 'receber', descricao: 'Honorários - Cliente ABC', valor: 5000, vencimento: '2025-11-10', dias_ate_vencimento: 5, status: 'pendente' },
-        { id: '2', tipo: 'receber', descricao: 'Fatura #2024-045', valor: 3200, vencimento: '2025-11-08', dias_ate_vencimento: 3, status: 'pendente' },
-        { id: '3', tipo: 'pagar', descricao: 'Aluguel Escritório', valor: 3500, vencimento: '2025-11-08', dias_ate_vencimento: 3, status: 'pendente' },
-        { id: '4', tipo: 'pagar', descricao: 'Folha de Pagamento', valor: 12000, vencimento: '2025-11-07', dias_ate_vencimento: 2, status: 'atrasado' },
-      ]
-      setContasProximas(mockContas)
+      // Buscar contas dos próximos 7 dias da view v_contas_receber_pagar
+      const dataLimite = addDays(new Date(), 7).toISOString().split('T')[0]
+
+      const { data, error } = await supabase
+        .from('v_contas_receber_pagar')
+        .select('id, tipo_conta, descricao, valor, data_vencimento, status, dias_atraso, cliente_fornecedor')
+        .eq('escritorio_id', escritorioAtivo)
+        .lte('data_vencimento', dataLimite)
+        .in('status', ['pendente', 'atrasado'])
+        .order('data_vencimento', { ascending: true })
+        .limit(10)
+
+      if (error) throw error
+
+      const contas: ContaProxima[] = (data || []).map((c) => {
+        const vencimento = c.data_vencimento || ''
+        const diasAteVencimento = vencimento
+          ? differenceInDays(parseISO(vencimento), new Date())
+          : 0
+
+        return {
+          id: c.id,
+          tipo: c.tipo_conta as 'receber' | 'pagar',
+          descricao: c.descricao || c.cliente_fornecedor || 'Sem descrição',
+          valor: Number(c.valor) || 0,
+          vencimento,
+          dias_ate_vencimento: diasAteVencimento,
+          status: (c.status === 'atrasado' || diasAteVencimento < 0) ? 'atrasado' : 'pendente',
+        }
+      })
+
+      setContasProximas(contas)
     } catch (error) {
       console.error('Erro ao carregar contas próximas:', error)
+      setContasProximas([])
+    } finally {
+      setLoadingContas(false)
+    }
+  }
+
+  const loadChartData = async () => {
+    if (!escritorioAtivo) return
+
+    setLoadingChart(true)
+    try {
+      // Buscar dados do DRE dos últimos 6 meses
+      const { data, error } = await supabase
+        .from('v_dre')
+        .select('mes_referencia, receita_bruta, despesas_totais')
+        .eq('escritorio_id', escritorioAtivo)
+        .order('mes_referencia', { ascending: true })
+        .limit(6)
+
+      if (error) throw error
+
+      const formatted = (data || []).map((d) => ({
+        mes: d.mes_referencia
+          ? format(parseISO(d.mes_referencia), 'MMM', { locale: ptBR })
+          : '',
+        receitas: Number(d.receita_bruta) || 0,
+        despesas: Number(d.despesas_totais) || 0,
+      }))
+
+      // Se não houver dados suficientes, adicionar meses vazios
+      if (formatted.length < 6) {
+        const mesesFaltando = 6 - formatted.length
+        const ultimoMes = formatted.length > 0
+          ? parseISO(data![data!.length - 1].mes_referencia)
+          : new Date()
+
+        for (let i = 1; i <= mesesFaltando; i++) {
+          const mesAnterior = new Date(ultimoMes)
+          mesAnterior.setMonth(mesAnterior.getMonth() - i)
+          formatted.unshift({
+            mes: format(mesAnterior, 'MMM', { locale: ptBR }),
+            receitas: 0,
+            despesas: 0,
+          })
+        }
+      }
+
+      setChartData(formatted)
+    } catch (error) {
+      console.error('Erro ao carregar dados do gráfico:', error)
+      setChartData([])
+    } finally {
+      setLoadingChart(false)
+    }
+  }
+
+  const loadInadimplencia = async () => {
+    if (!escritorioAtivo) return
+
+    try {
+      // Buscar parcelas pendentes e atrasadas
+      const { data: parcelas, error } = await supabase
+        .from('honorarios_parcelas')
+        .select(`
+          valor,
+          status,
+          honorarios!inner (
+            escritorio_id
+          )
+        `)
+        .eq('honorarios.escritorio_id', escritorioAtivo)
+        .in('status', ['pendente', 'atrasado'])
+
+      if (error) throw error
+
+      const totalPendente = (parcelas || []).reduce((sum, p) => sum + (Number(p.valor) || 0), 0)
+      const totalAtrasado = (parcelas || [])
+        .filter((p) => p.status === 'atrasado')
+        .reduce((sum, p) => sum + (Number(p.valor) || 0), 0)
+
+      const taxa = totalPendente > 0 ? (totalAtrasado / totalPendente) * 100 : 0
+
+      setMetrics((prev) => ({
+        ...prev,
+        taxa_inadimplencia: taxa,
+        atrasado: totalAtrasado,
+        pendente_receber: totalPendente,
+      }))
+    } catch (error) {
+      console.error('Erro ao carregar inadimplência:', error)
     }
   }
 
@@ -138,19 +260,8 @@ export default function FinanceiroDashboard() {
   const contasReceber = contasProximas.filter(c => c.tipo === 'receber')
   const contasPagar = contasProximas.filter(c => c.tipo === 'pagar')
 
-  // Dados do gráfico - últimos 6 meses
-  const chartData = [
-    { mes: 'Jun', receitas: 45000, despesas: 32000 },
-    { mes: 'Jul', receitas: 52000, despesas: 35000 },
-    { mes: 'Ago', receitas: 48000, despesas: 33000 },
-    { mes: 'Set', receitas: 61000, despesas: 38000 },
-    { mes: 'Out', receitas: 55000, despesas: 36000 },
-    { mes: 'Nov', receitas: 0, despesas: 0 }, // Mês atual (será preenchido com dados reais)
-  ]
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6">
-      <div className="max-w-[1800px] mx-auto space-y-6">
+    <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
           <div>
@@ -517,7 +628,6 @@ export default function FinanceiroDashboard() {
             </Card>
           </div>
       </div>
-    </div>
     </div>
   )
 }

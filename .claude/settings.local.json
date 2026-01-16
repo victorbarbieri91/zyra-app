@@ -48,7 +48,9 @@
       "mcp__supabase__deploy_edge_function",
       "Bash(python:*)",
       "Bash(python3:*)",
-      "mcp__supabase__list_edge_functions"
+      "mcp__supabase__list_edge_functions",
+      "Bash(npx next lint:*)",
+      "Bash(npx eslint:*)"
     ],
     "deny": [],
     "ask": []

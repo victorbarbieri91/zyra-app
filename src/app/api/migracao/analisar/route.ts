@@ -370,13 +370,25 @@ function mapeamentoHeuristico(headers: string[], amostra: Record<string, unknown
     'parte ativa': [{ campo: 'cliente_ref', confianca: 70 }],
     'parte passiva': [{ campo: 'cliente_ref', confianca: 70 }],
 
+    // Autor da ação
+    'autor': [{ campo: 'autor', confianca: 95 }],
+    'requerente': [{ campo: 'autor', confianca: 90 }],
+    'demandante': [{ campo: 'autor', confianca: 90 }],
+    'reclamante': [{ campo: 'autor', confianca: 90 }],
+    'exequente': [{ campo: 'autor', confianca: 85 }],
+
+    // Réu da ação
+    'réu': [{ campo: 'reu', confianca: 95 }],
+    'reu': [{ campo: 'reu', confianca: 95 }],
+    'requerido': [{ campo: 'reu', confianca: 90 }],
+    'demandado': [{ campo: 'reu', confianca: 90 }],
+    'reclamado': [{ campo: 'reu', confianca: 90 }],
+    'executado': [{ campo: 'reu', confianca: 85 }],
+
     // Parte contrária
     'parte contrária': [{ campo: 'parte_contraria', confianca: 95 }],
     'parte contraria': [{ campo: 'parte_contraria', confianca: 95 }],
     'parte_contraria': [{ campo: 'parte_contraria', confianca: 95 }],
-    'réu': [{ campo: 'parte_contraria', confianca: 80 }],
-    'reu': [{ campo: 'parte_contraria', confianca: 80 }],
-    'autor': [{ campo: 'parte_contraria', confianca: 75 }],
     'terceiro(s)': [{ campo: 'parte_contraria', confianca: 70 }],
     'adversário': [{ campo: 'parte_contraria', confianca: 85 }],
     'adversario': [{ campo: 'parte_contraria', confianca: 85 }],
@@ -415,6 +427,12 @@ function mapeamentoHeuristico(headers: string[], amostra: Record<string, unknown
     'valor condenacao': [{ campo: 'valor_condenacao', confianca: 95 }],
     'valor_condenacao': [{ campo: 'valor_condenacao', confianca: 95 }],
     'condenação': [{ campo: 'valor_condenacao', confianca: 80 }],
+
+    // Valor atualizado
+    'valor atualizado': [{ campo: 'valor_atualizado', confianca: 95 }],
+    'valor_atualizado': [{ campo: 'valor_atualizado', confianca: 95 }],
+    'vlr atualizado': [{ campo: 'valor_atualizado', confianca: 90 }],
+    'valor corrigido': [{ campo: 'valor_atualizado', confianca: 85 }],
 
     // Data de distribuição
     'data distribuição': [{ campo: 'data_distribuicao', confianca: 95 }],

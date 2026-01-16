@@ -42,9 +42,11 @@ export interface MigracaoJob {
   linhas_importadas: number
   erros: ErroValidacao[]
   duplicatas: Duplicata[]
+  pendencias: Pendencia[]
   campos_extras: string[]
   resultado_final: ResultadoFinal | null
   correcoes_usuario: Record<string, CorrecaoUsuario>
+  decisoes_pendencias: Record<string, DecisaoPendencia>
   iniciado_em: string | null
   concluido_em: string | null
   criado_por: string
@@ -72,11 +74,38 @@ export interface Duplicata {
   dados: Record<string, unknown>
 }
 
+// Pendência que requer decisão do usuário (cliente não encontrado, etc.)
+export interface Pendencia {
+  linha: number
+  tipo: 'cliente_nao_encontrado' | 'responsavel_nao_encontrado'
+  campo: string
+  valor: string
+  mensagem: string
+  dados: Record<string, unknown>
+  sugestoes?: {
+    id: string
+    nome: string
+    similaridade: number
+  }[]
+}
+
+// Decisão do usuário para pendências
+export interface DecisaoPendencia {
+  tipo: 'vincular' | 'criar' | 'pular'
+  clienteId?: string // Se vincular a existente
+  dadosCliente?: { // Se criar novo
+    nome_completo: string
+    tipo_contato?: string
+  }
+}
+
 // Correção feita pelo usuário
 export interface CorrecaoUsuario {
   tipo: 'corrigir' | 'remover_campo' | 'pular' | 'atualizar'
   valor?: string
   campo?: string
+  // Campos extras para quando há múltiplas correções na mesma linha
+  camposExtras?: Record<string, string>
 }
 
 // Resultado final do processamento

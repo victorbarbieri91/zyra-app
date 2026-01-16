@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -22,15 +22,16 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Progress } from '@/components/ui/progress'
-import { Separator } from '@/components/ui/separator'
 import {
   FileText,
   Plus,
@@ -38,7 +39,6 @@ import {
   Filter,
   Calendar,
   DollarSign,
-  User,
   Clock,
   CheckCircle,
   AlertCircle,
@@ -48,165 +48,86 @@ import {
   Download,
   Send,
   TrendingUp,
-  TrendingDown,
-  Copy,
-  CreditCard,
-  Briefcase,
   AlertTriangle,
-  ChevronRight,
   BarChart3,
   PieChart,
   Activity,
+  Loader2,
+  RotateCcw,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { format, addMonths, differenceInDays, isPast, isFuture, isWithinInterval } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
-
-interface Contrato {
-  id: string
-  numero: string
-  cliente_id: string
-  cliente_nome: string
-  processo_id?: string
-  processo_numero?: string
-  tipo: 'fixo' | 'variavel' | 'exito' | 'hibrido'
-  valor_total: number
-  valor_entrada?: number
-  valor_mensal?: number
-  numero_parcelas?: number
-  parcelas_pagas: number
-  percentual_exito?: number
-  data_inicio: Date
-  data_fim?: Date
-  data_assinatura: Date
-  status: 'ativo' | 'pendente' | 'suspenso' | 'encerrado' | 'cancelado'
-  forma_pagamento: 'boleto' | 'pix' | 'cartao' | 'transferencia' | 'dinheiro'
-  dia_vencimento?: number
-  observacoes?: string
-  valor_recebido: number
-  valor_pendente: number
-  proxima_parcela?: {
-    numero: number
-    valor: number
-    vencimento: Date
-  }
-  inadimplente: boolean
-  dias_atraso?: number
-}
+import { differenceInDays, parseISO } from 'date-fns'
+import { useContratosHonorarios, ContratoHonorario, ContratoFormData } from '@/hooks/useContratosHonorarios'
+import { ContratoModal } from './ContratoModal'
+import ContratoDetailModal from './ContratoDetailModal'
+import { formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
 
 interface HonorariosContratosProps {
   escritorioId: string
 }
 
-// Mock data generator
-const generateMockContratos = (): Contrato[] => {
-  const tipos: Contrato['tipo'][] = ['fixo', 'variavel', 'exito', 'hibrido']
-  const status: Contrato['status'][] = ['ativo', 'pendente', 'suspenso', 'encerrado']
-  const formas: Contrato['forma_pagamento'][] = ['boleto', 'pix', 'cartao', 'transferencia']
-
-  return Array.from({ length: 15 }, (_, i) => {
-    const tipo = tipos[i % tipos.length]
-    const valorTotal = 5000 + Math.random() * 50000
-    const numeroParcelas = tipo === 'fixo' ? Math.floor(Math.random() * 24) + 1 : undefined
-    const parcelasPagas = numeroParcelas ? Math.floor(Math.random() * numeroParcelas) : 0
-    const valorMensal = numeroParcelas ? valorTotal / numeroParcelas : undefined
-    const valorRecebido = valorMensal ? valorMensal * parcelasPagas : 0
-    const valorPendente = valorTotal - valorRecebido
-
-    return {
-      id: `${i + 1}`,
-      numero: `CTR-2024-${String(i + 1).padStart(4, '0')}`,
-      cliente_id: `cli-${i}`,
-      cliente_nome: [
-        'João Silva Advogados',
-        'Maria Santos Ltda',
-        'Tech Solutions S.A.',
-        'Construtora ABC',
-        'Empresa XYZ',
-      ][i % 5],
-      processo_id: i % 3 === 0 ? `proc-${i}` : undefined,
-      processo_numero: i % 3 === 0 ? `0001234-${String(i).padStart(2, '0')}.2024.8.26.0100` : undefined,
-      tipo,
-      valor_total: valorTotal,
-      valor_entrada: tipo === 'hibrido' ? valorTotal * 0.3 : undefined,
-      valor_mensal: valorMensal,
-      numero_parcelas: numeroParcelas,
-      parcelas_pagas: parcelasPagas,
-      percentual_exito: tipo === 'exito' ? 20 + Math.random() * 10 : undefined,
-      data_inicio: new Date(2024, 0 + i % 12, 1),
-      data_fim: numeroParcelas ? addMonths(new Date(2024, 0 + i % 12, 1), numeroParcelas) : undefined,
-      data_assinatura: new Date(2023, 11 + i % 12, 15),
-      status: status[i % status.length],
-      forma_pagamento: formas[i % formas.length],
-      dia_vencimento: tipo === 'fixo' ? 5 + (i % 25) : undefined,
-      valor_recebido: valorRecebido,
-      valor_pendente: valorPendente,
-      proxima_parcela: numeroParcelas && parcelasPagas < numeroParcelas ? {
-        numero: parcelasPagas + 1,
-        valor: valorMensal!,
-        vencimento: addMonths(new Date(), i % 3 - 1),
-      } : undefined,
-      inadimplente: i % 4 === 0,
-      dias_atraso: i % 4 === 0 ? Math.floor(Math.random() * 30) + 1 : undefined,
-    }
-  })
-}
-
-const getTipoBadge = (tipo: Contrato['tipo']) => {
+const getTipoBadge = (forma: ContratoHonorario['forma_cobranca']) => {
   const badges: Record<string, { label: string; class: string; icon: React.ReactNode }> = {
     fixo: {
       label: 'Fixo',
       class: 'bg-blue-100 text-blue-700',
-      icon: <Calendar className="w-3 h-3" />
+      icon: <Calendar className="w-3 h-3" />,
     },
-    variavel: {
-      label: 'Variável',
+    por_hora: {
+      label: 'Por Hora',
       class: 'bg-purple-100 text-purple-700',
-      icon: <Activity className="w-3 h-3" />
+      icon: <Clock className="w-3 h-3" />,
     },
-    exito: {
-      label: 'Êxito',
+    por_cargo: {
+      label: 'Por Cargo',
+      class: 'bg-indigo-100 text-indigo-700',
+      icon: <Clock className="w-3 h-3" />,
+    },
+    por_pasta: {
+      label: 'Por Pasta',
+      class: 'bg-cyan-100 text-cyan-700',
+      icon: <FileText className="w-3 h-3" />,
+    },
+    por_ato: {
+      label: 'Por Ato',
+      class: 'bg-rose-100 text-rose-700',
+      icon: <Activity className="w-3 h-3" />,
+    },
+    por_etapa: {
+      label: 'Por Etapa',
       class: 'bg-emerald-100 text-emerald-700',
-      icon: <TrendingUp className="w-3 h-3" />
+      icon: <TrendingUp className="w-3 h-3" />,
     },
-    hibrido: {
-      label: 'Híbrido',
+    misto: {
+      label: 'Misto',
       class: 'bg-amber-100 text-amber-700',
-      icon: <PieChart className="w-3 h-3" />
+      icon: <PieChart className="w-3 h-3" />,
     },
   }
-  return badges[tipo] || badges.fixo
+  return badges[forma] || badges.fixo
 }
 
-const getStatusBadge = (status: Contrato['status']) => {
-  const badges: Record<string, { label: string; class: string; icon: React.ReactNode }> = {
-    ativo: {
+const getStatusBadge = (ativo: boolean, inadimplente?: boolean) => {
+  if (inadimplente) {
+    return {
+      label: 'Inadimplente',
+      class: 'bg-red-100 text-red-700',
+      icon: <AlertTriangle className="w-3 h-3" />,
+    }
+  }
+  if (ativo) {
+    return {
       label: 'Ativo',
       class: 'bg-green-100 text-green-700',
-      icon: <CheckCircle className="w-3 h-3" />
-    },
-    pendente: {
-      label: 'Pendente',
-      class: 'bg-yellow-100 text-yellow-700',
-      icon: <Clock className="w-3 h-3" />
-    },
-    suspenso: {
-      label: 'Suspenso',
-      class: 'bg-orange-100 text-orange-700',
-      icon: <AlertCircle className="w-3 h-3" />
-    },
-    encerrado: {
-      label: 'Encerrado',
-      class: 'bg-gray-100 text-gray-700',
-      icon: <CheckCircle className="w-3 h-3" />
-    },
-    cancelado: {
-      label: 'Cancelado',
-      class: 'bg-red-100 text-red-700',
-      icon: <XCircle className="w-3 h-3" />
-    },
+      icon: <CheckCircle className="w-3 h-3" />,
+    }
   }
-  return badges[status] || badges.pendente
+  return {
+    label: 'Encerrado',
+    class: 'bg-gray-100 text-gray-700',
+    icon: <XCircle className="w-3 h-3" />,
+  }
 }
 
 const formatCurrency = (value: number) => {
@@ -218,13 +139,35 @@ const formatCurrency = (value: number) => {
 }
 
 export default function HonorariosContratos({ escritorioId }: HonorariosContratosProps) {
-  const [contratos] = useState<Contrato[]>(generateMockContratos())
+  const {
+    contratos,
+    loading,
+    error,
+    metrics,
+    loadContratos,
+    createContrato,
+    updateContrato,
+    deleteContrato,
+    reativarContrato,
+  } = useContratosHonorarios()
+
   const [searchTerm, setSearchTerm] = useState('')
   const [filterTipo, setFilterTipo] = useState<string>('all')
   const [filterStatus, setFilterStatus] = useState<string>('all')
-  const [selectedContrato, setSelectedContrato] = useState<Contrato | null>(null)
+  const [selectedContrato, setSelectedContrato] = useState<ContratoHonorario | null>(null)
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards')
-  const [activeTab, setActiveTab] = useState<'ativos' | 'vencer' | 'inadimplentes'>('ativos')
+  const [activeTab, setActiveTab] = useState<'ativos' | 'vencer' | 'inadimplentes' | 'todos'>('ativos')
+
+  // Modal states
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingContrato, setEditingContrato] = useState<ContratoHonorario | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [contratoToDelete, setContratoToDelete] = useState<ContratoHonorario | null>(null)
+
+  // Carregar contratos ao montar
+  useEffect(() => {
+    loadContratos()
+  }, [loadContratos])
 
   // Filtrar contratos
   const filteredContratos = useMemo(() => {
@@ -232,149 +175,141 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
 
     // Search filter
     if (searchTerm) {
-      filtered = filtered.filter(c =>
-        c.numero.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.cliente_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.processo_numero?.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        (c) =>
+          c.numero_contrato.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          c.cliente_nome?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
     // Type filter
     if (filterTipo !== 'all') {
-      filtered = filtered.filter(c => c.tipo === filterTipo)
+      filtered = filtered.filter((c) => c.forma_cobranca === filterTipo)
     }
 
     // Status filter
     if (filterStatus !== 'all') {
-      filtered = filtered.filter(c => c.status === filterStatus)
+      if (filterStatus === 'ativo') {
+        filtered = filtered.filter((c) => c.ativo)
+      } else if (filterStatus === 'encerrado') {
+        filtered = filtered.filter((c) => !c.ativo)
+      }
     }
 
     // Tab filter
     switch (activeTab) {
       case 'ativos':
-        filtered = filtered.filter(c => c.status === 'ativo')
+        filtered = filtered.filter((c) => c.ativo)
         break
       case 'vencer':
-        filtered = filtered.filter(c =>
-          c.proxima_parcela &&
-          differenceInDays(c.proxima_parcela.vencimento, new Date()) <= 7 &&
-          differenceInDays(c.proxima_parcela.vencimento, new Date()) >= 0
-        )
+        filtered = filtered.filter((c) => {
+          if (!c.proxima_parcela?.vencimento) return false
+          const dias = differenceInDays(parseISO(c.proxima_parcela.vencimento), new Date())
+          return dias >= 0 && dias <= 7
+        })
         break
       case 'inadimplentes':
-        filtered = filtered.filter(c => c.inadimplente)
+        filtered = filtered.filter((c) => c.inadimplente)
+        break
+      case 'todos':
+        // Sem filtro adicional
         break
     }
 
     return filtered
   }, [contratos, searchTerm, filterTipo, filterStatus, activeTab])
 
-  // Métricas
-  const metrics = useMemo(() => {
-    const ativos = contratos.filter(c => c.status === 'ativo')
-    const valorTotalAtivo = ativos.reduce((sum, c) => sum + c.valor_total, 0)
-    const valorRecebido = contratos.reduce((sum, c) => sum + c.valor_recebido, 0)
-    const valorPendente = contratos.reduce((sum, c) => sum + c.valor_pendente, 0)
-    const inadimplentes = contratos.filter(c => c.inadimplente)
-    const taxaInadimplencia = (inadimplentes.length / contratos.length) * 100
+  // Handlers
+  const handleNovoContrato = () => {
+    setEditingContrato(null)
+    setModalOpen(true)
+  }
 
-    return {
-      totalContratos: contratos.length,
-      contratosAtivos: ativos.length,
-      valorTotalAtivo,
-      valorRecebido,
-      valorPendente,
-      inadimplentes: inadimplentes.length,
-      taxaInadimplencia,
+  const handleEditContrato = (contrato: ContratoHonorario) => {
+    setEditingContrato(contrato)
+    setModalOpen(true)
+  }
+
+  const handleDeleteClick = (contrato: ContratoHonorario) => {
+    setContratoToDelete(contrato)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (contratoToDelete) {
+      await deleteContrato(contratoToDelete.id)
+      setDeleteDialogOpen(false)
+      setContratoToDelete(null)
     }
-  }, [contratos])
+  }
+
+  const handleReativar = async (contrato: ContratoHonorario) => {
+    await reativarContrato(contrato.id)
+  }
+
+  const handleSaveContrato = async (data: ContratoFormData): Promise<string | null | boolean> => {
+    if (editingContrato) {
+      return await updateContrato(editingContrato.id, data)
+    }
+    return await createContrato(data)
+  }
+
+  // Contadores para tabs
+  const contratosAtivos = contratos.filter((c) => c.ativo).length
+  const contratosVencer = contratos.filter((c) => {
+    if (!c.proxima_parcela?.vencimento) return false
+    const dias = differenceInDays(parseISO(c.proxima_parcela.vencimento), new Date())
+    return dias >= 0 && dias <= 7
+  }).length
+  const contratosInadimplentes = contratos.filter((c) => c.inadimplente).length
+
+  if (loading && contratos.length === 0) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-[#89bcbe] mx-auto mb-2" />
+          <p className="text-sm text-slate-600">Carregando contratos...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Métricas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-slate-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-slate-600 font-medium">Contratos Ativos</p>
-                <p className="text-2xl font-bold text-[#34495e]">{metrics.contratosAtivos}</p>
-                <p className="text-xs text-slate-500 mt-1">de {metrics.totalContratos} total</p>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-[#89bcbe] to-[#aacfd0] rounded-lg flex items-center justify-center">
-                <FileText className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-slate-600 font-medium">Valor Total</p>
-                <p className="text-2xl font-bold text-[#34495e]">
-                  {formatCurrency(metrics.valorTotalAtivo)}
-                </p>
-                <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" />
-                  Contratos ativos
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-slate-600 font-medium">A Receber</p>
-                <p className="text-2xl font-bold text-amber-600">
-                  {formatCurrency(metrics.valorPendente)}
-                </p>
-                <div className="mt-2">
-                  <Progress
-                    value={(metrics.valorRecebido / (metrics.valorRecebido + metrics.valorPendente)) * 100}
-                    className="h-1.5"
-                  />
-                </div>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center">
-                <Clock className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-slate-600 font-medium">Inadimplentes</p>
-                <p className="text-2xl font-bold text-red-600">{metrics.inadimplentes}</p>
-                <p className="text-xs text-red-500 mt-1">
-                  {metrics.taxaInadimplencia.toFixed(1)}% do total
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="p-6 space-y-6">
+      {/* Header da Página */}
+      <div>
+        <h1 className="text-2xl font-semibold text-[#34495e]">Contratos de Honorários</h1>
+        <p className="text-sm text-[#6c757d] mt-0.5">
+          Gerencie todos os contratos de honorários do escritório
+        </p>
       </div>
 
-      {/* Header com Filtros */}
-      <Card className="border-slate-200">
+      {/* Card Principal */}
+      <Card className="border-slate-200 shadow-sm">
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between mb-4">
-            <CardTitle className="text-lg font-semibold text-[#34495e]">
-              Contratos de Honorários
-            </CardTitle>
+          {/* Tabs e Ações */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+              <TabsList className="bg-slate-100">
+                <TabsTrigger value="ativos" className="text-xs">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Ativos ({contratosAtivos})
+                </TabsTrigger>
+                <TabsTrigger value="vencer" className="text-xs">
+                  <Clock className="w-3 h-3 mr-1" />
+                  A Vencer ({contratosVencer})
+                </TabsTrigger>
+                <TabsTrigger value="inadimplentes" className="text-xs">
+                  <AlertCircle className="w-3 h-3 mr-1" />
+                  Inadimplentes ({contratosInadimplentes})
+                </TabsTrigger>
+                <TabsTrigger value="todos" className="text-xs">
+                  <FileText className="w-3 h-3 mr-1" />
+                  Todos ({contratos.length})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -382,43 +317,26 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                 onClick={() => setViewMode(viewMode === 'cards' ? 'table' : 'cards')}
                 className="text-xs"
               >
-                {viewMode === 'cards' ? <Table className="w-3.5 h-3.5 mr-1" /> : <BarChart3 className="w-3.5 h-3.5 mr-1" />}
+                {viewMode === 'cards' ? (
+                  <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
+                ) : (
+                  <FileText className="w-3.5 h-3.5 mr-1.5" />
+                )}
                 {viewMode === 'cards' ? 'Tabela' : 'Cards'}
               </Button>
               <Button
                 size="sm"
+                onClick={handleNovoContrato}
                 className="bg-gradient-to-r from-[#89bcbe] to-[#aacfd0] hover:from-[#aacfd0] hover:to-[#89bcbe] text-white"
               >
-                <Plus className="w-3.5 h-3.5 mr-1" />
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
                 Novo Contrato
               </Button>
             </div>
           </div>
 
-          {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="mb-4">
-            <TabsList className="bg-slate-100">
-              <TabsTrigger value="ativos" className="text-xs">
-                <CheckCircle className="w-3 h-3 mr-1" />
-                Ativos ({contratos.filter(c => c.status === 'ativo').length})
-              </TabsTrigger>
-              <TabsTrigger value="vencer" className="text-xs">
-                <Clock className="w-3 h-3 mr-1" />
-                A Vencer ({contratos.filter(c =>
-                  c.proxima_parcela &&
-                  differenceInDays(c.proxima_parcela.vencimento, new Date()) <= 7 &&
-                  differenceInDays(c.proxima_parcela.vencimento, new Date()) >= 0
-                ).length})
-              </TabsTrigger>
-              <TabsTrigger value="inadimplentes" className="text-xs">
-                <AlertCircle className="w-3 h-3 mr-1" />
-                Inadimplentes ({contratos.filter(c => c.inadimplente).length})
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
           {/* Filtros */}
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3 mt-4">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
@@ -430,16 +348,19 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
             </div>
 
             <Select value={filterTipo} onValueChange={setFilterTipo}>
-              <SelectTrigger className="w-[140px] h-9 text-sm border-slate-200">
+              <SelectTrigger className="w-[160px] h-9 text-sm border-slate-200">
                 <Filter className="w-3.5 h-3.5 mr-1.5" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos Tipos</SelectItem>
-                <SelectItem value="fixo">Fixo</SelectItem>
-                <SelectItem value="variavel">Variável</SelectItem>
-                <SelectItem value="exito">Êxito</SelectItem>
-                <SelectItem value="hibrido">Híbrido</SelectItem>
+                <SelectItem value="fixo">Valor Fixo</SelectItem>
+                <SelectItem value="por_hora">Por Hora</SelectItem>
+                <SelectItem value="por_cargo">Por Cargo</SelectItem>
+                <SelectItem value="por_pasta">Por Pasta</SelectItem>
+                <SelectItem value="por_ato">Por Ato</SelectItem>
+                <SelectItem value="por_etapa">Por Etapa</SelectItem>
+                <SelectItem value="misto">Misto</SelectItem>
               </SelectContent>
             </Select>
 
@@ -451,10 +372,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
               <SelectContent>
                 <SelectItem value="all">Todos Status</SelectItem>
                 <SelectItem value="ativo">Ativo</SelectItem>
-                <SelectItem value="pendente">Pendente</SelectItem>
-                <SelectItem value="suspenso">Suspenso</SelectItem>
                 <SelectItem value="encerrado">Encerrado</SelectItem>
-                <SelectItem value="cancelado">Cancelado</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -465,15 +383,16 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
           {viewMode === 'cards' ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredContratos.map((contrato) => {
-                const tipoBadge = getTipoBadge(contrato.tipo)
-                const statusBadge = getStatusBadge(contrato.status)
+                const tipoBadge = getTipoBadge(contrato.forma_cobranca)
+                const statusBadge = getStatusBadge(contrato.ativo, contrato.inadimplente)
 
                 return (
                   <Card
                     key={contrato.id}
                     className={cn(
-                      "border-slate-200 hover:shadow-lg transition-all cursor-pointer",
-                      contrato.inadimplente && "border-red-200 bg-red-50/30"
+                      'border-slate-200 hover:shadow-lg transition-all cursor-pointer',
+                      contrato.inadimplente && 'border-red-200 bg-red-50/30',
+                      !contrato.ativo && 'opacity-60'
                     )}
                     onClick={() => setSelectedContrato(contrato)}
                   >
@@ -481,17 +400,17 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                       {/* Header */}
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <p className="text-xs font-semibold text-[#89bcbe]">{contrato.numero}</p>
+                          <p className="text-xs font-semibold text-[#89bcbe]">{contrato.numero_contrato}</p>
                           <h4 className="text-sm font-semibold text-[#34495e] mt-1">
                             {contrato.cliente_nome}
                           </h4>
                         </div>
                         <div className="flex flex-col gap-1 items-end">
-                          <Badge className={cn("text-[10px]", tipoBadge.class)}>
+                          <Badge className={cn('text-[10px]', tipoBadge.class)}>
                             {tipoBadge.icon}
                             <span className="ml-1">{tipoBadge.label}</span>
                           </Badge>
-                          <Badge className={cn("text-[10px]", statusBadge.class)}>
+                          <Badge className={cn('text-[10px]', statusBadge.class)}>
                             {statusBadge.icon}
                             <span className="ml-1">{statusBadge.label}</span>
                           </Badge>
@@ -503,42 +422,35 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                         <div className="flex justify-between items-center">
                           <span className="text-xs text-slate-600">Valor Total</span>
                           <span className="text-sm font-semibold text-[#34495e]">
-                            {formatCurrency(contrato.valor_total)}
+                            {formatCurrency(contrato.valor_total || 0)}
                           </span>
                         </div>
 
-                        {contrato.tipo === 'fixo' && contrato.numero_parcelas && (
+                        {contrato.total_parcelas && contrato.total_parcelas > 0 && (
                           <div className="flex justify-between items-center">
                             <span className="text-xs text-slate-600">Parcelas</span>
                             <span className="text-xs font-medium text-[#34495e]">
-                              {contrato.parcelas_pagas}/{contrato.numero_parcelas}
-                            </span>
-                          </div>
-                        )}
-
-                        {contrato.tipo === 'exito' && contrato.percentual_exito && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs text-slate-600">% Êxito</span>
-                            <span className="text-xs font-medium text-[#34495e]">
-                              {contrato.percentual_exito.toFixed(1)}%
+                              {contrato.parcelas_pagas}/{contrato.total_parcelas}
                             </span>
                           </div>
                         )}
                       </div>
 
                       {/* Progress */}
-                      <div className="mb-3">
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="text-slate-600">Recebido</span>
-                          <span className="font-medium text-green-600">
-                            {formatCurrency(contrato.valor_recebido)}
-                          </span>
+                      {(contrato.valor_total || 0) > 0 && (
+                        <div className="mb-3">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-slate-600">Recebido</span>
+                            <span className="font-medium text-green-600">
+                              {formatCurrency(contrato.valor_recebido || 0)}
+                            </span>
+                          </div>
+                          <Progress
+                            value={((contrato.valor_recebido || 0) / (contrato.valor_total || 1)) * 100}
+                            className="h-2"
+                          />
                         </div>
-                        <Progress
-                          value={(contrato.valor_recebido / contrato.valor_total) * 100}
-                          className="h-2"
-                        />
-                      </div>
+                      )}
 
                       {/* Próxima Parcela ou Alerta */}
                       {contrato.inadimplente ? (
@@ -546,22 +458,20 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                           <div className="flex items-center gap-2">
                             <AlertTriangle className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />
                             <div className="flex-1">
-                              <p className="text-xs font-semibold text-red-700">
-                                Inadimplente
-                              </p>
+                              <p className="text-xs font-semibold text-red-700">Inadimplente</p>
                               <p className="text-[10px] text-red-600">
                                 {contrato.dias_atraso} dias de atraso
                               </p>
                             </div>
                           </div>
                         </div>
-                      ) : contrato.proxima_parcela && (
+                      ) : contrato.proxima_parcela ? (
                         <div className="bg-blue-50 border border-blue-200 rounded-md p-2">
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-[10px] text-blue-600 font-medium">Próximo Vencimento</p>
                               <p className="text-xs font-semibold text-blue-700">
-                                {format(contrato.proxima_parcela.vencimento, 'dd/MM/yyyy')}
+                                {formatBrazilDate(parseDateInBrazil(contrato.proxima_parcela.vencimento))}
                               </p>
                             </div>
                             <p className="text-xs font-bold text-blue-700">
@@ -569,29 +479,69 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                             </p>
                           </div>
                         </div>
-                      )}
+                      ) : null}
 
                       {/* Actions */}
                       <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" className="h-7 px-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-[#89bcbe] hover:text-[#6ba9ab]"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedContrato(contrato)
+                            }}
+                          >
                             <Eye className="w-3.5 h-3.5" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="h-7 px-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditContrato(contrato)
+                            }}
+                          >
                             <Edit className="w-3.5 h-3.5" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="h-7 px-2">
-                            <Download className="w-3.5 h-3.5" />
-                          </Button>
+                          {contrato.ativo ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-red-600 hover:text-red-700"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteClick(contrato)
+                              }}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-green-600 hover:text-green-700"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleReativar(contrato)
+                              }}
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-[#89bcbe] hover:text-[#6ba9ab]"
-                        >
-                          <Send className="w-3.5 h-3.5 mr-1" />
-                          Cobrar
-                        </Button>
+                        {contrato.inadimplente && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-[#89bcbe] hover:text-[#6ba9ab]"
+                          >
+                            <Send className="w-3.5 h-3.5 mr-1" />
+                            Cobrar
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -616,45 +566,50 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                 </TableHeader>
                 <TableBody>
                   {filteredContratos.map((contrato) => {
-                    const tipoBadge = getTipoBadge(contrato.tipo)
-                    const statusBadge = getStatusBadge(contrato.status)
+                    const tipoBadge = getTipoBadge(contrato.forma_cobranca)
+                    const statusBadge = getStatusBadge(contrato.ativo, contrato.inadimplente)
 
                     return (
                       <TableRow
                         key={contrato.id}
                         className={cn(
-                          "cursor-pointer hover:bg-slate-50",
-                          contrato.inadimplente && "bg-red-50/30"
+                          'cursor-pointer hover:bg-slate-50',
+                          contrato.inadimplente && 'bg-red-50/30',
+                          !contrato.ativo && 'opacity-60'
                         )}
                         onClick={() => setSelectedContrato(contrato)}
                       >
                         <TableCell className="text-xs font-medium text-[#89bcbe]">
-                          {contrato.numero}
+                          {contrato.numero_contrato}
                         </TableCell>
                         <TableCell className="text-xs font-medium text-[#34495e]">
                           {contrato.cliente_nome}
                         </TableCell>
                         <TableCell>
-                          <Badge className={cn("text-[10px]", tipoBadge.class)}>
+                          <Badge className={cn('text-[10px]', tipoBadge.class)}>
                             {tipoBadge.label}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs font-semibold text-[#34495e]">
-                          {formatCurrency(contrato.valor_total)}
+                          {formatCurrency(contrato.valor_total || 0)}
                         </TableCell>
                         <TableCell className="text-xs">
                           <div className="flex items-center gap-2">
                             <Progress
-                              value={(contrato.valor_recebido / contrato.valor_total) * 100}
+                              value={
+                                (contrato.valor_total || 0) > 0
+                                  ? ((contrato.valor_recebido || 0) / (contrato.valor_total || 1)) * 100
+                                  : 0
+                              }
                               className="h-1.5 w-16"
                             />
                             <span className="text-green-600 font-medium">
-                              {formatCurrency(contrato.valor_recebido)}
+                              {formatCurrency(contrato.valor_recebido || 0)}
                             </span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={cn("text-[10px]", statusBadge.class)}>
+                          <Badge className={cn('text-[10px]', statusBadge.class)}>
                             {statusBadge.label}
                           </Badge>
                         </TableCell>
@@ -667,7 +622,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                           ) : contrato.proxima_parcela ? (
                             <div>
                               <p className="font-medium text-[#34495e]">
-                                {format(contrato.proxima_parcela.vencimento, 'dd/MM')}
+                                {formatBrazilDate(parseDateInBrazil(contrato.proxima_parcela.vencimento))}
                               </p>
                               <p className="text-[10px] text-slate-500">
                                 {formatCurrency(contrato.proxima_parcela.valor)}
@@ -679,15 +634,53 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-[#89bcbe] hover:text-[#6ba9ab]"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedContrato(contrato)
+                              }}
+                            >
                               <Eye className="w-3.5 h-3.5" />
                             </Button>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEditContrato(contrato)
+                              }}
+                            >
                               <Edit className="w-3.5 h-3.5" />
                             </Button>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                              <Send className="w-3.5 h-3.5 text-[#89bcbe]" />
-                            </Button>
+                            {contrato.ativo ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-red-600"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteClick(contrato)
+                                }}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-green-600"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleReativar(contrato)
+                                }}
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -710,10 +703,63 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                   ? 'Tente ajustar os filtros'
                   : 'Comece criando um novo contrato'}
               </p>
+              {!searchTerm && filterTipo === 'all' && filterStatus === 'all' && (
+                <Button
+                  size="sm"
+                  onClick={handleNovoContrato}
+                  className="mt-4 bg-[#89bcbe] hover:bg-[#6ba9ab]"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  Criar Primeiro Contrato
+                </Button>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Criação/Edição */}
+      <ContratoModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        contrato={editingContrato}
+        onSave={handleSaveContrato}
+      />
+
+      {/* Dialog de Confirmação de Exclusão */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Encerrar Contrato</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja encerrar o contrato{' '}
+              <strong>{contratoToDelete?.numero_contrato}</strong>?
+              <br />
+              O contrato será marcado como inativo, mas poderá ser reativado posteriormente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Encerrar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Modal de Visualização de Detalhes */}
+      <ContratoDetailModal
+        open={selectedContrato !== null}
+        onOpenChange={(open) => !open && setSelectedContrato(null)}
+        contrato={selectedContrato}
+        onEdit={(contrato) => {
+          setSelectedContrato(null)
+          handleEditContrato(contrato)
+        }}
+      />
     </div>
   )
 }

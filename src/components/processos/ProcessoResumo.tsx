@@ -41,6 +41,7 @@ import TarefaDetailModal from '@/components/agenda/TarefaDetailModal'
 import EventoDetailModal from '@/components/agenda/EventoDetailModal'
 import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
 import ProcessoTimelineHorizontal from '@/components/processos/ProcessoTimelineHorizontal'
+import ProcessoFinanceiroCard from '@/components/processos/ProcessoFinanceiroCard'
 import { useRouter } from 'next/navigation'
 import type { TarefaFormData } from '@/hooks/useTarefas'
 import type { EventoFormData } from '@/hooks/useEventos'
@@ -168,27 +169,36 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
     }
   }, [processo.id])
 
-  // Mock data
-  const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([
-    {
-      id: '1',
-      data_movimento: '2025-01-07T10:30:00',
-      tipo_descricao: 'Sentença',
-      descricao: 'Publicada sentença julgando procedente o pedido inicial, condenando a ré ao pagamento de R$ 50.000,00 a título de verbas rescisórias e indenização por danos morais.'
-    },
-    {
-      id: '2',
-      data_movimento: '2025-01-05T14:20:00',
-      tipo_descricao: 'Juntada de Petição',
-      descricao: 'Juntada de petição intermediária protocolada pela parte autora.'
-    },
-    {
-      id: '3',
-      data_movimento: '2024-12-15T09:15:00',
-      tipo_descricao: 'Audiência de Instrução',
-      descricao: 'Realizada audiência de instrução e julgamento. Colhidos depoimentos de testemunhas. Processo concluso para sentença.'
+  // Movimentações - carregadas do banco
+  const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([])
+  const [loadingMovimentacoes, setLoadingMovimentacoes] = useState(true)
+
+  // Carregar movimentações reais do banco
+  useEffect(() => {
+    const loadMovimentacoes = async () => {
+      try {
+        setLoadingMovimentacoes(true)
+        const { data, error } = await supabase
+          .from('processos_movimentacoes')
+          .select('id, data_movimento, tipo_descricao, descricao')
+          .eq('processo_id', processo.id)
+          .order('data_movimento', { ascending: false })
+          .limit(5)
+
+        if (!error && data) {
+          setMovimentacoes(data)
+        }
+      } catch (error) {
+        console.error('Erro ao carregar movimentações:', error)
+      } finally {
+        setLoadingMovimentacoes(false)
+      }
     }
-  ])
+
+    if (processo.id) {
+      loadMovimentacoes()
+    }
+  }, [processo.id, supabase])
 
 
   const copyCNJ = () => {
@@ -703,6 +713,19 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
             )}
           </CardContent>
         </Card>
+
+        {/* Card Financeiro */}
+        <ProcessoFinanceiroCard
+          processoId={processo.id}
+          onLancarHoras={() => {
+            // TODO: Abrir modal de timesheet
+            console.log('Lançar horas')
+          }}
+          onLancarDespesa={() => {
+            // TODO: Abrir modal de despesa
+            console.log('Lançar despesa')
+          }}
+        />
 
         {/* Card Equipe */}
         <Card className="border-slate-200 shadow-sm">

@@ -19,6 +19,7 @@ interface UseEscritorioCargosReturn {
   getCargoPermissoes: (cargoId: string) => Promise<CargoPermissao[]>;
   createCargo: (cargo: NovoCargo) => Promise<Cargo | null>;
   updateCargo: (cargoId: string, dados: Partial<NovoCargo>) => Promise<boolean>;
+  updateCargoValorHora: (cargoId: string, valorHora: number | null) => Promise<boolean>;
   deleteCargo: (cargoId: string) => Promise<boolean>;
   reorderCargos: (cargosOrdenados: { id: string; nivel: number }[]) => Promise<boolean>;
   updateCargoPermissao: (
@@ -202,6 +203,35 @@ export function useEscritorioCargos(escritorioId: string | undefined): UseEscrit
     return true;
   }, [supabase]);
 
+  const updateCargoValorHora = useCallback(async (
+    cargoId: string,
+    valorHora: number | null
+  ): Promise<boolean> => {
+    const { error } = await supabase
+      .from('escritorios_cargos')
+      .update({
+        valor_hora_padrao: valorHora,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', cargoId);
+
+    if (error) {
+      console.error('Erro ao atualizar valor hora:', error);
+      setErro('Erro ao atualizar valor hora');
+      return false;
+    }
+
+    // Atualizar estado local
+    setCargos(prev => prev.map(c =>
+      c.id === cargoId ? { ...c, valor_hora_padrao: valorHora } : c
+    ));
+    setCargosComPermissoes(prev => prev.map(c =>
+      c.id === cargoId ? { ...c, valor_hora_padrao: valorHora } : c
+    ));
+
+    return true;
+  }, [supabase]);
+
   const deleteCargo = useCallback(async (cargoId: string): Promise<boolean> => {
     // Verificar se há membros com esse cargo
     const { data: membros } = await supabase
@@ -310,6 +340,7 @@ export function useEscritorioCargos(escritorioId: string | undefined): UseEscrit
     getCargoPermissoes,
     createCargo,
     updateCargo,
+    updateCargoValorHora,
     deleteCargo,
     reorderCargos,
     updateCargoPermissao,

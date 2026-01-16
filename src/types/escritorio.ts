@@ -11,6 +11,7 @@ export interface Cargo {
   nivel: number;
   cor: string | null;
   descricao: string | null;
+  valor_hora_padrao: number | null;
   ativo: boolean;
   created_at?: string;
   updated_at?: string;

@@ -19,10 +19,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { X, ChevronLeft, ChevronRight, Check, Search, Loader2 } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, Check, Search, Loader2, FileText, DollarSign, Clock, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { ProcessoDataJud } from '@/types/datajud'
+import ModalidadeSelector from '@/components/financeiro/ModalidadeSelector'
 
 interface ProcessoWizardProps {
   open: boolean
@@ -46,6 +47,8 @@ interface FormData {
   cliente_id: string
   polo_cliente: string
   parte_contraria: string
+  contrato_id: string
+  modalidade_cobranca: string // Obrigatório quando tem contrato
 
   // Step 3: Localização
   tribunal: string
@@ -66,6 +69,28 @@ interface FormData {
   provisao_sugerida: string
 }
 
+interface FormaContrato {
+  forma_cobranca: string
+  config?: {
+    valor_fixo?: number
+    valor_hora?: number
+    percentual_exito?: number
+    valor_por_processo?: number
+  }
+}
+
+interface ContratoOption {
+  id: string
+  titulo: string
+  forma_cobranca: string
+  formas_disponiveis: FormaContrato[] // MÚLTIPLAS formas
+  valor_fixo: number | null
+  percentual_exito: number | null
+  valor_hora: number | null
+  valor_por_processo: number | null
+  dia_cobranca: number | null
+}
+
 const initialFormData: FormData = {
   numero_cnj: '',
   tipo: 'judicial',
@@ -79,6 +104,8 @@ const initialFormData: FormData = {
   cliente_id: '',
   polo_cliente: 'ativo',
   parte_contraria: '',
+  contrato_id: '',
+  modalidade_cobranca: '',
   tribunal: '',
   comarca: '',
   vara: '',
@@ -93,13 +120,145 @@ const initialFormData: FormData = {
   provisao_sugerida: '',
 }
 
+const FORMA_COBRANCA_LABELS: Record<string, string> = {
+  fixo: 'Valor Fixo',
+  por_hora: 'Por Hora',
+  por_etapa: 'Por Etapa',
+  misto: 'Misto',
+  por_pasta: 'Por Pasta (Mensal)',
+  por_ato: 'Por Ato Processual',
+  por_cargo: 'Por Cargo/Timesheet',
+}
+
 export default function ProcessoWizard({ open, onOpenChange, onSuccess }: ProcessoWizardProps) {
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState<FormData>(initialFormData)
   const [loading, setLoading] = useState(false)
   const [newTag, setNewTag] = useState('')
   const [consultandoCNJ, setConsultandoCNJ] = useState(false)
+  const [contratos, setContratos] = useState<ContratoOption[]>([])
+  const [loadingContratos, setLoadingContratos] = useState(false)
   const supabase = createClient()
+
+  // Carregar contratos quando cliente é selecionado
+  const loadContratosCliente = async (clienteId: string) => {
+    if (!clienteId) {
+      setContratos([])
+      return
+    }
+
+    setLoadingContratos(true)
+    try {
+      // Buscar contratos com config e formas disponíveis
+      const { data, error } = await supabase
+        .from('financeiro_contratos_honorarios')
+        .select(`
+          id,
+          titulo,
+          forma_cobranca,
+          config:financeiro_contratos_honorarios_config(
+            tipo_config,
+            valor_fixo,
+            percentual_exito,
+            valor_hora,
+            valor_por_processo,
+            dia_cobranca
+          ),
+          formas:financeiro_contratos_formas(
+            forma_cobranca,
+            ativo
+          )
+        `)
+        .eq('cliente_id', clienteId)
+        .eq('ativo', true)
+        .order('titulo')
+
+      if (error) {
+        console.error('Erro ao carregar contratos:', error)
+        setContratos([])
+        return
+      }
+
+      const contratosFormatados: ContratoOption[] = (data || []).map(c => {
+        const config = c.config?.[0] || {}
+
+        // Carregar formas disponíveis da tabela financeiro_contratos_formas
+        // Se não houver formas na nova tabela, usar forma_cobranca do contrato
+        const formasDisponiveis: FormaContrato[] = (c.formas || [])
+          .filter((f: any) => f.ativo !== false)
+          .map((f: any) => ({
+            forma_cobranca: f.forma_cobranca,
+            config: {
+              valor_fixo: config.valor_fixo,
+              valor_hora: config.valor_hora,
+              percentual_exito: config.percentual_exito,
+              valor_por_processo: config.valor_por_processo,
+            }
+          }))
+
+        // Fallback: se não tiver formas na nova tabela, usar forma_cobranca do contrato
+        if (formasDisponiveis.length === 0 && c.forma_cobranca) {
+          formasDisponiveis.push({
+            forma_cobranca: c.forma_cobranca,
+            config: {
+              valor_fixo: config.valor_fixo,
+              valor_hora: config.valor_hora,
+              percentual_exito: config.percentual_exito,
+              valor_por_processo: config.valor_por_processo,
+            }
+          })
+        }
+
+        return {
+          id: c.id,
+          titulo: c.titulo,
+          forma_cobranca: c.forma_cobranca || formasDisponiveis[0]?.forma_cobranca || 'fixo',
+          formas_disponiveis: formasDisponiveis,
+          valor_fixo: config.valor_fixo || null,
+          percentual_exito: config.percentual_exito || null,
+          valor_hora: config.valor_hora || null,
+          valor_por_processo: config.valor_por_processo || null,
+          dia_cobranca: config.dia_cobranca || null,
+        }
+      })
+
+      setContratos(contratosFormatados)
+    } catch (error) {
+      console.error('Erro ao carregar contratos:', error)
+      setContratos([])
+    } finally {
+      setLoadingContratos(false)
+    }
+  }
+
+  // Handler para seleção de cliente
+  const handleClienteChange = (clienteId: string) => {
+    updateField('cliente_id', clienteId)
+    updateField('contrato_id', '') // Limpar contrato ao mudar cliente
+    updateField('modalidade_cobranca', '') // Limpar modalidade também
+    loadContratosCliente(clienteId)
+  }
+
+  // Handler para seleção de contrato
+  const handleContratoChange = (contratoId: string) => {
+    updateField('contrato_id', contratoId)
+    updateField('modalidade_cobranca', '') // Limpar modalidade ao mudar contrato
+
+    // Se o contrato tiver apenas uma forma, seleciona automaticamente
+    const contrato = contratos.find(c => c.id === contratoId)
+    if (contrato && contrato.formas_disponiveis.length === 1) {
+      updateField('modalidade_cobranca', contrato.formas_disponiveis[0].forma_cobranca)
+    }
+  }
+
+  // Obter contrato selecionado
+  const contratoSelecionado = contratos.find(c => c.id === formData.contrato_id)
+
+  // Formatar valor para exibição
+  const formatarValor = (valor: number | null) => {
+    if (!valor) return null
+    return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  }
 
   // Funcao para inferir area juridica pela classe processual
   const inferirArea = (classe: string, assuntos?: string[]): string | null => {
@@ -228,6 +387,14 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
           toast.error('Cliente é obrigatório')
           return false
         }
+        // Se tem contrato com múltiplas formas, exigir modalidade
+        if (formData.contrato_id) {
+          const contrato = contratos.find(c => c.id === formData.contrato_id)
+          if (contrato && contrato.formas_disponiveis.length > 1 && !formData.modalidade_cobranca) {
+            toast.error('Selecione a modalidade de cobrança para este processo')
+            return false
+          }
+        }
         return true
       case 3:
         if (!formData.tribunal.trim()) {
@@ -276,6 +443,8 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
         cliente_id: formData.cliente_id,
         polo_cliente: formData.polo_cliente,
         parte_contraria: formData.parte_contraria || null,
+        contrato_id: formData.contrato_id || null,
+        modalidade_cobranca: formData.modalidade_cobranca || null,
         tribunal: formData.tribunal,
         comarca: formData.comarca || null,
         vara: formData.vara || null,
@@ -516,7 +685,7 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="cliente_id">Cliente *</Label>
-                  <Select value={formData.cliente_id} onValueChange={(v) => updateField('cliente_id', v)}>
+                  <Select value={formData.cliente_id} onValueChange={handleClienteChange}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o cliente..." />
                     </SelectTrigger>
@@ -530,6 +699,143 @@ export default function ProcessoWizard({ open, onOpenChange, onSuccess }: Proces
                     Não encontrou? <button className="text-[#89bcbe] hover:underline">Cadastrar novo cliente</button>
                   </p>
                 </div>
+
+                {/* Seletor de Contrato - aparece após selecionar cliente */}
+                {formData.cliente_id && (
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-[#34495e]" />
+                      <span className="text-sm font-medium text-[#34495e]">Contrato de Honorários</span>
+                    </div>
+
+                    {loadingContratos ? (
+                      <div className="flex items-center gap-2 text-slate-500">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="text-sm">Carregando contratos...</span>
+                      </div>
+                    ) : contratos.length === 0 ? (
+                      <div className="text-sm text-slate-500">
+                        <p>Nenhum contrato ativo encontrado para este cliente.</p>
+                        <p className="text-xs mt-1">
+                          O processo será criado sem vínculo com contrato. Você pode vincular posteriormente.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <div>
+                          <Label htmlFor="contrato_id">Qual contrato aplicar a este processo?</Label>
+                          <Select
+                            value={formData.contrato_id}
+                            onValueChange={handleContratoChange}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione um contrato (opcional)..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {contratos.map(c => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.titulo} - {c.formas_disponiveis.length > 1
+                                    ? `${c.formas_disponiveis.length} formas`
+                                    : FORMA_COBRANCA_LABELS[c.forma_cobranca] || c.forma_cobranca}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Preview das regras do contrato selecionado */}
+                        {contratoSelecionado && (
+                          <div className="p-3 bg-white rounded-lg border border-[#89bcbe]/30 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <DollarSign className="w-4 h-4 text-emerald-600" />
+                              <span className="text-sm font-medium text-[#34495e]">
+                                Regras de Cobrança
+                              </span>
+                              <Badge variant="outline" className="text-xs">
+                                {FORMA_COBRANCA_LABELS[contratoSelecionado.forma_cobranca]}
+                              </Badge>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              {contratoSelecionado.valor_fixo && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-slate-500">Valor fixo:</span>
+                                  <span className="font-medium text-emerald-600">
+                                    {formatarValor(contratoSelecionado.valor_fixo)}
+                                  </span>
+                                </div>
+                              )}
+                              {contratoSelecionado.valor_hora && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-slate-500">Valor/hora:</span>
+                                  <span className="font-medium text-emerald-600">
+                                    {formatarValor(contratoSelecionado.valor_hora)}
+                                  </span>
+                                </div>
+                              )}
+                              {contratoSelecionado.percentual_exito && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-slate-500">Êxito:</span>
+                                  <span className="font-medium text-emerald-600">
+                                    {contratoSelecionado.percentual_exito}%
+                                  </span>
+                                </div>
+                              )}
+                              {contratoSelecionado.valor_por_processo && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-slate-500">Valor/processo:</span>
+                                  <span className="font-medium text-emerald-600">
+                                    {formatarValor(contratoSelecionado.valor_por_processo)}
+                                  </span>
+                                </div>
+                              )}
+                              {contratoSelecionado.dia_cobranca && (
+                                <div className="flex items-center gap-1.5">
+                                  <Clock className="w-3 h-3 text-slate-400" />
+                                  <span className="text-slate-500">Cobrança dia:</span>
+                                  <span className="font-medium">{contratoSelecionado.dia_cobranca}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {contratoSelecionado.forma_cobranca === 'por_cargo' && (
+                              <p className="text-xs text-slate-500 mt-1">
+                                Os valores por cargo serão aplicados conforme configuração do contrato.
+                              </p>
+                            )}
+                            {contratoSelecionado.forma_cobranca === 'por_ato' && (
+                              <p className="text-xs text-slate-500 mt-1">
+                                Atos processuais serão cobrados automaticamente quando detectados.
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Seletor de Modalidade - aparece quando contrato tem múltiplas formas */}
+                        {contratoSelecionado && contratoSelecionado.formas_disponiveis.length > 1 && (
+                          <div className="mt-4">
+                            <ModalidadeSelector
+                              formas={contratoSelecionado.formas_disponiveis}
+                              selectedModalidade={formData.modalidade_cobranca}
+                              onSelect={(modalidade) => updateField('modalidade_cobranca', modalidade)}
+                              error={!formData.modalidade_cobranca ? undefined : undefined}
+                            />
+                          </div>
+                        )}
+
+                        {/* Aviso de seleção obrigatória */}
+                        {contratoSelecionado && contratoSelecionado.formas_disponiveis.length > 1 && !formData.modalidade_cobranca && (
+                          <div className="flex items-center gap-2 p-2.5 mt-3 rounded-lg bg-amber-50 border border-amber-200">
+                            <AlertTriangle className="w-4 h-4 text-amber-600" />
+                            <span className="text-xs text-amber-700">
+                              Selecione a modalidade de cobrança para este processo
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <Label htmlFor="polo_cliente">Polo do Cliente *</Label>

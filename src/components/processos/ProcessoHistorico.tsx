@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -9,62 +10,57 @@ import {
   Archive,
   DollarSign,
   Paperclip,
-  Activity
+  Activity,
+  Loader2,
+  History
 } from 'lucide-react'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { createClient } from '@/lib/supabase/client'
+import { formatBrazilDateTime } from '@/lib/timezone'
 
 interface ProcessoHistoricoProps {
   processoId: string
 }
 
+interface HistoricoEntry {
+  id: string
+  acao: string
+  descricao: string
+  campo_alterado: string | null
+  valor_anterior: string | null
+  valor_novo: string | null
+  user_nome: string | null
+  created_at: string
+}
+
 export default function ProcessoHistorico({ processoId }: ProcessoHistoricoProps) {
-  const historico = [
-    {
-      id: '1',
-      acao: 'edicao',
-      usuario: 'Dr. Carlos Souza',
-      data: '2025-01-07T14:32:00',
-      campo_alterado: 'Status',
-      valor_anterior: 'ativo',
-      valor_novo: 'suspenso',
-      descricao: 'Status alterado para suspenso devido a acordo parcial'
-    },
-    {
-      id: '2',
-      acao: 'movimentacao',
-      usuario: 'Sistema',
-      data: '2025-01-07T10:30:00',
-      descricao: 'Nova movimentação adicionada: Sentença'
-    },
-    {
-      id: '3',
-      acao: 'edicao',
-      usuario: 'Dra. Ana Santos',
-      data: '2025-01-05T16:20:00',
-      campo_alterado: 'Valor Condenação',
-      valor_anterior: null,
-      valor_novo: 'R$ 50.000,00',
-      descricao: 'Valor da condenação atualizado após sentença'
-    },
-    {
-      id: '4',
-      acao: 'edicao',
-      usuario: 'Dr. Carlos Souza',
-      data: '2024-12-20T11:15:00',
-      campo_alterado: 'Responsável',
-      valor_anterior: 'Dra. Ana Santos',
-      valor_novo: 'Dr. Carlos Souza',
-      descricao: 'Responsabilidade do processo transferida'
-    },
-    {
-      id: '5',
-      acao: 'criacao',
-      usuario: 'Dr. Carlos Souza',
-      data: '2024-01-15T10:00:00',
-      descricao: 'Processo criado no sistema'
+  const [historico, setHistorico] = useState<HistoricoEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
+
+  useEffect(() => {
+    const loadHistorico = async () => {
+      if (!processoId) return
+
+      setLoading(true)
+      try {
+        const { data, error } = await supabase
+          .from('processos_historico')
+          .select('id, acao, descricao, campo_alterado, valor_anterior, valor_novo, user_nome, created_at')
+          .eq('processo_id', processoId)
+          .order('created_at', { ascending: false })
+          .limit(50)
+
+        if (error) throw error
+        setHistorico(data || [])
+      } catch (error) {
+        console.error('Erro ao carregar histórico:', error)
+      } finally {
+        setLoading(false)
+      }
     }
-  ]
+
+    loadHistorico()
+  }, [processoId, supabase])
 
   const getIconeAcao = (acao: string) => {
     const icons = {
@@ -104,68 +100,81 @@ export default function ProcessoHistorico({ processoId }: ProcessoHistoricoProps
           </p>
         </CardHeader>
         <CardContent>
-          <div className="relative space-y-6">
-            {/* Linha vertical conectora */}
-            <div className="absolute left-[14px] top-0 bottom-0 w-0.5 bg-slate-200" />
+          {loading ? (
+            <div className="text-center py-8 text-slate-500">
+              <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+              <p className="text-sm">Carregando histórico...</p>
+            </div>
+          ) : historico.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              <History className="w-10 h-10 mx-auto mb-3 opacity-40" />
+              <p className="text-sm">Nenhum registro no histórico</p>
+              <p className="text-xs mt-1">Alterações no processo serão registradas aqui automaticamente</p>
+            </div>
+          ) : (
+            <div className="relative space-y-6">
+              {/* Linha vertical conectora */}
+              <div className="absolute left-[14px] top-0 bottom-0 w-0.5 bg-slate-200" />
 
-            {historico.map((entry, index) => {
-              const Icon = getIconeAcao(entry.acao)
-              return (
-                <div key={entry.id} className="relative flex gap-4 pl-10">
-                  {/* Ícone da ação */}
-                  <div className={`absolute left-0 w-7 h-7 rounded-lg flex items-center justify-center ${getColorClass(entry.acao)}`}>
-                    <Icon className="w-3.5 h-3.5" />
-                  </div>
-
-                  {/* Conteúdo do evento */}
-                  <div className="flex-1 pb-6 border-b border-slate-100 last:border-0">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="secondary" className="text-[10px]">
-                            {entry.acao}
-                          </Badge>
-                          <span className="text-sm font-semibold text-[#34495e]">
-                            {entry.usuario}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500">
-                          {format(new Date(entry.data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                        </p>
-                      </div>
+              {historico.map((entry) => {
+                const Icon = getIconeAcao(entry.acao)
+                return (
+                  <div key={entry.id} className="relative flex gap-4 pl-10">
+                    {/* Ícone da ação */}
+                    <div className={`absolute left-0 w-7 h-7 rounded-lg flex items-center justify-center ${getColorClass(entry.acao)}`}>
+                      <Icon className="w-3.5 h-3.5" />
                     </div>
 
-                    {/* Detalhes da alteração */}
-                    {entry.campo_alterado && (
-                      <div className="mb-2 p-3 bg-slate-50 rounded-lg">
-                        <p className="text-xs font-semibold text-[#46627f] mb-1">
-                          Campo: {entry.campo_alterado}
-                        </p>
-                        <div className="flex items-center gap-2 text-xs">
-                          {entry.valor_anterior && (
-                            <>
-                              <span className="text-slate-600">De:</span>
-                              <code className="px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-700">
-                                {entry.valor_anterior}
-                              </code>
-                            </>
-                          )}
-                          <span className="text-slate-600">→ Para:</span>
-                          <code className="px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-700">
-                            {entry.valor_novo}
-                          </code>
+                    {/* Conteúdo do evento */}
+                    <div className="flex-1 pb-6 border-b border-slate-100 last:border-0">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="secondary" className="text-[10px] capitalize">
+                              {entry.acao}
+                            </Badge>
+                            <span className="text-sm font-semibold text-[#34495e]">
+                              {entry.user_nome || 'Sistema'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500">
+                            {formatBrazilDateTime(new Date(entry.created_at))}
+                          </p>
                         </div>
                       </div>
-                    )}
 
-                    <p className="text-sm text-slate-700 leading-relaxed">
-                      {entry.descricao}
-                    </p>
+                      {/* Detalhes da alteração */}
+                      {entry.campo_alterado && (
+                        <div className="mb-2 p-3 bg-slate-50 rounded-lg">
+                          <p className="text-xs font-semibold text-[#46627f] mb-1">
+                            Campo: {entry.campo_alterado}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs flex-wrap">
+                            {entry.valor_anterior && (
+                              <>
+                                <span className="text-slate-600">De:</span>
+                                <code className="px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-700">
+                                  {entry.valor_anterior}
+                                </code>
+                              </>
+                            )}
+                            <span className="text-slate-600">→ Para:</span>
+                            <code className="px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-700">
+                              {entry.valor_novo}
+                            </code>
+                          </div>
+                        </div>
+                      )}
+
+                      <p className="text-sm text-slate-700 leading-relaxed">
+                        {entry.descricao}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

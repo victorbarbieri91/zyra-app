@@ -52,7 +52,6 @@ const menuItems: MenuItem[] = [
     icon: MessageSquareCode,
     href: '/dashboard/centro-comando',
     group: 'main',
-    disabled: true,
   },
   {
     title: 'Agenda',

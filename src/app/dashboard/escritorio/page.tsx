@@ -12,6 +12,7 @@ import { EscritorioHeader } from '@/components/escritorio/EscritorioHeader';
 import { EquipeCard } from '@/components/escritorio/EquipeCard';
 import { ConvitesCard } from '@/components/escritorio/ConvitesCard';
 import { CargosPermissoesCard } from '@/components/escritorio/CargosPermissoesCard';
+import { ValoresCargosCard } from '@/components/escritorio/ValoresCargosCard';
 import { PlanoLimitesCard } from '@/components/escritorio/PlanoLimitesCard';
 
 // Modais
@@ -31,6 +32,7 @@ export default function EscritorioPage() {
     recarregar: recarregarCargos,
     createCargo,
     updateCargo,
+    updateCargoValorHora,
     deleteCargo,
     reorderCargos,
   } = useEscritorioCargos(escritorioAtivo?.id);
@@ -84,7 +86,7 @@ export default function EscritorioPage() {
 
   if (carregando && !escritorioAtivo) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6 flex items-center justify-center">
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-[#89bcbe] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-[#6c757d]">Carregando escritorio...</p>
@@ -95,7 +97,7 @@ export default function EscritorioPage() {
 
   if (!escritorioAtivo) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6 flex items-center justify-center">
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <p className="text-[#6c757d] mb-4">Nenhum escritorio ativo</p>
           <p className="text-sm text-[#adb5bd]">
@@ -107,8 +109,7 @@ export default function EscritorioPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6">
-      <div className="max-w-[1400px] mx-auto space-y-6">
+    <div className="p-6 space-y-6">
         {/* Header */}
         <div className="mb-2">
           <h1 className="text-2xl font-semibold text-[#34495e]">Gestao do Escritorio</h1>
@@ -146,6 +147,13 @@ export default function EscritorioPage() {
           <CargosPermissoesCard
             cargos={cargos}
             onConfigurar={() => setModalCargosPermissoes(true)}
+          />
+
+          {/* Card Valores por Cargo - Timesheet */}
+          <ValoresCargosCard
+            cargos={cargos}
+            onUpdateValorHora={updateCargoValorHora}
+            carregando={carregandoCargos}
           />
 
           {/* Card Plano e Limites */}
@@ -199,7 +207,6 @@ export default function EscritorioPage() {
           deleteCargo={deleteCargo}
           reorderCargos={reorderCargos}
         />
-      </div>
     </div>
   );
 }

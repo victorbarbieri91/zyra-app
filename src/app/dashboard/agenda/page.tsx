@@ -442,8 +442,7 @@ export default function AgendaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6">
-      <div className="max-w-[1800px] mx-auto space-y-6">
+    <div className="p-6 space-y-6">
         {/* Header */}
         <div>
           {/* Linha 1: Título */}
@@ -617,7 +616,6 @@ export default function AgendaPage() {
             )}
           </>
         )}
-      </div>
 
       {/* Sidebar Dinâmica (apenas para view de mês) */}
       <SidebarDinamica

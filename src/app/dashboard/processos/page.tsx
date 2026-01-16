@@ -272,8 +272,7 @@ export default function ProcessosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6">
-      <div className="max-w-[1800px] mx-auto space-y-6">
+    <div className="p-6 space-y-6">
 
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -333,18 +332,18 @@ export default function ProcessosPage() {
         {/* Tabela de Processos */}
         <Card className="border-slate-200 shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full table-fixed">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide">Nº Pasta</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide">Nº CNJ</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide">Cliente</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide">Parte Contrária</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide">Área</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide">Responsável</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide">Status</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide">Últ. Mov.</th>
-                  <th className="text-center p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide">Ações</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Nº Pasta</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-52">Nº CNJ</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-56">Cliente</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-44">Parte Contrária</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-16">Área</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-28">Responsável</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-16">Status</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-20">Últ. Mov.</th>
+                  <th className="text-center p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -354,32 +353,38 @@ export default function ProcessosPage() {
                     onClick={() => router.push(`/dashboard/processos/${processo.id}`)}
                     className="border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer"
                   >
-                    <td className="p-3">
+                    <td className="p-3 whitespace-nowrap">
                       <span className="text-[14px] font-bold text-[#34495e]">{processo.numero_pasta}</span>
                     </td>
-                    <td className="p-3">
+                    <td className="p-3 whitespace-nowrap">
                       <span className="text-xs text-slate-600">{processo.numero_cnj}</span>
                     </td>
                     <td className="p-3">
-                      <span className="text-xs text-slate-700">{processo.cliente_nome}</span>
+                      <span className="text-xs text-slate-700 block truncate" title={processo.cliente_nome || ''}>
+                        {processo.cliente_nome || '-'}
+                      </span>
                     </td>
                     <td className="p-3">
-                      <span className="text-xs text-slate-600">{processo.parte_contraria}</span>
+                      <span className="text-xs text-slate-600 block truncate" title={processo.parte_contraria || ''}>
+                        {processo.parte_contraria || '-'}
+                      </span>
                     </td>
-                    <td className="p-3">
+                    <td className="p-3 whitespace-nowrap">
                       <Badge className={`text-[10px] border ${getAreaBadge(processo.area)}`}>
                         {processo.area}
                       </Badge>
                     </td>
                     <td className="p-3">
-                      <span className="text-xs text-slate-600">{processo.responsavel_nome}</span>
+                      <span className="text-xs text-slate-600 block truncate" title={processo.responsavel_nome || ''}>
+                        {processo.responsavel_nome || '-'}
+                      </span>
                     </td>
-                    <td className="p-3">
+                    <td className="p-3 whitespace-nowrap">
                       <Badge className={`text-[10px] border ${getStatusBadge(processo.status)}`}>
                         {processo.status}
                       </Badge>
                     </td>
-                    <td className="p-3">
+                    <td className="p-3 whitespace-nowrap">
                       <span className="text-xs text-slate-500">
                         {formatTimestamp(processo.ultima_movimentacao)}
                       </span>
@@ -474,8 +479,6 @@ export default function ProcessosPage() {
             </div>
           </div>
         </Card>
-
-      </div>
 
       {/* Wizard de Cadastro */}
       <ProcessoWizard

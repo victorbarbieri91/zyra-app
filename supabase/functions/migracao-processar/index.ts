@@ -131,6 +131,7 @@ async function processarArquivo(supabase: any, job: any) {
       linhas_duplicadas: resultado.duplicatas.length,
       erros: resultado.erros,
       duplicatas: resultado.duplicatas,
+      pendencias: resultado.pendencias, // NOVO: Pendências de cliente não encontrado
       campos_extras: resultado.camposExtras,
       resultado_final: { dados_validados: resultado.validas }
     })
@@ -220,7 +221,16 @@ async function parseExcel(blob: Blob): Promise<Record<string, any>[]> {
   // Detectar linha de headers (pular linhas de título)
   const headerRowIndex = encontrarLinhaHeaders(data)
 
-  const headers = data[headerRowIndex].map((h: any) => String(h).trim()).filter(Boolean)
+  // CORREÇÃO: Manter mapeamento de índices originais para evitar deslocamento
+  const rawHeaders = data[headerRowIndex].map((h: any) => String(h).trim())
+  const headerMapping: { header: string; originalIndex: number }[] = []
+
+  rawHeaders.forEach((header, originalIndex) => {
+    if (header) { // Apenas headers não vazios
+      headerMapping.push({ header, originalIndex })
+    }
+  })
+
   const result: Record<string, any>[] = []
 
   for (let i = headerRowIndex + 1; i < data.length; i++) {
@@ -229,8 +239,9 @@ async function parseExcel(blob: Blob): Promise<Record<string, any>[]> {
 
     if (!values.some((v: any) => v !== '')) continue // Pular linhas vazias
 
-    headers.forEach((header, index) => {
-      let value = values[index]
+    // CORREÇÃO: Usar índice original para pegar o valor correto
+    headerMapping.forEach(({ header, originalIndex }) => {
+      let value = values[originalIndex] // Usar índice ORIGINAL!
 
       // Converter Date para string
       if (value instanceof Date) {
@@ -294,6 +305,7 @@ async function validarLinhas(supabase: any, job: any, linhas: Record<string, any
   const validas: any[] = []
   const erros: any[] = []
   const duplicatas: any[] = []
+  const pendencias: any[] = [] // NOVO: Pendências de cliente não encontrado
   const camposExtras = new Set<string>()
 
   // Identificar campos não mapeados
@@ -314,13 +326,21 @@ async function validarLinhas(supabase: any, job: any, linhas: Record<string, any
     const numLinha = i + 2 // +2 porque linha 1 é header
 
     // Aplicar mapeamento
-    const registro = aplicarMapeamento(linha, mapeamento, Array.from(camposExtras))
+    const registroMapeado = aplicarMapeamento(linha, mapeamento, Array.from(camposExtras))
 
-    // Validar
+    // SANEAR dados ANTES de validar (normaliza CNJ, nomes, etc.)
+    const registro = sanearRegistro(registroMapeado, modulo)
+
+    // Validar (agora com dados já saneados)
     const errosLinha = validarRegistro(registro, modulo)
 
     if (errosLinha.length > 0) {
-      erros.push({ linha: numLinha, erros: errosLinha, dados: linha })
+      erros.push({
+        linha: numLinha,
+        erros: errosLinha,
+        dados: linha,
+        dadosSaneados: registro // Incluir dados saneados para mostrar ao usuário
+      })
       continue
     }
 
@@ -338,6 +358,27 @@ async function validarLinhas(supabase: any, job: any, linhas: Record<string, any
       continue
     }
 
+    // NOVO: Verificar se cliente existe (para módulos que precisam de cliente)
+    if ((modulo === 'processos' || modulo === 'consultivo' || modulo === 'financeiro') && registro.cliente_ref) {
+      const clienteEncontrado = await verificarClienteExiste(supabase, registro.cliente_ref, escritorioId)
+
+      if (!clienteEncontrado.existe) {
+        pendencias.push({
+          linha: numLinha,
+          tipo: 'cliente_nao_encontrado',
+          campo: 'cliente_ref',
+          valor: registro.cliente_ref,
+          mensagem: `Cliente "${registro.cliente_ref}" não encontrado no CRM`,
+          dados: linha,
+          sugestoes: clienteEncontrado.sugestoes || []
+        })
+        // IMPORTANTE: Ainda adicionar às válidas, mas marcar que tem pendência
+        // A decisão será tomada na etapa de revisão
+        validas.push({ linha: numLinha, dados: registro, temPendencia: true })
+        continue
+      }
+    }
+
     validas.push({ linha: numLinha, dados: registro })
 
     // Atualizar progresso a cada 20 linhas
@@ -350,6 +391,7 @@ async function validarLinhas(supabase: any, job: any, linhas: Record<string, any
     validas,
     erros,
     duplicatas,
+    pendencias,
     camposExtras: Array.from(camposExtras)
   }
 }
@@ -392,6 +434,153 @@ function aplicarMapeamento(
   return resultado
 }
 
+/**
+ * Saneia/normaliza os dados ANTES da validação
+ * Remove prefixos, formata valores, corrige padrões comuns
+ */
+function sanearRegistro(registro: Record<string, any>, modulo: string): Record<string, any> {
+  const saneado = { ...registro }
+
+  // ========================================
+  // SANEAMENTO UNIVERSAL (todos os módulos)
+  // ========================================
+
+  // Limpar espaços extras em todos os campos texto
+  for (const [key, value] of Object.entries(saneado)) {
+    if (typeof value === 'string') {
+      saneado[key] = value.trim().replace(/\s+/g, ' ')
+    }
+  }
+
+  // Normalizar CPF/CNPJ - remover formatação para validação
+  if (saneado.cpf_cnpj) {
+    // Extrair apenas números, mas manter pontuação se já formatado
+    const limpo = saneado.cpf_cnpj.replace(/[^\d]/g, '')
+    if (limpo.length === 11) {
+      // CPF - formatar
+      saneado.cpf_cnpj = limpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+    } else if (limpo.length === 14) {
+      // CNPJ - formatar
+      saneado.cpf_cnpj = limpo.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+    }
+  }
+
+  // Normalizar email - lowercase
+  if (saneado.email_principal) {
+    saneado.email_principal = saneado.email_principal.toLowerCase().trim()
+  }
+
+  // ========================================
+  // SANEAMENTO POR MÓDULO
+  // ========================================
+
+  switch (modulo) {
+    case 'crm':
+      // Normalizar nome - capitalizar corretamente
+      if (saneado.nome_completo) {
+        saneado.nome_completo = normalizarNomeProprio(saneado.nome_completo)
+      }
+      // Normalizar tipo_contato
+      if (saneado.tipo_contato) {
+        saneado.tipo_contato = normalizarTipoContato(saneado.tipo_contato)
+      }
+      break
+
+    case 'processos':
+      // CRÍTICO: Normalizar número CNJ - remover prefixos
+      if (saneado.numero_cnj) {
+        saneado.numero_cnj = normalizarNumeroCNJ(saneado.numero_cnj)
+      }
+      // Normalizar cliente_ref - pode ser nome ou documento
+      if (saneado.cliente_ref) {
+        saneado.cliente_ref = saneado.cliente_ref.trim()
+        // Se parece ser um nome, normalizar
+        if (!/^\d/.test(saneado.cliente_ref)) {
+          saneado.cliente_ref = normalizarNomeProprio(saneado.cliente_ref)
+        }
+      }
+      // Normalizar enums de processo
+      if (saneado.tipo) saneado.tipo = normalizarTipoProcesso(saneado.tipo)
+      if (saneado.area) saneado.area = normalizarArea(saneado.area)
+      if (saneado.fase) saneado.fase = normalizarFaseProcesso(saneado.fase)
+      if (saneado.instancia) saneado.instancia = normalizarInstancia(saneado.instancia)
+      if (saneado.rito) saneado.rito = normalizarRito(saneado.rito)
+      if (saneado.polo_cliente) saneado.polo_cliente = normalizarPolo(saneado.polo_cliente)
+      if (saneado.status) saneado.status = normalizarStatusProcesso(saneado.status)
+      if (saneado.uf) saneado.uf = normalizarUF(saneado.uf)
+      break
+
+    case 'consultivo':
+      if (saneado.cliente_ref) {
+        saneado.cliente_ref = saneado.cliente_ref.trim()
+      }
+      break
+
+    case 'agenda':
+      if (saneado.titulo) {
+        saneado.titulo = saneado.titulo.trim()
+      }
+      break
+
+    case 'financeiro':
+      // Normalizar valor
+      if (saneado.valor_total) {
+        saneado.valor_total = normalizarValorMonetario(saneado.valor_total)
+      }
+      break
+  }
+
+  return saneado
+}
+
+/**
+ * Normaliza nome próprio - capitalização correta
+ * "JOÃO DA SILVA" ou "joão da silva" → "João da Silva"
+ */
+function normalizarNomeProprio(nome: string): string {
+  if (!nome) return ''
+
+  const preposicoes = ['da', 'de', 'do', 'das', 'dos', 'e']
+
+  return nome
+    .toLowerCase()
+    .split(' ')
+    .map((palavra, index) => {
+      if (index > 0 && preposicoes.includes(palavra)) {
+        return palavra
+      }
+      return palavra.charAt(0).toUpperCase() + palavra.slice(1)
+    })
+    .join(' ')
+}
+
+/**
+ * Normaliza valor monetário
+ * "R$ 1.234,56" ou "1234.56" → 1234.56
+ */
+function normalizarValorMonetario(valor: string | number): number | null {
+  if (valor === null || valor === undefined || valor === '') return null
+  if (typeof valor === 'number') return valor
+
+  // Remover R$, espaços
+  let limpo = valor.toString().replace(/[R$\s]/g, '').trim()
+
+  // Detectar formato brasileiro (1.234,56) vs americano (1,234.56)
+  if (/^\d{1,3}(\.\d{3})*,\d{2}$/.test(limpo)) {
+    // Formato brasileiro
+    limpo = limpo.replace(/\./g, '').replace(',', '.')
+  } else if (/^\d{1,3}(,\d{3})*\.\d{2}$/.test(limpo)) {
+    // Formato americano
+    limpo = limpo.replace(/,/g, '')
+  } else {
+    // Tentar converter diretamente
+    limpo = limpo.replace(',', '.')
+  }
+
+  const numero = parseFloat(limpo)
+  return isNaN(numero) ? null : numero
+}
+
 function validarRegistro(registro: Record<string, any>, modulo: string): string[] {
   const erros: string[] = []
 
@@ -415,8 +604,23 @@ function validarRegistro(registro: Record<string, any>, modulo: string): string[
     case 'processos':
       if (!registro.numero_cnj?.trim()) {
         erros.push('Número do processo é obrigatório')
-      } else if (!validarNumeroCNJ(registro.numero_cnj)) {
-        erros.push('Número CNJ em formato inválido')
+      } else {
+        // Validar formato: CNJ para judicial, qualquer formato para administrativo
+        const tipoProcesso = registro.tipo?.toLowerCase() || 'judicial'
+        const numeroProcLimpo = registro.numero_cnj.trim()
+
+        if (tipoProcesso === 'judicial') {
+          // Judicial: deve ser formato CNJ ou ao menos ter dígitos suficientes
+          if (!validarNumeroProcesso(numeroProcLimpo, 'judicial')) {
+            erros.push('Número do processo judicial inválido. Formato esperado: 1234567-12.2024.8.26.0100 (CNJ) ou 20 dígitos')
+          }
+        } else if (tipoProcesso === 'administrativo') {
+          // Administrativo: aceita qualquer formato desde que tenha conteúdo
+          if (!validarNumeroProcesso(numeroProcLimpo, 'administrativo')) {
+            erros.push('Número do processo administrativo inválido')
+          }
+        }
+        // Arbitragem: flexível também
       }
       if (!registro.cliente_ref?.trim()) {
         erros.push('Cliente é obrigatório')
@@ -547,10 +751,47 @@ function validarNumeroCNJ(numero: string): boolean {
 }
 
 /**
- * Normaliza número CNJ removendo prefixos comuns
- * "CNJ 0000000-00.0000.0.00.0000" → "0000000-00.0000.0.00.0000"
- * "Processo: 0000000-00.0000.0.00.0000" → "0000000-00.0000.0.00.0000"
- * "Nº 0000000-00.0000.0.00.0000" → "0000000-00.0000.0.00.0000"
+ * Valida número de processo de forma inteligente baseado no tipo
+ * - Judicial: deve ser convertível para formato CNJ (NNNNNNN-DD.AAAA.J.TT.OOOO)
+ * - Administrativo: aceita qualquer formato com ao menos 3 caracteres
+ * - Arbitragem: aceita qualquer formato com ao menos 3 caracteres
+ */
+function validarNumeroProcesso(numero: string, tipo: string): boolean {
+  if (!numero || numero.trim().length < 3) return false
+
+  const normalizado = normalizarNumeroCNJ(numero)
+
+  switch (tipo) {
+    case 'judicial':
+      // Após normalização, deve estar no formato CNJ
+      // A função normalizarNumeroCNJ tenta formatar 20 dígitos ou padrões similares
+      if (/^\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$/.test(normalizado)) {
+        return true
+      }
+      // Se não conseguiu formatar, verificar se tem 20 dígitos puros
+      // (que podem ser formatados)
+      const apenasDigitos = numero.replace(/\D/g, '')
+      return apenasDigitos.length === 20
+
+    case 'administrativo':
+    case 'arbitragem':
+      // Aceita qualquer formato com conteúdo significativo
+      return normalizado.length >= 3
+
+    default:
+      // Para tipos desconhecidos, ser flexível
+      return normalizado.length >= 3
+  }
+}
+
+/**
+ * Normaliza número CNJ para formato padrão: NNNNNNN-DD.AAAA.J.TT.OOOO
+ *
+ * Aceita diversos formatos de entrada:
+ * - "CNJ 0000000-00.0000.0.00.0000" → "0000000-00.0000.0.00.0000"
+ * - "00000001020240260100" (20 dígitos) → "0000000-10.2024.0.26.0100"
+ * - "0000000.10.2024.0.26.0100" → "0000000-10.2024.0.26.0100"
+ * - "Processo: 0000000-10.2024.0.26.0100" → "0000000-10.2024.0.26.0100"
  */
 function normalizarNumeroCNJ(numero: string): string {
   if (!numero) return ''
@@ -574,7 +815,38 @@ function normalizarNumeroCNJ(numero: string): string {
     normalizado = normalizado.replace(prefixo, '')
   }
 
-  return normalizado.trim()
+  normalizado = normalizado.trim()
+
+  // Se já está no formato CNJ correto, retorna
+  if (/^\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$/.test(normalizado)) {
+    return normalizado
+  }
+
+  // Extrai apenas dígitos
+  const apenasDigitos = normalizado.replace(/\D/g, '')
+
+  // Se tem exatamente 20 dígitos, formata como CNJ
+  // Formato: NNNNNNN-DD.AAAA.J.TT.OOOO
+  if (apenasDigitos.length === 20) {
+    const seq = apenasDigitos.substring(0, 7)    // NNNNNNN (7)
+    const dig = apenasDigitos.substring(7, 9)    // DD (2)
+    const ano = apenasDigitos.substring(9, 13)   // AAAA (4)
+    const seg = apenasDigitos.substring(13, 14)  // J (1)
+    const trib = apenasDigitos.substring(14, 16) // TT (2)
+    const orig = apenasDigitos.substring(16, 20) // OOOO (4)
+
+    return `${seq}-${dig}.${ano}.${seg}.${trib}.${orig}`
+  }
+
+  // Tenta extrair padrão com separadores variados
+  // Ex: 0000000.10.2024.0.26.0100 ou 0000000/10/2024/0/26/0100
+  const match = normalizado.match(/(\d{7})[.\-\/](\d{2})[.\-\/](\d{4})[.\-\/](\d{1})[.\-\/](\d{2})[.\-\/](\d{4})/)
+  if (match) {
+    return `${match[1]}-${match[2]}.${match[3]}.${match[4]}.${match[5]}.${match[6]}`
+  }
+
+  // Retorna o que conseguiu normalizar
+  return normalizado
 }
 
 // ============================================
@@ -645,20 +917,41 @@ async function importarDados(supabase: any, job: any) {
 
     const dados = job.resultado_final?.dados_validados || []
     const correcoes = job.correcoes_usuario || {}
+    const decisoesPendencias = job.decisoes_pendencias || {}
     const modulo = job.modulo
     const escritorioId = job.escritorio_id
 
-    // Filtrar dados com base nas correções
+    // Filtrar dados com base nas correções E pendências
     const dadosParaImportar = dados.filter((d: any) => {
       const correcao = correcoes[d.linha]
-      return !correcao || correcao.tipo !== 'pular'
+      // Se marcou para pular, não importar
+      if (correcao?.tipo === 'pular') return false
+
+      // Se tem pendência de cliente
+      if (d.temPendencia) {
+        const decisao = decisoesPendencias[d.linha]
+        // Se não há decisão ou decisão é pular, não importar
+        if (!decisao || decisao.tipo === 'pular') return false
+        // Se tem decisão de vincular ou criar, continuar
+      }
+
+      return true
     })
 
     // Aplicar correções
     const dadosCorrigidos = dadosParaImportar.map((d: any) => {
       const correcao = correcoes[d.linha]
-      if (correcao?.tipo === 'corrigir' && correcao.campo && correcao.valor) {
-        d.dados[correcao.campo] = correcao.valor
+      if (correcao?.tipo === 'corrigir') {
+        // Aplicar campo principal
+        if (correcao.campo && correcao.valor) {
+          d.dados[correcao.campo] = correcao.valor
+        }
+        // Aplicar campos extras (múltiplas correções na mesma linha)
+        if (correcao.camposExtras) {
+          for (const [campo, valor] of Object.entries(correcao.camposExtras)) {
+            d.dados[campo] = valor
+          }
+        }
       } else if (correcao?.tipo === 'remover_campo' && correcao.campo) {
         delete d.dados[correcao.campo]
       }
@@ -672,7 +965,7 @@ async function importarDados(supabase: any, job: any) {
     for (let i = 0; i < dadosCorrigidos.length; i += batchSize) {
       const batch = dadosCorrigidos.slice(i, i + batchSize)
 
-      await inserirBatch(supabase, batch, modulo, escritorioId, job.criado_por)
+      await inserirBatch(supabase, batch, modulo, escritorioId, job.criado_por, decisoesPendencias)
 
       importados += batch.length
       await atualizarJob(supabase, job.id, { linhas_importadas: importados })
@@ -716,14 +1009,15 @@ async function inserirBatch(
   batch: any[],
   modulo: string,
   escritorioId: string,
-  userId: string
+  userId: string,
+  decisoesPendencias?: Record<string, any>
 ) {
   switch (modulo) {
     case 'crm':
       await inserirCRM(supabase, batch, escritorioId)
       break
     case 'processos':
-      await inserirProcessos(supabase, batch, escritorioId, userId)
+      await inserirProcessos(supabase, batch, escritorioId, userId, decisoesPendencias)
       break
     case 'consultivo':
       await inserirConsultivo(supabase, batch, escritorioId, userId)
@@ -771,12 +1065,45 @@ async function inserirCRM(supabase: any, batch: any[], escritorioId: string) {
   if (error) throw error
 }
 
-async function inserirProcessos(supabase: any, batch: any[], escritorioId: string, userId: string) {
+async function inserirProcessos(supabase: any, batch: any[], escritorioId: string, userId: string, decisoesPendencias?: Record<string, any>) {
   for (const item of batch) {
     const dados = item.dados
+    const linha = item.linha
 
-    // Resolver cliente_id
-    const clienteId = await resolverClienteId(supabase, dados.cliente_ref, escritorioId)
+    // Resolver cliente_id - primeiro verificar se há decisão de pendência
+    let clienteId: string | null = null
+    const decisao = decisoesPendencias?.[linha]
+
+    if (decisao?.tipo === 'vincular' && decisao.clienteId) {
+      // Usar o cliente que o usuário escolheu vincular
+      clienteId = decisao.clienteId
+    } else if (decisao?.tipo === 'criar' && decisao.dadosCliente) {
+      // Criar novo cliente conforme decisão do usuário
+      const { data: novoCliente, error: createError } = await supabase
+        .from('crm_pessoas')
+        .insert({
+          escritorio_id: escritorioId,
+          nome_completo: decisao.dadosCliente.nome_completo,
+          tipo_contato: decisao.dadosCliente.tipo_contato || 'cliente'
+        })
+        .select('id')
+        .single()
+
+      if (createError) {
+        console.error(`Erro ao criar cliente para processo ${dados.numero_cnj}:`, createError)
+        throw new Error(`Erro ao criar cliente "${decisao.dadosCliente.nome_completo}": ${createError.message}`)
+      }
+      clienteId = novoCliente.id
+    } else {
+      // Tentar resolver normalmente
+      clienteId = await resolverClienteId(supabase, dados.cliente_ref, escritorioId)
+    }
+
+    // Se cliente não foi encontrado, pular este registro (cliente_id é obrigatório)
+    if (!clienteId) {
+      console.warn(`Processo ${dados.numero_cnj}: Cliente "${dados.cliente_ref}" não encontrado no CRM - pulando`)
+      continue // Pular em vez de dar erro (o filtro anterior já deveria ter removido estes)
+    }
 
     // Resolver responsável (se informado, senão usa o usuário atual)
     const responsavelId = await resolverResponsavelId(
@@ -808,14 +1135,16 @@ async function inserirProcessos(supabase: any, batch: any[], escritorioId: strin
       uf: normalizarUF(dados.uf),
       comarca: dados.comarca || null,
       vara: dados.vara || null,
-      juiz: dados.juiz || null,
+      autor: dados.autor || null,
+      reu: dados.reu || null,
       polo_cliente: polo,
       parte_contraria: dados.parte_contraria || null,
       responsavel_id: responsavelId,
-      data_distribuicao: parseData(dados.data_distribuicao),
+      data_distribuicao: parseData(dados.data_distribuicao) || new Date().toISOString().split('T')[0],
       valor_causa: parseValor(dados.valor_causa),
       valor_acordo: parseValor(dados.valor_acordo),
       valor_condenacao: parseValor(dados.valor_condenacao),
+      valor_atualizado: parseValor(dados.valor_atualizado),
       objeto_acao: dados.objeto_acao || null,
       status: status,
       link_tribunal: dados.link_tribunal || null,
@@ -1041,31 +1370,215 @@ async function inserirFinanceiro(supabase: any, batch: any[], escritorioId: stri
 // HELPERS
 // ============================================
 
-async function resolverClienteId(supabase: any, referencia: string, escritorioId: string): Promise<string | null> {
-  if (!referencia) return null
+/**
+ * Normaliza texto para comparação: remove acentos, lowercase, normaliza espaços
+ */
+function normalizarTextoParaBusca(texto: string): string {
+  if (!texto) return ''
 
-  // Tentar por CPF/CNPJ
-  const doc = referencia.replace(/\D/g, '')
+  return texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[^\w\s]/g, ' ') // Remove pontuação
+    .replace(/\s+/g, ' ') // Normaliza espaços
+    .trim()
+}
+
+/**
+ * Extrai tokens significativos de um nome (remove preposições, artigos)
+ */
+function extrairTokensSignificativos(nome: string): string[] {
+  const stopWords = ['da', 'de', 'do', 'das', 'dos', 'e', 'a', 'o', 'as', 'os', 'ltda', 'sa', 's/a', 'me', 'epp', 'eireli']
+  const normalizado = normalizarTextoParaBusca(nome)
+
+  return normalizado
+    .split(' ')
+    .filter(t => t.length > 1 && !stopWords.includes(t))
+}
+
+/**
+ * Calcula distância de Levenshtein entre duas strings
+ */
+function levenshtein(str1: string, str2: string): number {
+  const m = str1.length
+  const n = str2.length
+
+  if (m === 0) return n
+  if (n === 0) return m
+
+  const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0))
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i
+  for (let j = 0; j <= n; j++) dp[0][j] = j
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = str1[i - 1] === str2[j - 1] ? 0 : 1
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,      // Deleção
+        dp[i][j - 1] + 1,      // Inserção
+        dp[i - 1][j - 1] + cost // Substituição
+      )
+    }
+  }
+
+  return dp[m][n]
+}
+
+/**
+ * Calcula similaridade entre duas strings (0-1) usando Levenshtein
+ */
+function calcularSimilaridade(str1: string, str2: string): number {
+  const s1 = normalizarTextoParaBusca(str1)
+  const s2 = normalizarTextoParaBusca(str2)
+
+  if (s1 === s2) return 1
+  if (!s1 || !s2) return 0
+
+  const maxLen = Math.max(s1.length, s2.length)
+  const distancia = levenshtein(s1, s2)
+
+  return (maxLen - distancia) / maxLen
+}
+
+/**
+ * Calcula similaridade por tokens (palavras em comum)
+ */
+function calcularSimilaridadeTokens(str1: string, str2: string): number {
+  const tokens1 = extrairTokensSignificativos(str1)
+  const tokens2 = extrairTokensSignificativos(str2)
+
+  if (tokens1.length === 0 || tokens2.length === 0) return 0
+
+  let matches = 0
+  for (const t1 of tokens1) {
+    for (const t2 of tokens2) {
+      // Match exato ou similaridade > 80%
+      if (t1 === t2 || calcularSimilaridade(t1, t2) > 0.8) {
+        matches++
+        break
+      }
+    }
+  }
+
+  return matches / Math.max(tokens1.length, tokens2.length)
+}
+
+/**
+ * Verifica se o cliente existe no CRM usando busca inteligente
+ * - Normaliza nomes (remove acentos, case insensitive)
+ * - Busca por CPF/CNPJ
+ * - Busca por nome exato normalizado
+ * - Busca por tokens (palavras significativas)
+ * - Retorna sugestões com similaridade calculada
+ */
+async function verificarClienteExiste(
+  supabase: any,
+  referencia: string,
+  escritorioId: string
+): Promise<{ existe: boolean; clienteId?: string; sugestoes?: { id: string; nome: string; similaridade: number }[] }> {
+  if (!referencia) return { existe: false, sugestoes: [] }
+
+  const referenciaLimpa = referencia.trim()
+  const tokensReferencia = extrairTokensSignificativos(referenciaLimpa)
+
+  // === ESTRATÉGIA 1: Buscar por CPF/CNPJ (match exato) ===
+  const doc = referenciaLimpa.replace(/\D/g, '')
   if (doc.length === 11 || doc.length === 14) {
     const { data } = await supabase
       .from('crm_pessoas')
-      .select('id')
+      .select('id, nome_completo')
       .eq('escritorio_id', escritorioId)
       .ilike('cpf_cnpj', `%${doc}%`)
       .limit(1)
 
-    if (data?.length > 0) return data[0].id
+    if (data?.length > 0) {
+      return { existe: true, clienteId: data[0].id }
+    }
   }
 
-  // Tentar por nome
-  const { data } = await supabase
-    .from('crm_pessoas')
-    .select('id')
-    .eq('escritorio_id', escritorioId)
-    .ilike('nome_completo', `%${referencia}%`)
-    .limit(1)
+  // === ESTRATÉGIA 2: Buscar uma amostra de clientes para comparação inteligente ===
+  // Buscar clientes que contenham pelo menos um dos tokens significativos
+  let clientesParaComparar: any[] = []
 
-  return data?.[0]?.id || null
+  // Buscar por cada token significativo (primeiro nome, sobrenome principal)
+  for (const token of tokensReferencia.slice(0, 3)) { // Limitar a 3 tokens principais
+    if (token.length >= 3) { // Token com pelo menos 3 caracteres
+      const { data } = await supabase
+        .from('crm_pessoas')
+        .select('id, nome_completo')
+        .eq('escritorio_id', escritorioId)
+        .ilike('nome_completo', `%${token}%`)
+        .limit(20)
+
+      if (data) {
+        clientesParaComparar = [...clientesParaComparar, ...data]
+      }
+    }
+  }
+
+  // Remover duplicatas
+  const clientesUnicos = Array.from(
+    new Map(clientesParaComparar.map(c => [c.id, c])).values()
+  )
+
+  // === ESTRATÉGIA 3: Calcular similaridade para cada cliente encontrado ===
+  const candidatos = clientesUnicos.map((cliente: any) => {
+    const nomeCliente = cliente.nome_completo
+
+    // Calcular múltiplas métricas de similaridade
+    const simLevenshtein = calcularSimilaridade(referenciaLimpa, nomeCliente)
+    const simTokens = calcularSimilaridadeTokens(referenciaLimpa, nomeCliente)
+
+    // Usar a maior das duas métricas (ponderado)
+    const similaridade = Math.max(simLevenshtein, simTokens * 0.95)
+
+    return {
+      id: cliente.id,
+      nome: nomeCliente,
+      similaridade: Math.round(similaridade * 100) / 100
+    }
+  })
+
+  // Ordenar por similaridade decrescente
+  candidatos.sort((a, b) => b.similaridade - a.similaridade)
+
+  // === ESTRATÉGIA 4: Se encontrou match com alta similaridade (>= 85%), considerar encontrado ===
+  if (candidatos.length > 0 && candidatos[0].similaridade >= 0.85) {
+    console.log(`[MATCH] Cliente "${referenciaLimpa}" -> "${candidatos[0].nome}" (${(candidatos[0].similaridade * 100).toFixed(0)}%)`)
+    return { existe: true, clienteId: candidatos[0].id }
+  }
+
+  // === Não encontrou - retornar sugestões ===
+  const sugestoes = candidatos
+    .filter(c => c.similaridade >= 0.3) // Mínimo 30% para sugestão
+    .slice(0, 5) // Top 5 sugestões
+
+  if (sugestoes.length > 0) {
+    console.log(`[SUGESTÕES] Cliente "${referenciaLimpa}": ${sugestoes.map(s => `${s.nome} (${(s.similaridade * 100).toFixed(0)}%)`).join(', ')}`)
+  }
+
+  return { existe: false, sugestoes }
+}
+
+async function resolverClienteId(supabase: any, referencia: string, escritorioId: string): Promise<string | null> {
+  if (!referencia) return null
+
+  // Usar a busca inteligente
+  const resultado = await verificarClienteExiste(supabase, referencia, escritorioId)
+
+  if (resultado.existe && resultado.clienteId) {
+    return resultado.clienteId
+  }
+
+  // Se não encontrou match automático mas tem sugestão com alta similaridade, usar ela
+  if (resultado.sugestoes && resultado.sugestoes.length > 0 && resultado.sugestoes[0].similaridade >= 0.8) {
+    console.log(`[RESOLVER] Usando sugestão "${resultado.sugestoes[0].nome}" para "${referencia}" (${(resultado.sugestoes[0].similaridade * 100).toFixed(0)}%)`)
+    return resultado.sugestoes[0].id
+  }
+
+  return null
 }
 
 async function resolverProcessoId(supabase: any, referencia: string, escritorioId: string): Promise<string | null> {
@@ -1319,19 +1832,42 @@ function parseData(data: any): string | null {
 
   const str = String(data).trim()
 
+  // Rejeitar datas claramente inválidas
+  if (str === '0000-00-00' || str === '00/00/0000' || str === '' || str === '0') {
+    return null
+  }
+
+  let ano: string, mes: string, dia: string
+
   // DD/MM/YYYY ou DD-MM-YYYY
   const matchDMY = str.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/)
   if (matchDMY) {
-    const [, dia, mes, ano] = matchDMY
-    return `${ano}-${mes}-${dia}`
+    [, dia, mes, ano] = matchDMY
+  } else if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    // YYYY-MM-DD
+    [ano, mes, dia] = str.split('-')
+  } else {
+    return null
   }
 
-  // YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-    return str
+  // Validar se é uma data real (não 0000, não mês 00 ou 13, etc.)
+  const anoNum = parseInt(ano, 10)
+  const mesNum = parseInt(mes, 10)
+  const diaNum = parseInt(dia, 10)
+
+  if (anoNum < 1900 || anoNum > 2100) return null // Ano fora do range válido
+  if (mesNum < 1 || mesNum > 12) return null      // Mês inválido
+  if (diaNum < 1 || diaNum > 31) return null      // Dia inválido
+
+  // Verificar se a data realmente existe
+  const dataObj = new Date(anoNum, mesNum - 1, diaNum)
+  if (dataObj.getFullYear() !== anoNum ||
+      dataObj.getMonth() !== mesNum - 1 ||
+      dataObj.getDate() !== diaNum) {
+    return null
   }
 
-  return null
+  return `${ano}-${mes}-${dia}`
 }
 
 function parseDataHora(data: any): string | null {

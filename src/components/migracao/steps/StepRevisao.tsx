@@ -24,9 +24,14 @@ import {
   Type,
   Eye,
   Users,
-  Loader2
+  Loader2,
+  Sparkles,
+  SkipForward,
+  CheckCheck,
+  UserPlus,
+  Link2
 } from 'lucide-react'
-import { MigracaoState, StepMigracao, ErroValidacao, Duplicata, CorrecaoUsuario, MigracaoJob } from '@/types/migracao'
+import { MigracaoState, StepMigracao, ErroValidacao, Duplicata, CorrecaoUsuario, MigracaoJob, Pendencia, DecisaoPendencia } from '@/types/migracao'
 import { createClient } from '@/lib/supabase/client'
 import { normalizarNome, precisaNormalizar } from '@/lib/migracao/validators'
 
@@ -36,14 +41,32 @@ interface Props {
   goToStep: (step: StepMigracao) => void
 }
 
+interface Sugestao {
+  linha: number
+  campo: string
+  valorSugerido: string
+  origem: string
+  confianca: number
+}
+
 export function StepRevisao({ state, updateState, goToStep }: Props) {
   const [correcoes, setCorrecoes] = useState<Record<string, CorrecaoUsuario>>({})
   const [expandedErrors, setExpandedErrors] = useState<Set<number>>(new Set())
   const [expandedDups, setExpandedDups] = useState<Set<number>>(new Set())
+  const [expandedPendencias, setExpandedPendencias] = useState<Set<number>>(new Set())
   const [isSaving, setIsSaving] = useState(false)
-  const [activeTab, setActiveTab] = useState<'resumo' | 'normalizacao' | 'erros' | 'duplicatas'>('resumo')
+  const [activeTab, setActiveTab] = useState<'resumo' | 'normalizacao' | 'erros' | 'duplicatas' | 'pendencias'>('resumo')
   const [isLoadingFullData, setIsLoadingFullData] = useState(false)
   const [localJob, setLocalJob] = useState<MigracaoJob | null>(state.job)
+
+  // Estados para sugestões da IA
+  const [sugestoes, setSugestoes] = useState<Record<number, Sugestao[]>>({})
+  const [isLoadingSugestoes, setIsLoadingSugestoes] = useState(false)
+  const [sugestoesCarregadas, setSugestoesCarregadas] = useState(false)
+
+  // Estados para decisões de pendências (clientes não encontrados)
+  const [decisoesPendencias, setDecisoesPendencias] = useState<Record<number, DecisaoPendencia>>({})
+  const [isCriandoCliente, setIsCriandoCliente] = useState<number | null>(null)
 
   // Usar job local ou do state
   const job = localJob || state.job
@@ -89,6 +112,7 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
 
   const erros = job.erros || []
   const duplicatas = job.duplicatas || []
+  const pendencias = (job.pendencias || []) as Pendencia[]
 
   // Calcular quantos nomes precisam de normalização
   const dadosValidados = job.resultado_final?.dados_validados || []
@@ -142,12 +166,188 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
     setExpandedDups(newSet)
   }
 
+  // ========================================
+  // FUNÇÕES DE IA E AÇÕES EM LOTE
+  // ========================================
+
+  // Buscar sugestões da IA
+  const buscarSugestoes = async () => {
+    if (erros.length === 0) return
+
+    setIsLoadingSugestoes(true)
+    try {
+      const response = await fetch('/api/migracao/sugerir-correcoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          erros,
+          modulo: state.modulo
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSugestoes(data.sugestoes || {})
+        setSugestoesCarregadas(true)
+      }
+    } catch (error) {
+      console.error('Erro ao buscar sugestões:', error)
+    } finally {
+      setIsLoadingSugestoes(false)
+    }
+  }
+
+  // Aplicar TODAS as sugestões da IA
+  const aplicarTodasSugestoes = () => {
+    const novasCorrecoes: Record<string, CorrecaoUsuario> = { ...correcoes }
+
+    for (const [linhaStr, sugestoesLinha] of Object.entries(sugestoes)) {
+      const linha = parseInt(linhaStr)
+      // Para cada linha, criar correção com todos os campos sugeridos
+      const campos: Record<string, string> = {}
+      for (const sug of sugestoesLinha) {
+        campos[sug.campo] = sug.valorSugerido
+      }
+
+      // Se temos sugestões, aplicar como correção
+      if (Object.keys(campos).length > 0) {
+        // Se há apenas um campo, usar formato simples
+        if (Object.keys(campos).length === 1) {
+          const [campo, valor] = Object.entries(campos)[0]
+          novasCorrecoes[linha] = { tipo: 'corrigir', campo, valor }
+        } else {
+          // Múltiplos campos - usar primeiro como principal
+          const [campo, valor] = Object.entries(campos)[0]
+          novasCorrecoes[linha] = { tipo: 'corrigir', campo, valor, camposExtras: campos }
+        }
+      }
+    }
+
+    // Para erros sem sugestão, marcar para pular
+    for (const erro of erros) {
+      if (!novasCorrecoes[erro.linha] && !sugestoes[erro.linha]) {
+        novasCorrecoes[erro.linha] = { tipo: 'pular' }
+      }
+    }
+
+    setCorrecoes(novasCorrecoes)
+  }
+
+  // Pular TODOS os erros
+  const pularTodosErros = () => {
+    const novasCorrecoes: Record<string, CorrecaoUsuario> = { ...correcoes }
+    for (const erro of erros) {
+      novasCorrecoes[erro.linha] = { tipo: 'pular' }
+    }
+    setCorrecoes(novasCorrecoes)
+  }
+
+  // Pular TODAS as duplicatas
+  const pularTodasDuplicatas = () => {
+    const novasCorrecoes: Record<string, CorrecaoUsuario> = { ...correcoes }
+    for (const dup of duplicatas) {
+      novasCorrecoes[dup.linha] = { tipo: 'pular' }
+    }
+    setCorrecoes(novasCorrecoes)
+  }
+
+  // Aceitar sugestão individual
+  const aceitarSugestao = (linha: number, sugestao: Sugestao) => {
+    setCorrecoes(prev => ({
+      ...prev,
+      [linha]: { tipo: 'corrigir', campo: sugestao.campo, valor: sugestao.valorSugerido }
+    }))
+  }
+
+  // Contar quantos erros têm sugestão
+  const errosComSugestao = useMemo(() => {
+    return erros.filter(e => sugestoes[e.linha]?.length > 0).length
+  }, [erros, sugestoes])
+
   // Verificar se todas as decisões foram tomadas
   const todasDecisoesTomadas = () => {
-    if (erros.length === 0 && duplicatas.length === 0) return true
+    if (erros.length === 0 && duplicatas.length === 0 && pendencias.length === 0) return true
     const errosRevisados = erros.every(e => correcoes[e.linha])
     const dupsRevisadas = duplicatas.every(d => correcoes[d.linha])
-    return errosRevisados && dupsRevisadas
+    const pendenciasRevisadas = pendencias.every(p => decisoesPendencias[p.linha])
+    return errosRevisados && dupsRevisadas && pendenciasRevisadas
+  }
+
+  // Toggle expandir pendência
+  const togglePendencia = (linha: number) => {
+    const newSet = new Set(expandedPendencias)
+    if (newSet.has(linha)) {
+      newSet.delete(linha)
+    } else {
+      newSet.add(linha)
+    }
+    setExpandedPendencias(newSet)
+  }
+
+  // Criar cliente e vincular
+  const criarClienteParaPendencia = async (pendencia: Pendencia) => {
+    setIsCriandoCliente(pendencia.linha)
+    try {
+      const response = await fetch('/api/migracao/criar-cliente', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome_completo: pendencia.valor,
+          tipo_contato: 'cliente',
+          escritorio_id: job.escritorio_id
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setDecisoesPendencias(prev => ({
+          ...prev,
+          [pendencia.linha]: {
+            tipo: 'criar',
+            clienteId: data.cliente.id,
+            dadosCliente: { nome_completo: pendencia.valor }
+          }
+        }))
+      }
+    } catch (error) {
+      console.error('Erro ao criar cliente:', error)
+    } finally {
+      setIsCriandoCliente(null)
+    }
+  }
+
+  // Vincular a cliente existente
+  const vincularClienteExistente = (linha: number, clienteId: string) => {
+    setDecisoesPendencias(prev => ({
+      ...prev,
+      [linha]: { tipo: 'vincular', clienteId }
+    }))
+  }
+
+  // Pular pendência (não importar)
+  const pularPendencia = (linha: number) => {
+    setDecisoesPendencias(prev => ({
+      ...prev,
+      [linha]: { tipo: 'pular' }
+    }))
+  }
+
+  // Criar todos os clientes faltantes
+  const criarTodosClientes = async () => {
+    for (const pendencia of pendencias) {
+      if (!decisoesPendencias[pendencia.linha]) {
+        await criarClienteParaPendencia(pendencia)
+      }
+    }
+  }
+
+  // Pular todas as pendências
+  const pularTodasPendencias = () => {
+    const novasDecisoes: Record<number, DecisaoPendencia> = { ...decisoesPendencias }
+    for (const pendencia of pendencias) {
+      novasDecisoes[pendencia.linha] = { tipo: 'pular' }
+    }
+    setDecisoesPendencias(novasDecisoes)
   }
 
   // Salvar correções e continuar
@@ -157,10 +357,13 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
     try {
       const supabase = createClient()
 
-      // Salvar correções no job (mesmo que vazio)
+      // Salvar correções e decisões de pendências no job
       await supabase
         .from('migracao_jobs')
-        .update({ correcoes_usuario: correcoes })
+        .update({
+          correcoes_usuario: correcoes,
+          decisoes_pendencias: decisoesPendencias
+        })
         .eq('id', job.id)
 
       goToStep('confirmacao')
@@ -175,7 +378,7 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
     goToStep('mapeamento')
   }
 
-  const temProblemas = erros.length > 0 || duplicatas.length > 0
+  const temProblemas = erros.length > 0 || duplicatas.length > 0 || pendencias.length > 0
 
   // Mostrar loading se estiver buscando dados completos
   if (isLoadingFullData) {
@@ -256,6 +459,17 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
             Duplicatas ({duplicatas.length})
           </Button>
         )}
+        {pendencias.length > 0 && (
+          <Button
+            variant={activeTab === 'pendencias' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('pendencias')}
+            className="gap-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            Clientes ({pendencias.length})
+          </Button>
+        )}
       </div>
 
       {/* Conteúdo das tabs */}
@@ -290,11 +504,14 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
                       <span className="font-medium text-slate-700">
                         {normalizarNome(item.dados?.nome_completo as string)}
                       </span>
-                      {item.dados?.tipo_contato && (
-                        <Badge variant="outline" className="ml-2 text-[10px]">
-                          {item.dados.tipo_contato as string}
-                        </Badge>
-                      )}
+                      {(() => {
+                        const tipo = (item.dados as Record<string, string>)?.tipo_contato
+                        return tipo ? (
+                          <Badge variant="outline" className="ml-2 text-[10px]">
+                            {tipo}
+                          </Badge>
+                        ) : null
+                      })()}
                     </div>
                     <span className="text-slate-400">Linha {item.linha}</span>
                   </div>
@@ -376,34 +593,144 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
       )}
 
       {activeTab === 'erros' && erros.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-4">
+          {/* Barra de ações em lote */}
+          <Card className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-500" />
+                <span className="font-medium text-slate-700">
+                  {sugestoesCarregadas
+                    ? `${errosComSugestao} de ${erros.length} erros com sugestão de correção`
+                    : `${erros.length} erros encontrados`
+                  }
+                </span>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {!sugestoesCarregadas ? (
+                  <Button
+                    onClick={buscarSugestoes}
+                    disabled={isLoadingSugestoes}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    {isLoadingSugestoes ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Analisando...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Analisar com IA
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <>
+                    {errosComSugestao > 0 && (
+                      <Button
+                        onClick={aplicarTodasSugestoes}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCheck className="w-4 h-4 mr-2" />
+                        Aplicar {errosComSugestao} sugestões
+                      </Button>
+                    )}
+                  </>
+                )}
+
+                <Button
+                  variant="outline"
+                  onClick={pularTodosErros}
+                  className="border-red-300 text-red-600 hover:bg-red-50"
+                >
+                  <SkipForward className="w-4 h-4 mr-2" />
+                  Pular todos
+                </Button>
+              </div>
+            </div>
+
+            {sugestoesCarregadas && errosComSugestao > 0 && (
+              <p className="text-xs text-purple-600 mt-3">
+                💡 A IA encontrou sugestões de correção analisando os dados. Clique em &quot;Aplicar sugestões&quot; para aceitar todas ou revise individualmente abaixo.
+              </p>
+            )}
+          </Card>
+
+          {/* Lista de erros */}
           {erros.map((erro: ErroValidacao) => {
             const isExpanded = expandedErrors.has(erro.linha)
             const correcao = correcoes[erro.linha]
+            const sugestoesLinha = sugestoes[erro.linha] || []
+            const temSugestao = sugestoesLinha.length > 0
 
             return (
-              <Card key={erro.linha} className="border-red-200 overflow-hidden">
+              <Card key={erro.linha} className={`overflow-hidden ${temSugestao && !correcao ? 'border-purple-300 bg-purple-50/30' : 'border-red-200'}`}>
                 {/* Header */}
                 <div
-                  className="p-4 bg-red-50 flex items-center justify-between cursor-pointer"
+                  className={`p-4 flex items-center justify-between cursor-pointer ${temSugestao && !correcao ? 'bg-purple-50' : 'bg-red-50'}`}
                   onClick={() => toggleError(erro.linha)}
                 >
-                  <div>
-                    <span className="font-medium text-slate-700">Linha {erro.linha}</span>
-                    <div className="flex gap-2 mt-1">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-slate-700">Linha {erro.linha}</span>
+                      {temSugestao && !correcao && (
+                        <Badge className="bg-purple-100 text-purple-700 text-[10px]">
+                          <Sparkles className="w-3 h-3 mr-1" />
+                          IA sugeriu correção
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-1">
                       {erro.erros.map((e, i) => (
                         <Badge key={i} variant="destructive" className="text-xs">
                           {e}
                         </Badge>
                       ))}
                     </div>
+
+                    {/* Preview da sugestão */}
+                    {temSugestao && !correcao && (
+                      <div className="mt-2 text-xs text-purple-700 bg-purple-100/50 rounded px-2 py-1 inline-block">
+                        Sugestão: {sugestoesLinha.map(s => `${s.campo} = "${s.valorSugerido}"`).join(', ')}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
+
+                  <div className="flex items-center gap-2 ml-4">
+                    {/* Botões de ação rápida */}
+                    {temSugestao && !correcao && (
+                      <Button
+                        size="sm"
+                        className="bg-purple-600 hover:bg-purple-700 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          sugestoesLinha.forEach(s => aceitarSugestao(erro.linha, s))
+                        }}
+                      >
+                        <Check className="w-3 h-3 mr-1" />
+                        Aceitar
+                      </Button>
+                    )}
+                    {!correcao && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs border-red-300 text-red-600"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setCorrecao(erro.linha, { tipo: 'pular' })
+                        }}
+                      >
+                        Pular
+                      </Button>
+                    )}
                     {correcao && (
                       <Badge variant="outline" className="bg-white">
-                        {correcao.tipo === 'pular' ? 'Será pulada' :
-                         correcao.tipo === 'remover_campo' ? 'Sem CPF' :
-                         'Corrigido'}
+                        {correcao.tipo === 'pular' ? '⏭️ Pulada' :
+                         correcao.tipo === 'remover_campo' ? '✂️ Sem CPF' :
+                         '✅ Corrigido'}
                       </Badge>
                     )}
                     {isExpanded ? (
@@ -417,9 +744,9 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
                 {/* Conteúdo expandido */}
                 {isExpanded && (
                   <div className="p-4 border-t space-y-4">
-                    {/* Dados da linha */}
+                    {/* Dados da linha - original e saneado */}
                     <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded">
-                      <p className="font-medium mb-1">Dados da linha:</p>
+                      <p className="font-medium mb-2">Dados da linha:</p>
                       {Object.entries(erro.dados).map(([key, value]) => (
                         <p key={key} className="text-xs">
                           <span className="text-slate-400">{key}:</span> {String(value || '-')}
@@ -427,7 +754,81 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
                       ))}
                     </div>
 
-                    {/* Opções de correção */}
+                    {/* Mostrar dados saneados se diferentes */}
+                    {(erro as any).dadosSaneados && (
+                      <div className="text-sm bg-blue-50 p-3 rounded border border-blue-200">
+                        <p className="font-medium mb-2 text-blue-700">Dados após saneamento automático:</p>
+                        {Object.entries((erro as any).dadosSaneados).map(([key, value]) => (
+                          <p key={key} className="text-xs">
+                            <span className="text-blue-400">{key}:</span>{' '}
+                            <span className="text-blue-700">{String(value || '-')}</span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Opções de correção para CNJ */}
+                    {erro.erros.some(e => e.includes('CNJ')) && (
+                      <div className="space-y-3">
+                        <p className="text-sm font-medium">Corrigir número do processo:</p>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            placeholder="Digite o número CNJ correto (ex: 0000000-00.0000.0.00.0000)"
+                            className="flex-1"
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                setCorrecao(erro.linha, {
+                                  tipo: 'corrigir',
+                                  campo: 'numero_cnj',
+                                  valor: e.target.value
+                                })
+                              }
+                            }}
+                          />
+                          <Button
+                            variant={correcao?.tipo === 'pular' ? 'destructive' : 'outline'}
+                            size="sm"
+                            onClick={() => setCorrecao(erro.linha, { tipo: 'pular' })}
+                          >
+                            Pular esta linha
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Opções de correção para Cliente */}
+                    {erro.erros.some(e => e.includes('Cliente')) && (
+                      <div className="space-y-3">
+                        <p className="text-sm font-medium">Corrigir cliente:</p>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            placeholder="Digite o nome ou CPF/CNPJ do cliente"
+                            className="flex-1"
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                setCorrecao(erro.linha, {
+                                  tipo: 'corrigir',
+                                  campo: 'cliente_ref',
+                                  valor: e.target.value
+                                })
+                              }
+                            }}
+                          />
+                          <Button
+                            variant={correcao?.tipo === 'pular' ? 'destructive' : 'outline'}
+                            size="sm"
+                            onClick={() => setCorrecao(erro.linha, { tipo: 'pular' })}
+                          >
+                            Pular esta linha
+                          </Button>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          💡 O cliente precisa existir no CRM. Verifique se o nome está correto ou importe os clientes primeiro.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Opções de correção para CPF/CNPJ */}
                     {erro.erros.some(e => e.includes('CPF') || e.includes('CNPJ')) && (
                       <div className="space-y-3">
                         <p className="text-sm font-medium">O que fazer com esta linha?</p>
@@ -469,8 +870,8 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
                       </div>
                     )}
 
-                    {/* Outros tipos de erro */}
-                    {!erro.erros.some(e => e.includes('CPF') || e.includes('CNPJ')) && (
+                    {/* Outros tipos de erro genéricos */}
+                    {!erro.erros.some(e => e.includes('CPF') || e.includes('CNPJ') || e.includes('CNJ') || e.includes('Cliente')) && (
                       <div className="flex gap-2">
                         <Button
                           variant={correcao?.tipo === 'pular' ? 'destructive' : 'outline'}
@@ -490,7 +891,33 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
       )}
 
       {activeTab === 'duplicatas' && duplicatas.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-4">
+          {/* Barra de ações em lote para duplicatas */}
+          <Card className="p-4 bg-amber-50 border-amber-200">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                <span className="font-medium text-slate-700">
+                  {duplicatas.length} registros já existem no sistema
+                </span>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={pularTodasDuplicatas}
+                  className="border-amber-300 text-amber-700 hover:bg-amber-100"
+                >
+                  <SkipForward className="w-4 h-4 mr-2" />
+                  Pular todas
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-amber-600 mt-2">
+              💡 Duplicatas são registros que já existem no sistema. Você pode pular todos ou decidir individualmente.
+            </p>
+          </Card>
+
           {duplicatas.map((dup: Duplicata) => {
             const isExpanded = expandedDups.has(dup.linha)
             const correcao = correcoes[dup.linha]
@@ -550,11 +977,203 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
         </div>
       )}
 
+      {/* Tab de Pendências (Clientes não encontrados) */}
+      {activeTab === 'pendencias' && pendencias.length > 0 && (
+        <div className="space-y-4">
+          {/* Barra de ações em lote */}
+          <Card className="p-4 bg-blue-50 border-blue-200">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-blue-500" />
+                <span className="font-medium text-slate-700">
+                  {pendencias.length} clientes não encontrados no CRM
+                </span>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={criarTodosClientes}
+                  disabled={isCriandoCliente !== null}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {isCriandoCliente !== null ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Criando...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Criar todos
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={pularTodasPendencias}
+                  className="border-red-300 text-red-600 hover:bg-red-50"
+                >
+                  <SkipForward className="w-4 h-4 mr-2" />
+                  Pular todos
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-blue-600 mt-2">
+              💡 Esses clientes precisam existir no CRM para vincular aos processos. Você pode criá-los agora ou pular (não importar os processos).
+            </p>
+          </Card>
+
+          {/* Lista de pendências */}
+          {pendencias.map((pendencia: Pendencia) => {
+            const isExpanded = expandedPendencias.has(pendencia.linha)
+            const decisao = decisoesPendencias[pendencia.linha]
+
+            return (
+              <Card key={pendencia.linha} className="border-blue-200 overflow-hidden">
+                {/* Header */}
+                <div
+                  className="p-4 bg-blue-50 flex items-center justify-between cursor-pointer"
+                  onClick={() => togglePendencia(pendencia.linha)}
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-slate-700">Linha {pendencia.linha}</span>
+                      {!decisao && pendencia.sugestoes && pendencia.sugestoes.length > 0 && (
+                        <Badge className="bg-green-100 text-green-700 text-[10px]">
+                          {pendencia.sugestoes.length} sugestões
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-blue-700 mt-1">
+                      Cliente: <strong>&quot;{pendencia.valor}&quot;</strong> não encontrado
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 ml-4">
+                    {/* Botões de ação rápida */}
+                    {!decisao && (
+                      <>
+                        <Button
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700 text-xs"
+                          disabled={isCriandoCliente === pendencia.linha}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            criarClienteParaPendencia(pendencia)
+                          }}
+                        >
+                          {isCriandoCliente === pendencia.linha ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <>
+                              <UserPlus className="w-3 h-3 mr-1" />
+                              Criar
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs border-red-300 text-red-600"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            pularPendencia(pendencia.linha)
+                          }}
+                        >
+                          Pular
+                        </Button>
+                      </>
+                    )}
+                    {decisao && (
+                      <Badge variant="outline" className="bg-white">
+                        {decisao.tipo === 'pular' ? '⏭️ Pulado' :
+                         decisao.tipo === 'criar' ? '✅ Cliente criado' :
+                         '🔗 Vinculado'}
+                      </Badge>
+                    )}
+                    {isExpanded ? (
+                      <ChevronUp className="w-4 h-4 text-slate-400" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-slate-400" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Conteúdo expandido */}
+                {isExpanded && (
+                  <div className="p-4 border-t space-y-4">
+                    {/* Sugestões de clientes similares */}
+                    {pendencia.sugestoes && pendencia.sugestoes.length > 0 && (
+                      <div className="bg-green-50 border border-green-200 rounded p-3">
+                        <p className="text-sm font-medium text-green-700 mb-2 flex items-center gap-2">
+                          <Link2 className="w-4 h-4" />
+                          Clientes similares encontrados:
+                        </p>
+                        <div className="space-y-2">
+                          {pendencia.sugestoes.map((sug) => (
+                            <div key={sug.id} className="flex items-center justify-between bg-white rounded p-2">
+                              <span className="text-sm">
+                                {sug.nome}
+                                <Badge variant="outline" className="ml-2 text-[10px]">
+                                  {Math.round(sug.similaridade * 100)}% similar
+                                </Badge>
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs"
+                                onClick={() => vincularClienteExistente(pendencia.linha, sug.id)}
+                              >
+                                <Link2 className="w-3 h-3 mr-1" />
+                                Vincular
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Opções de ação */}
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        onClick={() => criarClienteParaPendencia(pendencia)}
+                        disabled={isCriandoCliente === pendencia.linha}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        {isCriandoCliente === pendencia.linha ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Criando...
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="w-4 h-4 mr-2" />
+                            Criar cliente &quot;{pendencia.valor}&quot;
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="border-red-300 text-red-600 hover:bg-red-50"
+                        onClick={() => pularPendencia(pendencia.linha)}
+                      >
+                        <SkipForward className="w-4 h-4 mr-2" />
+                        Não importar este processo
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            )
+          })}
+        </div>
+      )}
+
       {/* Aviso se faltam decisões */}
       {temProblemas && !todasDecisoesTomadas() && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
           <AlertTriangle className="w-4 h-4 inline mr-2" />
-          Clique em cada erro/duplicata nas abas acima para definir o que fazer com cada um.
+          Revise todas as pendências nas abas acima para continuar.
         </div>
       )}
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { parseDBDate } from '@/lib/timezone'
 
 export interface AgendaItem {
   id: string
@@ -181,7 +182,7 @@ export function useAgendaConsolidada(escritorioId: string | undefined, filters?:
 
     const criticos = items.filter(i =>
       i.prioridade === 'alta' ||
-      (i.prazo_data_limite && new Date(i.prazo_data_limite) <= new Date(Date.now() + 2 * 24 * 60 * 60 * 1000))
+      (i.prazo_data_limite && parseDBDate(i.prazo_data_limite) <= new Date(Date.now() + 2 * 24 * 60 * 60 * 1000))
     ).length
 
     return {

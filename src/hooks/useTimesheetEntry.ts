@@ -33,6 +33,24 @@ export function useTimesheetEntry(escritorioId: string | null): UseTimesheetEntr
       throw new Error('Registro deve estar vinculado a um processo ou consulta');
     }
 
+    // Validar que processo tem contrato vinculado (para faturamento correto)
+    if (dados.processo_id) {
+      const { data: processo, error: processoError } = await supabase
+        .from('processos_processos')
+        .select('contrato_id, numero_cnj')
+        .eq('id', dados.processo_id)
+        .single();
+
+      if (processoError) throw processoError;
+
+      if (!processo?.contrato_id) {
+        throw new Error(
+          `O processo ${processo?.numero_cnj || ''} não tem contrato vinculado. ` +
+          'Vincule um contrato ao processo antes de lançar horas para garantir o faturamento correto.'
+        );
+      }
+    }
+
     const { data, error } = await supabase
       .from('financeiro_timesheet')
       .insert({
@@ -62,6 +80,24 @@ export function useTimesheetEntry(escritorioId: string | null): UseTimesheetEntr
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Usuário não autenticado');
+
+    // Validar que processo tem contrato vinculado (para faturamento correto)
+    if (dados.processo_id) {
+      const { data: processo, error: processoError } = await supabase
+        .from('processos_processos')
+        .select('contrato_id, numero_cnj')
+        .eq('id', dados.processo_id)
+        .single();
+
+      if (processoError) throw processoError;
+
+      if (!processo?.contrato_id) {
+        throw new Error(
+          `O processo ${processo?.numero_cnj || ''} não tem contrato vinculado. ` +
+          'Vincule um contrato ao processo antes de lançar horas.'
+        );
+      }
+    }
 
     const { data, error } = await supabase.rpc('registrar_tempo_retroativo', {
       p_escritorio_id: escritorioId,

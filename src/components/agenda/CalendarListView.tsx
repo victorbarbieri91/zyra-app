@@ -17,6 +17,7 @@ import {
   Filter
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { parseDBDate } from '@/lib/timezone'
 import { useAgendaConsolidada, AgendaItem } from '@/hooks/useAgendaConsolidada'
 import { Tarefa, useTarefas } from '@/hooks/useTarefas'
 import { Audiencia } from '@/hooks/useAudiencias'
@@ -80,7 +81,7 @@ export default function CalendarListView({
 
     // Filtro por período
     filtered = filtered.filter((item) => {
-      const itemDate = new Date(item.data_inicio)
+      const itemDate = parseDBDate(item.data_inicio)
       return itemDate >= dataInicio && itemDate <= dataFim
     })
 
@@ -97,7 +98,7 @@ export default function CalendarListView({
     const grupos: Record<string, AgendaItem[]> = {}
 
     itemsFiltrados.forEach((item) => {
-      const dataKey = format(new Date(item.data_inicio), 'yyyy-MM-dd')
+      const dataKey = format(parseDBDate(item.data_inicio), 'yyyy-MM-dd')
       if (!grupos[dataKey]) {
         grupos[dataKey] = []
       }
@@ -138,7 +139,7 @@ export default function CalendarListView({
         }
 
         // 4. Por data/hora de início
-        return new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime()
+        return parseDBDate(a.data_inicio).getTime() - parseDBDate(b.data_inicio).getTime()
       })
     })
 
@@ -152,7 +153,7 @@ export default function CalendarListView({
     })
 
     return datasOrdenadas.map((dataKey) => ({
-      data: new Date(dataKey),
+      data: parseDBDate(dataKey),
       items: grupos[dataKey],
     }))
   }, [itemsFiltrados, isPassado])

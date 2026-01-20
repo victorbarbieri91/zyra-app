@@ -33,12 +33,22 @@ import {
   ListTodo,
   Calendar,
   Gavel,
-  Loader2
+  Loader2,
+  RefreshCw,
+  ExternalLink,
+  Trash2,
+  Eye
 } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { NovoProcessoDropdown } from '@/components/processos/NovoProcessoDropdown'
+import AtualizarCapaModal from '@/components/processos/AtualizarCapaModal'
+import { BulkActionsToolbar, BulkAction } from '@/components/processos/BulkActionsToolbar'
+import { BulkEditModal } from '@/components/processos/BulkEditModal'
+import { MonitoramentoModal } from '@/components/processos/MonitoramentoModal'
+import { AndamentosModal } from '@/components/processos/AndamentosModal'
 import TarefaWizard from '@/components/agenda/TarefaWizard'
 import EventoWizard from '@/components/agenda/EventoWizard'
 import AudienciaWizard from '@/components/agenda/AudienciaWizard'
@@ -61,7 +71,10 @@ interface Processo {
   movimentacoes_nao_lidas: number
   tem_prazo_critico: boolean
   tem_documento_pendente: boolean
+  escavador_monitoramento_id?: number | null
 }
+
+type EditField = 'area' | 'responsavel' | 'status' | 'prioridade' | 'tags'
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 const DEFAULT_PAGE_SIZE = 20
@@ -86,6 +99,23 @@ export default function ProcessosPage() {
   const [selectedProcessoId, setSelectedProcessoId] = useState<string | null>(null)
   const [escritorioId, setEscritorioId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
+
+  // Estado para modal de atualizar capa
+  const [showAtualizarCapa, setShowAtualizarCapa] = useState(false)
+  const [processoParaAtualizar, setProcessoParaAtualizar] = useState<{
+    id: string
+    numero_cnj: string
+    numero_pasta: string
+  } | null>(null)
+
+  // Estados para selecao em massa
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkEditField, setBulkEditField] = useState<EditField | null>(null)
+  const [showBulkEditModal, setShowBulkEditModal] = useState(false)
+  const [showMonitoramentoModal, setShowMonitoramentoModal] = useState(false)
+  const [monitoramentoAction, setMonitoramentoAction] = useState<'ativar' | 'desativar'>('ativar')
+  const [showAndamentosModal, setShowAndamentosModal] = useState(false)
+  const [bulkLoading, setBulkLoading] = useState(false)
 
   // Debounce timer ref
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -148,9 +178,9 @@ export default function ProcessosPage() {
     try {
       setLoading(true)
 
-      // Build base query
+      // Usar view que já inclui última movimentação e contagem de não lidas
       let query = supabase
-        .from('processos_processos')
+        .from('v_processos_com_movimentacoes')
         .select(`
           id,
           numero_pasta,
@@ -162,8 +192,10 @@ export default function ProcessosPage() {
           status,
           updated_at,
           responsavel_id,
-          cliente:crm_pessoas!processos_processos_cliente_id_fkey(nome_completo),
-          responsavel:profiles!processos_processos_responsavel_id_fkey(nome_completo)
+          cliente_id,
+          escavador_monitoramento_id,
+          ultima_movimentacao,
+          movimentacoes_nao_lidas
         `, { count: 'exact' })
 
       // Apply search filter
@@ -184,12 +216,12 @@ export default function ProcessosPage() {
       // Get total count first (for pagination)
       const { count } = await query
 
-      // Apply pagination and ordering
+      // Apply pagination and ordering (última movimentação mais recente primeiro)
       const from = (currentPage - 1) * pageSize
       const to = from + pageSize - 1
 
       const { data, error } = await query
-        .order('numero_pasta', { ascending: false })
+        .order('ultima_movimentacao', { ascending: false, nullsFirst: false })
         .range(from, to)
 
       if (error) {
@@ -200,10 +232,32 @@ export default function ProcessosPage() {
 
       setTotalCount(count || 0)
 
+      // Buscar dados de cliente e responsável para os processos carregados
+      const processoIds = (data || []).map((p: { id: string }) => p.id)
+      const clienteIds = (data || []).map((p: { cliente_id: string }) => p.cliente_id).filter(Boolean)
+      const responsavelIds = (data || []).map((p: { responsavel_id: string }) => p.responsavel_id).filter(Boolean)
+
+      // Buscar clientes
+      const { data: clientes } = await supabase
+        .from('crm_pessoas')
+        .select('id, nome_completo')
+        .in('id', clienteIds)
+
+      const clientesMap = new Map((clientes || []).map(c => [c.id, c.nome_completo]))
+
+      // Buscar responsáveis
+      const { data: responsaveis } = await supabase
+        .from('profiles')
+        .select('id, nome_completo')
+        .in('id', responsavelIds)
+
+      const responsaveisMap = new Map((responsaveis || []).map(r => [r.id, r.nome_completo]))
+
       // Buscar prazos críticos (próximos 7 dias) via view
       const { data: prazosCriticos } = await supabase
         .from('v_prazos_criticos')
         .select('id')
+        .in('id', processoIds)
         .gte('dias_restantes', 0)
         .lte('dias_restantes', 7)
         .eq('prazo_cumprido', false)
@@ -217,17 +271,18 @@ export default function ProcessosPage() {
         id: p.id,
         numero_pasta: p.numero_pasta,
         numero_cnj: p.numero_cnj,
-        cliente_nome: p.cliente?.nome_completo || 'N/A',
+        cliente_nome: clientesMap.get(p.cliente_id) || 'N/A',
         parte_contraria: p.parte_contraria || 'Não informado',
         area: formatArea(p.area),
         fase: formatFase(p.fase),
         instancia: formatInstancia(p.instancia),
-        responsavel_nome: p.responsavel?.nome_completo || 'N/A',
+        responsavel_nome: responsaveisMap.get(p.responsavel_id) || 'N/A',
         status: p.status,
-        ultima_movimentacao: p.updated_at,
-        movimentacoes_nao_lidas: 0, // TODO: buscar da tabela de movimentações
+        ultima_movimentacao: p.ultima_movimentacao,
+        movimentacoes_nao_lidas: p.movimentacoes_nao_lidas || 0,
         tem_prazo_critico: processoComPrazoCritico.has(p.id),
-        tem_documento_pendente: false // TODO: buscar da tabela de documentos
+        tem_documento_pendente: false,
+        escavador_monitoramento_id: p.escavador_monitoramento_id
       }))
 
       setProcessos(processosFormatados)
@@ -334,6 +389,60 @@ export default function ProcessosPage() {
     }
   }
 
+  // ============= Handlers de Selecao =============
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === processos.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(processos.map(p => p.id)))
+    }
+  }
+
+  const clearSelection = () => {
+    setSelectedIds(new Set())
+  }
+
+  const handleBulkAction = (action: BulkAction) => {
+    if (action === 'ativar_monitoramento') {
+      setMonitoramentoAction('ativar')
+      setShowMonitoramentoModal(true)
+    } else if (action === 'desativar_monitoramento') {
+      setMonitoramentoAction('desativar')
+      setShowMonitoramentoModal(true)
+    } else if (action === 'atualizar_andamentos') {
+      setShowAndamentosModal(true)
+    } else if (action === 'alterar_area') {
+      setBulkEditField('area')
+      setShowBulkEditModal(true)
+    } else if (action === 'alterar_responsavel') {
+      setBulkEditField('responsavel')
+      setShowBulkEditModal(true)
+    } else if (action === 'alterar_status') {
+      setBulkEditField('status')
+      setShowBulkEditModal(true)
+    } else if (action === 'alterar_prioridade') {
+      setBulkEditField('prioridade')
+      setShowBulkEditModal(true)
+    } else if (action === 'adicionar_tags') {
+      setBulkEditField('tags')
+      setShowBulkEditModal(true)
+    }
+  }
+
+  const selectedProcessos = processos.filter(p => selectedIds.has(p.id))
+
   return (
     <div className="p-6 space-y-6">
 
@@ -399,22 +508,29 @@ export default function ProcessosPage() {
             <table className="w-full table-fixed">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Nº Pasta</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-52">Nº CNJ</th>
+                  <th className="text-center p-3 w-10">
+                    <Checkbox
+                      checked={processos.length > 0 && selectedIds.size === processos.length}
+                      onCheckedChange={toggleSelectAll}
+                      className="border-slate-300 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
+                    />
+                  </th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Pasta</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-52">CNJ</th>
                   <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-56">Cliente</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-44">Parte Contrária</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-16">Área</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-28">Responsável</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-44">Parte Contraria</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-16">Area</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-28">Responsavel</th>
                   <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-16">Status</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-20">Últ. Mov.</th>
-                  <th className="text-center p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Ações</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-20">Ult. Mov.</th>
+                  <th className="text-center p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Acoes</th>
                 </tr>
               </thead>
               <tbody className={loading ? 'opacity-50' : ''}>
                 {/* Loading state */}
                 {loading && processos.length === 0 && (
                   <tr>
-                    <td colSpan={9} className="p-8 text-center">
+                    <td colSpan={10} className="p-8 text-center">
                       <div className="flex items-center justify-center gap-3">
                         <Loader2 className="w-5 h-5 text-[#34495e] animate-spin" />
                         <span className="text-sm text-slate-600">Carregando processos...</span>
@@ -426,7 +542,7 @@ export default function ProcessosPage() {
                 {/* Empty state */}
                 {!loading && processos.length === 0 && (
                   <tr>
-                    <td colSpan={9} className="p-8 text-center">
+                    <td colSpan={10} className="p-8 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <FileText className="w-10 h-10 text-slate-300" />
                         <p className="text-sm text-slate-600">
@@ -451,10 +567,26 @@ export default function ProcessosPage() {
                   <tr
                     key={processo.id}
                     onClick={() => router.push(`/dashboard/processos/${processo.id}`)}
-                    className="border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer"
+                    className={`border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer ${
+                      selectedIds.has(processo.id) ? 'bg-blue-50 hover:bg-blue-100' : ''
+                    }`}
                   >
+                    <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(processo.id)}
+                        onCheckedChange={() => toggleSelection(processo.id)}
+                        className="border-slate-300 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
+                      />
+                    </td>
                     <td className="p-3 whitespace-nowrap">
-                      <span className="text-[14px] font-bold text-[#34495e]">{processo.numero_pasta}</span>
+                      <div className="flex items-center gap-1.5">
+                        {processo.escavador_monitoramento_id && (
+                          <span title="Monitorado via Escavador">
+                            <Eye className="w-3 h-3 text-emerald-500" />
+                          </span>
+                        )}
+                        <span className="text-[14px] font-bold text-[#34495e]">{processo.numero_pasta}</span>
+                      </div>
                     </td>
                     <td className="p-3 whitespace-nowrap">
                       <span className="text-xs text-slate-600">{processo.numero_cnj}</span>
@@ -542,17 +674,57 @@ export default function ProcessosPage() {
                         </DropdownMenu>
 
                         {/* Menu de ações */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            // Menu de ações
-                          }}
-                        >
-                          <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            {processo.numero_cnj && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setProcessoParaAtualizar({
+                                      id: processo.id,
+                                      numero_cnj: processo.numero_cnj,
+                                      numero_pasta: processo.numero_pasta
+                                    })
+                                    setShowAtualizarCapa(true)
+                                  }}
+                                >
+                                  <RefreshCw className="w-4 h-4 mr-2 text-[#89bcbe]" />
+                                  <span className="text-sm">Atualizar Capa</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setSelectedIds(new Set([processo.id]))
+                                    setShowAndamentosModal(true)
+                                  }}
+                                >
+                                  <FileText className="w-4 h-4 mr-2 text-blue-500" />
+                                  <span className="text-sm">Atualizar Andamentos</span>
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                window.open(`/dashboard/processos/${processo.id}`, '_blank')
+                              }}
+                            >
+                              <ExternalLink className="w-4 h-4 mr-2 text-slate-500" />
+                              <span className="text-sm">Abrir em nova aba</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </td>
                   </tr>
@@ -728,6 +900,81 @@ export default function ProcessosPage() {
           }}
           initialData={{
             processo_id: selectedProcessoId
+          }}
+        />
+      )}
+
+      {/* Modal de Atualizar Capa via Escavador */}
+      {showAtualizarCapa && processoParaAtualizar && (
+        <AtualizarCapaModal
+          open={showAtualizarCapa}
+          onClose={() => {
+            setShowAtualizarCapa(false)
+            setProcessoParaAtualizar(null)
+          }}
+          processoId={processoParaAtualizar.id}
+          numeroCnj={processoParaAtualizar.numero_cnj}
+          numeroPasta={processoParaAtualizar.numero_pasta}
+          onAtualizado={loadProcessos}
+        />
+      )}
+
+      {/* Toolbar de Acoes em Massa */}
+      <BulkActionsToolbar
+        selectedCount={selectedIds.size}
+        onClearSelection={clearSelection}
+        onAction={handleBulkAction}
+        loading={bulkLoading}
+      />
+
+      {/* Modal de Edicao em Massa */}
+      {showBulkEditModal && bulkEditField && (
+        <BulkEditModal
+          open={showBulkEditModal}
+          onClose={() => {
+            setShowBulkEditModal(false)
+            setBulkEditField(null)
+          }}
+          field={bulkEditField}
+          selectedIds={Array.from(selectedIds)}
+          onSuccess={() => {
+            loadProcessos()
+            clearSelection()
+          }}
+        />
+      )}
+
+      {/* Modal de Monitoramento */}
+      {showMonitoramentoModal && (
+        <MonitoramentoModal
+          open={showMonitoramentoModal}
+          onClose={() => setShowMonitoramentoModal(false)}
+          action={monitoramentoAction}
+          selectedProcessos={selectedProcessos.map(p => ({
+            id: p.id,
+            numero_cnj: p.numero_cnj,
+            numero_pasta: p.numero_pasta
+          }))}
+          onSuccess={() => {
+            loadProcessos()
+            clearSelection()
+          }}
+        />
+      )}
+
+      {/* Modal de Atualizar Andamentos */}
+      {showAndamentosModal && (
+        <AndamentosModal
+          open={showAndamentosModal}
+          onClose={() => setShowAndamentosModal(false)}
+          selectedProcessos={selectedProcessos.map(p => ({
+            id: p.id,
+            numero_cnj: p.numero_cnj,
+            numero_pasta: p.numero_pasta
+          }))}
+          onSuccess={() => {
+            loadProcessos()
+            clearSelection()
           }}
         />
       )}

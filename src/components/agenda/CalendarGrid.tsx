@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { parseDBDate } from '@/lib/timezone'
 import {
   format,
   startOfMonth,
@@ -57,7 +58,7 @@ export default function CalendarGrid({
   const goToToday = () => setCurrentMonth(new Date())
 
   const getEventosForDay = (day: Date) => {
-    return eventos.filter((evento) => isSameDay(new Date(evento.data_inicio), day))
+    return eventos.filter((evento) => isSameDay(parseDBDate(evento.data_inicio), day))
   }
 
   const isFeriado = (day: Date) => {
@@ -192,7 +193,7 @@ export default function CalendarGrid({
                         id={evento.id}
                         titulo={evento.titulo}
                         tipo={evento.tipo}
-                        data_inicio={new Date(evento.data_inicio)}
+                        data_inicio={parseDBDate(evento.data_inicio)}
                         dia_inteiro={evento.dia_inteiro}
                         status={evento.status}
                         onClick={(e) => {

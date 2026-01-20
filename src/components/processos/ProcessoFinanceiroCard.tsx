@@ -4,31 +4,37 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   DollarSign,
-  Clock,
-  Receipt,
-  AlertTriangle,
-  ArrowRight,
   FileText,
   Loader2,
   Link as LinkIcon,
+  Plus,
+  ChevronRight,
+  Banknote,
+  Clock,
+  Receipt,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { useProcessoFinanceiro } from '@/hooks/useProcessoFinanceiro'
-import { useRouter } from 'next/navigation'
 import VincularContratoModal from './VincularContratoModal'
+import FinanceiroDetalhesModal from './FinanceiroDetalhesModal'
 
 interface ProcessoFinanceiroCardProps {
   processoId: string
   onLancarHoras?: () => void
   onLancarDespesa?: () => void
-  onVerDetalhes?: () => void
+  onLancarHonorario?: () => void
 }
 
 const MODALIDADE_LABELS: Record<string, string> = {
-  fixo: 'Fixo',
+  fixo: 'Honorários Fixos',
   por_hora: 'Por Hora',
   por_etapa: 'Por Etapa',
   misto: 'Misto',
@@ -37,41 +43,39 @@ const MODALIDADE_LABELS: Record<string, string> = {
   por_cargo: 'Por Cargo',
 }
 
-const MODALIDADE_COLORS: Record<string, string> = {
-  fixo: 'bg-blue-100 text-blue-700 border-blue-200',
-  por_hora: 'bg-amber-100 text-amber-700 border-amber-200',
-  por_etapa: 'bg-purple-100 text-purple-700 border-purple-200',
-  misto: 'bg-slate-100 text-slate-700 border-slate-200',
-  por_pasta: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  por_ato: 'bg-rose-100 text-rose-700 border-rose-200',
-  por_cargo: 'bg-cyan-100 text-cyan-700 border-cyan-200',
-}
-
 export default function ProcessoFinanceiroCard({
   processoId,
   onLancarHoras,
   onLancarDespesa,
-  onVerDetalhes,
+  onLancarHonorario,
 }: ProcessoFinanceiroCardProps) {
-  const router = useRouter()
   const {
     contratoInfo,
     processoInfo,
     resumo,
-    despesasReembolsaveisPendentes,
+    honorarios,
+    despesas,
+    timesheet,
     loading,
     podelancarHoras,
     loadDados,
   } = useProcessoFinanceiro(processoId)
 
-  // Estado para modal de vincular contrato
+  // Estados para modais
   const [vincularModalOpen, setVincularModalOpen] = useState(false)
+  const [detalhesModalOpen, setDetalhesModalOpen] = useState(false)
+  const [detalhesModalTipo, setDetalhesModalTipo] = useState<'honorarios' | 'timesheet' | 'despesas'>('honorarios')
 
   useEffect(() => {
     if (processoId) {
       loadDados()
     }
   }, [processoId, loadDados])
+
+  const openDetalhesModal = (tipo: 'honorarios' | 'timesheet' | 'despesas') => {
+    setDetalhesModalTipo(tipo)
+    setDetalhesModalOpen(true)
+  }
 
   if (loading) {
     return (
@@ -90,32 +94,30 @@ export default function ProcessoFinanceiroCard({
     return (
       <>
         <Card className="border-slate-200 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-[#89bcbe]" />
-              Financeiro
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-4">
-              <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-xs text-slate-600 mb-3">
+          <CardContent className="py-6">
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                <FileText className="w-5 h-5 text-slate-400" />
+              </div>
+              <p className="text-sm font-medium text-slate-700 mb-1">
                 Nenhum contrato vinculado
+              </p>
+              <p className="text-xs text-slate-500 mb-4">
+                Vincule um contrato para gerenciar o financeiro deste processo
               </p>
               <Button
                 size="sm"
                 variant="outline"
-                className="text-xs h-7"
+                className="text-xs h-8 border-[#89bcbe] text-[#34495e] hover:bg-[#89bcbe]/10"
                 onClick={() => setVincularModalOpen(true)}
               >
-                <LinkIcon className="w-3 h-3 mr-1.5" />
+                <LinkIcon className="w-3.5 h-3.5 mr-1.5" />
                 Vincular Contrato
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Modal para vincular contrato */}
         <VincularContratoModal
           open={vincularModalOpen}
           onOpenChange={setVincularModalOpen}
@@ -129,137 +131,151 @@ export default function ProcessoFinanceiroCard({
   }
 
   return (
-    <Card className="border-slate-200 shadow-sm">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-[#89bcbe]" />
-            Financeiro
-          </CardTitle>
-        </div>
-      </CardHeader>
+    <>
+      <Card className="border-slate-200 shadow-sm">
+        {/* Header - igual às demais seções */}
+        <CardHeader className="pb-3 pt-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-[#89bcbe]" />
+              Financeiro
+            </CardTitle>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2.5 text-xs text-slate-500 hover:text-[#34495e] hover:bg-slate-100"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />
+                  Novo
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem
+                  onClick={() => onLancarHonorario?.()}
+                  className="text-xs cursor-pointer py-2.5"
+                >
+                  <Banknote className="w-4 h-4 mr-2.5 text-slate-500" />
+                  Honorário
+                </DropdownMenuItem>
+                {podelancarHoras && (
+                  <DropdownMenuItem
+                    onClick={() => onLancarHoras?.()}
+                    className="text-xs cursor-pointer py-2.5"
+                  >
+                    <Clock className="w-4 h-4 mr-2.5 text-slate-500" />
+                    Timesheet
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  onClick={() => onLancarDespesa?.()}
+                  className="text-xs cursor-pointer py-2.5"
+                >
+                  <Receipt className="w-4 h-4 mr-2.5 text-slate-500" />
+                  Despesa
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardHeader>
 
-      <CardContent className="space-y-3">
-        {/* Contrato e Modalidade */}
-        <div className="p-2.5 rounded-lg bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] border border-[#aacfd0]/30">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] text-slate-500 uppercase tracking-wide">Contrato</span>
-            <span className="text-xs font-semibold text-[#34495e]">
+        {/* Info do Contrato - Seção separada */}
+        <div className="px-6 py-4 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <FileText className="w-3.5 h-3.5 text-slate-400" />
+            <span className="text-xs text-slate-600">
               {contratoInfo.numero_contrato}
             </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] text-slate-500 uppercase tracking-wide">Modalidade</span>
-            <Badge
-              variant="outline"
-              className={`text-[10px] h-5 ${
-                MODALIDADE_COLORS[contratoInfo.modalidade_cobranca || ''] || 'bg-slate-100 text-slate-700'
-              }`}
-            >
-              {MODALIDADE_LABELS[contratoInfo.modalidade_cobranca || ''] || 'Não definida'}
+            <Badge variant="outline" className="text-[10px] font-medium h-5 bg-slate-50 text-slate-600 border-slate-200">
+              {MODALIDADE_LABELS[contratoInfo.modalidade_cobranca || ''] || 'Padrão'}
             </Badge>
           </div>
         </div>
 
-        {/* Aviso se não pode lançar horas */}
-        {contratoInfo.modalidade_cobranca && !podelancarHoras && (
-          <div className="flex items-start gap-2 p-2 rounded bg-amber-50 border border-amber-200">
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <p className="text-[10px] text-amber-700 leading-relaxed">
-              Modalidade <strong>{MODALIDADE_LABELS[contratoInfo.modalidade_cobranca]}</strong> não permite lançamento de horas.
-            </p>
-          </div>
-        )}
-
-        {/* KPIs */}
-        <div className="grid grid-cols-3 gap-2">
-          <div className="text-center p-2 rounded bg-slate-50">
-            <p className="text-[10px] text-slate-500 mb-0.5">Honorários</p>
-            <p className="text-sm font-bold text-[#34495e]">
-              {formatCurrency(resumo.totalHonorarios)}
-            </p>
-          </div>
-          <div className="text-center p-2 rounded bg-slate-50">
-            <p className="text-[10px] text-slate-500 mb-0.5">Despesas</p>
-            <p className="text-sm font-bold text-slate-600">
-              {formatCurrency(resumo.totalDespesas)}
-            </p>
-          </div>
-          <div className="text-center p-2 rounded bg-emerald-50">
-            <p className="text-[10px] text-emerald-600 mb-0.5">Saldo</p>
-            <p className="text-sm font-bold text-emerald-700">
-              {formatCurrency(resumo.saldo)}
-            </p>
-          </div>
-        </div>
-
-        {/* Horas trabalhadas (se aplicável) */}
-        {podelancarHoras && resumo.horasTrabalhadas > 0 && (
-          <div className="flex items-center justify-between p-2 rounded bg-amber-50 border border-amber-100">
-            <div className="flex items-center gap-2">
-              <Clock className="w-3.5 h-3.5 text-amber-600" />
-              <span className="text-xs text-amber-700">
-                {resumo.horasTrabalhadas}h trabalhadas
-              </span>
-            </div>
-            {contratoInfo.config?.valor_hora && (
-              <span className="text-xs font-semibold text-amber-700">
-                {formatCurrency(resumo.horasTrabalhadas * contratoInfo.config.valor_hora)}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Alerta de despesas reembolsáveis */}
-        {despesasReembolsaveisPendentes.length > 0 && (
-          <div className="flex items-center justify-between p-2 rounded bg-rose-50 border border-rose-200">
-            <div className="flex items-center gap-2">
-              <Receipt className="w-3.5 h-3.5 text-rose-600" />
-              <span className="text-xs text-rose-700">
-                {despesasReembolsaveisPendentes.length} despesa{despesasReembolsaveisPendentes.length > 1 ? 's' : ''} reembolsável{despesasReembolsaveisPendentes.length > 1 ? 'is' : ''} pendente{despesasReembolsaveisPendentes.length > 1 ? 's' : ''}
-              </span>
-            </div>
-            <span className="text-xs font-semibold text-rose-700">
-              {formatCurrency(resumo.totalDespesasReembolsaveis)}
-            </span>
-          </div>
-        )}
-
-        <Separator />
-
-        {/* Botões de ação */}
-        <div className="flex gap-2">
-          {podelancarHoras && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="flex-1 text-xs h-7 hover:bg-[#89bcbe]/10 hover:border-[#89bcbe]"
-              onClick={onLancarHoras}
-            >
-              <Clock className="w-3 h-3 mr-1" />
-              + Horas
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1 text-xs h-7 hover:bg-[#89bcbe]/10 hover:border-[#89bcbe]"
-            onClick={onLancarDespesa}
+        {/* Categorias Financeiras */}
+        <CardContent className="p-5 space-y-4">
+          {/* Honorários */}
+          <div
+            className="group flex items-center justify-between cursor-pointer hover:bg-slate-50 -mx-3 px-3 py-3 rounded-lg transition-colors"
+            onClick={() => openDetalhesModal('honorarios')}
           >
-            <Receipt className="w-3 h-3 mr-1" />
-            + Despesa
-          </Button>
-        </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Honorários</p>
+                {honorarios.length > 0 && (
+                  <span className="text-[10px] text-slate-400">
+                    ({honorarios.length})
+                  </span>
+                )}
+              </div>
+              <p className="text-sm font-semibold text-[#34495e] mt-1">
+                {formatCurrency(resumo.totalHonorarios)}
+              </p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#89bcbe] transition-colors" />
+          </div>
 
-        {/* Ver detalhes */}
-        <Button
-          variant="link"
-          className="text-xs text-[#89bcbe] hover:text-[#6ba9ab] p-0 h-auto w-full"
-          onClick={onVerDetalhes || (() => router.push(`/dashboard/financeiro?processo_id=${processoId}`))}
-        >
-          Ver financeiro completo <ArrowRight className="w-3 h-3 ml-1" />
-        </Button>
-      </CardContent>
-    </Card>
+          {/* Timesheet */}
+          <div
+            className="group flex items-center justify-between cursor-pointer hover:bg-slate-50 -mx-3 px-3 py-3 rounded-lg transition-colors"
+            onClick={() => openDetalhesModal('timesheet')}
+          >
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Timesheet</p>
+                {timesheet.length > 0 && (
+                  <span className="text-[10px] text-slate-400">
+                    ({timesheet.length})
+                  </span>
+                )}
+              </div>
+              <p className="text-sm font-semibold text-[#34495e] mt-1">
+                {resumo.horasTrabalhadas}h
+              </p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#89bcbe] transition-colors" />
+          </div>
+
+          {/* Despesas */}
+          <div
+            className="group flex items-center justify-between cursor-pointer hover:bg-slate-50 -mx-3 px-3 py-3 rounded-lg transition-colors"
+            onClick={() => openDetalhesModal('despesas')}
+          >
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Despesas</p>
+                {despesas.length > 0 && (
+                  <span className="text-[10px] text-slate-400">
+                    ({despesas.length})
+                  </span>
+                )}
+              </div>
+              <p className="text-sm font-semibold text-[#34495e] mt-1">
+                {formatCurrency(resumo.totalDespesas)}
+              </p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#89bcbe] transition-colors" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Modal de Detalhes */}
+      <FinanceiroDetalhesModal
+        open={detalhesModalOpen}
+        onOpenChange={setDetalhesModalOpen}
+        tipo={detalhesModalTipo}
+        processoId={processoId}
+        honorarios={honorarios}
+        timesheet={timesheet}
+        despesas={despesas}
+        resumo={resumo}
+        contratoInfo={contratoInfo}
+        onLancarHonorario={onLancarHonorario}
+        onLancarHoras={onLancarHoras}
+        onLancarDespesa={onLancarDespesa}
+        onRefresh={loadDados}
+      />
+    </>
   )
 }

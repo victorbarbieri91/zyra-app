@@ -26,11 +26,13 @@ import {
   Gavel,
   TrendingUp,
   PieChart,
+  Plus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
 import { formatCurrency } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
 
 type FormaCobranca = 'fixo' | 'por_hora' | 'por_etapa' | 'misto' | 'por_pasta' | 'por_ato' | 'por_cargo'
 
@@ -96,6 +98,7 @@ export default function VincularContratoModal({
   onSuccess,
 }: VincularContratoModalProps) {
   const supabase = createClient()
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [contratos, setContratos] = useState<ContratoDisponivel[]>([])
@@ -206,23 +209,37 @@ export default function VincularContratoModal({
     setError(null)
 
     try {
-      const modalidade = selectedModalidade || contrato.formas_disponiveis[0]
+      // Determinar modalidade: selecionada ou a primeira (ou a forma principal se não houver formas_disponiveis)
+      const modalidade = selectedModalidade || contrato.formas_disponiveis[0] || contrato.forma_cobranca
 
-      const { error: updateError } = await supabase
+      console.log('[VincularContrato] Iniciando vinculação:', {
+        processoId,
+        contratoId: selectedContrato,
+        modalidade,
+        contrato: contrato,
+      })
+
+      const { data, error: updateError } = await supabase
         .from('processos_processos')
         .update({
           contrato_id: selectedContrato,
           modalidade_cobranca: modalidade,
         })
         .eq('id', processoId)
+        .select('id, contrato_id, modalidade_cobranca')
 
-      if (updateError) throw updateError
+      console.log('[VincularContrato] Resultado UPDATE:', { data, error: updateError })
+
+      if (updateError) {
+        console.error('[VincularContrato] Erro no UPDATE:', updateError)
+        throw updateError
+      }
 
       onSuccess?.()
       onOpenChange(false)
-    } catch (err) {
-      console.error('Erro ao vincular contrato:', err)
-      setError('Erro ao vincular contrato ao processo')
+    } catch (err: any) {
+      console.error('[VincularContrato] Erro ao vincular contrato:', err)
+      setError(err?.message || 'Erro ao vincular contrato ao processo')
     } finally {
       setSaving(false)
     }
@@ -270,9 +287,19 @@ export default function VincularContratoModal({
               <p className="text-sm text-slate-600">
                 Nenhum contrato ativo encontrado para este cliente.
               </p>
-              <p className="text-xs text-slate-500 mt-1">
-                Crie um contrato no módulo Financeiro primeiro.
+              <p className="text-xs text-slate-500 mt-2 mb-4">
+                Crie um contrato de honorários para vincular a este processo.
               </p>
+              <Button
+                onClick={() => {
+                  onOpenChange(false)
+                  router.push(`/dashboard/financeiro?tab=contratos&action=novo&cliente_id=${clienteId}`)
+                }}
+                className="bg-gradient-to-r from-[#89bcbe] to-[#aacfd0] hover:from-[#aacfd0] hover:to-[#89bcbe] text-white"
+              >
+                <Plus className="w-4 h-4 mr-1.5" />
+                Criar Novo Contrato
+              </Button>
             </div>
           ) : (
             <div className="space-y-4">

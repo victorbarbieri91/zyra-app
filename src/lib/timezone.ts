@@ -122,6 +122,49 @@ export function parseDateInBrazil(
 }
 
 /**
+ * Faz parse de uma string de data vinda do banco de dados
+ *
+ * IMPORTANTE: Use esta função ao invés de `new Date(string)` para datas do banco!
+ *
+ * Quando o banco retorna "2025-01-19" (tipo date) e você faz new Date("2025-01-19"),
+ * o JavaScript interpreta como meia-noite UTC, que no horário de Brasília (UTC-3)
+ * vira 21:00 do dia ANTERIOR (18/01).
+ *
+ * Esta função trata corretamente:
+ * - Strings date: "2025-01-19" → 19/01/2025 00:00 (local)
+ * - Strings timestamptz: "2025-01-19T14:30:00Z" → convertido para Brasília
+ *
+ * @param dateString - String da data vinda do banco (date ou timestamptz)
+ * @returns Date object correto para uso em comparações e exibição
+ *
+ * @example
+ * // ❌ ERRADO - pode mostrar dia anterior
+ * new Date("2025-01-19")
+ *
+ * // ✅ CORRETO
+ * parseDBDate("2025-01-19")
+ */
+export function parseDBDate(dateInput: string | Date | null | undefined): Date {
+  if (!dateInput) {
+    return new Date() // fallback para data atual
+  }
+
+  // Se já é um objeto Date, retornar diretamente
+  if (dateInput instanceof Date) {
+    return dateInput
+  }
+
+  // Se é apenas YYYY-MM-DD (tipo date do banco), tratar como data local
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+    // Adiciona T12:00:00 para garantir que fica no mesmo dia em qualquer timezone
+    return new Date(`${dateInput}T12:00:00`)
+  }
+
+  // Se já tem horário (timestamptz), converter para timezone de Brasília
+  return toBrazilTime(dateInput)
+}
+
+/**
  * Prepara uma data para ser enviada ao Supabase
  * Converte de Brasília para UTC e formata como ISO string
  *

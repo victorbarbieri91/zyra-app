@@ -6,7 +6,8 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, ListTodo, PlayCircle, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { format, addDays, subDays, isSameDay, startOfDay, endOfDay } from 'date-fns'
+import { parseDBDate } from '@/lib/timezone'
+import { format, addDays, subDays, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Tarefa, useTarefas } from '@/hooks/useTarefas'
 import KanbanColumn from './KanbanColumn'
@@ -63,7 +64,7 @@ export default function CalendarKanbanView({
 
     // Filtrar tarefas do dia e do usuário logado
     const tarefasDoDia = todasTarefas.filter((tarefa) => {
-      const tarefaDate = new Date(tarefa.data_inicio)
+      const tarefaDate = parseDBDate(tarefa.data_inicio)
       // Filtro 1: dia selecionado
       if (!isSameDay(tarefaDate, selectedDate)) return false
       // Filtro 2: apenas tarefas do usuário logado

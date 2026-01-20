@@ -21,7 +21,7 @@ import ProcessoResumo from '@/components/processos/ProcessoResumo'
 import ProcessoDocumentos from '@/components/processos/ProcessoDocumentos'
 import ProcessoEstrategia from '@/components/processos/ProcessoEstrategia'
 import ProcessoJurisprudencias from '@/components/processos/ProcessoJurisprudencias'
-import ProcessoFinanceiro from '@/components/processos/ProcessoFinanceiro'
+import ProcessoDepositos from '@/components/processos/ProcessoDepositos'
 import ProcessoHistorico from '@/components/processos/ProcessoHistorico'
 
 interface Processo {
@@ -263,17 +263,17 @@ export default function ProcessoDetalhe() {
           </div>
 
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div>
+            <div className="flex items-center gap-4 min-w-0 flex-1">
+              <div className="flex-shrink-0">
                 <span className="text-xs font-medium text-white/60 uppercase tracking-wide">Pasta</span>
                 <h1 className="text-2xl font-bold text-white">
                   {processo.numero_pasta}
                 </h1>
               </div>
-              <div className="w-px h-10 bg-white/20" />
-              <div>
-                <h2 className="text-lg font-semibold text-white">
-                  {processo.cliente_nome} <span className="text-white/50 font-normal">vs</span> {processo.parte_contraria}
+              <div className="w-px h-10 bg-white/20 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg font-semibold text-white truncate" title={`${processo.cliente_nome} vs ${processo.parte_contraria}`}>
+                  <span className="truncate">{processo.cliente_nome}</span> <span className="text-white/50 font-normal">vs</span> <span className="truncate">{processo.parte_contraria}</span>
                 </h2>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-xs text-white/60">CNJ:</span>
@@ -343,8 +343,8 @@ export default function ProcessoDetalhe() {
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="financeiro" className="text-xs">
-                  Financeiro
+                <TabsTrigger value="depositos" className="text-xs">
+                  Depósitos
                 </TabsTrigger>
                 <TabsTrigger value="historico" className="text-xs">
                   Histórico
@@ -370,8 +370,8 @@ export default function ProcessoDetalhe() {
             <ProcessoJurisprudencias processoId={processo.id} />
           </TabsContent>
 
-          <TabsContent value="financeiro" className="space-y-6">
-            <ProcessoFinanceiro processo={processo} />
+          <TabsContent value="depositos" className="space-y-6">
+            <ProcessoDepositos processoId={processo.id} />
           </TabsContent>
 
           <TabsContent value="historico" className="space-y-6">

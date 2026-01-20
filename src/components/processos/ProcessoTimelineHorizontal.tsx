@@ -3,21 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import {
-  Gavel,
-  FileText,
-  Calendar,
-  Clock,
-  Upload,
-  Download,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  ChevronLeft,
-  ChevronRight,
-  Circle,
-} from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatBrazilDate } from '@/lib/timezone'
 
@@ -35,80 +21,6 @@ interface ProcessoTimelineHorizontalProps {
   movimentacoes: ProcessoMovimentacao[]
   onItemClick?: (movimentacaoId: string) => void
   className?: string
-}
-
-// Mapeamento de tipos para ícones e cores (sutis, compatíveis com design system)
-const tipoConfig: Record<string, { icon: any; bg: string; iconColor: string; textColor: string }> = {
-  sentenca: {
-    icon: Gavel,
-    bg: 'bg-purple-100',
-    iconColor: 'text-purple-600',
-    textColor: 'text-[#34495e]',
-  },
-  despacho: {
-    icon: FileText,
-    bg: 'bg-blue-100',
-    iconColor: 'text-blue-600',
-    textColor: 'text-[#34495e]',
-  },
-  juntada: {
-    icon: Upload,
-    bg: 'bg-emerald-100',
-    iconColor: 'text-emerald-600',
-    textColor: 'text-[#34495e]',
-  },
-  audiencia: {
-    icon: Calendar,
-    bg: 'bg-amber-100',
-    iconColor: 'text-amber-600',
-    textColor: 'text-[#34495e]',
-  },
-  intimacao: {
-    icon: AlertCircle,
-    bg: 'bg-red-100',
-    iconColor: 'text-red-600',
-    textColor: 'text-[#34495e]',
-  },
-  peticao: {
-    icon: Download,
-    bg: 'bg-teal-100',
-    iconColor: 'text-teal-600',
-    textColor: 'text-[#34495e]',
-  },
-  conclusao: {
-    icon: CheckCircle,
-    bg: 'bg-green-100',
-    iconColor: 'text-green-600',
-    textColor: 'text-[#34495e]',
-  },
-  baixa: {
-    icon: XCircle,
-    bg: 'bg-slate-100',
-    iconColor: 'text-slate-600',
-    textColor: 'text-[#34495e]',
-  },
-  default: {
-    icon: Circle,
-    bg: 'bg-slate-100',
-    iconColor: 'text-[#89bcbe]',
-    textColor: 'text-[#34495e]',
-  },
-}
-
-// Função para determinar o tipo baseado na descrição
-const getTipoFromDescricao = (descricao: string): string => {
-  const lower = descricao.toLowerCase()
-
-  if (lower.includes('sentença')) return 'sentenca'
-  if (lower.includes('despacho')) return 'despacho'
-  if (lower.includes('juntada')) return 'juntada'
-  if (lower.includes('audiência')) return 'audiencia'
-  if (lower.includes('intimação')) return 'intimacao'
-  if (lower.includes('petição')) return 'peticao'
-  if (lower.includes('conclusão')) return 'conclusao'
-  if (lower.includes('baixa')) return 'baixa'
-
-  return 'default'
 }
 
 export default function ProcessoTimelineHorizontal({
@@ -135,11 +47,24 @@ export default function ProcessoTimelineHorizontal({
     setScrollProgress(progress)
   }
 
+  // Scroll inicial para o final (mais recentes à direita)
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      // Aguardar renderização e scrollar para o final
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth
+          updateScrollButtons()
+        }
+      }, 100)
+    }
+  }, [movimentacoes])
+
   useEffect(() => {
     updateScrollButtons()
     window.addEventListener('resize', updateScrollButtons)
     return () => window.removeEventListener('resize', updateScrollButtons)
-  }, [movimentacoes])
+  }, [])
 
   // Scroll suave
   const scroll = (direction: 'left' | 'right') => {
@@ -156,8 +81,10 @@ export default function ProcessoTimelineHorizontal({
     })
   }
 
-  // Limitar movimentações para performance (últimas 20)
-  const movimentacoesLimitadas = movimentacoes.slice(0, 20)
+  // Limitar movimentações para performance (últimas 20) e inverter ordem
+  // A entrada vem ordenada DESC (mais recente primeiro), invertemos para ordem cronológica
+  // Assim: mais antigo à esquerda, mais recente à direita
+  const movimentacoesLimitadas = movimentacoes.slice(0, 20).reverse()
 
   if (movimentacoesLimitadas.length === 0) {
     return null
@@ -167,7 +94,7 @@ export default function ProcessoTimelineHorizontal({
     <div className={cn('space-y-2.5', className)}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-medium text-slate-500">Timeline Visual</h3>
+        <h3 className="text-xs font-medium text-slate-500">Timeline</h3>
         <span className="text-[10px] text-slate-400">
           {movimentacoesLimitadas.length} {movimentacoesLimitadas.length === 1 ? 'evento' : 'eventos'}
         </span>
@@ -210,13 +137,8 @@ export default function ProcessoTimelineHorizontal({
           }}
         >
           <div className="flex gap-3 min-w-max">
-            {movimentacoesLimitadas.map((mov, index) => {
-              const tipo = getTipoFromDescricao(mov.tipo_descricao || mov.descricao || '')
-              const config = tipoConfig[tipo] || tipoConfig.default
-              const Icon = config.icon
-
-              return (
-                <div key={mov.id} className="flex items-center gap-2.5">
+            {movimentacoesLimitadas.map((mov, index) => (
+              <div key={mov.id} className="flex items-center gap-2.5">
                   {/* Card do Evento */}
                   <Card
                     onClick={() => onItemClick?.(mov.id)}
@@ -228,39 +150,22 @@ export default function ProcessoTimelineHorizontal({
                     )}
                   >
                     <CardContent className="p-2.5">
-                      {/* Header com Ícone */}
-                      <div className="flex items-start gap-2 mb-1.5">
-                        <div className={cn('rounded flex items-center justify-center flex-shrink-0 w-6 h-6', config.bg)}>
-                          <Icon className={cn('w-3 h-3', config.iconColor)} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-1.5">
-                            <h4 className={cn('text-[11px] font-semibold leading-tight line-clamp-2', config.textColor)}>
-                              {mov.tipo_descricao || 'Movimentação'}
-                            </h4>
-                            {mov.importante && (
-                              <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 flex-shrink-0 bg-red-50 text-red-600 border-red-200">
-                                !
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                      {/* Data */}
+                      <p className="text-[11px] font-medium text-[#46627f] mb-1.5">
+                        {formatBrazilDate(mov.data_movimento)}
+                      </p>
+
+                      {/* Tipo */}
+                      <p className="text-[11px] font-medium text-[#34495e] leading-tight line-clamp-1 mb-1">
+                        {mov.tipo_descricao || 'Movimentação'}
+                      </p>
 
                       {/* Descrição */}
                       {mov.descricao && (
-                        <p className="text-[10px] text-slate-600 line-clamp-2 mb-1.5 leading-relaxed">
+                        <p className="text-[10px] text-slate-500 line-clamp-2 leading-relaxed">
                           {mov.descricao}
                         </p>
                       )}
-
-                      {/* Data */}
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-2.5 h-2.5 text-[#89bcbe]" />
-                        <span className="text-[10px] text-slate-500 font-medium">
-                          {formatBrazilDate(mov.data_movimento)}
-                        </span>
-                      </div>
                     </CardContent>
                   </Card>
 
@@ -268,9 +173,8 @@ export default function ProcessoTimelineHorizontal({
                   {index < movimentacoesLimitadas.length - 1 && (
                     <div className="w-8 h-px bg-slate-200 flex-shrink-0" />
                   )}
-                </div>
-              )
-            })}
+              </div>
+            ))}
           </div>
         </div>
 

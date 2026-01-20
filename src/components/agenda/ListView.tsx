@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Plus, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { parseDBDate } from '@/lib/timezone'
 import {
   format,
   isToday,
@@ -45,9 +46,9 @@ export default function ListView({
     }
 
     eventos
-      .sort((a, b) => compareAsc(new Date(a.data_inicio), new Date(b.data_inicio)))
+      .sort((a, b) => compareAsc(parseDBDate(a.data_inicio), parseDBDate(b.data_inicio)))
       .forEach((evento) => {
-        const eventoDate = new Date(evento.data_inicio)
+        const eventoDate = parseDBDate(evento.data_inicio)
 
         if (isToday(eventoDate)) {
           groups.hoje.push(evento)
@@ -113,7 +114,7 @@ export default function ListView({
     const map = new Map<string, EventCardProps[]>()
 
     groupedEventos.proximos7dias.forEach((evento) => {
-      const dateKey = format(new Date(evento.data_inicio), 'yyyy-MM-dd')
+      const dateKey = format(parseDBDate(evento.data_inicio), 'yyyy-MM-dd')
       if (!map.has(dateKey)) {
         map.set(dateKey, [])
       }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -128,6 +129,9 @@ const getStatusBadge = (ativo: boolean, inadimplente?: boolean) => {
 }
 
 export default function HonorariosContratos({ escritorioId }: HonorariosContratosProps) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
   const {
     contratos,
     loading,
@@ -152,11 +156,27 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
   const [editingContrato, setEditingContrato] = useState<ContratoHonorario | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [contratoToDelete, setContratoToDelete] = useState<ContratoHonorario | null>(null)
+  const [preSelectedClienteId, setPreSelectedClienteId] = useState<string | null>(null)
 
   // Carregar contratos ao montar
   useEffect(() => {
     loadContratos()
   }, [loadContratos])
+
+  // Processar parâmetros da URL (para abrir modal automaticamente)
+  useEffect(() => {
+    const action = searchParams.get('action')
+    const clienteId = searchParams.get('cliente_id')
+
+    if (action === 'novo' && clienteId) {
+      setPreSelectedClienteId(clienteId)
+      setEditingContrato(null)
+      setModalOpen(true)
+
+      // Limpar parâmetros da URL após processar
+      router.replace('/dashboard/financeiro?tab=contratos')
+    }
+  }, [searchParams, router])
 
   // Filtrar contratos
   const filteredContratos = useMemo(() => {
@@ -211,7 +231,15 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
   // Handlers
   const handleNovoContrato = () => {
     setEditingContrato(null)
+    setPreSelectedClienteId(null)
     setModalOpen(true)
+  }
+
+  const handleModalClose = (open: boolean) => {
+    setModalOpen(open)
+    if (!open) {
+      setPreSelectedClienteId(null) // Limpar cliente pré-selecionado ao fechar
+    }
   }
 
   const handleEditContrato = (contrato: ContratoHonorario) => {
@@ -670,9 +698,10 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
       {/* Modal de Criação/Edição */}
       <ContratoModal
         open={modalOpen}
-        onOpenChange={setModalOpen}
+        onOpenChange={handleModalClose}
         contrato={editingContrato}
         onSave={handleSaveContrato}
+        defaultClienteId={preSelectedClienteId}
       />
 
       {/* Dialog de Confirmação de Exclusão */}

@@ -50,7 +50,9 @@
       "Bash(python3:*)",
       "mcp__supabase__list_edge_functions",
       "Bash(npx next lint:*)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(cd:*)",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": []

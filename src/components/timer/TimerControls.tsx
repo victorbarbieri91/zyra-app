@@ -25,25 +25,25 @@ export function TimerControls({
   disabled = false,
 }: TimerControlsProps) {
   const sizeClasses = {
-    sm: 'w-7 h-7',
-    md: 'w-8 h-8',
+    sm: 'w-6 h-6',
+    md: 'w-7 h-7',
   };
 
   const iconSizes = {
-    sm: 'w-3.5 h-3.5',
-    md: 'w-4 h-4',
+    sm: 'w-3 h-3',
+    md: 'w-3.5 h-3.5',
   };
 
-  const buttonBase = `rounded-full flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed`;
+  const buttonBase = `rounded flex items-center justify-center transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed`;
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1">
       {/* Play / Pause */}
       {status === 'pausado' ? (
         <button
           onClick={onPlay}
           disabled={disabled}
-          className={`${buttonBase} ${sizeClasses[size]} bg-emerald-100 text-emerald-600 hover:bg-emerald-200 focus:ring-emerald-500`}
+          className={`${buttonBase} ${sizeClasses[size]} bg-slate-100 text-[#34495e] hover:bg-slate-200`}
           title="Retomar"
         >
           <Play className={iconSizes[size]} />
@@ -52,7 +52,7 @@ export function TimerControls({
         <button
           onClick={onPause}
           disabled={disabled}
-          className={`${buttonBase} ${sizeClasses[size]} bg-amber-100 text-amber-600 hover:bg-amber-200 focus:ring-amber-500`}
+          className={`${buttonBase} ${sizeClasses[size]} bg-slate-100 text-[#46627f] hover:bg-slate-200`}
           title="Pausar"
         >
           <Pause className={iconSizes[size]} />
@@ -63,7 +63,7 @@ export function TimerControls({
       <button
         onClick={onStop}
         disabled={disabled}
-        className={`${buttonBase} ${sizeClasses[size]} bg-slate-100 text-slate-600 hover:bg-slate-200 focus:ring-slate-500`}
+        className={`${buttonBase} ${sizeClasses[size]} bg-slate-100 text-slate-500 hover:bg-slate-200`}
         title="Parar e salvar"
       >
         <Square className={iconSizes[size]} />
@@ -74,7 +74,7 @@ export function TimerControls({
         <button
           onClick={onDiscard}
           disabled={disabled}
-          className={`${buttonBase} ${sizeClasses[size]} bg-red-50 text-red-500 hover:bg-red-100 focus:ring-red-500`}
+          className={`${buttonBase} ${sizeClasses[size]} text-slate-400 hover:text-slate-500 hover:bg-slate-100`}
           title="Descartar"
         >
           <Trash2 className={iconSizes[size]} />

@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, addDays, subDays, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
+import { parseDBDate } from '@/lib/timezone'
 import { Tarefa, useTarefas } from '@/hooks/useTarefas'
 import { useAgendaConsolidada, AgendaItem } from '@/hooks/useAgendaConsolidada'
 import { createClient } from '@/lib/supabase/client'
@@ -56,7 +57,7 @@ export default function CalendarDayView({
 
     // Filtrar tarefas do dia e do usuário
     const tarefasDoDia = todasTarefas.filter((tarefa) => {
-      const tarefaDate = new Date(tarefa.data_inicio)
+      const tarefaDate = parseDBDate(tarefa.data_inicio)
       if (!isSameDay(tarefaDate, selectedDate)) return false
       if (userId && tarefa.responsavel_id !== userId) return false
       if (tarefa.status === 'cancelada') return false
@@ -78,7 +79,7 @@ export default function CalendarDayView({
     if (!todosEventos) return []
 
     return todosEventos.filter((evento) => {
-      if (!isSameDay(new Date(evento.data_inicio), selectedDate)) return false
+      if (!isSameDay(parseDBDate(evento.data_inicio), selectedDate)) return false
       if (evento.tipo_entidade === 'tarefa') return false // Excluir tarefas
       if (evento.status === 'cancelada' || evento.status === 'cancelado') return false
       return true

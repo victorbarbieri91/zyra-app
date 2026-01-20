@@ -111,13 +111,22 @@ const SCHEMA_PRINCIPAIS = `
    data_distribuicao, cliente_id, responsavel_id, status, valor_causa, objeto_acao, autor, reu, tags
    Filtros comuns: status='ativo', area='trabalhista'/'civel'/'criminal'
 
-2. **crm_pessoas** - Clientes e contatos
-   Campos: id, nome, tipo_pessoa, cpf_cnpj, email, telefone, endereco, tipo (cliente/contato/adverso)
-   Filtros comuns: tipo='cliente'
+2. **crm_pessoas** - Clientes e contatos (NÃO usar para responsável de tarefas!)
+   Campos: id, nome_completo, tipo_pessoa, cpf_cnpj, email, telefone, endereco, tipo_contato (cliente/contato/adverso)
+   Filtros comuns: tipo_contato='cliente'
+
+2b. **profiles** - Usuários do sistema (usar para responsavel_id em tarefas/eventos)
+   Campos: id, nome_completo, email, cargo, escritorio_id
+   Use esta tabela para buscar IDs de responsáveis para agenda_tarefas e agenda_eventos
 
 3. **agenda_tarefas** - Tarefas e afazeres
-   Campos: id, titulo, descricao, data_inicio, data_limite, status, prioridade, responsavel_id, processo_id
-   Filtros comuns: status='pendente', data_limite >= CURRENT_DATE
+   Campos: id, titulo, descricao, tipo (obrigatório: 'prazo_processual'/'acompanhamento'/'follow_up'/'administrativo'/'outro'),
+   prioridade ('alta'/'media'/'baixa'), status ('pendente'/'em_andamento'/'concluida'/'cancelada'),
+   data_inicio (timestamptz, obrigatório), data_fim (timestamptz), prazo_data_limite (date),
+   responsavel_id (uuid - DEVE vir de profiles.id, NÃO de crm_pessoas!), processo_id
+   Para INSERT usar: titulo, tipo='administrativo', data_inicio, prioridade, status='pendente'
+   IMPORTANTE: responsavel_id é OPCIONAL. Se não souber o ID correto do profiles, NÃO inclua este campo.
+   Filtros comuns: status='pendente', prazo_data_limite >= CURRENT_DATE
 
 4. **agenda_eventos** - Eventos e compromissos
    Campos: id, titulo, descricao, data_inicio, data_fim, tipo, local, responsavel_id, processo_id
@@ -154,13 +163,18 @@ SELECT * FROM processos_processos
 WHERE escritorio_id = '{escritorio_id}' AND status = 'ativo' AND LOWER(area) = 'trabalhista';
 
 -- Tarefas pendentes para hoje
-SELECT id, titulo, data_limite, prioridade, status
+SELECT id, titulo, prazo_data_limite, prioridade, status
 FROM agenda_tarefas
-WHERE escritorio_id = '{escritorio_id}' AND status = 'pendente' AND data_limite <= CURRENT_DATE;
+WHERE escritorio_id = '{escritorio_id}' AND status = 'pendente' AND prazo_data_limite <= CURRENT_DATE;
 
 -- Tarefas da semana
 SELECT * FROM agenda_tarefas
-WHERE escritorio_id = '{escritorio_id}' AND data_limite BETWEEN CURRENT_DATE AND CURRENT_DATE + 7;
+WHERE escritorio_id = '{escritorio_id}' AND prazo_data_limite BETWEEN CURRENT_DATE AND CURRENT_DATE + 7;
+
+-- Criar tarefa (INSERT)
+-- Campos obrigatórios: titulo, tipo, data_inicio
+-- tipo DEVE ser um de: 'prazo_processual', 'acompanhamento', 'follow_up', 'administrativo', 'outro'
+-- INSERT via preparar_cadastro: {titulo: "...", tipo: "administrativo", data_inicio: "2026-01-17T10:00:00", prioridade: "alta", status: "pendente"}
 
 -- Clientes ativos
 SELECT id, nome, email, telefone FROM crm_pessoas
@@ -2010,18 +2024,28 @@ async function executarAcaoConfirmada(
   try {
     switch (acao.tipo_acao) {
       case 'insert': {
+        console.log('[executarAcaoConfirmada] Executando INSERT:', { tabela: acao.tabela, dados: acao.dados })
+
         const { data, error } = await supabase.rpc('execute_safe_insert', {
           tabela: acao.tabela,
           dados: acao.dados,
           escritorio_param: escritorioId,
         })
 
+        console.log('[executarAcaoConfirmada] Resultado INSERT:', { data, error })
+
         if (error) throw error
+        // A função RPC retorna { sucesso: true/false, erro?: string }
+        if (data && data.sucesso === false) {
+          throw new Error(data.erro || 'Erro ao inserir registro')
+        }
         resultado = data
         break
       }
 
       case 'update': {
+        console.log('[executarAcaoConfirmada] Executando UPDATE:', { tabela: acao.tabela, dados: acao.dados })
+
         const { data, error } = await supabase.rpc('execute_safe_update', {
           tabela: acao.tabela,
           registro_id: acao.dados.registro_id,
@@ -2029,7 +2053,12 @@ async function executarAcaoConfirmada(
           escritorio_param: escritorioId,
         })
 
+        console.log('[executarAcaoConfirmada] Resultado UPDATE:', { data, error })
+
         if (error) throw error
+        if (data && data.sucesso === false) {
+          throw new Error(data.erro || 'Erro ao atualizar registro')
+        }
         resultado = data
         break
       }
@@ -2043,12 +2072,19 @@ async function executarAcaoConfirmada(
           throw new Error('Query de UPDATE em massa deve incluir filtro de escritorio_id')
         }
 
+        console.log('[executarAcaoConfirmada] Executando UPDATE EM MASSA:', { query })
+
         // Executar via RPC para garantir segurança
         const { data, error } = await supabase.rpc('execute_raw_sql', {
           sql_query: query,
         })
 
+        console.log('[executarAcaoConfirmada] Resultado UPDATE EM MASSA:', { data, error })
+
         if (error) throw error
+        if (data && data.sucesso === false) {
+          throw new Error(data.erro || 'Erro ao executar UPDATE em massa')
+        }
 
         resultado = {
           sucesso: true,
@@ -2068,6 +2104,8 @@ async function executarAcaoConfirmada(
           }
         }
 
+        console.log('[executarAcaoConfirmada] Executando DELETE:', { tabela: acao.tabela, dados: acao.dados })
+
         const { data, error } = await supabase.rpc('execute_safe_delete', {
           tabela: acao.tabela,
           registro_id: acao.dados.registro_id,
@@ -2075,7 +2113,12 @@ async function executarAcaoConfirmada(
           confirmacao_dupla: true,
         })
 
+        console.log('[executarAcaoConfirmada] Resultado DELETE:', { data, error })
+
         if (error) throw error
+        if (data && data.sucesso === false) {
+          throw new Error(data.erro || 'Erro ao excluir registro')
+        }
         resultado = data
         break
       }
@@ -2108,17 +2151,29 @@ async function executarAcaoConfirmada(
     }
 
   } catch (err: any) {
+    // Log detalhado do erro
+    console.error('[executarAcaoConfirmada] Erro completo:', JSON.stringify(err, null, 2))
+    console.error('[executarAcaoConfirmada] err.message:', err?.message)
+    console.error('[executarAcaoConfirmada] err.details:', err?.details)
+    console.error('[executarAcaoConfirmada] err.hint:', err?.hint)
+    console.error('[executarAcaoConfirmada] err.code:', err?.code)
+
+    // Extrair mensagem de erro de várias fontes possíveis
+    const errorMessage = err?.message || err?.details || err?.hint || err?.code ||
+                        (typeof err === 'string' ? err : JSON.stringify(err)) ||
+                        'Erro desconhecido ao executar ação'
+
     // Salvar erro na ação
     await supabase
       .from('centro_comando_acoes_pendentes')
       .update({
-        erro: err.message,
+        erro: errorMessage,
       })
       .eq('id', acaoId)
 
     return {
       sucesso: false,
-      erro: err.message,
+      erro: errorMessage,
     }
   }
 }

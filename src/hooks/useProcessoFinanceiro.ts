@@ -54,15 +54,28 @@ export interface TimesheetEntry {
 }
 
 export interface ResumoFinanceiro {
+  // Honorários
   totalHonorarios: number
   totalHonorariosPagos: number
   totalHonorariosPendentes: number
+  countHonorariosPagos: number
+  countHonorariosFaturados: number
+  countHonorariosAbertos: number
+
+  // Despesas
   totalDespesas: number
   totalDespesasPagas: number
   totalDespesasReembolsaveis: number
+  countDespesasPagas: number
+  countDespesasPendentes: number
+  countDespesasReembolsaveis: number
+
+  // Timesheet
   totalTimesheet: number
   horasTrabalhadas: number
-  saldo: number
+  horasAprovadas: number
+  horasFaturadas: number
+  horasPendentes: number
 }
 
 export interface ContratoInfo {
@@ -120,15 +133,26 @@ export function useProcessoFinanceiro(processoId: string | null) {
   const [contratoInfo, setContratoInfo] = useState<ContratoInfo | null>(null)
   const [processoInfo, setProcessoInfo] = useState<ProcessoInfo | null>(null)
   const [resumo, setResumo] = useState<ResumoFinanceiro>({
+    // Honorários
     totalHonorarios: 0,
     totalHonorariosPagos: 0,
     totalHonorariosPendentes: 0,
+    countHonorariosPagos: 0,
+    countHonorariosFaturados: 0,
+    countHonorariosAbertos: 0,
+    // Despesas
     totalDespesas: 0,
     totalDespesasPagas: 0,
     totalDespesasReembolsaveis: 0,
+    countDespesasPagas: 0,
+    countDespesasPendentes: 0,
+    countDespesasReembolsaveis: 0,
+    // Timesheet
     totalTimesheet: 0,
     horasTrabalhadas: 0,
-    saldo: 0,
+    horasAprovadas: 0,
+    horasFaturadas: 0,
+    horasPendentes: 0,
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -141,45 +165,66 @@ export function useProcessoFinanceiro(processoId: string | null) {
     setError(null)
 
     try {
-      // Buscar informações do processo e contrato
-      const { data: processoData } = await supabase
+      // Buscar informações básicas do processo (sem joins complexos)
+      const { data: processoData, error: processoError } = await supabase
         .from('processos_processos')
-        .select(`
-          id,
-          contrato_id,
-          modalidade_cobranca,
-          cliente_id,
-          crm_pessoas:cliente_id (
-            nome_completo
-          ),
-          financeiro_contratos_honorarios (
-            id,
-            numero_contrato,
-            forma_cobranca,
-            financeiro_contratos_honorarios_config (
-              tipo_config,
-              valor_fixo,
-              valor_hora,
-              percentual_exito,
-              valor_por_processo
-            )
-          )
-        `)
+        .select('id, contrato_id, modalidade_cobranca, cliente_id')
         .eq('id', processoId)
         .single()
+
+      if (processoError) {
+        console.error('Erro ao buscar processo:', processoError)
+        throw processoError
+      }
+
+      // Buscar nome do cliente separadamente
+      let clienteNome: string | undefined
+      if (processoData?.cliente_id) {
+        const { data: clienteData } = await supabase
+          .from('crm_pessoas')
+          .select('nome_completo')
+          .eq('id', processoData.cliente_id)
+          .single()
+
+        clienteNome = clienteData?.nome_completo || undefined
+      }
 
       // Atualizar info do processo
       if (processoData) {
         setProcessoInfo({
           id: processoData.id,
           cliente_id: processoData.cliente_id,
-          cliente_nome: (processoData.crm_pessoas as any)?.nome_completo || undefined,
+          cliente_nome: clienteNome,
           contrato_id: processoData.contrato_id,
         })
       }
 
-      if (processoData?.financeiro_contratos_honorarios) {
-        const contrato = processoData.financeiro_contratos_honorarios as any
+      // Buscar contrato separadamente se existir
+      let contratoData = null
+      let configData = null
+      if (processoData?.contrato_id) {
+        // Buscar contrato básico (sem joins)
+        const { data: contrato } = await supabase
+          .from('financeiro_contratos_honorarios')
+          .select('id, numero_contrato, forma_cobranca')
+          .eq('id', processoData.contrato_id)
+          .single()
+
+        contratoData = contrato
+
+        // Buscar config separadamente
+        if (contrato) {
+          const { data: configs } = await supabase
+            .from('financeiro_contratos_honorarios_config')
+            .select('tipo_config, valor_fixo, valor_hora, percentual_exito, valor_por_processo')
+            .eq('contrato_id', contrato.id)
+
+          configData = configs?.[0] || null
+        }
+      }
+
+      if (contratoData) {
+        const contrato = contratoData as any
 
         // Buscar formas disponíveis no contrato
         const { data: formasData } = await supabase
@@ -188,7 +233,12 @@ export function useProcessoFinanceiro(processoId: string | null) {
           .eq('contrato_id', contrato.id)
           .eq('ativo', true)
 
-        const config = contrato.financeiro_contratos_honorarios_config?.[0] || {}
+        const config = (configData || {}) as {
+          valor_hora?: number
+          valor_fixo?: number
+          percentual_exito?: number
+          valor_por_processo?: number
+        }
 
         setContratoInfo({
           id: contrato.id,
@@ -250,50 +300,77 @@ export function useProcessoFinanceiro(processoId: string | null) {
         }))
       )
 
-      // Calcular resumo
-      const totalHonorarios = (honorariosData || []).reduce(
+      // Calcular resumo de honorários
+      const honorariosArr = honorariosData || []
+      const totalHonorarios = honorariosArr.reduce(
         (sum: number, h: any) => sum + Number(h.valor_total),
         0
       )
-      const totalHonorariosPagos = (honorariosData || [])
-        .filter((h: any) => h.status === 'pago')
-        .reduce((sum: number, h: any) => sum + Number(h.valor_total), 0)
-      const totalHonorariosPendentes = (honorariosData || [])
+      const honorariosPagos = honorariosArr.filter((h: any) => h.status === 'pago')
+      const honorariosFaturados = honorariosArr.filter((h: any) => h.status === 'em_aberto' || h.status === 'faturado')
+      const honorariosAbertos = honorariosArr.filter((h: any) => h.status === 'pendente' || h.status === 'aprovado' || h.status === 'proposta')
+
+      const totalHonorariosPagos = honorariosPagos.reduce((sum: number, h: any) => sum + Number(h.valor_total), 0)
+      const totalHonorariosPendentes = honorariosArr
         .filter((h: any) => h.status !== 'pago' && h.status !== 'cancelado')
         .reduce((sum: number, h: any) => sum + Number(h.valor_total), 0)
 
-      const totalDespesas = (despesasData || []).reduce(
+      // Calcular resumo de despesas
+      const despesasArr = despesasData || []
+      const totalDespesas = despesasArr.reduce(
         (sum: number, d: any) => sum + Number(d.valor),
         0
       )
-      const totalDespesasPagas = (despesasData || [])
-        .filter((d: any) => d.status === 'pago')
-        .reduce((sum: number, d: any) => sum + Number(d.valor), 0)
-      const totalDespesasReembolsaveis = (despesasData || [])
-        .filter((d: any) => d.reembolsavel && d.reembolso_status === 'pendente')
-        .reduce((sum: number, d: any) => sum + Number(d.valor), 0)
+      const despesasPagas = despesasArr.filter((d: any) => d.status === 'pago')
+      const despesasPendentes = despesasArr.filter((d: any) => d.status === 'pendente')
+      const despesasReembolsaveis = despesasArr.filter((d: any) => d.reembolsavel && d.reembolso_status === 'pendente')
 
-      const horasTrabalhadas = (timesheetData || []).reduce(
+      const totalDespesasPagas = despesasPagas.reduce((sum: number, d: any) => sum + Number(d.valor), 0)
+      const totalDespesasReembolsaveis = despesasReembolsaveis.reduce((sum: number, d: any) => sum + Number(d.valor), 0)
+
+      // Calcular resumo de timesheet
+      const timesheetArr = timesheetData || []
+      const horasTrabalhadas = timesheetArr.reduce(
         (sum: number, t: any) => sum + Number(t.horas),
         0
       )
+      const horasAprovadas = timesheetArr
+        .filter((t: any) => t.aprovado && !t.faturado)
+        .reduce((sum: number, t: any) => sum + Number(t.horas), 0)
+      const horasFaturadas = timesheetArr
+        .filter((t: any) => t.faturado)
+        .reduce((sum: number, t: any) => sum + Number(t.horas), 0)
+      const horasPendentes = timesheetArr
+        .filter((t: any) => !t.aprovado && !t.reprovado)
+        .reduce((sum: number, t: any) => sum + Number(t.horas), 0)
 
-      // Calcular valor do timesheet baseado no contrato
+      // Calcular valor do timesheet baseado no config carregado
       let totalTimesheet = 0
-      if (contratoInfo?.config?.valor_hora) {
-        totalTimesheet = horasTrabalhadas * contratoInfo.config.valor_hora
+      if (configData?.valor_hora) {
+        totalTimesheet = horasTrabalhadas * Number(configData.valor_hora)
       }
 
       setResumo({
+        // Honorários
         totalHonorarios,
         totalHonorariosPagos,
         totalHonorariosPendentes,
+        countHonorariosPagos: honorariosPagos.length,
+        countHonorariosFaturados: honorariosFaturados.length,
+        countHonorariosAbertos: honorariosAbertos.length,
+        // Despesas
         totalDespesas,
         totalDespesasPagas,
         totalDespesasReembolsaveis,
+        countDespesasPagas: despesasPagas.length,
+        countDespesasPendentes: despesasPendentes.length,
+        countDespesasReembolsaveis: despesasReembolsaveis.length,
+        // Timesheet
         totalTimesheet,
         horasTrabalhadas,
-        saldo: totalHonorariosPagos - totalDespesasPagas,
+        horasAprovadas,
+        horasFaturadas,
+        horasPendentes,
       })
     } catch (err) {
       console.error('Erro ao carregar dados financeiros:', err)
@@ -308,6 +385,12 @@ export function useProcessoFinanceiro(processoId: string | null) {
     async (data: TimesheetData): Promise<boolean> => {
       if (!processoId || !escritorioAtivo) {
         setError('Processo ou escritório não selecionado')
+        return false
+      }
+
+      // Validar se processo tem contrato (obrigatório para timesheet)
+      if (!processoInfo?.contrato_id) {
+        setError('Este processo não tem contrato vinculado. Vincule um contrato antes de lançar horas.')
         return false
       }
 
@@ -345,7 +428,7 @@ export function useProcessoFinanceiro(processoId: string | null) {
         return false
       }
     },
-    [processoId, escritorioAtivo, supabase, loadDados, contratoInfo]
+    [processoId, escritorioAtivo, supabase, loadDados, contratoInfo, processoInfo]
   )
 
   // Lançar despesa
@@ -396,15 +479,23 @@ export function useProcessoFinanceiro(processoId: string | null) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('Usuário não autenticado')
 
-        // Buscar cliente_id do processo
+        // Buscar cliente_id e contrato_id do processo
         const { data: processoData } = await supabase
           .from('processos_processos')
-          .select('cliente_id')
+          .select('cliente_id, contrato_id, numero_cnj')
           .eq('id', processoId)
           .single()
 
         if (!processoData?.cliente_id) {
           throw new Error('Processo não tem cliente vinculado')
+        }
+
+        // Validar que processo tem contrato (obrigatório para honorários)
+        if (!processoData?.contrato_id) {
+          throw new Error(
+            `O processo ${processoData?.numero_cnj || ''} não tem contrato vinculado. ` +
+            'Vincule um contrato ao processo antes de lançar honorários para garantir rastreabilidade.'
+          )
         }
 
         // Gerar número interno
@@ -430,6 +521,7 @@ export function useProcessoFinanceiro(processoId: string | null) {
             escritorio_id: escritorioAtivo,
             cliente_id: processoData.cliente_id,
             processo_id: processoId,
+            contrato_id: processoData.contrato_id, // Vincula ao contrato para rastreabilidade
             tipo_honorario: data.tipo_honorario,
             valor_total: data.valor_total,
             descricao: data.descricao,

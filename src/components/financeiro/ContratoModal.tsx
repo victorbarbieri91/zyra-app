@@ -53,6 +53,7 @@ interface ContratoModalProps {
   onOpenChange: (open: boolean) => void
   contrato?: ContratoHonorario | null
   onSave: (data: ContratoFormData) => Promise<string | null | boolean>
+  defaultClienteId?: string | null // Para pré-selecionar cliente (vindo de outro módulo)
 }
 
 interface Cliente {
@@ -96,7 +97,7 @@ const ETAPAS_PADRAO = [
   { key: 'exito', label: 'Êxito' },
 ]
 
-export function ContratoModal({ open, onOpenChange, contrato, onSave }: ContratoModalProps) {
+export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultClienteId }: ContratoModalProps) {
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
 
@@ -264,6 +265,31 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave }: Contrato
       loadContratoData()
     }
   }, [contrato, open, supabase])
+
+  // Pré-selecionar cliente quando defaultClienteId for fornecido
+  useEffect(() => {
+    const loadDefaultCliente = async () => {
+      if (!defaultClienteId || !open || contrato) return
+
+      try {
+        const { data, error } = await supabase
+          .from('crm_pessoas')
+          .select('id, nome_completo, cpf_cnpj, tipo_pessoa')
+          .eq('id', defaultClienteId)
+          .single()
+
+        if (error) throw error
+        if (data) {
+          setSelectedCliente(data)
+          setFormData((prev) => ({ ...prev, cliente_id: data.id }))
+        }
+      } catch (error) {
+        console.error('Erro ao carregar cliente padrão:', error)
+      }
+    }
+
+    loadDefaultCliente()
+  }, [defaultClienteId, open, contrato, supabase])
 
   // Buscar clientes do CRM
   const searchClientes = async (query: string) => {

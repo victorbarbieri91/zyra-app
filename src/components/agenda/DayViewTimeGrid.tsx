@@ -7,7 +7,7 @@ import { Clock, Calendar as CalendarIcon, Gavel, ChevronRight } from 'lucide-rea
 import { cn } from '@/lib/utils'
 import { getHours, getMinutes } from 'date-fns'
 import { Tarefa } from '@/hooks/useTarefas'
-import { parseTimeToMinutes, formatBrazilTime } from '@/lib/timezone'
+import { parseTimeToMinutes, formatBrazilTime, parseDBDate } from '@/lib/timezone'
 import TimeSlotDropZone from './TimeSlotDropZone'
 import ScheduledTaskCard from './ScheduledTaskCard'
 import { AgendaItem } from '@/hooks/useAgendaConsolidada'
@@ -101,16 +101,16 @@ export default function DayViewTimeGrid({
 
   // Função para calcular posição de eventos fixos
   const getEventoPosition = (evento: AgendaItem) => {
-    const hour = getHours(new Date(evento.data_inicio))
-    const minute = getMinutes(new Date(evento.data_inicio))
+    const hour = getHours(parseDBDate(evento.data_inicio))
+    const minute = getMinutes(parseDBDate(evento.data_inicio))
     const minutosDesde6h = (hour - 6) * 60 + minute
     const top = minutosDesde6h * ESCALA_GRADE
 
     let duracaoMinutos = 60 // Padrão 1 hora
 
     if (evento.data_fim) {
-      const endHour = getHours(new Date(evento.data_fim))
-      const endMinute = getMinutes(new Date(evento.data_fim))
+      const endHour = getHours(parseDBDate(evento.data_fim))
+      const endMinute = getMinutes(parseDBDate(evento.data_fim))
       const endMinutosDesde6h = (endHour - 6) * 60 + endMinute
       duracaoMinutos = endMinutosDesde6h - minutosDesde6h
     }

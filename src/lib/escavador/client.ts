@@ -10,7 +10,9 @@ import type {
   EscavadorEnvolvido,
   EscavadorErro,
   ResultadoConsultaEscavador,
-  ResultadoMonitoramento
+  ResultadoMonitoramento,
+  ResultadoSolicitarAtualizacao,
+  FrequenciaMonitoramento
 } from './types'
 import { normalizarProcessoEscavador } from './normalizer'
 
@@ -237,6 +239,15 @@ export async function buscarProcessoPorCNJ(
 /**
  * Busca movimentacoes de um processo
  * GET /api/v2/processos/numero_cnj/{numero}/movimentacoes
+ *
+ * Documentacao: https://api.escavador.com/v2/docs/#movimentaes-de-um-processo
+ *
+ * A resposta vem no formato:
+ * {
+ *   "items": [...],
+ *   "links": { "next": "..." },
+ *   "paginator": { "per_page": 20 }
+ * }
  */
 export async function buscarMovimentacoes(
   numeroCNJ: string,
@@ -249,6 +260,7 @@ export async function buscarMovimentacoes(
     titulo: string
     conteudo: string
     fonte: string | null
+    tipo: string
   }>
   total?: number
   erro?: string
@@ -256,8 +268,155 @@ export async function buscarMovimentacoes(
   try {
     const numeroLimpo = numeroCNJ.replace(/[.-]/g, '')
 
+    console.log(`[Escavador] Buscando movimentacoes para: ${numeroCNJ}`)
+
     const response = await fetch(
       `${ESCAVADOR_BASE_URL}/processos/numero_cnj/${numeroLimpo}/movimentacoes?page=${pagina}&per_page=${limite}`,
+      {
+        method: 'GET',
+        headers: getHeaders()
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      console.error('[Escavador] Erro na resposta:', response.status, errorData)
+      return {
+        sucesso: false,
+        erro: errorData ? handleApiError(errorData) : `Erro ${response.status}`
+      }
+    }
+
+    const data = await response.json()
+
+    console.log(`[Escavador] Resposta recebida, items: ${data.items?.length || 0}`)
+
+    // A API retorna { items: [...], links: {...}, paginator: {...} }
+    const items = data.items || []
+
+    const movimentacoes = items.map((mov: Record<string, unknown>) => {
+      // Extrair titulo da classificacao_predita ou usar o tipo
+      const classificacao = mov.classificacao_predita as { nome?: string } | null
+      const titulo = classificacao?.nome || (mov.tipo as string) || 'Movimentação'
+
+      // Extrair fonte
+      const fonte = mov.fonte as { sigla?: string; nome?: string } | null
+      const fonteStr = fonte?.sigla || fonte?.nome || null
+
+      return {
+        data: mov.data as string,
+        titulo,
+        conteudo: (mov.conteudo || '') as string,
+        fonte: fonteStr,
+        tipo: (mov.tipo || 'ANDAMENTO') as string
+      }
+    })
+
+    console.log(`[Escavador] Movimentacoes processadas: ${movimentacoes.length}`)
+
+    return {
+      sucesso: true,
+      movimentacoes,
+      total: movimentacoes.length
+    }
+  } catch (error) {
+    console.error('[Escavador] Erro ao buscar movimentacoes:', error)
+    return {
+      sucesso: false,
+      erro: error instanceof Error ? error.message : 'Erro desconhecido'
+    }
+  }
+}
+
+/**
+ * Solicita atualizacao de um processo no Escavador
+ * POST /api/v2/processos/numero_cnj/{numero}/solicitar-atualizacao
+ *
+ * Forca o Escavador a verificar o tribunal e atualizar as movimentacoes
+ */
+export async function solicitarAtualizacao(
+  numeroCNJ: string
+): Promise<ResultadoSolicitarAtualizacao> {
+  try {
+    const numeroLimpo = numeroCNJ.replace(/[.-]/g, '')
+
+    console.log('[Escavador] Solicitando atualizacao para:', numeroCNJ)
+
+    const response = await fetch(
+      `${ESCAVADOR_BASE_URL}/processos/numero_cnj/${numeroLimpo}/solicitar-atualizacao`,
+      {
+        method: 'POST',
+        headers: getHeaders()
+      }
+    )
+
+    const creditosUtilizados = parseInt(
+      response.headers.get('Creditos-Utilizados') || '0',
+      10
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+
+      if (response.status === 404) {
+        return {
+          sucesso: false,
+          erro: 'Processo nao encontrado no Escavador',
+          creditos_utilizados: creditosUtilizados
+        }
+      }
+
+      if (response.status === 429) {
+        return {
+          sucesso: false,
+          erro: 'Limite de requisicoes excedido',
+          creditos_utilizados: creditosUtilizados
+        }
+      }
+
+      return {
+        sucesso: false,
+        erro: errorData ? handleApiError(errorData) : `Erro ${response.status}`,
+        creditos_utilizados: creditosUtilizados
+      }
+    }
+
+    const data = await response.json()
+    console.log('[Escavador] Atualizacao solicitada:', data)
+
+    return {
+      sucesso: true,
+      status: data.status || 'PENDENTE',
+      data_ultima_verificacao: data.data_ultima_verificacao,
+      creditos_utilizados: creditosUtilizados
+    }
+  } catch (error) {
+    console.error('[Escavador] Erro ao solicitar atualizacao:', error)
+    return {
+      sucesso: false,
+      erro: error instanceof Error ? error.message : 'Erro desconhecido'
+    }
+  }
+}
+
+/**
+ * Verifica o status de atualizacao de um processo
+ * GET /api/v2/processos/numero_cnj/{numero}/status-atualizacao
+ */
+export async function verificarStatusAtualizacao(
+  numeroCNJ: string
+): Promise<{
+  sucesso: boolean
+  status?: string
+  data_ultima_verificacao?: string
+  em_atualizacao?: boolean
+  erro?: string
+}> {
+  try {
+    const numeroLimpo = numeroCNJ.replace(/[.-]/g, '')
+
+    const response = await fetch(
+      `${ESCAVADOR_BASE_URL}/processos/numero_cnj/${numeroLimpo}/status-atualizacao`,
       {
         method: 'GET',
         headers: getHeaders()
@@ -274,20 +433,14 @@ export async function buscarMovimentacoes(
 
     const data = await response.json()
 
-    const movimentacoes = (data.data || []).map((mov: Record<string, unknown>) => ({
-      data: mov.data as string,
-      titulo: (mov.titulo || mov.tipo || '') as string,
-      conteudo: (mov.conteudo || '') as string,
-      fonte: (mov.fonte_sigla || mov.fonte_nome || null) as string | null
-    }))
-
     return {
       sucesso: true,
-      movimentacoes,
-      total: data.total || movimentacoes.length
+      status: data.status,
+      data_ultima_verificacao: data.data_ultima_verificacao,
+      em_atualizacao: data.em_atualizacao || false
     }
   } catch (error) {
-    console.error('[Escavador] Erro ao buscar movimentacoes:', error)
+    console.error('[Escavador] Erro ao verificar status:', error)
     return {
       sucesso: false,
       erro: error instanceof Error ? error.message : 'Erro desconhecido'
@@ -307,14 +460,20 @@ export async function criarMonitoramento(
   request: EscavadorCriarMonitoramentoRequest
 ): Promise<ResultadoMonitoramento> {
   try {
-    console.log('[Escavador] Criando monitoramento para:', request.numero_cnj)
+    // Define frequencia padrao como SEMANAL se nao especificada
+    const requestComFrequencia = {
+      ...request,
+      frequencia: request.frequencia || 'SEMANAL'
+    }
+
+    console.log('[Escavador] Criando monitoramento para:', request.numero_cnj, '- Frequencia:', requestComFrequencia.frequencia)
 
     const response = await fetch(
       `${ESCAVADOR_BASE_URL}/monitoramentos/processos`,
       {
         method: 'POST',
         headers: getHeaders(),
-        body: JSON.stringify(request)
+        body: JSON.stringify(requestComFrequencia)
       }
     )
 

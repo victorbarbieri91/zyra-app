@@ -2,6 +2,7 @@
 
 import { ChevronDown, GripVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { parseDBDate } from '@/lib/timezone'
 import { EventCardProps } from './EventCard'
 import { format, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -32,7 +33,7 @@ export default function AllDayEventsSection({
     // Encontrar o dia com mais eventos para calcular altura necessária
     const maxEventosPorDia = Math.max(
       ...dias.map(dia =>
-        eventos.filter(e => isSameDay(new Date(e.data_inicio), dia)).length
+        eventos.filter(e => isSameDay(parseDBDate(e.data_inicio), dia)).length
       ),
       1
     )
@@ -43,7 +44,7 @@ export default function AllDayEventsSection({
   }
 
   const getEventosForDay = (dia: Date) => {
-    return eventos.filter(e => isSameDay(new Date(e.data_inicio), dia))
+    return eventos.filter(e => isSameDay(parseDBDate(e.data_inicio), dia))
   }
 
   const altura = calcularAltura()

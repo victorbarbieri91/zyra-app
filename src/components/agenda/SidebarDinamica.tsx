@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { parseDBDate } from '@/lib/timezone'
 import EventDetailCard from './EventDetailCard'
 import { AgendaItem } from '@/hooks/useAgendaConsolidada'
 
@@ -142,8 +143,8 @@ export default function SidebarDinamica({
                     titulo={evento.titulo}
                     descricao={evento.descricao}
                     tipo={evento.tipo_entidade === 'tarefa' ? 'tarefa' : evento.tipo_entidade === 'audiencia' ? 'audiencia' : evento.subtipo === 'prazo_processual' ? 'prazo' : 'compromisso'}
-                    data_inicio={new Date(evento.data_inicio)}
-                    data_fim={evento.data_fim ? new Date(evento.data_fim) : undefined}
+                    data_inicio={parseDBDate(evento.data_inicio)}
+                    data_fim={evento.data_fim ? parseDBDate(evento.data_fim) : undefined}
                     dia_inteiro={evento.dia_inteiro}
                     local={evento.local}
                     responsavel_nome={evento.responsavel_nome}

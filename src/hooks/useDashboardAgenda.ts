@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from './useEscritorioAtivo'
-import { startOfDayInBrazil, endOfDayInBrazil, formatBrazilTime } from '@/lib/timezone'
+import { startOfDayInBrazil, endOfDayInBrazil, formatBrazilTime, parseDBDate } from '@/lib/timezone'
 
 export interface AgendaItemDashboard {
   id: string
@@ -62,7 +62,7 @@ export function useDashboardAgenda() {
 
       // Transformar para formato do dashboard
       const agendaItems: AgendaItemDashboard[] = (data || []).map(item => {
-        const dataInicio = new Date(item.data_inicio)
+        const dataInicio = parseDBDate(item.data_inicio)
         const time = item.dia_inteiro ? 'Dia todo' : formatBrazilTime(dataInicio)
 
         // Determinar o tipo e cor

@@ -1,6 +1,7 @@
 'use client'
 
-import { Clock, DollarSign, FileText } from 'lucide-react'
+import Link from 'next/link'
+import { Clock, DollarSign, ExternalLink, Users } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import type { LancamentoProntoFaturar } from '@/hooks/useFaturamento'
@@ -75,15 +76,39 @@ export function LancamentoSelectableItem({
             </p>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-xs text-slate-600">{lancamento.categoria}</span>
-              {(lancamento.processo_id || lancamento.consulta_id) && (
+              {lancamento.consulta_id && !lancamento.processo_id && (
                 <>
                   <span className="text-xs text-slate-400">•</span>
-                  <span className="text-xs text-slate-600">
-                    {lancamento.processo_id ? 'Processo' : 'Consulta'}
-                  </span>
+                  <span className="text-xs text-slate-600">Consulta</span>
                 </>
               )}
             </div>
+
+            {/* Detalhes do Processo */}
+            {lancamento.processo_id && (
+              <div className="mt-1.5 space-y-0.5">
+                {/* Número do processo com link */}
+                <div className="flex items-center gap-1.5">
+                  <Link
+                    href={`/dashboard/processos/${lancamento.processo_id}`}
+                    className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                    target="_blank"
+                  >
+                    {lancamento.processo_pasta || lancamento.processo_numero || 'Ver processo'}
+                    <ExternalLink className="h-3 w-3 text-slate-400" />
+                  </Link>
+                </div>
+
+                {/* Partes */}
+                {lancamento.partes_resumo && (
+                  <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                    <Users className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{lancamento.partes_resumo}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div className="text-right shrink-0">
             {isTimesheet && (

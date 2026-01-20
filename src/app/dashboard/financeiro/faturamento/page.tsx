@@ -342,6 +342,12 @@ export default function FaturamentoPage() {
                     setShowFaturaDetails(false)
                     setSelectedFatura(null)
                   }}
+                  onPagamentoRealizado={() => {
+                    // Recarregar dados após pagamento
+                    loadData()
+                    setShowFaturaDetails(false)
+                    setSelectedFatura(null)
+                  }}
                 />
               </div>
             )}

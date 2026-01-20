@@ -13,7 +13,7 @@ import {
   CalendarDays,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatBrazilDate, formatDateTimeForDB } from '@/lib/timezone'
+import { formatBrazilDate, formatDateTimeForDB, parseDBDate } from '@/lib/timezone'
 import { Tarefa } from '@/hooks/useTarefas'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -250,7 +250,7 @@ export default function TarefaDetailModal({
   // Calcular urgência
   const getUrgency = (date: string) => {
     const now = new Date()
-    const targetDate = new Date(date)
+    const targetDate = parseDBDate(date)
     return differenceInHours(targetDate, now)
   }
 
@@ -309,7 +309,7 @@ export default function TarefaDetailModal({
             disabled={updatingDate}
           >
             <span className="font-medium">
-              {formatBrazilDate(new Date(currentDate))}
+              {formatBrazilDate(parseDBDate(currentDate))}
             </span>
             <Calendar className="w-3 h-3 ml-0.5 opacity-50" />
           </button>
@@ -338,7 +338,7 @@ export default function TarefaDetailModal({
               <PopoverContent className="w-auto p-0" align="start" side="left">
                 <CalendarComponent
                   mode="single"
-                  selected={new Date(currentDate)}
+                  selected={parseDBDate(currentDate)}
                   onSelect={handleCustomDate}
                   initialFocus
                 />
@@ -497,12 +497,12 @@ export default function TarefaDetailModal({
                     Prazo Fatal
                   </div>
                   <div className="h-5 leading-5">
-                    <span className="text-xs font-medium text-slate-700">{formatBrazilDate(new Date(tarefa.prazo_data_limite))}</span>
+                    <span className="text-xs font-medium text-slate-700">{formatBrazilDate(parseDBDate(tarefa.prazo_data_limite))}</span>
                     <span className="text-[10px] text-slate-400 ml-1.5">
                       {(() => {
                         const diasEntreDatas = differenceInDays(
-                          new Date(tarefa.prazo_data_limite),
-                          new Date(tarefa.data_inicio)
+                          parseDBDate(tarefa.prazo_data_limite),
+                          parseDBDate(tarefa.data_inicio)
                         )
                         return diasEntreDatas > 0 ? `${diasEntreDatas}d` : ''
                       })()}
@@ -564,7 +564,7 @@ export default function TarefaDetailModal({
                   </div>
                   <div className="h-5 flex items-center">
                     <span className="text-xs text-emerald-600">
-                      {formatBrazilDate(new Date(tarefa.data_conclusao))}
+                      {formatBrazilDate(parseDBDate(tarefa.data_conclusao))}
                     </span>
                   </div>
                 </div>
@@ -582,7 +582,7 @@ export default function TarefaDetailModal({
                   {recorrenciaInfo.intervalo === 1 ? 'vez' : 'vezes'}
                   {recorrenciaInfo.data_fim && (
                     <span className="text-[10px] text-slate-500 block mt-1">
-                      Até {formatBrazilDate(new Date(recorrenciaInfo.data_fim))}
+                      Até {formatBrazilDate(parseDBDate(recorrenciaInfo.data_fim))}
                     </span>
                   )}
                 </div>

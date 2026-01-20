@@ -18,14 +18,14 @@ export function TimerDisplay({
   const tempo = showSeconds ? formatarTempo(segundos) : formatarTempoHorasMinutos(segundos);
 
   const sizeClasses = {
-    sm: 'text-sm font-medium',
-    md: 'text-lg font-semibold',
-    lg: 'text-2xl font-bold',
+    sm: 'text-xs font-medium',
+    md: 'text-sm font-semibold',
+    lg: 'text-base font-semibold',
   };
 
   return (
     <span
-      className={`font-mono tabular-nums tracking-wider ${sizeClasses[size]} ${className}`}
+      className={`font-mono tabular-nums tracking-wide ${sizeClasses[size]} ${className}`}
     >
       {tempo}
     </span>

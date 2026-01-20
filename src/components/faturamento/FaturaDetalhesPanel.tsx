@@ -1,26 +1,60 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, FileText, Clock, DollarSign, Calendar, CheckCircle2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { X, FileText, Clock, DollarSign, Calendar, CheckCircle2, CreditCard, Banknote, Printer } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useFaturamento } from '@/hooks/useFaturamento'
 import type { FaturaGerada, ItemFatura } from '@/hooks/useFaturamento'
+import { toast } from 'sonner'
+
+interface ContaBancaria {
+  id: string
+  banco: string
+  agencia: string
+  numero_conta: string
+  saldo_atual: number
+}
 
 interface FaturaDetalhesPanelProps {
   fatura: FaturaGerada
   escritorioId: string | null
   onClose: () => void
+  onPagamentoRealizado?: () => void
 }
 
-export function FaturaDetalhesPanel({ fatura, escritorioId, onClose }: FaturaDetalhesPanelProps) {
-  const { loadItensFatura } = useFaturamento(escritorioId)
+export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamentoRealizado }: FaturaDetalhesPanelProps) {
+  const router = useRouter()
+  const { loadItensFatura, pagarFatura, loadContasBancarias, loading } = useFaturamento(escritorioId)
   const [itens, setItens] = useState<ItemFatura[]>([])
   const [loadingItens, setLoadingItens] = useState(false)
+
+  // Estados para o modal de pagamento
+  const [showPagamentoDialog, setShowPagamentoDialog] = useState(false)
+  const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([])
+  const [pagamentoForm, setPagamentoForm] = useState({
+    valor: fatura.valor_total.toString(),
+    dataPagamento: new Date().toISOString().split('T')[0],
+    formaPagamento: 'pix',
+    contaBancariaId: '',
+    observacoes: '',
+  })
 
   useEffect(() => {
     const fetchItens = async () => {
@@ -34,6 +68,47 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose }: FaturaDet
 
     fetchItens()
   }, [fatura.fatura_id, loadItensFatura])
+
+  // Carregar contas bancárias quando abrir o dialog de pagamento
+  const handleOpenPagamentoDialog = async () => {
+    const contas = await loadContasBancarias()
+    setContasBancarias(contas)
+    setPagamentoForm({
+      valor: fatura.valor_total.toString(),
+      dataPagamento: new Date().toISOString().split('T')[0],
+      formaPagamento: 'pix',
+      contaBancariaId: contas.length > 0 ? contas[0].id : '',
+      observacoes: '',
+    })
+    setShowPagamentoDialog(true)
+  }
+
+  // Processar pagamento
+  const handleConfirmarPagamento = async () => {
+    const valorPago = parseFloat(pagamentoForm.valor)
+    if (isNaN(valorPago) || valorPago <= 0) {
+      toast.error('Valor inválido')
+      return
+    }
+
+    const pagamentoId = await pagarFatura(
+      fatura.fatura_id,
+      valorPago,
+      pagamentoForm.dataPagamento,
+      pagamentoForm.formaPagamento,
+      pagamentoForm.contaBancariaId || undefined,
+      undefined,
+      pagamentoForm.observacoes || undefined
+    )
+
+    if (pagamentoId) {
+      toast.success('Pagamento registrado com sucesso! O valor foi lançado na conta bancária.')
+      setShowPagamentoDialog(false)
+      onPagamentoRealizado?.()
+    } else {
+      toast.error('Erro ao registrar pagamento. Tente novamente.')
+    }
+  }
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -197,6 +272,26 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose }: FaturaDet
                                   {formatCurrency(item.valor_unitario)} / unidade
                                 </p>
                               )}
+                              {/* Detalhes do Processo - Descrição para o cliente */}
+                              {item.processo_id && (item.processo_numero || item.processo_pasta || item.partes_resumo) && (
+                                <div className="mt-1.5 pt-1.5 border-t border-slate-100">
+                                  {item.processo_numero && (
+                                    <p className="text-[10px] text-slate-500">
+                                      Processo nº {item.processo_numero}
+                                    </p>
+                                  )}
+                                  {!item.processo_numero && item.processo_pasta && (
+                                    <p className="text-[10px] text-slate-500">
+                                      Ref: {item.processo_pasta}
+                                    </p>
+                                  )}
+                                  {item.partes_resumo && (
+                                    <p className="text-[10px] text-slate-500 italic">
+                                      {item.partes_resumo}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
                             </div>
                             <div className="col-span-2 text-center text-slate-600 font-medium">
                               {item.quantidade || 1}
@@ -244,6 +339,26 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose }: FaturaDet
                           >
                             <div className="col-span-7 text-slate-700">
                               <p className="font-medium">{item.descricao}</p>
+                              {/* Detalhes do Processo - Descrição para o cliente */}
+                              {item.processo_id && (item.processo_numero || item.processo_pasta || item.partes_resumo) && (
+                                <div className="mt-1.5 pt-1.5 border-t border-slate-100">
+                                  {item.processo_numero && (
+                                    <p className="text-[10px] text-slate-500">
+                                      Processo nº {item.processo_numero}
+                                    </p>
+                                  )}
+                                  {!item.processo_numero && item.processo_pasta && (
+                                    <p className="text-[10px] text-slate-500">
+                                      Ref: {item.processo_pasta}
+                                    </p>
+                                  )}
+                                  {item.partes_resumo && (
+                                    <p className="text-[10px] text-slate-500 italic">
+                                      {item.partes_resumo}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
                             </div>
                             <div className="col-span-2 text-center text-slate-600 font-medium">
                               {item.quantidade ? `${item.quantidade}h` : '-'}
@@ -278,6 +393,40 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose }: FaturaDet
                   {formatCurrency(fatura.valor_total)}
                 </p>
               </div>
+
+              {/* Botão de Registrar Pagamento - Apenas se não estiver paga */}
+              {fatura.status !== 'paga' && fatura.status !== 'cancelada' && (
+                <div className="mt-4">
+                  <Button
+                    onClick={handleOpenPagamentoDialog}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                    size="lg"
+                  >
+                    <Banknote className="h-5 w-5 mr-2" />
+                    Registrar Pagamento
+                  </Button>
+                </div>
+              )}
+
+              {/* Indicador de fatura paga */}
+              {fatura.status === 'paga' && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-emerald-600 bg-emerald-50 py-2 px-4 rounded-lg">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <span className="font-medium">Fatura paga em {formatDate(fatura.paga_em!)}</span>
+                </div>
+              )}
+
+              {/* Botão Imprimir PDF */}
+              <div className="mt-4">
+                <Button
+                  variant="outline"
+                  className="w-full border-[#1E3A8A] text-[#1E3A8A] hover:bg-[#1E3A8A]/10"
+                  onClick={() => window.open(`/imprimir/fatura/${fatura.fatura_id}`, '_blank')}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Imprimir / Salvar PDF
+                </Button>
+              </div>
             </div>
 
             {/* Observações */}
@@ -292,6 +441,115 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose }: FaturaDet
           </div>
         </ScrollArea>
       </CardContent>
+
+      {/* Dialog de Pagamento */}
+      <Dialog open={showPagamentoDialog} onOpenChange={setShowPagamentoDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Banknote className="h-5 w-5 text-emerald-600" />
+              Registrar Pagamento
+            </DialogTitle>
+            <DialogDescription>
+              Fatura {fatura.numero_fatura} - {fatura.cliente_nome}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            {/* Valor */}
+            <div className="grid gap-2">
+              <Label htmlFor="valor">Valor Pago</Label>
+              <Input
+                id="valor"
+                type="number"
+                step="0.01"
+                value={pagamentoForm.valor}
+                onChange={(e) => setPagamentoForm({ ...pagamentoForm, valor: e.target.value })}
+              />
+            </div>
+
+            {/* Data do Pagamento */}
+            <div className="grid gap-2">
+              <Label htmlFor="dataPagamento">Data do Pagamento</Label>
+              <Input
+                id="dataPagamento"
+                type="date"
+                value={pagamentoForm.dataPagamento}
+                onChange={(e) => setPagamentoForm({ ...pagamentoForm, dataPagamento: e.target.value })}
+              />
+            </div>
+
+            {/* Forma de Pagamento */}
+            <div className="grid gap-2">
+              <Label htmlFor="formaPagamento">Forma de Pagamento</Label>
+              <Select
+                value={pagamentoForm.formaPagamento}
+                onValueChange={(value) => setPagamentoForm({ ...pagamentoForm, formaPagamento: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pix">PIX</SelectItem>
+                  <SelectItem value="transferencia">Transferência Bancária</SelectItem>
+                  <SelectItem value="boleto">Boleto</SelectItem>
+                  <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
+                  <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
+                  <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Conta Bancária de Destino */}
+            <div className="grid gap-2">
+              <Label htmlFor="contaBancaria">Conta Bancária (Destino do Valor)</Label>
+              <Select
+                value={pagamentoForm.contaBancariaId}
+                onValueChange={(value) => setPagamentoForm({ ...pagamentoForm, contaBancariaId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a conta..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {contasBancarias.map((conta) => (
+                    <SelectItem key={conta.id} value={conta.id}>
+                      {conta.banco} - Ag: {conta.agencia} / CC: {conta.numero_conta}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500">
+                O valor será lançado automaticamente como entrada nesta conta.
+              </p>
+            </div>
+
+            {/* Observações */}
+            <div className="grid gap-2">
+              <Label htmlFor="observacoes">Observações (opcional)</Label>
+              <Input
+                id="observacoes"
+                placeholder="Ex: Comprovante recebido por email"
+                value={pagamentoForm.observacoes}
+                onChange={(e) => setPagamentoForm({ ...pagamentoForm, observacoes: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPagamentoDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmarPagamento}
+              disabled={loading || !pagamentoForm.valor || !pagamentoForm.contaBancariaId}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              {loading ? 'Processando...' : 'Confirmar Pagamento'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

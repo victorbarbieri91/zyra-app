@@ -19,7 +19,8 @@ import { cn } from '@/lib/utils'
 import {
   formatBrazilDateTime,
   formatBrazilDate,
-  formatBrazilTime
+  formatBrazilTime,
+  parseDBDate
 } from '@/lib/timezone'
 import { differenceInMinutes, differenceInDays, parseISO, isBefore, startOfDay } from 'date-fns'
 
@@ -262,8 +263,8 @@ export default function EventoDetailModal({
                   <span className="text-xs font-medium text-slate-700">
                     {evento.data_inicio ? (
                       evento.dia_inteiro
-                        ? formatBrazilDate(new Date(evento.data_inicio))
-                        : formatBrazilDateTime(new Date(evento.data_inicio))
+                        ? formatBrazilDate(parseDBDate(evento.data_inicio))
+                        : formatBrazilDateTime(parseDBDate(evento.data_inicio))
                     ) : '-'}
                   </span>
                 </div>
@@ -277,7 +278,7 @@ export default function EventoDetailModal({
                   </div>
                   <div className="h-5 leading-5">
                     <span className="text-xs text-slate-700">
-                      {formatBrazilTime(new Date(evento.data_fim))}
+                      {formatBrazilTime(parseDBDate(evento.data_fim))}
                     </span>
                   </div>
                 </div>
@@ -297,7 +298,7 @@ export default function EventoDetailModal({
                       diasRestantes !== null && diasRestantes <= 2 ? "text-amber-600" :
                       "text-slate-700"
                     )}>
-                      {formatBrazilDate(new Date(evento.prazo_data_limite))}
+                      {formatBrazilDate(parseDBDate(evento.prazo_data_limite))}
                     </span>
                     {diasRestantes !== null && !prazoVencido && (
                       <span className="text-[10px] text-slate-400 ml-1.5">

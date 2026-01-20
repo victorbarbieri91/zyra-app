@@ -199,12 +199,29 @@ export interface EscavadorMovimentacao {
 // ============================================
 
 /**
+ * Frequencia de monitoramento
+ */
+export type FrequenciaMonitoramento = 'DIARIO' | 'SEMANAL'
+
+/**
  * Request para criar monitoramento
  */
 export interface EscavadorCriarMonitoramentoRequest {
   numero_cnj: string
   tribunal?: string
   callback_url?: string
+  frequencia?: FrequenciaMonitoramento
+}
+
+/**
+ * Resultado de solicitacao de atualizacao
+ */
+export interface ResultadoSolicitarAtualizacao {
+  sucesso: boolean
+  status?: 'ATUALIZADO' | 'EM_ATUALIZACAO' | 'PENDENTE' | 'ERRO'
+  data_ultima_verificacao?: string
+  creditos_utilizados?: number
+  erro?: string
 }
 
 /**

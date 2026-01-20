@@ -5,8 +5,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { format, differenceInDays } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { differenceInDays } from 'date-fns'
+import { formatBrazilDate } from '@/lib/timezone'
 
 export interface PrazoCardProps {
   id: string
@@ -89,7 +89,7 @@ export default function PrazoCard({
   onClick,
 }: PrazoCardProps) {
   const config = criticidadeConfig[criticidade]
-  const diasRestantes = differenceInDays(new Date(data_limite), new Date())
+  const diasRestantes = differenceInDays(data_limite, new Date())
 
   return (
     <Card
@@ -144,7 +144,7 @@ export default function PrazoCard({
                 Intimação
               </div>
               <div className="text-xs font-semibold text-[#34495e]">
-                {format(new Date(data_intimacao), "dd/MM/yyyy", { locale: ptBR })}
+                {formatBrazilDate(data_intimacao)}
               </div>
             </div>
 
@@ -155,7 +155,7 @@ export default function PrazoCard({
                 Vencimento
               </div>
               <div className={cn('text-xs font-bold', config.text)}>
-                {format(new Date(data_limite), "dd/MM/yyyy", { locale: ptBR })}
+                {formatBrazilDate(data_limite)}
               </div>
             </div>
           </div>

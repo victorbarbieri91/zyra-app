@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { parseDBDate } from '@/lib/timezone'
 import {
   format,
   startOfWeek,
@@ -132,8 +133,8 @@ export default function CalendarWeekView({
 
   // Função helper para verificar se evento tem hora definida
   const temHoraDefinida = (evento: EventCardProps) => {
-    const hora = getHours(new Date(evento.data_inicio))
-    const minutos = getMinutes(new Date(evento.data_inicio))
+    const hora = getHours(parseDBDate(evento.data_inicio))
+    const minutos = getMinutes(parseDBDate(evento.data_inicio))
     // Considera que tem hora se não for 00:00 OU se tiver data_fim
     return (hora !== 0 || minutos !== 0) || evento.data_fim !== undefined
   }
@@ -157,19 +158,19 @@ export default function CalendarWeekView({
 
   const getEventosForDay = (day: Date) => {
     return eventosCategorized.comHora.filter((evento) =>
-      isSameDay(new Date(evento.data_inicio), day)
+      isSameDay(parseDBDate(evento.data_inicio), day)
     )
   }
 
   const getEventoPosition = (evento: EventCardProps) => {
-    const hour = getHours(new Date(evento.data_inicio))
-    const minute = getMinutes(new Date(evento.data_inicio))
+    const hour = getHours(parseDBDate(evento.data_inicio))
+    const minute = getMinutes(parseDBDate(evento.data_inicio))
     const top = ((hour - 6) * 60 + minute) * (60 / 60) // 60px por hora
 
     let height = 60 // Padrão 1 hora
     if (evento.data_fim) {
-      const endHour = getHours(new Date(evento.data_fim))
-      const endMinute = getMinutes(new Date(evento.data_fim))
+      const endHour = getHours(parseDBDate(evento.data_fim))
+      const endMinute = getMinutes(parseDBDate(evento.data_fim))
       const duration = (endHour * 60 + endMinute) - (hour * 60 + minute)
       height = duration * (60 / 60)
     }

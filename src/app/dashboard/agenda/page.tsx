@@ -13,6 +13,7 @@ import {
 import { format, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
+import { parseDBDate } from '@/lib/timezone'
 import { getEscritorioAtivo } from '@/lib/supabase/escritorio-helpers'
 
 // Components
@@ -134,8 +135,8 @@ export default function AgendaPage() {
         id: item.id,
         titulo: item.titulo,
         tipo: item.tipo_entidade === 'tarefa' ? 'tarefa' : item.tipo_entidade === 'audiencia' ? 'audiencia' : item.subtipo === 'prazo_processual' ? 'prazo' : 'compromisso',
-        data_inicio: new Date(item.data_inicio),
-        data_fim: item.data_fim ? new Date(item.data_fim) : undefined,
+        data_inicio: parseDBDate(item.data_inicio),
+        data_fim: item.data_fim ? parseDBDate(item.data_fim) : undefined,
         dia_inteiro: item.dia_inteiro || false,
         local: item.local,
         responsavel_nome: item.responsavel_nome,
@@ -148,7 +149,7 @@ export default function AgendaPage() {
   // Eventos do dia selecionado (para sidebar) - usar agendaItems diretamente
   const eventosDoDia = useMemo(() => {
     return agendaItems.filter(item =>
-      isSameDay(new Date(item.data_inicio), selectedDate)
+      isSameDay(parseDBDate(item.data_inicio), selectedDate)
     )
   }, [agendaItems, selectedDate])
 
@@ -379,8 +380,8 @@ export default function AgendaPage() {
       }
 
       // Pegar a data e hora original
-      const originalDate = new Date(evento.data_inicio)
-      const originalEnd = evento.data_fim ? new Date(evento.data_fim) : null
+      const originalDate = parseDBDate(evento.data_inicio)
+      const originalEnd = evento.data_fim ? parseDBDate(evento.data_fim) : null
 
       // Criar nova data mantendo o horário original
       const newDateTime = new Date(newDate)
@@ -629,8 +630,8 @@ export default function AgendaPage() {
             id: agendaItem.id,
             titulo: agendaItem.titulo,
             tipo: agendaItem.tipo_entidade === 'tarefa' ? 'tarefa' : agendaItem.tipo_entidade === 'audiencia' ? 'audiencia' : agendaItem.subtipo === 'prazo_processual' ? 'prazo' : 'compromisso',
-            data_inicio: new Date(agendaItem.data_inicio),
-            data_fim: agendaItem.data_fim ? new Date(agendaItem.data_fim) : undefined,
+            data_inicio: parseDBDate(agendaItem.data_inicio),
+            data_fim: agendaItem.data_fim ? parseDBDate(agendaItem.data_fim) : undefined,
             dia_inteiro: agendaItem.dia_inteiro,
             local: agendaItem.local,
             responsavel_nome: agendaItem.responsavel_nome,

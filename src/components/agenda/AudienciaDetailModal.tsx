@@ -18,7 +18,8 @@ import {
 import { cn } from '@/lib/utils'
 import {
   formatBrazilDateTime,
-  formatBrazilDate
+  formatBrazilDate,
+  parseDBDate
 } from '@/lib/timezone'
 import { differenceInMinutes, parseISO } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
@@ -309,7 +310,7 @@ export default function AudienciaDetailModal({
                 </div>
                 <div className="h-5 leading-5">
                   <span className="text-xs text-slate-700">
-                    {audiencia.data_inicio ? formatBrazilDateTime(new Date(audiencia.data_inicio)) : '-'}
+                    {audiencia.data_inicio ? formatBrazilDateTime(parseDBDate(audiencia.data_inicio)) : '-'}
                   </span>
                 </div>
               </div>

@@ -93,6 +93,8 @@ interface Movimentacao {
   data_movimento: string
   tipo_descricao?: string
   descricao: string
+  conteudo_completo?: string | null
+  origem?: string
 }
 
 export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
@@ -172,6 +174,7 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
   // Movimentações - carregadas do banco
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([])
   const [loadingMovimentacoes, setLoadingMovimentacoes] = useState(true)
+  const [selectedMovimentacao, setSelectedMovimentacao] = useState<Movimentacao | null>(null)
 
   // Carregar movimentações reais do banco
   useEffect(() => {
@@ -180,7 +183,7 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
         setLoadingMovimentacoes(true)
         const { data, error } = await supabase
           .from('processos_movimentacoes')
-          .select('id, data_movimento, tipo_descricao, descricao')
+          .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem')
           .eq('processo_id', processo.id)
           .order('data_movimento', { ascending: false })
           .limit(5)
@@ -248,16 +251,16 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
 
                 {/* Partes */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 mb-1.5">Cliente ({processo.polo_cliente === 'ativo' ? 'Autor' : 'Réu'})</p>
-                    <Button variant="link" className="text-sm font-semibold text-[#34495e] hover:text-[#89bcbe] p-0 h-auto">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-slate-500 mb-1.5">Cliente</p>
+                    <Button variant="link" className="text-sm font-semibold text-[#34495e] hover:text-[#89bcbe] p-0 h-auto max-w-full truncate block" title={processo.cliente_nome}>
                       {processo.cliente_nome}
                     </Button>
                   </div>
 
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs font-medium text-slate-500 mb-1.5">Parte Contrária</p>
-                    <p className="text-sm font-semibold text-slate-700">{processo.parte_contraria || 'Não informado'}</p>
+                    <p className="text-sm font-semibold text-slate-700 truncate" title={processo.parte_contraria || 'Não informado'}>{processo.parte_contraria || 'Não informado'}</p>
                   </div>
                 </div>
 
@@ -349,8 +352,9 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
 
               </div>
 
-              {/* Coluna Direita - Localização */}
-              <div className="col-span-5 pl-6 border-l border-slate-100">
+              {/* Coluna Direita - Localização e Responsável */}
+              <div className="col-span-5 pl-6 border-l border-slate-100 space-y-4">
+                {/* Localização */}
                 <div className="flex items-start gap-2">
                   <MapPin className="w-4 h-4 text-[#89bcbe] mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
@@ -388,6 +392,25 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
                           <p className="text-sm text-slate-700">{processo.juiz}</p>
                         </div>
                       )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Responsável */}
+                <div className="flex items-start gap-2 pt-3 border-t border-slate-100">
+                  <Users className="w-4 h-4 text-[#89bcbe] mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-slate-500 mb-2.5">Responsável</p>
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center flex-shrink-0">
+                        <span className="text-[10px] font-semibold text-white">
+                          {processo.responsavel_nome.split(' ')[1]?.charAt(0) || processo.responsavel_nome.charAt(0)}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-[#34495e]">{processo.responsavel_nome}</p>
+                        <p className="text-[10px] text-slate-500">Advogado responsável</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -483,7 +506,8 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
               <div
                 key={mov.id}
                 id={`andamento-${mov.id}`}
-                className={`transition-colors duration-300 ${index !== movimentacoes.length - 1 ? 'pb-3 border-b border-slate-100' : ''}`}
+                className={`transition-colors duration-300 cursor-pointer hover:bg-slate-50 rounded-md p-2 -mx-2 ${index !== movimentacoes.length - 1 ? 'pb-3 border-b border-slate-100' : ''}`}
+                onClick={() => setSelectedMovimentacao(mov)}
               >
                 <div className="flex gap-3">
                   {/* Data */}
@@ -498,7 +522,7 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
                     <p className="text-xs font-semibold text-[#34495e] mb-0.5">
                       {mov.tipo_descricao}
                     </p>
-                    <p className="text-xs text-slate-600 leading-relaxed">
+                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
                       {mov.descricao}
                     </p>
                   </div>
@@ -522,12 +546,10 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
               <ProcessoTimelineHorizontal
                 movimentacoes={movimentacoes}
                 onItemClick={(movId) => {
-                  // Scroll to corresponding andamento in list
-                  const element = document.getElementById(`andamento-${movId}`)
-                  if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                    element.classList.add('bg-[#89bcbe]/10')
-                    setTimeout(() => element.classList.remove('bg-[#89bcbe]/10'), 2000)
+                  // Abrir modal de detalhe da movimentação
+                  const mov = movimentacoes.find(m => m.id === movId)
+                  if (mov) {
+                    setSelectedMovimentacao(mov)
                   }
                 }}
               />
@@ -717,6 +739,10 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
         {/* Card Financeiro */}
         <ProcessoFinanceiroCard
           processoId={processo.id}
+          onLancarHonorario={() => {
+            // TODO: Abrir modal de honorário
+            console.log('Lançar honorário')
+          }}
           onLancarHoras={() => {
             // TODO: Abrir modal de timesheet
             console.log('Lançar horas')
@@ -726,52 +752,6 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
             console.log('Lançar despesa')
           }}
         />
-
-        {/* Card Equipe */}
-        <Card className="border-slate-200 shadow-sm">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2 mb-1">
-                <Users className="w-4 h-4 text-[#89bcbe]" />
-                Equipe
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <p className="text-xs font-medium text-slate-500 mb-2">Responsável</p>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-semibold text-white">
-                    {processo.responsavel_nome.split(' ')[1]?.charAt(0) || processo.responsavel_nome.charAt(0)}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-[#34495e]">{processo.responsavel_nome}</p>
-                  <p className="text-[10px] text-slate-500">Advogado responsável</p>
-                </div>
-              </div>
-            </div>
-
-            {processo.colaboradores_nomes.length > 0 && (
-              <div>
-                <p className="text-xs font-medium text-slate-500 mb-2">Colaboradores</p>
-                <div className="space-y-2">
-                  {processo.colaboradores_nomes.map((nome, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-[#89bcbe]/20 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-semibold text-[#34495e]">
-                          {nome.split(' ')[1]?.charAt(0) || nome.charAt(0)}
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-700">{nome}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
       </div>
 
@@ -934,6 +914,57 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           }}
         />
       )}
+
+      {/* Modal de Detalhe da Movimentação */}
+      <Dialog open={!!selectedMovimentacao} onOpenChange={(open) => !open && setSelectedMovimentacao(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold text-[#34495e]">
+              Detalhe da Movimentação
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedMovimentacao && (
+            <div className="space-y-4 pt-2">
+              {/* Data e Tipo */}
+              <div className="flex items-baseline gap-4 pb-3 border-b border-slate-100">
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Data</p>
+                  <p className="text-sm font-medium text-[#34495e]">
+                    {format(new Date(selectedMovimentacao.data_movimento), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  </p>
+                </div>
+                {selectedMovimentacao.tipo_descricao && (
+                  <div className="flex-1">
+                    <p className="text-xs text-slate-500 mb-1">Tipo</p>
+                    <p className="text-sm font-medium text-[#34495e]">
+                      {selectedMovimentacao.tipo_descricao}
+                    </p>
+                  </div>
+                )}
+                {selectedMovimentacao.origem && (
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Origem</p>
+                    <p className="text-xs text-slate-600 capitalize">
+                      {selectedMovimentacao.origem}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Conteúdo Completo */}
+              <div>
+                <p className="text-xs text-slate-500 mb-2">Descrição</p>
+                <div className="bg-slate-50 rounded-lg p-4 max-h-[400px] overflow-y-auto">
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                    {selectedMovimentacao.conteudo_completo || selectedMovimentacao.descricao}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

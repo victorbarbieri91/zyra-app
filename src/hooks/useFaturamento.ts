@@ -14,6 +14,10 @@ export interface LancamentoProntoFaturar {
   consulta_id: string | null
   categoria: string
   created_at: string
+  // Campos de detalhes do processo
+  processo_numero: string | null // numero_cnj
+  processo_pasta: string | null // PROC-0001
+  partes_resumo: string | null // "João Silva vs Empresa ABC"
 }
 
 export interface ClienteParaFaturar {
@@ -69,6 +73,10 @@ export interface ItemFatura {
   timesheet_ids: string[] | null
   referencia_id: string | null
   created_at: string
+  // Campos de detalhes do processo (via JOIN)
+  processo_numero?: string | null // numero_cnj
+  processo_pasta?: string | null // PROC-0001
+  partes_resumo?: string | null // "João Silva vs Empresa ABC"
 }
 
 export function useFaturamento(escritorioId: string | null) {
@@ -245,16 +253,37 @@ export function useFaturamento(escritorioId: string | null) {
         setLoading(true)
         setError(null)
 
+        // Query com JOIN para dados do processo
         const { data, error: queryError } = await supabase
           .from('financeiro_faturamento_itens')
-          .select('*')
+          .select(`
+            *,
+            processo:processos_processos (
+              numero_cnj,
+              numero_pasta,
+              autor,
+              reu
+            )
+          `)
           .eq('fatura_id', faturaId)
           .order('tipo_item', { ascending: true })
           .order('created_at', { ascending: false })
 
         if (queryError) throw queryError
 
-        return (data as ItemFatura[]) || []
+        // Mapear para incluir dados do processo
+        const itensComProcesso = (data || []).map((item: any) => ({
+          ...item,
+          processo_numero: item.processo?.numero_cnj || null,
+          processo_pasta: item.processo?.numero_pasta || null,
+          partes_resumo:
+            item.processo?.autor && item.processo?.reu
+              ? `${item.processo.autor} vs ${item.processo.reu}`
+              : null,
+          processo: undefined, // Remove o objeto aninhado
+        }))
+
+        return itensComProcesso as ItemFatura[]
       } catch (err: any) {
         setError(err.message)
         console.error('Erro ao carregar itens da fatura:', err)
@@ -347,6 +376,78 @@ export function useFaturamento(escritorioId: string | null) {
     [supabase]
   )
 
+  // ============================================
+  // PAGAMENTO DE FATURA
+  // ============================================
+
+  const pagarFatura = useCallback(
+    async (
+      faturaId: string,
+      valorPago: number,
+      dataPagamento: string,
+      formaPagamento: string,
+      contaBancariaId?: string,
+      comprovanteUrl?: string,
+      observacoes?: string
+    ): Promise<string | null> => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        // Buscar user_id atual
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+
+        const { data, error: rpcError } = await supabase.rpc('pagar_fatura', {
+          p_fatura_id: faturaId,
+          p_valor_pago: valorPago,
+          p_data_pagamento: dataPagamento,
+          p_forma_pagamento: formaPagamento,
+          p_conta_bancaria_id: contaBancariaId || null,
+          p_user_id: user?.id || null,
+          p_comprovante_url: comprovanteUrl || null,
+          p_observacoes: observacoes || null,
+        })
+
+        if (rpcError) throw rpcError
+
+        return data as string // Retorna pagamento_id
+      } catch (err: any) {
+        setError(err.message)
+        console.error('Erro ao pagar fatura:', err)
+        return null
+      } finally {
+        setLoading(false)
+      }
+    },
+    [supabase]
+  )
+
+  // ============================================
+  // CONTAS BANCÁRIAS (para seleção no pagamento)
+  // ============================================
+
+  const loadContasBancarias = useCallback(async () => {
+    if (!escritorioId) return []
+
+    try {
+      const { data, error: queryError } = await supabase
+        .from('financeiro_contas_bancarias')
+        .select('id, banco, agencia, numero_conta, saldo_atual')
+        .eq('escritorio_id', escritorioId)
+        .eq('ativa', true)
+        .order('banco', { ascending: true })
+
+      if (queryError) throw queryError
+
+      return data || []
+    } catch (err: any) {
+      console.error('Erro ao carregar contas bancárias:', err)
+      return []
+    }
+  }, [escritorioId, supabase])
+
   return {
     loading,
     error,
@@ -357,5 +458,7 @@ export function useFaturamento(escritorioId: string | null) {
     loadItensFatura,
     gerarFatura,
     desmontarFatura,
+    pagarFatura,
+    loadContasBancarias,
   }
 }

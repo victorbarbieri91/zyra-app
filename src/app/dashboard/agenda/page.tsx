@@ -111,8 +111,16 @@ export default function AgendaPage() {
     loadUser()
   }, [])
 
+  // Filtros para agenda consolidada - sempre filtra por responsável (usuário logado)
+  const agendaFilters = useMemo(() => {
+    if (userId) {
+      return { responsavel_id: userId }
+    }
+    return undefined
+  }, [userId])
+
   // Hooks - usar agenda consolidada e hooks específicos
-  const { items: agendaItems, loading, refreshItems } = useAgendaConsolidada(escritorioId || undefined)
+  const { items: agendaItems, loading, refreshItems } = useAgendaConsolidada(escritorioId || undefined, agendaFilters)
   const { tarefas, createTarefa, updateTarefa, concluirTarefa, reabrirTarefa } = useTarefas(escritorioId || undefined)
   const { audiencias, createAudiencia, updateAudiencia } = useAudiencias(escritorioId || undefined)
   const { eventos, createEvento, updateEvento } = useEventos(escritorioId || undefined)
@@ -140,6 +148,7 @@ export default function AgendaPage() {
         dia_inteiro: item.dia_inteiro || false,
         local: item.local,
         responsavel_nome: item.responsavel_nome,
+        processo_numero: item.processo_numero,
         status: (item.status || 'agendado') as EventCardProps['status'],
         prazo_criticidade: item.prioridade === 'alta' ? 'critico' : item.prioridade === 'media' ? 'atencao' : 'normal',
         recorrencia_id: item.recorrencia_id,
@@ -195,21 +204,99 @@ export default function AgendaPage() {
     const itemCompleto = agendaItems.find(item => item.id === evento.id)
 
     if (evento.tipo === 'tarefa') {
-      const tarefaCompleta = tarefas.find(t => t.id === evento.id)
+      // Primeiro tenta no array de tarefas carregado
+      let tarefaCompleta = tarefas.find(t => t.id === evento.id)
+
+      // Se não encontrar, usar dados da agenda consolidada como fallback
+      if (!tarefaCompleta && itemCompleto) {
+        console.log('🔵 Tarefa não encontrada no hook, usando dados da view consolidada')
+        const item = itemCompleto as any
+        tarefaCompleta = {
+          id: item.id,
+          escritorio_id: item.escritorio_id,
+          titulo: item.titulo,
+          descricao: item.descricao,
+          tipo: item.subtipo || 'outro',
+          prioridade: item.prioridade || 'media',
+          status: item.status || 'pendente',
+          data_inicio: item.data_inicio,
+          data_fim: item.data_fim,
+          responsavel_id: item.responsavel_id,
+          responsavel_nome: item.responsavel_nome,
+          processo_id: item.processo_id,
+          consultivo_id: item.consultivo_id,
+          prazo_data_limite: item.prazo_data_limite,
+          cor: item.cor,
+          recorrencia_id: item.recorrencia_id,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+        } as Tarefa
+      }
+
       if (tarefaCompleta) {
         setTarefaSelecionada(tarefaCompleta)
-        console.log('🔵 Abrindo TarefaDetailModal')
+        setTarefaDetailOpen(true)
+        console.log('🔵 Abrindo TarefaDetailModal com processo_id:', tarefaCompleta.processo_id)
+      } else {
+        console.warn('🔴 Tarefa não encontrada:', evento.id)
       }
-      setTarefaDetailOpen(true)
     } else if (evento.tipo === 'audiencia') {
-      const audienciaCompleta = audiencias.find(a => a.id === evento.id)
+      let audienciaCompleta = audiencias.find(a => a.id === evento.id)
+
+      // Fallback para dados da view consolidada
+      if (!audienciaCompleta && itemCompleto) {
+        console.log('🔵 Audiência não encontrada no hook, usando dados da view consolidada')
+        const item = itemCompleto as any
+        audienciaCompleta = {
+          id: item.id,
+          escritorio_id: item.escritorio_id,
+          processo_id: item.processo_id,
+          titulo: item.titulo,
+          data_hora: item.data_inicio,
+          tipo_audiencia: item.subtipo || 'outra',
+          status: item.status || 'agendado',
+          responsavel_id: item.responsavel_id,
+          responsavel_nome: item.responsavel_nome,
+          local: item.local,
+          observacoes: item.descricao,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+        } as Audiencia
+      }
+
       if (audienciaCompleta) {
         setAudienciaSelecionada(audienciaCompleta)
+        setAudienciaDetailOpen(true)
+      } else {
+        console.warn('🔴 Audiência não encontrada:', evento.id)
       }
-      setAudienciaDetailOpen(true)
     } else {
       // Para eventos/prazos, montar objeto compatível com EventoDetailModal
-      const eventoCompleto = eventos.find(e => e.id === evento.id)
+      let eventoCompleto = eventos.find(e => e.id === evento.id)
+
+      if (!eventoCompleto && itemCompleto) {
+        console.log('🔵 Evento não encontrado no hook, usando dados da view consolidada')
+        const item = itemCompleto as any
+        eventoCompleto = {
+          id: item.id,
+          escritorio_id: item.escritorio_id,
+          titulo: item.titulo,
+          descricao: item.descricao,
+          data_inicio: item.data_inicio,
+          data_fim: item.data_fim,
+          dia_inteiro: item.dia_inteiro,
+          local: item.local,
+          status: item.status || 'agendado',
+          responsavel_id: item.responsavel_id,
+          responsavel_nome: item.responsavel_nome,
+          processo_id: item.processo_id,
+          consultivo_id: item.consultivo_id,
+          recorrencia_id: item.recorrencia_id,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+        } as Evento
+      }
+
       if (eventoCompleto && itemCompleto) {
         // Combinar dados do evento e da agenda consolidada
         const item = itemCompleto as any
@@ -223,8 +310,10 @@ export default function AgendaPage() {
           responsavel_nome: item.responsavel_nome,
           prazo_data_limite: item.prazo_data_limite,
         } as any)
+        setEventoDetailOpen(true)
+      } else {
+        console.warn('🔴 Evento não encontrado:', evento.id)
       }
-      setEventoDetailOpen(true)
     }
   }
 

@@ -1,12 +1,33 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, Calendar, User, Filter, Search, CheckCircle, AlertCircle, Plus, DollarSign, CreditCard, MoreVertical, Edit2, Check, ChevronLeft, ChevronRight, ArrowLeftRight } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import {
+  Calendar,
+  Search,
+  CheckCircle,
+  AlertCircle,
+  DollarSign,
+  CreditCard,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ArrowLeftRight,
+  Clock,
+  Receipt,
+  FileText,
+  RefreshCw,
+} from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -17,21 +38,38 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
-// Types defined locally
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
-interface Lancamento { id: string; conta_id: string; tipo: string; valor: number; descricao: string; categoria: string; data_lancamento: string; saldo_apos: number; created_at: string }
+// Interfaces
+interface ExtratoItem {
+  id: string
+  escritorio_id: string
+  tipo_movimento: 'receita' | 'despesa' | 'transferencia'
+  status: 'pendente' | 'efetivado' | 'vencido' | 'cancelado'
+  origem: 'honorario' | 'despesa' | 'cartao_credito' | 'reembolso' | 'transferencia' | 'manual'
+  categoria: string
+  descricao: string
+  valor: number
+  data_referencia: string
+  data_vencimento: string | null
+  data_efetivacao: string | null
+  entidade: string | null
+  conta_bancaria_id: string | null
+  origem_id: string | null
+  processo_id: string | null
+}
 
-interface LancamentosFilters {
-  tipo: 'entrada' | 'saida' | 'transferencia' | 'todos'
-  conta_bancaria_id: string
-  periodo: 'semana' | 'mes' | 'trimestre' | 'todos'
+interface ExtratoFilters {
+  tipo_movimento: 'todos' | 'receita' | 'despesa' | 'transferencia'
+  status: 'todos' | 'pendente' | 'efetivado' | 'vencido'
+  origem: 'todos' | 'honorario' | 'despesa' | 'cartao_credito' | 'reembolso' | 'transferencia'
+  periodo: 'semana' | 'mes' | 'trimestre' | 'ano' | 'todos'
   busca: string
 }
 
 interface NovaReceitaForm {
   cliente_id: string
-  contrato_id: string
   descricao: string
   valor_total: string
   parcelado: boolean
@@ -61,50 +99,91 @@ interface NovaTransferenciaForm {
   data: string
 }
 
-interface LancamentoComConta extends Lancamento {
-  conta_nome?: string
-  conta_banco?: string
-  origem_tipo?: string
+// Mapeamento de labels
+const ORIGEM_LABELS: Record<string, string> = {
+  honorario: 'Honorário',
+  despesa: 'Despesa',
+  cartao_credito: 'Cartão de Crédito',
+  reembolso: 'Reembolso',
+  transferencia: 'Transferência',
+  manual: 'Manual',
 }
 
-export default function ContasPage() {
+const CATEGORIA_LABELS: Record<string, string> = {
+  honorario_contrato: 'Honorário Contratual',
+  honorario_avulso: 'Honorário Avulso',
+  exito: 'Êxito',
+  custas: 'Custas',
+  fornecedor: 'Fornecedor',
+  folha: 'Folha de Pagamento',
+  impostos: 'Impostos',
+  aluguel: 'Aluguel',
+  marketing: 'Marketing',
+  capacitacao: 'Capacitação',
+  material: 'Material',
+  tecnologia: 'Tecnologia',
+  viagem: 'Viagem',
+  alimentacao: 'Alimentação',
+  combustivel: 'Combustível',
+  assinatura: 'Assinatura',
+  cartao_credito: 'Fatura Cartão',
+  outras: 'Outras',
+  infraestrutura: 'Infraestrutura',
+  pessoal: 'Pessoal',
+  transferencia: 'Transferência',
+}
+
+const STATUS_CONFIG = {
+  pendente: {
+    label: 'Pendente',
+    className: 'bg-amber-50 border-amber-200 text-amber-700',
+    icon: Clock,
+  },
+  efetivado: {
+    label: 'Efetivado',
+    className: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+    icon: CheckCircle,
+  },
+  vencido: {
+    label: 'Vencido',
+    className: 'bg-red-50 border-red-200 text-red-700',
+    icon: AlertCircle,
+  },
+  cancelado: {
+    label: 'Cancelado',
+    className: 'bg-slate-50 border-slate-200 text-slate-500',
+    icon: Clock,
+  },
+}
+
+export default function ExtratoFinanceiroPage() {
   const { escritorioAtivo } = useEscritorioAtivo()
   const supabase = createClient()
 
-  const [lancamentos, setLancamentos] = useState<LancamentoComConta[]>([])
-  const [filters, setFilters] = useState<LancamentosFilters>({
-    tipo: 'todos',
-    conta_bancaria_id: 'todas',
-    periodo: 'todos',
-    busca: '',
-  })
+  // Estados principais
+  const [extrato, setExtrato] = useState<ExtratoItem[]>([])
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const itemsPerPage = 50
+
+  // Filtros
+  const [filters, setFilters] = useState<ExtratoFilters>({
+    tipo_movimento: 'todos',
+    status: 'todos',
+    origem: 'todos',
+    periodo: 'mes',
+    busca: '',
+  })
 
   // Estados dos modais
   const [modalReceitaOpen, setModalReceitaOpen] = useState(false)
   const [modalDespesaOpen, setModalDespesaOpen] = useState(false)
   const [modalTransferenciaOpen, setModalTransferenciaOpen] = useState(false)
 
-  // Abrir modal automaticamente se ?tipo=despesa ou ?tipo=receita
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const tipo = params.get('tipo')
-    if (tipo === 'despesa') {
-      setModalDespesaOpen(true)
-      window.history.replaceState({}, '', '/dashboard/financeiro/receitas-despesas')
-    } else if (tipo === 'receita') {
-      setModalReceitaOpen(true)
-      window.history.replaceState({}, '', '/dashboard/financeiro/receitas-despesas')
-    }
-  }, [])
-
   // Estados dos formulários
   const [receitaForm, setReceitaForm] = useState<NovaReceitaForm>({
     cliente_id: '',
-    contrato_id: '',
     descricao: '',
     valor_total: '',
     parcelado: false,
@@ -134,170 +213,211 @@ export default function ContasPage() {
     data: new Date().toISOString().split('T')[0],
   })
 
+  // Dados auxiliares
   const [clientes, setClientes] = useState<any[]>([])
-  const [contratos, setContratos] = useState<any[]>([])
   const [processos, setProcessos] = useState<any[]>([])
   const [contasBancarias, setContasBancarias] = useState<any[]>([])
   const [submitting, setSubmitting] = useState(false)
 
+  // Abrir modal automaticamente se ?tipo=despesa ou ?tipo=receita
   useEffect(() => {
-    if (escritorioAtivo) {
-      setCurrentPage(1) // Reset página ao mudar filtros
+    const params = new URLSearchParams(window.location.search)
+    const tipo = params.get('tipo')
+    if (tipo === 'despesa') {
+      setModalDespesaOpen(true)
+      window.history.replaceState({}, '', '/dashboard/financeiro/receitas-despesas')
+    } else if (tipo === 'receita') {
+      setModalReceitaOpen(true)
+      window.history.replaceState({}, '', '/dashboard/financeiro/receitas-despesas')
     }
+  }, [])
+
+  // Reset página ao mudar filtros
+  useEffect(() => {
+    setCurrentPage(1)
   }, [filters])
 
-  useEffect(() => {
-    if (escritorioAtivo) {
-      loadLancamentos()
-      loadClientes()
-      loadProcessos()
-      loadContasBancarias()
-    }
-  }, [escritorioAtivo, filters, currentPage])
+  // Carregar dados principais - consulta direta às tabelas
+  const loadExtrato = useCallback(async () => {
+    if (!escritorioAtivo) return
 
-  useEffect(() => {
-    if (receitaForm.cliente_id) {
-      loadContratos(receitaForm.cliente_id)
-    }
-  }, [receitaForm.cliente_id])
-
-  const loadLancamentos = async () => {
-    if (!escritorioAtivo) {
-      console.log('loadLancamentos: escritorioAtivo não definido')
-      return
-    }
-
-    console.log('loadLancamentos: iniciando...', { escritorioAtivo, filters })
     setLoading(true)
     try {
-      // Primeiro buscar IDs das contas bancárias do escritório
-      const { data: contasIds } = await supabase
-        .from('financeiro_contas_bancarias')
-        .select('id')
+      const hoje = new Date()
+      const hojeStr = hoje.toISOString().split('T')[0]
+
+      // 1. Buscar despesas
+      const { data: despesas, error: despesasError } = await supabase
+        .from('financeiro_despesas')
+        .select('*')
         .eq('escritorio_id', escritorioAtivo)
 
-      console.log('loadLancamentos: contas do escritório', contasIds)
-
-      if (!contasIds || contasIds.length === 0) {
-        console.log('loadLancamentos: nenhuma conta bancária encontrada')
-        setLancamentos([])
-        setTotalCount(0)
-        setLoading(false)
-        return
+      if (despesasError) {
+        console.error('Erro ao buscar despesas:', despesasError)
       }
 
-      const contasIdsArray = contasIds.map(c => c.id)
-
-      let query = supabase
-        .from('financeiro_contas_lancamentos')
+      // 2. Buscar parcelas de honorários com dados do honorário
+      const { data: parcelas, error: parcelasError } = await supabase
+        .from('financeiro_honorarios_parcelas')
         .select(`
           *,
-          financeiro_contas_bancarias(banco, agencia, numero_conta)
-        `, { count: 'exact' })
-        .in('conta_bancaria_id', contasIdsArray)
+          honorario:financeiro_honorarios(
+            descricao,
+            tipo_honorario,
+            cliente_id,
+            processo_id
+          )
+        `)
+        .eq('escritorio_id', escritorioAtivo)
 
-      // Aplicar filtros
-      if (filters.tipo !== 'todos') {
-        if (filters.tipo === 'transferencia') {
-          query = query.eq('origem_tipo', 'transferencia')
-        } else {
-          query = query.eq('tipo', filters.tipo)
-        }
+      if (parcelasError) {
+        console.error('Erro ao buscar parcelas:', parcelasError)
       }
 
-      if (filters.conta_bancaria_id !== 'todas') {
-        query = query.eq('conta_bancaria_id', filters.conta_bancaria_id)
+      // Combinar os dados em formato unificado
+      let combinedData: ExtratoItem[] = []
+
+      // Mapear despesas
+      if (despesas) {
+        const despesasMapped = despesas.map((d) => ({
+          id: d.id,
+          escritorio_id: d.escritorio_id,
+          tipo_movimento: 'despesa' as const,
+          status: d.status === 'pago'
+            ? 'efetivado'
+            : (d.data_vencimento < hojeStr && d.status === 'pendente')
+              ? 'vencido'
+              : 'pendente',
+          origem: d.categoria === 'cartao_credito' ? 'cartao_credito' : 'despesa',
+          categoria: d.categoria,
+          descricao: d.descricao,
+          valor: d.valor,
+          data_referencia: d.data_pagamento || d.data_vencimento,
+          data_vencimento: d.data_vencimento,
+          data_efetivacao: d.data_pagamento,
+          entidade: d.fornecedor,
+          conta_bancaria_id: null,
+          origem_id: d.id,
+          processo_id: d.processo_id,
+        }))
+        combinedData = [...combinedData, ...despesasMapped]
+      }
+
+      // Mapear parcelas de honorários (receitas)
+      if (parcelas) {
+        const parcelasMapped = parcelas.map((p) => ({
+          id: p.id,
+          escritorio_id: p.escritorio_id,
+          tipo_movimento: 'receita' as const,
+          status: p.status === 'pago'
+            ? 'efetivado'
+            : (p.data_vencimento < hojeStr && p.status !== 'pago')
+              ? 'vencido'
+              : 'pendente',
+          origem: 'honorario',
+          categoria: (p.honorario as any)?.tipo_honorario || 'honorario',
+          descricao: (p.honorario as any)?.descricao || `Parcela ${p.numero_parcela}`,
+          valor: p.valor,
+          data_referencia: p.data_pagamento || p.data_vencimento,
+          data_vencimento: p.data_vencimento,
+          data_efetivacao: p.data_pagamento,
+          entidade: null, // Cliente seria buscado separadamente se necessário
+          conta_bancaria_id: null,
+          origem_id: p.id,
+          processo_id: (p.honorario as any)?.processo_id,
+        }))
+        combinedData = [...combinedData, ...parcelasMapped]
+      }
+
+      // Aplicar filtros
+      let filteredData = combinedData
+
+      if (filters.tipo_movimento !== 'todos') {
+        filteredData = filteredData.filter((item) => item.tipo_movimento === filters.tipo_movimento)
+      }
+
+      if (filters.status !== 'todos') {
+        filteredData = filteredData.filter((item) => item.status === filters.status)
+      }
+
+      if (filters.origem !== 'todos') {
+        filteredData = filteredData.filter((item) => item.origem === filters.origem)
       }
 
       if (filters.busca) {
-        query = query.ilike('descricao', `%${filters.busca}%`)
+        const termo = filters.busca.toLowerCase()
+        filteredData = filteredData.filter(
+          (item) =>
+            item.descricao?.toLowerCase().includes(termo) ||
+            item.entidade?.toLowerCase().includes(termo)
+        )
       }
 
       if (filters.periodo !== 'todos') {
-        const hoje = new Date()
         let dataInicio = new Date()
 
-        if (filters.periodo === 'semana') {
-          dataInicio.setDate(hoje.getDate() - 7)
-        } else if (filters.periodo === 'mes') {
-          dataInicio.setMonth(hoje.getMonth() - 1)
-        } else if (filters.periodo === 'trimestre') {
-          dataInicio.setMonth(hoje.getMonth() - 3)
+        switch (filters.periodo) {
+          case 'semana':
+            dataInicio.setDate(hoje.getDate() - 7)
+            break
+          case 'mes':
+            dataInicio.setMonth(hoje.getMonth() - 1)
+            break
+          case 'trimestre':
+            dataInicio.setMonth(hoje.getMonth() - 3)
+            break
+          case 'ano':
+            dataInicio.setFullYear(hoje.getFullYear() - 1)
+            break
         }
 
-        query = query.gte('data_lancamento', dataInicio.toISOString().split('T')[0])
+        const dataInicioStr = dataInicio.toISOString().split('T')[0]
+        filteredData = filteredData.filter((item) => item.data_referencia >= dataInicioStr)
       }
 
-      // Paginação
+      // Ordenar por data decrescente
+      filteredData.sort(
+        (a, b) => new Date(b.data_referencia).getTime() - new Date(a.data_referencia).getTime()
+      )
+
+      // Aplicar paginação
+      const totalFiltered = filteredData.length
       const from = (currentPage - 1) * itemsPerPage
-      const to = from + itemsPerPage - 1
+      const paginatedData = filteredData.slice(from, from + itemsPerPage)
 
-      const { data, error, count } = await query
-        .order('data_lancamento', { ascending: false })
-        .order('created_at', { ascending: false })
-        .range(from, to)
-
-      console.log('loadLancamentos: resposta da query', { data, error, count, contasIdsArray })
-
-      if (error) throw error
-
-      // Processar dados para incluir info da conta
-      const lancamentosProcessados = (data || []).map((lanc: any) => ({
-        ...lanc,
-        conta_nome: `${lanc.financeiro_contas_bancarias?.banco} - Ag ${lanc.financeiro_contas_bancarias?.agencia}`,
-        conta_banco: lanc.financeiro_contas_bancarias?.numero_conta,
-      }))
-
-      console.log('loadLancamentos: lançamentos processados', lancamentosProcessados)
-
-      setLancamentos(lancamentosProcessados)
-      setTotalCount(count || 0)
+      setExtrato(paginatedData as ExtratoItem[])
+      setTotalCount(totalFiltered)
     } catch (error) {
-      console.error('Erro ao carregar lançamentos:', error)
+      console.error('Erro ao carregar extrato:', error)
+      toast.error('Erro ao carregar extrato financeiro')
     } finally {
       setLoading(false)
     }
-  }
+  }, [escritorioAtivo, filters, currentPage, supabase])
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value)
-  }
-
-  const loadClientes = async () => {
+  // Carregar dados auxiliares
+  const loadClientes = useCallback(async () => {
     if (!escritorioAtivo) return
     const { data } = await supabase
-      .from('clientes')
-      .select('id, nome_completo, nome_fantasia')
+      .from('crm_pessoas')
+      .select('id, nome_completo')
       .eq('escritorio_id', escritorioAtivo)
+      .eq('status', 'ativo')
       .order('nome_completo')
     setClientes(data || [])
-  }
+  }, [escritorioAtivo, supabase])
 
-  const loadContratos = async (clienteId: string) => {
-    if (!escritorioAtivo || !clienteId) return
-    const { data } = await supabase
-      .from('honorarios')
-      .select('id, descricao, valor_total')
-      .eq('escritorio_id', escritorioAtivo)
-      .eq('cliente_id', clienteId)
-      .order('created_at', { ascending: false })
-    setContratos(data || [])
-  }
-
-  const loadProcessos = async () => {
+  const loadProcessos = useCallback(async () => {
     if (!escritorioAtivo) return
     const { data } = await supabase
-      .from('processos')
-      .select('id, numero_processo, parte_contraria')
+      .from('processos_processos')
+      .select('id, numero_cnj, parte_contraria')
       .eq('escritorio_id', escritorioAtivo)
       .order('created_at', { ascending: false })
     setProcessos(data || [])
-  }
+  }, [escritorioAtivo, supabase])
 
-  const loadContasBancarias = async () => {
+  const loadContasBancarias = useCallback(async () => {
     if (!escritorioAtivo) return
     const { data } = await supabase
       .from('financeiro_contas_bancarias')
@@ -306,6 +426,137 @@ export default function ContasPage() {
       .eq('ativa', true)
       .order('banco')
     setContasBancarias(data || [])
+  }, [escritorioAtivo, supabase])
+
+  // Effects
+  useEffect(() => {
+    if (escritorioAtivo) {
+      loadExtrato()
+      loadClientes()
+      loadProcessos()
+      loadContasBancarias()
+    }
+  }, [escritorioAtivo, loadExtrato, loadClientes, loadProcessos, loadContasBancarias])
+
+  // Handlers
+  const handlePagarDespesa = async (item: ExtratoItem, contaId: string) => {
+    if (!contaId || !escritorioAtivo) {
+      toast.error('Selecione uma conta bancária')
+      return
+    }
+
+    try {
+      // Buscar saldo atual da conta
+      const { data: conta } = await supabase
+        .from('financeiro_contas_bancarias')
+        .select('saldo_atual')
+        .eq('id', contaId)
+        .single()
+
+      const saldoAtual = conta?.saldo_atual || 0
+      const novoSaldo = saldoAtual - Number(item.valor)
+
+      // Criar lançamento de saída na conta bancária
+      const { error: lancamentoError } = await supabase
+        .from('financeiro_contas_lancamentos')
+        .insert({
+          escritorio_id: escritorioAtivo,
+          conta_bancaria_id: contaId,
+          tipo: 'saida',
+          valor: item.valor,
+          descricao: item.descricao,
+          categoria: item.categoria,
+          data_lancamento: new Date().toISOString().split('T')[0],
+          origem_tipo: 'despesa',
+          origem_id: item.origem_id,
+          saldo_apos_lancamento: novoSaldo,
+        })
+
+      if (lancamentoError) throw lancamentoError
+
+      // Atualizar saldo da conta
+      await supabase
+        .from('financeiro_contas_bancarias')
+        .update({ saldo_atual: novoSaldo })
+        .eq('id', contaId)
+
+      // Atualizar status da despesa
+      const { error: despesaError } = await supabase
+        .from('financeiro_despesas')
+        .update({
+          status: 'pago',
+          data_pagamento: new Date().toISOString().split('T')[0],
+        })
+        .eq('id', item.origem_id)
+
+      if (despesaError) throw despesaError
+
+      toast.success('Despesa paga com sucesso!')
+      loadExtrato()
+    } catch (error) {
+      console.error('Erro ao pagar despesa:', error)
+      toast.error('Erro ao pagar despesa')
+    }
+  }
+
+  const handleReceberReceita = async (item: ExtratoItem, contaId: string) => {
+    if (!contaId || !escritorioAtivo) {
+      toast.error('Selecione uma conta bancária')
+      return
+    }
+
+    try {
+      // Buscar saldo atual da conta
+      const { data: conta } = await supabase
+        .from('financeiro_contas_bancarias')
+        .select('saldo_atual')
+        .eq('id', contaId)
+        .single()
+
+      const saldoAtual = conta?.saldo_atual || 0
+      const novoSaldo = saldoAtual + Number(item.valor)
+
+      // Criar lançamento de entrada na conta bancária
+      const { error: lancamentoError } = await supabase
+        .from('financeiro_contas_lancamentos')
+        .insert({
+          escritorio_id: escritorioAtivo,
+          conta_bancaria_id: contaId,
+          tipo: 'entrada',
+          valor: item.valor,
+          descricao: item.descricao,
+          categoria: item.categoria,
+          data_lancamento: new Date().toISOString().split('T')[0],
+          origem_tipo: 'pagamento',
+          origem_id: item.origem_id,
+          saldo_apos_lancamento: novoSaldo,
+        })
+
+      if (lancamentoError) throw lancamentoError
+
+      // Atualizar saldo da conta
+      await supabase
+        .from('financeiro_contas_bancarias')
+        .update({ saldo_atual: novoSaldo })
+        .eq('id', contaId)
+
+      // Atualizar status da parcela de honorário
+      const { error: parcelaError } = await supabase
+        .from('financeiro_honorarios_parcelas')
+        .update({
+          status: 'pago',
+          data_pagamento: new Date().toISOString().split('T')[0],
+        })
+        .eq('id', item.origem_id)
+
+      if (parcelaError) throw parcelaError
+
+      toast.success('Receita recebida com sucesso!')
+      loadExtrato()
+    } catch (error) {
+      console.error('Erro ao receber receita:', error)
+      toast.error('Erro ao receber receita')
+    }
   }
 
   const handleSubmitReceita = async (e: React.FormEvent) => {
@@ -316,7 +567,7 @@ export default function ContasPage() {
     try {
       // Criar honorário
       const { data: honorario, error: honorarioError } = await supabase
-        .from('honorarios')
+        .from('financeiro_honorarios')
         .insert({
           escritorio_id: escritorioAtivo,
           cliente_id: receitaForm.cliente_id || null,
@@ -353,14 +604,13 @@ export default function ContasPage() {
         }
 
         const { error: parcelasError } = await supabase
-          .from('honorarios_parcelas')
+          .from('financeiro_honorarios_parcelas')
           .insert(parcelas)
 
         if (parcelasError) throw parcelasError
       } else if (honorario) {
-        // Criar uma única parcela
         const { error: parcelaError } = await supabase
-          .from('honorarios_parcelas')
+          .from('financeiro_honorarios_parcelas')
           .insert({
             escritorio_id: escritorioAtivo,
             honorario_id: honorario.id,
@@ -373,10 +623,8 @@ export default function ContasPage() {
         if (parcelaError) throw parcelaError
       }
 
-      // Reset form e fechar modal
       setReceitaForm({
         cliente_id: '',
-        contrato_id: '',
         descricao: '',
         valor_total: '',
         parcelado: false,
@@ -388,10 +636,11 @@ export default function ContasPage() {
         observacoes: '',
       })
       setModalReceitaOpen(false)
-      loadLancamentos()
+      toast.success('Receita criada com sucesso!')
+      loadExtrato()
     } catch (error) {
       console.error('Erro ao criar receita:', error)
-      alert('Erro ao criar receita. Verifique os campos e tente novamente.')
+      toast.error('Erro ao criar receita')
     } finally {
       setSubmitting(false)
     }
@@ -403,7 +652,7 @@ export default function ContasPage() {
 
     setSubmitting(true)
     try {
-      const { error } = await supabase.from('despesas').insert({
+      const { error } = await supabase.from('financeiro_despesas').insert({
         escritorio_id: escritorioAtivo,
         fornecedor: despesaForm.fornecedor,
         categoria: despesaForm.categoria,
@@ -417,7 +666,6 @@ export default function ContasPage() {
 
       if (error) throw error
 
-      // Reset form e fechar modal
       setDespesaForm({
         fornecedor: '',
         categoria: 'fornecedor',
@@ -428,10 +676,11 @@ export default function ContasPage() {
         observacoes: '',
       })
       setModalDespesaOpen(false)
-      loadLancamentos()
+      toast.success('Despesa criada com sucesso!')
+      loadExtrato()
     } catch (error) {
       console.error('Erro ao criar despesa:', error)
-      alert('Erro ao criar despesa. Verifique os campos e tente novamente.')
+      toast.error('Erro ao criar despesa')
     } finally {
       setSubmitting(false)
     }
@@ -454,7 +703,6 @@ export default function ContasPage() {
 
       if (error) throw error
 
-      // Reset form e fechar modal
       setTransferenciaForm({
         conta_origem_id: '',
         conta_destino_id: '',
@@ -463,13 +711,55 @@ export default function ContasPage() {
         data: new Date().toISOString().split('T')[0],
       })
       setModalTransferenciaOpen(false)
-      loadLancamentos()
-      alert('Transferência realizada com sucesso!')
+      toast.success('Transferência realizada com sucesso!')
+      loadExtrato()
     } catch (error) {
       console.error('Erro ao criar transferência:', error)
-      alert('Erro ao criar transferência. Tente novamente.')
+      toast.error('Erro ao criar transferência')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value)
+  }
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+    })
+  }
+
+  // Calcular dias até vencimento
+  const getDiasVencimento = (dataVencimento: string | null) => {
+    if (!dataVencimento) return null
+    const venc = new Date(dataVencimento + 'T00:00:00')
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+    return Math.ceil((venc.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24))
+  }
+
+  // Ícone baseado na origem
+  const getOrigemIcon = (origem: string) => {
+    switch (origem) {
+      case 'honorario':
+        return DollarSign
+      case 'despesa':
+        return Receipt
+      case 'cartao_credito':
+        return CreditCard
+      case 'reembolso':
+        return RefreshCw
+      case 'transferencia':
+        return ArrowLeftRight
+      default:
+        return FileText
     }
   }
 
@@ -509,7 +799,7 @@ export default function ContasPage() {
                     <option value="">Selecione um cliente</option>
                     {clientes.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.nome_completo || c.nome_fantasia}
+                        {c.nome_completo}
                       </option>
                     ))}
                   </select>
@@ -521,7 +811,9 @@ export default function ContasPage() {
                   <select
                     id="categoria"
                     value={receitaForm.categoria}
-                    onChange={(e) => setReceitaForm({ ...receitaForm, categoria: e.target.value as any })}
+                    onChange={(e) =>
+                      setReceitaForm({ ...receitaForm, categoria: e.target.value as any })
+                    }
                     className="w-full h-10 rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
                   >
                     <option value="honorario_contrato">Honorário Contratual</option>
@@ -551,7 +843,9 @@ export default function ContasPage() {
                     step="0.01"
                     min="0"
                     value={receitaForm.valor_total}
-                    onChange={(e) => setReceitaForm({ ...receitaForm, valor_total: e.target.value })}
+                    onChange={(e) =>
+                      setReceitaForm({ ...receitaForm, valor_total: e.target.value })
+                    }
                     placeholder="0,00"
                     required
                   />
@@ -563,7 +857,9 @@ export default function ContasPage() {
                     id="parcelado"
                     type="checkbox"
                     checked={receitaForm.parcelado}
-                    onChange={(e) => setReceitaForm({ ...receitaForm, parcelado: e.target.checked })}
+                    onChange={(e) =>
+                      setReceitaForm({ ...receitaForm, parcelado: e.target.checked })
+                    }
                     className="h-4 w-4 rounded border-slate-300 text-[#1E3A8A] focus:ring-[#1E3A8A]"
                   />
                   <Label htmlFor="parcelado" className="cursor-pointer">
@@ -581,7 +877,9 @@ export default function ContasPage() {
                         type="number"
                         min="2"
                         value={receitaForm.num_parcelas}
-                        onChange={(e) => setReceitaForm({ ...receitaForm, num_parcelas: e.target.value })}
+                        onChange={(e) =>
+                          setReceitaForm({ ...receitaForm, num_parcelas: e.target.value })
+                        }
                         required
                       />
                     </div>
@@ -591,7 +889,9 @@ export default function ContasPage() {
                         id="primeira_vencimento"
                         type="date"
                         value={receitaForm.primeira_vencimento}
-                        onChange={(e) => setReceitaForm({ ...receitaForm, primeira_vencimento: e.target.value })}
+                        onChange={(e) =>
+                          setReceitaForm({ ...receitaForm, primeira_vencimento: e.target.value })
+                        }
                         required
                       />
                     </div>
@@ -603,7 +903,9 @@ export default function ContasPage() {
                       id="data_vencimento_unica"
                       type="date"
                       value={receitaForm.data_vencimento_unica}
-                      onChange={(e) => setReceitaForm({ ...receitaForm, data_vencimento_unica: e.target.value })}
+                      onChange={(e) =>
+                        setReceitaForm({ ...receitaForm, data_vencimento_unica: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -615,13 +917,15 @@ export default function ContasPage() {
                   <select
                     id="processo"
                     value={receitaForm.processo_id}
-                    onChange={(e) => setReceitaForm({ ...receitaForm, processo_id: e.target.value })}
+                    onChange={(e) =>
+                      setReceitaForm({ ...receitaForm, processo_id: e.target.value })
+                    }
                     className="w-full h-10 rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
                   >
                     <option value="">Nenhum</option>
                     {processos.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.numero_processo} - {p.parte_contraria}
+                        {p.numero_cnj} - {p.parte_contraria}
                       </option>
                     ))}
                   </select>
@@ -633,7 +937,9 @@ export default function ContasPage() {
                   <Textarea
                     id="observacoes"
                     value={receitaForm.observacoes}
-                    onChange={(e) => setReceitaForm({ ...receitaForm, observacoes: e.target.value })}
+                    onChange={(e) =>
+                      setReceitaForm({ ...receitaForm, observacoes: e.target.value })
+                    }
                     placeholder="Informações adicionais..."
                     rows={3}
                   />
@@ -680,7 +986,9 @@ export default function ContasPage() {
                   <Input
                     id="fornecedor"
                     value={despesaForm.fornecedor}
-                    onChange={(e) => setDespesaForm({ ...despesaForm, fornecedor: e.target.value })}
+                    onChange={(e) =>
+                      setDespesaForm({ ...despesaForm, fornecedor: e.target.value })
+                    }
                     placeholder="Nome do fornecedor ou destinatário"
                     required
                   />
@@ -692,15 +1000,23 @@ export default function ContasPage() {
                   <select
                     id="categoria_despesa"
                     value={despesaForm.categoria}
-                    onChange={(e) => setDespesaForm({ ...despesaForm, categoria: e.target.value })}
+                    onChange={(e) =>
+                      setDespesaForm({ ...despesaForm, categoria: e.target.value })
+                    }
                     className="w-full h-10 rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
                   >
                     <option value="fornecedor">Fornecedor</option>
-                    <option value="custas_processuais">Custas Processuais</option>
-                    <option value="tributo">Tributo</option>
+                    <option value="custas">Custas Processuais</option>
+                    <option value="impostos">Tributo/Impostos</option>
                     <option value="infraestrutura">Infraestrutura</option>
-                    <option value="pessoal">Pessoal</option>
-                    <option value="outros">Outros</option>
+                    <option value="folha">Folha de Pagamento</option>
+                    <option value="aluguel">Aluguel</option>
+                    <option value="marketing">Marketing</option>
+                    <option value="capacitacao">Capacitação</option>
+                    <option value="material">Material</option>
+                    <option value="tecnologia">Tecnologia</option>
+                    <option value="assinatura">Assinatura</option>
+                    <option value="outras">Outros</option>
                   </select>
                 </div>
 
@@ -710,7 +1026,9 @@ export default function ContasPage() {
                   <Input
                     id="descricao_despesa"
                     value={despesaForm.descricao}
-                    onChange={(e) => setDespesaForm({ ...despesaForm, descricao: e.target.value })}
+                    onChange={(e) =>
+                      setDespesaForm({ ...despesaForm, descricao: e.target.value })
+                    }
                     placeholder="Ex: Pagamento de custas judiciais"
                     required
                   />
@@ -738,7 +1056,9 @@ export default function ContasPage() {
                     id="data_vencimento_despesa"
                     type="date"
                     value={despesaForm.data_vencimento}
-                    onChange={(e) => setDespesaForm({ ...despesaForm, data_vencimento: e.target.value })}
+                    onChange={(e) =>
+                      setDespesaForm({ ...despesaForm, data_vencimento: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -749,14 +1069,15 @@ export default function ContasPage() {
                   <select
                     id="forma_pagamento"
                     value={despesaForm.forma_pagamento}
-                    onChange={(e) => setDespesaForm({ ...despesaForm, forma_pagamento: e.target.value })}
+                    onChange={(e) =>
+                      setDespesaForm({ ...despesaForm, forma_pagamento: e.target.value })
+                    }
                     className="w-full h-10 rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
                   >
                     <option value="transferencia">Transferência</option>
                     <option value="boleto">Boleto</option>
                     <option value="pix">PIX</option>
                     <option value="dinheiro">Dinheiro</option>
-                    <option value="cartao_credito">Cartão de Crédito</option>
                     <option value="cartao_debito">Cartão de Débito</option>
                   </select>
                 </div>
@@ -767,7 +1088,9 @@ export default function ContasPage() {
                   <Textarea
                     id="observacoes_despesa"
                     value={despesaForm.observacoes}
-                    onChange={(e) => setDespesaForm({ ...despesaForm, observacoes: e.target.value })}
+                    onChange={(e) =>
+                      setDespesaForm({ ...despesaForm, observacoes: e.target.value })
+                    }
                     placeholder="Informações adicionais..."
                     rows={3}
                   />
@@ -814,7 +1137,12 @@ export default function ContasPage() {
                   <select
                     id="conta_origem"
                     value={transferenciaForm.conta_origem_id}
-                    onChange={(e) => setTransferenciaForm({ ...transferenciaForm, conta_origem_id: e.target.value })}
+                    onChange={(e) =>
+                      setTransferenciaForm({
+                        ...transferenciaForm,
+                        conta_origem_id: e.target.value,
+                      })
+                    }
                     className="w-full h-10 rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
                     required
                   >
@@ -833,7 +1161,12 @@ export default function ContasPage() {
                   <select
                     id="conta_destino"
                     value={transferenciaForm.conta_destino_id}
-                    onChange={(e) => setTransferenciaForm({ ...transferenciaForm, conta_destino_id: e.target.value })}
+                    onChange={(e) =>
+                      setTransferenciaForm({
+                        ...transferenciaForm,
+                        conta_destino_id: e.target.value,
+                      })
+                    }
                     className="w-full h-10 rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
                     required
                   >
@@ -855,7 +1188,9 @@ export default function ContasPage() {
                     step="0.01"
                     min="0"
                     value={transferenciaForm.valor}
-                    onChange={(e) => setTransferenciaForm({ ...transferenciaForm, valor: e.target.value })}
+                    onChange={(e) =>
+                      setTransferenciaForm({ ...transferenciaForm, valor: e.target.value })
+                    }
                     placeholder="0,00"
                     required
                   />
@@ -867,7 +1202,9 @@ export default function ContasPage() {
                   <Input
                     id="descricao_transferencia"
                     value={transferenciaForm.descricao}
-                    onChange={(e) => setTransferenciaForm({ ...transferenciaForm, descricao: e.target.value })}
+                    onChange={(e) =>
+                      setTransferenciaForm({ ...transferenciaForm, descricao: e.target.value })
+                    }
                     placeholder="Motivo da transferência (opcional)"
                   />
                 </div>
@@ -899,11 +1236,11 @@ export default function ContasPage() {
       {/* Filtros */}
       <Card className="border-slate-200 shadow-sm">
         <CardContent className="pt-4">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div className="relative">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
-                placeholder="Buscar na descrição..."
+                placeholder="Buscar na descrição ou entidade..."
                 value={filters.busca}
                 onChange={(e) => setFilters({ ...filters, busca: e.target.value })}
                 className="pl-10"
@@ -911,27 +1248,38 @@ export default function ContasPage() {
             </div>
 
             <select
-              value={filters.tipo}
-              onChange={(e) => setFilters({ ...filters, tipo: e.target.value as any })}
+              value={filters.tipo_movimento}
+              onChange={(e) => setFilters({ ...filters, tipo_movimento: e.target.value as any })}
               className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
             >
               <option value="todos">Todos os tipos</option>
-              <option value="entrada">Entradas</option>
-              <option value="saida">Saídas</option>
+              <option value="receita">Receitas</option>
+              <option value="despesa">Despesas</option>
               <option value="transferencia">Transferências</option>
             </select>
 
             <select
-              value={filters.conta_bancaria_id}
-              onChange={(e) => setFilters({ ...filters, conta_bancaria_id: e.target.value })}
+              value={filters.status}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value as any })}
               className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
             >
-              <option value="todas">Todas as contas</option>
-              {contasBancarias.map((cb) => (
-                <option key={cb.id} value={cb.id}>
-                  {cb.banco} - {cb.numero_conta}
-                </option>
-              ))}
+              <option value="todos">Todos os status</option>
+              <option value="pendente">Pendentes</option>
+              <option value="efetivado">Efetivados</option>
+              <option value="vencido">Vencidos</option>
+            </select>
+
+            <select
+              value={filters.origem}
+              onChange={(e) => setFilters({ ...filters, origem: e.target.value as any })}
+              className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
+            >
+              <option value="todos">Todas as origens</option>
+              <option value="honorario">Honorários</option>
+              <option value="despesa">Despesas</option>
+              <option value="cartao_credito">Cartão de Crédito</option>
+              <option value="reembolso">Reembolsos</option>
+              <option value="transferencia">Transferências</option>
             </select>
 
             <select
@@ -942,27 +1290,19 @@ export default function ContasPage() {
               <option value="semana">Última semana</option>
               <option value="mes">Último mês</option>
               <option value="trimestre">Último trimestre</option>
+              <option value="ano">Último ano</option>
               <option value="todos">Todos</option>
             </select>
-
-            <Button
-              onClick={loadLancamentos}
-              variant="outline"
-              className="border-slate-200"
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Aplicar
-            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Extrato de Lançamentos */}
+      {/* Extrato Unificado */}
       <Card className="border-slate-200 shadow-sm">
         <CardHeader className="pb-2 pt-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-medium text-slate-700">
-              Lançamentos ({lancamentos.length} de {totalCount})
+              Lançamentos ({extrato.length} de {totalCount})
             </CardTitle>
           </div>
         </CardHeader>
@@ -970,11 +1310,11 @@ export default function ContasPage() {
           {loading ? (
             <div className="py-12 text-center">
               <div className="h-8 w-8 mx-auto border-4 border-slate-200 border-t-[#1E3A8A] rounded-full animate-spin" />
-              <p className="text-sm text-slate-500 mt-2">Carregando...</p>
+              <p className="text-sm text-slate-500 mt-2">Carregando extrato...</p>
             </div>
-          ) : lancamentos.length === 0 ? (
+          ) : extrato.length === 0 ? (
             <div className="py-12 text-center">
-              <CheckCircle className="h-12 w-12 mx-auto text-slate-300" />
+              <FileText className="h-12 w-12 mx-auto text-slate-300" />
               <p className="text-sm text-slate-500 mt-2">Nenhum lançamento encontrado</p>
             </div>
           ) : (
@@ -982,90 +1322,198 @@ export default function ContasPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200">
-                    <th className="text-left py-2 px-3 text-xs font-semibold text-slate-600 w-16">Tipo</th>
-                    <th className="text-left py-2 px-3 text-xs font-semibold text-slate-600 w-24">Data</th>
-                    <th className="text-left py-2 px-3 text-xs font-semibold text-slate-600">Descrição</th>
-                    <th className="text-left py-2 px-3 text-xs font-semibold text-slate-600 w-48">Conta</th>
-                    <th className="text-left py-2 px-3 text-xs font-semibold text-slate-600 w-32">Categoria</th>
-                    <th className="text-right py-2 px-3 text-xs font-semibold text-slate-600 w-32">Valor</th>
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-slate-600 w-20">
+                      Tipo
+                    </th>
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-slate-600 w-24">
+                      Data
+                    </th>
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-slate-600">
+                      Descrição
+                    </th>
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-slate-600 w-36">
+                      Entidade
+                    </th>
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-slate-600 w-32">
+                      Categoria
+                    </th>
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-slate-600 w-24">
+                      Status
+                    </th>
+                    <th className="text-right py-2 px-3 text-xs font-semibold text-slate-600 w-32">
+                      Valor
+                    </th>
+                    <th className="text-center py-2 px-3 text-xs font-semibold text-slate-600 w-20">
+                      Ações
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {lancamentos.map((lanc) => (
-                    <tr
-                      key={lanc.id}
-                      className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
-                    >
-                      {/* Tipo */}
-                      <td className="py-2.5 px-3">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            'text-[10px] px-2 py-0.5 font-medium',
-                            lanc.tipo === 'entrada' && 'bg-emerald-50 border-emerald-200 text-emerald-700',
-                            lanc.tipo === 'saida' && 'bg-red-50 border-red-200 text-red-700',
-                            lanc.origem_tipo === 'transferencia' && 'bg-blue-50 border-blue-200 text-blue-700'
+                  {extrato.map((item) => {
+                    const OrigemIcon = getOrigemIcon(item.origem)
+                    const statusConfig = STATUS_CONFIG[item.status]
+                    const StatusIcon = statusConfig?.icon || Clock
+                    const diasVenc = getDiasVencimento(item.data_vencimento)
+
+                    return (
+                      <tr
+                        key={`${item.origem}-${item.id}`}
+                        className={cn(
+                          'border-b border-slate-100 hover:bg-slate-50 transition-colors',
+                          item.status === 'vencido' && 'bg-red-50/50',
+                          item.status === 'pendente' &&
+                            diasVenc !== null &&
+                            diasVenc <= 5 &&
+                            diasVenc >= 0 &&
+                            'bg-amber-50/50'
+                        )}
+                      >
+                        {/* Tipo/Origem */}
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={cn(
+                                'w-7 h-7 rounded-lg flex items-center justify-center',
+                                item.tipo_movimento === 'receita' && 'bg-emerald-100',
+                                item.tipo_movimento === 'despesa' && 'bg-red-100',
+                                item.tipo_movimento === 'transferencia' && 'bg-blue-100'
+                              )}
+                            >
+                              <OrigemIcon
+                                className={cn(
+                                  'w-3.5 h-3.5',
+                                  item.tipo_movimento === 'receita' && 'text-emerald-600',
+                                  item.tipo_movimento === 'despesa' && 'text-red-600',
+                                  item.tipo_movimento === 'transferencia' && 'text-blue-600'
+                                )}
+                              />
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Data */}
+                        <td className="py-2.5 px-3">
+                          <div>
+                            <span className="text-xs text-slate-700">
+                              {formatDate(item.data_referencia)}
+                            </span>
+                            {item.data_vencimento &&
+                              item.status === 'pendente' &&
+                              diasVenc !== null && (
+                                <p
+                                  className={cn(
+                                    'text-[10px]',
+                                    diasVenc < 0 && 'text-red-600 font-medium',
+                                    diasVenc <= 5 && diasVenc >= 0 && 'text-amber-600',
+                                    diasVenc > 5 && 'text-slate-500'
+                                  )}
+                                >
+                                  {diasVenc < 0
+                                    ? `Vencido há ${Math.abs(diasVenc)}d`
+                                    : diasVenc === 0
+                                      ? 'Vence hoje'
+                                      : `Vence em ${diasVenc}d`}
+                                </p>
+                              )}
+                          </div>
+                        </td>
+
+                        {/* Descrição */}
+                        <td className="py-2.5 px-3">
+                          <p className="text-xs font-medium text-slate-700 line-clamp-1">
+                            {item.descricao}
+                          </p>
+                          <p className="text-[10px] text-slate-500">
+                            {ORIGEM_LABELS[item.origem] || item.origem}
+                          </p>
+                        </td>
+
+                        {/* Entidade */}
+                        <td className="py-2.5 px-3">
+                          <p className="text-xs text-slate-600 line-clamp-1">
+                            {item.entidade || '-'}
+                          </p>
+                        </td>
+
+                        {/* Categoria */}
+                        <td className="py-2.5 px-3">
+                          <span className="text-xs text-slate-600">
+                            {CATEGORIA_LABELS[item.categoria] || item.categoria}
+                          </span>
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-2.5 px-3">
+                          <Badge
+                            variant="outline"
+                            className={cn('text-[10px] px-2 py-0.5 font-medium', statusConfig?.className)}
+                          >
+                            <StatusIcon className="w-3 h-3 mr-1" />
+                            {statusConfig?.label || item.status}
+                          </Badge>
+                        </td>
+
+                        {/* Valor */}
+                        <td className="py-2.5 px-3 text-right">
+                          <p
+                            className={cn(
+                              'text-sm font-semibold',
+                              item.tipo_movimento === 'receita' && 'text-emerald-600',
+                              item.tipo_movimento === 'despesa' && 'text-red-600',
+                              item.tipo_movimento === 'transferencia' && 'text-blue-600'
+                            )}
+                          >
+                            {item.tipo_movimento === 'receita' ? '+' : '-'}{' '}
+                            {formatCurrency(Number(item.valor))}
+                          </p>
+                        </td>
+
+                        {/* Ações */}
+                        <td className="py-2.5 px-3 text-center">
+                          {item.status === 'pendente' || item.status === 'vencido' ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  className={cn(
+                                    'h-7 text-xs',
+                                    item.tipo_movimento === 'receita'
+                                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                      : 'bg-[#34495e] hover:bg-[#2c3e50] text-white'
+                                  )}
+                                >
+                                  <Check className="w-3 h-3 mr-1" />
+                                  {item.tipo_movimento === 'receita' ? 'Receber' : 'Pagar'}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {contasBancarias.length === 0 ? (
+                                  <DropdownMenuItem disabled>
+                                    Nenhuma conta bancária
+                                  </DropdownMenuItem>
+                                ) : (
+                                  contasBancarias.map((conta) => (
+                                    <DropdownMenuItem
+                                      key={conta.id}
+                                      onClick={() =>
+                                        item.tipo_movimento === 'receita'
+                                          ? handleReceberReceita(item, conta.id)
+                                          : handlePagarDespesa(item, conta.id)
+                                      }
+                                    >
+                                      {conta.banco} - Ag {conta.agencia}
+                                    </DropdownMenuItem>
+                                  ))
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            <span className="text-xs text-slate-400">-</span>
                           )}
-                        >
-                          {lanc.tipo === 'entrada'
-                            ? 'Entrada'
-                            : lanc.origem_tipo === 'transferencia'
-                            ? 'Transfer'
-                            : 'Saída'}
-                        </Badge>
-                      </td>
-
-                      {/* Data */}
-                      <td className="py-2.5 px-3">
-                        <span className="text-xs text-slate-700">
-                          {new Date(lanc.data_lancamento + 'T00:00:00').toLocaleDateString('pt-BR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: '2-digit',
-                          })}
-                        </span>
-                      </td>
-
-                      {/* Descrição */}
-                      <td className="py-2.5 px-3">
-                        <p className="text-xs font-medium text-slate-700">
-                          {lanc.descricao}
-                        </p>
-                      </td>
-
-                      {/* Conta */}
-                      <td className="py-2.5 px-3">
-                        <p className="text-xs text-slate-600">
-                          {lanc.conta_nome}
-                        </p>
-                        <p className="text-[10px] text-slate-500">
-                          {lanc.conta_banco}
-                        </p>
-                      </td>
-
-                      {/* Categoria */}
-                      <td className="py-2.5 px-3">
-                        <span className="text-xs text-slate-600 capitalize">
-                          {lanc.origem_tipo === 'pagamento' ? 'Recebimento' :
-                           lanc.origem_tipo === 'despesa' ? 'Despesa' :
-                           lanc.origem_tipo === 'transferencia' ? 'Transferência' :
-                           lanc.origem_tipo === 'manual' ? 'Manual' : lanc.origem_tipo}
-                        </span>
-                      </td>
-
-                      {/* Valor */}
-                      <td className="py-2.5 px-3 text-right">
-                        <p
-                          className={cn(
-                            'text-sm font-semibold',
-                            lanc.tipo === 'entrada' ? 'text-emerald-600' : 'text-red-600'
-                          )}
-                        >
-                          {lanc.tipo === 'entrada' ? '+' : '-'} {formatCurrency(Number(lanc.valor))}
-                        </p>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1105,7 +1553,6 @@ export default function ContasPage() {
           )}
         </CardContent>
       </Card>
-
     </div>
   )
 }

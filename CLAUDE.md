@@ -23,18 +23,65 @@ This is a comprehensive legal system integrated with AI, designed for law firms.
 
 ## Database Structure
 
-The system uses PostgreSQL with 100+ tables organized across modules:
-- Authentication & Profiles (`profiles`, `escritorios`)
-- Dashboard (`dashboard_metrics`, `ai_chat_history`, `notifications`)
-- CRM (`clientes`, `interacoes`)
-- Agenda (`eventos`, `eventos_prazos`, `feriados`)
-- Processes (`processos`, `processos_movimentacoes`, `processos_pecas`)
-- Consultivo (`consultas`, `consultas_analise`, `templates_pareceres`)
-- Publications (`publicacoes`, `publicacoes_analise_ia`, `aasp_config`)
-- Financial (`honorarios`, `timesheet`, `pagamentos`)
-- Reports (`relatorios_templates`, `metricas_cache`)
-- Documents (`documentos`, `pastas`, `templates_documentos`)
-- Command Center (`centro_comando_historico`, `centro_comando_favoritos`)
+The system uses PostgreSQL with ~115 tables organized across modules:
+- Core (profiles, escritorios, permissões) - 8 tabelas
+- CRM (pessoas, interações, oportunidades) - 10 tabelas
+- Processos (processos, partes, movimentações) - 7 tabelas
+- Agenda (eventos, tarefas, audiências) - 8 tabelas
+- Financeiro (contratos, honorários, faturamento) - 25 tabelas
+- Consultivo (consultas, pareceres, minutas) - 12 tabelas
+- Publicações (publicações, análises, config) - 8 tabelas
+- Peças (templates, teses, jurisprudências) - 7 tabelas
+- Centro de Comando (histórico, sessões) - 4 tabelas
+- Portfolio (produtos, projetos) - 11 tabelas
+- Integrações (DataJud, Escavador) - 3 tabelas
+- Sistema (tags, numeração, migração) - 7 tabelas
+
+## Documentação do Sistema
+
+**IMPORTANTE**: Antes de modificar qualquer parte do sistema, consulte a documentação em `docs/`.
+
+### Estrutura da Documentação
+
+```
+docs/
+├── README.md                    # Índice geral e plano de execução
+├── DATABASE.md                  # Visão geral do banco de dados
+├── TEMPLATE_DATABASE.md         # Template para documentar módulos DB
+├── TEMPLATE_PAGE.md             # Template para documentar páginas
+├── database/                    # Documentação detalhada por módulo
+│   ├── 01-core.md              # ✅ Profiles, escritórios, permissões
+│   ├── 02-crm.md               # Clientes, oportunidades
+│   ├── 03-processos.md         # Processos judiciais
+│   ├── 04-agenda.md            # Eventos, tarefas, audiências
+│   ├── 05-financeiro.md        # ✅ Contratos, honorários, faturamento, cartões
+│   └── ...
+├── modules/                     # Estrutura dos módulos frontend
+└── pages/                       # Documentação página por página
+```
+
+### Fluxo de Desenvolvimento Orientado
+
+1. **Antes de modificar**: Consulte `docs/database/XX-modulo.md` para entender a estrutura
+2. **Durante desenvolvimento**: Verifique relacionamentos e dependências
+3. **Após modificar**: Atualize a documentação correspondente
+
+### Consulta Rápida por Módulo
+
+| Módulo | Banco de Dados | Frontend |
+|--------|----------------|----------|
+| Core | `docs/database/01-core.md` | `docs/modules/auth.md` |
+| CRM | `docs/database/02-crm.md` | `docs/modules/02-crm.md` |
+| Processos | `docs/database/03-processos.md` | `docs/modules/03-processos.md` |
+| Agenda | `docs/database/04-agenda.md` | `docs/modules/04-agenda.md` |
+| Financeiro | `docs/database/05-financeiro.md` | `docs/modules/05-financeiro.md` |
+
+### Regras para o Claude Code
+
+1. **SEMPRE** consultar a documentação antes de fazer alterações em tabelas ou queries
+2. **SEMPRE** verificar relacionamentos entre tabelas antes de modificar schemas
+3. **SEMPRE** atualizar a documentação após fazer alterações estruturais
+4. **NUNCA** assumir estrutura de tabela sem verificar a documentação ou o banco
 
 ## Common Development Commands
 

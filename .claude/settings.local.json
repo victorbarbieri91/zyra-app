@@ -52,7 +52,10 @@
       "Bash(npx next lint:*)",
       "Bash(npx eslint:*)",
       "Bash(cd:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(cut:*)",
+      "Bash(iconv:*)",
+      "Bash(sort:*)"
     ],
     "deny": [],
     "ask": []

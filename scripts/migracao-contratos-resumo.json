@@ -1,0 +1,44 @@
+{
+  "total_csv": 129,
+  "total_migrar": 123,
+  "total_erros": 6,
+  "proximo_numero": 124,
+  "erros": [
+    {
+      "linha": 98,
+      "ci": "195",
+      "cliente": "Maristella Fuganti Cabello Campos",
+      "erro": "Cliente não encontrado no CRM"
+    },
+    {
+      "linha": 113,
+      "ci": "203",
+      "cliente": "3Fg Negocios Imobiliarios e Intermediacao de Negocios Ltda",
+      "erro": "Cliente não encontrado no CRM"
+    },
+    {
+      "linha": 117,
+      "ci": "209",
+      "cliente": "Edinei Mercure",
+      "erro": "Cliente não encontrado no CRM"
+    },
+    {
+      "linha": 128,
+      "ci": "225",
+      "cliente": "Leonardo de Almeida Lira",
+      "erro": "Cliente não encontrado no CRM"
+    },
+    {
+      "linha": 129,
+      "ci": "227",
+      "cliente": "César Augusto dos Santos",
+      "erro": "Cliente não encontrado no CRM"
+    },
+    {
+      "linha": 131,
+      "ci": "228",
+      "cliente": "César Augusto dos Santos",
+      "erro": "Cliente não encontrado no CRM"
+    }
+  ]
+}

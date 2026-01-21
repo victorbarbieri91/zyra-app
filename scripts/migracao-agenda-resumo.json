@@ -1,0 +1,16 @@
+{
+  "total_csv": 174,
+  "total_tarefas": 169,
+  "total_audiencias": 4,
+  "total_erros": 1,
+  "erros": [
+    {
+      "linha": 138,
+      "ci": "5240",
+      "tipo": "audiencia",
+      "erro": "Audiência sem processo vinculado",
+      "cliente": "Inova Ts Engenharia Ltda.",
+      "processo": "0012241-19.2025.5.03.0067"
+    }
+  ]
+}

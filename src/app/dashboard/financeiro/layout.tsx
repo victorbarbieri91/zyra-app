@@ -12,6 +12,7 @@ import {
   DollarSign,
   BarChart3,
   TrendingUpDown,
+  CreditCard,
 } from 'lucide-react'
 
 const financeiroMenuItems = [
@@ -39,6 +40,11 @@ const financeiroMenuItems = [
     title: 'Contas Bancárias',
     icon: Building2,
     href: '/dashboard/financeiro/contas-bancarias',
+  },
+  {
+    title: 'Cartões de Crédito',
+    icon: CreditCard,
+    href: '/dashboard/financeiro/cartoes',
   },
   {
     title: 'Faturamento',

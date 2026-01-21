@@ -45,13 +45,24 @@ export function useDashboardAgenda() {
       setLoading(true)
       setError(null)
 
+      // Buscar usuário logado para filtrar apenas seus itens
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setItems([])
+        setLoading(false)
+        return
+      }
+
       const inicioHoje = startOfDayInBrazil(new Date())
       const fimHoje = endOfDayInBrazil(new Date())
 
+      // Buscar apenas itens onde o usuário é responsável OU criador
+      // Isso garante que cada pessoa veja apenas sua própria agenda no dashboard
       const { data, error: queryError } = await supabase
         .from('v_agenda_consolidada')
         .select('*')
         .eq('escritorio_id', escritorioAtivo)
+        .or(`responsavel_id.eq.${user.id},criado_por.eq.${user.id}`)
         .gte('data_inicio', inicioHoje.toISOString())
         .lte('data_inicio', fimHoje.toISOString())
         .neq('status', 'concluida') // Mostrar apenas itens pendentes

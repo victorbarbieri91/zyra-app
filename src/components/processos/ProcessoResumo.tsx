@@ -145,19 +145,19 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
   }, [])
 
   // Carregar agendamentos do processo
+  // Usa função especial que permite ver todos os agendamentos vinculados ao processo
+  // (independente de quem é o responsável, desde que seja do mesmo escritório)
   useEffect(() => {
     const loadAgendaItems = async () => {
       try {
         setLoadingAgenda(true)
+        // Usar função RPC que bypassa RLS por responsável mas mantém segurança por escritório
         const { data, error } = await supabase
-          .from('v_agenda_consolidada')
-          .select('*')
-          .eq('processo_id', processo.id)
-          .order('data_inicio', { ascending: true })
-          .limit(5)
+          .rpc('get_agenda_processo', { p_processo_id: processo.id })
 
         if (!error && data) {
-          setAgendaItems(data)
+          // Limitar a 5 itens no frontend
+          setAgendaItems(data.slice(0, 5))
         }
         setLoadingAgenda(false)
       } catch (error) {
@@ -774,14 +774,10 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           }
 
           setShowTarefaWizard(false)
-          // Recarregar agendamentos
+          // Recarregar agendamentos usando função RPC
           const { data: agendaData } = await supabase
-            .from('v_agenda_consolidada')
-            .select('*')
-            .eq('processo_id', processo.id)
-            .order('data_inicio', { ascending: true })
-            .limit(5)
-          if (agendaData) setAgendaItems(agendaData)
+            .rpc('get_agenda_processo', { p_processo_id: processo.id })
+          if (agendaData) setAgendaItems(agendaData.slice(0, 5))
         }}
         initialData={{
           processo_id: processo.id
@@ -805,14 +801,10 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           }
 
           setShowEventoWizard(false)
-          // Recarregar agendamentos
+          // Recarregar agendamentos usando função RPC
           const { data: agendaData } = await supabase
-            .from('v_agenda_consolidada')
-            .select('*')
-            .eq('processo_id', processo.id)
-            .order('data_inicio', { ascending: true })
-            .limit(5)
-          if (agendaData) setAgendaItems(agendaData)
+            .rpc('get_agenda_processo', { p_processo_id: processo.id })
+          if (agendaData) setAgendaItems(agendaData.slice(0, 5))
         }}
         initialData={{
           processo_id: processo.id
@@ -836,14 +828,10 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           }
 
           setShowAudienciaWizard(false)
-          // Recarregar agendamentos
+          // Recarregar agendamentos usando função RPC
           const { data: agendaData } = await supabase
-            .from('v_agenda_consolidada')
-            .select('*')
-            .eq('processo_id', processo.id)
-            .order('data_inicio', { ascending: true })
-            .limit(5)
-          if (agendaData) setAgendaItems(agendaData)
+            .rpc('get_agenda_processo', { p_processo_id: processo.id })
+          if (agendaData) setAgendaItems(agendaData.slice(0, 5))
         }}
         initialData={{
           processo_id: processo.id
@@ -861,14 +849,10 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           }}
           tarefa={selectedTarefa}
           onUpdate={async () => {
-            // Recarregar agendamentos após atualização
+            // Recarregar agendamentos após atualização usando função RPC
             const { data } = await supabase
-              .from('v_agenda_consolidada')
-              .select('*')
-              .eq('processo_id', processo.id)
-              .order('data_inicio', { ascending: true })
-              .limit(5)
-            if (data) setAgendaItems(data)
+              .rpc('get_agenda_processo', { p_processo_id: processo.id })
+            if (data) setAgendaItems(data.slice(0, 5))
           }}
         />
       )}
@@ -882,14 +866,10 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           }}
           evento={selectedEvento}
           onUpdate={async () => {
-            // Recarregar agendamentos após atualização
+            // Recarregar agendamentos após atualização usando função RPC
             const { data } = await supabase
-              .from('v_agenda_consolidada')
-              .select('*')
-              .eq('processo_id', processo.id)
-              .order('data_inicio', { ascending: true })
-              .limit(5)
-            if (data) setAgendaItems(data)
+              .rpc('get_agenda_processo', { p_processo_id: processo.id })
+            if (data) setAgendaItems(data.slice(0, 5))
           }}
         />
       )}
@@ -903,14 +883,10 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           }}
           audiencia={selectedAudiencia}
           onUpdate={async () => {
-            // Recarregar agendamentos após atualização
+            // Recarregar agendamentos após atualização usando função RPC
             const { data } = await supabase
-              .from('v_agenda_consolidada')
-              .select('*')
-              .eq('processo_id', processo.id)
-              .order('data_inicio', { ascending: true })
-              .limit(5)
-            if (data) setAgendaItems(data)
+              .rpc('get_agenda_processo', { p_processo_id: processo.id })
+            if (data) setAgendaItems(data.slice(0, 5))
           }}
         />
       )}

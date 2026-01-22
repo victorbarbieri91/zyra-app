@@ -84,20 +84,33 @@ export default function PortfolioAnalyticsPage() {
   useEffect(() => {
     async function loadData() {
       if (!escritorioId) return
-      const [produtos, receita, taxaSucesso, duracao] = await Promise.all([
-        getProdutosMaisVendidos(5),
-        getReceitaPorMes(new Date().getFullYear()),
-        getTaxaSucessoPorArea(),
-        getDuracaoMediaPorProduto(),
-      ])
 
-      setProdutosMaisVendidos(produtos)
-      setReceitaPorMes(receita)
-      setTaxaSucessoArea(taxaSucesso)
-      setDuracaoMedia(duracao)
+      // Guard: ensure all functions are available
+      if (typeof getProdutosMaisVendidos !== 'function' ||
+          typeof getReceitaPorMes !== 'function' ||
+          typeof getTaxaSucessoPorArea !== 'function' ||
+          typeof getDuracaoMediaPorProduto !== 'function') {
+        return
+      }
+
+      try {
+        const [produtos, receita, taxaSucesso, duracao] = await Promise.all([
+          getProdutosMaisVendidos(5),
+          getReceitaPorMes(new Date().getFullYear()),
+          getTaxaSucessoPorArea(),
+          getDuracaoMediaPorProduto(),
+        ])
+
+        setProdutosMaisVendidos(produtos)
+        setReceitaPorMes(receita)
+        setTaxaSucessoArea(taxaSucesso)
+        setDuracaoMedia(duracao)
+      } catch (err) {
+        console.error('Erro ao carregar dados do analytics:', err)
+      }
     }
     loadData()
-  }, [escritorioId])
+  }, [escritorioId, getProdutosMaisVendidos, getReceitaPorMes, getTaxaSucessoPorArea, getDuracaoMediaPorProduto])
 
   // Calcular variação de receita
   const receitaAtual = dashboardMetricas?.receita_mes_atual || 0

@@ -93,11 +93,12 @@ export function useDashboardPerformance() {
           .eq('escritorio_id', escritorioAtivo)
           .gte('data_trabalho', inicioMes.toISOString().split('T')[0]),
 
-        // Profiles para nomes
+        // Profiles para nomes (usuários do escritório)
         supabase
-          .from('profiles')
-          .select('id, nome_completo')
-          .eq('escritorio_ativo_id', escritorioAtivo),
+          .from('escritorios_usuarios')
+          .select('user_id, profiles:user_id(id, nome_completo)')
+          .eq('escritorio_id', escritorioAtivo)
+          .eq('ativo', true),
 
         // Processos por área com valores
         supabase
@@ -134,10 +135,13 @@ export function useDashboardPerformance() {
         }
       })
 
-      // Mapear nomes
+      // Mapear nomes (agora vem de escritorios_usuarios com join em profiles)
       const profilesMap: Record<string, string> = {}
-      profilesResult.data?.forEach(p => {
-        profilesMap[p.id] = p.nome_completo || 'Usuário'
+      profilesResult.data?.forEach((eu: any) => {
+        const profile = eu.profiles as { id: string; nome_completo: string } | null
+        if (profile?.id) {
+          profilesMap[profile.id] = profile.nome_completo || 'Usuário'
+        }
       })
 
       // Criar lista de equipe ordenada por horas

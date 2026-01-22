@@ -11,6 +11,7 @@ export interface ContratoHonorario {
   id: string
   escritorio_id: string
   numero_contrato: string
+  titulo?: string | null // Título/referência do contrato
   cliente_id: string
   cliente_nome?: string
   tipo_servico: 'processo' | 'consultoria' | 'avulso' | 'misto'
@@ -72,6 +73,7 @@ export interface AtoContrato {
 
 export interface ContratoFormData {
   cliente_id: string
+  titulo?: string // Título/referência do contrato
   tipo_servico: 'processo' | 'consultoria' | 'avulso' | 'misto'
   forma_cobranca: FormaCobranca
   formas_selecionadas?: string[] // MÚLTIPLAS formas de cobrança
@@ -250,6 +252,7 @@ export function useContratosHonorarios() {
           id: contrato.id,
           escritorio_id: contrato.escritorio_id,
           numero_contrato: contrato.numero_contrato,
+          titulo: contrato.titulo,
           cliente_id: contrato.cliente_id,
           cliente_nome: contrato.crm_pessoas?.nome_completo || 'Cliente não encontrado',
           tipo_servico: contrato.tipo_contrato,
@@ -318,6 +321,7 @@ export function useContratosHonorarios() {
           .insert({
             escritorio_id: escritorioAtivo,
             numero_contrato: numeroContrato,
+            titulo: data.titulo || null,
             cliente_id: data.cliente_id,
             tipo_contrato: data.tipo_servico,
             forma_cobranca: data.forma_cobranca,
@@ -432,6 +436,7 @@ export function useContratosHonorarios() {
         // Atualizar dados básicos do contrato
         const updateData: Record<string, unknown> = {}
         if (data.cliente_id) updateData.cliente_id = data.cliente_id
+        if (data.titulo !== undefined) updateData.titulo = data.titulo || null
         if (data.tipo_servico) updateData.tipo_contrato = data.tipo_servico
         if (data.forma_cobranca) updateData.forma_cobranca = data.forma_cobranca
         if (data.data_inicio) updateData.data_inicio = data.data_inicio

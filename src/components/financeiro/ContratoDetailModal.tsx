@@ -106,60 +106,63 @@ export default function ContratoDetailModal({
   const [valoresCargo, setValoresCargo] = useState<ValorCargo[]>([])
   const [atos, setAtos] = useState<AtoConfigured[]>([])
 
-  // Carregar dados complementares do contrato
+  // Carregar dados complementares do contrato (agora dos campos JSONB)
   useEffect(() => {
     const loadContratoDetails = async () => {
       if (!contrato || !open) return
 
       setLoading(true)
       try {
-        // Buscar formas de cobrança
-        const { data: formasData } = await supabase
-          .from('financeiro_contratos_formas')
-          .select('id, forma_cobranca, ativo, ordem')
-          .eq('contrato_id', contrato.id)
-          .eq('ativo', true)
-          .order('ordem')
+        // Buscar contrato com campos JSONB
+        const { data: contratoData } = await supabase
+          .from('financeiro_contratos_honorarios')
+          .select('formas_pagamento, config')
+          .eq('id', contrato.id)
+          .single()
 
-        setFormas(formasData || [])
+        if (contratoData) {
+          // Extrair formas de cobrança do JSONB formas_pagamento
+          const formasPagamento = (contratoData.formas_pagamento || []) as Array<{ forma: string; ordem?: number }>
+          setFormas(
+            formasPagamento.map((f, index) => ({
+              id: `${contrato.id}-${index}`,
+              forma_cobranca: f.forma,
+              ativo: true,
+              ordem: f.ordem ?? index,
+            }))
+          )
 
-        // Buscar valores por cargo
-        const { data: cargoData } = await supabase
-          .from('financeiro_contratos_valores_cargo')
-          .select(`
-            cargo_id,
-            valor_hora_negociado,
-            escritorios_cargos (nome)
-          `)
-          .eq('contrato_id', contrato.id)
+          // Extrair valores por cargo do JSONB config
+          const config = (contratoData.config || {}) as Record<string, unknown>
+          const valoresPorCargoJsonb = (config.valores_por_cargo || []) as Array<{
+            cargo_id: string
+            cargo_nome?: string
+            valor_negociado?: number
+          }>
+          setValoresCargo(
+            valoresPorCargoJsonb.map(c => ({
+              cargo_id: c.cargo_id,
+              cargo_nome: c.cargo_nome || 'Cargo',
+              valor_hora_negociado: c.valor_negociado || 0,
+            }))
+          )
 
-        setValoresCargo(
-          (cargoData || []).map(c => ({
-            cargo_id: c.cargo_id,
-            cargo_nome: (c.escritorios_cargos as { nome: string } | null)?.nome || 'Cargo',
-            valor_hora_negociado: c.valor_hora_negociado,
-          }))
-        )
-
-        // Buscar atos configurados
-        const { data: atosData } = await supabase
-          .from('financeiro_contratos_atos')
-          .select(`
-            ato_tipo_id,
-            percentual_valor_causa,
-            valor_fixo,
-            financeiro_atos_processuais_tipos (nome)
-          `)
-          .eq('contrato_id', contrato.id)
-
-        setAtos(
-          (atosData || []).map(a => ({
-            ato_tipo_id: a.ato_tipo_id,
-            ato_nome: (a.financeiro_atos_processuais_tipos as { nome: string } | null)?.nome || 'Ato',
-            percentual_valor_causa: a.percentual_valor_causa,
-            valor_fixo: a.valor_fixo,
-          }))
-        )
+          // Extrair atos configurados do JSONB config
+          const atosConfigurados = (config.atos_configurados || []) as Array<{
+            ato_tipo_id: string
+            ato_nome?: string
+            percentual_valor_causa?: number
+            valor_fixo?: number
+          }>
+          setAtos(
+            atosConfigurados.map(a => ({
+              ato_tipo_id: a.ato_tipo_id,
+              ato_nome: a.ato_nome || 'Ato',
+              percentual_valor_causa: a.percentual_valor_causa,
+              valor_fixo: a.valor_fixo,
+            }))
+          )
+        }
       } catch (error) {
         console.error('Erro ao carregar detalhes do contrato:', error)
       } finally {

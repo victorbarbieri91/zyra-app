@@ -147,7 +147,6 @@ export function useAudiencias(escritorioId?: string) {
           processo_id: data.processo_id || null,
           consultivo_id: data.consultivo_id || null,
           titulo: data.titulo,
-          descricao: data.descricao,
           data_hora: data.data_hora ? formatDateTimeForDB(new Date(data.data_hora)) : undefined,
           duracao_minutos: data.duracao_minutos || 60,
           tipo_audiencia: data.tipo_audiencia || 'inicial',
@@ -163,14 +162,10 @@ export function useAudiencias(escritorioId?: string) {
           link_virtual: data.link_virtual,
           plataforma: data.plataforma,
           // Pessoas
-          juiz: data.juiz,
-          promotor: data.promotor,
-          advogado_contrario: data.advogado_contrario,
           responsavel_id: data.responsavel_id,
           // Metadados
           preparativos_checklist: data.preparativos_checklist,
           observacoes: data.observacoes,
-          cor: data.cor,
           status: data.status || 'agendada',
         })
         .select()
@@ -204,7 +199,6 @@ export function useAudiencias(escritorioId?: string) {
           processo_id: data.processo_id || null,
           consultivo_id: data.consultivo_id || null,
           titulo: data.titulo,
-          descricao: data.descricao,
           data_hora: data.data_hora ? formatDateTimeForDB(new Date(data.data_hora)) : undefined,
           duracao_minutos: data.duracao_minutos,
           tipo_audiencia: data.tipo_audiencia,
@@ -220,19 +214,14 @@ export function useAudiencias(escritorioId?: string) {
           link_virtual: data.link_virtual,
           plataforma: data.plataforma,
           // Pessoas
-          juiz: data.juiz,
-          promotor: data.promotor,
-          advogado_contrario: data.advogado_contrario,
           responsavel_id: data.responsavel_id,
           // Status e resultado
           status: data.status,
           resultado_tipo: data.resultado_tipo,
           resultado_descricao: data.resultado_descricao,
-          proxima_audiencia_id: data.proxima_audiencia_id,
           // Metadados
           preparativos_checklist: data.preparativos_checklist,
           observacoes: data.observacoes,
-          cor: data.cor,
         })
         .eq('id', id)
 
@@ -346,8 +335,7 @@ export function useAudiencias(escritorioId?: string) {
         .from('agenda_audiencias')
         .update({
           status: 'remarcada',
-          proxima_audiencia_id: novaAudiencia.id,
-          observacoes: `REMARCADA para ${new Date(novaData).toLocaleString('pt-BR')}. Motivo: ${motivo || 'Não informado'}`,
+          observacoes: `REMARCADA para ${new Date(novaData).toLocaleString('pt-BR')}. Nova audiência ID: ${novaAudiencia.id}. Motivo: ${motivo || 'Não informado'}`,
         })
         .eq('id', id)
 

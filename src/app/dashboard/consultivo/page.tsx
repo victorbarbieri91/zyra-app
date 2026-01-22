@@ -156,9 +156,9 @@ export default function ConsultivoPage() {
     try {
       setLoading(true)
 
-      // Query direta na tabela com joins
+      // Usar view que já inclui cliente e responsável
       let query = supabase
-        .from('consultivo_consultas')
+        .from('v_consultivo_consultas')
         .select(`
           id,
           numero,
@@ -173,14 +173,16 @@ export default function ConsultivoPage() {
           contrato_id,
           anexos,
           andamentos,
-          created_at
+          created_at,
+          cliente_nome,
+          responsavel_nome
         `, { count: 'exact' })
 
-      // Apply search filter - quando busca, mostra tudo incluindo arquivados
+      // Apply search filter - busca por título, número, cliente e responsável
       const isSearching = debouncedSearch.trim().length > 0
       if (isSearching) {
         const searchTerm = `%${debouncedSearch.trim()}%`
-        query = query.or(`titulo.ilike.${searchTerm},numero.ilike.${searchTerm}`)
+        query = query.or(`titulo.ilike.${searchTerm},numero.ilike.${searchTerm},cliente_nome.ilike.${searchTerm},responsavel_nome.ilike.${searchTerm}`)
       }
 
       // Apply view filter
@@ -216,40 +218,20 @@ export default function ConsultivoPage() {
 
       setTotalCount(count || 0)
 
-      // Buscar dados de cliente e responsavel para os registros carregados
-      const clienteIds = (data || []).map((c: any) => c.cliente_id).filter(Boolean)
-      const responsavelIds = (data || []).map((c: any) => c.responsavel_id).filter(Boolean)
-
-      // Buscar clientes
-      const { data: clientes } = await supabase
-        .from('crm_pessoas')
-        .select('id, nome_completo')
-        .in('id', clienteIds)
-
-      const clientesMap = new Map((clientes || []).map(c => [c.id, c.nome_completo]))
-
-      // Buscar responsaveis
-      const { data: responsaveis } = await supabase
-        .from('profiles')
-        .select('id, nome_completo')
-        .in('id', responsavelIds)
-
-      const responsaveisMap = new Map((responsaveis || []).map(r => [r.id, r.nome_completo]))
-
-      // Formatar dados
+      // Formatar dados - cliente_nome e responsavel_nome já vêm da view
       const consultasFormatadas: Consulta[] = (data || []).map((c: any) => ({
         id: c.id,
         numero: c.numero,
         titulo: c.titulo,
         descricao: c.descricao,
         cliente_id: c.cliente_id,
-        cliente_nome: clientesMap.get(c.cliente_id) || 'N/A',
+        cliente_nome: c.cliente_nome || 'N/A',
         area: c.area,
         status: c.status,
         prioridade: c.prioridade,
         prazo: c.prazo,
         responsavel_id: c.responsavel_id,
-        responsavel_nome: responsaveisMap.get(c.responsavel_id) || 'N/A',
+        responsavel_nome: c.responsavel_nome || 'N/A',
         contrato_id: c.contrato_id,
         anexos: c.anexos || [],
         andamentos: c.andamentos || [],
@@ -410,7 +392,7 @@ export default function ConsultivoPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               )}
               <Input
-                placeholder="Buscar por título ou número..."
+                placeholder="Buscar por cliente, título, número ou responsável..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type {
   ProdutoMetricas,
@@ -113,7 +113,7 @@ export function usePortfolioMetricas(escritorioId?: string) {
   }
 
   // Obter produtos mais vendidos
-  const getProdutosMaisVendidos = async (limite: number = 5): Promise<Array<{
+  const getProdutosMaisVendidos = useCallback(async (limite: number = 5): Promise<Array<{
     produto_id: string
     produto_nome: string
     produto_codigo: string
@@ -121,6 +121,7 @@ export function usePortfolioMetricas(escritorioId?: string) {
     total_execucoes: number
     receita_total: number
   }>> => {
+    if (!escritorioId) return []
     try {
       const { data, error } = await supabase
         .from('portfolio_metricas')
@@ -149,14 +150,15 @@ export function usePortfolioMetricas(escritorioId?: string) {
       console.error('Erro ao buscar produtos mais vendidos:', err)
       return []
     }
-  }
+  }, [supabase, escritorioId])
 
   // Obter receita por mês
-  const getReceitaPorMes = async (ano: number): Promise<Array<{
+  const getReceitaPorMes = useCallback(async (ano: number): Promise<Array<{
     mes: number
     receita: number
     projetos_concluidos: number
   }>> => {
+    if (!escritorioId) return []
     try {
       const { data, error } = await supabase
         .from('portfolio_projetos')
@@ -192,15 +194,16 @@ export function usePortfolioMetricas(escritorioId?: string) {
       console.error('Erro ao buscar receita por mês:', err)
       return []
     }
-  }
+  }, [supabase, escritorioId])
 
   // Obter taxa de sucesso por área
-  const getTaxaSucessoPorArea = async (): Promise<Array<{
+  const getTaxaSucessoPorArea = useCallback(async (): Promise<Array<{
     area_juridica: AreaJuridica
     total_concluidos: number
     total_sucesso: number
     taxa_sucesso: number
   }>> => {
+    if (!escritorioId) return []
     try {
       const { data, error } = await supabase
         .from('portfolio_projetos')
@@ -242,16 +245,17 @@ export function usePortfolioMetricas(escritorioId?: string) {
       console.error('Erro ao buscar taxa de sucesso por área:', err)
       return []
     }
-  }
+  }, [supabase, escritorioId])
 
   // Obter duração média por produto
-  const getDuracaoMediaPorProduto = async (): Promise<Array<{
+  const getDuracaoMediaPorProduto = useCallback(async (): Promise<Array<{
     produto_id: string
     produto_nome: string
     duracao_media_dias: number
     duracao_estimada_dias: number
     diferenca_dias: number
   }>> => {
+    if (!escritorioId) return []
     try {
       const { data, error } = await supabase
         .from('portfolio_metricas')
@@ -277,7 +281,7 @@ export function usePortfolioMetricas(escritorioId?: string) {
       console.error('Erro ao buscar duração média:', err)
       return []
     }
-  }
+  }, [supabase, escritorioId])
 
   // Carregar todas as métricas ao montar
   useEffect(() => {

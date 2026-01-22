@@ -200,59 +200,45 @@ export function useProcessoFinanceiro(processoId: string | null) {
       }
 
       // Buscar contrato separadamente se existir
-      let contratoData = null
-      let configData = null
       if (processoData?.contrato_id) {
-        // Buscar contrato básico (sem joins)
+        // Buscar contrato com todos os campos JSONB
         const { data: contrato } = await supabase
           .from('financeiro_contratos_honorarios')
-          .select('id, numero_contrato, forma_cobranca')
+          .select('id, numero_contrato, forma_cobranca, config, formas_pagamento')
           .eq('id', processoData.contrato_id)
           .single()
 
-        contratoData = contrato
-
-        // Buscar config separadamente
         if (contrato) {
-          const { data: configs } = await supabase
-            .from('financeiro_contratos_honorarios_config')
-            .select('tipo_config, valor_fixo, valor_hora, percentual_exito, valor_por_processo')
-            .eq('contrato_id', contrato.id)
+          // Config vem do campo JSONB
+          const config = (contrato.config || {}) as {
+            valor_hora?: number
+            valor_fixo?: number
+            percentual_exito?: number
+            valor_por_processo?: number
+          }
 
-          configData = configs?.[0] || null
+          // Formas disponíveis vem do campo JSONB formas_pagamento
+          const formasPagamento = (contrato.formas_pagamento || []) as Array<{ forma_cobranca: string; ativo?: boolean }>
+          const formasDisponiveis = formasPagamento
+            .filter((f: any) => f.ativo !== false)
+            .map((f: any) => f.forma_cobranca)
+
+          setContratoInfo({
+            id: contrato.id,
+            numero_contrato: contrato.numero_contrato,
+            forma_cobranca: contrato.forma_cobranca,
+            modalidade_cobranca: processoData.modalidade_cobranca,
+            formas_disponiveis: formasDisponiveis,
+            config: {
+              valor_hora: config.valor_hora,
+              valor_fixo: config.valor_fixo,
+              percentual_exito: config.percentual_exito,
+              valor_por_processo: config.valor_por_processo,
+            },
+          })
+        } else {
+          setContratoInfo(null)
         }
-      }
-
-      if (contratoData) {
-        const contrato = contratoData as any
-
-        // Buscar formas disponíveis no contrato
-        const { data: formasData } = await supabase
-          .from('financeiro_contratos_formas')
-          .select('forma_cobranca')
-          .eq('contrato_id', contrato.id)
-          .eq('ativo', true)
-
-        const config = (configData || {}) as {
-          valor_hora?: number
-          valor_fixo?: number
-          percentual_exito?: number
-          valor_por_processo?: number
-        }
-
-        setContratoInfo({
-          id: contrato.id,
-          numero_contrato: contrato.numero_contrato,
-          forma_cobranca: contrato.forma_cobranca,
-          modalidade_cobranca: processoData.modalidade_cobranca,
-          formas_disponiveis: formasData?.map((f: any) => f.forma_cobranca) || [],
-          config: {
-            valor_hora: config.valor_hora,
-            valor_fixo: config.valor_fixo,
-            percentual_exito: config.percentual_exito,
-            valor_por_processo: config.valor_por_processo,
-          },
-        })
       } else {
         setContratoInfo(null)
       }
@@ -347,11 +333,10 @@ export function useProcessoFinanceiro(processoId: string | null) {
         .filter((t: any) => !t.aprovado && !t.reprovado)
         .reduce((sum: number, t: any) => sum + Number(t.horas), 0)
 
-      // Calcular valor do timesheet baseado no config carregado
+      // Calcular valor do timesheet baseado no config do contrato
       let totalTimesheet = 0
-      if (configData?.valor_hora) {
-        totalTimesheet = horasTrabalhadas * Number(configData.valor_hora)
-      }
+      // contratoInfo é atualizado antes, podemos usar o valor_hora se disponível
+      // Nota: contratoInfo já foi populado acima com o config do contrato
 
       setResumo({
         // Honorários

@@ -29,15 +29,12 @@ import {
   User,
   Calendar,
   DollarSign,
-  Clock,
-  Percent,
   CheckCircle,
   Loader2,
   Search,
   Folders,
   Gavel,
   Users,
-  Briefcase,
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -72,12 +69,9 @@ const TIPO_SERVICO_OPTIONS = [
 
 const FORMA_COBRANCA_OPTIONS = [
   { value: 'fixo', label: 'Valor Fixo', description: 'Valor único ou parcelado', icon: DollarSign },
-  { value: 'por_hora', label: 'Por Hora', description: 'Cobrança por hora trabalhada', icon: Clock },
   { value: 'por_cargo', label: 'Por Cargo/Timesheet', description: 'Valor hora por cargo (sênior, pleno, etc)', icon: Users },
   { value: 'por_pasta', label: 'Por Pasta Mensal', description: 'Valor fixo × número de processos', icon: Folders },
   { value: 'por_ato', label: 'Por Ato Processual', description: '% do valor da causa por ato', icon: Gavel },
-  { value: 'por_etapa', label: 'Por Etapa', description: 'Valores por fase do processo', icon: CheckCircle },
-  { value: 'misto', label: 'Misto', description: 'Combinação de formas', icon: FileText },
 ]
 
 const AREAS_JURIDICAS = [
@@ -90,12 +84,6 @@ const AREAS_JURIDICAS = [
   { value: 'consumidor', label: 'Consumidor' },
 ]
 
-const ETAPAS_PADRAO = [
-  { key: 'inicial', label: 'Petição Inicial' },
-  { key: 'sentenca', label: 'Sentença' },
-  { key: 'recurso', label: 'Recurso' },
-  { key: 'exito', label: 'Êxito' },
-]
 
 export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultClienteId }: ContratoModalProps) {
   const supabase = createClient()
@@ -130,6 +118,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
   // Dados do formulário
   const [formData, setFormData] = useState<ContratoFormData>({
     cliente_id: '',
+    titulo: '',
     tipo_servico: 'processo',
     forma_cobranca: 'fixo',
     formas_selecionadas: ['fixo'], // Múltiplas formas
@@ -156,75 +145,77 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
   useEffect(() => {
     const loadContratoData = async () => {
       if (contrato) {
-        // Buscar formas de cobrança da tabela financeiro_contratos_formas
-        const { data: formasData } = await supabase
-          .from('financeiro_contratos_formas')
-          .select('forma_cobranca')
-          .eq('contrato_id', contrato.id)
-          .eq('ativo', true)
-          .order('ordem')
+        // Buscar contrato com campos JSONB
+        const { data: contratoData } = await supabase
+          .from('financeiro_contratos_honorarios')
+          .select('formas_pagamento, config')
+          .eq('id', contrato.id)
+          .single()
 
-        const formasSelecionadas = formasData?.map(f => f.forma_cobranca) || [contrato.forma_cobranca]
+        // Extrair formas de cobrança do JSONB
+        const formasPagamento = (contratoData?.formas_pagamento || []) as Array<{ forma: string }>
+        const formasValidas = ['fixo', 'por_cargo', 'por_pasta', 'por_ato']
+        const formasSelecionadas = formasPagamento.length > 0
+          ? formasPagamento.map(f => f.forma).filter(f => formasValidas.includes(f))
+          : [contrato.forma_cobranca].filter(f => formasValidas.includes(f))
 
-        // Buscar valores por cargo se aplicável
+        // Extrair config do JSONB
+        const configJsonb = (contratoData?.config || {}) as Record<string, unknown>
+
+        // Extrair valores por cargo do JSONB config
         let valoresPorCargo: ValorPorCargo[] = []
-        if (formasSelecionadas.includes('por_cargo')) {
-          const { data: cargosData } = await supabase
-            .from('financeiro_contratos_valores_cargo')
-            .select('cargo_id, valor_hora_negociado')
-            .eq('contrato_id', contrato.id)
-
-          if (cargosData) {
-            valoresPorCargo = cargosData.map(c => ({
-              cargo_id: c.cargo_id,
-              cargo_nome: '', // Será preenchido pelo componente
-              valor_padrao: undefined,
-              valor_negociado: c.valor_hora_negociado,
-            }))
-          }
+        if (formasSelecionadas.includes('por_cargo') && configJsonb.valores_por_cargo) {
+          const cargosData = configJsonb.valores_por_cargo as Array<{
+            cargo_id: string
+            cargo_nome?: string
+            valor_negociado?: number
+          }>
+          valoresPorCargo = cargosData.map(c => ({
+            cargo_id: c.cargo_id,
+            cargo_nome: c.cargo_nome || '',
+            valor_padrao: undefined,
+            valor_negociado: c.valor_negociado,
+          }))
         }
 
-        // Buscar atos configurados se aplicável
+        // Extrair atos configurados do JSONB config
         let atosConfigurados: AtoContrato[] = []
-        if (formasSelecionadas.includes('por_ato')) {
-          const { data: atosData } = await supabase
-            .from('financeiro_contratos_atos')
-            .select('ato_tipo_id, percentual_valor_causa, valor_fixo')
-            .eq('contrato_id', contrato.id)
-
-          if (atosData) {
-            atosConfigurados = atosData.map(a => ({
-              ato_tipo_id: a.ato_tipo_id,
-              ato_nome: '', // Será preenchido pelo componente
-              percentual_valor_causa: a.percentual_valor_causa || undefined,
-              valor_fixo: a.valor_fixo || undefined,
-            }))
-          }
+        if (formasSelecionadas.includes('por_ato') && configJsonb.atos_configurados) {
+          const atosData = configJsonb.atos_configurados as Array<{
+            ato_tipo_id: string
+            ato_nome?: string
+            percentual_valor_causa?: number
+            valor_fixo?: number
+          }>
+          atosConfigurados = atosData.map(a => ({
+            ato_tipo_id: a.ato_tipo_id,
+            ato_nome: a.ato_nome || '',
+            percentual_valor_causa: a.percentual_valor_causa || undefined,
+            valor_fixo: a.valor_fixo || undefined,
+          }))
         }
 
-        // Buscar config de pasta se aplicável
-        const configPasta = contrato.config?.find((c) => c.tipo_config === 'pasta')
+        // Config de pasta vem do JSONB
+        const valorPorProcesso = configJsonb.valor_por_processo as number | undefined
+        const diaCobranca = configJsonb.dia_cobranca as number | undefined
 
         setFormData({
           cliente_id: contrato.cliente_id,
+          titulo: contrato.titulo || '',
           tipo_servico: contrato.tipo_servico,
           forma_cobranca: contrato.forma_cobranca,
           formas_selecionadas: formasSelecionadas,
           data_inicio: contrato.data_inicio,
           data_fim: contrato.data_fim || '',
           observacoes: contrato.observacoes || '',
-          valor_fixo: contrato.config?.find((c) => c.tipo_config === 'fixo')?.valor_fixo || undefined,
-          valor_hora: contrato.config?.find((c) => c.tipo_config === 'hora')?.valor_hora || undefined,
-          horas_estimadas:
-            contrato.config?.find((c) => c.tipo_config === 'hora')?.horas_estimadas || undefined,
-          etapas_valores:
-            (contrato.config?.find((c) => c.tipo_config === 'etapa')?.etapas_valores as Record<string, number>) || {},
-          percentual_exito:
-            contrato.config?.find((c) => c.tipo_config === 'exito')?.percentual_exito || undefined,
-          valor_minimo_exito:
-            contrato.config?.find((c) => c.tipo_config === 'exito')?.valor_minimo_exito || undefined,
-          valor_por_processo: configPasta?.valor_por_processo || undefined,
-          dia_cobranca: configPasta?.dia_cobranca || undefined,
+          valor_fixo: (configJsonb.valor_fixo as number) || undefined,
+          valor_hora: (configJsonb.valor_hora as number) || undefined,
+          horas_estimadas: (configJsonb.horas_estimadas as number) || undefined,
+          etapas_valores: (configJsonb.etapas_valores as Record<string, number>) || {},
+          percentual_exito: (configJsonb.percentual_exito as number) || undefined,
+          valor_minimo_exito: (configJsonb.valor_minimo_exito as number) || undefined,
+          valor_por_processo: valorPorProcesso || undefined,
+          dia_cobranca: diaCobranca || undefined,
           valores_por_cargo: valoresPorCargo,
           atos_configurados: atosConfigurados,
         })
@@ -239,6 +230,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
         // Reset form para novo contrato
         setFormData({
           cliente_id: '',
+          titulo: '',
           tipo_servico: 'processo',
           forma_cobranca: 'fixo',
           formas_selecionadas: [],
@@ -410,18 +402,22 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
     }
   }
 
-  // Carregar cargos e atos quando necessário (usando formas_selecionadas)
+  // Carregar cargos quando necessário
   useEffect(() => {
     const formas = formData.formas_selecionadas || []
-    if (open && escritorioAtivo) {
-      if (formas.includes('por_cargo')) {
-        loadCargos()
-      }
-      if (formas.includes('por_ato') && formData.area_juridica) {
-        loadAtos(formData.area_juridica)
-      }
+    if (open && escritorioAtivo && formas.includes('por_cargo')) {
+      loadCargos()
     }
-  }, [open, escritorioAtivo, formData.formas_selecionadas, formData.area_juridica])
+  }, [open, escritorioAtivo, JSON.stringify(formData.formas_selecionadas)])
+
+  // Carregar atos quando por_ato for selecionado ou área mudar
+  useEffect(() => {
+    const formas = formData.formas_selecionadas || []
+    if (open && escritorioAtivo && formas.includes('por_ato')) {
+      const area = formData.area_juridica || 'civel'
+      loadAtos(area)
+    }
+  }, [open, escritorioAtivo, JSON.stringify(formData.formas_selecionadas), formData.area_juridica])
 
   // Handler para salvar
   const handleSave = async () => {
@@ -450,18 +446,6 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
 
         if (formas.includes('fixo') && (formData.valor_fixo || 0) > 0) {
           hasValidValue = true
-        }
-        if (formas.includes('por_hora') && (formData.valor_hora || 0) > 0) {
-          hasValidValue = true
-        }
-        if (formas.includes('por_etapa')) {
-          const etapas = formData.etapas_valores || {}
-          if (Object.values(etapas).some((v) => v > 0)) hasValidValue = true
-        }
-        if (formas.includes('misto')) {
-          if ((formData.valor_hora || 0) > 0 || (formData.percentual_exito || 0) > 0) {
-            hasValidValue = true
-          }
         }
         if (formas.includes('por_pasta') && (formData.valor_por_processo || 0) > 0) {
           hasValidValue = true
@@ -494,12 +478,6 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
   const calcularValorTotal = () => {
     let total = 0
     if (formData.valor_fixo) total += formData.valor_fixo
-    if (formData.valor_hora && formData.horas_estimadas) {
-      total += formData.valor_hora * formData.horas_estimadas
-    }
-    if (formData.etapas_valores) {
-      total += Object.values(formData.etapas_valores).reduce((sum, v) => sum + (v || 0), 0)
-    }
     return total
   }
 
@@ -622,15 +600,31 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                 </CardContent>
               </Card>
             )}
+
+            {/* Campo de Título do Contrato */}
+            <div className="space-y-2">
+              <Label htmlFor="titulo">Título do Contrato</Label>
+              <Input
+                id="titulo"
+                placeholder="Ex: Ação Trabalhista - Rescisão Indireta"
+                value={formData.titulo || ''}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, titulo: e.target.value }))
+                }
+              />
+              <p className="text-xs text-slate-500">
+                Título de referência para identificar o contrato (opcional)
+              </p>
+            </div>
           </div>
         )}
 
         {/* Step 2: Tipo de Serviço e Forma de Cobrança */}
         {step === 2 && (
           <div className="space-y-6 py-4">
-            <div className="space-y-3">
+            <div className="space-y-2">
               <Label>Tipo de Serviço</Label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-4 gap-2">
                 {TIPO_SERVICO_OPTIONS.map((option) => (
                   <Card
                     key={option.value}
@@ -646,9 +640,8 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                       }))
                     }
                   >
-                    <CardContent className="p-3">
-                      <p className="font-medium text-sm text-[#34495e]">{option.label}</p>
-                      <p className="text-xs text-slate-500 mt-1">{option.description}</p>
+                    <CardContent className="p-2 text-center">
+                      <p className="font-medium text-xs text-[#34495e]">{option.label}</p>
                     </CardContent>
                   </Card>
                 ))}
@@ -754,12 +747,11 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
         {/* Step 3: Valores */}
         {step === 3 && (
           <div className="space-y-4 py-4">
-            {/* Grid para cards pequenos lado a lado */}
-            {(((formData.formas_selecionadas || []).includes('fixo') || (formData.formas_selecionadas || []).includes('misto')) ||
-              ((formData.formas_selecionadas || []).includes('por_hora') || (formData.formas_selecionadas || []).includes('misto'))) && (
+            {/* Grid para Valor Fixo e Por Pasta lado a lado */}
+            {((formData.formas_selecionadas || []).includes('fixo') || (formData.formas_selecionadas || []).includes('por_pasta')) && (
               <div className="grid grid-cols-2 gap-4">
                 {/* Valor Fixo */}
-                {((formData.formas_selecionadas || []).includes('fixo') || (formData.formas_selecionadas || []).includes('misto')) && (
+                {(formData.formas_selecionadas || []).includes('fixo') && (
                   <Card>
                     <CardHeader className="pb-2 pt-3">
                       <CardTitle className="text-sm flex items-center gap-2">
@@ -786,64 +778,6 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                   </Card>
                 )}
 
-                {/* Por Hora */}
-                {((formData.formas_selecionadas || []).includes('por_hora') || (formData.formas_selecionadas || []).includes('misto')) && (
-                  <Card>
-                    <CardHeader className="pb-2 pt-3">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-[#89bcbe]" />
-                        Por Hora
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pb-3">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label htmlFor="valor_hora" className="text-xs">Valor/h</Label>
-                          <Input
-                            id="valor_hora"
-                            type="number"
-                            placeholder="0,00"
-                            value={formData.valor_hora || ''}
-                            onChange={(e) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                valor_hora: e.target.value ? parseFloat(e.target.value) : undefined,
-                              }))
-                            }
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="horas_estimadas" className="text-xs">Horas Est.</Label>
-                          <Input
-                            id="horas_estimadas"
-                            type="number"
-                            placeholder="0"
-                            value={formData.horas_estimadas || ''}
-                            onChange={(e) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                horas_estimadas: e.target.value ? parseFloat(e.target.value) : undefined,
-                              }))
-                            }
-                            className="mt-1"
-                          />
-                        </div>
-                      </div>
-                      {formData.valor_hora && formData.horas_estimadas && (
-                        <p className="text-xs text-slate-600 mt-2">
-                          Est.: <span className="font-semibold text-[#34495e]">{formatCurrency(formData.valor_hora * formData.horas_estimadas)}</span>
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            )}
-
-            {/* Grid para Pasta + Êxito */}
-            {((formData.formas_selecionadas || []).includes('por_pasta') || (formData.formas_selecionadas || []).includes('misto')) && (
-              <div className="grid grid-cols-2 gap-4">
                 {/* Por Pasta Mensal */}
                 {(formData.formas_selecionadas || []).includes('por_pasta') && (
                   <Card>
@@ -898,93 +832,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                     </CardContent>
                   </Card>
                 )}
-
-                {/* Êxito */}
-                {(formData.formas_selecionadas || []).includes('misto') && (
-                  <Card>
-                    <CardHeader className="pb-2 pt-3">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <Percent className="h-4 w-4 text-[#89bcbe]" />
-                        Êxito
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pb-3">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label htmlFor="percentual_exito" className="text-xs">Percentual</Label>
-                          <Input
-                            id="percentual_exito"
-                            type="number"
-                            placeholder="0%"
-                            max="100"
-                            value={formData.percentual_exito || ''}
-                            onChange={(e) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                percentual_exito: e.target.value ? parseFloat(e.target.value) : undefined,
-                              }))
-                            }
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="valor_minimo_exito" className="text-xs">Mínimo (R$)</Label>
-                          <Input
-                            id="valor_minimo_exito"
-                            type="number"
-                            placeholder="0,00"
-                            value={formData.valor_minimo_exito || ''}
-                            onChange={(e) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                valor_minimo_exito: e.target.value ? parseFloat(e.target.value) : undefined,
-                              }))
-                            }
-                            className="mt-1"
-                          />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
               </div>
-            )}
-
-            {/* Por Etapa - Grid 2x2 */}
-            {((formData.formas_selecionadas || []).includes('por_etapa') || (formData.formas_selecionadas || []).includes('misto')) && (
-              <Card>
-                <CardHeader className="pb-2 pt-3">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-[#89bcbe]" />
-                    Valores por Etapa
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pb-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    {ETAPAS_PADRAO.map((etapa) => (
-                      <div key={etapa.key} className="flex items-center gap-2">
-                        <Label className="w-24 flex-shrink-0 text-xs">{etapa.label}</Label>
-                        <Input
-                          type="number"
-                          placeholder="0,00"
-                          value={formData.etapas_valores?.[etapa.key] || ''}
-                          onChange={(e) => {
-                            const newValue = e.target.value ? parseFloat(e.target.value) : 0
-                            setFormData((prev) => ({
-                              ...prev,
-                              etapas_valores: {
-                                ...prev.etapas_valores,
-                                [etapa.key]: newValue,
-                              },
-                            }))
-                          }}
-                          className="h-8"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
             )}
 
             {/* Por Cargo/Timesheet - Grid 2 colunas */}
@@ -1074,57 +922,79 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                       <p className="text-xs">Nenhum ato cadastrado para esta área</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       {formData.atos_configurados?.filter(a => a.ativo !== false).map((ato, index) => {
                         const realIndex = formData.atos_configurados?.findIndex(a => a.ato_tipo_id === ato.ato_tipo_id) ?? index
                         return (
-                          <div key={ato.ato_tipo_id} className="flex items-center gap-1.5 p-2 rounded bg-slate-50">
-                            <span className="text-xs font-medium text-[#34495e] w-24 truncate" title={ato.ato_nome}>
-                              {ato.ato_nome}
-                            </span>
-                            <Input
-                              type="number"
-                              placeholder="%"
-                              value={ato.percentual_valor_causa || ''}
-                              onChange={(e) => {
-                                const newAtos = [...(formData.atos_configurados || [])]
-                                newAtos[realIndex] = {
-                                  ...newAtos[realIndex],
-                                  percentual_valor_causa: e.target.value ? parseFloat(e.target.value) : undefined,
-                                }
-                                setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
-                              }}
-                              className="h-7 w-14"
-                            />
-                            <span className="text-[10px] text-slate-400">%</span>
-                            <span className="text-[10px] text-slate-300">|</span>
-                            <Input
-                              type="number"
-                              placeholder="R$"
-                              value={ato.valor_fixo || ''}
-                              onChange={(e) => {
-                                const newAtos = [...(formData.atos_configurados || [])]
-                                newAtos[realIndex] = {
-                                  ...newAtos[realIndex],
-                                  valor_fixo: e.target.value ? parseFloat(e.target.value) : undefined,
-                                }
-                                setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
-                              }}
-                              className="h-7 w-16"
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 text-slate-300 hover:text-red-500 hover:bg-red-50"
-                              onClick={() => {
-                                const newAtos = [...(formData.atos_configurados || [])]
-                                newAtos[realIndex] = { ...newAtos[realIndex], ativo: false }
-                                setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
-                              }}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
+                          <div key={ato.ato_tipo_id} className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <Input
+                                type="text"
+                                value={ato.ato_nome || ''}
+                                onChange={(e) => {
+                                  const newAtos = [...(formData.atos_configurados || [])]
+                                  newAtos[realIndex] = {
+                                    ...newAtos[realIndex],
+                                    ato_nome: e.target.value,
+                                  }
+                                  setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
+                                }}
+                                placeholder="Nome do ato"
+                                className="h-7 text-xs font-medium text-[#34495e] bg-white border border-slate-200 hover:border-[#89bcbe] focus:border-[#89bcbe] px-2 flex-1"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-slate-300 hover:text-red-500 hover:bg-red-50 flex-shrink-0"
+                                onClick={() => {
+                                  const newAtos = [...(formData.atos_configurados || [])]
+                                  newAtos[realIndex] = { ...newAtos[realIndex], ativo: false }
+                                  setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
+                                }}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  placeholder="0"
+                                  value={ato.percentual_valor_causa || ''}
+                                  onChange={(e) => {
+                                    const newAtos = [...(formData.atos_configurados || [])]
+                                    newAtos[realIndex] = {
+                                      ...newAtos[realIndex],
+                                      percentual_valor_causa: e.target.value ? parseFloat(e.target.value) : undefined,
+                                    }
+                                    setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
+                                  }}
+                                  className="h-8 w-20 text-center"
+                                />
+                                <span className="text-xs text-slate-500">%</span>
+                              </div>
+                              <span className="text-slate-300">ou</span>
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs text-slate-500">R$</span>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  placeholder="0,00"
+                                  value={ato.valor_fixo || ''}
+                                  onChange={(e) => {
+                                    const newAtos = [...(formData.atos_configurados || [])]
+                                    newAtos[realIndex] = {
+                                      ...newAtos[realIndex],
+                                      valor_fixo: e.target.value ? parseFloat(e.target.value) : undefined,
+                                    }
+                                    setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
+                                  }}
+                                  className="h-8 w-24"
+                                />
+                              </div>
+                            </div>
                           </div>
                         )
                       })}
@@ -1203,36 +1073,6 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                         <span className="font-medium">{formatCurrency(formData.valor_fixo)}</span>
                       </div>
                     )}
-                    {formData.valor_hora && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Valor/Hora:</span>
-                        <span className="font-medium">{formatCurrency(formData.valor_hora)}</span>
-                      </div>
-                    )}
-                    {formData.horas_estimadas && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Horas Estimadas:</span>
-                        <span className="font-medium">{formData.horas_estimadas}h</span>
-                      </div>
-                    )}
-                    {formData.etapas_valores &&
-                      Object.entries(formData.etapas_valores).map(([key, value]) =>
-                        value ? (
-                          <div key={key} className="flex justify-between text-sm">
-                            <span className="text-slate-600">
-                              {ETAPAS_PADRAO.find((e) => e.key === key)?.label}:
-                            </span>
-                            <span className="font-medium">{formatCurrency(value)}</span>
-                          </div>
-                        ) : null
-                      )}
-                    {formData.percentual_exito && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Êxito:</span>
-                        <span className="font-medium">{formData.percentual_exito}%</span>
-                      </div>
-                    )}
-                    {/* Novos tipos */}
                     {formData.valor_por_processo && (
                       <div className="flex justify-between text-sm">
                         <span className="text-slate-600">Valor por Processo:</span>
@@ -1322,7 +1162,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
             <Button
               onClick={() => setStep((s) => s + 1)}
               disabled={!canProceed()}
-              className="bg-[#89bcbe] hover:bg-[#6ba9ab]"
+              className="bg-[#34495e] hover:bg-[#46627f] text-white shadow-sm"
             >
               Continuar
             </Button>
@@ -1330,7 +1170,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="bg-[#89bcbe] hover:bg-[#6ba9ab]"
+              className="bg-[#34495e] hover:bg-[#46627f] text-white shadow-sm"
             >
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {contrato ? 'Salvar Alterações' : 'Criar Contrato'}

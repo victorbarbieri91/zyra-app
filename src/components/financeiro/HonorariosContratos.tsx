@@ -94,7 +94,7 @@ const getTipoBadge = (forma: ContratoHonorario['forma_cobranca']) => {
     },
     por_etapa: {
       label: 'Por Etapa',
-      class: 'bg-emerald-100 text-emerald-700',
+      class: 'bg-slate-100 text-slate-700',
       icon: <TrendingUp className="w-3 h-3" />,
     },
     misto: {
@@ -415,11 +415,19 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                     <CardContent className="p-4">
                       {/* Header */}
                       <div className="flex items-start justify-between mb-3">
-                        <div>
+                        <div className="flex-1 min-w-0 pr-2">
                           <p className="text-xs font-semibold text-[#89bcbe]">{contrato.numero_contrato}</p>
-                          <h4 className="text-sm font-semibold text-[#34495e] mt-1">
+                          {contrato.titulo && (
+                            <h4 className="text-sm font-semibold text-[#34495e] mt-1 truncate" title={contrato.titulo}>
+                              {contrato.titulo}
+                            </h4>
+                          )}
+                          <p className={cn(
+                            "text-slate-600 truncate",
+                            contrato.titulo ? "text-xs mt-0.5" : "text-sm font-semibold text-[#34495e] mt-1"
+                          )} title={contrato.cliente_nome}>
                             {contrato.cliente_nome}
-                          </h4>
+                          </p>
                         </div>
                         <div className="flex flex-col gap-1 items-end">
                           {/* Múltiplas formas de cobrança */}
@@ -545,6 +553,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-xs">Contrato</TableHead>
+                    <TableHead className="text-xs">Título</TableHead>
                     <TableHead className="text-xs">Cliente</TableHead>
                     <TableHead className="text-xs">Tipo de Cobrança</TableHead>
                     <TableHead className="text-xs">Vigência</TableHead>
@@ -569,7 +578,10 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                         <TableCell className="text-xs font-medium text-[#89bcbe]">
                           {contrato.numero_contrato}
                         </TableCell>
-                        <TableCell className="text-xs font-medium text-[#34495e]">
+                        <TableCell className="text-xs font-medium text-[#34495e] max-w-[200px] truncate" title={contrato.titulo || ''}>
+                          {contrato.titulo || '-'}
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-600">
                           {contrato.cliente_nome}
                         </TableCell>
                         <TableCell>

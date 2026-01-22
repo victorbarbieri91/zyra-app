@@ -178,7 +178,7 @@ export default function ProcessosPage() {
     try {
       setLoading(true)
 
-      // Usar view que já inclui última movimentação e contagem de não lidas
+      // Usar view que já inclui última movimentação, contagem de não lidas, cliente e responsável
       let query = supabase
         .from('v_processos_com_movimentacoes')
         .select(`
@@ -194,14 +194,16 @@ export default function ProcessosPage() {
           responsavel_id,
           cliente_id,
           escavador_monitoramento_id,
+          cliente_nome,
+          responsavel_nome,
           ultima_movimentacao,
           movimentacoes_nao_lidas
         `, { count: 'exact' })
 
-      // Apply search filter
+      // Apply search filter - busca por CNJ, pasta, parte contrária, cliente e responsável
       if (debouncedSearch.trim()) {
         const searchTerm = `%${debouncedSearch.trim()}%`
-        query = query.or(`numero_cnj.ilike.${searchTerm},numero_pasta.ilike.${searchTerm},parte_contraria.ilike.${searchTerm}`)
+        query = query.or(`numero_cnj.ilike.${searchTerm},numero_pasta.ilike.${searchTerm},parte_contraria.ilike.${searchTerm},cliente_nome.ilike.${searchTerm},responsavel_nome.ilike.${searchTerm}`)
       }
 
       // Apply view filter
@@ -232,28 +234,8 @@ export default function ProcessosPage() {
 
       setTotalCount(count || 0)
 
-      // Buscar dados de cliente e responsável para os processos carregados
-      const processoIds = (data || []).map((p: { id: string }) => p.id)
-      const clienteIds = (data || []).map((p: { cliente_id: string }) => p.cliente_id).filter(Boolean)
-      const responsavelIds = (data || []).map((p: { responsavel_id: string }) => p.responsavel_id).filter(Boolean)
-
-      // Buscar clientes
-      const { data: clientes } = await supabase
-        .from('crm_pessoas')
-        .select('id, nome_completo')
-        .in('id', clienteIds)
-
-      const clientesMap = new Map((clientes || []).map(c => [c.id, c.nome_completo]))
-
-      // Buscar responsáveis
-      const { data: responsaveis } = await supabase
-        .from('profiles')
-        .select('id, nome_completo')
-        .in('id', responsavelIds)
-
-      const responsaveisMap = new Map((responsaveis || []).map(r => [r.id, r.nome_completo]))
-
       // Buscar prazos críticos (próximos 7 dias) via view
+      const processoIds = (data || []).map((p: { id: string }) => p.id)
       const { data: prazosCriticos } = await supabase
         .from('v_prazos_criticos')
         .select('id')
@@ -267,16 +249,17 @@ export default function ProcessosPage() {
       )
 
       // Transformar dados do banco para o formato da interface
+      // cliente_nome e responsavel_nome já vêm diretamente da view
       const processosFormatados: Processo[] = (data || []).map((p: any) => ({
         id: p.id,
         numero_pasta: p.numero_pasta,
         numero_cnj: p.numero_cnj,
-        cliente_nome: clientesMap.get(p.cliente_id) || 'N/A',
+        cliente_nome: p.cliente_nome || 'N/A',
         parte_contraria: p.parte_contraria || 'Não informado',
         area: formatArea(p.area),
         fase: formatFase(p.fase),
         instancia: formatInstancia(p.instancia),
-        responsavel_nome: responsaveisMap.get(p.responsavel_id) || 'N/A',
+        responsavel_nome: p.responsavel_nome || 'N/A',
         status: p.status,
         ultima_movimentacao: p.ultima_movimentacao,
         movimentacoes_nao_lidas: p.movimentacoes_nao_lidas || 0,
@@ -468,7 +451,7 @@ export default function ProcessosPage() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 )}
                 <Input
-                  placeholder="Buscar por número CNJ, pasta ou parte contrária..."
+                  placeholder="Buscar por cliente, CNJ, pasta, parte contrária ou responsável..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"

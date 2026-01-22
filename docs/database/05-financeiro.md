@@ -1,8 +1,9 @@
 # Módulo: Financeiro
 
 **Status**: ✅ Completo
-**Última atualização**: 2025-01-21
+**Última atualização**: 2025-01-21 (ENUMs padronizados)
 **Tabelas**: 30 tabelas (incluindo cartões de crédito)
+**View de Referência**: `v_financeiro_enums` - consulte para ENUMs atualizados
 
 ## Visão Geral
 
@@ -102,21 +103,24 @@ O módulo Financeiro é o maior e mais complexo do sistema, gerenciando:
 | `created_at` | timestamptz | YES | now() | Data de criação |
 | `updated_at` | timestamptz | YES | now() | Data de atualização |
 
-**Tipos de Contrato**:
-- `contencioso` - Processos judiciais
-- `consultivo` - Consultoria jurídica
-- `trabalhista` - Área trabalhista
-- `tributario` - Área tributária
-- `societario` - Área societária
-- `criminal` - Área criminal
-
-**Formas de Cobrança**:
-- `fixo` - Valor mensal fixo
+**Tipos de Contrato** (CHECK constraint):
+- `processo` - Contrato para processo judicial
+- `consultoria` - Consultoria jurídica
+- `avulso` - Serviço avulso
+- `misto` - Combinação de tipos
+- `fixo` - Contrato fixo
 - `hora` - Por hora trabalhada
-- `exito` - Percentual sobre êxito
-- `por_ato` - Por ato processual
-- `por_processo` - Valor fixo por processo
+- `exito` - Baseado em êxito
+- `recorrente` - Contrato recorrente/mensal
+
+**Formas de Cobrança** (CHECK constraint):
+- `fixo` - Valor fixo
+- `por_hora` - Por hora trabalhada
+- `por_etapa` - Por etapa do processo
 - `misto` - Combinação de formas
+- `por_pasta` - Por pasta/processo
+- `por_ato` - Por ato processual
+- `por_cargo` - Valor por cargo/hora do profissional
 
 ---
 
@@ -263,7 +267,7 @@ O módulo Financeiro é o maior e mais complexo do sistema, gerenciando:
 | `consulta_id` | uuid | YES | - | FK para consulta (opcional) |
 | `fatura_id` | uuid | YES | - | FK para fatura (quando faturado) |
 | `numero_interno` | text | NO | - | Número sequencial interno |
-| `tipo_honorario` | text | NO | - | Tipo: `inicial`, `mensal`, `exito`, `ato`, `avulso` |
+| `tipo_honorario` | text | NO | - | Tipo: `fixo`, `hora`, `exito`, `misto` |
 | `descricao` | text | NO | - | Descrição do serviço |
 | `valor_total` | numeric | NO | - | Valor total |
 | `parcelado` | boolean | YES | false | Se é parcelado |
@@ -274,13 +278,11 @@ O módulo Financeiro é o maior e mais complexo do sistema, gerenciando:
 | `created_at` | timestamptz | YES | now() | Data de criação |
 | `updated_at` | timestamptz | YES | now() | Data de atualização |
 
-**Status possíveis**:
+**Status possíveis** (CHECK constraint):
 - `rascunho` - Em elaboração
-- `pendente` - Aguardando pagamento
-- `parcial` - Parcialmente pago
-- `pago` - Totalmente pago
-- `cancelado` - Cancelado
+- `aprovado` - Aprovado, aguardando faturamento/pagamento
 - `faturado` - Incluído em fatura
+- `cancelado` - Cancelado
 
 **Estrutura do JSONB `etapas_valores`** (para êxito):
 ```json
@@ -408,13 +410,12 @@ O módulo Financeiro é o maior e mais complexo do sistema, gerenciando:
 | `created_at` | timestamptz | YES | now() | Data de criação |
 | `updated_at` | timestamptz | YES | now() | Data de atualização |
 
-**Status possíveis**:
+**Status possíveis** (CHECK constraint):
 - `rascunho` - Em elaboração
 - `emitida` - Emitida, aguardando envio
 - `enviada` - Enviada ao cliente
 - `paga` - Totalmente paga
-- `parcial` - Parcialmente paga
-- `vencida` - Vencida
+- `atrasada` - Pagamento atrasado
 - `cancelada` - Cancelada
 
 ---
@@ -555,7 +556,7 @@ O módulo Financeiro é o maior e mais complexo do sistema, gerenciando:
 | `banco` | text | NO | - | Nome do banco |
 | `agencia` | text | NO | - | Número da agência |
 | `numero_conta` | text | NO | - | Número da conta |
-| `tipo_conta` | text | NO | - | Tipo: `corrente`, `poupanca`, `pagamento` |
+| `tipo_conta` | text | NO | - | Tipo: `corrente`, `poupanca`, `digital` |
 | `titular` | text | NO | - | Nome do titular |
 | `saldo_inicial` | numeric | NO | 0 | Saldo inicial |
 | `saldo_atual` | numeric | NO | 0 | Saldo atual calculado |
@@ -583,7 +584,7 @@ O módulo Financeiro é o maior e mais complexo do sistema, gerenciando:
 | `data_lancamento` | date | NO | CURRENT_DATE | Data do lançamento |
 | `descricao` | text | NO | - | Descrição |
 | `categoria` | text | YES | - | Categoria do lançamento |
-| `origem_tipo` | text | NO | - | Origem: `honorario`, `despesa`, `manual`, `transferencia` |
+| `origem_tipo` | text | NO | - | Origem: `pagamento`, `despesa`, `transferencia`, `manual` |
 | `origem_id` | uuid | YES | - | ID do registro de origem |
 | `transferencia_id` | uuid | YES | - | ID da transferência (para transferências) |
 | `saldo_apos_lancamento` | numeric | NO | - | Saldo após este lançamento |
@@ -706,16 +707,21 @@ O módulo Financeiro é o maior e mais complexo do sistema, gerenciando:
 | `created_at` | timestamptz | YES | now() | Data de criação |
 | `updated_at` | timestamptz | YES | now() | Data de atualização |
 
-**Categorias comuns**:
-- `aluguel` - Aluguel do escritório
-- `salarios` - Salários e encargos
-- `servicos` - Serviços terceirizados
+**Categorias** (CHECK constraint):
 - `custas` - Custas processuais
-- `correio` - Despesas postais
-- `telefone` - Telefonia
-- `software` - Software e sistemas
+- `fornecedor` - Pagamento a fornecedores
+- `folha` - Folha de pagamento/salários
+- `impostos` - Impostos e tributos
+- `aluguel` - Aluguel do escritório
 - `marketing` - Marketing e publicidade
+- `capacitacao` - Treinamentos e cursos
+- `material` - Material de escritório
+- `tecnologia` - Software e hardware
 - `viagem` - Viagens e deslocamentos
+- `alimentacao` - Refeições e alimentação
+- `combustivel` - Combustível
+- `assinatura` - Assinaturas e mensalidades
+- `cartao_credito` - Fatura de cartão de crédito
 - `outros` - Outros
 
 ---
@@ -832,7 +838,7 @@ O módulo Financeiro é o maior e mais complexo do sistema, gerenciando:
 | `fatura_id` | uuid | YES | - | FK para fatura criada |
 | `arquivo_nome` | text | NO | - | Nome do arquivo |
 | `arquivo_url` | text | NO | - | URL do arquivo |
-| `status` | text | NO | 'pendente' | Status: `pendente`, `processando`, `sucesso`, `erro` |
+| `status` | text | NO | 'pendente' | Status: `pendente`, `processando`, `concluido`, `erro` |
 | `transacoes_encontradas` | integer | YES | 0 | Total de transações encontradas |
 | `transacoes_importadas` | integer | YES | 0 | Total importadas |
 | `transacoes_duplicadas` | integer | YES | 0 | Total de duplicadas ignoradas |
@@ -1035,10 +1041,94 @@ O módulo Financeiro é o maior e mais complexo do sistema, gerenciando:
 
 ---
 
+## Referência de ENUMs Padronizados
+
+**IMPORTANTE**: Consulte a view `v_financeiro_enums` no banco de dados para a referência completa e sempre atualizada.
+
+### Formas de Pagamento
+
+Usado em: `financeiro_contas_pagamentos`, `financeiro_despesas`, `financeiro_honorarios_parcelas`, `financeiro_faturamento_faturas`
+
+| Valor | Descrição |
+|-------|-----------|
+| `dinheiro` | Pagamento em dinheiro |
+| `pix` | Transferência PIX |
+| `ted` | Transferência TED |
+| `boleto` | Boleto bancário |
+| `cartao_credito` | Cartão de crédito |
+| `cartao_debito` | Cartão de débito |
+
+### Categorias de Despesa
+
+#### Categorias Gerais
+Usado em: `financeiro_despesas`, `cartoes_credito_despesas`
+
+| Valor | Descrição |
+|-------|-----------|
+| `custas` | Custas processuais |
+| `fornecedor` | Pagamento a fornecedores |
+| `folha` | Folha de pagamento |
+| `impostos` | Impostos e tributos |
+| `aluguel` | Aluguel do escritório |
+| `marketing` | Marketing e publicidade |
+| `capacitacao` | Treinamentos e cursos |
+| `material` | Material de escritório |
+| `tecnologia` | Software e hardware |
+| `viagem` | Viagens e deslocamentos |
+| `alimentacao` | Refeições e alimentação |
+| `combustivel` | Combustível |
+| `assinatura` | Assinaturas e mensalidades |
+| `cartao_credito` | Fatura de cartão (apenas `financeiro_despesas`) |
+| `outros` | Outros |
+
+#### Categorias de Custas Processuais (Reembolsáveis)
+Usado em: `financeiro_despesas` (quando vinculado a processo)
+
+| Valor | Descrição |
+|-------|-----------|
+| `honorarios_perito` | Honorários de Perito |
+| `oficial_justica` | Oficial de Justiça |
+| `correios` | Correios / Envios |
+| `cartorio` | Cartório |
+| `copia` | Cópias / Impressões |
+| `deslocamento` | Deslocamento / Transporte |
+| `hospedagem` | Hospedagem |
+| `publicacao` | Publicação |
+| `certidao` | Certidões |
+| `protesto` | Protesto |
+| `outra` | Outra Despesa |
+
+### Status por Entidade
+
+| Entidade | Valores |
+|----------|---------|
+| `financeiro_despesas` | `pendente`, `pago`, `cancelado` |
+| `financeiro_honorarios` | `rascunho`, `aprovado`, `faturado`, `cancelado` |
+| `financeiro_honorarios_parcelas` | `pendente`, `pago`, `atrasado`, `cancelado` |
+| `financeiro_faturamento_faturas` | `rascunho`, `emitida`, `enviada`, `paga`, `atrasada`, `cancelada` |
+| `cartoes_credito_faturas` | `aberta`, `fechada`, `paga`, `cancelada` |
+| `cartoes_credito_importacoes` | `pendente`, `processando`, `concluido`, `erro` |
+
+### Tipos e Formas
+
+| Campo | Tabela | Valores |
+|-------|--------|---------|
+| `tipo_honorario` | `financeiro_honorarios` | `fixo`, `hora`, `exito`, `misto` |
+| `tipo_contrato` | `financeiro_contratos_honorarios` | `processo`, `consultoria`, `avulso`, `misto`, `fixo`, `hora`, `exito`, `recorrente` |
+| `forma_cobranca` | `financeiro_contratos_*` | `fixo`, `por_hora`, `por_etapa`, `misto`, `por_pasta`, `por_ato`, `por_cargo` |
+| `tipo_conta` | `financeiro_contas_bancarias` | `corrente`, `poupanca`, `digital` |
+| `tipo` | `financeiro_contas_lancamentos` | `entrada`, `saida`, `transferencia_entrada`, `transferencia_saida` |
+| `origem_tipo` | `financeiro_contas_lancamentos` | `pagamento`, `despesa`, `transferencia`, `manual` |
+| `bandeira` | `cartoes_credito` | `visa`, `mastercard`, `elo`, `amex`, `hipercard`, `diners`, `outra` |
+
+---
+
 ## Histórico de Alterações
 
 | Data | Descrição | Migration |
 |------|-----------|-----------|
 | 2024-XX-XX | Estrutura inicial | (migration inicial) |
-| 2025-01-XX | Módulo de cartões de crédito | 20250121_cartoes_credito.sql |
-| 2025-01-XX | Sistema de alertas de cobrança | 20250121_alertas_cobranca.sql |
+| 2025-01-21 | Módulo de cartões de crédito | 20250121000001_cartoes_credito_tables.sql |
+| 2025-01-21 | Funções de cartões de crédito | 20250121000002_cartoes_credito_functions.sql |
+| 2025-01-21 | RLS de cartões de crédito | 20250121000003_cartoes_credito_rls.sql |
+| 2025-01-21 | Padronização de ENUMs | 20250121000004_padronizar_enums_financeiro.sql |

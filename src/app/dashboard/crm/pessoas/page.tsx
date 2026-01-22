@@ -5,23 +5,19 @@ import { useRouter } from 'next/navigation';
 import {
   Plus,
   Search,
-  Download,
   Users,
   X,
   Building2,
   Phone,
   Mail,
   MapPin,
-  MessageSquare,
-  FileText,
-  DollarSign,
-  Clock,
   User,
   Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -40,8 +36,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PessoaWizardModal } from '@/components/crm/PessoaWizardModal';
+import { BulkActionsToolbarCRM, BulkActionCRM } from '@/components/crm/BulkActionsToolbarCRM';
+import { BulkEditModalCRM } from '@/components/crm/BulkEditModalCRM';
 import { createClient } from '@/lib/supabase/client';
 import type { PessoaResumo } from '@/types/crm';
+
+type EditFieldCRM = 'status' | 'categoria';
 
 export default function PessoasPage() {
   const router = useRouter();
@@ -49,12 +49,17 @@ export default function PessoasPage() {
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [busca, setBusca] = useState('');
-  const [tipoContato, setTipoContato] = useState<string>('todos');
+  const [tipoCadastro, setTipoCadastro] = useState<string>('todos');
   const [status, setStatus] = useState<string>('todos');
   const [pessoaSelecionada, setPessoaSelecionada] = useState<PessoaResumo | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [wizardModalOpen, setWizardModalOpen] = useState(false);
   const itemsPerPage = 15;
+
+  // Estados para selecao em massa
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkEditField, setBulkEditField] = useState<EditFieldCRM | null>(null);
+  const [showBulkEditModal, setShowBulkEditModal] = useState(false);
 
   // Buscar pessoas do banco de dados
   const fetchPessoas = useCallback(async () => {
@@ -68,15 +73,15 @@ export default function PessoasPage() {
         .order('nome_completo', { ascending: true });
 
       // Aplicar filtros
-      if (tipoContato !== 'todos') {
-        query = query.eq('tipo_contato', tipoContato);
+      if (tipoCadastro !== 'todos') {
+        query = query.eq('tipo_cadastro', tipoCadastro);
       }
       if (status !== 'todos') {
         query = query.eq('status', status);
       }
       if (busca.trim()) {
         const searchTerm = busca.trim();
-        query = query.or(`nome_completo.ilike.%${searchTerm}%,email_principal.ilike.%${searchTerm}%,cpf_cnpj.ilike.%${searchTerm}%`);
+        query = query.or(`nome_completo.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,cpf_cnpj.ilike.%${searchTerm}%`);
       }
 
       // Paginação
@@ -93,27 +98,16 @@ export default function PessoasPage() {
         id: p.id,
         escritorio_id: p.escritorio_id,
         tipo_pessoa: p.tipo_pessoa,
-        tipo_contato: p.tipo_contato,
+        tipo_cadastro: p.tipo_cadastro,
         nome_completo: p.nome_completo,
         cpf_cnpj: p.cpf_cnpj,
-        celular: p.celular,
-        email_principal: p.email_principal,
+        telefone: p.telefone,
+        email: p.email,
         cidade: p.cidade,
         uf: p.uf,
         status: p.status,
         created_at: p.created_at,
         updated_at: p.updated_at,
-        responsavel_nome: null,
-        total_processos: 0,
-        processos_ativos: 0,
-        total_honorarios: 0,
-        honorarios_pendentes: 0,
-        honorarios_pagos: 0,
-        dias_sem_contato: null,
-        total_interacoes: 0,
-        follow_ups_pendentes: 0,
-        oportunidades_ativas: 0,
-        total_relacionamentos: 0,
       }));
 
       setPessoas(pessoasMapeadas);
@@ -123,7 +117,7 @@ export default function PessoasPage() {
     } finally {
       setLoading(false);
     }
-  }, [busca, tipoContato, status, currentPage]);
+  }, [busca, tipoCadastro, status, currentPage]);
 
   // Buscar dados quando os filtros mudarem
   useEffect(() => {
@@ -133,18 +127,15 @@ export default function PessoasPage() {
   // Resetar página quando filtros mudarem
   useEffect(() => {
     setCurrentPage(1);
-  }, [busca, tipoContato, status]);
+  }, [busca, tipoCadastro, status]);
+
+  // Limpar selecao quando mudar de pagina ou filtros
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [currentPage, busca, tipoCadastro, status]);
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
   const paginatedPessoas = pessoas;
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 0,
-    }).format(value);
-  };
 
   const formatCpfCnpj = (value: string) => {
     const numbers = value.replace(/\D/g, '');
@@ -156,11 +147,10 @@ export default function PessoasPage() {
     return value;
   };
 
-  const getTipoContatoColor = (tipo: string) => {
+  const getTipoCadastroColor = (tipo: string) => {
     const colors: Record<string, string> = {
       cliente: 'bg-emerald-50 text-emerald-700 border-emerald-200',
       prospecto: 'bg-amber-50 text-amber-700 border-amber-200',
-      parceiro: 'bg-cyan-50 text-cyan-700 border-cyan-200',
       parte_contraria: 'bg-red-50 text-red-700 border-red-200',
       correspondente: 'bg-blue-50 text-blue-700 border-blue-200',
       testemunha: 'bg-purple-50 text-purple-700 border-purple-200',
@@ -172,12 +162,11 @@ export default function PessoasPage() {
     return colors[tipo] || 'bg-slate-50 text-slate-700 border-slate-200';
   };
 
-  const getTipoContatoLabel = (tipo: string) => {
+  const getTipoCadastroLabel = (tipo: string) => {
     const labels: Record<string, string> = {
       cliente: 'Cliente',
       prospecto: 'Prospecto',
-      parceiro: 'Parceiro',
-      parte_contraria: 'Parte Contrária',
+      parte_contraria: 'Parte Contraria',
       correspondente: 'Correspondente',
       testemunha: 'Testemunha',
       perito: 'Perito',
@@ -188,16 +177,46 @@ export default function PessoasPage() {
     return labels[tipo] || tipo;
   };
 
-  // Verifica se deve mostrar stats de cliente (apenas para cliente e prospecto)
-  const isClienteOuProspecto = (tipo: string) => {
-    return tipo === 'cliente' || tipo === 'prospecto';
+  // Handlers de selecao
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === pessoas.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(pessoas.map(p => p.id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkAction = (action: BulkActionCRM) => {
+    if (action === 'alterar_status') {
+      setBulkEditField('status');
+      setShowBulkEditModal(true);
+    } else if (action === 'alterar_categoria') {
+      setBulkEditField('categoria');
+      setShowBulkEditModal(true);
+    }
   };
 
   return (
     <div className="flex h-[calc(100vh-12rem)] gap-4">
       {/* Lista Principal */}
       <div className="flex-1 flex flex-col space-y-4 min-w-0">
-        {/* Filtros e Ações */}
+        {/* Filtros e Acoes */}
         <div className="bg-white border border-slate-200 rounded-lg p-4 flex-shrink-0">
           <div className="flex flex-wrap items-center gap-3">
             {/* Busca */}
@@ -219,9 +238,9 @@ export default function PessoasPage() {
 
             {/* Filtro Tipo */}
             <Select
-              value={tipoContato}
+              value={tipoCadastro}
               onValueChange={(value) => {
-                setTipoContato(value);
+                setTipoCadastro(value);
                 setCurrentPage(1);
               }}
             >
@@ -232,8 +251,7 @@ export default function PessoasPage() {
                 <SelectItem value="todos">Todos os tipos</SelectItem>
                 <SelectItem value="cliente">Cliente</SelectItem>
                 <SelectItem value="prospecto">Prospecto</SelectItem>
-                <SelectItem value="parceiro">Parceiro</SelectItem>
-                <SelectItem value="parte_contraria">Parte Contrária</SelectItem>
+                <SelectItem value="parte_contraria">Parte Contraria</SelectItem>
                 <SelectItem value="correspondente">Correspondente</SelectItem>
                 <SelectItem value="testemunha">Testemunha</SelectItem>
                 <SelectItem value="perito">Perito</SelectItem>
@@ -257,17 +275,12 @@ export default function PessoasPage() {
               <SelectContent>
                 <SelectItem value="todos">Todos</SelectItem>
                 <SelectItem value="ativo">Ativo</SelectItem>
-                <SelectItem value="prospecto">Prospecto</SelectItem>
                 <SelectItem value="inativo">Inativo</SelectItem>
+                <SelectItem value="arquivado">Arquivado</SelectItem>
               </SelectContent>
             </Select>
 
-            {/* Botões de Ação */}
-            <Button variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Exportar
-            </Button>
-
+            {/* Botao de Acao */}
             <Button
               size="sm"
               className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:opacity-90"
@@ -285,7 +298,7 @@ export default function PessoasPage() {
             </span>
             {totalPages > 1 && (
               <span>
-                Página {currentPage} de {totalPages}
+                Pagina {currentPage} de {totalPages}
               </span>
             )}
           </div>
@@ -305,14 +318,14 @@ export default function PessoasPage() {
                   Nenhuma pessoa encontrada
                 </h3>
                 <p className="text-sm text-slate-500 mb-6">
-                  {busca || tipoContato !== 'todos' || status !== 'todos'
+                  {busca || tipoCadastro !== 'todos' || status !== 'todos'
                     ? 'Tente ajustar os filtros ou busca'
                     : 'Comece cadastrando sua primeira pessoa'}
                 </p>
-                {busca === '' && tipoContato === 'todos' && status === 'todos' && (
+                {busca === '' && tipoCadastro === 'todos' && status === 'todos' && (
                   <Button
                     className="bg-gradient-to-r from-[#34495e] to-[#46627f]"
-                    onClick={() => router.push('/dashboard/crm/pessoas/novo')}
+                    onClick={() => setWizardModalOpen(true)}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Cadastrar Primeira Pessoa
@@ -326,14 +339,21 @@ export default function PessoasPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="text-xs">
+                      <TableHead className="w-[40px] text-center">
+                        <Checkbox
+                          checked={pessoas.length > 0 && selectedIds.size === pessoas.length}
+                          onCheckedChange={toggleSelectAll}
+                          className="border-slate-300 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
+                        />
+                      </TableHead>
                       <TableHead className="w-[40px] text-xs">Tipo</TableHead>
-                      <TableHead className="w-[250px] text-xs">Nome</TableHead>
-                      <TableHead className="w-[150px] text-xs">CPF/CNPJ</TableHead>
-                      <TableHead className="w-[130px] text-xs">Telefone</TableHead>
-                      <TableHead className="w-[220px] text-xs">Email</TableHead>
-                      <TableHead className="w-[150px] text-xs">Cidade/UF</TableHead>
-                      <TableHead className="w-[130px] text-xs">Categoria</TableHead>
-                      <TableHead className="w-[80px] text-xs">Status</TableHead>
+                      <TableHead className="w-[220px] text-xs">Nome</TableHead>
+                      <TableHead className="w-[130px] text-xs">CPF/CNPJ</TableHead>
+                      <TableHead className="w-[120px] text-xs">Telefone</TableHead>
+                      <TableHead className="w-[180px] text-xs">Email</TableHead>
+                      <TableHead className="w-[120px] text-xs">Cidade/UF</TableHead>
+                      <TableHead className="w-[110px] text-xs">Categoria</TableHead>
+                      <TableHead className="w-[70px] text-xs">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -343,8 +363,15 @@ export default function PessoasPage() {
                         onClick={() => setPessoaSelecionada(pessoa)}
                         className={`cursor-pointer text-xs ${
                           pessoaSelecionada?.id === pessoa.id ? 'bg-blue-50' : ''
-                        }`}
+                        } ${selectedIds.has(pessoa.id) ? 'bg-blue-50' : ''}`}
                       >
+                        <TableCell className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.has(pessoa.id)}
+                            onCheckedChange={() => toggleSelection(pessoa.id)}
+                            className="border-slate-300 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
+                          />
+                        </TableCell>
                         <TableCell className="py-2">
                           <div className="flex items-center justify-center">
                             {pessoa.tipo_pessoa === 'pj' ? (
@@ -354,15 +381,17 @@ export default function PessoasPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="font-medium py-2 text-xs">{pessoa.nome_completo}</TableCell>
+                        <TableCell className="font-medium py-2 text-xs truncate max-w-[220px]">
+                          {pessoa.nome_completo}
+                        </TableCell>
                         <TableCell className="font-mono text-[11px] text-slate-600 py-2">
                           {pessoa.cpf_cnpj ? formatCpfCnpj(pessoa.cpf_cnpj) : '-'}
                         </TableCell>
                         <TableCell className="text-xs text-slate-600 py-2">
-                          {pessoa.celular || '-'}
+                          {pessoa.telefone || '-'}
                         </TableCell>
-                        <TableCell className="text-xs text-slate-600 truncate max-w-[220px] py-2">
-                          {pessoa.email_principal || '-'}
+                        <TableCell className="text-xs text-slate-600 truncate max-w-[180px] py-2">
+                          {pessoa.email || '-'}
                         </TableCell>
                         <TableCell className="text-xs text-slate-600 py-2">
                           {pessoa.cidade && pessoa.uf ? `${pessoa.cidade}/${pessoa.uf}` : '-'}
@@ -370,9 +399,9 @@ export default function PessoasPage() {
                         <TableCell className="py-2">
                           <Badge
                             variant="outline"
-                            className={`text-[10px] ${getTipoContatoColor(pessoa.tipo_contato)}`}
+                            className={`text-[10px] ${getTipoCadastroColor(pessoa.tipo_cadastro)}`}
                           >
-                            {getTipoContatoLabel(pessoa.tipo_contato)}
+                            {getTipoCadastroLabel(pessoa.tipo_cadastro)}
                           </Badge>
                         </TableCell>
                         <TableCell className="py-2">
@@ -389,7 +418,7 @@ export default function PessoasPage() {
                 </Table>
               </ScrollArea>
 
-              {/* Paginação */}
+              {/* Paginacao */}
               {totalPages > 1 && (
                 <div className="p-4 border-t border-slate-200 flex items-center justify-between">
                   <Button
@@ -401,7 +430,7 @@ export default function PessoasPage() {
                     Anterior
                   </Button>
                   <span className="text-sm text-slate-600">
-                    Página {currentPage} de {totalPages}
+                    Pagina {currentPage} de {totalPages}
                   </span>
                   <Button
                     variant="outline"
@@ -409,7 +438,7 @@ export default function PessoasPage() {
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
                   >
-                    Próxima
+                    Proxima
                   </Button>
                 </div>
               )}
@@ -437,16 +466,16 @@ export default function PessoasPage() {
                   {pessoaSelecionada.nome_completo}
                 </h3>
                 <p className="text-xs text-slate-600 mb-2">
-                  {pessoaSelecionada.tipo_pessoa === 'pj' ? 'Pessoa Jurídica' : 'Pessoa Física'}
+                  {pessoaSelecionada.tipo_pessoa === 'pj' ? 'Pessoa Juridica' : 'Pessoa Fisica'}
                 </p>
                 <div className="flex flex-wrap gap-1">
                   <Badge
                     variant="outline"
-                    className={`text-[10px] ${getTipoContatoColor(
-                      pessoaSelecionada.tipo_contato
+                    className={`text-[10px] ${getTipoCadastroColor(
+                      pessoaSelecionada.tipo_cadastro
                     )}`}
                   >
-                    {getTipoContatoLabel(pessoaSelecionada.tipo_contato)}
+                    {getTipoCadastroLabel(pessoaSelecionada.tipo_cadastro)}
                   </Badge>
                   <Badge variant="outline" className="text-[10px] bg-slate-100">
                     {pessoaSelecionada.status}
@@ -470,16 +499,16 @@ export default function PessoasPage() {
                       </span>
                     </div>
                   )}
-                  {pessoaSelecionada.email_principal && (
+                  {pessoaSelecionada.email && (
                     <div className="flex items-center gap-2">
                       <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                      <span className="truncate">{pessoaSelecionada.email_principal}</span>
+                      <span className="truncate">{pessoaSelecionada.email}</span>
                     </div>
                   )}
-                  {pessoaSelecionada.celular && (
+                  {pessoaSelecionada.telefone && (
                     <div className="flex items-center gap-2">
                       <Phone className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                      <span>{pessoaSelecionada.celular}</span>
+                      <span>{pessoaSelecionada.telefone}</span>
                     </div>
                   )}
                   {pessoaSelecionada.cidade && (
@@ -493,123 +522,29 @@ export default function PessoasPage() {
                 </div>
               </div>
 
-              {/* Estatísticas - APENAS para Cliente e Prospecto */}
-              {isClienteOuProspecto(pessoaSelecionada.tipo_contato) && (
+              {/* Observacoes */}
+              {pessoaSelecionada.observacoes && (
                 <>
                   <Separator />
                   <div>
-                    <h4 className="text-xs font-semibold text-slate-900 mb-3">
-                      Dados Comerciais
-                    </h4>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-slate-50 rounded-lg p-3">
-                        <div className="flex items-center gap-2 text-xs text-slate-600 mb-1">
-                          <FileText className="w-3.5 h-3.5" />
-                          <span>Processos</span>
-                        </div>
-                        <div className="text-lg font-bold text-slate-900">
-                          {pessoaSelecionada.total_processos}
-                        </div>
-                        <div className="text-[10px] text-slate-600">
-                          {pessoaSelecionada.processos_ativos} ativos
-                        </div>
-                      </div>
-
-                      <div className="bg-slate-50 rounded-lg p-3">
-                        <div className="flex items-center gap-2 text-xs text-slate-600 mb-1">
-                          <MessageSquare className="w-3.5 h-3.5" />
-                          <span>Interações</span>
-                        </div>
-                        <div className="text-lg font-bold text-slate-900">
-                          {pessoaSelecionada.total_interacoes}
-                        </div>
-                        {pessoaSelecionada.dias_sem_contato != null && (
-                          <div
-                            className={`text-[10px] ${
-                              (pessoaSelecionada.dias_sem_contato ?? 0) > 30
-                                ? 'text-amber-600'
-                                : 'text-slate-600'
-                            }`}
-                          >
-                            {pessoaSelecionada.dias_sem_contato}d sem contato
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="bg-gradient-to-r from-[#f0f9f9] to-[#e8f5f5] rounded-lg p-3">
-                        <div className="flex items-center gap-2 text-xs text-slate-600 mb-1">
-                          <DollarSign className="w-3.5 h-3.5" />
-                          <span>Honorários</span>
-                        </div>
-                        <div className="text-sm font-bold text-slate-900">
-                          {formatCurrency(pessoaSelecionada.total_honorarios)}
-                        </div>
-                        <div className="text-[10px] text-emerald-600">
-                          {formatCurrency(pessoaSelecionada.honorarios_pagos)} pagos
-                        </div>
-                      </div>
-
-                      <div className="bg-slate-50 rounded-lg p-3">
-                        <div className="flex items-center gap-2 text-xs text-slate-600 mb-1">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>Follow-ups</span>
-                        </div>
-                        <div className="text-lg font-bold text-slate-900">
-                          {pessoaSelecionada.follow_ups_pendentes}
-                        </div>
-                        <div className="text-[10px] text-slate-600">pendentes</div>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Informação para não-clientes */}
-              {!isClienteOuProspecto(pessoaSelecionada.tipo_contato) && (
-                <>
-                  <Separator />
-                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                    <p className="text-xs text-slate-600 text-center">
-                      Esta pessoa está cadastrada como{' '}
-                      <strong>{getTipoContatoLabel(pessoaSelecionada.tipo_contato)}</strong>.
-                      <br />
-                      Dados comerciais disponíveis apenas para Clientes e Prospectos.
+                    <h4 className="text-xs font-semibold text-slate-900 mb-2">Observacoes</h4>
+                    <p className="text-xs text-slate-600 whitespace-pre-wrap">
+                      {pessoaSelecionada.observacoes}
                     </p>
                   </div>
                 </>
               )}
-
-              {/* Responsável */}
-              <Separator />
-              <div>
-                <h4 className="text-xs font-semibold text-slate-900 mb-2">Responsável</h4>
-                <div className="text-xs text-slate-600">
-                  {pessoaSelecionada.responsavel_nome || 'Não atribuído'}
-                </div>
-              </div>
             </div>
           </ScrollArea>
 
-          {/* Footer com Ações */}
-          <div className="p-4 border-t border-slate-200 space-y-2">
+          {/* Footer com Acoes */}
+          <div className="p-4 border-t border-slate-200">
             <Button
               className="w-full bg-gradient-to-r from-[#34495e] to-[#46627f]"
               onClick={() => router.push(`/dashboard/crm/pessoas/${pessoaSelecionada.id}`)}
             >
               Ver Perfil Completo
             </Button>
-            {isClienteOuProspecto(pessoaSelecionada.tipo_contato) && (
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm">
-                  <MessageSquare className="w-3.5 h-3.5 mr-1" />
-                  Interação
-                </Button>
-                <Button variant="outline" size="sm">
-                  <FileText className="w-3.5 h-3.5 mr-1" />
-                  Processos
-                </Button>
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -619,11 +554,66 @@ export default function PessoasPage() {
         open={wizardModalOpen}
         onOpenChange={setWizardModalOpen}
         onSave={async (data) => {
-          console.log('Salvando pessoa:', data)
-          // TODO: Integrar com Supabase
-          alert('Pessoa salva com sucesso!')
+          try {
+            const supabase = createClient();
+
+            const insertData = {
+              tipo_pessoa: data.tipo_pessoa,
+              tipo_cadastro: data.tipo_cadastro,
+              status: data.status || 'ativo',
+              nome_completo: data.nome_completo,
+              nome_fantasia: data.nome_fantasia || null,
+              cpf_cnpj: data.cpf_cnpj || null,
+              telefone: data.telefone || null,
+              email: data.email || null,
+              cep: data.cep || null,
+              logradouro: data.logradouro || null,
+              numero: data.numero || null,
+              complemento: data.complemento || null,
+              bairro: data.bairro || null,
+              cidade: data.cidade || null,
+              uf: data.uf || null,
+              origem: data.origem || null,
+              observacoes: data.observacoes || null,
+            };
+
+            const { error } = await supabase
+              .from('crm_pessoas')
+              .insert(insertData);
+
+            if (error) throw error;
+
+            fetchPessoas();
+          } catch (error) {
+            console.error('Erro ao salvar pessoa:', error);
+            alert('Erro ao salvar pessoa. Tente novamente.');
+          }
         }}
       />
+
+      {/* Toolbar de Acoes em Massa */}
+      <BulkActionsToolbarCRM
+        selectedCount={selectedIds.size}
+        onClearSelection={clearSelection}
+        onAction={handleBulkAction}
+      />
+
+      {/* Modal de Edicao em Massa */}
+      {showBulkEditModal && bulkEditField && (
+        <BulkEditModalCRM
+          open={showBulkEditModal}
+          onClose={() => {
+            setShowBulkEditModal(false);
+            setBulkEditField(null);
+          }}
+          field={bulkEditField}
+          selectedIds={Array.from(selectedIds)}
+          onSuccess={() => {
+            fetchPessoas();
+            clearSelection();
+          }}
+        />
+      )}
     </div>
   );
 }

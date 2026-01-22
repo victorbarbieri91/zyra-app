@@ -11,11 +11,14 @@ import { DateTimeInput } from '@/components/ui/datetime-picker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import TagSelector from '@/components/tags/TagSelector'
 import VinculacaoSelector, { Vinculacao } from '@/components/agenda/VinculacaoSelector'
+import ResponsaveisSelector from '@/components/agenda/ResponsaveisSelector'
 import type { AudienciaFormData } from '@/hooks/useAudiencias'
 import type { WizardStep as WizardStepType } from '@/components/wizards'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useTags } from '@/hooks/useTags'
+import { useAgendaResponsaveis } from '@/hooks/useAgendaResponsaveis'
+import { useEscritorioMembros } from '@/hooks/useEscritorioMembros'
 import { createClient } from '@/lib/supabase/client'
 import { formatBrazilDateTime } from '@/lib/timezone'
 
@@ -84,22 +87,11 @@ export default function AudienciaWizard({
   // Carregar tags para mostrar na revisão
   const { tags } = useTags('agenda', escritorioId)
 
-  // Carregar perfis do escritório para o seletor de responsável
-  const [perfis, setPerfis] = useState<Array<{ id: string; nome_completo: string }>>([])
+  // Carregar membros do escritório para exibição na revisão
+  const { membros } = useEscritorioMembros(escritorioId)
 
-  useEffect(() => {
-    const loadPerfis = async () => {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, nome_completo')
-        .eq('escritorio_id', escritorioId)
-        .order('nome_completo')
-
-      if (data) setPerfis(data)
-    }
-    loadPerfis()
-  }, [escritorioId])
+  // Hook para salvar responsáveis
+  const { setResponsaveis } = useAgendaResponsaveis()
 
   // Form State
   const [tipoAudiencia, setTipoAudiencia] = useState<TipoAudiencia>(initialData?.tipo_audiencia || 'inicial')
@@ -108,7 +100,7 @@ export default function AudienciaWizard({
 
   const [dataHora, setDataHora] = useState(initialData?.data_hora || '')
   const [duracaoMinutos, setDuracaoMinutos] = useState(initialData?.duracao_minutos || 60)
-  const [responsavelId, setResponsavelId] = useState(initialData?.responsavel_id || '')
+  const [responsaveisIds, setResponsaveisIds] = useState<string[]>(initialData?.responsavel_id ? [initialData.responsavel_id] : [])
 
   const [modalidade, setModalidade] = useState<Modalidade>(initialData?.modalidade || 'presencial')
 
@@ -205,8 +197,8 @@ export default function AudienciaWizard({
           .from('consultivo_consultas')
           .select(`
             id,
-            numero_interno,
-            assunto,
+            numero,
+            titulo,
             crm_pessoas!consultivo_consultas_cliente_id_fkey(nome_completo, nome_fantasia)
           `)
           .eq('id', consultivoIdToLoad)
@@ -219,8 +211,8 @@ export default function AudienciaWizard({
             modulo: 'consultivo',
             modulo_registro_id: consultivo.id,
             metadados: {
-              numero_pasta: consultivo.numero_interno,
-              titulo: consultivo.assunto,
+              numero_pasta: consultivo.numero,
+              titulo: consultivo.titulo,
               partes: clienteNome || undefined,
             },
           })
@@ -314,13 +306,20 @@ export default function AudienciaWizard({
         juiz: juiz || undefined,
         promotor: promotor || undefined,
         advogado_contrario: advogadoContrario || undefined,
-        responsavel_id: responsavelId || undefined,
+        // responsavel_id mantido para retrocompatibilidade
+        responsavel_id: responsaveisIds.length > 0 ? responsaveisIds[0] : undefined,
         observacoes: observacoes || undefined,
         cor,
       }
 
       console.log('FormData sendo enviado:', formData)
-      await onSubmit(formData)
+      const novaAudiencia = await onSubmit(formData)
+
+      // Salvar responsáveis na tabela N:N
+      if (novaAudiencia && (novaAudiencia as any).id && responsaveisIds.length > 0) {
+        await setResponsaveis('audiencia', (novaAudiencia as any).id, responsaveisIds)
+      }
+
       onClose()
     } catch (error) {
       console.error('Erro ao criar audiência:', error)
@@ -457,28 +456,14 @@ export default function AudienciaWizard({
               </Select>
             </div>
 
-            {/* Responsável */}
-            <div className="space-y-2">
-              <Label htmlFor="responsavel" className="text-sm font-medium text-[#34495e]">
-                Advogado Responsável
-                <span className="text-xs text-slate-500 font-normal ml-2">(Opcional)</span>
-              </Label>
-              <Select
-                value={responsavelId || undefined}
-                onValueChange={(value) => setResponsavelId(value || '')}
-              >
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="Nenhum (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {perfis.map((perfil) => (
-                    <SelectItem key={perfil.id} value={perfil.id}>
-                      {perfil.nome_completo}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Responsáveis */}
+            <ResponsaveisSelector
+              escritorioId={escritorioId}
+              selectedIds={responsaveisIds}
+              onChange={setResponsaveisIds}
+              label="Advogados Responsáveis"
+              placeholder="Selecionar responsáveis..."
+            />
           </div>
         </WizardStep>
       )}
@@ -715,11 +700,11 @@ export default function AudienciaWizard({
                 <span className="text-slate-500">Duração</span>
                 <span className="text-[#34495e] font-medium">{duracaoMinutos} minutos</span>
 
-                {responsavelId && (
+                {responsaveisIds.length > 0 && (
                   <>
-                    <span className="text-slate-500">Responsável</span>
+                    <span className="text-slate-500">Responsáveis</span>
                     <span className="text-[#34495e] font-medium">
-                      {perfis.find(p => p.id === responsavelId)?.nome_completo || 'Não encontrado'}
+                      {responsaveisIds.map(id => membros.find(m => m.user_id === id)?.nome || 'Não encontrado').join(', ')}
                     </span>
                   </>
                 )}

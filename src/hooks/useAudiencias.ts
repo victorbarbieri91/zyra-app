@@ -48,10 +48,13 @@ export interface Audiencia {
 
   // Relations (populated)
   processo_numero?: string
-  consultivo_assunto?: string
+  consultivo_titulo?: string
   consultivo_numero?: string
   responsavel_nome?: string
   criado_por_nome?: string
+
+  // Múltiplos responsáveis (carregado separadamente via useAgendaResponsaveis)
+  responsaveis_ids?: string[]
 
   created_at: string
   updated_at: string
@@ -78,7 +81,7 @@ export function useAudiencias(escritorioId?: string) {
         .select(`
           *,
           processo:processos_processos(numero_cnj),
-          consultivo:consultivo_consultas(assunto, numero_interno),
+          consultivo:consultivo_consultas(titulo, numero),
           responsavel:profiles!agenda_audiencias_responsavel_id_fkey(nome_completo),
           criado_por_user:profiles!agenda_audiencias_criado_por_fkey(nome_completo)
         `)
@@ -104,8 +107,8 @@ export function useAudiencias(escritorioId?: string) {
       const audienciasFormatadas = (data || []).map((a: any) => ({
         ...a,
         processo_numero: a.processo?.numero_cnj,
-        consultivo_assunto: a.consultivo?.assunto,
-        consultivo_numero: a.consultivo?.numero_interno,
+        consultivo_titulo: a.consultivo?.titulo,
+        consultivo_numero: a.consultivo?.numero,
         responsavel_nome: a.responsavel?.nome_completo,
         criado_por_nome: a.criado_por_user?.nome_completo,
       }))

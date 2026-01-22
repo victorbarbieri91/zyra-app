@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InteracaoTimeline } from '@/components/crm/InteracaoTimeline';
 import { InteracaoModal } from '@/components/crm/InteracaoModal';
 import { KanbanBoard } from '@/components/crm/KanbanBoard';
+import type { InteracaoJSONB } from '@/types/crm';
 
 // Mock data - cores seguindo o gradiente da paleta
 const mockEtapas = [
@@ -67,45 +68,32 @@ const initialOportunidades = [
   },
 ];
 
-const mockInteracoes = [
+const mockInteracoes: InteracaoJSONB[] = [
   {
     id: '1',
-    pessoa_id: '1',
-    pessoa_nome: 'Ana Paula Costa',
+    tipo: 'reuniao',
+    data: '2024-01-15T14:00:00Z',
+    descricao: 'Reunião inicial para entender os detalhes da reclamação trabalhista. Cliente interessado, solicitou proposta comercial.',
     user_id: '1',
     user_nome: 'Dr. João Silva',
-    tipo: 'reuniao' as const,
-    assunto: 'Primeira reunião - Detalhamento do caso',
-    descricao: 'Reunião inicial para entender os detalhes da reclamação trabalhista',
-    data_hora: '2024-01-15T14:00:00Z',
-    duracao_minutos: 60,
-    resultado: 'Cliente interessado, solicitou proposta comercial',
-    follow_up: true,
-    follow_up_data: '2024-01-22T00:00:00Z',
-    follow_up_descricao: 'Enviar proposta comercial',
-    follow_up_concluido: false,
-    oportunidade_id: '1',
-    created_at: '2024-01-15T14:00:00Z',
-    updated_at: '2024-01-15T14:00:00Z',
   },
   {
     id: '2',
-    pessoa_id: '2',
-    pessoa_nome: 'Empresa XYZ Ltda',
+    tipo: 'email',
+    data: '2024-01-12T10:30:00Z',
+    descricao: 'Enviada proposta detalhada para reestruturação societária. Aguardando retorno.',
     user_id: '1',
     user_nome: 'Dr. João Silva',
-    tipo: 'email' as const,
-    assunto: 'Envio de proposta comercial',
-    descricao: 'Enviada proposta detalhada para reestruturação societária',
-    data_hora: '2024-01-12T10:30:00Z',
-    resultado: 'Proposta enviada, aguardando retorno',
-    follow_up: true,
-    follow_up_data: '2024-01-19T00:00:00Z',
-    follow_up_descricao: 'Ligar para verificar recebimento',
-    follow_up_concluido: false,
-    oportunidade_id: '2',
-    created_at: '2024-01-12T10:30:00Z',
-    updated_at: '2024-01-12T10:30:00Z',
+  },
+  {
+    id: '3',
+    tipo: 'proposta_enviada',
+    data: '2024-01-10T09:00:00Z',
+    descricao: 'Proposta comercial enviada com valores e condições de pagamento.',
+    user_id: '1',
+    user_nome: 'Dr. João Silva',
+    etapa_anterior: 'lead',
+    etapa_nova: 'proposta_enviada',
   },
 ];
 

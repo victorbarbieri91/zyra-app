@@ -1,82 +1,70 @@
 'use client';
 
-import { Phone, Mail, MessageCircle, MapPin, Clock, TrendingUp } from 'lucide-react';
-import { PessoaResumo, TipoContato } from '@/types/crm';
+import { Phone, Mail, MapPin, Building2, User } from 'lucide-react';
+import { PessoaResumo, TipoCadastro, TIPO_CADASTRO_LABELS } from '@/types/crm';
 import { Badge } from '@/components/ui/badge';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
 interface PessoaCardProps {
   pessoa: PessoaResumo;
   onClick?: () => void;
 }
 
-const tipoContatoLabels: Record<TipoContato, string> = {
-  cliente: 'Cliente',
-  parte_contraria: 'Parte Contrária',
-  correspondente: 'Correspondente',
-  testemunha: 'Testemunha',
-  perito: 'Perito',
-  juiz: 'Juiz',
-  promotor: 'Promotor',
-  outros: 'Outros',
-};
-
-const tipoContatoCores: Record<TipoContato, string> = {
+const tipoCadastroCores: Record<TipoCadastro, string> = {
   cliente: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  prospecto: 'bg-amber-100 text-amber-700 border-amber-200',
   parte_contraria: 'bg-red-100 text-red-700 border-red-200',
   correspondente: 'bg-blue-100 text-blue-700 border-blue-200',
-  testemunha: 'bg-amber-100 text-amber-700 border-amber-200',
-  perito: 'bg-purple-100 text-purple-700 border-purple-200',
-  juiz: 'bg-slate-100 text-slate-700 border-slate-200',
-  promotor: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  testemunha: 'bg-purple-100 text-purple-700 border-purple-200',
+  perito: 'bg-teal-100 text-teal-700 border-teal-200',
+  juiz: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  promotor: 'bg-violet-100 text-violet-700 border-violet-200',
   outros: 'bg-gray-100 text-gray-700 border-gray-200',
 };
 
 export function PessoaCard({ pessoa, onClick }: PessoaCardProps) {
-  const diasSemContato = pessoa.dias_sem_contato;
-  const temAlertas = diasSemContato && diasSemContato > 30;
-
   return (
     <div
       onClick={onClick}
-      className={`
-        bg-white border border-slate-200 rounded-lg p-4
-        hover:shadow-lg hover:border-[#89bcbe] transition-all duration-200 cursor-pointer
-        ${temAlertas ? 'border-l-4 border-l-amber-500' : ''}
-      `}
+      className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-lg hover:border-[#89bcbe] transition-all duration-200 cursor-pointer"
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-[#34495e] truncate">
-            {pessoa.nome_completo}
-          </h3>
+          <div className="flex items-center gap-2 mb-1">
+            {pessoa.tipo_pessoa === 'pj' ? (
+              <Building2 className="w-4 h-4 text-slate-400" />
+            ) : (
+              <User className="w-4 h-4 text-slate-400" />
+            )}
+            <h3 className="text-sm font-semibold text-[#34495e] truncate">
+              {pessoa.nome_completo}
+            </h3>
+          </div>
           {pessoa.nome_fantasia && (
-            <p className="text-xs text-slate-500 truncate">{pessoa.nome_fantasia}</p>
+            <p className="text-xs text-slate-500 truncate ml-6">{pessoa.nome_fantasia}</p>
           )}
         </div>
 
         <Badge
           variant="outline"
-          className={`ml-2 text-[10px] ${tipoContatoCores[pessoa.tipo_contato]}`}
+          className={`ml-2 text-[10px] ${tipoCadastroCores[pessoa.tipo_cadastro]}`}
         >
-          {tipoContatoLabels[pessoa.tipo_contato]}
+          {TIPO_CADASTRO_LABELS[pessoa.tipo_cadastro]}
         </Badge>
       </div>
 
-      {/* Informações de Contato */}
+      {/* Informacoes de Contato */}
       <div className="space-y-1.5 mb-3">
-        {pessoa.celular && (
+        {pessoa.telefone && (
           <div className="flex items-center gap-2 text-xs text-slate-600">
             <Phone className="w-3 h-3 text-[#89bcbe]" />
-            <span className="truncate">{pessoa.celular}</span>
+            <span className="truncate">{pessoa.telefone}</span>
           </div>
         )}
-        {pessoa.email_principal && (
+        {pessoa.email && (
           <div className="flex items-center gap-2 text-xs text-slate-600">
             <Mail className="w-3 h-3 text-[#89bcbe]" />
-            <span className="truncate">{pessoa.email_principal}</span>
+            <span className="truncate">{pessoa.email}</span>
           </div>
         )}
         {(pessoa.cidade || pessoa.uf) && (
@@ -92,52 +80,22 @@ export function PessoaCard({ pessoa, onClick }: PessoaCardProps) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-100">
+      <div className="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100">
         <div className="text-center">
           <div className="text-xs font-semibold text-[#34495e]">
-            {pessoa.total_interacoes}
-          </div>
-          <div className="text-[10px] text-slate-500">Interações</div>
-        </div>
-        <div className="text-center">
-          <div className="text-xs font-semibold text-[#34495e]">
-            {pessoa.oportunidades_ativas}
+            {pessoa.oportunidades_ativas || 0}
           </div>
           <div className="text-[10px] text-slate-500">Oportunidades</div>
         </div>
         <div className="text-center">
-          <div className="text-xs font-semibold text-[#34495e]">
-            {pessoa.total_processos}
-          </div>
-          <div className="text-[10px] text-slate-500">Processos</div>
+          <Badge
+            variant={pessoa.status === 'ativo' ? 'default' : 'secondary'}
+            className="text-[10px]"
+          >
+            {pessoa.status}
+          </Badge>
         </div>
       </div>
-
-      {/* Última Interação / Alertas */}
-      {diasSemContato !== null && diasSemContato !== undefined && (
-        <div
-          className={`mt-3 pt-3 border-t border-slate-100 flex items-center gap-2 text-xs ${
-            temAlertas ? 'text-amber-600' : 'text-slate-500'
-          }`}
-        >
-          <Clock className="w-3 h-3" />
-          <span>
-            {diasSemContato === 0
-              ? 'Contato hoje'
-              : diasSemContato === 1
-              ? 'Último contato há 1 dia'
-              : `Último contato há ${diasSemContato} dias`}
-          </span>
-        </div>
-      )}
-
-      {/* Follow-ups Pendentes */}
-      {pessoa.follow_ups_pendentes > 0 && (
-        <div className="mt-2 flex items-center gap-2 text-xs text-blue-600">
-          <MessageCircle className="w-3 h-3" />
-          <span>{pessoa.follow_ups_pendentes} follow-up(s) pendente(s)</span>
-        </div>
-      )}
 
       {/* Tags */}
       {pessoa.tags && pessoa.tags.length > 0 && (

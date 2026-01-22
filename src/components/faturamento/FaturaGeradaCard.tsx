@@ -87,7 +87,7 @@ export function FaturaGeradaCard({
     <Card className="border-slate-200 shadow-sm hover:border-[#46627f] hover:shadow-md transition-all">
       <CardContent className="p-0">
         {/* Header - Estilo Nota Fiscal */}
-        <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
+        <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 rounded-t-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-[#46627f]" />

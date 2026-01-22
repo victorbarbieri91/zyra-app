@@ -1,0 +1,1164 @@
+[
+  {
+    "cliente": "João Hamilton de Abreu",
+    "ci": 810,
+    "objeto": "CONSULTAS",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "João Hamilton - Time Sheet - CONTRATO DE HONORARIOS",
+    "data": "28/04/2003",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "EDVALDO AILDER CATALANI MORATA",
+    "ci": 811,
+    "departamento": "Consultivo",
+    "area": "Serviços",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Edvaldo Morata - Time Sheet",
+    "data": "17/02/2009",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "ANCAR AGROPECUARIA LTDA",
+    "ci": 819,
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "30/10/2013",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "TRIASSICO PARTICIPACOES LTDA",
+    "ci": 820,
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "06/11/2013",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "BEL STAR S/A",
+    "ci": 824,
+    "objeto": "PROCURAçãO REPRE. EMP. ESTRANGEIRA",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "30/06/2015",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda.",
+    "ci": 771,
+    "objeto": "BELCORP - CONSULTIVO GERAL",
+    "departamento": "Cível",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Belcorp Corporativo - BELCORP - CORPORATIVO",
+    "data": "04/04/2016",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "BARRA DO CAI LTDA",
+    "ci": 782,
+    "objeto": "SOCIETÁRIO",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Barra do Caí - Time Sheet - BARRA DO CAÍ - TIME SHEET",
+    "data": "21/04/2016",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda",
+    "ci": 840,
+    "objeto": "CONSULTIVO GERAL",
+    "departamento": "Consultivo",
+    "area": "Serviços",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Platlog - Time Sheet",
+    "data": "25/04/2016",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "FRANCISCO VELOSO FILHO",
+    "ci": 848,
+    "objeto": "CONSULTAS EM GERAL",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Veloso Time Sheet - VELOSO - TIME SHEET",
+    "data": "06/07/2016",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Inova Ts Engenharia Ltda.",
+    "ci": 659,
+    "objeto": "INOVA consulta SEM obra - CÓDIGOS POR ÁREA OU PESSOA",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "8 Inova - Time Sheet - INOVA TIME SHEET",
+    "data": "01/03/2017",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "FORFUTURING CONSULTORIA ESTRATEGICA LTDA",
+    "ci": 857,
+    "objeto": "SERVIÇOS GERAIS",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Forfuturing - Time Sheet - FORFUTURING - TIME SHEET",
+    "data": "17/08/2018",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda.",
+    "ci": 778,
+    "objeto": "BELCORP - AKT TEC",
+    "departamento": "Administrativo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Time Sheet - Corporativo - Horas trabalhadas no regime de time sheet para o corporativo",
+    "data": "09/08/2019",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Belcorp Trading do Brasil Importação e Exportação Ltda",
+    "ci": 1050,
+    "objeto": "CONTRATO DE HONORARIOS",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "14/08/2019",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "MAESTRO PLANEJAMENTO E GERENCIAMENTO DE OBRAS LTDA.",
+    "ci": 867,
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "28/11/2019",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Optical Sunglassses Ltda",
+    "ci": 870,
+    "objeto": "CONSULTIVO",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "contrato": "221 - OPTICAL SUNGLASSES",
+    "data": "16/12/2019",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda.",
+    "ci": 780,
+    "objeto": "BELCORP - ABIHPEC",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Time Sheet - Corporativo - Horas trabalhadas no regime de time sheet para o corporativo",
+    "data": "30/12/2019",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda.",
+    "ci": 779,
+    "objeto": "BELCORP - POLYCARPO",
+    "departamento": "Administrativo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Time Sheet - Corporativo - Horas trabalhadas no regime de time sheet para o corporativo",
+    "data": "07/01/2020",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "SERGIO  MOACYR RAGUSA",
+    "ci": 886,
+    "objeto": "ASSUNTOS DIVERSOS - CONSULTORIA",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "01/07/2020",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda.",
+    "ci": 777,
+    "objeto": "BELCORP - GABRIEL ASSINATURA DE DOCUMENTOS",
+    "departamento": "Cível",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Time Sheet - Corporativo - Horas trabalhadas no regime de time sheet para o corporativo",
+    "data": "28/07/2020",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "PAULA ARANTXA DE FREITAS VILLALBA",
+    "ci": 882,
+    "objeto": "CONSULTAS TRABALHISTAS",
+    "departamento": "Trabalhista",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "contrato": "431 - CONSULTAS TRABALHISTAS",
+    "data": "05/08/2020",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "JOSE LUIZ TABITH JUNIOR",
+    "ci": 883,
+    "objeto": "NEGOCIAçãO COM SóCIOS",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "19/08/2020",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "LUIZ HENRIQUE FASCINA",
+    "ci": 884,
+    "objeto": "NEGOCIAçãO COM SóCIOS",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "19/08/2020",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "CELSO FERNANDES PEREIRA",
+    "ci": 885,
+    "objeto": "NEGOCIAçãO COM SóCIOS",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "19/08/2020",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "MARCELO TELLES RIBEIRO 99390817749",
+    "ci": 887,
+    "objeto": "ASSESSORIA CONTRATUAL",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "12/10/2020",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "FRANCISCO VELOSO FILHO",
+    "ci": 748,
+    "objeto": "NOTIFICAÇÃO ACTEGA",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Veloso Time Sheet - VELOSO - TIME SHEET",
+    "data": "01/11/2020",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "ANTONIO OSVALDO DA COSTA",
+    "ci": 892,
+    "objeto": "NOTIFICAçãO ACTEGA",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "01/11/2020",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "LAVISKA INCORPORACAO LTDA",
+    "ci": 899,
+    "objeto": "AQUISIçãO DE IMóVEL",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "04/01/2021",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "GILBERTO LAVIERO MOSCA JUNIOR",
+    "ci": 907,
+    "objeto": "ELABORAçãO DE CONTRATO SOCIAL",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "11/02/2021",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "ESCRITORIO VIDA - APOIO ADMINISTRATIVO LTDA.",
+    "ci": 921,
+    "objeto": "CONSULTAS EM GERAL (GRUPO VIDA)",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "data": "19/03/2021",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "4FX CORRETORA DE SEGUROS E DESENVOLVIMENTO EMPRESARIAL LTDA",
+    "ci": 928,
+    "objeto": "NEGOCIAçãO DE PENDêNCIAS CONTRATUAIS",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "31/05/2021",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "RADIO CIDADE DE CAMPINAS LTDA",
+    "ci": 930,
+    "objeto": "ADMINISTRATIVO EM GERAL",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "data": "21/06/2021",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda.",
+    "ci": 654,
+    "objeto": "BELCORP - CONSULTIVO TRIBUTÁRIO",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Victor Tavolaro Barbieri",
+    "contrato": "Tributário - Time Sheet - Time sheet para as horas trabalhadas em atendimentos tributários",
+    "data": "02/07/2021",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Inova Ts Engenharia Ltda.",
+    "ci": 729,
+    "objeto": "INOVA - VILA EAU",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "8 Inova - Time Sheet - INOVA TIME SHEET",
+    "data": "28/07/2021",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "JOSE LUIZ TABITH JUNIOR",
+    "ci": 942,
+    "objeto": "OBRA - CONDOMíNIO EDIFíCIO APRACS",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "01/10/2021",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Sandra Savoia Grasso",
+    "ci": 966,
+    "objeto": "COMPRA E VENDA - APARTAMENTO STUDIO PINHEIROS",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "04/10/2021",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "BARASCH INDUSTRIA E COMERCIO DE PRODUTOS ELETROELETRONICOS LTDA",
+    "ci": 1055,
+    "objeto": "CONTRATO DE HONORARIOS",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "26/01/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "DELI GARAGE DOCERIA & PADARIA EIRELI",
+    "ci": 945,
+    "objeto": "M&A",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "01/02/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "ARMAZENS GERAIS VILA CARIOCA LTDA",
+    "ci": 944,
+    "objeto": "CONSULTAS EM GERAL",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "data": "23/02/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "CARLOS EDUARDO DE MELLO",
+    "ci": 946,
+    "objeto": "CONSTITUIçãO DE SOCIEDADE",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Mello - Time Sheet - CARLOS EDUARDO MELLO",
+    "data": "29/03/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "CARLOS EDUARDO DE MELLO",
+    "ci": 947,
+    "objeto": "INTEGRALIZAÇÃO DE CAPITAL",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Mello - Time Sheet - CARLOS EDUARDO MELLO",
+    "data": "29/03/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Zait Engenharia Ltda.",
+    "ci": 802,
+    "objeto": "OBR 203 COLÉGIO BRASILEIRO ISLÂMICO",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "ZAIT - Time Sheet",
+    "data": "05/04/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "RAFAEL DAHER SEVIERI",
+    "ci": 949,
+    "objeto": "OPERAçãO SOCIETáRIA",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "01/05/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda",
+    "ci": 950,
+    "objeto": "PLATLOG - MARCAS PLATLOG E ARMAZéNS GERAIS",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Platlog - Time Sheet",
+    "data": "10/05/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "LAVISKA INCORPORACAO LTDA",
+    "ci": 954,
+    "objeto": "CONTRATOS OBRA SC",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "23/05/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Zait Engenharia Ltda.",
+    "ci": 797,
+    "objeto": "OBR 174 - CONDOMÍNIO BRISAS AVARÉ",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "contrato": "ZAIT - Time Sheet",
+    "data": "30/05/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Polycarpo Advogados",
+    "ci": 786,
+    "objeto": "MKT E DESENVOLVIMENTO DE NEGÓCIOS",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "contrato": "390 - POLYCARPO",
+    "data": "08/06/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Silvia Veitzman",
+    "ci": 1105,
+    "objeto": "EMPREGADOS DOMÉSTICOS",
+    "departamento": "Trabalhista",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "contrato": "Silvia Veitzman - Time Sheet",
+    "data": "08/06/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Inova Ts Engenharia Ltda.",
+    "ci": 690,
+    "objeto": "INOVA - SHOPPING PÁTIO MACEIÓ",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "8 Inova - Time Sheet - INOVA TIME SHEET",
+    "data": "14/06/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "PROHABITAT SOLUCOES AMBIENTAIS LTDA.",
+    "ci": 960,
+    "objeto": "CONSULTIVO GERAL",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "250 - PROHABITAT - PARTIDO",
+    "data": "28/07/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "UBIRATAN DOS SANTOS MACHADO",
+    "ci": 961,
+    "objeto": "CONSULTIVO IMOBILIáRIO - SãO PEDRO - GUARUJ",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "01/08/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Polycarpo Advogados",
+    "ci": 787,
+    "objeto": "GESTÃO ADMINISTRATIVA DO ESCRITÓRIO",
+    "departamento": "Trabalhista",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "390 - POLYCARPO",
+    "data": "21/10/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "ALMIR POLYCARPO",
+    "ci": 963,
+    "objeto": "ESTUDOS E PALESTRAS",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "contrato": "394 - ALMIR",
+    "data": "24/10/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "JONILDES DA SILVA RIBEIRO DE LIMA",
+    "ci": 964,
+    "objeto": "CONSULTA SOCIETáRIA",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "25/10/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Polycarpo Advogados",
+    "ci": 788,
+    "objeto": "PLANEJAMENTO",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "390 - POLYCARPO",
+    "data": "14/12/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "LAURA DEL NERO NEGRO",
+    "ci": 969,
+    "objeto": "REVISãO DE CONTRATO GLEBA 1B E OUTROS.",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "19/12/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "CONSISTEC CONTROLES E SISTEMAS DE AUTOMACAO LTDA",
+    "ci": 967,
+    "objeto": "M&A",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "20/12/2022",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "FUZARO ADVOGADOS",
+    "ci": 971,
+    "objeto": "CONSULTAS EM GERAL FUZARO ADVOGADOS E LCC CONTABILIDADE",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "data": "07/02/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "ANDA STRATEGY",
+    "ci": 973,
+    "objeto": "NOTIFICAçãO EXTRAJUDICIAL",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "07/02/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Andrade Engenharia Consultoria e Construções Ltda.",
+    "ci": 972,
+    "objeto": "CONSULTAS",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "data": "10/02/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Andrade Engenharia Consultoria e Construções Ltda.",
+    "ci": 974,
+    "objeto": "CONSULTORIA DE CONTRATATOS",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "data": "17/02/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "JOSE LUIZ TABITH JUNIOR",
+    "ci": 976,
+    "objeto": "CONSULTIVO",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "23/02/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "PROMISSOR CONTABILIDADE S/S",
+    "ci": 977,
+    "objeto": "CONSULTAS GERAIS",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "data": "27/02/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "FABIANO TOLLER DE SOUZA",
+    "ci": 978,
+    "objeto": "NOTIFICAçãO EXTRAJUDICIAL",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "01/03/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Polycarpo Apoio Empresarial Ltda",
+    "ci": 979,
+    "objeto": "TREINAMENTO",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "data": "31/03/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "MARCO VITIELLO",
+    "ci": 746,
+    "objeto": "CONSULTAS EM GERAL",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Marco Vitiello - Time Sheet - MARCO VITIELLO - TIME SHEET",
+    "data": "06/04/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "ANGELA SILVIA MARIA DESIDERI JUNQUEIRA",
+    "ci": 982,
+    "objeto": "LIQUIDAçãO DE SOCIEDADE",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "17/04/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "KGT INDUSTRIA E COMERCIO DE ABRASIVOS LTDA - EPP",
+    "ci": 985,
+    "objeto": "ENCERRAMENTO DA EMPRESA",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "data": "18/07/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "IVANA FREITAS DE MOURA",
+    "ci": 986,
+    "objeto": "CONFLITO DE SóCIOS",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "18/07/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "CUCINA RISTORANTE BERGAMO LTDA",
+    "ci": 987,
+    "objeto": "PROCEDIMENTO ADMINISTRATIVO",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "25/07/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda",
+    "ci": 989,
+    "objeto": "PLATLOG - ARRENDAMENTO AGRíCOLA",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Platlog - Time Sheet",
+    "data": "28/07/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Yofc Brasil Cabos e Solucoes Ltda",
+    "ci": 783,
+    "objeto": "YOFC - LGPD",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "385 - YOFC - LGPD",
+    "data": "01/08/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Yofc Brasil Cabos e Solucoes Ltda",
+    "ci": 765,
+    "objeto": "YOFC - ASSESSORIA EM ESG",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "360 - YOFC - Compliance",
+    "data": "02/08/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Yofc Brasil Cabos e Solucoes Ltda",
+    "ci": 768,
+    "objeto": "YOFC - PARTICIPAÇÃO NO COMITÊ ESG",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "361 - YOFC - COMITÊ",
+    "data": "02/08/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Yofc Brasil Cabos e Solucoes Ltda",
+    "ci": 769,
+    "objeto": "YOFC - REALIZAÇÂO DE TREINAMENTO",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "362 - YOFC - TREINAMENTO",
+    "data": "02/08/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "BAMBOO ARQUITETURA ASSOCIADOS",
+    "ci": 990,
+    "objeto": "ASSUNTOS CONTRATUAIS",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "data": "02/08/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda",
+    "ci": 992,
+    "objeto": "PLATLOG - RECURSO ADMINISTRATIVO IMPACTOS NO TRÂNSITO",
+    "departamento": "Tributário",
+    "area": "Serviços",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Platlog - Time Sheet",
+    "data": "01/09/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "ANGELA SILVIA MARIA DESIDERI JUNQUEIRA",
+    "ci": 993,
+    "objeto": "REMAK - RESPOSTA à NOTIFICAçãO",
+    "area": "Atendimento a clientes",
+    "responsavel": "Andrei Gomes da Silva Pinto",
+    "data": "15/09/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "ANGELA SILVIA MARIA DESIDERI JUNQUEIRA",
+    "ci": 994,
+    "objeto": "MAQBRIT - RESPOSTA à NOTIFICAçãO",
+    "area": "Atendimento a clientes",
+    "responsavel": "Andrei Gomes da Silva Pinto",
+    "data": "15/09/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "ALMIR POLYCARPO",
+    "ci": 996,
+    "objeto": "BOARD VENTURE E FCJ",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "contrato": "394 - ALMIR",
+    "data": "25/09/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Polycarpo Apoio Empresarial Ltda",
+    "ci": 998,
+    "objeto": "CONSULTA CLEONICE PEREIRA (EMPREGADA DE JACYRA DA COSTA FONSECA)",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "data": "15/12/2023",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "GUILHERME LEAO",
+    "ci": 1000,
+    "objeto": "CONSULTORIA",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "data": "09/04/2024",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Distribuidora de Bebidas Tm Ltda",
+    "ci": 1002,
+    "objeto": "AUTO DE INFRAÇÃO CETESB (DÁDIVA)",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Andrei Gomes da Silva Pinto",
+    "contrato": "365 Dádiva - Time Sheet - DÁDIVA - TIME SHEET",
+    "data": "03/06/2024",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Distribuidora de Bebidas Tm Ltda",
+    "ci": 770,
+    "objeto": "CONSULTAS EM GERAL  (DÁDIVA)",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "365 Dádiva - Time Sheet - DÁDIVA - TIME SHEET",
+    "data": "17/06/2024",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Distribuidora de Bebidas Tm Ltda",
+    "ci": 1003,
+    "objeto": "MARCAS INPI DÁDIVA",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Andrei Gomes da Silva Pinto",
+    "contrato": "365 Dádiva - Time Sheet - DÁDIVA - TIME SHEET",
+    "data": "19/06/2024",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Yofc Brasil Cabos e Solucoes Ltda",
+    "ci": 764,
+    "objeto": "YOFC - NOTIFICAÇÃO DE COBRANÇA TEC - WI",
+    "departamento": "Cível",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "359 - YOFC - TEC WI",
+    "data": "30/07/2024",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Yofc Brasil Cabos e Solucoes Ltda",
+    "ci": 766,
+    "objeto": "YOFC - CONTRATOS",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "360 - YOFC - Compliance",
+    "data": "22/08/2024",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda",
+    "ci": 1056,
+    "objeto": "PLATLOG - MOU FÁBRICA DE PÃO",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Platlog - Time Sheet",
+    "data": "22/08/2024",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Maria Paloma Medeiros Siqueiros",
+    "ci": 790,
+    "objeto": "PALOMA SEQUEIROS",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Paloma Sequeiros - Time Sheet - PALOMA SEQUEIROS",
+    "data": "09/09/2024",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda",
+    "ci": 1057,
+    "objeto": "Contrato de Empreitada Pré-fabricados",
+    "departamento": "Consultivo",
+    "area": "Serviços",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Platlog - Time Sheet",
+    "data": "25/09/2024",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Yofc Brasil Cabos e Solucoes Ltda",
+    "ci": 767,
+    "objeto": "CONTRATOS HAGANÁ",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "360 - YOFC - Compliance",
+    "data": "27/09/2024",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Zait Engenharia Ltda.",
+    "ci": 806,
+    "objeto": "ZAIT consulta SEM obra - CÓDIGOS POR ÁREA OU PESSOA",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "ZAIT - Time Sheet",
+    "data": "01/10/2024",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Eliane Do Carmo Luchetti",
+    "ci": 807,
+    "objeto": "Eliane - Notificação Condomínio",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Eliane Luchetti - Time Sheet - Eliane Luchetti",
+    "data": "01/10/2024",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "LE BIFE EVENTOS LTDA",
+    "ci": 749,
+    "objeto": "LE BIFE EVENTOS - Time Sheet",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Le Bife Eventos - Time Sheet - LE BIFE EVENTOS Time Sheet",
+    "data": "02/12/2024",
+    "etiquetas": "Aberto"
+  },
+  {
+    "cliente": "GERALDO ROCHA MELLO",
+    "ci": 808,
+    "objeto": "Geraldo Rocha Mello",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "contrato": "403 - Geraldo Rocha Mello",
+    "data": "17/01/2025",
+    "etiquetas": "Aberto"
+  },
+  {
+    "cliente": "DELQUIMICA COMERCIAL LTDA",
+    "ci": 809,
+    "objeto": "Sucessão Societária",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Delquímica - Projeto Sucessão Societária - Delquímica - Sucessão Societária",
+    "data": "21/01/2025",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Inova Ts Engenharia Ltda.",
+    "ci": 744,
+    "objeto": "OBR 216 NESTLÉ GAROTO -SJR PARDO-TELHADO",
+    "departamento": "Consultivo",
+    "area": "Serviços",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "contrato": "8 Inova - Time Sheet - INOVA TIME SHEET",
+    "data": "24/01/2025",
+    "etiquetas": "AbertoEm andamento"
+  },
+  {
+    "cliente": "FLAVIA MARTINS FUZARO POLYCARPO",
+    "ci": 763,
+    "objeto": "DOB - Diretoria - Comitê temático 2025-2026",
+    "departamento": "Trabalhista",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "contrato": "325 - FLÁVIA MARTINS FUZARO POLYCARPO",
+    "data": "27/01/2025",
+    "etiquetas": "Pro bono"
+  },
+  {
+    "cliente": "Inova Ts Engenharia Ltda.",
+    "ci": 745,
+    "objeto": "OBR 220 NESTLE VL PUMP TR RESFR.",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "contrato": "8 Inova - Time Sheet - INOVA TIME SHEET",
+    "data": "29/01/2025",
+    "etiquetas": "AbertoEm andamento"
+  },
+  {
+    "cliente": "ALMIR POLYCARPO",
+    "ci": 1087,
+    "objeto": "Anotar o tempo utilizado para preparação do material do Congresso Ciello em Bordeaux",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "394 - ALMIR",
+    "data": "25/03/2025",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Inova Ts Engenharia Ltda.",
+    "ci": 1088,
+    "objeto": "OBR 221 NESTLÉ MONTES CLAROS -  PROJETO KALDI",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "8 Inova - Time Sheet - INOVA TIME SHEET",
+    "data": "27/03/2025",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Henrique Martins de Oliveira",
+    "ci": 1092,
+    "objeto": "Convocação do Sindicato dos domésticos referente à ex-empregada Milene Galdino",
+    "departamento": "Trabalhista",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "data": "01/04/2025",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Zait Engenharia Ltda.",
+    "ci": 1096,
+    "objeto": "Z.24.02 SHHOPPING CARNOT",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "ZAIT - Time Sheet",
+    "data": "14/04/2025",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "FLAVIA MARTINS FUZARO POLYCARPO",
+    "ci": 1112,
+    "objeto": "Pasta para atividades gerais pessoais",
+    "departamento": "Trabalhista",
+    "area": "Serviços",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "contrato": "325 - FLÁVIA MARTINS FUZARO POLYCARPO",
+    "data": "03/06/2025",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Polycarpo Advogados",
+    "ci": 1116,
+    "objeto": "Inclusão das horas utilizados no desenvolvimento dos produtos tecnológicos",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "390 - POLYCARPO",
+    "data": "18/06/2025",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Polycarpo Advogados",
+    "ci": 1117,
+    "objeto": "Lançamento de horas dos trabalhos desenvolvido para o produto ESG",
+    "departamento": "Consultivo",
+    "area": "Serviços",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "390 - POLYCARPO",
+    "data": "24/06/2025",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Edinei Mercure",
+    "ci": 1122,
+    "objeto": "Processo de desapropriação municipal para canalização do córrego do Capão Redondo",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Andrei Gomes da Silva Pinto",
+    "contrato": "Elizabete Dias Teixeira - Edinei - Desapropriação",
+    "data": "11/07/2025",
+    "etiquetas": "Pro bono"
+  },
+  {
+    "cliente": "PROHABITAT SOLUCOES AMBIENTAIS LTDA.",
+    "ci": 1125,
+    "objeto": "Operação de M&A da Prohabitat",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "Prohabitat - M&A - Negociação de M&A",
+    "data": "25/07/2025",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Inova Ts Engenharia Ltda.",
+    "ci": 1129,
+    "objeto": "OBRA 212 SHOPPING CIDADE  SP- REFORMA JARDIM EXTERNO",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "8 Inova - Time Sheet - INOVA TIME SHEET",
+    "data": "31/07/2025",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "ALMIR POLYCARPO",
+    "ci": 1132,
+    "objeto": "Registrar o tempo despendido na redação de textos que não sejam profissionais",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "394 - ALMIR",
+    "data": "09/08/2025",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Zait Engenharia Ltda.",
+    "ci": 1135,
+    "objeto": "OBR 199 RESIDÊNCIA F.VASCONCELOS - LOTE A7",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "ZAIT - Time Sheet",
+    "data": "14/08/2025",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Zait Engenharia Ltda.",
+    "ci": 1136,
+    "objeto": "Z.25.02 BM8 - VL SERENA",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "ZAIT - Time Sheet",
+    "data": "14/08/2025",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Zait Engenharia Ltda.",
+    "ci": 1138,
+    "objeto": "Análise da formatação jurídica das parcerias estratégicas",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "ZAIT - Time Sheet",
+    "data": "26/08/2025",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Zait Engenharia Ltda.",
+    "ci": 1144,
+    "objeto": "Contrato de obra do Retrofit Pça Alimentação - Catuaí Londrina",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "ZAIT - Time Sheet",
+    "data": "02/10/2025",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "Zait Engenharia Ltda.",
+    "ci": 1148,
+    "objeto": "Estabelecer instrumento de parceria para negócios na área de logística",
+    "departamento": "Consultivo",
+    "area": "Atendimento a clientes",
+    "responsavel": "Almir Polycarpo",
+    "contrato": "ZAIT - Time Sheet",
+    "data": "13/10/2025",
+    "etiquetas": "Em andamento"
+  },
+  {
+    "cliente": "FLAVIA MARTINS FUZARO POLYCARPO",
+    "ci": 1160,
+    "objeto": "Marcação de compromissos para atividades Me Too",
+    "departamento": "Trabalhista",
+    "area": "Atendimento a clientes",
+    "responsavel": "Flávia Martins Fuzaro Polycarpo",
+    "data": "24/11/2025",
+    "etiquetas": "Pro bono"
+  }
+]

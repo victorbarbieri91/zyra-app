@@ -85,18 +85,17 @@ export function useDashboardAtividades() {
 
         // Pagamentos recebidos
         supabase
-          .from('financeiro_honorarios_parcelas')
+          .from('financeiro_receitas')
           .select(`
             id,
             valor_pago,
             data_pagamento,
             created_at,
-            honorario:financeiro_honorarios(
-              cliente:crm_pessoas(nome_completo)
-            )
+            cliente:crm_pessoas(nome_completo)
           `)
           .eq('escritorio_id', escritorioAtivo)
           .eq('status', 'pago')
+          .not('data_pagamento', 'is', null)
           .order('data_pagamento', { ascending: false })
           .limit(5),
 
@@ -153,17 +152,17 @@ export function useDashboardAtividades() {
       })
 
       // Processar pagamentos
-      parcelasResult.data?.forEach(parcela => {
+      parcelasResult.data?.forEach(receita => {
         const config = tipoConfig.pagamento
-        const honorario = parcela.honorario as any
-        const clienteNome = honorario?.cliente?.nome_completo || 'Cliente'
+        const cliente = receita.cliente as { nome_completo?: string } | null
+        const clienteNome = cliente?.nome_completo || 'Cliente'
         todasAtividades.push({
-          id: `pag-${parcela.id}`,
+          id: `pag-${receita.id}`,
           tipo: 'pagamento',
           icon: config.icon,
           title: 'Pagamento recebido',
-          description: `${clienteNome} - R$ ${Number(parcela.valor_pago || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-          time: formatRelativeDate(new Date(parcela.data_pagamento || parcela.created_at)),
+          description: `${clienteNome} - R$ ${Number(receita.valor_pago || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+          time: formatRelativeDate(new Date(receita.data_pagamento || receita.created_at)),
           colorScheme: config.colorScheme,
         })
       })

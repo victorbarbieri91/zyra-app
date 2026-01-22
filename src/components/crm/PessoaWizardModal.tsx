@@ -1,13 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { WizardWrapper, WizardStep } from '@/components/wizards/WizardWrapper'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -31,8 +24,12 @@ import {
   Users,
   Briefcase,
 } from 'lucide-react'
-import { colors } from '@/lib/design-system'
-import type { TipoPessoa, TipoContato } from '@/types/crm'
+
+// Tipos baseados nos ENUMs do banco
+type TipoPessoa = 'pf' | 'pj'
+type TipoCadastro = 'cliente' | 'prospecto' | 'parte_contraria' | 'correspondente' | 'testemunha' | 'perito' | 'juiz' | 'promotor' | 'outros'
+type StatusPessoa = 'ativo' | 'inativo' | 'arquivado'
+type OrigemCRM = 'indicacao' | 'site' | 'google' | 'redes_sociais' | 'evento' | 'parceria' | 'outros' | ''
 
 interface PessoaWizardModalProps {
   open: boolean
@@ -41,22 +38,16 @@ interface PessoaWizardModalProps {
 }
 
 export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardModalProps) {
+  const [currentStep, setCurrentStep] = useState(0)
   const [formData, setFormData] = useState({
-    // Tipo
     tipo_pessoa: 'pf' as TipoPessoa,
-    tipo_contato: 'cliente' as TipoContato,
-    // Dados Básicos
+    tipo_cadastro: 'cliente' as TipoCadastro,
+    status: 'ativo' as StatusPessoa,
     nome_completo: '',
     nome_fantasia: '',
     cpf_cnpj: '',
-    rg_ie: '',
-    profissao: '',
-    // Contato
-    telefone_principal: '',
-    celular: '',
-    email_principal: '',
-    whatsapp: '',
-    // Endereço
+    telefone: '',
+    email: '',
     cep: '',
     logradouro: '',
     numero: '',
@@ -64,9 +55,7 @@ export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardMo
     bairro: '',
     cidade: '',
     uf: '',
-    // CRM
-    status: 'ativo',
-    origem: '',
+    origem: '' as OrigemCRM,
     observacoes: '',
   })
 
@@ -81,99 +70,99 @@ export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardMo
     onOpenChange(false)
   }
 
-  // Step 1: Tipo e Dados Básicos
+  // Step 1: Tipo e Dados Basicos
   const dadosBasicosStep = (
-    <div className="space-y-5">
-      <Card className="p-4">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-          <Users className="w-4 h-4" />
+    <div className="space-y-3">
+      <Card className="p-3">
+        <h3 className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+          <Users className="w-3.5 h-3.5" />
           Tipo de Pessoa
         </h3>
         <RadioGroup
           value={formData.tipo_pessoa}
           onValueChange={(value) => handleChange('tipo_pessoa', value as TipoPessoa)}
-          className="grid grid-cols-2 gap-4"
+          className="grid grid-cols-2 gap-3"
         >
           <div className="flex items-center space-x-2">
-            <RadioGroupItem value="pf" id="pf" />
-            <Label htmlFor="pf" className="cursor-pointer">
-              Pessoa Física
+            <RadioGroupItem value="pf" id="pf" className="w-3.5 h-3.5" />
+            <Label htmlFor="pf" className="cursor-pointer text-xs">
+              Pessoa Fisica
             </Label>
           </div>
           <div className="flex items-center space-x-2">
-            <RadioGroupItem value="pj" id="pj" />
-            <Label htmlFor="pj" className="cursor-pointer">
-              Pessoa Jurídica
+            <RadioGroupItem value="pj" id="pj" className="w-3.5 h-3.5" />
+            <Label htmlFor="pj" className="cursor-pointer text-xs">
+              Pessoa Juridica
             </Label>
           </div>
         </RadioGroup>
       </Card>
 
-      <Card className="p-4">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-          <Briefcase className="w-4 h-4" />
+      <Card className="p-3">
+        <h3 className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+          <Briefcase className="w-3.5 h-3.5" />
           Categoria
         </h3>
         <Select
-          value={formData.tipo_contato}
-          onValueChange={(value) => handleChange('tipo_contato', value as TipoContato)}
+          value={formData.tipo_cadastro}
+          onValueChange={(value) => handleChange('tipo_cadastro', value as TipoCadastro)}
         >
-          <SelectTrigger>
+          <SelectTrigger className="h-8 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="cliente">Cliente</SelectItem>
-            <SelectItem value="prospecto">Prospecto</SelectItem>
-            <SelectItem value="parceiro">Parceiro</SelectItem>
-            <SelectItem value="parte_contraria">Parte Contrária</SelectItem>
-            <SelectItem value="correspondente">Correspondente</SelectItem>
-            <SelectItem value="testemunha">Testemunha</SelectItem>
-            <SelectItem value="perito">Perito</SelectItem>
-            <SelectItem value="juiz">Juiz</SelectItem>
-            <SelectItem value="promotor">Promotor</SelectItem>
-            <SelectItem value="outros">Outros</SelectItem>
+            <SelectItem value="cliente" className="text-xs">Cliente</SelectItem>
+            <SelectItem value="prospecto" className="text-xs">Prospecto</SelectItem>
+            <SelectItem value="parte_contraria" className="text-xs">Parte Contraria</SelectItem>
+            <SelectItem value="correspondente" className="text-xs">Correspondente</SelectItem>
+            <SelectItem value="testemunha" className="text-xs">Testemunha</SelectItem>
+            <SelectItem value="perito" className="text-xs">Perito</SelectItem>
+            <SelectItem value="juiz" className="text-xs">Juiz</SelectItem>
+            <SelectItem value="promotor" className="text-xs">Promotor</SelectItem>
+            <SelectItem value="outros" className="text-xs">Outros</SelectItem>
           </SelectContent>
         </Select>
       </Card>
 
-      <Card className="p-4">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4">
+      <Card className="p-3">
+        <h3 className="text-xs font-semibold text-slate-700 mb-2">
           Dados Principais
         </h3>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="nome_completo">
-              {formData.tipo_pessoa === 'pf' ? 'Nome Completo' : 'Razão Social'} *
+        <div className="space-y-2.5">
+          <div className="space-y-1">
+            <Label htmlFor="nome_completo" className="text-xs">
+              {formData.tipo_pessoa === 'pf' ? 'Nome Completo' : 'Razao Social'} *
             </Label>
             <div className="relative">
               {formData.tipo_pessoa === 'pf' ? (
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
               ) : (
-                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Building2 className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
               )}
               <Input
                 id="nome_completo"
                 value={formData.nome_completo}
                 onChange={(e) => handleChange('nome_completo', e.target.value)}
-                className="pl-10"
+                className="pl-8 h-8 text-xs"
                 required
               />
             </div>
           </div>
 
           {formData.tipo_pessoa === 'pj' && (
-            <div className="space-y-2">
-              <Label htmlFor="nome_fantasia">Nome Fantasia</Label>
+            <div className="space-y-1">
+              <Label htmlFor="nome_fantasia" className="text-xs">Nome Fantasia</Label>
               <Input
                 id="nome_fantasia"
                 value={formData.nome_fantasia}
                 onChange={(e) => handleChange('nome_fantasia', e.target.value)}
+                className="h-8 text-xs"
               />
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="cpf_cnpj">
+          <div className="space-y-1">
+            <Label htmlFor="cpf_cnpj" className="text-xs">
               {formData.tipo_pessoa === 'pf' ? 'CPF' : 'CNPJ'}
             </Label>
             <Input
@@ -181,40 +170,9 @@ export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardMo
               value={formData.cpf_cnpj}
               onChange={(e) => handleChange('cpf_cnpj', e.target.value)}
               placeholder={formData.tipo_pessoa === 'pf' ? '000.000.000-00' : '00.000.000/0000-00'}
+              className="h-8 text-xs"
             />
           </div>
-
-          {formData.tipo_pessoa === 'pf' && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="rg_ie">RG</Label>
-                <Input
-                  id="rg_ie"
-                  value={formData.rg_ie}
-                  onChange={(e) => handleChange('rg_ie', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="profissao">Profissão</Label>
-                <Input
-                  id="profissao"
-                  value={formData.profissao}
-                  onChange={(e) => handleChange('profissao', e.target.value)}
-                />
-              </div>
-            </>
-          )}
-
-          {formData.tipo_pessoa === 'pj' && (
-            <div className="space-y-2">
-              <Label htmlFor="rg_ie">Inscrição Estadual</Label>
-              <Input
-                id="rg_ie"
-                value={formData.rg_ie}
-                onChange={(e) => handleChange('rg_ie', e.target.value)}
-              />
-            </div>
-          )}
         </div>
       </Card>
     </div>
@@ -222,65 +180,43 @@ export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardMo
 
   // Step 2: Contato
   const contatoStep = (
-    <div className="space-y-4">
-      <Card className="p-4">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-          <Phone className="w-4 h-4" />
-          Telefones
+    <div className="space-y-3">
+      <Card className="p-3">
+        <h3 className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+          <Phone className="w-3.5 h-3.5" />
+          Telefone
         </h3>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="telefone_principal">Telefone Principal</Label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                id="telefone_principal"
-                value={formData.telefone_principal}
-                onChange={(e) => handleChange('telefone_principal', e.target.value)}
-                placeholder="(11) 3333-3333"
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="celular">Celular</Label>
+        <div className="space-y-1">
+          <Label htmlFor="telefone" className="text-xs">Telefone / Celular / WhatsApp</Label>
+          <div className="relative">
+            <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <Input
-              id="celular"
-              value={formData.celular}
-              onChange={(e) => handleChange('celular', e.target.value)}
+              id="telefone"
+              value={formData.telefone}
+              onChange={(e) => handleChange('telefone', e.target.value)}
               placeholder="(11) 99999-9999"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="whatsapp">WhatsApp</Label>
-            <Input
-              id="whatsapp"
-              value={formData.whatsapp}
-              onChange={(e) => handleChange('whatsapp', e.target.value)}
-              placeholder="(11) 99999-9999"
+              className="pl-8 h-8 text-xs"
             />
           </div>
         </div>
       </Card>
 
-      <Card className="p-4">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-          <Mail className="w-4 h-4" />
+      <Card className="p-3">
+        <h3 className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+          <Mail className="w-3.5 h-3.5" />
           Email
         </h3>
-        <div className="space-y-2">
-          <Label htmlFor="email_principal">Email Principal</Label>
+        <div className="space-y-1">
+          <Label htmlFor="email" className="text-xs">Email</Label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <Input
-              id="email_principal"
+              id="email"
               type="email"
-              value={formData.email_principal}
-              onChange={(e) => handleChange('email_principal', e.target.value)}
+              value={formData.email}
+              onChange={(e) => handleChange('email', e.target.value)}
               placeholder="email@exemplo.com"
-              className="pl-10"
+              className="pl-8 h-8 text-xs"
             />
           </div>
         </div>
@@ -288,78 +224,86 @@ export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardMo
     </div>
   )
 
-  // Step 3: Endereço
+  // Step 3: Endereco
   const enderecoStep = (
-    <Card className="p-4">
-      <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-        <MapPin className="w-4 h-4" />
-        Endereço
+    <Card className="p-3">
+      <h3 className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+        <MapPin className="w-3.5 h-3.5" />
+        Endereco
       </h3>
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="cep">CEP</Label>
+      <div className="space-y-2.5">
+        <div className="space-y-1">
+          <Label htmlFor="cep" className="text-xs">CEP</Label>
           <Input
             id="cep"
             value={formData.cep}
             onChange={(e) => handleChange('cep', e.target.value)}
             placeholder="00000-000"
+            className="h-8 text-xs w-32"
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          <div className="col-span-2 space-y-2">
-            <Label htmlFor="logradouro">Logradouro</Label>
+        <div className="grid grid-cols-4 gap-2">
+          <div className="col-span-3 space-y-1">
+            <Label htmlFor="logradouro" className="text-xs">Logradouro</Label>
             <Input
               id="logradouro"
               value={formData.logradouro}
               onChange={(e) => handleChange('logradouro', e.target.value)}
+              className="h-8 text-xs"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="numero">Número</Label>
+          <div className="space-y-1">
+            <Label htmlFor="numero" className="text-xs">Numero</Label>
             <Input
               id="numero"
               value={formData.numero}
               onChange={(e) => handleChange('numero', e.target.value)}
+              className="h-8 text-xs"
             />
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="complemento">Complemento</Label>
-          <Input
-            id="complemento"
-            value={formData.complemento}
-            onChange={(e) => handleChange('complemento', e.target.value)}
-          />
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <Label htmlFor="complemento" className="text-xs">Complemento</Label>
+            <Input
+              id="complemento"
+              value={formData.complemento}
+              onChange={(e) => handleChange('complemento', e.target.value)}
+              className="h-8 text-xs"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="bairro" className="text-xs">Bairro</Label>
+            <Input
+              id="bairro"
+              value={formData.bairro}
+              onChange={(e) => handleChange('bairro', e.target.value)}
+              className="h-8 text-xs"
+            />
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="bairro">Bairro</Label>
-          <Input
-            id="bairro"
-            value={formData.bairro}
-            onChange={(e) => handleChange('bairro', e.target.value)}
-          />
-        </div>
-
-        <div className="grid grid-cols-3 gap-4">
-          <div className="col-span-2 space-y-2">
-            <Label htmlFor="cidade">Cidade</Label>
+        <div className="grid grid-cols-4 gap-2">
+          <div className="col-span-3 space-y-1">
+            <Label htmlFor="cidade" className="text-xs">Cidade</Label>
             <Input
               id="cidade"
               value={formData.cidade}
               onChange={(e) => handleChange('cidade', e.target.value)}
+              className="h-8 text-xs"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="uf">UF</Label>
+          <div className="space-y-1">
+            <Label htmlFor="uf" className="text-xs">UF</Label>
             <Input
               id="uf"
               value={formData.uf}
               onChange={(e) => handleChange('uf', e.target.value.toUpperCase())}
               maxLength={2}
               placeholder="SP"
+              className="h-8 text-xs"
             />
           </div>
         </div>
@@ -367,49 +311,59 @@ export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardMo
     </Card>
   )
 
-  // Step 4: Informações CRM
+  // Step 4: Informacoes CRM
   const crmStep = (
-    <div className="space-y-4">
-      <Card className="p-4">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-          <FileText className="w-4 h-4" />
-          Origem e Observações
-        </h3>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="origem">Como conheceu o escritório?</Label>
-            <Input
-              id="origem"
-              value={formData.origem}
-              onChange={(e) => handleChange('origem', e.target.value)}
-              placeholder="Ex: Indicação, Google, Redes Sociais..."
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="observacoes">Observações</Label>
-            <Textarea
-              id="observacoes"
-              value={formData.observacoes}
-              onChange={(e) => handleChange('observacoes', e.target.value)}
-              placeholder="Anotações sobre o cliente..."
-              rows={4}
-            />
-          </div>
+    <Card className="p-3">
+      <h3 className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+        <FileText className="w-3.5 h-3.5" />
+        Origem e Observacoes
+      </h3>
+      <div className="space-y-2.5">
+        <div className="space-y-1">
+          <Label htmlFor="origem" className="text-xs">Como conheceu o escritorio?</Label>
+          <Select
+            value={formData.origem}
+            onValueChange={(value) => handleChange('origem', value as OrigemCRM)}
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Selecione a origem" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="indicacao" className="text-xs">Indicacao</SelectItem>
+              <SelectItem value="site" className="text-xs">Site</SelectItem>
+              <SelectItem value="google" className="text-xs">Google</SelectItem>
+              <SelectItem value="redes_sociais" className="text-xs">Redes Sociais</SelectItem>
+              <SelectItem value="evento" className="text-xs">Evento</SelectItem>
+              <SelectItem value="parceria" className="text-xs">Parceria</SelectItem>
+              <SelectItem value="outros" className="text-xs">Outros</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      </Card>
-    </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="observacoes" className="text-xs">Observacoes</Label>
+          <Textarea
+            id="observacoes"
+            value={formData.observacoes}
+            onChange={(e) => handleChange('observacoes', e.target.value)}
+            placeholder="Anotacoes sobre o cliente..."
+            rows={3}
+            className="text-xs resize-none"
+          />
+        </div>
+      </div>
+    </Card>
   )
 
   const steps: WizardStep[] = [
     {
       id: 'dados_basicos',
-      title: 'Dados Básicos',
-      description: 'Tipo e informações principais',
+      title: 'Dados Basicos',
+      description: 'Tipo e informacoes principais',
       component: dadosBasicosStep,
       validate: () => {
         if (!formData.nome_completo) {
-          alert('Nome/Razão Social é obrigatório')
+          alert('Nome/Razao Social e obrigatorio')
           return false
         }
         return true
@@ -418,44 +372,61 @@ export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardMo
     {
       id: 'contato',
       title: 'Contato',
-      description: 'Telefones e emails',
+      description: 'Telefone e email',
       component: contatoStep,
       optional: true,
     },
     {
       id: 'endereco',
-      title: 'Endereço',
-      description: 'Endereço completo',
+      title: 'Endereco',
+      description: 'Endereco completo',
       component: enderecoStep,
       optional: true,
     },
     {
       id: 'crm',
-      title: 'Informações CRM',
-      description: 'Origem e observações',
+      title: 'CRM',
+      description: 'Origem e observacoes',
       component: crmStep,
       optional: true,
     },
   ]
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[#34495e]">
-            <User className="w-5 h-5" />
-            Adicionar Nova Pessoa
-          </DialogTitle>
-          <DialogDescription>
-            Preencha as informações da nova pessoa/empresa no CRM
-          </DialogDescription>
-        </DialogHeader>
+  const handleCancel = () => {
+    setCurrentStep(0)
+    setFormData({
+      tipo_pessoa: 'pf',
+      tipo_cadastro: 'cliente',
+      status: 'ativo',
+      nome_completo: '',
+      nome_fantasia: '',
+      cpf_cnpj: '',
+      telefone: '',
+      email: '',
+      cep: '',
+      logradouro: '',
+      numero: '',
+      complemento: '',
+      bairro: '',
+      cidade: '',
+      uf: '',
+      origem: '',
+      observacoes: '',
+    })
+    onOpenChange(false)
+  }
 
-        <WizardWrapper
-          steps={steps}
-          onComplete={handleComplete}
-        />
-      </DialogContent>
-    </Dialog>
+  if (!open) return null
+
+  return (
+    <WizardWrapper
+      steps={steps}
+      currentStep={currentStep}
+      onStepChange={setCurrentStep}
+      onComplete={handleComplete}
+      onCancel={handleCancel}
+      title="Nova Pessoa"
+      description="Preencha as informacoes"
+    />
   )
 }

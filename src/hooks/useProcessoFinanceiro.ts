@@ -257,20 +257,23 @@ export function useProcessoFinanceiro(processoId: string | null) {
         setContratoInfo(null)
       }
 
-      // Buscar honorários
-      const { data: honorariosData } = await supabase
-        .from('financeiro_honorarios')
+      // Buscar receitas (honorários unificados)
+      const { data: receitasData } = await supabase
+        .from('financeiro_receitas')
         .select(`
           *,
-          profiles:responsavel_id (nome_completo)
+          profiles:created_by (nome_completo)
         `)
         .eq('processo_id', processoId)
+        .in('tipo', ['honorario', 'parcela', 'avulso'])
         .order('created_at', { ascending: false })
 
       setHonorarios(
-        (honorariosData || []).map((h: any) => ({
-          ...h,
-          responsavel_nome: h.profiles?.nome_completo,
+        (receitasData || []).map((r: any) => ({
+          ...r,
+          valor_total: r.valor, // Map valor to valor_total for compatibility
+          tipo_honorario: r.categoria,
+          responsavel_nome: r.profiles?.nome_completo,
         }))
       )
 
@@ -301,19 +304,19 @@ export function useProcessoFinanceiro(processoId: string | null) {
       )
 
       // Calcular resumo de honorários
-      const honorariosArr = honorariosData || []
+      const honorariosArr = receitasData || []
       const totalHonorarios = honorariosArr.reduce(
-        (sum: number, h: any) => sum + Number(h.valor_total),
+        (sum: number, r: any) => sum + Number(r.valor),
         0
       )
-      const honorariosPagos = honorariosArr.filter((h: any) => h.status === 'pago')
-      const honorariosFaturados = honorariosArr.filter((h: any) => h.status === 'em_aberto' || h.status === 'faturado')
-      const honorariosAbertos = honorariosArr.filter((h: any) => h.status === 'pendente' || h.status === 'aprovado' || h.status === 'proposta')
+      const honorariosPagos = honorariosArr.filter((r: any) => r.status === 'pago')
+      const honorariosFaturados = honorariosArr.filter((r: any) => r.status === 'faturado')
+      const honorariosAbertos = honorariosArr.filter((r: any) => r.status === 'pendente' || r.status === 'atrasado' || r.status === 'parcial')
 
-      const totalHonorariosPagos = honorariosPagos.reduce((sum: number, h: any) => sum + Number(h.valor_total), 0)
+      const totalHonorariosPagos = honorariosPagos.reduce((sum: number, r: any) => sum + Number(r.valor_pago || r.valor), 0)
       const totalHonorariosPendentes = honorariosArr
-        .filter((h: any) => h.status !== 'pago' && h.status !== 'cancelado')
-        .reduce((sum: number, h: any) => sum + Number(h.valor_total), 0)
+        .filter((r: any) => r.status !== 'pago' && r.status !== 'cancelado')
+        .reduce((sum: number, r: any) => sum + Number(r.valor) - Number(r.valor_pago || 0), 0)
 
       // Calcular resumo de despesas
       const despesasArr = despesasData || []
@@ -498,38 +501,29 @@ export function useProcessoFinanceiro(processoId: string | null) {
           )
         }
 
-        // Gerar número interno
-        const ano = new Date().getFullYear()
-        const { data: lastHon } = await supabase
-          .from('financeiro_honorarios')
-          .select('numero_interno')
-          .eq('escritorio_id', escritorioAtivo)
-          .ilike('numero_interno', `HON-${ano}-%`)
-          .order('numero_interno', { ascending: false })
-          .limit(1)
-
-        let seq = 1
-        if (lastHon && lastHon.length > 0) {
-          const parts = lastHon[0].numero_interno.split('-')
-          seq = parseInt(parts[2] || '0', 10) + 1
-        }
-        const numeroInterno = `HON-${ano}-${String(seq).padStart(4, '0')}`
+        // Calcular data de vencimento (30 dias a partir de hoje)
+        const dataVencimento = new Date()
+        dataVencimento.setDate(dataVencimento.getDate() + 30)
+        const dataVencimentoStr = dataVencimento.toISOString().split('T')[0]
+        const dataCompetencia = dataVencimentoStr.substring(0, 7) + '-01'
 
         const { error: insertError } = await supabase
-          .from('financeiro_honorarios')
+          .from('financeiro_receitas')
           .insert({
             escritorio_id: escritorioAtivo,
+            tipo: 'honorario',
             cliente_id: processoData.cliente_id,
             processo_id: processoId,
-            contrato_id: processoData.contrato_id, // Vincula ao contrato para rastreabilidade
-            tipo_honorario: data.tipo_honorario,
-            valor_total: data.valor_total,
+            contrato_id: processoData.contrato_id,
+            categoria: data.tipo_honorario,
+            valor: data.valor_total,
             descricao: data.descricao,
-            responsavel_id: user.id,
-            numero_interno: numeroInterno,
+            data_competencia: dataCompetencia,
+            data_vencimento: dataVencimentoStr,
             parcelado: data.parcelado ?? false,
-            numero_parcelas: data.numero_parcelas || null,
+            numero_parcelas: data.numero_parcelas || 1,
             status: 'pendente',
+            created_by: user.id,
           })
 
         if (insertError) throw insertError

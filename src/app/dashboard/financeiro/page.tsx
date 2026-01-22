@@ -200,19 +200,22 @@ export default function FinanceiroDashboard() {
     if (!escritorioAtivo) return
 
     try {
-      // Buscar parcelas pendentes e atrasadas
-      const { data: parcelas, error } = await supabase
-        .from('financeiro_honorarios_parcelas')
-        .select('valor, status')
+      // Buscar receitas pendentes e atrasadas
+      const { data: receitas, error } = await supabase
+        .from('financeiro_receitas')
+        .select('valor, valor_pago, status')
         .eq('escritorio_id', escritorioAtivo)
-        .in('status', ['pendente', 'atrasado'])
+        .in('status', ['pendente', 'atrasado', 'parcial'])
 
       if (error) throw error
 
-      const totalPendente = (parcelas || []).reduce((sum, p) => sum + (Number(p.valor) || 0), 0)
-      const totalAtrasado = (parcelas || [])
-        .filter((p) => p.status === 'atrasado')
-        .reduce((sum, p) => sum + (Number(p.valor) || 0), 0)
+      const totalPendente = (receitas || []).reduce(
+        (sum, r) => sum + (Number(r.valor) || 0) - (Number(r.valor_pago) || 0),
+        0
+      )
+      const totalAtrasado = (receitas || [])
+        .filter((r) => r.status === 'atrasado')
+        .reduce((sum, r) => sum + (Number(r.valor) || 0) - (Number(r.valor_pago) || 0), 0)
 
       const taxa = totalPendente > 0 ? (totalAtrasado / totalPendente) * 100 : 0
 

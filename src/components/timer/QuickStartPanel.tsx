@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Play, AlertCircle, Clock, FileText, CheckSquare, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useEscritorio } from '@/contexts/EscritorioContext';
 import { useTimer } from '@/contexts/TimerContext';
 import { useTarefasDoDia, TarefaDoDia } from '@/hooks/useTarefasDoDia';
@@ -23,7 +24,10 @@ export function QuickStartPanel() {
         faturavel: true,
       });
       await refreshTarefas();
-    } catch (err) {
+      toast.success('Timer iniciado!');
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Erro ao iniciar timer';
+      toast.error(errorMessage);
       console.error('Erro ao iniciar timer:', err);
     } finally {
       setLoadingTarefaId(null);

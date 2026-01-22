@@ -28,7 +28,9 @@ import ChecklistEditor, { ChecklistItem } from './ChecklistEditor'
 import VinculacaoSelector, { Vinculacao } from './VinculacaoSelector'
 import LembretesEditor, { Lembrete } from './LembretesEditor'
 import PrazoCalculator from './PrazoCalculator'
+import ResponsaveisSelector from './ResponsaveisSelector'
 import { useTarefas, Tarefa } from '@/hooks/useTarefas'
+import { useAgendaResponsaveis } from '@/hooks/useAgendaResponsaveis'
 
 interface TarefaModalProps {
   open: boolean
@@ -84,6 +86,7 @@ export default function TarefaModal({
   processoIdPadrao,
 }: TarefaModalProps) {
   const { createTarefa, updateTarefa } = useTarefas()
+  const { getResponsaveis, setResponsaveis } = useAgendaResponsaveis()
 
   const [activeTab, setActiveTab] = useState('basico')
   const [saving, setSaving] = useState(false)
@@ -95,7 +98,7 @@ export default function TarefaModal({
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
   const [prioridade, setPrioridade] = useState<Tarefa['prioridade']>('media')
-  const [responsavelId, setResponsavelId] = useState<string>('')
+  const [responsaveisIds, setResponsaveisIds] = useState<string[]>([])
 
   // Prazo processual
   const [prazoDataIntimacao, setPrazoDataIntimacao] = useState('')
@@ -114,28 +117,35 @@ export default function TarefaModal({
 
   // Carregar dados da tarefa se estiver editando ou aplicar valores padrão
   useEffect(() => {
-    if (tarefa) {
-      setTipo(tarefa.tipo)
-      setTitulo(tarefa.titulo)
-      setDescricao(tarefa.descricao || '')
-      setDataInicio(tarefa.data_inicio?.split('T')[0] || '')
-      setDataFim(tarefa.data_fim?.split('T')[0] || '')
-      setPrioridade(tarefa.prioridade)
-      setResponsavelId(tarefa.responsavel_id || '')
-      setPrazoDataIntimacao(tarefa.prazo_data_intimacao || '')
-      setPrazoQuantidadeDias(tarefa.prazo_quantidade_dias || 15)
-      setPrazoDiasUteis(tarefa.prazo_dias_uteis ?? true)
-      setPrazoDataLimite(tarefa.prazo_data_limite || '')
-      // TODO: Carregar checklist, vinculações e lembretes
-    } else {
-      resetForm()
-      // Aplicar valores padrão se fornecidos
-      if (tituloPadrao) setTitulo(tituloPadrao)
-      if (descricaoPadrao) setDescricao(descricaoPadrao)
-      if (processoIdPadrao) {
-        setVinculacao({ modulo: 'processo', modulo_registro_id: processoIdPadrao })
+    const loadData = async () => {
+      if (tarefa) {
+        setTipo(tarefa.tipo)
+        setTitulo(tarefa.titulo)
+        setDescricao(tarefa.descricao || '')
+        setDataInicio(tarefa.data_inicio?.split('T')[0] || '')
+        setDataFim(tarefa.data_fim?.split('T')[0] || '')
+        setPrioridade(tarefa.prioridade)
+        setPrazoDataIntimacao(tarefa.prazo_data_intimacao || '')
+        setPrazoQuantidadeDias(tarefa.prazo_quantidade_dias || 15)
+        setPrazoDiasUteis(tarefa.prazo_dias_uteis ?? true)
+        setPrazoDataLimite(tarefa.prazo_data_limite || '')
+
+        // Carregar responsáveis da nova tabela
+        const responsaveis = await getResponsaveis('tarefa', tarefa.id)
+        setResponsaveisIds(responsaveis.map(r => r.user_id))
+
+        // TODO: Carregar checklist, vinculações e lembretes
+      } else {
+        resetForm()
+        // Aplicar valores padrão se fornecidos
+        if (tituloPadrao) setTitulo(tituloPadrao)
+        if (descricaoPadrao) setDescricao(descricaoPadrao)
+        if (processoIdPadrao) {
+          setVinculacao({ modulo: 'processo', modulo_registro_id: processoIdPadrao })
+        }
       }
     }
+    loadData()
   }, [tarefa, tituloPadrao, descricaoPadrao, processoIdPadrao])
 
   const resetForm = () => {
@@ -145,7 +155,7 @@ export default function TarefaModal({
     setDataInicio('')
     setDataFim('')
     setPrioridade('media')
-    setResponsavelId('')
+    setResponsaveisIds([])
     setPrazoDataIntimacao('')
     setPrazoQuantidadeDias(15)
     setPrazoDiasUteis(true)
@@ -189,7 +199,8 @@ export default function TarefaModal({
         data_inicio: dataInicio,
         data_fim: dataFim || undefined,
         prioridade,
-        responsavel_id: responsavelId || undefined,
+        // responsavel_id mantido para retrocompatibilidade (primeiro da lista)
+        responsavel_id: responsaveisIds.length > 0 ? responsaveisIds[0] : undefined,
         prazo_data_intimacao: tipo === 'prazo_processual' ? prazoDataIntimacao || undefined : undefined,
         prazo_quantidade_dias: tipo === 'prazo_processual' ? prazoQuantidadeDias : undefined,
         prazo_dias_uteis: tipo === 'prazo_processual' ? prazoDiasUteis : undefined,
@@ -201,11 +212,17 @@ export default function TarefaModal({
 
       console.log('Dados da tarefa sendo salvos:', tarefaData)
 
+      let tarefaId: string
       if (tarefa?.id) {
         await updateTarefa(tarefa.id, tarefaData)
+        tarefaId = tarefa.id
       } else {
-        await createTarefa(tarefaData)
+        const novaTarefa = await createTarefa(tarefaData)
+        tarefaId = novaTarefa.id
       }
+
+      // Salvar responsáveis na tabela N:N
+      await setResponsaveis('tarefa', tarefaId, responsaveisIds)
 
       // TODO: Salvar checklist e lembretes separadamente
 
@@ -399,17 +416,13 @@ export default function TarefaModal({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="responsavel" className="text-sm font-medium text-[#46627f]">
-                    Responsável
-                  </Label>
-                  <Input
-                    id="responsavel"
-                    value={responsavelId}
-                    onChange={(e) => setResponsavelId(e.target.value)}
-                    placeholder="Selecionar usuário..."
-                    className="border-slate-200"
+                  <ResponsaveisSelector
+                    escritorioId={escritorioId || undefined}
+                    selectedIds={responsaveisIds}
+                    onChange={setResponsaveisIds}
+                    label="Responsáveis"
+                    placeholder="Selecionar responsáveis..."
                   />
-                  {/* TODO: Implementar autocomplete de usuários */}
                 </div>
               </div>
             </TabsContent>

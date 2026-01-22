@@ -78,6 +78,8 @@ export function useDashboardMetrics() {
         timesheetFaturadoResult,
         horasNaoFaturadasResult,
         metasResult,
+        receitasRecebidasResult,
+        aReceberResult,
       ] = await Promise.all([
         // Processos ativos
         supabase
@@ -144,6 +146,21 @@ export function useDashboardMetrics() {
           .eq('ativa', true)
           .gte('data_fim', hoje.toISOString().split('T')[0])
           .lte('data_inicio', hoje.toISOString().split('T')[0]),
+
+        // Receitas recebidas no mês (faturamento)
+        supabase
+          .from('financeiro_receitas')
+          .select('valor_pago')
+          .eq('escritorio_id', escritorioAtivo)
+          .in('status', ['pago', 'parcial'])
+          .gte('data_pagamento', inicioMes.toISOString().split('T')[0]),
+
+        // A receber (receitas pendentes)
+        supabase
+          .from('financeiro_receitas')
+          .select('valor, valor_pago')
+          .eq('escritorio_id', escritorioAtivo)
+          .in('status', ['pendente', 'atrasado', 'parcial']),
       ])
 
       // Processar resultados
@@ -172,19 +189,31 @@ export function useDashboardMetrics() {
         if (metaReceita) receitaMeta = Number(metaReceita.valor_meta)
       }
 
+      // Calcular faturamento do mês (soma de valor_pago das receitas pagas)
+      const faturamentoMes = receitasRecebidasResult.data?.reduce(
+        (acc, item) => acc + (Number(item.valor_pago) || 0),
+        0
+      ) || 0
+
+      // Calcular total a receber (valor pendente das receitas)
+      const totalAReceber = aReceberResult.data?.reduce(
+        (acc, item) => acc + (Number(item.valor) || 0) - (Number(item.valor_pago) || 0),
+        0
+      ) || 0
+
       setMetrics({
         processos_ativos: processosResult.count || 0,
         processos_novos_semana: processosNovosResult.count || 0,
         clientes_ativos: clientesResult.count || 0,
         clientes_novos_mes: clientesNovosResult.count || 0,
         consultas_abertas: consultasResult.count || 0,
-        faturamento_mes: 0, // TODO: calcular de financeiro_honorarios_parcelas
-        a_receber: valorNaoFaturado,
+        faturamento_mes: faturamentoMes,
+        a_receber: totalAReceber,
         horas_faturadas_mes: horasFaturadas,
         horas_nao_faturadas: horasNaoFaturadas,
         valor_horas_nao_faturadas: valorNaoFaturado,
         horas_meta: horasMeta,
-        receita_mes: 0, // TODO: calcular de pagamentos recebidos
+        receita_mes: faturamentoMes,
         receita_meta: receitaMeta,
         publicacoes_pendentes: publicacoesResult.data?.pendentes || 0,
         publicacoes_urgentes: publicacoesResult.data?.urgentes_nao_processadas || 0,

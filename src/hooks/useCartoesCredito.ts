@@ -10,7 +10,7 @@ export interface CartaoCredito {
   escritorio_id: string
   nome: string
   banco: string
-  bandeira: 'visa' | 'mastercard' | 'elo' | 'amex' | 'hipercard' | 'outras'
+  bandeira: 'visa' | 'mastercard' | 'elo' | 'amex' | 'hipercard' | 'diners' | 'outra'
   ultimos_digitos: string
   dia_vencimento: number
   dias_antes_fechamento: number
@@ -121,7 +121,7 @@ export interface ImportacaoFatura {
 export interface CartaoFormData {
   nome: string
   banco: string
-  bandeira: 'visa' | 'mastercard' | 'elo' | 'amex' | 'hipercard' | 'outras'
+  bandeira: 'visa' | 'mastercard' | 'elo' | 'amex' | 'hipercard' | 'diners' | 'outra'
   ultimos_digitos: string
   dia_vencimento: number
   dias_antes_fechamento: number
@@ -147,6 +147,7 @@ export interface DespesaCartaoFormData {
 // CATEGORIAS DE DESPESA DO CARTÃO
 // =====================================================
 
+// Valores padronizados conforme v_financeiro_enums
 export const CATEGORIAS_DESPESA_CARTAO = [
   { value: 'custas', label: 'Custas Processuais' },
   { value: 'fornecedor', label: 'Fornecedor' },
@@ -161,16 +162,18 @@ export const CATEGORIAS_DESPESA_CARTAO = [
   { value: 'alimentacao', label: 'Alimentação' },
   { value: 'combustivel', label: 'Combustível' },
   { value: 'assinatura', label: 'Assinaturas' },
-  { value: 'outras', label: 'Outras' },
+  { value: 'outros', label: 'Outros' },
 ]
 
+// Bandeiras conforme v_financeiro_enums
 export const BANDEIRAS_CARTAO = [
   { value: 'visa', label: 'Visa', cor: '#1A1F71' },
   { value: 'mastercard', label: 'Mastercard', cor: '#EB001B' },
   { value: 'elo', label: 'Elo', cor: '#00A4E0' },
   { value: 'amex', label: 'American Express', cor: '#006FCF' },
   { value: 'hipercard', label: 'Hipercard', cor: '#822124' },
-  { value: 'outras', label: 'Outras', cor: '#64748B' },
+  { value: 'diners', label: 'Diners Club', cor: '#0066B3' },
+  { value: 'outra', label: 'Outra', cor: '#64748B' },
 ]
 
 export const CORES_CARTAO = [

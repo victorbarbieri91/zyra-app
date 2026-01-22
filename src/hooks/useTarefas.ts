@@ -43,6 +43,9 @@ export interface Tarefa {
   responsavel_nome?: string
   criado_por_nome?: string
 
+  // Múltiplos responsáveis (carregado separadamente via useAgendaResponsaveis)
+  responsaveis_ids?: string[]
+
   created_at: string
   updated_at: string
 }

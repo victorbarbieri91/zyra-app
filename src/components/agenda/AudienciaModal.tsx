@@ -24,7 +24,9 @@ import { cn } from '@/lib/utils'
 import ChecklistEditor, { ChecklistItem } from './ChecklistEditor'
 import LembretesEditor, { Lembrete } from './LembretesEditor'
 import VinculacaoSelector, { Vinculacao } from './VinculacaoSelector'
+import ResponsaveisSelector from './ResponsaveisSelector'
 import { useAudiencias, Audiencia } from '@/hooks/useAudiencias'
+import { useAgendaResponsaveis } from '@/hooks/useAgendaResponsaveis'
 
 interface AudienciaModalProps {
   open: boolean
@@ -54,9 +56,13 @@ export default function AudienciaModal({
   descricaoPadrao,
 }: AudienciaModalProps) {
   const { createAudiencia, updateAudiencia } = useAudiencias()
+  const { getResponsaveis, setResponsaveis } = useAgendaResponsaveis()
 
   const [activeTab, setActiveTab] = useState('basico')
   const [saving, setSaving] = useState(false)
+
+  // Responsáveis
+  const [responsaveisIds, setResponsaveisIds] = useState<string[]>([])
 
   // Campos básicos
   const [processoId, setProcessoId] = useState(processoIdPadrao || '')
@@ -94,30 +100,37 @@ export default function AudienciaModal({
   const [lembretes, setLembretes] = useState<Lembrete[]>([])
 
   useEffect(() => {
-    if (audiencia) {
-      setProcessoId(audiencia.processo_id || '')
-      setTipoAudiencia(audiencia.tipo_audiencia)
-      setModalidade(audiencia.modalidade)
-      setDataHora(audiencia.data_hora?.substring(0, 16) || '')
-      setDuracao(audiencia.duracao_estimada_minutos?.toString() || '')
-      setObservacoes(audiencia.observacoes || '')
-      setTribunal(audiencia.tribunal || '')
-      setComarca(audiencia.comarca || '')
-      setVara(audiencia.vara || '')
-      setEndereco(audiencia.endereco || '')
-      setLinkVirtual(audiencia.link_virtual || '')
-      setPlataforma(audiencia.plataforma || '')
-      setInstrucoes(audiencia.instrucoes_acesso || '')
-      setJuiz(audiencia.juiz || '')
-      setPromotor(audiencia.promotor || '')
-      setParteContraria(audiencia.parte_contraria || '')
-      setAdvogadoContrario(audiencia.advogado_contrario || '')
-      setTestemunhas(audiencia.testemunhas || '')
-    } else {
-      resetForm()
-      // Aplicar valores padrão se fornecidos
-      if (descricaoPadrao) setObservacoes(descricaoPadrao)
+    const loadData = async () => {
+      if (audiencia) {
+        setProcessoId(audiencia.processo_id || '')
+        setTipoAudiencia(audiencia.tipo_audiencia)
+        setModalidade(audiencia.modalidade)
+        setDataHora(audiencia.data_hora?.substring(0, 16) || '')
+        setDuracao(audiencia.duracao_estimada_minutos?.toString() || '')
+        setObservacoes(audiencia.observacoes || '')
+        setTribunal(audiencia.tribunal || '')
+        setComarca(audiencia.comarca || '')
+        setVara(audiencia.vara || '')
+        setEndereco(audiencia.endereco || '')
+        setLinkVirtual(audiencia.link_virtual || '')
+        setPlataforma(audiencia.plataforma || '')
+        setInstrucoes(audiencia.instrucoes_acesso || '')
+        setJuiz(audiencia.juiz || '')
+        setPromotor(audiencia.promotor || '')
+        setParteContraria(audiencia.parte_contraria || '')
+        setAdvogadoContrario(audiencia.advogado_contrario || '')
+        setTestemunhas(audiencia.testemunhas || '')
+
+        // Carregar responsáveis da nova tabela
+        const responsaveis = await getResponsaveis('audiencia', audiencia.id)
+        setResponsaveisIds(responsaveis.map(r => r.user_id))
+      } else {
+        resetForm()
+        // Aplicar valores padrão se fornecidos
+        if (descricaoPadrao) setObservacoes(descricaoPadrao)
+      }
     }
+    loadData()
   }, [audiencia, descricaoPadrao])
 
   const resetForm = () => {
@@ -141,6 +154,7 @@ export default function AudienciaModal({
     setTestemunhas('')
     setChecklist([])
     setVinculacao(null)
+    setResponsaveisIds([])
     setLembretes([])
     setActiveTab('basico')
   }
@@ -198,13 +212,21 @@ export default function AudienciaModal({
         parte_contraria: parteContraria || null,
         advogado_contrario: advogadoContrario || null,
         testemunhas: testemunhas || null,
+        // responsavel_id para retrocompatibilidade
+        responsavel_id: responsaveisIds.length > 0 ? responsaveisIds[0] : null,
       }
 
+      let audienciaId: string
       if (audiencia?.id) {
         await updateAudiencia(audiencia.id, audienciaData)
+        audienciaId = audiencia.id
       } else {
-        await createAudiencia(audienciaData)
+        const novaAudiencia = await createAudiencia(audienciaData)
+        audienciaId = novaAudiencia.id
       }
+
+      // Salvar responsáveis na tabela N:N
+      await setResponsaveis('audiencia', audienciaId, responsaveisIds)
 
       // TODO: Salvar checklist e lembretes
 
@@ -497,6 +519,17 @@ export default function AudienciaModal({
 
             {/* ABA PARTICIPANTES */}
             <TabsContent value="participantes" className="space-y-4 mt-0">
+              {/* Responsáveis do Escritório */}
+              <ResponsaveisSelector
+                escritorioId={escritorioId || undefined}
+                selectedIds={responsaveisIds}
+                onChange={setResponsaveisIds}
+                label="Responsáveis do Escritório"
+                placeholder="Selecionar advogados responsáveis..."
+              />
+
+              <div className="border-t border-slate-100 my-4" />
+
               <div className="space-y-2">
                 <Label htmlFor="juiz" className="text-sm font-medium text-[#46627f]">
                   Juiz(a)

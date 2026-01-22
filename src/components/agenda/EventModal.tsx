@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Calendar, Clock, MapPin, User, FileText, Bell, Repeat, X, Plus } from 'lucide-react'
+import ResponsaveisSelector from '@/components/agenda/ResponsaveisSelector'
+import { useAgendaResponsaveis } from '@/hooks/useAgendaResponsaveis'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
@@ -67,6 +69,7 @@ interface EventModalProps {
   clientes?: Array<{ id: string; nome: string }>
   processos?: Array<{ id: string; numero: string }>
   responsaveis?: Array<{ id: string; nome: string }>
+  escritorioId?: string
 }
 
 export default function EventModal({
@@ -79,6 +82,7 @@ export default function EventModal({
   clientes = [],
   processos = [],
   responsaveis = [],
+  escritorioId,
 }: EventModalProps) {
   const isEdit = !!evento?.id
 
@@ -95,12 +99,23 @@ export default function EventModal({
 
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('basico')
+  const [responsaveisIds, setResponsaveisIds] = useState<string[]>([])
+
+  // Hook para gerenciar responsáveis múltiplos
+  const { setResponsaveis, getResponsaveis } = useAgendaResponsaveis()
 
   useEffect(() => {
     if (evento) {
       setFormData(evento)
+      // Carregar responsáveis do evento existente
+      if (evento.id) {
+        getResponsaveis('evento', evento.id).then(ids => {
+          setResponsaveisIds(ids)
+        })
+      }
     } else if (defaultDate) {
       setFormData(prev => ({ ...prev, data_inicio: defaultDate }))
+      setResponsaveisIds([])
     }
   }, [evento, defaultDate])
 
@@ -108,7 +123,18 @@ export default function EventModal({
     e.preventDefault()
     setLoading(true)
     try {
-      await onSave(formData)
+      // Incluir responsavel_id para compatibilidade (primeiro da lista)
+      const dataToSave = {
+        ...formData,
+        responsavel_id: responsaveisIds[0] || formData.responsavel_id
+      }
+      await onSave(dataToSave)
+
+      // Salvar múltiplos responsáveis na tabela N:N se temos o ID do evento
+      if (formData.id && responsaveisIds.length > 0) {
+        await setResponsaveis('evento', formData.id, responsaveisIds)
+      }
+
       onOpenChange(false)
       // Reset form
       setFormData({
@@ -119,6 +145,7 @@ export default function EventModal({
         status: 'agendado',
         lembretes: [{ tempo_antes_minutos: 15, metodos: ['push'] }],
       })
+      setResponsaveisIds([])
     } catch (error) {
       console.error('Erro ao salvar evento:', error)
     } finally {
@@ -363,28 +390,38 @@ export default function EventModal({
                 </div>
               </div>
 
-              {/* Responsável */}
-              <div className="space-y-2">
-                <Label htmlFor="responsavel_id" className="text-sm font-medium text-[#46627f]">
-                  Responsável *
-                </Label>
-                <Select
-                  value={formData.responsavel_id}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, responsavel_id: value }))}
-                  required
-                >
-                  <SelectTrigger className="border-slate-200">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {responsaveis.map((responsavel) => (
-                      <SelectItem key={responsavel.id} value={responsavel.id}>
-                        {responsavel.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Responsáveis (multi-select) */}
+              {escritorioId ? (
+                <ResponsaveisSelector
+                  escritorioId={escritorioId}
+                  selectedIds={responsaveisIds}
+                  onChange={setResponsaveisIds}
+                  label="Responsáveis *"
+                  placeholder="Selecionar responsáveis..."
+                />
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="responsavel_id" className="text-sm font-medium text-[#46627f]">
+                    Responsável *
+                  </Label>
+                  <Select
+                    value={formData.responsavel_id}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, responsavel_id: value }))}
+                    required
+                  >
+                    <SelectTrigger className="border-slate-200">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {responsaveis.map((responsavel) => (
+                        <SelectItem key={responsavel.id} value={responsavel.id}>
+                          {responsavel.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </TabsContent>
 
             {/* TAB: Detalhes */}

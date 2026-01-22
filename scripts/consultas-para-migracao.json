@@ -1,0 +1,1496 @@
+[
+  {
+    "idx": 1,
+    "cliente_nome": "João Hamilton de Abreu",
+    "assunto": "CONSULTAS",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "ae7aaeca-aeac-4db9-952a-3e254d57a19a",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 810",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 2,
+    "cliente_nome": "EDVALDO AILDER CATALANI MORATA",
+    "assunto": "Consulta migrada",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "031d6fab-b0ae-46ba-85d0-f57612633e05",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 811",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 3,
+    "cliente_nome": "ANCAR AGROPECUARIA LTDA",
+    "assunto": "Consulta migrada",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 819",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 4,
+    "cliente_nome": "TRIASSICO PARTICIPACOES LTDA",
+    "assunto": "Consulta migrada",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 820",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 5,
+    "cliente_nome": "BEL STAR S/A",
+    "assunto": "PROCURAçãO REPRE. EMP. ESTRANGEIRA",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 824",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 6,
+    "cliente_nome": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda.",
+    "assunto": "BELCORP - CONSULTIVO GERAL",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "4797401c-1645-40ca-a3de-41dfee13cce5",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 771",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 7,
+    "cliente_nome": "BARRA DO CAI LTDA",
+    "assunto": "SOCIETÁRIO",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "ca1bd57f-3803-4335-9558-a868f2479c82",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 782",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 8,
+    "cliente_nome": "Platlog Importação, Logística e Distribuição Ltda",
+    "assunto": "CONSULTIVO GERAL",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "30bea91a-88ce-41a5-8c99-00da2cc46c8a",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 840",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 9,
+    "cliente_nome": "FRANCISCO VELOSO FILHO",
+    "assunto": "CONSULTAS EM GERAL",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "35480478-3309-47f1-9d7d-eb505ec99466",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 848",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 10,
+    "cliente_nome": "Inova Ts Engenharia Ltda.",
+    "assunto": "INOVA consulta SEM obra - CÓDIGOS POR ÁREA OU PESSOA",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "5e917dfe-5917-4493-9a2c-4e5f2361d1d8",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 659",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 11,
+    "cliente_nome": "FORFUTURING CONSULTORIA ESTRATEGICA LTDA",
+    "assunto": "SERVIÇOS GERAIS",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "b17733ef-247f-4ecd-bbd4-4c8ab0ec0641",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 857",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 12,
+    "cliente_nome": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda.",
+    "assunto": "BELCORP - AKT TEC",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "c3a918fe-4302-4b24-b174-c0665a23c460",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 778",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 13,
+    "cliente_nome": "Belcorp Trading do Brasil Importação e Exportação Ltda",
+    "assunto": "CONTRATO DE HONORARIOS",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1050",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 14,
+    "cliente_nome": "MAESTRO PLANEJAMENTO E GERENCIAMENTO DE OBRAS LTDA.",
+    "assunto": "Consulta migrada",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 867",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 15,
+    "cliente_nome": "Optical Sunglassses Ltda",
+    "assunto": "CONSULTIVO",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": "a4220cbb-b950-44bb-b469-30ae7db5a6c7",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 870",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 16,
+    "cliente_nome": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda.",
+    "assunto": "BELCORP - ABIHPEC",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "c3a918fe-4302-4b24-b174-c0665a23c460",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 780",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 17,
+    "cliente_nome": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda.",
+    "assunto": "BELCORP - POLYCARPO",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "c3a918fe-4302-4b24-b174-c0665a23c460",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 779",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 18,
+    "cliente_nome": "SERGIO  MOACYR RAGUSA",
+    "assunto": "ASSUNTOS DIVERSOS - CONSULTORIA",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 886",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 19,
+    "cliente_nome": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda.",
+    "assunto": "BELCORP - GABRIEL ASSINATURA DE DOCUMENTOS",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "c3a918fe-4302-4b24-b174-c0665a23c460",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 777",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 20,
+    "cliente_nome": "PAULA ARANTXA DE FREITAS VILLALBA",
+    "assunto": "CONSULTAS TRABALHISTAS",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": "ab444312-e369-4bd1-8eb1-f317793d0c36",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 882",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 21,
+    "cliente_nome": "JOSE LUIZ TABITH JUNIOR",
+    "assunto": "NEGOCIAçãO COM SóCIOS",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 883",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 22,
+    "cliente_nome": "LUIZ HENRIQUE FASCINA",
+    "assunto": "NEGOCIAçãO COM SóCIOS",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 884",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 23,
+    "cliente_nome": "CELSO FERNANDES PEREIRA",
+    "assunto": "NEGOCIAçãO COM SóCIOS",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 885",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 24,
+    "cliente_nome": "MARCELO TELLES RIBEIRO 99390817749",
+    "assunto": "ASSESSORIA CONTRATUAL",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 887",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 25,
+    "cliente_nome": "FRANCISCO VELOSO FILHO",
+    "assunto": "NOTIFICAÇÃO ACTEGA",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "35480478-3309-47f1-9d7d-eb505ec99466",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 748",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 26,
+    "cliente_nome": "ANTONIO OSVALDO DA COSTA",
+    "assunto": "NOTIFICAçãO ACTEGA",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 892",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 27,
+    "cliente_nome": "LAVISKA INCORPORACAO LTDA",
+    "assunto": "AQUISIçãO DE IMóVEL",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 899",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 28,
+    "cliente_nome": "GILBERTO LAVIERO MOSCA JUNIOR",
+    "assunto": "ELABORAçãO DE CONTRATO SOCIAL",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 907",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 29,
+    "cliente_nome": "ESCRITORIO VIDA - APOIO ADMINISTRATIVO LTDA.",
+    "assunto": "CONSULTAS EM GERAL (GRUPO VIDA)",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 921",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 30,
+    "cliente_nome": "4FX CORRETORA DE SEGUROS E DESENVOLVIMENTO EMPRESARIAL LTDA",
+    "assunto": "NEGOCIAçãO DE PENDêNCIAS CONTRATUAIS",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 928",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 31,
+    "cliente_nome": "RADIO CIDADE DE CAMPINAS LTDA",
+    "assunto": "ADMINISTRATIVO EM GERAL",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 930",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 32,
+    "cliente_nome": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda.",
+    "assunto": "BELCORP - CONSULTIVO TRIBUTÁRIO",
+    "descricao": null,
+    "responsavel_id": "a7aebc01-3bc4-4f1d-a0c6-cddd0ac0941a",
+    "contrato_id": "b0d3801f-fd89-434d-94c2-a3ad659e80c6",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 654",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 33,
+    "cliente_nome": "Inova Ts Engenharia Ltda.",
+    "assunto": "INOVA - VILA EAU",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "5e917dfe-5917-4493-9a2c-4e5f2361d1d8",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 729",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 34,
+    "cliente_nome": "JOSE LUIZ TABITH JUNIOR",
+    "assunto": "OBRA - CONDOMíNIO EDIFíCIO APRACS",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 942",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 35,
+    "cliente_nome": "Sandra Savoia Grasso",
+    "assunto": "COMPRA E VENDA - APARTAMENTO STUDIO PINHEIROS",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 966",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 36,
+    "cliente_nome": "BARASCH INDUSTRIA E COMERCIO DE PRODUTOS ELETROELETRONICOS LTDA",
+    "assunto": "CONTRATO DE HONORARIOS",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1055",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 37,
+    "cliente_nome": "DELI GARAGE DOCERIA & PADARIA EIRELI",
+    "assunto": "M&A",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 945",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 38,
+    "cliente_nome": "ARMAZENS GERAIS VILA CARIOCA LTDA",
+    "assunto": "CONSULTAS EM GERAL",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 944",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 39,
+    "cliente_nome": "CARLOS EDUARDO DE MELLO",
+    "assunto": "CONSTITUIçãO DE SOCIEDADE",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "d4de3cab-cbe9-47ff-b934-daf87f5081d0",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 946",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 40,
+    "cliente_nome": "CARLOS EDUARDO DE MELLO",
+    "assunto": "INTEGRALIZAÇÃO DE CAPITAL",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "d4de3cab-cbe9-47ff-b934-daf87f5081d0",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 947",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 41,
+    "cliente_nome": "Zait Engenharia Ltda.",
+    "assunto": "OBR 203 COLÉGIO BRASILEIRO ISLÂMICO",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "881d26fa-1fe8-444d-8c0c-54b4bb41f523",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 802",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 42,
+    "cliente_nome": "RAFAEL DAHER SEVIERI",
+    "assunto": "OPERAçãO SOCIETáRIA",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 949",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 43,
+    "cliente_nome": "Platlog Importação, Logística e Distribuição Ltda",
+    "assunto": "PLATLOG - MARCAS PLATLOG E ARMAZéNS GERAIS",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "30bea91a-88ce-41a5-8c99-00da2cc46c8a",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 950",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 44,
+    "cliente_nome": "LAVISKA INCORPORACAO LTDA",
+    "assunto": "CONTRATOS OBRA SC",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 954",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 45,
+    "cliente_nome": "Zait Engenharia Ltda.",
+    "assunto": "OBR 174 - CONDOMÍNIO BRISAS AVARÉ",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": "881d26fa-1fe8-444d-8c0c-54b4bb41f523",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 797",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 46,
+    "cliente_nome": "Polycarpo Advogados",
+    "assunto": "MKT E DESENVOLVIMENTO DE NEGÓCIOS",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": "00852629-70a3-4a62-bda6-28a2cd4a6112",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 786",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 47,
+    "cliente_nome": "Silvia Veitzman",
+    "assunto": "EMPREGADOS DOMÉSTICOS",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": "99c3cdc9-3703-44df-bc2a-ddf5969a5abd",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1105",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 48,
+    "cliente_nome": "Inova Ts Engenharia Ltda.",
+    "assunto": "INOVA - SHOPPING PÁTIO MACEIÓ",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "5e917dfe-5917-4493-9a2c-4e5f2361d1d8",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 690",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 49,
+    "cliente_nome": "PROHABITAT SOLUCOES AMBIENTAIS LTDA.",
+    "assunto": "CONSULTIVO GERAL",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "06123ede-8df7-4cac-8b34-6e9e0971c75f",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 960",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 50,
+    "cliente_nome": "UBIRATAN DOS SANTOS MACHADO",
+    "assunto": "CONSULTIVO IMOBILIáRIO - SãO PEDRO - GUARUJ",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 961",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 51,
+    "cliente_nome": "Polycarpo Advogados",
+    "assunto": "GESTÃO ADMINISTRATIVA DO ESCRITÓRIO",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "00852629-70a3-4a62-bda6-28a2cd4a6112",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 787",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 52,
+    "cliente_nome": "ALMIR POLYCARPO",
+    "assunto": "ESTUDOS E PALESTRAS",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": "2e4b05ba-a3c3-48fe-9c9e-2b05558a1a2a",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 963",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 53,
+    "cliente_nome": "JONILDES DA SILVA RIBEIRO DE LIMA",
+    "assunto": "CONSULTA SOCIETáRIA",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 964",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 54,
+    "cliente_nome": "Polycarpo Advogados",
+    "assunto": "PLANEJAMENTO",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "00852629-70a3-4a62-bda6-28a2cd4a6112",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 788",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 55,
+    "cliente_nome": "LAURA DEL NERO NEGRO",
+    "assunto": "REVISãO DE CONTRATO GLEBA 1B E OUTROS.",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 969",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 56,
+    "cliente_nome": "CONSISTEC CONTROLES E SISTEMAS DE AUTOMACAO LTDA",
+    "assunto": "M&A",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 967",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 57,
+    "cliente_nome": "FUZARO ADVOGADOS",
+    "assunto": "CONSULTAS EM GERAL FUZARO ADVOGADOS E LCC CONTABILIDADE",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 971",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 58,
+    "cliente_nome": "ANDA STRATEGY",
+    "assunto": "NOTIFICAçãO EXTRAJUDICIAL",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 973",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 59,
+    "cliente_nome": "Andrade Engenharia Consultoria e Construções Ltda.",
+    "assunto": "CONSULTAS",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 972",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 60,
+    "cliente_nome": "Andrade Engenharia Consultoria e Construções Ltda.",
+    "assunto": "CONSULTORIA DE CONTRATATOS",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 974",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 61,
+    "cliente_nome": "JOSE LUIZ TABITH JUNIOR",
+    "assunto": "CONSULTIVO",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 976",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 62,
+    "cliente_nome": "PROMISSOR CONTABILIDADE S/S",
+    "assunto": "CONSULTAS GERAIS",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 977",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 63,
+    "cliente_nome": "FABIANO TOLLER DE SOUZA",
+    "assunto": "NOTIFICAçãO EXTRAJUDICIAL",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 978",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 64,
+    "cliente_nome": "Polycarpo Apoio Empresarial Ltda",
+    "assunto": "TREINAMENTO",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 979",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 65,
+    "cliente_nome": "MARCO VITIELLO",
+    "assunto": "CONSULTAS EM GERAL",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "e9afd6ac-a529-4ffb-bd5c-ddb6f111b7be",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 746",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 66,
+    "cliente_nome": "ANGELA SILVIA MARIA DESIDERI JUNQUEIRA",
+    "assunto": "LIQUIDAçãO DE SOCIEDADE",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 982",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 67,
+    "cliente_nome": "KGT INDUSTRIA E COMERCIO DE ABRASIVOS LTDA - EPP",
+    "assunto": "ENCERRAMENTO DA EMPRESA",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 985",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 68,
+    "cliente_nome": "IVANA FREITAS DE MOURA",
+    "assunto": "CONFLITO DE SóCIOS",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 986",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 69,
+    "cliente_nome": "CUCINA RISTORANTE BERGAMO LTDA",
+    "assunto": "PROCEDIMENTO ADMINISTRATIVO",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 987",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 70,
+    "cliente_nome": "Platlog Importação, Logística e Distribuição Ltda",
+    "assunto": "PLATLOG - ARRENDAMENTO AGRíCOLA",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "30bea91a-88ce-41a5-8c99-00da2cc46c8a",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 989",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 71,
+    "cliente_nome": "Yofc Brasil Cabos e Solucoes Ltda",
+    "assunto": "YOFC - LGPD",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "7cd1e477-8972-4ecc-8f3f-61043ab6ba43",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 783",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 72,
+    "cliente_nome": "Yofc Brasil Cabos e Solucoes Ltda",
+    "assunto": "YOFC - ASSESSORIA EM ESG",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "4dfbf759-20ff-4cb6-a194-3b643b9e9ca0",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 765",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 73,
+    "cliente_nome": "Yofc Brasil Cabos e Solucoes Ltda",
+    "assunto": "YOFC - PARTICIPAÇÃO NO COMITÊ ESG",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "0ffd5f56-1cfe-4433-adb4-56c73499415d",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 768",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 74,
+    "cliente_nome": "Yofc Brasil Cabos e Solucoes Ltda",
+    "assunto": "YOFC - REALIZAÇÂO DE TREINAMENTO",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "ec1c6445-fa53-4cc2-b574-fdaf6da6190d",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 769",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 75,
+    "cliente_nome": "BAMBOO ARQUITETURA ASSOCIADOS",
+    "assunto": "ASSUNTOS CONTRATUAIS",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 990",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 76,
+    "cliente_nome": "Platlog Importação, Logística e Distribuição Ltda",
+    "assunto": "PLATLOG - RECURSO ADMINISTRATIVO IMPACTOS NO TRÂNSITO",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "30bea91a-88ce-41a5-8c99-00da2cc46c8a",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 992",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 77,
+    "cliente_nome": "ANGELA SILVIA MARIA DESIDERI JUNQUEIRA",
+    "assunto": "REMAK - RESPOSTA à NOTIFICAçãO",
+    "descricao": null,
+    "responsavel_id": "ddb9c4ea-874d-458c-8f9f-8659c02bebd5",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 993",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 78,
+    "cliente_nome": "ANGELA SILVIA MARIA DESIDERI JUNQUEIRA",
+    "assunto": "MAQBRIT - RESPOSTA à NOTIFICAçãO",
+    "descricao": null,
+    "responsavel_id": "ddb9c4ea-874d-458c-8f9f-8659c02bebd5",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 994",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 79,
+    "cliente_nome": "ALMIR POLYCARPO",
+    "assunto": "BOARD VENTURE E FCJ",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": "2e4b05ba-a3c3-48fe-9c9e-2b05558a1a2a",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 996",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 80,
+    "cliente_nome": "Polycarpo Apoio Empresarial Ltda",
+    "assunto": "CONSULTA CLEONICE PEREIRA (EMPREGADA DE JACYRA DA COSTA FONSECA)",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 998",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 81,
+    "cliente_nome": "GUILHERME LEAO",
+    "assunto": "CONSULTORIA",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1000",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 82,
+    "cliente_nome": "Distribuidora de Bebidas Tm Ltda",
+    "assunto": "AUTO DE INFRAÇÃO CETESB (DÁDIVA)",
+    "descricao": null,
+    "responsavel_id": "ddb9c4ea-874d-458c-8f9f-8659c02bebd5",
+    "contrato_id": "cd731077-613c-4422-a17d-fcd90c969bbe",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1002",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 83,
+    "cliente_nome": "Distribuidora de Bebidas Tm Ltda",
+    "assunto": "CONSULTAS EM GERAL  (DÁDIVA)",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "cd731077-613c-4422-a17d-fcd90c969bbe",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 770",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 84,
+    "cliente_nome": "Distribuidora de Bebidas Tm Ltda",
+    "assunto": "MARCAS INPI DÁDIVA",
+    "descricao": null,
+    "responsavel_id": "ddb9c4ea-874d-458c-8f9f-8659c02bebd5",
+    "contrato_id": "cd731077-613c-4422-a17d-fcd90c969bbe",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1003",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 85,
+    "cliente_nome": "Yofc Brasil Cabos e Solucoes Ltda",
+    "assunto": "YOFC - NOTIFICAÇÃO DE COBRANÇA TEC - WI",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "369ec31a-843a-49c4-ae8e-5adaf7f2d5f2",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 764",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 86,
+    "cliente_nome": "Yofc Brasil Cabos e Solucoes Ltda",
+    "assunto": "YOFC - CONTRATOS",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "4dfbf759-20ff-4cb6-a194-3b643b9e9ca0",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 766",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 87,
+    "cliente_nome": "Platlog Importação, Logística e Distribuição Ltda",
+    "assunto": "PLATLOG - MOU FÁBRICA DE PÃO",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "30bea91a-88ce-41a5-8c99-00da2cc46c8a",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1056",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 88,
+    "cliente_nome": "Maria Paloma Medeiros Siqueiros",
+    "assunto": "PALOMA SEQUEIROS",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "8d196eeb-3bfc-4fb1-a4c3-4065483c11c4",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 790",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 89,
+    "cliente_nome": "Platlog Importação, Logística e Distribuição Ltda",
+    "assunto": "Contrato de Empreitada Pré-fabricados",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "30bea91a-88ce-41a5-8c99-00da2cc46c8a",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1057",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 90,
+    "cliente_nome": "Yofc Brasil Cabos e Solucoes Ltda",
+    "assunto": "CONTRATOS HAGANÁ",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "4dfbf759-20ff-4cb6-a194-3b643b9e9ca0",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 767",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 91,
+    "cliente_nome": "Zait Engenharia Ltda.",
+    "assunto": "ZAIT consulta SEM obra - CÓDIGOS POR ÁREA OU PESSOA",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "881d26fa-1fe8-444d-8c0c-54b4bb41f523",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 806",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 92,
+    "cliente_nome": "Eliane Do Carmo Luchetti",
+    "assunto": "Eliane - Notificação Condomínio",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "38220c39-769a-4a38-88cb-d2ab8ce8d915",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 807",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 93,
+    "cliente_nome": "LE BIFE EVENTOS LTDA",
+    "assunto": "LE BIFE EVENTOS - Time Sheet",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "27c7b8b1-e16b-4ee3-b5b5-9581bc85df6c",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 749",
+    "tags": [
+      "Aberto"
+    ]
+  },
+  {
+    "idx": 94,
+    "cliente_nome": "GERALDO ROCHA MELLO",
+    "assunto": "Geraldo Rocha Mello",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": "1f7d0559-07a3-4476-a9af-026349f83911",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 808",
+    "tags": [
+      "Aberto"
+    ]
+  },
+  {
+    "idx": 95,
+    "cliente_nome": "DELQUIMICA COMERCIAL LTDA",
+    "assunto": "Sucessão Societária",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "9acce60a-6ecd-4c3d-9844-93df03bb95bf",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 809",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 96,
+    "cliente_nome": "Inova Ts Engenharia Ltda.",
+    "assunto": "OBR 216 NESTLÉ GAROTO -SJR PARDO-TELHADO",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": "5e917dfe-5917-4493-9a2c-4e5f2361d1d8",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 744",
+    "tags": [
+      "AbertoEm andamento"
+    ]
+  },
+  {
+    "idx": 97,
+    "cliente_nome": "FLAVIA MARTINS FUZARO POLYCARPO",
+    "assunto": "DOB - Diretoria - Comitê temático 2025-2026",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": "3449c27b-65c4-4f31-ac9e-8409df0b6fb1",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 763",
+    "tags": [
+      "Pro bono"
+    ]
+  },
+  {
+    "idx": 98,
+    "cliente_nome": "Inova Ts Engenharia Ltda.",
+    "assunto": "OBR 220 NESTLE VL PUMP TR RESFR.",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": "5e917dfe-5917-4493-9a2c-4e5f2361d1d8",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 745",
+    "tags": [
+      "AbertoEm andamento"
+    ]
+  },
+  {
+    "idx": 99,
+    "cliente_nome": "ALMIR POLYCARPO",
+    "assunto": "Anotar o tempo utilizado para preparação do material do Congresso Ciello em Bordeaux",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "2e4b05ba-a3c3-48fe-9c9e-2b05558a1a2a",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1087",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 100,
+    "cliente_nome": "Inova Ts Engenharia Ltda.",
+    "assunto": "OBR 221 NESTLÉ MONTES CLAROS -  PROJETO KALDI",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "5e917dfe-5917-4493-9a2c-4e5f2361d1d8",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1088",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 101,
+    "cliente_nome": "Henrique Martins de Oliveira",
+    "assunto": "Convocação do Sindicato dos domésticos referente à ex-empregada Milene Galdino",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1092",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 102,
+    "cliente_nome": "Zait Engenharia Ltda.",
+    "assunto": "Z.24.02 SHHOPPING CARNOT",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "881d26fa-1fe8-444d-8c0c-54b4bb41f523",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1096",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 103,
+    "cliente_nome": "FLAVIA MARTINS FUZARO POLYCARPO",
+    "assunto": "Pasta para atividades gerais pessoais",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": "3449c27b-65c4-4f31-ac9e-8409df0b6fb1",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1112",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 104,
+    "cliente_nome": "Polycarpo Advogados",
+    "assunto": "Inclusão das horas utilizados no desenvolvimento dos produtos tecnológicos",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "00852629-70a3-4a62-bda6-28a2cd4a6112",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1116",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 105,
+    "cliente_nome": "Polycarpo Advogados",
+    "assunto": "Lançamento de horas dos trabalhos desenvolvido para o produto ESG",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "00852629-70a3-4a62-bda6-28a2cd4a6112",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1117",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 106,
+    "cliente_nome": "Edinei Mercure",
+    "assunto": "Processo de desapropriação municipal para canalização do córrego do Capão Redondo",
+    "descricao": null,
+    "responsavel_id": "ddb9c4ea-874d-458c-8f9f-8659c02bebd5",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1122",
+    "tags": [
+      "Pro bono"
+    ]
+  },
+  {
+    "idx": 107,
+    "cliente_nome": "PROHABITAT SOLUCOES AMBIENTAIS LTDA.",
+    "assunto": "Operação de M&A da Prohabitat",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "13d6d3e7-d352-41d5-aa15-379f50055000",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1125",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 108,
+    "cliente_nome": "Inova Ts Engenharia Ltda.",
+    "assunto": "OBRA 212 SHOPPING CIDADE  SP- REFORMA JARDIM EXTERNO",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "5e917dfe-5917-4493-9a2c-4e5f2361d1d8",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1129",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 109,
+    "cliente_nome": "ALMIR POLYCARPO",
+    "assunto": "Registrar o tempo despendido na redação de textos que não sejam profissionais",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "2e4b05ba-a3c3-48fe-9c9e-2b05558a1a2a",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1132",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 110,
+    "cliente_nome": "Zait Engenharia Ltda.",
+    "assunto": "OBR 199 RESIDÊNCIA F.VASCONCELOS - LOTE A7",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "881d26fa-1fe8-444d-8c0c-54b4bb41f523",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1135",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 111,
+    "cliente_nome": "Zait Engenharia Ltda.",
+    "assunto": "Z.25.02 BM8 - VL SERENA",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "881d26fa-1fe8-444d-8c0c-54b4bb41f523",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1136",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 112,
+    "cliente_nome": "Zait Engenharia Ltda.",
+    "assunto": "Análise da formatação jurídica das parcerias estratégicas",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "881d26fa-1fe8-444d-8c0c-54b4bb41f523",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1138",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 113,
+    "cliente_nome": "Zait Engenharia Ltda.",
+    "assunto": "Contrato de obra do Retrofit Pça Alimentação - Catuaí Londrina",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "881d26fa-1fe8-444d-8c0c-54b4bb41f523",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1144",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 114,
+    "cliente_nome": "Zait Engenharia Ltda.",
+    "assunto": "Estabelecer instrumento de parceria para negócios na área de logística",
+    "descricao": null,
+    "responsavel_id": "d33b167b-01ed-4dd6-accd-3bab78c86573",
+    "contrato_id": "881d26fa-1fe8-444d-8c0c-54b4bb41f523",
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1148",
+    "tags": [
+      "Em andamento"
+    ]
+  },
+  {
+    "idx": 115,
+    "cliente_nome": "FLAVIA MARTINS FUZARO POLYCARPO",
+    "assunto": "Marcação de compromissos para atividades Me Too",
+    "descricao": null,
+    "responsavel_id": "f2f822f4-5660-4001-9626-9d29c305a40e",
+    "contrato_id": null,
+    "data_recebimento": "2026-01-21",
+    "observacoes": "CI legado: 1160",
+    "tags": [
+      "Pro bono"
+    ]
+  }
+]

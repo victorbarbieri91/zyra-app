@@ -156,11 +156,11 @@ export default function VinculacaoSelector({
             .from('consultivo_consultas')
             .select(`
               id,
-              numero_interno,
-              assunto,
+              numero,
+              titulo,
               crm_pessoas!consultivo_consultas_cliente_id_fkey(nome_completo, nome_fantasia)
             `)
-            .or(`numero_interno.ilike.%${buscaTexto}%,assunto.ilike.%${buscaTexto}%`)
+            .or(`numero.ilike.%${buscaTexto}%,titulo.ilike.%${buscaTexto}%`)
             .limit(10)
 
           if (consultivos) {
@@ -170,8 +170,8 @@ export default function VinculacaoSelector({
               resultadosUnificados.push({
                 id: c.id,
                 modulo: 'consultivo',
-                numero_pasta: c.numero_interno,
-                titulo: c.assunto,
+                numero_pasta: c.numero,
+                titulo: c.titulo,
                 partes: clienteNome || undefined,
               })
             })
@@ -185,8 +185,8 @@ export default function VinculacaoSelector({
               nome_fantasia,
               consultivo_consultas!consultivo_consultas_cliente_id_fkey(
                 id,
-                numero_interno,
-                assunto
+                numero,
+                titulo
               )
             `)
             .or(`nome_completo.ilike.%${buscaTexto}%,nome_fantasia.ilike.%${buscaTexto}%`)
@@ -203,8 +203,8 @@ export default function VinculacaoSelector({
                     resultadosUnificados.push({
                       id: cons.id,
                       modulo: 'consultivo',
-                      numero_pasta: cons.numero_interno,
-                      titulo: cons.assunto,
+                      numero_pasta: cons.numero,
+                      titulo: cons.titulo,
                       partes: clienteNome || undefined,
                     })
                   }

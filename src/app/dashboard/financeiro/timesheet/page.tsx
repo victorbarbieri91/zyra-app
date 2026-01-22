@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Clock, CheckCircle, XCircle, Calendar, User, Search, Filter } from 'lucide-react'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -104,11 +105,13 @@ export default function TimesheetPage() {
 
       if (error) throw error
 
+      toast.success(`${selectedIds.size} registro(s) aprovado(s) com sucesso!`)
       setSelectedIds(new Set())
       loadTimesheets()
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Erro ao aprovar timesheets'
+      toast.error(errorMessage)
       console.error('Erro ao aprovar:', error)
-      alert('Erro ao aprovar timesheets')
     }
   }
 
@@ -117,7 +120,7 @@ export default function TimesheetPage() {
 
     const justificativa = prompt('Justificativa da reprovação (obrigatória):')
     if (!justificativa || justificativa.length < 10) {
-      alert('Justificativa deve ter pelo menos 10 caracteres')
+      toast.error('Justificativa deve ter pelo menos 10 caracteres')
       return
     }
 
@@ -130,11 +133,13 @@ export default function TimesheetPage() {
 
       if (error) throw error
 
+      toast.success(`${selectedIds.size} registro(s) reprovado(s)`)
       setSelectedIds(new Set())
       loadTimesheets()
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Erro ao reprovar timesheets'
+      toast.error(errorMessage)
       console.error('Erro ao reprovar:', error)
-      alert('Erro ao reprovar timesheets')
     }
   }
 

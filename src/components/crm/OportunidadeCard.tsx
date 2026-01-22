@@ -1,11 +1,9 @@
 'use client';
 
-import { DollarSign, Calendar, TrendingUp, User, Clock, MessageSquare } from 'lucide-react';
-import { OportunidadeComDados } from '@/types/crm';
+import { DollarSign, Calendar, TrendingUp, User, MessageSquare } from 'lucide-react';
+import { OportunidadeComDados, ETAPA_COLORS, AREA_JURIDICA_LABELS } from '@/types/crm';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
 interface OportunidadeCardProps {
   oportunidade: OportunidadeComDados;
@@ -27,12 +25,14 @@ export function OportunidadeCard({ oportunidade, onClick, onRegistrarInteracao }
     return 'bg-slate-100 text-slate-600';
   };
 
+  const etapaCor = ETAPA_COLORS[oportunidade.etapa] || '#94a3b8';
+
   return (
     <div
       onClick={onClick}
       className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-lg transition-all duration-200 cursor-pointer group"
       style={{
-        borderLeft: `4px solid ${oportunidade.etapa_cor}`,
+        borderLeft: `4px solid ${etapaCor}`,
       }}
     >
       {/* Header */}
@@ -77,7 +77,7 @@ export function OportunidadeCard({ oportunidade, onClick, onRegistrarInteracao }
         {oportunidade.area_juridica && (
           <div className="flex items-center gap-2">
             <TrendingUp className="w-3 h-3 text-[#89bcbe]" />
-            <span>{oportunidade.area_juridica}</span>
+            <span>{AREA_JURIDICA_LABELS[oportunidade.area_juridica]}</span>
           </div>
         )}
         {oportunidade.data_prevista_fechamento && (
@@ -90,21 +90,6 @@ export function OportunidadeCard({ oportunidade, onClick, onRegistrarInteracao }
           </div>
         )}
       </div>
-
-      {/* Tempo na Etapa */}
-      {oportunidade.tempo_na_etapa_dias !== undefined &&
-        oportunidade.tempo_na_etapa_dias !== null && (
-          <div className="flex items-center gap-2 text-xs text-slate-500 pt-3 border-t border-slate-100">
-            <Clock className="w-3 h-3" />
-            <span>
-              {oportunidade.tempo_na_etapa_dias === 0
-                ? 'Movido hoje'
-                : oportunidade.tempo_na_etapa_dias === 1
-                ? 'Há 1 dia nesta etapa'
-                : `Há ${Math.floor(oportunidade.tempo_na_etapa_dias)} dias nesta etapa`}
-            </span>
-          </div>
-        )}
 
       {/* Tags */}
       {oportunidade.tags && oportunidade.tags.length > 0 && (
@@ -129,9 +114,11 @@ export function OportunidadeCard({ oportunidade, onClick, onRegistrarInteracao }
         </div>
       )}
 
-      {/* Footer com Atividades e Ação */}
+      {/* Footer com Acoes */}
       <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-        <span className="text-slate-500">{oportunidade.total_atividades} atividades</span>
+        <span className="text-slate-500">
+          {oportunidade.interacoes?.length || 0} interacoes
+        </span>
         {onRegistrarInteracao ? (
           <Button
             size="sm"
@@ -143,7 +130,7 @@ export function OportunidadeCard({ oportunidade, onClick, onRegistrarInteracao }
             }}
           >
             <MessageSquare className="w-3 h-3" />
-            Interação
+            Interacao
           </Button>
         ) : (
           <span className="text-slate-400">{oportunidade.responsavel_nome}</span>

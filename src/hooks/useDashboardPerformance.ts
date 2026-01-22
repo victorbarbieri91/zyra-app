@@ -106,26 +106,24 @@ export function useDashboardPerformance() {
           .eq('escritorio_id', escritorioAtivo)
           .in('status', ['ativo', 'em_andamento', 'aguardando']),
 
-        // Parcelas pagas no mês para top clientes
+        // Receitas pagas no mês para top clientes
         supabase
-          .from('financeiro_honorarios_parcelas')
+          .from('financeiro_receitas')
           .select(`
             valor_pago,
-            honorario:financeiro_honorarios(
-              cliente_id,
-              cliente:crm_pessoas(id, nome_completo)
-            )
+            cliente_id,
+            cliente:crm_pessoas(id, nome_completo)
           `)
           .eq('escritorio_id', escritorioAtivo)
           .eq('status', 'pago')
           .gte('data_pagamento', inicioMes.toISOString().split('T')[0]),
 
-        // Parcelas pendentes para cálculo de inadimplência
+        // Receitas pendentes para cálculo de inadimplência
         supabase
-          .from('financeiro_honorarios_parcelas')
+          .from('financeiro_receitas')
           .select('valor, status, data_vencimento')
           .eq('escritorio_id', escritorioAtivo)
-          .in('status', ['pendente', 'vencido', 'pago']),
+          .in('status', ['pendente', 'atrasado', 'pago', 'parcial']),
       ])
 
       // Processar horas por membro da equipe
@@ -180,14 +178,13 @@ export function useDashboardPerformance() {
 
       // Processar top clientes
       const clienteValores: Record<string, { nome: string; valor: number }> = {}
-      parcelasResult.data?.forEach(parcela => {
-        const honorario = parcela.honorario as any
-        const cliente = honorario?.cliente
+      parcelasResult.data?.forEach(receita => {
+        const cliente = receita.cliente as { id: string; nome_completo: string } | null
         if (cliente?.id) {
           if (!clienteValores[cliente.id]) {
             clienteValores[cliente.id] = { nome: cliente.nome_completo || 'Cliente', valor: 0 }
           }
-          clienteValores[cliente.id].valor += Number(parcela.valor_pago || 0)
+          clienteValores[cliente.id].valor += Number(receita.valor_pago || 0)
         }
       })
 
@@ -203,11 +200,9 @@ export function useDashboardPerformance() {
       // Calcular inadimplência
       let totalVencido = 0
       let totalPendente = 0
-      const hoje30dias = new Date()
-      hoje30dias.setDate(hoje30dias.getDate() - 30)
 
       parcelasPendentesResult.data?.forEach(p => {
-        if (p.status === 'vencido' || (p.status === 'pendente' && new Date(p.data_vencimento) < new Date())) {
+        if (p.status === 'atrasado' || (p.status === 'pendente' && new Date(p.data_vencimento) < new Date())) {
           totalVencido += Number(p.valor || 0)
         }
         if (p.status !== 'pago') {

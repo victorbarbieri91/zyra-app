@@ -1,0 +1,836 @@
+[
+  {
+    "cnj": "0000892-33.2023.8.03.0004",
+    "contratoId": "8c6319d8-8af7-4b45-9e10-9504f17fe015",
+    "contrato": "Dádiva - Indústria - Contencioso Cível",
+    "cliente": "Indústria de Bebidas Lt Ltda."
+  },
+  {
+    "cnj": "0707991-83.2022.8.02.0001",
+    "contratoId": "bd272d35-3e7d-4e29-8881-5f50938d3603",
+    "contrato": "Belcorp - Tributário - BELCORP - TRIBUTÁRIO",
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda."
+  },
+  {
+    "cnj": "5671988-07.2022.8.09.0112",
+    "contratoId": "d3954f37-bb9c-404a-ab40-63de6351a500",
+    "contrato": "Inova TS - Contencioso Cível - INOVA - Contencioso Cível",
+    "cliente": "Inova Ts Engenharia Ltda."
+  },
+  {
+    "cnj": "0834011-39.2023.8.15.2001",
+    "contratoId": "0ac75204-b7c9-45f9-8dc9-5c5c4913334a",
+    "contrato": "Dádiva - Contencioso Cível - DÁDIVA - CONTENCIOSO CÍVEL",
+    "cliente": "Distribuidora de Bebidas Tm Ltda"
+  },
+  {
+    "cnj": "0016876-22.2019.8.19.0208",
+    "contratoId": "5b17fd7d-c675-4770-8f05-2e8d91849681",
+    "contrato": "Platlog - Êxito - Contencioso Cível - Remuneração no êxito",
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda"
+  },
+  {
+    "cnj": "0151528-10.2022.8.19.0001",
+    "contratoId": "7af931a9-7767-4611-a8d4-9d6eed57682c",
+    "contrato": "366 - Dádiva - Indústria - Contencioso Tributário - DÁDIVA - INDÚSTRIA TRIBUTÁRIO",
+    "cliente": "Indústria de Bebidas Lt Ltda."
+  },
+  {
+    "cnj": "1002304-28.2023.8.26.0396",
+    "contratoId": "3bee38cd-9461-4ca6-a9ef-28eec94286f2",
+    "contrato": "Carjim - Time Sheet",
+    "cliente": "AGROPECUARIA CARJIM LTDA."
+  },
+  {
+    "cnj": "0055660-59.2012.8.26.0001",
+    "contratoId": "052f7775-3a9e-46cd-a199-a58c6191ab75",
+    "contrato": "Digon - Movinord - DIGON - MOVINORD",
+    "cliente": "COMERCIAL DIGON LTDA"
+  },
+  {
+    "cnj": "0054801-85.2015.8.26.0050",
+    "contratoId": "4797401c-1645-40ca-a3de-41dfee13cce5",
+    "contrato": "Belcorp Corporativo - BELCORP - CORPORATIVO",
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda."
+  },
+  {
+    "cnj": "1052709-40.2017.8.26.0053",
+    "contratoId": "78d4f931-09b7-474b-97de-3f6befa95276",
+    "contrato": "Luiz Octávio - ITCMD - LUIZ OCTÁVIO - FAZENDA PÚBLICA ITCMD",
+    "cliente": "LUIZ OCTAVIO CARDOSO"
+  },
+  {
+    "cnj": "1042218-51.2022.8.26.0100",
+    "contratoId": "d3954f37-bb9c-404a-ab40-63de6351a500",
+    "contrato": "Inova TS - Contencioso Cível - INOVA - Contencioso Cível",
+    "cliente": "Inova Ts Engenharia Ltda."
+  },
+  {
+    "cnj": "0001898-31.2022.8.26.0114",
+    "contratoId": "5b17fd7d-c675-4770-8f05-2e8d91849681",
+    "contrato": "Platlog - Êxito - Contencioso Cível - Remuneração no êxito",
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda"
+  },
+  {
+    "cnj": "1022977-46.2022.8.26.0309",
+    "contratoId": "9d6b1610-4789-4f66-b5b0-df462bd38e05",
+    "contrato": "Kona - Contencioso ~Exito",
+    "cliente": "KONA TRANSPORTES LTDA"
+  },
+  {
+    "cnj": "1003445-71.2023.8.26.0529",
+    "contratoId": "6acad4e7-bb08-4f38-8380-7bc10972ec1f",
+    "contrato": "393 - MAQBRIT - LIQUIDAÇÃO",
+    "cliente": "MAQBRIT COMERCIO E INDUSTRIA DE MAQUINAS LIMITADA"
+  },
+  {
+    "cnj": "1003598-62.2024.8.26.0079",
+    "contratoId": "d00449e4-b489-41a7-8f67-c29f85036ff1",
+    "contrato": "373 - SILVANA CARVALHO DA SILVA - MURAYAMA",
+    "cliente": "SILVANA CARVALHO DA SILVA"
+  },
+  {
+    "cnj": "1039789-43.2024.8.26.0100",
+    "contratoId": "8840b9f0-9cdd-48f9-91a0-fc98dfa35272",
+    "contrato": "Ana Carolina Pesciallo - Execução Débora - Ana Carolina Pesciallo - Execução Débora",
+    "cliente": "Ana Carolina Pesciallo"
+  },
+  {
+    "cnj": "0037317-89.2024.8.26.0002",
+    "contratoId": "0ac75204-b7c9-45f9-8dc9-5c5c4913334a",
+    "contrato": "Dádiva - Contencioso Cível - DÁDIVA - CONTENCIOSO CÍVEL",
+    "cliente": "Distribuidora de Bebidas Tm Ltda"
+  },
+  {
+    "cnj": "5000473-29.2017.4.03.6128",
+    "contratoId": "06bfd238-93ad-43bb-8df5-ce1992a429c9",
+    "contrato": "BT - Tributário",
+    "cliente": "Belcorp Trading do Brasil Importação e Exportação Ltda"
+  },
+  {
+    "cnj": "5006680-84.2024.4.03.6100",
+    "contratoId": "35480478-3309-47f1-9d7d-eb505ec99466",
+    "contrato": "Veloso Time Sheet - VELOSO - TIME SHEET",
+    "cliente": "FRANCISCO VELOSO FILHO"
+  },
+  {
+    "cnj": "5002312-02.2024.4.03.6304",
+    "contratoId": "8c6319d8-8af7-4b45-9e10-9504f17fe015",
+    "contrato": "Dádiva - Indústria - Contencioso Cível",
+    "cliente": "Indústria de Bebidas Lt Ltda."
+  },
+  {
+    "cnj": "8001826-55.2021.8.05.0039",
+    "contratoId": "d3954f37-bb9c-404a-ab40-63de6351a500",
+    "contrato": "Inova TS - Contencioso Cível - INOVA - Contencioso Cível",
+    "cliente": "Inova Ts Engenharia Ltda."
+  },
+  {
+    "cnj": "0050568-74.2024.8.26.0100",
+    "contratoId": "41a55467-dcf5-4272-b878-d4e304487d58",
+    "contrato": "Fernanda Silva Santos",
+    "cliente": "FERNANDA SILVA SANTOS"
+  },
+  {
+    "cnj": "0013195-27.2025.8.26.0309",
+    "contratoId": "5b17fd7d-c675-4770-8f05-2e8d91849681",
+    "contrato": "Platlog - Êxito - Contencioso Cível - Remuneração no êxito",
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda"
+  },
+  {
+    "cnj": "1000860-90.2020.5.02.0716",
+    "contratoId": "05e741ce-c659-426b-9f2d-6313dd67c959",
+    "contrato": "Karina Ochsenhofer x Sueli - KARINA OCHSENHOFER",
+    "cliente": "KARINA OCHSENHOFER"
+  },
+  {
+    "cnj": "0046100-75.1984.5.02.0007",
+    "contratoId": "ae7aaeca-aeac-4db9-952a-3e254d57a19a",
+    "contrato": "João Hamilton - Time Sheet - CONTRATO DE HONORARIOS",
+    "cliente": "João Hamilton de Abreu"
+  },
+  {
+    "cnj": "1000449-75.2017.5.02.0482",
+    "contratoId": "4797401c-1645-40ca-a3de-41dfee13cce5",
+    "contrato": "Belcorp Corporativo - BELCORP - CORPORATIVO",
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda."
+  },
+  {
+    "cnj": "0103500-49.1996.5.02.0032",
+    "contratoId": "8b0669df-95c5-4d7c-9ea9-0a21638f1229",
+    "contrato": "IDPJ - Edvan",
+    "cliente": "Georges Henri Foz"
+  },
+  {
+    "cnj": "0125200-79.1999.5.03.0022",
+    "contratoId": "7099763a-c53c-42e2-b4c3-03ea4cb9aaa4",
+    "contrato": "309 - Processual - ANGELA PAGANI COSTA",
+    "cliente": "ngela Pagani Costa"
+  },
+  {
+    "cnj": "0029300-88.2003.5.14.0421",
+    "contratoId": "7099763a-c53c-42e2-b4c3-03ea4cb9aaa4",
+    "contrato": "309 - Processual - ANGELA PAGANI COSTA",
+    "cliente": "ngela Pagani Costa"
+  },
+  {
+    "cnj": "0112300-42.2005.5.02.0035",
+    "contratoId": "ae7aaeca-aeac-4db9-952a-3e254d57a19a",
+    "contrato": "João Hamilton - Time Sheet - CONTRATO DE HONORARIOS",
+    "cliente": "João Hamilton de Abreu"
+  },
+  {
+    "cnj": "0008416-24.2013.8.14.0005",
+    "contratoId": "72429524-10cb-48d6-94d4-e27fcc17c504",
+    "contrato": "Sciencia - CR Com. e Serv. Ltda - SCIENTIA - CR COM E SERV LTDA",
+    "cliente": "Scientia Consultoria Cientifica Ltda"
+  },
+  {
+    "cnj": "0005150-60.2013.8.14.0027",
+    "contratoId": "4797401c-1645-40ca-a3de-41dfee13cce5",
+    "contrato": "Belcorp Corporativo - BELCORP - CORPORATIVO",
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda."
+  },
+  {
+    "cnj": "0001652-85.2014.8.14.0005",
+    "contratoId": "5edf85ba-e7fb-4fb5-aa8b-9523edbf6710",
+    "contrato": "Scientia - Maria da Penha - SCIENTIA - MARIA DA PENHA",
+    "cliente": "Scientia Consultoria Cientifica Ltda"
+  },
+  {
+    "cnj": "0005263-82.2014.8.17.1130",
+    "contratoId": "4797401c-1645-40ca-a3de-41dfee13cce5",
+    "contrato": "Belcorp Corporativo - BELCORP - CORPORATIVO",
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda."
+  },
+  {
+    "cnj": "5019389-15.2016.8.13.0024",
+    "contratoId": "5b17fd7d-c675-4770-8f05-2e8d91849681",
+    "contrato": "Platlog - Êxito - Contencioso Cível - Remuneração no êxito",
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda"
+  },
+  {
+    "cnj": "0021749-70.2016.8.19.0208",
+    "contratoId": "00852629-70a3-4a62-bda6-28a2cd4a6112",
+    "contrato": "390 - POLYCARPO",
+    "cliente": "Polycarpo Advogados"
+  },
+  {
+    "cnj": "5003690-67.2017.4.03.6100",
+    "contratoId": "00852629-70a3-4a62-bda6-28a2cd4a6112",
+    "contrato": "390 - POLYCARPO",
+    "cliente": "Polycarpo Advogados"
+  },
+  {
+    "cnj": "1009897-75.2018.8.26.0011",
+    "contratoId": "99b83454-9e8c-4e28-8941-8c5b4583b90b",
+    "contrato": "91 - SHEILA GRASSO",
+    "cliente": "SHEILA MARIA GRASSO FELTRAN"
+  },
+  {
+    "cnj": "5518608-89.2018.8.09.0051",
+    "contratoId": "5b17fd7d-c675-4770-8f05-2e8d91849681",
+    "contrato": "Platlog - Êxito - Contencioso Cível - Remuneração no êxito",
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda"
+  },
+  {
+    "cnj": "1021369-21.2019.8.26.0114",
+    "contratoId": "5b17fd7d-c675-4770-8f05-2e8d91849681",
+    "contrato": "Platlog - Êxito - Contencioso Cível - Remuneração no êxito",
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda"
+  },
+  {
+    "cnj": "0039858-69.2019.8.19.0001",
+    "contratoId": "00852629-70a3-4a62-bda6-28a2cd4a6112",
+    "contrato": "390 - POLYCARPO",
+    "cliente": "Polycarpo Advogados"
+  },
+  {
+    "cnj": "0002601-45.2022.8.26.0248",
+    "contratoId": "00852629-70a3-4a62-bda6-28a2cd4a6112",
+    "contrato": "390 - POLYCARPO",
+    "cliente": "Polycarpo Advogados"
+  },
+  {
+    "cnj": "0018395-29.2019.8.19.0209",
+    "contratoId": "30bea91a-88ce-41a5-8c99-00da2cc46c8a",
+    "contrato": "Platlog - Time Sheet",
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda"
+  },
+  {
+    "cnj": "1129434-55.2019.8.26.0100",
+    "contratoId": "8022fdd0-4637-4733-a1da-4221647adf2d",
+    "contrato": "32 - ANDREA POLYCARPO",
+    "cliente": "Andrea Polycarpo"
+  },
+  {
+    "cnj": "1005763-34.2020.8.26.0011",
+    "contratoId": "d4a3f47f-f12d-45c0-9757-66e561e822f3",
+    "contrato": "Crislene Marchioto",
+    "cliente": "CRISLENE MARCHIOTTO"
+  },
+  {
+    "cnj": "1001243-22.2020.5.02.0020",
+    "contratoId": "569f60d2-92da-4447-9478-fe9f662f9a42",
+    "contrato": "WGS & Filhos - Contrato Pro-Bono",
+    "cliente": "Wgs & Filhos Comércio de Produtos Alimentícios Ltda."
+  },
+  {
+    "cnj": "0028941-19.2021.8.26.0100",
+    "contratoId": "87730a4e-8a19-475b-ad9b-dac9e7c5a8a3",
+    "contrato": "28 - MARLENE - SANTANDER",
+    "cliente": "Marlene Savoia Grasso"
+  },
+  {
+    "cnj": "5020540-60.2021.4.03.6100",
+    "contratoId": "bd272d35-3e7d-4e29-8881-5f50938d3603",
+    "contrato": "Belcorp - Tributário - BELCORP - TRIBUTÁRIO",
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda."
+  },
+  {
+    "cnj": "1087537-76.2021.8.26.0100",
+    "contratoId": "2231e434-0343-4d41-be82-81acbc0775f8",
+    "contrato": "4 fx - Uniqq - 4FX - UNIQQ",
+    "cliente": "4fx - Assessoria Empresarial Ltda"
+  },
+  {
+    "cnj": "5000616-42.2022.4.03.6128",
+    "contratoId": "7af931a9-7767-4611-a8d4-9d6eed57682c",
+    "contrato": "366 - Dádiva - Indústria - Contencioso Tributário - DÁDIVA - INDÚSTRIA TRIBUTÁRIO",
+    "cliente": "Indústria de Bebidas Lt Ltda."
+  },
+  {
+    "cnj": "0707979-69.2022.8.02.0001",
+    "contratoId": "bd272d35-3e7d-4e29-8881-5f50938d3603",
+    "contrato": "Belcorp - Tributário - BELCORP - TRIBUTÁRIO",
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda."
+  },
+  {
+    "cnj": "0707986-61.2022.8.02.0001",
+    "contratoId": "bd272d35-3e7d-4e29-8881-5f50938d3603",
+    "contrato": "Belcorp - Tributário - BELCORP - TRIBUTÁRIO",
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda."
+  },
+  {
+    "cnj": "0709395-72.2022.8.02.0001",
+    "contratoId": "bd272d35-3e7d-4e29-8881-5f50938d3603",
+    "contrato": "Belcorp - Tributário - BELCORP - TRIBUTÁRIO",
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda."
+  },
+  {
+    "cnj": "0714891-82.2022.8.02.0001",
+    "contratoId": "bd272d35-3e7d-4e29-8881-5f50938d3603",
+    "contrato": "Belcorp - Tributário - BELCORP - TRIBUTÁRIO",
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda."
+  },
+  {
+    "cnj": "0723073-19.2022.8.07.0001",
+    "contratoId": "5b17fd7d-c675-4770-8f05-2e8d91849681",
+    "contrato": "Platlog - Êxito - Contencioso Cível - Remuneração no êxito",
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda"
+  },
+  {
+    "cnj": "0722279-36.2022.8.02.0001",
+    "contratoId": "bd272d35-3e7d-4e29-8881-5f50938d3603",
+    "contrato": "Belcorp - Tributário - BELCORP - TRIBUTÁRIO",
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda."
+  },
+  {
+    "cnj": "0827991-36.2022.8.12.0001",
+    "contratoId": "de9c2c9a-4e3a-4795-96ea-66914d08ddfc",
+    "contrato": "Platlog - Bertola",
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda"
+  },
+  {
+    "cnj": "1013218-58.2022.8.26.0309",
+    "contratoId": "5b17fd7d-c675-4770-8f05-2e8d91849681",
+    "contrato": "Platlog - Êxito - Contencioso Cível - Remuneração no êxito",
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda"
+  },
+  {
+    "cnj": "1001121-23.2022.5.02.0025",
+    "contratoId": "569f60d2-92da-4447-9478-fe9f662f9a42",
+    "contrato": "WGS & Filhos - Contrato Pro-Bono",
+    "cliente": "Wgs & Filhos Comércio de Produtos Alimentícios Ltda."
+  },
+  {
+    "cnj": "0010805-16.2022.5.03.0104",
+    "contratoId": "628ba2dc-b0d1-43a3-8647-8bfd23e82e38",
+    "contrato": "Vale Verde - Contencioso Trabalhista - VALE VERDE - TRABALHISTA",
+    "cliente": "Vale Verde Engenharia e Empreendimentos Ltda."
+  },
+  {
+    "cnj": "1059977-72.2022.8.26.0053",
+    "contratoId": "5b17fd7d-c675-4770-8f05-2e8d91849681",
+    "contrato": "Platlog - Êxito - Contencioso Cível - Remuneração no êxito",
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda"
+  },
+  {
+    "cnj": "1502402-86.2022.8.26.0655",
+    "contratoId": "7af931a9-7767-4611-a8d4-9d6eed57682c",
+    "contrato": "366 - Dádiva - Indústria - Contencioso Tributário - DÁDIVA - INDÚSTRIA TRIBUTÁRIO",
+    "cliente": "Indústria de Bebidas Lt Ltda."
+  },
+  {
+    "cnj": "5004697-83.2022.4.03.6144",
+    "contratoId": "4797401c-1645-40ca-a3de-41dfee13cce5",
+    "contrato": "Belcorp Corporativo - BELCORP - CORPORATIVO",
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda."
+  },
+  {
+    "cnj": "1000140-34.2023.5.02.0065",
+    "contratoId": "c2de14a4-2f75-49e6-a5b6-5bcb4bc53ad6",
+    "contrato": "Inova TS - Contencioso Trabalhista - INOVA - Contencioso Trabalhista",
+    "cliente": "Inova Ts Engenharia Ltda."
+  },
+  {
+    "cnj": "0005871-02.2023.8.26.0100",
+    "contratoId": "7f40e6d9-0a84-4386-97f8-7ceccc7a0d58",
+    "contrato": "Le Bife Restaurante Time Sheet - LE BIFE - TIME SHEET",
+    "cliente": "Le Bife Restaurante Ltda"
+  },
+  {
+    "cnj": "1676268-36.2023.8.26.0224",
+    "contratoId": "bd272d35-3e7d-4e29-8881-5f50938d3603",
+    "contrato": "Belcorp - Tributário - BELCORP - TRIBUTÁRIO",
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda."
+  },
+  {
+    "cnj": "5002718-03.2023.4.03.6128",
+    "contratoId": "3b73d933-4954-442d-8e78-269a39008a44",
+    "contrato": "Dádiva - Distribuidora - Tributário - Dádiva Contencioso Tributário Distribuidora",
+    "cliente": "Distribuidora de Bebidas Tm Ltda"
+  },
+  {
+    "cnj": "1000478-96.2023.5.02.0262",
+    "contratoId": "628ba2dc-b0d1-43a3-8647-8bfd23e82e38",
+    "contrato": "Vale Verde - Contencioso Trabalhista - VALE VERDE - TRABALHISTA",
+    "cliente": "Vale Verde Engenharia e Empreendimentos Ltda."
+  },
+  {
+    "cnj": "1000770-12.2023.5.02.0382",
+    "contratoId": "afccd20a-0780-4834-bf6f-3e45d7291c7b",
+    "contrato": "339 - ANDRADE ENGENHARIA",
+    "cliente": "Andrade Engenharia Consultoria e Construções Ltda."
+  },
+  {
+    "cnj": "1000721-54.2023.8.26.0219",
+    "contratoId": "0ac75204-b7c9-45f9-8dc9-5c5c4913334a",
+    "contrato": "Dádiva - Contencioso Cível - DÁDIVA - CONTENCIOSO CÍVEL",
+    "cliente": "Distribuidora de Bebidas Tm Ltda"
+  },
+  {
+    "cnj": "1027686-65.2023.8.26.0576",
+    "contratoId": "0ac75204-b7c9-45f9-8dc9-5c5c4913334a",
+    "contrato": "Dádiva - Contencioso Cível - DÁDIVA - CONTENCIOSO CÍVEL",
+    "cliente": "Distribuidora de Bebidas Tm Ltda"
+  },
+  {
+    "cnj": "1021571-47.2023.8.26.0602",
+    "contratoId": "0ac75204-b7c9-45f9-8dc9-5c5c4913334a",
+    "contrato": "Dádiva - Contencioso Cível - DÁDIVA - CONTENCIOSO CÍVEL",
+    "cliente": "Distribuidora de Bebidas Tm Ltda"
+  },
+  {
+    "cnj": "1054644-64.2023.8.26.0002",
+    "contratoId": "0ac75204-b7c9-45f9-8dc9-5c5c4913334a",
+    "contrato": "Dádiva - Contencioso Cível - DÁDIVA - CONTENCIOSO CÍVEL",
+    "cliente": "Distribuidora de Bebidas Tm Ltda"
+  },
+  {
+    "cnj": "0036236-39.2023.8.26.0100",
+    "contratoId": "2231e434-0343-4d41-be82-81acbc0775f8",
+    "contrato": "4 fx - Uniqq - 4FX - UNIQQ",
+    "cliente": "4fx - Assessoria Empresarial Ltda"
+  },
+  {
+    "cnj": "1107634-29.2023.8.26.0100",
+    "contratoId": "aed5a5f4-b1ee-4f23-99be-dcc039215d76",
+    "contrato": "Le Bife - Expande - Defesa do Le bife na ação promovida pela Expand",
+    "cliente": "EVANDRO ANDREONI"
+  },
+  {
+    "cnj": "1501039-30.2023.8.26.0655",
+    "contratoId": "7af931a9-7767-4611-a8d4-9d6eed57682c",
+    "contrato": "366 - Dádiva - Indústria - Contencioso Tributário - DÁDIVA - INDÚSTRIA TRIBUTÁRIO",
+    "cliente": "Indústria de Bebidas Lt Ltda."
+  },
+  {
+    "cnj": "0011957-95.2023.5.15.0083",
+    "contratoId": "628ba2dc-b0d1-43a3-8647-8bfd23e82e38",
+    "contrato": "Vale Verde - Contencioso Trabalhista - VALE VERDE - TRABALHISTA",
+    "cliente": "Vale Verde Engenharia e Empreendimentos Ltda."
+  },
+  {
+    "cnj": "1500123-59.2024.8.26.0655",
+    "contratoId": "7af931a9-7767-4611-a8d4-9d6eed57682c",
+    "contrato": "366 - Dádiva - Indústria - Contencioso Tributário - DÁDIVA - INDÚSTRIA TRIBUTÁRIO",
+    "cliente": "Indústria de Bebidas Lt Ltda."
+  },
+  {
+    "cnj": "0000840-72.2024.8.17.3250",
+    "contratoId": "d4007c0f-bd48-41e5-99f8-f29b7e7ee62e",
+    "contrato": "Refricon - Êxito",
+    "cliente": "Refricon Mercantil Ltda."
+  },
+  {
+    "cnj": "0010263-14.2024.5.03.0173",
+    "contratoId": "c2de14a4-2f75-49e6-a5b6-5bcb4bc53ad6",
+    "contrato": "Inova TS - Contencioso Trabalhista - INOVA - Contencioso Trabalhista",
+    "cliente": "Inova Ts Engenharia Ltda."
+  },
+  {
+    "cnj": "0020157-95.2024.5.04.0234",
+    "contratoId": "c2de14a4-2f75-49e6-a5b6-5bcb4bc53ad6",
+    "contrato": "Inova TS - Contencioso Trabalhista - INOVA - Contencioso Trabalhista",
+    "cliente": "Inova Ts Engenharia Ltda."
+  },
+  {
+    "cnj": "1000364-04.2024.5.02.0043",
+    "contratoId": "c2de14a4-2f75-49e6-a5b6-5bcb4bc53ad6",
+    "contrato": "Inova TS - Contencioso Trabalhista - INOVA - Contencioso Trabalhista",
+    "cliente": "Inova Ts Engenharia Ltda."
+  },
+  {
+    "cnj": "1000639-40.2024.8.26.0396",
+    "contratoId": "3bee38cd-9461-4ca6-a9ef-28eec94286f2",
+    "contrato": "Carjim - Time Sheet",
+    "cliente": "AGROPECUARIA CARJIM LTDA."
+  },
+  {
+    "cnj": "2237780-19.2024.8.26.0000",
+    "contratoId": "3bee38cd-9461-4ca6-a9ef-28eec94286f2",
+    "contrato": "Carjim - Time Sheet",
+    "cliente": "AGROPECUARIA CARJIM LTDA."
+  },
+  {
+    "cnj": "1062692-72.2024.8.26.0100",
+    "contratoId": "8840b9f0-9cdd-48f9-91a0-fc98dfa35272",
+    "contrato": "Ana Carolina Pesciallo - Execução Débora - Ana Carolina Pesciallo - Execução Débora",
+    "cliente": "Ana Carolina Pesciallo"
+  },
+  {
+    "cnj": "0010540-62.2024.5.15.0119",
+    "contratoId": "c2de14a4-2f75-49e6-a5b6-5bcb4bc53ad6",
+    "contrato": "Inova TS - Contencioso Trabalhista - INOVA - Contencioso Trabalhista",
+    "cliente": "Inova Ts Engenharia Ltda."
+  },
+  {
+    "cnj": "5001436-90.2024.4.03.6128",
+    "contratoId": "7af931a9-7767-4611-a8d4-9d6eed57682c",
+    "contrato": "366 - Dádiva - Indústria - Contencioso Tributário - DÁDIVA - INDÚSTRIA TRIBUTÁRIO",
+    "cliente": "Indústria de Bebidas Lt Ltda."
+  },
+  {
+    "cnj": "5015488-78.2024.4.03.6100",
+    "contratoId": "bd272d35-3e7d-4e29-8881-5f50938d3603",
+    "contrato": "Belcorp - Tributário - BELCORP - TRIBUTÁRIO",
+    "cliente": "Belcorp do Brasil Distribuidora de Cosmeticos Ltda."
+  },
+  {
+    "cnj": "5002087-25.2024.4.03.6128",
+    "contratoId": "7af931a9-7767-4611-a8d4-9d6eed57682c",
+    "contrato": "366 - Dádiva - Indústria - Contencioso Tributário - DÁDIVA - INDÚSTRIA TRIBUTÁRIO",
+    "cliente": "Indústria de Bebidas Lt Ltda."
+  },
+  {
+    "cnj": "5018983-55.2024.8.24.0008",
+    "contratoId": "5b17fd7d-c675-4770-8f05-2e8d91849681",
+    "contrato": "Platlog - Êxito - Contencioso Cível - Remuneração no êxito",
+    "cliente": "Platlog Importação, Logística e Distribuição Ltda"
+  },
+  {
+    "cnj": "0200664-61.2024.8.06.0164",
+    "contratoId": "ad8c2657-27e1-4b2a-9923-f34dd1e6bf85",
+    "contrato": "358 - YOFC - Cobrança Geral",
+    "cliente": "Yofc Brasil Cabos e Solucoes Ltda"
+  },
+  {
+    "cnj": "0200666-31.2024.8.06.0164",
+    "contratoId": "ad8c2657-27e1-4b2a-9923-f34dd1e6bf85",
+    "contrato": "358 - YOFC - Cobrança Geral",
+    "cliente": "Yofc Brasil Cabos e Solucoes Ltda"
+  },
+  {
+    "cnj": "0700964-49.2024.8.02.0043",
+    "contratoId": "ad8c2657-27e1-4b2a-9923-f34dd1e6bf85",
+    "contrato": "358 - YOFC - Cobrança Geral",
+    "cliente": "Yofc Brasil Cabos e Solucoes Ltda"
+  },
+  {
+    "cnj": "0040806-34.2024.8.26.0100",
+    "contratoId": "2231e434-0343-4d41-be82-81acbc0775f8",
+    "contrato": "4 fx - Uniqq - 4FX - UNIQQ",
+    "cliente": "4fx - Assessoria Empresarial Ltda"
+  },
+  {
+    "cnj": "0011045-53.2024.5.15.0119",
+    "contratoId": "c2de14a4-2f75-49e6-a5b6-5bcb4bc53ad6",
+    "contrato": "Inova TS - Contencioso Trabalhista - INOVA - Contencioso Trabalhista",
+    "cliente": "Inova Ts Engenharia Ltda."
+  },
+  {
+    "cnj": "0011074-06.2024.5.15.0119",
+    "contratoId": "c2de14a4-2f75-49e6-a5b6-5bcb4bc53ad6",
+    "contrato": "Inova TS - Contencioso Trabalhista - INOVA - Contencioso Trabalhista",
+    "cliente": "Inova Ts Engenharia Ltda."
+  },
+  {
+    "cnj": "0000677-59.2024.8.26.0076",
+    "contratoId": "d3954f37-bb9c-404a-ab40-63de6351a500",
+    "contrato": "Inova TS - Contencioso Cível - INOVA - Contencioso Cível",
+    "cliente": "Inova Ts Engenharia Ltda."
+  },
+  {
+    "cnj": "1002321-88.2024.5.02.0609",
+    "contratoId": "49c82219-ea6c-47f5-88e6-fc4fa4224dca",
+    "contrato": "Fábio Alexandre Galdeano - RT - Ricardo Lucindo Cruz - Reclamação trabalhista - Ricardo Lucindo Cruz",
+    "cliente": "Fábio Alexandre Galdeano"
+  },
+  {
+    "cnj": "5048784-12.2024.8.08.0024",
+    "contratoId": "fc41f289-3177-4a55-8c84-1f0f2e3f3b16",
+    "contrato": "391 - YOFC - A2M E OUTROS",
+    "cliente": "Yofc Brasil Cabos e Solucoes Ltda"
+  },
+  {
+    "cnj": "0010015-80.2025.5.15.0140",
+    "contratoId": "433c48eb-a726-42b8-bd31-cc889246f4cb",
+    "contrato": "D'Rattan - Consultoria jurídica em geral",
+    "cliente": "Furniture House Ltda."
+  },
+  {
+    "cnj": "5004571-13.2024.4.03.6128",
+    "contratoId": "7af931a9-7767-4611-a8d4-9d6eed57682c",
+    "contrato": "366 - Dádiva - Indústria - Contencioso Tributário - DÁDIVA - INDÚSTRIA TRIBUTÁRIO",
+    "cliente": "Indústria de Bebidas Lt Ltda."
+  },
+  {
+    "cnj": "5003015-69.2025.8.08.0048",
+    "contratoId": "e885c38e-066f-4776-b663-497ffddf564a",
+    "contrato": "401 - YOFC - JAÇANÃ e LÍDER",
+    "cliente": "Yofc Brasil Cabos e Solucoes Ltda"
+  },
+  {
+    "cnj": "0010159-45.2025.5.15.0046",
+    "contratoId": "8a1495d7-300b-4b21-a6d9-fb9ddfdcd160",
+    "contrato": "Inova - 2025 - Contencioso Trabalhista",
+    "cliente": "Inova Ts Engenharia Ltda."
+  },
+  {
+    "cnj": "5005740-33.2025.4.03.6182",
+    "contratoId": "7af931a9-7767-4611-a8d4-9d6eed57682c",
+    "contrato": "366 - Dádiva - Indústria - Contencioso Tributário - DÁDIVA - INDÚSTRIA TRIBUTÁRIO",
+    "cliente": "Indústria de Bebidas Lt Ltda."
+  },
+  {
+    "cnj": "1019469-35.2025.8.26.0100",
+    "contratoId": "b7670e94-4b05-4e31-bbdf-285978b9b625",
+    "contrato": "Eliane - Processo Judicial Condomínio - Contrato de honorários para a condução do processo movido pelo condomínio",
+    "cliente": "Eliane Do Carmo Luchetti"
+  },
+  {
+    "cnj": "5002108-93.2025.4.03.6183",
+    "contratoId": "a82fe0d8-dead-4016-9096-a288c20ccad0",
+    "contrato": "392 - MARIA DE FÁTIMA - PREVIDNCIÁRIO",
+    "cliente": "Maria de Fátima Domingues de Oliveira"
+  },
+  {
+    "cnj": "2060184-14.2025.8.26.0000",
+    "contratoId": "2231e434-0343-4d41-be82-81acbc0775f8",
+    "contrato": "4 fx - Uniqq - 4FX - UNIQQ",
+    "cliente": "4fx - Assessoria Empresarial Ltda"
+  },
+  {
+    "cnj": "0010161-89.2025.8.26.0100",
+    "contratoId": "8022fdd0-4637-4733-a1da-4221647adf2d",
+    "contrato": "32 - ANDREA POLYCARPO",
+    "cliente": "Andrea Polycarpo"
+  },
+  {
+    "cnj": "1000329-46.2025.5.02.0031",
+    "contratoId": "5858fb0d-477b-49b4-ad42-5f6fb5697618",
+    "contrato": "Zait - Contencioso Trabalhistas",
+    "cliente": "Zait Engenharia Ltda."
+  },
+  {
+    "cnj": "1028512-93.2025.8.26.0100",
+    "contratoId": "00852629-70a3-4a62-bda6-28a2cd4a6112",
+    "contrato": "390 - POLYCARPO",
+    "cliente": "Polycarpo Advogados"
+  },
+  {
+    "cnj": "1030580-16.2025.8.26.0100",
+    "contratoId": "e885c38e-066f-4776-b663-497ffddf564a",
+    "contrato": "401 - YOFC - JAÇANÃ e LÍDER",
+    "cliente": "Yofc Brasil Cabos e Solucoes Ltda"
+  },
+  {
+    "cnj": "0100290-78.2025.5.01.0071",
+    "contratoId": "8d196eeb-3bfc-4fb1-a4c3-4065483c11c4",
+    "contrato": "Paloma Sequeiros - Time Sheet - PALOMA SEQUEIROS",
+    "cliente": "Maria Paloma Medeiros Siqueiros"
+  },
+  {
+    "cnj": "1002332-71.2025.8.26.0704",
+    "contratoId": "922ea1c6-75e8-4b0d-9b47-9c6b182d4378",
+    "contrato": "´Marco Aurélio Raimundo - Êxito",
+    "cliente": "Marco Aurelio Raimundo"
+  },
+  {
+    "cnj": "0010437-91.2025.5.15.0031",
+    "contratoId": "5858fb0d-477b-49b4-ad42-5f6fb5697618",
+    "contrato": "Zait - Contencioso Trabalhistas",
+    "cliente": "Zait Engenharia Ltda."
+  },
+  {
+    "cnj": "5003749-59.2025.4.03.6105",
+    "contratoId": "d22a5005-d957-4a75-8628-536e97becec2",
+    "contrato": "YOFC - MS Desembraço aduaneiro",
+    "cliente": "Yofc Brasil Cabos e Solucoes Ltda"
+  },
+  {
+    "cnj": "1050152-55.2025.8.26.0100",
+    "contratoId": "2231e434-0343-4d41-be82-81acbc0775f8",
+    "contrato": "4 fx - Uniqq - 4FX - UNIQQ",
+    "cliente": "4fx - Assessoria Empresarial Ltda"
+  },
+  {
+    "cnj": "0000333-44.2025.8.26.0076",
+    "contratoId": "d3954f37-bb9c-404a-ab40-63de6351a500",
+    "contrato": "Inova TS - Contencioso Cível - INOVA - Contencioso Cível",
+    "cliente": "Inova Ts Engenharia Ltda."
+  },
+  {
+    "cnj": "5009669-74.2025.4.03.6182",
+    "contratoId": "7af931a9-7767-4611-a8d4-9d6eed57682c",
+    "contrato": "366 - Dádiva - Indústria - Contencioso Tributário - DÁDIVA - INDÚSTRIA TRIBUTÁRIO",
+    "cliente": "Indústria de Bebidas Lt Ltda."
+  },
+  {
+    "cnj": "1017085-33.2024.8.26.0004",
+    "contratoId": "8022fdd0-4637-4733-a1da-4221647adf2d",
+    "contrato": "32 - ANDREA POLYCARPO",
+    "cliente": "Andrea Polycarpo"
+  },
+  {
+    "cnj": "4000021-77.2025.8.26.0115",
+    "contratoId": "2f79d9af-4d94-4981-ad15-d8407c865916",
+    "contrato": "Brígida (Mocinha) - Pro-Bono",
+    "cliente": "Brígida Ferreira Fidelis"
+  },
+  {
+    "cnj": "1000719-43.2025.5.02.0022",
+    "contratoId": "5858fb0d-477b-49b4-ad42-5f6fb5697618",
+    "contrato": "Zait - Contencioso Trabalhistas",
+    "cliente": "Zait Engenharia Ltda."
+  },
+  {
+    "cnj": "1009017-60.2025.8.26.0004",
+    "contratoId": "d3954f37-bb9c-404a-ab40-63de6351a500",
+    "contrato": "Inova TS - Contencioso Cível - INOVA - Contencioso Cível",
+    "cliente": "Inova Ts Engenharia Ltda."
+  },
+  {
+    "cnj": "0025214-13.2025.8.26.0100",
+    "contratoId": "87730a4e-8a19-475b-ad9b-dac9e7c5a8a3",
+    "contrato": "28 - MARLENE - SANTANDER",
+    "cliente": "Marlene Savoia Grasso"
+  },
+  {
+    "cnj": "0017013-35.2025.8.26.0002",
+    "contratoId": "0ac75204-b7c9-45f9-8dc9-5c5c4913334a",
+    "contrato": "Dádiva - Contencioso Cível - DÁDIVA - CONTENCIOSO CÍVEL",
+    "cliente": "Distribuidora de Bebidas Tm Ltda"
+  },
+  {
+    "cnj": "1000717-88.2025.5.02.0211",
+    "contratoId": "e455c0b9-8127-442c-aab3-c999133fa958",
+    "contrato": "Almeida - Reclamação Trabalhista - Contrato para processos trabalhistas",
+    "cliente": "Almeida Engenharia Consultoria e Construções Ltda."
+  },
+  {
+    "cnj": "5005117-09.2025.4.03.6104",
+    "contratoId": "d6838966-e61b-4a1b-9a95-0f771463d2fd",
+    "contrato": "YOFC - Mandado de Segurança Compensação de Ofício nº 08114-00000737/2025 - Propositura de Mandado de Segurança para reconhecimento da prescrição do crédito exigido, com pedido de liminar para conceder o efeito suspensivo da dívida permitindo a obtenção de certidões negativas.",
+    "cliente": "Yofc Brasil Cabos e Solucoes Ltda"
+  },
+  {
+    "cnj": "0033715-53.2025.8.26.0100",
+    "contratoId": "2231e434-0343-4d41-be82-81acbc0775f8",
+    "contrato": "4 fx - Uniqq - 4FX - UNIQQ",
+    "cliente": "4fx - Assessoria Empresarial Ltda"
+  },
+  {
+    "cnj": "2242951-20.2025.8.26.0000",
+    "contratoId": "2231e434-0343-4d41-be82-81acbc0775f8",
+    "contrato": "4 fx - Uniqq - 4FX - UNIQQ",
+    "cliente": "4fx - Assessoria Empresarial Ltda"
+  },
+  {
+    "cnj": "0010748-54.2025.5.03.0019",
+    "contratoId": "e4d94bff-7d3a-4d48-a335-a7eef69ff612",
+    "contrato": "RT Sebastião Joaquim de Souza",
+    "cliente": "Luiz Alfredo de Lima Sapucaia"
+  },
+  {
+    "cnj": "1001395-19.2025.5.02.0045",
+    "contratoId": "de873cd8-c04f-4bd1-a431-48c7c30eb452",
+    "contrato": "RT de Milene Galdino - Reclamação trabalhista de Milene Galdino",
+    "cliente": "Henrique Martins de Oliveira"
+  },
+  {
+    "cnj": "0042091-28.2025.8.26.0100",
+    "contratoId": "8840b9f0-9cdd-48f9-91a0-fc98dfa35272",
+    "contrato": "Ana Carolina Pesciallo - Execução Débora - Ana Carolina Pesciallo - Execução Débora",
+    "cliente": "Ana Carolina Pesciallo"
+  },
+  {
+    "cnj": "0011038-03.2025.5.03.0041",
+    "contratoId": "0debd935-f6c4-470c-82e9-50d1992983c7",
+    "contrato": "Reclamação Trabalhista - processo particular - Ações pessoais do Antonio Carlos",
+    "cliente": "Antônio Carlos de Oliveira"
+  },
+  {
+    "cnj": "1001786-89.2025.5.02.0718",
+    "contratoId": "e455c0b9-8127-442c-aab3-c999133fa958",
+    "contrato": "Almeida - Reclamação Trabalhista - Contrato para processos trabalhistas",
+    "cliente": "Almeida Engenharia Consultoria e Construções Ltda."
+  },
+  {
+    "cnj": "2329632-90.2025.8.26.0000",
+    "contratoId": "d3954f37-bb9c-404a-ab40-63de6351a500",
+    "contrato": "Inova TS - Contencioso Cível - INOVA - Contencioso Cível",
+    "cliente": "Inova Ts Engenharia Ltda."
+  },
+  {
+    "cnj": "0011365-69.2025.5.15.0119",
+    "contratoId": "8a1495d7-300b-4b21-a6d9-fb9ddfdcd160",
+    "contrato": "Inova - 2025 - Contencioso Trabalhista",
+    "cliente": "Inova Ts Engenharia Ltda."
+  },
+  {
+    "cnj": "4001820-05.2025.8.26.0650",
+    "contratoId": "369ec31a-843a-49c4-ae8e-5adaf7f2d5f2",
+    "contrato": "359 - YOFC - TEC WI",
+    "cliente": "Yofc Brasil Cabos e Solucoes Ltda"
+  },
+  {
+    "cnj": "2360838-25.2025.8.26.0000",
+    "contratoId": "369ec31a-843a-49c4-ae8e-5adaf7f2d5f2",
+    "contrato": "359 - YOFC - TEC WI",
+    "cliente": "Yofc Brasil Cabos e Solucoes Ltda"
+  },
+  {
+    "cnj": "1001924-86.2025.5.02.0029",
+    "contratoId": "38f25091-1016-454f-b5ed-f4836b36d3dd",
+    "contrato": "Sunglasses x Franco Boris Andrulis - RT de Franco Boris Andrulis",
+    "cliente": "Optical Sunglassses Ltda"
+  },
+  {
+    "cnj": "2388924-06.2025.8.26.0000",
+    "contratoId": "00852629-70a3-4a62-bda6-28a2cd4a6112",
+    "contrato": "390 - POLYCARPO",
+    "cliente": "Polycarpo Advogados"
+  }
+]

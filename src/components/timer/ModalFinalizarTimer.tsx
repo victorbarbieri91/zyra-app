@@ -29,6 +29,10 @@ export function ModalFinalizarTimer({
     setLoading(true);
     try {
       await onConfirm(descricao, ajusteMinutos);
+    } catch (err) {
+      // Error is handled by the parent component (FloatingTimerWidget)
+      // Just re-throw to let parent handle it
+      throw err;
     } finally {
       setLoading(false);
     }

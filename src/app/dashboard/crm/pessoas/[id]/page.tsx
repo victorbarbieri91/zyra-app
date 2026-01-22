@@ -28,6 +28,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import type { InteracaoJSONB } from '@/types/crm';
 
 // Mock data
 const mockPessoa = {
@@ -58,39 +59,22 @@ const mockPessoa = {
   created_at: '2024-01-15T10:00:00Z',
 };
 
-const mockInteracoes = [
+const mockInteracoes: InteracaoJSONB[] = [
   {
     id: '1',
-    pessoa_id: '1',
+    tipo: 'reuniao',
+    data: '2024-01-20T14:00:00Z',
+    descricao: 'Discussão sobre ação trabalhista. Cliente apresentou documentação completa. Documentos recebidos.',
     user_id: '1',
     user_nome: 'Dr. João Silva',
-    tipo: 'reuniao' as const,
-    assunto: 'Reunião sobre novo caso',
-    descricao: 'Discussão sobre ação trabalhista. Cliente apresentou documentação completa.',
-    data_hora: '2024-01-20T14:00:00Z',
-    duracao_minutos: 60,
-    resultado: 'Documentos recebidos',
-    follow_up: false,
-    follow_up_concluido: false,
-    created_at: '2024-01-20T14:00:00Z',
-    updated_at: '2024-01-20T14:00:00Z',
   },
   {
     id: '2',
-    pessoa_id: '1',
+    tipo: 'email',
+    data: '2024-01-18T10:30:00Z',
+    descricao: 'Enviado email com atualização sobre movimentação processual. Cliente satisfeito.',
     user_id: '1',
     user_nome: 'Dr. João Silva',
-    tipo: 'email' as const,
-    assunto: 'Atualização do processo',
-    descricao: 'Enviado email com atualização sobre movimentação processual.',
-    data_hora: '2024-01-18T10:30:00Z',
-    resultado: 'Cliente satisfeito',
-    follow_up: true,
-    follow_up_data: '2024-01-25',
-    follow_up_descricao: 'Verificar se cliente tem dúvidas',
-    follow_up_concluido: false,
-    created_at: '2024-01-18T10:30:00Z',
-    updated_at: '2024-01-18T10:30:00Z',
   },
 ];
 

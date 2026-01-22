@@ -19,6 +19,8 @@ export interface Evento {
   // Vinculações (FK diretas)
   processo_id?: string | null
   consultivo_id?: string | null
+  // Múltiplos responsáveis (carregado separadamente via useAgendaResponsaveis)
+  responsaveis_ids?: string[]
   created_at?: string
   updated_at?: string
 }

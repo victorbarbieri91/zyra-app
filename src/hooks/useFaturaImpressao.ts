@@ -111,47 +111,54 @@ export function useFaturaImpressao() {
           .select(`
             id, nome_completo, nome_fantasia, tipo_pessoa, cpf_cnpj,
             logradouro, numero, complemento, bairro, cidade, uf, cep,
-            email_principal, telefone_principal
+            email, telefone
           `)
           .eq('id', faturaData.cliente_id)
           .single()
 
         if (clienteError) throw new Error('Cliente não encontrado')
 
-        // 4. Buscar itens com dados do processo
-        const { data: itensData, error: itensError } = await supabase
-          .from('financeiro_faturamento_itens')
-          .select(`
-            *,
-            processo:processos_processos (
-              numero_cnj,
-              numero_pasta,
-              autor,
-              reu
-            )
-          `)
-          .eq('fatura_id', faturaId)
-          .order('tipo_item', { ascending: true })
-          .order('created_at', { ascending: true })
+        // 4. Itens estão em JSONB na fatura
+        const itensJsonb = faturaData.itens || []
 
-        if (itensError) throw itensError
+        // Buscar dados de processos para os itens que têm processo_id
+        const processosIds = itensJsonb
+          .filter((item: any) => item.processo_id)
+          .map((item: any) => item.processo_id)
 
-        // Mapear itens com dados do processo
-        const itens: ItemFaturaImpressao[] = (itensData || []).map((item: any) => ({
-          id: item.id,
-          tipo_item: item.tipo_item,
-          descricao: item.descricao,
-          quantidade: item.quantidade,
-          valor_unitario: item.valor_unitario,
-          valor_total: item.valor_total,
-          processo_id: item.processo_id,
-          processo_numero: item.processo?.numero_cnj || null,
-          processo_pasta: item.processo?.numero_pasta || null,
-          partes_resumo:
-            item.processo?.autor && item.processo?.reu
-              ? `${item.processo.autor} vs ${item.processo.reu}`
-              : null,
-        }))
+        let processosMap: Record<string, any> = {}
+
+        if (processosIds.length > 0) {
+          const { data: processos } = await supabase
+            .from('processos_processos')
+            .select('id, numero_cnj, numero_pasta, autor, reu')
+            .in('id', processosIds)
+
+          processos?.forEach((p) => {
+            processosMap[p.id] = p
+          })
+        }
+
+        // Mapear itens JSONB para o formato de impressão
+        const itens: ItemFaturaImpressao[] = itensJsonb.map((item: any, index: number) => {
+          const processo = item.processo_id ? processosMap[item.processo_id] : null
+
+          return {
+            id: `${faturaId}-item-${index}`,
+            tipo_item: item.tipo === 'timesheet' ? 'timesheet' : item.tipo === 'honorario' ? 'honorario' : 'despesa',
+            descricao: item.descricao || '',
+            quantidade: item.horas || null,
+            valor_unitario: item.valor_hora || null,
+            valor_total: Number(item.valor) || 0,
+            processo_id: item.processo_id || null,
+            processo_numero: processo?.numero_cnj || null,
+            processo_pasta: processo?.numero_pasta || null,
+            partes_resumo:
+              processo?.autor && processo?.reu
+                ? `${processo.autor} vs ${processo.reu}`
+                : null,
+          }
+        })
 
         // Calcular totais
         const subtotal_honorarios = itens
@@ -208,8 +215,8 @@ export function useFaturaImpressao() {
             cidade: clienteData.cidade,
             uf: clienteData.uf,
             cep: clienteData.cep,
-            email_principal: clienteData.email_principal,
-            telefone_principal: clienteData.telefone_principal,
+            email_principal: clienteData.email,
+            telefone_principal: clienteData.telefone,
           },
           itens,
           totais: {

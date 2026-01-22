@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import TagSelector from '@/components/tags/TagSelector'
 import VinculacaoSelector, { Vinculacao } from '@/components/agenda/VinculacaoSelector'
 import RecorrenciaConfig, { RecorrenciaData } from '@/components/agenda/RecorrenciaConfig'
+import ResponsaveisSelector from '@/components/agenda/ResponsaveisSelector'
 import type { EventoFormData } from '@/hooks/useEventos'
 import type { WizardStep as WizardStepType } from '@/components/wizards'
 import { format } from 'date-fns'
@@ -21,6 +22,8 @@ import { ptBR } from 'date-fns/locale'
 import { createClient } from '@/lib/supabase/client'
 import { useTags } from '@/hooks/useTags'
 import { useRecorrencias } from '@/hooks/useRecorrencias'
+import { useAgendaResponsaveis } from '@/hooks/useAgendaResponsaveis'
+import { useEscritorioMembros } from '@/hooks/useEscritorioMembros'
 import { toBrazilTime, formatBrazilDateLong, formatBrazilDateTime } from '@/lib/timezone'
 
 interface EventoWizardProps {
@@ -78,22 +81,11 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
   // Carregar tags para mostrar na revisão
   const { tags } = useTags('agenda', escritorioId)
 
-  // Carregar perfis do escritório para o seletor de responsável
-  const [perfis, setPerfis] = useState<Array<{ id: string; nome_completo: string }>>([])
+  // Carregar membros do escritório para o seletor de responsáveis
+  const { membros } = useEscritorioMembros(escritorioId)
 
-  useEffect(() => {
-    const loadPerfis = async () => {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, nome_completo')
-        .eq('escritorio_id', escritorioId)
-        .order('nome_completo')
-
-      if (data) setPerfis(data)
-    }
-    loadPerfis()
-  }, [escritorioId])
+  // Hook para gerenciar responsáveis múltiplos
+  const { setResponsaveis } = useAgendaResponsaveis()
 
   // Form State
   const [tipoEvento, setTipoEvento] = useState<TipoEvento>('reuniao_cliente')
@@ -109,7 +101,9 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
   const [consultivoId, setConsultivoId] = useState<string | null>(initialData?.consultivo_id || null)
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
 
-  const [responsavelId, setResponsavelId] = useState(initialData?.responsavel_id || '')
+  const [responsaveisIds, setResponsaveisIds] = useState<string[]>(
+    initialData?.responsavel_id ? [initialData.responsavel_id] : []
+  )
   const [cor, setCor] = useState(initialData?.cor || '#6366F1')
 
   // Estado de recorrência
@@ -185,8 +179,8 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
           .from('consultivo_consultas')
           .select(`
             id,
-            numero_interno,
-            assunto,
+            numero,
+            titulo,
             crm_pessoas!consultivo_consultas_cliente_id_fkey(nome_completo, nome_fantasia)
           `)
           .eq('id', initialData.consultivo_id)
@@ -199,8 +193,8 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
             modulo: 'consultivo',
             modulo_registro_id: consultivo.id,
             metadados: {
-              numero_pasta: consultivo.numero_interno,
-              titulo: consultivo.assunto,
+              numero_pasta: consultivo.numero,
+              titulo: consultivo.titulo,
               partes: clienteNome || undefined,
             },
           })
@@ -282,7 +276,7 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
         dia_inteiro: diaInteiro,
         local: local || undefined,
         cor,
-        responsavel_id: responsavelId || undefined,
+        responsavel_id: responsaveisIds[0] || undefined, // Primeiro para compatibilidade
         processo_id: processoId,
         consultivo_id: consultivoId,
       }
@@ -308,7 +302,13 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
         })
       } else {
         // Evento único
-        await onSubmit(formData)
+        const resultado = await onSubmit(formData)
+
+        // Salvar múltiplos responsáveis na tabela N:N
+        // O ID do evento virá do resultado se a função retornar
+        if (responsaveisIds.length > 0 && (resultado as any)?.id) {
+          await setResponsaveis('evento', (resultado as any).id, responsaveisIds)
+        }
       }
 
       onClose()
@@ -486,28 +486,14 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
               />
             </div>
 
-            {/* Responsável */}
-            <div className="space-y-2">
-              <Label htmlFor="responsavel" className="text-sm font-medium text-[#34495e]">
-                Responsável
-                <span className="text-xs text-slate-500 font-normal ml-2">(Opcional)</span>
-              </Label>
-              <Select
-                value={responsavelId || undefined}
-                onValueChange={(value) => setResponsavelId(value || '')}
-              >
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="Nenhum (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {perfis.map((perfil) => (
-                    <SelectItem key={perfil.id} value={perfil.id}>
-                      {perfil.nome_completo}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Responsáveis (multi-select) */}
+            <ResponsaveisSelector
+              escritorioId={escritorioId}
+              selectedIds={responsaveisIds}
+              onChange={setResponsaveisIds}
+              label="Responsáveis"
+              placeholder="Selecionar responsáveis (opcional)..."
+            />
           </div>
         </WizardStep>
       )}
@@ -604,11 +590,14 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
                   </>
                 )}
 
-                {responsavelId && (
+                {responsaveisIds.length > 0 && (
                   <>
-                    <span className="text-slate-500">Responsável</span>
+                    <span className="text-slate-500">Responsáveis</span>
                     <span className="text-[#34495e] font-medium">
-                      {perfis.find(p => p.id === responsavelId)?.nome_completo || 'Definido'}
+                      {responsaveisIds
+                        .map(id => membros.find(m => m.user_id === id)?.nome)
+                        .filter(Boolean)
+                        .join(', ') || 'Definidos'}
                     </span>
                   </>
                 )}

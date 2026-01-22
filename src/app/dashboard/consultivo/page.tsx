@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,23 +14,27 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Plus,
   Search,
   Filter,
   Scale,
-  Clock,
-  AlertCircle,
-  FileText,
-  CheckCircle,
-  XCircle,
-  Timer,
-  TrendingUp,
-  Users,
+  ChevronLeft,
+  ChevronRight,
+  MoreVertical,
   ListTodo,
-  Calendar
+  Calendar,
+  Loader2,
+  ExternalLink
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { format, formatDistanceToNow } from 'date-fns'
+import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { ConsultaWizardModal } from '@/components/consultivo/ConsultaWizardModal'
@@ -37,36 +42,56 @@ import TarefaWizard from '@/components/agenda/TarefaWizard'
 import EventoWizard from '@/components/agenda/EventoWizard'
 import { useTarefas } from '@/hooks/useTarefas'
 import { useEventos } from '@/hooks/useEventos'
+import { BulkActionsToolbarCRM, BulkActionCRM } from '@/components/crm/BulkActionsToolbarCRM'
 
 interface Consulta {
   id: string
-  numero_interno: string
-  assunto: string
+  numero: string | null
+  titulo: string
+  descricao: string | null
+  cliente_id: string
   cliente_nome: string
-  tipo: string
   area: string
-  urgencia: string
   status: string
+  prioridade: string
+  prazo: string | null
+  responsavel_id: string
   responsavel_nome: string
-  data_recebimento: string
-  data_conclusao_estimada: string | null
-  status_sla: string
-  horas_reais: number
-  horas_nao_faturadas: number
+  contrato_id: string | null
+  anexos: any[]
+  andamentos: any[]
+  created_at: string
 }
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
+const DEFAULT_PAGE_SIZE = 20
 
 export default function ConsultivoPage() {
   const [consultas, setConsultas] = useState<Consulta[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
-  const [currentView, setCurrentView] = useState<'todas' | 'pendentes' | 'atrasadas' | 'minhas'>('pendentes')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [currentView, setCurrentView] = useState<'ativas' | 'arquivadas' | 'minhas'>('ativas')
   const [wizardModalOpen, setWizardModalOpen] = useState(false)
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+  const [totalCount, setTotalCount] = useState(0)
 
   // Estados para wizards de agenda
   const [showTarefaWizard, setShowTarefaWizard] = useState(false)
   const [showEventoWizard, setShowEventoWizard] = useState(false)
   const [selectedConsultivoId, setSelectedConsultivoId] = useState<string | null>(null)
   const [escritorioId, setEscritorioId] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+
+  // Estados para selecao em massa
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkLoading, setBulkLoading] = useState(false)
+
+  // Debounce timer ref
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const router = useRouter()
   const supabase = createClient()
@@ -76,7 +101,6 @@ export default function ConsultivoPage() {
     const params = new URLSearchParams(window.location.search)
     if (params.get('novo') === 'true') {
       setWizardModalOpen(true)
-      // Limpar o query param da URL
       window.history.replaceState({}, '', '/dashboard/consultivo')
     }
   }, [])
@@ -85,11 +109,12 @@ export default function ConsultivoPage() {
   const { createTarefa } = useTarefas(escritorioId || '')
   const { createEvento } = useEventos(escritorioId || '')
 
-  // Carregar escritórioId do usuário logado
+  // Carregar escritorioId e userId do usuario logado
   useEffect(() => {
-    const loadEscritorioId = async () => {
+    const loadUserData = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        setUserId(user.id)
         const { data: profile } = await supabase
           .from('profiles')
           .select('escritorio_id')
@@ -101,40 +126,87 @@ export default function ConsultivoPage() {
         }
       }
     }
-    loadEscritorioId()
+    loadUserData()
   }, [])
 
+  // Debounce search input
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+      setCurrentPage(1)
+    }, 300)
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  }, [searchQuery])
+
+  // Load consultas when filters change
   useEffect(() => {
     loadConsultas()
-  }, [currentView, searchQuery])
+  }, [currentView, debouncedSearch, currentPage, pageSize])
 
   const loadConsultas = async () => {
     try {
       setLoading(true)
 
+      // Query direta na tabela com joins
       let query = supabase
-        .from('v_consultivo_consultas_completas')
-        .select('*')
-        .order('data_recebimento', { ascending: false })
+        .from('consultivo_consultas')
+        .select(`
+          id,
+          numero,
+          titulo,
+          descricao,
+          cliente_id,
+          area,
+          status,
+          prioridade,
+          prazo,
+          responsavel_id,
+          contrato_id,
+          anexos,
+          andamentos,
+          created_at
+        `, { count: 'exact' })
 
-      // Filtrar por view
-      if (currentView === 'pendentes') {
-        query = query.in('status', ['nova', 'em_analise', 'em_revisao'])
-      } else if (currentView === 'atrasadas') {
-        query = query.eq('status_sla', 'vencido')
-      } else if (currentView === 'minhas') {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          query = query.eq('responsavel_id', user.id)
+      // Apply search filter - quando busca, mostra tudo incluindo arquivados
+      const isSearching = debouncedSearch.trim().length > 0
+      if (isSearching) {
+        const searchTerm = `%${debouncedSearch.trim()}%`
+        query = query.or(`titulo.ilike.${searchTerm},numero.ilike.${searchTerm}`)
+      }
+
+      // Apply view filter
+      if (currentView === 'arquivadas') {
+        query = query.eq('status', 'arquivado')
+      } else if (currentView === 'minhas' && userId) {
+        query = query.eq('responsavel_id', userId)
+        // Minhas consultas também filtra por ativo, a menos que esteja buscando
+        if (!isSearching) {
+          query = query.eq('status', 'ativo')
         }
+      } else if (currentView === 'ativas' && !isSearching) {
+        // Por padrão mostra apenas ativas, exceto se estiver buscando
+        query = query.eq('status', 'ativo')
       }
 
-      // Busca
-      if (searchQuery) {
-        query = query.or(`assunto.ilike.%${searchQuery}%,numero_interno.ilike.%${searchQuery}%`)
-      }
+      // Get total count first
+      const { count } = await query
+
+      // Apply pagination and ordering
+      const from = (currentPage - 1) * pageSize
+      const to = from + pageSize - 1
 
       const { data, error } = await query
+        .order('created_at', { ascending: false })
+        .range(from, to)
 
       if (error) {
         console.error('Erro ao carregar consultas:', error)
@@ -142,7 +214,49 @@ export default function ConsultivoPage() {
         return
       }
 
-      setConsultas(data || [])
+      setTotalCount(count || 0)
+
+      // Buscar dados de cliente e responsavel para os registros carregados
+      const clienteIds = (data || []).map((c: any) => c.cliente_id).filter(Boolean)
+      const responsavelIds = (data || []).map((c: any) => c.responsavel_id).filter(Boolean)
+
+      // Buscar clientes
+      const { data: clientes } = await supabase
+        .from('crm_pessoas')
+        .select('id, nome_completo')
+        .in('id', clienteIds)
+
+      const clientesMap = new Map((clientes || []).map(c => [c.id, c.nome_completo]))
+
+      // Buscar responsaveis
+      const { data: responsaveis } = await supabase
+        .from('profiles')
+        .select('id, nome_completo')
+        .in('id', responsavelIds)
+
+      const responsaveisMap = new Map((responsaveis || []).map(r => [r.id, r.nome_completo]))
+
+      // Formatar dados
+      const consultasFormatadas: Consulta[] = (data || []).map((c: any) => ({
+        id: c.id,
+        numero: c.numero,
+        titulo: c.titulo,
+        descricao: c.descricao,
+        cliente_id: c.cliente_id,
+        cliente_nome: clientesMap.get(c.cliente_id) || 'N/A',
+        area: c.area,
+        status: c.status,
+        prioridade: c.prioridade,
+        prazo: c.prazo,
+        responsavel_id: c.responsavel_id,
+        responsavel_nome: responsaveisMap.get(c.responsavel_id) || 'N/A',
+        contrato_id: c.contrato_id,
+        anexos: c.anexos || [],
+        andamentos: c.andamentos || [],
+        created_at: c.created_at
+      }))
+
+      setConsultas(consultasFormatadas)
       setLoading(false)
     } catch (error) {
       console.error('Erro:', error)
@@ -150,63 +264,120 @@ export default function ConsultivoPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; variant: string; className: string }> = {
-      nova: { label: 'Nova', variant: 'default', className: 'bg-blue-100 text-blue-700 border-blue-200' },
-      em_analise: { label: 'Em Análise', variant: 'default', className: 'bg-amber-100 text-amber-700 border-amber-200' },
-      em_revisao: { label: 'Em Revisão', variant: 'default', className: 'bg-purple-100 text-purple-700 border-purple-200' },
-      aguardando_cliente: { label: 'Aguardando Cliente', variant: 'default', className: 'bg-slate-100 text-slate-700 border-slate-200' },
-      concluida: { label: 'Concluída', variant: 'default', className: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-      enviada: { label: 'Enviada', variant: 'default', className: 'bg-teal-100 text-teal-700 border-teal-200' },
-      cancelada: { label: 'Cancelada', variant: 'default', className: 'bg-red-100 text-red-700 border-red-200' },
+  const formatArea = (area: string) => {
+    const map: Record<string, string> = {
+      'civel': 'Cível',
+      'trabalhista': 'Trabalhista',
+      'tributario': 'Tributário',
+      'societario': 'Societário',
+      'contratual': 'Contratual',
+      'familia': 'Família',
+      'consumidor': 'Consumidor',
+      'ambiental': 'Ambiental',
+      'imobiliario': 'Imobiliário',
+      'propriedade_intelectual': 'Prop. Intelectual',
+      'outros': 'Outros'
     }
+    return map[area] || area
+  }
 
-    const config = statusConfig[status] || statusConfig.nova
+  const getStatusBadge = (status: string) => {
+    const styles: Record<string, string> = {
+      ativo: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+      arquivado: 'bg-slate-100 text-slate-700 border-slate-200',
+    }
+    const labels: Record<string, string> = {
+      ativo: 'Ativo',
+      arquivado: 'Arquivado',
+    }
     return (
-      <Badge className={cn('text-[10px] font-medium border', config.className)}>
-        {config.label}
+      <Badge className={cn('text-[10px] border', styles[status] || styles.ativo)}>
+        {labels[status] || status}
       </Badge>
     )
   }
 
-  const getSLABadge = (statusSla: string) => {
-    if (statusSla === 'vencido') {
-      return (
-        <Badge className="bg-red-100 text-red-700 border-red-200 text-[10px] font-medium border">
-          <AlertCircle className="w-3 h-3 mr-1" />
-          Atrasado
-        </Badge>
-      )
+  const getPrioridadeBadge = (prioridade: string) => {
+    const styles: Record<string, string> = {
+      baixa: 'bg-slate-100 text-slate-600 border-slate-200',
+      media: 'bg-blue-100 text-blue-700 border-blue-200',
+      alta: 'bg-amber-100 text-amber-700 border-amber-200',
+      urgente: 'bg-red-100 text-red-700 border-red-200',
     }
-    if (statusSla === 'critico') {
-      return (
-        <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] font-medium border">
-          <Clock className="w-3 h-3 mr-1" />
-          Urgente
-        </Badge>
-      )
+    const labels: Record<string, string> = {
+      baixa: 'Baixa',
+      media: 'Média',
+      alta: 'Alta',
+      urgente: 'Urgente',
     }
-    return null
+    return (
+      <Badge className={cn('text-[10px] border', styles[prioridade] || styles.media)}>
+        {labels[prioridade] || prioridade}
+      </Badge>
+    )
   }
 
-  const getTipoBadge = (tipo: string) => {
-    const tipos: Record<string, { label: string; icon: any }> = {
-      simples: { label: 'Consulta', icon: FileText },
-      parecer: { label: 'Parecer', icon: Scale },
-      contrato: { label: 'Contrato', icon: FileText },
-      due_diligence: { label: 'Due Diligence', icon: Users },
-      opiniao: { label: 'Opinião', icon: Scale },
+  const formatPrazo = (prazo: string | null) => {
+    if (!prazo) return '-'
+    const date = new Date(prazo + 'T00:00:00')
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const diffDays = Math.ceil((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+    if (diffDays < 0) {
+      return <span className="text-red-600 font-medium">{format(date, 'dd/MM/yyyy')}</span>
+    } else if (diffDays === 0) {
+      return <span className="text-amber-600 font-medium">Hoje</span>
+    } else if (diffDays <= 3) {
+      return <span className="text-amber-600">{format(date, 'dd/MM/yyyy')}</span>
     }
+    return format(date, 'dd/MM/yyyy')
+  }
 
-    const config = tipos[tipo] || tipos.simples
-    const Icon = config.icon
+  // Calculate pagination info
+  const totalPages = Math.ceil(totalCount / pageSize)
+  const startItem = totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0
+  const endItem = Math.min(currentPage * pageSize, totalCount)
 
-    return (
-      <div className="flex items-center gap-1 text-xs text-slate-600">
-        <Icon className="w-3 h-3" />
-        <span>{config.label}</span>
-      </div>
-    )
+  const handlePageSizeChange = (newSize: string) => {
+    setPageSize(parseInt(newSize))
+    setCurrentPage(1)
+  }
+
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page)
+    }
+  }
+
+  // ============= Handlers de Selecao =============
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === consultas.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(consultas.map(c => c.id)))
+    }
+  }
+
+  const clearSelection = () => {
+    setSelectedIds(new Set())
+  }
+
+  const handleBulkAction = async (action: BulkActionCRM) => {
+    // Vamos implementar ações em massa depois se necessário
+    console.log('Bulk action:', action, selectedIds)
   }
 
   return (
@@ -214,9 +385,9 @@ export default function ConsultivoPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#34495e]">Consultivo</h1>
-          <p className="text-sm text-slate-600 mt-1">
-            Gestão de consultas jurídicas, pareceres e análises contratuais
+          <h1 className="text-2xl font-semibold text-[#34495e]">Consultivo</h1>
+          <p className="text-sm text-slate-600 mt-0.5 font-normal">
+            {loading ? 'Carregando...' : `${totalCount} ${totalCount === 1 ? 'consulta' : 'consultas'} encontradas`}
           </p>
         </div>
         <Button
@@ -228,196 +399,354 @@ export default function ConsultivoPage() {
         </Button>
       </div>
 
-      {/* Filtros e Busca */}
+      {/* Busca e Filtros */}
       <Card className="border-slate-200 shadow-sm">
-        <CardContent className="pt-4">
-          <div className="flex items-center gap-4">
-            {/* Busca */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <CardContent className="p-4">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              {loading && searchQuery ? (
+                <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 animate-spin" />
+              ) : (
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              )}
               <Input
-                placeholder="Buscar por assunto ou número..."
+                placeholder="Buscar por título ou número..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 border-slate-200"
+                className="pl-10"
               />
             </div>
 
-            {/* Views */}
-            <div className="flex gap-2">
-              <Button
-                variant={currentView === 'pendentes' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setCurrentView('pendentes')}
-                className={cn(
-                  currentView === 'pendentes' && 'bg-gradient-to-r from-[#34495e] to-[#46627f] text-white'
-                )}
-              >
-                Pendentes
-              </Button>
-              <Button
-                variant={currentView === 'atrasadas' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setCurrentView('atrasadas')}
-                className={cn(
-                  currentView === 'atrasadas' && 'bg-gradient-to-r from-red-500 to-red-600 text-white'
-                )}
-              >
-                Atrasadas
-              </Button>
-              <Button
-                variant={currentView === 'minhas' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setCurrentView('minhas')}
-              >
-                Minhas
-              </Button>
-              <Button
-                variant={currentView === 'todas' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setCurrentView('todas')}
-              >
-                Todas
-              </Button>
-            </div>
+            {/* Dropdown Visualizacao */}
+            <select
+              value={currentView}
+              onChange={(e) => {
+                setCurrentView(e.target.value as typeof currentView)
+                setCurrentPage(1)
+              }}
+              className="px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#89bcbe] min-w-[160px]"
+            >
+              <option value="ativas">Ativas</option>
+              <option value="arquivadas">Arquivadas</option>
+              <option value="minhas">Minhas Consultas</option>
+            </select>
+
+            <Button variant="outline">
+              <Filter className="w-4 h-4 mr-2" />
+              Mais Filtros
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Lista de Consultas */}
-      <div className="space-y-3">
-        {loading ? (
-          <Card className="border-slate-200 shadow-sm">
-            <CardContent className="pt-6 pb-6 text-center text-slate-600">
-              Carregando consultas...
-            </CardContent>
-          </Card>
-        ) : consultas.length === 0 ? (
-          <Card className="border-slate-200 shadow-sm">
-            <CardContent className="pt-6 pb-6 text-center text-slate-600">
-              Nenhuma consulta encontrada
-            </CardContent>
-          </Card>
-        ) : (
-          consultas.map((consulta) => (
-            <Card
-              key={consulta.id}
-              className="border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => router.push(`/dashboard/consultivo/${consulta.id}`)}
-            >
-              <CardContent className="pt-4 pb-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="text-xs font-mono text-slate-500">
-                        {consulta.numero_interno}
-                      </span>
-                      {getTipoBadge(consulta.tipo)}
-                      {getStatusBadge(consulta.status)}
-                      {getSLABadge(consulta.status_sla)}
+      {/* Tabela de Consultas */}
+      <Card className="border-slate-200 shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full table-fixed">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="text-center p-3 w-10">
+                  <Checkbox
+                    checked={consultas.length > 0 && selectedIds.size === consultas.length}
+                    onCheckedChange={toggleSelectAll}
+                    className="border-slate-300 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
+                  />
+                </th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-20">Nº</th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-72">Título</th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-44">Cliente</th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Área</th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Status</th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-20">Prior.</th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Prazo</th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-28">Responsável</th>
+                <th className="text-center p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-20">Ações</th>
+              </tr>
+            </thead>
+            <tbody className={loading ? 'opacity-50' : ''}>
+              {/* Loading state */}
+              {loading && consultas.length === 0 && (
+                <tr>
+                  <td colSpan={10} className="p-8 text-center">
+                    <div className="flex items-center justify-center gap-3">
+                      <Loader2 className="w-5 h-5 text-[#34495e] animate-spin" />
+                      <span className="text-sm text-slate-600">Carregando consultas...</span>
                     </div>
+                  </td>
+                </tr>
+              )}
 
-                    <h3 className="text-sm font-semibold text-[#34495e] mb-2 truncate">
-                      {consulta.assunto}
-                    </h3>
-
-                    <div className="flex items-center gap-4 text-xs text-slate-600">
-                      <div className="flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        <span>{consulta.cliente_nome}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Scale className="w-3 h-3" />
-                        <span>{consulta.area}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        <span>{consulta.responsavel_nome}</span>
-                      </div>
-                      {consulta.horas_reais > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Timer className="w-3 h-3" />
-                          <span>{consulta.horas_reais.toFixed(1)}h trabalhadas</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <div className="text-right text-xs text-slate-500">
-                      <div>
-                        {formatDistanceToNow(new Date(consulta.data_recebimento), {
-                          addSuffix: true,
-                          locale: ptBR,
-                        })}
-                      </div>
-                      {consulta.data_conclusao_estimada && (
-                        <div className="mt-1">
-                          Prazo: {format(new Date(consulta.data_conclusao_estimada), 'dd/MM/yyyy')}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Botão + Agenda */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+              {/* Empty state */}
+              {!loading && consultas.length === 0 && (
+                <tr>
+                  <td colSpan={10} className="p-8 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <Scale className="w-10 h-10 text-slate-300" />
+                      <p className="text-sm text-slate-600">
+                        {debouncedSearch ? 'Nenhuma consulta encontrada para esta busca' : 'Nenhuma consulta cadastrada'}
+                      </p>
+                      {debouncedSearch && (
                         <Button
-                          variant="ghost"
+                          variant="link"
                           size="sm"
-                          className="h-8 px-2 text-xs hover:bg-[#89bcbe] hover:text-white transition-colors flex-shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                          }}
-                          title="Criar agendamento para esta consulta"
+                          onClick={() => setSearchQuery('')}
+                          className="text-[#34495e]"
                         >
-                          <Plus className="w-3.5 h-3.5 mr-1" />
-                          Agenda
+                          Limpar busca
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedConsultivoId(consulta.id)
-                            setShowTarefaWizard(true)
-                          }}
-                        >
-                          <ListTodo className="w-4 h-4 mr-2 text-[#34495e]" />
-                          <span className="text-sm">Nova Tarefa</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedConsultivoId(consulta.id)
-                            setShowEventoWizard(true)
-                          }}
-                        >
-                          <Calendar className="w-4 h-4 mr-2 text-[#89bcbe]" />
-                          <span className="text-sm">Novo Compromisso</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )}
 
-      {/* Modal Wizard */}
+              {consultas.map((consulta) => (
+                <tr
+                  key={consulta.id}
+                  onClick={() => router.push(`/dashboard/consultivo/${consulta.id}`)}
+                  className={cn(
+                    'border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer',
+                    selectedIds.has(consulta.id) && 'bg-blue-50 hover:bg-blue-100'
+                  )}
+                >
+                  <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedIds.has(consulta.id)}
+                      onCheckedChange={() => toggleSelection(consulta.id)}
+                      className="border-slate-300 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
+                    />
+                  </td>
+                  <td className="p-3 whitespace-nowrap">
+                    <span className="text-xs font-mono text-slate-500">
+                      {consulta.numero || '-'}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <span className="text-sm font-medium text-[#34495e] truncate block" title={consulta.titulo}>
+                      {consulta.titulo}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <span className="text-xs text-slate-700 block truncate" title={consulta.cliente_nome}>
+                      {consulta.cliente_nome}
+                    </span>
+                  </td>
+                  <td className="p-3 whitespace-nowrap">
+                    <span className="text-xs text-slate-600">
+                      {formatArea(consulta.area)}
+                    </span>
+                  </td>
+                  <td className="p-3 whitespace-nowrap">
+                    {getStatusBadge(consulta.status)}
+                  </td>
+                  <td className="p-3 whitespace-nowrap">
+                    {getPrioridadeBadge(consulta.prioridade)}
+                  </td>
+                  <td className="p-3 whitespace-nowrap">
+                    <span className="text-xs">
+                      {formatPrazo(consulta.prazo)}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <span className="text-xs text-slate-600 block truncate" title={consulta.responsavel_nome}>
+                      {consulta.responsavel_nome}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <div className="flex items-center justify-center gap-1">
+                      {/* Menu de criar agendamento */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs hover:bg-[#89bcbe] hover:text-white transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                            title="Criar agendamento"
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Agenda
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedConsultivoId(consulta.id)
+                              setShowTarefaWizard(true)
+                            }}
+                          >
+                            <ListTodo className="w-4 h-4 mr-2 text-[#34495e]" />
+                            <span className="text-sm">Nova Tarefa</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedConsultivoId(consulta.id)
+                              setShowEventoWizard(true)
+                            }}
+                          >
+                            <Calendar className="w-4 h-4 mr-2 text-[#89bcbe]" />
+                            <span className="text-sm">Novo Compromisso</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      {/* Menu de acoes */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              window.open(`/dashboard/consultivo/${consulta.id}`, '_blank')
+                            }}
+                          >
+                            <ExternalLink className="w-4 h-4 mr-2 text-slate-500" />
+                            <span className="text-sm">Abrir em nova aba</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Paginacao */}
+        <div className="flex items-center justify-between p-4 border-t border-slate-200">
+          <div className="flex items-center gap-4">
+            <div className="text-xs text-slate-600">
+              {loading ? (
+                'Carregando...'
+              ) : totalCount > 0 ? (
+                <>Mostrando <span className="font-semibold">{startItem}</span> a <span className="font-semibold">{endItem}</span> de <span className="font-semibold">{totalCount}</span> consultas</>
+              ) : (
+                'Nenhuma consulta encontrada'
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">Por página:</span>
+              <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+                <SelectTrigger className="w-[70px] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map(size => (
+                    <SelectItem key={size} value={size.toString()}>
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1 || loading}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+
+            {/* Page numbers */}
+            {totalPages > 0 && (
+              <>
+                {currentPage > 2 && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => goToPage(1)}
+                      className="min-w-[32px]"
+                    >
+                      1
+                    </Button>
+                    {currentPage > 3 && <span className="text-slate-400 px-1">...</span>}
+                  </>
+                )}
+
+                {currentPage > 1 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => goToPage(currentPage - 1)}
+                    className="min-w-[32px]"
+                  >
+                    {currentPage - 1}
+                  </Button>
+                )}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-[#34495e] text-white min-w-[32px]"
+                  disabled
+                >
+                  {currentPage}
+                </Button>
+
+                {currentPage < totalPages && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => goToPage(currentPage + 1)}
+                    className="min-w-[32px]"
+                  >
+                    {currentPage + 1}
+                  </Button>
+                )}
+
+                {currentPage < totalPages - 1 && (
+                  <>
+                    {currentPage < totalPages - 2 && <span className="text-slate-400 px-1">...</span>}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => goToPage(totalPages)}
+                      className="min-w-[32px]"
+                    >
+                      {totalPages}
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages || totalPages === 0 || loading}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Modal Nova Consulta */}
       <ConsultaWizardModal
         open={wizardModalOpen}
         onOpenChange={setWizardModalOpen}
-        onSave={async (data) => {
-          console.log('Salvando consulta:', data)
-          // TODO: Integrar com Supabase
-          await loadConsultas()
-          alert('Consulta criada com sucesso!')
-        }}
+        onSuccess={loadConsultas}
+        escritorioId={escritorioId || undefined}
       />
 
-      {/* Wizards de Agenda vinculados à consulta */}
+      {/* Wizards de Agenda vinculados a consulta */}
       {showTarefaWizard && escritorioId && selectedConsultivoId && (
         <TarefaWizard
           escritorioId={escritorioId}
@@ -449,6 +778,16 @@ export default function ConsultivoPage() {
           initialData={{
             consultivo_id: selectedConsultivoId
           }}
+        />
+      )}
+
+      {/* Toolbar de Acoes em Massa */}
+      {selectedIds.size > 0 && (
+        <BulkActionsToolbarCRM
+          selectedCount={selectedIds.size}
+          onClearSelection={clearSelection}
+          onAction={handleBulkAction}
+          loading={bulkLoading}
         />
       )}
     </div>

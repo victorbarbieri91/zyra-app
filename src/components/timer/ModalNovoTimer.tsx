@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Play, Loader2, Search } from 'lucide-react';
+import { toast } from 'sonner';
 import { useEscritorio } from '@/contexts/EscritorioContext';
 import { useTimer } from '@/contexts/TimerContext';
 import { createClient } from '@/lib/supabase/client';
@@ -71,15 +72,15 @@ export function ModalNovoTimer({ onClose }: ModalNovoTimerProps) {
         } else {
           const { data } = await supabase
             .from('consultivo_consultas')
-            .select('id, assunto, numero_interno, crm_pessoas(nome_completo)')
+            .select('id, titulo, numero, crm_pessoas(nome_completo)')
             .eq('escritorio_id', escritorioAtivo.id)
-            .ilike('assunto', `%${searchTerm}%`)
+            .ilike('titulo', `%${searchTerm}%`)
             .limit(10);
 
           setConsultas(
             (data || []).map((c: any) => ({
               id: c.id,
-              titulo: c.numero_interno ? `${c.numero_interno} - ${c.assunto}` : c.assunto,
+              titulo: c.numero ? `${c.numero} - ${c.titulo}` : c.titulo,
               cliente_nome: c.crm_pessoas?.nome_completo,
             }))
           );
@@ -97,12 +98,12 @@ export function ModalNovoTimer({ onClose }: ModalNovoTimerProps) {
 
   const handleSubmit = async () => {
     if (!vinculoId) {
-      alert('Selecione um processo ou consulta');
+      toast.error('Selecione um processo ou consulta');
       return;
     }
 
     if (!titulo.trim()) {
-      alert('Informe o título do timer');
+      toast.error('Informe o título do timer');
       return;
     }
 
@@ -115,10 +116,12 @@ export function ModalNovoTimer({ onClose }: ModalNovoTimerProps) {
         consulta_id: vinculoTipo === 'consulta' ? vinculoId : undefined,
         faturavel,
       });
+      toast.success('Timer iniciado!');
       onClose();
-    } catch (err) {
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Erro ao iniciar timer';
+      toast.error(errorMessage);
       console.error('Erro ao iniciar timer:', err);
-      alert('Erro ao iniciar timer');
     } finally {
       setLoading(false);
     }

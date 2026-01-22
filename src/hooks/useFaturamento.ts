@@ -253,37 +253,62 @@ export function useFaturamento(escritorioId: string | null) {
         setLoading(true)
         setError(null)
 
-        // Query com JOIN para dados do processo
-        const { data, error: queryError } = await supabase
-          .from('financeiro_faturamento_itens')
-          .select(`
-            *,
-            processo:processos_processos (
-              numero_cnj,
-              numero_pasta,
-              autor,
-              reu
-            )
-          `)
-          .eq('fatura_id', faturaId)
-          .order('tipo_item', { ascending: true })
-          .order('created_at', { ascending: false })
+        // Buscar fatura com itens em JSONB
+        const { data: fatura, error: queryError } = await supabase
+          .from('financeiro_faturamento_faturas')
+          .select('itens')
+          .eq('id', faturaId)
+          .single()
 
         if (queryError) throw queryError
 
-        // Mapear para incluir dados do processo
-        const itensComProcesso = (data || []).map((item: any) => ({
-          ...item,
-          processo_numero: item.processo?.numero_cnj || null,
-          processo_pasta: item.processo?.numero_pasta || null,
-          partes_resumo:
-            item.processo?.autor && item.processo?.reu
-              ? `${item.processo.autor} vs ${item.processo.reu}`
-              : null,
-          processo: undefined, // Remove o objeto aninhado
-        }))
+        const itensJsonb = fatura?.itens || []
 
-        return itensComProcesso as ItemFatura[]
+        // Buscar dados de processos para os itens que têm processo_id
+        const processosIds = itensJsonb
+          .filter((item: any) => item.processo_id)
+          .map((item: any) => item.processo_id)
+
+        let processosMap: Record<string, any> = {}
+
+        if (processosIds.length > 0) {
+          const { data: processos } = await supabase
+            .from('processos_processos')
+            .select('id, numero_cnj, numero_pasta, autor, reu')
+            .in('id', processosIds)
+
+          processos?.forEach((p) => {
+            processosMap[p.id] = p
+          })
+        }
+
+        // Mapear itens JSONB para o formato ItemFatura
+        const itens: ItemFatura[] = itensJsonb.map((item: any, index: number) => {
+          const processo = item.processo_id ? processosMap[item.processo_id] : null
+
+          return {
+            id: `${faturaId}-item-${index}`,
+            fatura_id: faturaId,
+            tipo_item: item.tipo === 'timesheet' ? 'timesheet' : item.tipo === 'honorario' ? 'honorario' : 'despesa',
+            descricao: item.descricao || '',
+            processo_id: item.processo_id || null,
+            consulta_id: item.consulta_id || null,
+            quantidade: item.horas || null,
+            valor_unitario: item.valor_hora || null,
+            valor_total: Number(item.valor) || 0,
+            timesheet_ids: item.timesheet_ids || null,
+            referencia_id: item.referencia_id || null,
+            created_at: new Date().toISOString(),
+            processo_numero: processo?.numero_cnj || null,
+            processo_pasta: processo?.numero_pasta || null,
+            partes_resumo:
+              processo?.autor && processo?.reu
+                ? `${processo.autor} vs ${processo.reu}`
+                : null,
+          }
+        })
+
+        return itens
       } catch (err: any) {
         setError(err.message)
         console.error('Erro ao carregar itens da fatura:', err)

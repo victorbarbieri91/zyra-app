@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { X, Plus, History, ChevronDown } from 'lucide-react';
+import { toast } from 'sonner';
 import { useTimer } from '@/contexts/TimerContext';
 import { TimerDisplay } from './TimerDisplay';
 import { TimerCard } from './TimerCard';
@@ -112,15 +113,29 @@ export function FloatingTimerWidget() {
   // Handler para confirmar finalização
   const handleConfirmFinalizar = async (descricao: string, ajusteMinutos: number) => {
     if (timerParaFinalizar) {
-      await finalizarTimer(timerParaFinalizar, { descricao, ajuste_minutos: ajusteMinutos });
-      setTimerParaFinalizar(null);
+      try {
+        await finalizarTimer(timerParaFinalizar, { descricao, ajuste_minutos: ajusteMinutos });
+        setTimerParaFinalizar(null);
+        toast.success('Tempo registrado com sucesso!');
+      } catch (err: any) {
+        const errorMessage = err?.message || err?.error?.message || 'Erro desconhecido ao finalizar timer';
+        toast.error(errorMessage);
+        console.error('Erro ao finalizar timer:', err);
+      }
     }
   };
 
   // Handler para descartar timer
   const handleDiscardTimer = async (timerId: string) => {
     if (confirm('Descartar este timer? O tempo não será salvo.')) {
-      await descartarTimer(timerId);
+      try {
+        await descartarTimer(timerId);
+        toast.success('Timer descartado');
+      } catch (err: any) {
+        const errorMessage = err?.message || 'Erro ao descartar timer';
+        toast.error(errorMessage);
+        console.error('Erro ao descartar timer:', err);
+      }
     }
   };
 

@@ -20,9 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Phone, Video, Mail, MessageCircle, Users, Calendar, FileText } from 'lucide-react';
-import type { TipoInteracao } from '@/types/crm';
+import { Phone, Video, Mail, MessageCircle, Users, Calendar, FileText, Briefcase, FileCheck } from 'lucide-react';
+import type { InteracaoJSONB } from '@/types/crm';
+
+type TipoInteracao = InteracaoJSONB['tipo'];
 
 interface InteracaoModalProps {
   open: boolean;
@@ -30,16 +31,18 @@ interface InteracaoModalProps {
   pessoaId?: string;
   pessoaNome?: string;
   oportunidadeId?: string;
+  onSave?: (interacao: Omit<InteracaoJSONB, 'id'>) => Promise<void>;
 }
 
 const tiposInteracao: { value: TipoInteracao; label: string; icon: any }[] = [
-  { value: 'ligacao', label: 'Ligação', icon: Phone },
-  { value: 'reuniao', label: 'Reunião', icon: Users },
+  { value: 'ligacao', label: 'Ligacao', icon: Phone },
+  { value: 'reuniao', label: 'Reuniao', icon: Users },
   { value: 'email', label: 'E-mail', icon: Mail },
   { value: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
   { value: 'videochamada', label: 'Videochamada', icon: Video },
   { value: 'visita', label: 'Visita', icon: Calendar },
-  { value: 'mensagem', label: 'Mensagem', icon: MessageCircle },
+  { value: 'proposta_enviada', label: 'Proposta Enviada', icon: Briefcase },
+  { value: 'contrato_enviado', label: 'Contrato Enviado', icon: FileCheck },
   { value: 'outros', label: 'Outros', icon: FileText },
 ];
 
@@ -49,48 +52,60 @@ export function InteracaoModal({
   pessoaId,
   pessoaNome,
   oportunidadeId,
+  onSave,
 }: InteracaoModalProps) {
   const [formData, setFormData] = useState({
-    tipo: '' as TipoInteracao,
-    assunto: '',
+    tipo: '' as TipoInteracao | '',
     descricao: '',
-    data_hora: new Date().toISOString().slice(0, 16),
-    duracao_minutos: '',
-    resultado: '',
-    follow_up: false,
-    follow_up_data: '',
-    follow_up_descricao: '',
+    data: new Date().toISOString().slice(0, 16),
   });
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Registrar interação:', {
-      ...formData,
-      pessoa_id: pessoaId,
-      oportunidade_id: oportunidadeId,
-    });
-    onOpenChange(false);
-    // TODO: Integrar com Supabase
+
+    if (!formData.tipo || !formData.descricao) return;
+
+    setSaving(true);
+    try {
+      if (onSave) {
+        await onSave({
+          tipo: formData.tipo as TipoInteracao,
+          descricao: formData.descricao,
+          data: formData.data,
+          user_id: '', // Sera preenchido pelo backend
+        });
+      }
+      onOpenChange(false);
+      setFormData({
+        tipo: '',
+        descricao: '',
+        data: new Date().toISOString().slice(0, 16),
+      });
+    } catch (error) {
+      console.error('Erro ao salvar interacao:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Registrar Interação</DialogTitle>
+          <DialogTitle>Registrar Interacao</DialogTitle>
           <DialogDescription>
-            {pessoaNome ? `Registrar interação com ${pessoaNome}` : 'Registrar nova interação'}
+            {pessoaNome ? `Registrar interacao com ${pessoaNome}` : 'Registrar nova interacao'}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Tipo de Interação */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Tipo de Interacao */}
           <div className="space-y-2">
-            <Label htmlFor="tipo">Tipo de Interação *</Label>
+            <Label htmlFor="tipo">Tipo de Interacao *</Label>
             <Select
               value={formData.tipo}
               onValueChange={(value) => setFormData({ ...formData, tipo: value as TipoInteracao })}
-              required
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o tipo" />
@@ -111,116 +126,29 @@ export function InteracaoModal({
             </Select>
           </div>
 
-          {/* Data e Hora + Duração */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="data_hora">Data e Hora *</Label>
-              <Input
-                id="data_hora"
-                type="datetime-local"
-                value={formData.data_hora}
-                onChange={(e) => setFormData({ ...formData, data_hora: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="duracao">Duração (minutos)</Label>
-              <Input
-                id="duracao"
-                type="number"
-                placeholder="Ex: 30"
-                value={formData.duracao_minutos}
-                onChange={(e) => setFormData({ ...formData, duracao_minutos: e.target.value })}
-              />
-            </div>
-          </div>
-
-          {/* Assunto */}
+          {/* Data e Hora */}
           <div className="space-y-2">
-            <Label htmlFor="assunto">Assunto *</Label>
+            <Label htmlFor="data">Data e Hora *</Label>
             <Input
-              id="assunto"
-              placeholder="Ex: Reunião inicial para discussão do caso"
-              value={formData.assunto}
-              onChange={(e) => setFormData({ ...formData, assunto: e.target.value })}
+              id="data"
+              type="datetime-local"
+              value={formData.data}
+              onChange={(e) => setFormData({ ...formData, data: e.target.value })}
               required
             />
           </div>
 
-          {/* Descrição */}
+          {/* Descricao */}
           <div className="space-y-2">
-            <Label htmlFor="descricao">Descrição *</Label>
+            <Label htmlFor="descricao">Descricao *</Label>
             <Textarea
               id="descricao"
-              placeholder="Descreva os detalhes da interação..."
+              placeholder="Descreva os detalhes da interacao..."
               rows={4}
               value={formData.descricao}
               onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
               required
             />
-          </div>
-
-          {/* Resultado */}
-          <div className="space-y-2">
-            <Label htmlFor="resultado">Resultado</Label>
-            <Textarea
-              id="resultado"
-              placeholder="Qual foi o resultado dessa interação?"
-              rows={2}
-              value={formData.resultado}
-              onChange={(e) => setFormData({ ...formData, resultado: e.target.value })}
-            />
-          </div>
-
-          {/* Follow-up */}
-          <div className="space-y-4 p-4 border border-slate-200 rounded-lg bg-slate-50">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="follow_up" className="text-sm font-semibold text-slate-900">
-                  Agendar Follow-up
-                </Label>
-                <p className="text-xs text-slate-600 mt-1">
-                  Criar lembrete para acompanhamento futuro
-                </p>
-              </div>
-              <Switch
-                id="follow_up"
-                checked={formData.follow_up}
-                onCheckedChange={(checked) => setFormData({ ...formData, follow_up: checked })}
-              />
-            </div>
-
-            {formData.follow_up && (
-              <div className="space-y-4 pt-2">
-                <div className="space-y-2">
-                  <Label htmlFor="follow_up_data">Data do Follow-up *</Label>
-                  <Input
-                    id="follow_up_data"
-                    type="date"
-                    value={formData.follow_up_data}
-                    onChange={(e) =>
-                      setFormData({ ...formData, follow_up_data: e.target.value })
-                    }
-                    required={formData.follow_up}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="follow_up_descricao">Descrição do Follow-up *</Label>
-                  <Textarea
-                    id="follow_up_descricao"
-                    placeholder="O que deve ser feito no follow-up?"
-                    rows={2}
-                    value={formData.follow_up_descricao}
-                    onChange={(e) =>
-                      setFormData({ ...formData, follow_up_descricao: e.target.value })
-                    }
-                    required={formData.follow_up}
-                  />
-                </div>
-              </div>
-            )}
           </div>
 
           <DialogFooter>
@@ -230,8 +158,9 @@ export function InteracaoModal({
             <Button
               type="submit"
               className="bg-gradient-to-r from-[#34495e] to-[#46627f]"
+              disabled={saving || !formData.tipo || !formData.descricao}
             >
-              Registrar Interação
+              {saving ? 'Salvando...' : 'Registrar Interacao'}
             </Button>
           </DialogFooter>
         </form>

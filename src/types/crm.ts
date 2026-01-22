@@ -1,18 +1,16 @@
 // =====================================================
-// TIPOS DO MÓDULO CRM
+// TIPOS DO MÓDULO CRM (Atualizado para nova estrutura)
 // =====================================================
 
+// ENUMs do banco de dados
 export type TipoPessoa = 'pf' | 'pj';
-export type TipoContato = 'cliente' | 'prospecto' | 'parceiro' | 'parte_contraria' | 'correspondente' | 'testemunha' | 'perito' | 'juiz' | 'promotor' | 'outros';
-export type StatusPessoa = 'ativo' | 'inativo' | 'prospecto' | 'arquivado';
-export type EstadoCivil = 'solteiro' | 'casado' | 'divorciado' | 'viuvo' | 'uniao_estavel';
-
-export type TipoEtapa = 'em_andamento' | 'ganho' | 'perdido';
-export type ResultadoOportunidade = 'ganho' | 'perdido' | 'cancelado';
-
-export type TipoInteracao = 'ligacao' | 'reuniao' | 'email' | 'whatsapp' | 'visita' | 'videochamada' | 'mensagem' | 'outros';
-export type TipoAtividade = 'nota' | 'ligacao' | 'reuniao' | 'email' | 'whatsapp' | 'proposta_enviada' | 'contrato_enviado' | 'mudanca_etapa' | 'alteracao_valor' | 'outros';
-export type TipoRelacionamento = 'socio' | 'procurador' | 'representante_legal' | 'conjuge' | 'parente' | 'filial' | 'matriz' | 'contador' | 'fornecedor' | 'parceiro' | 'outros';
+export type TipoCadastro = 'cliente' | 'prospecto' | 'parte_contraria' | 'correspondente' | 'testemunha' | 'perito' | 'juiz' | 'promotor' | 'outros';
+export type StatusPessoa = 'ativo' | 'inativo' | 'arquivado';
+export type OrigemCRM = 'indicacao' | 'site' | 'google' | 'redes_sociais' | 'evento' | 'parceria' | 'outros';
+export type EtapaOportunidade = 'lead' | 'contato_feito' | 'proposta_enviada' | 'negociacao' | 'ganho' | 'perdido';
+export type AreaJuridica = 'civel' | 'trabalhista' | 'criminal' | 'tributario' | 'empresarial' | 'familia' | 'consumidor' | 'previdenciario' | 'administrativo' | 'outros';
+export type MotivoPerda = 'preco' | 'concorrencia' | 'desistencia' | 'sem_resposta' | 'fora_escopo' | 'outros';
+export type UF = 'AC' | 'AL' | 'AM' | 'AP' | 'BA' | 'CE' | 'DF' | 'ES' | 'GO' | 'MA' | 'MG' | 'MS' | 'MT' | 'PA' | 'PB' | 'PE' | 'PI' | 'PR' | 'RJ' | 'RN' | 'RO' | 'RR' | 'RS' | 'SC' | 'SE' | 'SP' | 'TO';
 
 // =====================================================
 // INTERFACES PRINCIPAIS
@@ -22,23 +20,14 @@ export interface Pessoa {
   id: string;
   escritorio_id: string;
   tipo_pessoa: TipoPessoa;
-  tipo_contato: TipoContato;
+  tipo_cadastro: TipoCadastro;
   nome_completo: string;
   nome_fantasia?: string | null;
   cpf_cnpj?: string | null;
-  rg_ie?: string | null;
-  data_nascimento?: string | null;
-  nacionalidade?: string | null;
-  estado_civil?: EstadoCivil | null;
-  profissao?: string | null;
 
-  // Contatos
-  telefone_principal?: string | null;
-  telefone_secundario?: string | null;
-  celular?: string | null;
-  email_principal?: string | null;
-  email_secundario?: string | null;
-  whatsapp?: string | null;
+  // Contato (unificado)
+  telefone?: string | null;
+  email?: string | null;
 
   // Endereço
   cep?: string | null;
@@ -47,50 +36,22 @@ export interface Pessoa {
   complemento?: string | null;
   bairro?: string | null;
   cidade?: string | null;
-  uf?: string | null;
+  uf?: UF | null;
 
   // CRM
   status: StatusPessoa;
-  origem?: string | null;
-  responsavel_id?: string | null;
+  origem?: OrigemCRM | null;
+  indicado_por?: string | null;
   observacoes?: string | null;
   tags?: string[] | null;
 
   // Metadados
   created_at: string;
   updated_at: string;
-  inativado_em?: string | null;
-  motivo_inativacao?: string | null;
 }
 
 export interface PessoaResumo extends Pessoa {
-  responsavel_nome?: string | null;
-  responsavel_avatar?: string | null;
-  total_processos: number;
-  processos_ativos: number;
-  total_honorarios: number;
-  honorarios_pendentes: number;
-  honorarios_pagos: number;
-  ultima_interacao_data?: string | null;
-  ultima_interacao_tipo?: TipoInteracao | null;
-  dias_sem_contato?: number | null;
-  total_interacoes: number;
-  follow_ups_pendentes: number;
-  oportunidades_ativas: number;
-  total_relacionamentos: number;
-}
-
-export interface FunilEtapa {
-  id: string;
-  escritorio_id: string;
-  nome: string;
-  descricao?: string | null;
-  ordem: number;
-  cor: string;
-  ativo: boolean;
-  tipo: TipoEtapa;
-  created_at: string;
-  updated_at: string;
+  oportunidades_ativas?: number;
 }
 
 export interface Oportunidade {
@@ -100,19 +61,19 @@ export interface Oportunidade {
   titulo: string;
   descricao?: string | null;
   valor_estimado?: number | null;
+  valor_fechado?: number | null;
   probabilidade?: number | null;
-  etapa_id: string;
+  etapa: EtapaOportunidade;
   responsavel_id: string;
-  origem?: string | null;
+  origem?: OrigemCRM | null;
   indicado_por?: string | null;
-  area_juridica?: string | null;
+  area_juridica?: AreaJuridica | null;
+  motivo_perda?: MotivoPerda | null;
   tags?: string[] | null;
+  interacoes?: InteracaoJSONB[] | null;
   data_abertura: string;
   data_prevista_fechamento?: string | null;
   data_fechamento?: string | null;
-  resultado?: ResultadoOportunidade | null;
-  motivo_perda?: string | null;
-  valor_fechado?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -120,83 +81,19 @@ export interface Oportunidade {
 export interface OportunidadeComDados extends Oportunidade {
   pessoa_nome: string;
   pessoa_tipo_pessoa: TipoPessoa;
-  etapa_nome: string;
-  etapa_cor: string;
-  etapa_tipo: TipoEtapa;
   responsavel_nome: string;
-  tempo_na_etapa_dias?: number;
-  total_atividades: number;
 }
 
-export interface OportunidadeAtividade {
+// Estrutura de interação no JSONB
+export interface InteracaoJSONB {
   id: string;
-  oportunidade_id: string;
-  user_id: string;
-  tipo: TipoAtividade;
-  titulo?: string | null;
+  tipo: 'ligacao' | 'reuniao' | 'email' | 'whatsapp' | 'visita' | 'videochamada' | 'proposta_enviada' | 'contrato_enviado' | 'outros';
+  data: string;
   descricao: string;
-  dados_extras?: Record<string, any> | null;
-  data_hora: string;
-  created_at: string;
-}
-
-export interface OportunidadeAtividadeComUsuario extends OportunidadeAtividade {
-  user_nome: string;
-  user_avatar?: string | null;
-}
-
-export interface Interacao {
-  id: string;
-  pessoa_id: string;
   user_id: string;
-  tipo: TipoInteracao;
-  assunto: string;
-  descricao: string;
-  data_hora: string;
-  duracao_minutos?: number | null;
-  resultado?: string | null;
-  participantes?: string[] | null;
-  follow_up: boolean;
-  follow_up_data?: string | null;
-  follow_up_descricao?: string | null;
-  follow_up_concluido: boolean;
-  follow_up_concluido_em?: string | null;
-  processo_id?: string | null;
-  oportunidade_id?: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface InteracaoComUsuario extends Interacao {
-  user_nome: string;
-  user_avatar?: string | null;
-}
-
-export interface InteracaoAnexo {
-  id: string;
-  interacao_id: string;
-  arquivo_nome: string;
-  arquivo_url: string;
-  arquivo_tipo: string;
-  arquivo_tamanho: number;
-  created_at: string;
-}
-
-export interface Relacionamento {
-  id: string;
-  pessoa_origem_id: string;
-  pessoa_destino_id: string;
-  tipo_relacionamento: TipoRelacionamento;
-  descricao?: string | null;
-  observacoes?: string | null;
-  created_at: string;
-}
-
-export interface RelacionamentoCompleto extends Relacionamento {
-  pessoa_relacionada_nome: string;
-  pessoa_relacionada_tipo: TipoPessoa;
-  pessoa_relacionada_tipo_contato: TipoContato;
-  direcao: 'origem' | 'destino';
+  user_nome?: string;
+  etapa_anterior?: EtapaOportunidade;
+  etapa_nova?: EtapaOportunidade;
 }
 
 // =====================================================
@@ -205,31 +102,22 @@ export interface RelacionamentoCompleto extends Relacionamento {
 
 export interface PessoaFormData {
   tipo_pessoa: TipoPessoa;
-  tipo_contato: TipoContato;
+  tipo_cadastro: TipoCadastro;
   nome_completo: string;
   nome_fantasia?: string;
   cpf_cnpj?: string;
-  rg_ie?: string;
-  data_nascimento?: string;
-  nacionalidade?: string;
-  estado_civil?: EstadoCivil;
-  profissao?: string;
-  telefone_principal?: string;
-  telefone_secundario?: string;
-  celular?: string;
-  email_principal?: string;
-  email_secundario?: string;
-  whatsapp?: string;
+  telefone?: string;
+  email?: string;
   cep?: string;
   logradouro?: string;
   numero?: string;
   complemento?: string;
   bairro?: string;
   cidade?: string;
-  uf?: string;
+  uf?: UF;
   status: StatusPessoa;
-  origem?: string;
-  responsavel_id?: string;
+  origem?: OrigemCRM;
+  indicado_por?: string;
   observacoes?: string;
   tags?: string[];
 }
@@ -240,30 +128,14 @@ export interface OportunidadeFormData {
   descricao?: string;
   valor_estimado?: number;
   probabilidade?: number;
-  etapa_id: string;
+  etapa: EtapaOportunidade;
   responsavel_id: string;
-  origem?: string;
+  origem?: OrigemCRM;
   indicado_por?: string;
-  area_juridica?: string;
+  area_juridica?: AreaJuridica;
   tags?: string[];
   data_abertura: string;
   data_prevista_fechamento?: string;
-}
-
-export interface InteracaoFormData {
-  pessoa_id: string;
-  tipo: TipoInteracao;
-  assunto: string;
-  descricao: string;
-  data_hora?: string;
-  duracao_minutos?: number;
-  resultado?: string;
-  participantes?: string[];
-  follow_up?: boolean;
-  follow_up_data?: string;
-  follow_up_descricao?: string;
-  processo_id?: string;
-  oportunidade_id?: string;
 }
 
 // =====================================================
@@ -272,19 +144,18 @@ export interface InteracaoFormData {
 
 export interface PessoasFiltros {
   tipo_pessoa?: TipoPessoa[];
-  tipo_contato?: TipoContato[];
+  tipo_cadastro?: TipoCadastro[];
   status?: StatusPessoa[];
-  responsavel_id?: string[];
-  origem?: string[];
+  origem?: OrigemCRM[];
   tags?: string[];
   busca?: string;
 }
 
 export interface OportunidadesFiltros {
-  etapa_id?: string[];
+  etapa?: EtapaOportunidade[];
   responsavel_id?: string[];
-  area_juridica?: string[];
-  origem?: string[];
+  area_juridica?: AreaJuridica[];
+  origem?: OrigemCRM[];
   tags?: string[];
   valor_min?: number;
   valor_max?: number;
@@ -292,7 +163,7 @@ export interface OportunidadesFiltros {
   busca?: string;
 }
 
-export type OrdenacaoPessoas = 'nome_asc' | 'nome_desc' | 'created_at_asc' | 'created_at_desc' | 'ultima_interacao_asc' | 'ultima_interacao_desc';
+export type OrdenacaoPessoas = 'nome_asc' | 'nome_desc' | 'created_at_asc' | 'created_at_desc';
 export type OrdenacaoOportunidades = 'valor_desc' | 'valor_asc' | 'probabilidade_desc' | 'probabilidade_asc' | 'data_abertura_desc' | 'data_abertura_asc';
 
 // =====================================================
@@ -300,25 +171,76 @@ export type OrdenacaoOportunidades = 'valor_desc' | 'valor_asc' | 'probabilidade
 // =====================================================
 
 export interface FunilMetricas {
-  etapa_id: string;
-  etapa_nome: string;
-  etapa_ordem: number;
-  etapa_cor: string;
-  etapa_tipo: TipoEtapa;
+  etapa: EtapaOportunidade;
+  etapa_label: string;
   total_oportunidades: number;
   valor_total: number;
   valor_medio: number;
   probabilidade_media: number;
-  tempo_medio_dias?: number;
 }
 
 export interface CRMMetricas {
   total_pessoas: number;
   total_clientes: number;
-  total_leads: number;
+  total_prospectos: number;
   total_oportunidades_ativas: number;
   valor_total_pipeline: number;
   taxa_conversao: number;
-  interacoes_ultima_semana: number;
-  follow_ups_pendentes: number;
 }
+
+// =====================================================
+// HELPERS
+// =====================================================
+
+export const ETAPA_LABELS: Record<EtapaOportunidade, string> = {
+  lead: 'Lead',
+  contato_feito: 'Contato Feito',
+  proposta_enviada: 'Proposta Enviada',
+  negociacao: 'Negociação',
+  ganho: 'Ganho',
+  perdido: 'Perdido',
+};
+
+export const ETAPA_COLORS: Record<EtapaOportunidade, string> = {
+  lead: '#94a3b8',
+  contato_feito: '#60a5fa',
+  proposta_enviada: '#fbbf24',
+  negociacao: '#f97316',
+  ganho: '#22c55e',
+  perdido: '#ef4444',
+};
+
+export const TIPO_CADASTRO_LABELS: Record<TipoCadastro, string> = {
+  cliente: 'Cliente',
+  prospecto: 'Prospecto',
+  parte_contraria: 'Parte Contrária',
+  correspondente: 'Correspondente',
+  testemunha: 'Testemunha',
+  perito: 'Perito',
+  juiz: 'Juiz',
+  promotor: 'Promotor',
+  outros: 'Outros',
+};
+
+export const ORIGEM_LABELS: Record<OrigemCRM, string> = {
+  indicacao: 'Indicação',
+  site: 'Site',
+  google: 'Google',
+  redes_sociais: 'Redes Sociais',
+  evento: 'Evento',
+  parceria: 'Parceria',
+  outros: 'Outros',
+};
+
+export const AREA_JURIDICA_LABELS: Record<AreaJuridica, string> = {
+  civel: 'Cível',
+  trabalhista: 'Trabalhista',
+  criminal: 'Criminal',
+  tributario: 'Tributário',
+  empresarial: 'Empresarial',
+  familia: 'Família',
+  consumidor: 'Consumidor',
+  previdenciario: 'Previdenciário',
+  administrativo: 'Administrativo',
+  outros: 'Outros',
+};

@@ -17,6 +17,7 @@ import { formatBrazilDate, formatDateTimeForDB, parseDBDate } from '@/lib/timezo
 import { Tarefa } from '@/hooks/useTarefas'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAgendaResponsaveis, Responsavel } from '@/hooks/useAgendaResponsaveis'
 import { addDays, nextMonday, differenceInDays, differenceInHours } from 'date-fns'
 import {
   DropdownMenu,
@@ -87,6 +88,10 @@ export default function TarefaDetailModal({
   const [updatingDate, setUpdatingDate] = useState(false)
   const [dateDropdownOpen, setDateDropdownOpen] = useState<string | null>(null)
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [responsaveis, setResponsaveis] = useState<Responsavel[]>([])
+  const [loadingResponsaveis, setLoadingResponsaveis] = useState(false)
+
+  const { getResponsaveis } = useAgendaResponsaveis()
 
   // Carregar informações adicionais
   useEffect(() => {
@@ -94,6 +99,17 @@ export default function TarefaDetailModal({
 
     async function loadAdditionalInfo() {
       const supabase = createClient()
+
+      // Carregar responsáveis (múltiplos)
+      setLoadingResponsaveis(true)
+      try {
+        const responsaveisList = await getResponsaveis('tarefa', tarefa.id)
+        setResponsaveis(responsaveisList)
+      } catch (err) {
+        console.error('[TarefaDetail] Erro ao carregar responsáveis:', err)
+      } finally {
+        setLoadingResponsaveis(false)
+      }
 
       // Carregar processo
       if (tarefa.processo_id) {
@@ -511,15 +527,34 @@ export default function TarefaDetailModal({
                 </div>
               )}
 
-              {/* Responsável */}
+              {/* Responsáveis */}
               <div className="min-w-[120px]">
                 <div className="text-[10px] text-slate-500 mb-1 h-4">
-                  Responsável
+                  {responsaveis.length > 1 ? 'Responsáveis' : 'Responsável'}
                 </div>
-                <div className="h-5 leading-5">
-                  <span className="text-xs text-slate-700">
-                    {tarefa.responsavel_nome || 'Não atribuído'}
-                  </span>
+                <div className="min-h-[20px] leading-5">
+                  {loadingResponsaveis ? (
+                    <span className="text-xs text-slate-400 italic">Carregando...</span>
+                  ) : responsaveis.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {responsaveis.map((resp, idx) => (
+                        <span
+                          key={resp.id}
+                          className="text-xs text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded"
+                        >
+                          {resp.nome_completo}
+                        </span>
+                      ))}
+                    </div>
+                  ) : tarefa.responsavel_nome ? (
+                    <span className="text-xs text-slate-700">
+                      {tarefa.responsavel_nome}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-400 italic">
+                      Não atribuído
+                    </span>
+                  )}
                 </div>
               </div>
 

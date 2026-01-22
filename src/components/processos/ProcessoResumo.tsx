@@ -33,7 +33,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
-import { formatBrazilDateTime } from '@/lib/timezone'
+import { formatBrazilDateTime, formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
 import TarefaWizard from '@/components/agenda/TarefaWizard'
 import EventoWizard from '@/components/agenda/EventoWizard'
 import AudienciaWizard from '@/components/agenda/AudienciaWizard'
@@ -609,19 +609,6 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
             ) : (
               <div className="space-y-3.5">
                 {agendaItems.map((item) => {
-                  const tipoIcons = {
-                    tarefa: ListTodo,
-                    evento: Calendar,
-                    audiencia: Gavel
-                  }
-                  const Icon = tipoIcons[item.tipo_entidade as keyof typeof tipoIcons] || Calendar
-
-                  const iconBg = {
-                    tarefa: 'bg-gradient-to-br from-[#34495e] to-[#46627f]',
-                    evento: 'bg-gradient-to-br from-[#89bcbe] to-[#aacfd0]',
-                    audiencia: 'bg-gradient-to-br from-emerald-500 to-emerald-600'
-                  }[item.tipo_entidade] || 'bg-gradient-to-br from-[#89bcbe] to-[#aacfd0]'
-
                   const statusConfig: Record<string, { bg: string; text: string }> = {
                     pendente: { bg: 'bg-amber-100', text: 'text-amber-700' },
                     em_andamento: { bg: 'bg-blue-100', text: 'text-blue-700' },
@@ -671,13 +658,10 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
                     <div
                       key={item.id}
                       onClick={handleClick}
-                      className="border border-slate-200 rounded-lg p-3.5 hover:border-[#89bcbe] hover:shadow-sm transition-all cursor-pointer"
+                      className="border border-slate-200 rounded-lg p-4 hover:border-[#89bcbe] hover:shadow-sm transition-all cursor-pointer"
                     >
-                      {/* Header com ícone, título e status */}
+                      {/* Header com título e status */}
                       <div className="flex items-start gap-2.5 mb-2.5">
-                        <div className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 ${iconBg}`}>
-                          <Icon className="w-3 h-3 text-white" />
-                        </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-semibold text-[#34495e] leading-tight truncate">
                             {item.titulo}
@@ -689,12 +673,14 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
                       </div>
 
                       {/* Info adicional */}
-                      <div className="pl-8 space-y-1.5">
-                        {/* Data/Horário */}
+                      <div className="space-y-1.5">
+                        {/* Data/Horário - tarefas sem hora, eventos e audiências com hora */}
                         <div className="flex items-center gap-1.5">
                           <Clock className="w-3 h-3 text-[#89bcbe]" />
                           <span className="text-[10px] text-slate-600">
-                            {formatBrazilDateTime(item.data_inicio)}
+                            {item.tipo_entidade === 'tarefa'
+                              ? formatBrazilDate(item.data_inicio)
+                              : formatBrazilDateTime(item.data_inicio)}
                           </span>
                         </div>
 
@@ -713,7 +699,7 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
                           <div className="flex items-center gap-1.5">
                             <CalendarClock className="w-3 h-3 text-red-500" />
                             <span className="text-[10px] text-red-600 font-medium">
-                              Fatal: {format(new Date(item.prazo_data_limite), "dd/MM/yyyy", { locale: ptBR })}
+                              Fatal: {formatBrazilDate(item.prazo_data_limite)}
                             </span>
                           </div>
                         )}

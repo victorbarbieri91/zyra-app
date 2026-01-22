@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { X, Plus, History, ChevronDown } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { X, Plus, History, ChevronDown, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTimer } from '@/contexts/TimerContext';
 import { TimerDisplay } from './TimerDisplay';
@@ -30,6 +30,7 @@ export function FloatingTimerWidget() {
   const [timerParaFinalizar, setTimerParaFinalizar] = useState<string | null>(null);
   const [showRetroativo, setShowRetroativo] = useState(false);
   const [showNovoTimer, setShowNovoTimer] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const widgetRef = useRef<HTMLDivElement>(null);
 
   // Estado para drag
@@ -139,6 +140,24 @@ export function FloatingTimerWidget() {
     }
   };
 
+  // Filtrar timers por busca
+  const timersFiltrados = useMemo(() => {
+    if (!searchTerm.trim()) return timersAtivos;
+
+    const termo = searchTerm.toLowerCase().trim();
+    return timersAtivos.filter((timer) => {
+      // Busca por nome do cliente
+      if (timer.cliente_nome?.toLowerCase().includes(termo)) return true;
+      // Busca por número do processo
+      if (timer.processo_numero?.toLowerCase().includes(termo)) return true;
+      // Busca por título da consulta
+      if (timer.consulta_titulo?.toLowerCase().includes(termo)) return true;
+      // Busca por título do timer
+      if (timer.titulo?.toLowerCase().includes(termo)) return true;
+      return false;
+    });
+  }, [timersAtivos, searchTerm]);
+
   // Timer selecionado para finalizar
   const timerSelecionado = timerParaFinalizar
     ? timersAtivos.find((t) => t.id === timerParaFinalizar)
@@ -244,6 +263,28 @@ export function FloatingTimerWidget() {
         <div className="max-h-[320px] overflow-y-auto">
           {widgetTab === 'timers' && (
             <div className="p-2.5 space-y-2">
+              {/* Campo de busca */}
+              {timersAtivos.length > 0 && (
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Buscar por cliente, pasta ou processo..."
+                    className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-[#34495e] focus:border-[#34495e] placeholder:text-slate-400"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              )}
+
               {loading ? (
                 <div className="py-6 text-center text-xs text-slate-400">Carregando...</div>
               ) : timersAtivos.length === 0 ? (
@@ -253,8 +294,15 @@ export function FloatingTimerWidget() {
                     Inicie um timer na aba Início Rápido
                   </p>
                 </div>
+              ) : timersFiltrados.length === 0 ? (
+                <div className="py-4 text-center">
+                  <p className="text-xs text-slate-400">Nenhum timer encontrado</p>
+                  <p className="text-[10px] text-slate-300 mt-1">
+                    Tente outro termo de busca
+                  </p>
+                </div>
               ) : (
-                timersAtivos.map((timer) => (
+                timersFiltrados.map((timer) => (
                   <TimerCard
                     key={timer.id}
                     timer={timer}

@@ -34,16 +34,25 @@ export function useTarefasDoDia(escritorioId: string | null): UseTarefasDoDiaRet
       setLoading(true);
       setError(null);
 
+      // Obter usuário logado
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setTarefas([]);
+        setLoading(false);
+        return;
+      }
+
       // Data de hoje
       const hoje = new Date();
       const hojeStr = formatDateForDB(hoje);
 
-      // Buscar tarefas do dia da view consolidada
+      // Buscar tarefas do dia da view consolidada - APENAS do usuário logado
       const { data, error: queryError } = await supabase
         .from('v_agenda_consolidada')
         .select('*')
         .eq('escritorio_id', escritorioId)
         .eq('tipo_entidade', 'tarefa')
+        .eq('responsavel_id', user.id) // Filtrar apenas tarefas do usuário logado
         .in('status', ['pendente', 'em_andamento'])
         .or(`data_inicio.gte.${hojeStr}T00:00:00,data_inicio.lte.${hojeStr}T23:59:59,prazo_data_limite.gte.${hojeStr}T00:00:00,prazo_data_limite.lte.${hojeStr}T23:59:59`)
         .order('prioridade', { ascending: true }) // alta primeiro

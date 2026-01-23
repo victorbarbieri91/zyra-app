@@ -111,7 +111,7 @@ export default function FaturaImprimirPage() {
     )
   }
 
-  const { escritorio, fatura, cliente, itens, totais } = dados
+  const { escritorio, fatura, cliente, itens, totais, impostos, regime_tributario_label } = dados
 
   return (
     <>
@@ -408,13 +408,136 @@ export default function FaturaImprimirPage() {
                   </div>
                 )}
                 <div className="flex justify-between pt-3 border-t-2 border-[#34495e]">
-                  <span className="text-lg font-bold text-[#34495e]">VALOR TOTAL:</span>
+                  <span className="text-lg font-bold text-[#34495e]">VALOR BRUTO:</span>
                   <span className="text-2xl font-bold text-[#1E3A8A]">
                     {formatCurrency(totais.valor_total)}
                   </span>
                 </div>
               </div>
             </div>
+
+            {/* Secao de Impostos Retidos */}
+            {impostos && impostos.total_retencoes > 0 && (
+              <div className="mb-8 print-break-inside-avoid">
+                <h3 className="text-sm font-bold text-[#34495e] uppercase tracking-wide mb-4 pb-2 border-b-2 border-amber-400">
+                  Impostos Retidos na Fonte
+                </h3>
+
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Lista de Impostos */}
+                  <div className="space-y-2">
+                    {impostos.irrf.retido && impostos.irrf.valor > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">
+                          IRRF ({impostos.irrf.aliquota.toFixed(2)}%):
+                        </span>
+                        <span className="font-medium text-amber-700">
+                          - {formatCurrency(impostos.irrf.valor)}
+                        </span>
+                      </div>
+                    )}
+                    {impostos.pis.retido && impostos.pis.valor > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">
+                          PIS ({impostos.pis.aliquota.toFixed(2)}%):
+                        </span>
+                        <span className="font-medium text-amber-700">
+                          - {formatCurrency(impostos.pis.valor)}
+                        </span>
+                      </div>
+                    )}
+                    {impostos.cofins.retido && impostos.cofins.valor > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">
+                          COFINS ({impostos.cofins.aliquota.toFixed(2)}%):
+                        </span>
+                        <span className="font-medium text-amber-700">
+                          - {formatCurrency(impostos.cofins.valor)}
+                        </span>
+                      </div>
+                    )}
+                    {impostos.csll.retido && impostos.csll.valor > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">
+                          CSLL ({impostos.csll.aliquota.toFixed(2)}%):
+                        </span>
+                        <span className="font-medium text-amber-700">
+                          - {formatCurrency(impostos.csll.valor)}
+                        </span>
+                      </div>
+                    )}
+                    {impostos.iss.retido && impostos.iss.valor > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">
+                          ISS ({impostos.iss.aliquota.toFixed(2)}%):
+                        </span>
+                        <span className="font-medium text-amber-700">
+                          - {formatCurrency(impostos.iss.valor)}
+                        </span>
+                      </div>
+                    )}
+                    {impostos.inss.retido && impostos.inss.valor > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">
+                          INSS ({impostos.inss.aliquota.toFixed(2)}%):
+                        </span>
+                        <span className="font-medium text-amber-700">
+                          - {formatCurrency(impostos.inss.valor)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Resumo */}
+                  <div className="flex flex-col justify-between">
+                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-500">Base de Calculo:</span>
+                          <span className="font-medium">{formatCurrency(impostos.base_calculo)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-500">Total Retencoes:</span>
+                          <span className="font-semibold text-amber-700">
+                            - {formatCurrency(impostos.total_retencoes)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between pt-3 border-t border-slate-200">
+                          <span className="font-bold text-[#34495e]">VALOR LIQUIDO:</span>
+                          <span className="text-xl font-bold text-emerald-600">
+                            {formatCurrency(impostos.valor_liquido)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {regime_tributario_label && (
+                      <p className="text-xs text-slate-400 text-right mt-2">
+                        Regime: {regime_tributario_label}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Regime Tributario Info (Simples Nacional sem retencoes) */}
+            {impostos && impostos.total_retencoes === 0 && regime_tributario_label && (
+              <div className="mb-8 p-4 bg-emerald-50 rounded-lg border border-emerald-200 print-break-inside-avoid">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                    <span className="text-emerald-600 text-sm font-bold">SN</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-emerald-800">
+                      Empresa optante pelo {regime_tributario_label}
+                    </p>
+                    <p className="text-xs text-emerald-600 mt-1">
+                      Nao sujeita a retencao de impostos federais na fonte. A tributacao e recolhida mensalmente via DAS (Documento de Arrecadacao do Simples Nacional).
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Observacoes */}
             {fatura.observacoes && (

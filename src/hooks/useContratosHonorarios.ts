@@ -10,6 +10,9 @@ export type FormaCobranca = 'fixo' | 'por_hora' | 'por_etapa' | 'misto' | 'por_p
 export interface ContratoHonorario {
   id: string
   escritorio_id: string
+  escritorio_cobranca_id?: string | null // Escritório que fatura (CNPJ na nota)
+  escritorio_cobranca_nome?: string // Nome do escritório de cobrança
+  escritorio_cobranca_cnpj?: string // CNPJ do escritório de cobrança
   numero_contrato: string
   titulo?: string | null // Título/referência do contrato
   cliente_id: string
@@ -39,6 +42,8 @@ export interface ContratoHonorario {
     valor: number
     vencimento: string
   }
+  // Indica se o contrato tem configuração de valores preenchida
+  configurado?: boolean
 }
 
 export interface ContratoConfig {
@@ -157,13 +162,18 @@ export function useContratosHonorarios() {
     setError(null)
 
     try {
-      // Buscar contratos com join em crm_pessoas (clientes) e receitas
+      // Buscar contratos com join em crm_pessoas (clientes), escritório de cobrança e receitas
       const { data: contratosData, error: contratosError } = await supabase
         .from('financeiro_contratos_honorarios')
         .select(`
           *,
           crm_pessoas (
             nome_completo
+          ),
+          escritorio_cobranca:escritorios!financeiro_contratos_honorarios_escritorio_cobranca_id_fkey (
+            id,
+            nome,
+            cnpj
           ),
           financeiro_receitas (
             id,
@@ -250,9 +260,52 @@ export function useContratosHonorarios() {
           ? (contrato.formas_pagamento as Array<{ forma: FormaCobranca }>).map(f => f.forma)
           : [contrato.forma_cobranca]
 
+        // Verificar se o contrato está configurado baseado na forma de cobrança
+        const configData = contrato.config as Record<string, unknown> | null
+        let configurado = false
+
+        if (configData && Object.keys(configData).length > 0) {
+          const formaCobranca = contrato.forma_cobranca as FormaCobranca
+          switch (formaCobranca) {
+            case 'fixo':
+              configurado = !!configData.valor_fixo
+              break
+            case 'por_hora':
+              configurado = !!configData.valor_hora
+              break
+            case 'por_cargo':
+              configurado = Array.isArray(configData.valores_por_cargo) &&
+                (configData.valores_por_cargo as unknown[]).length > 0
+              break
+            case 'por_etapa':
+              configurado = !!configData.etapas_valores &&
+                Object.keys(configData.etapas_valores as object).length > 0
+              break
+            case 'por_pasta':
+              configurado = !!configData.valor_por_processo
+              break
+            case 'por_ato':
+              configurado = Array.isArray(configData.atos_configurados) &&
+                (configData.atos_configurados as unknown[]).length > 0
+              break
+            case 'misto':
+              // Para misto, precisa ter pelo menos uma configuração válida
+              configurado = !!configData.valor_fixo ||
+                !!configData.valor_hora ||
+                !!configData.percentual_exito ||
+                (!!configData.etapas_valores && Object.keys(configData.etapas_valores as object).length > 0)
+              break
+            default:
+              configurado = false
+          }
+        }
+
         return {
           id: contrato.id,
           escritorio_id: contrato.escritorio_id,
+          escritorio_cobranca_id: contrato.escritorio_cobranca_id,
+          escritorio_cobranca_nome: contrato.escritorio_cobranca?.nome,
+          escritorio_cobranca_cnpj: contrato.escritorio_cobranca?.cnpj,
           numero_contrato: contrato.numero_contrato,
           titulo: contrato.titulo,
           cliente_id: contrato.cliente_id,
@@ -276,6 +329,7 @@ export function useContratosHonorarios() {
           inadimplente,
           dias_atraso: diasAtraso,
           proxima_parcela: proximaParcela,
+          configurado,
         }
       })
 
@@ -317,11 +371,17 @@ export function useContratosHonorarios() {
         // Gerar número do contrato
         const numeroContrato = await gerarNumeroContrato()
 
+        // Determinar escritório de cobrança (se diferente do ativo)
+        const escritorioCobranca = data.escritorio_id && data.escritorio_id !== escritorioAtivo
+          ? data.escritorio_id
+          : null
+
         // Criar contrato
         const { data: novoContrato, error: contratoError } = await supabase
           .from('financeiro_contratos_honorarios')
           .insert({
             escritorio_id: escritorioAtivo,
+            escritorio_cobranca_id: escritorioCobranca, // Escritório que fatura (CNPJ)
             numero_contrato: numeroContrato,
             titulo: data.titulo || null,
             cliente_id: data.cliente_id,
@@ -444,6 +504,12 @@ export function useContratosHonorarios() {
         if (data.data_inicio) updateData.data_inicio = data.data_inicio
         if (data.data_fim !== undefined) updateData.data_fim = data.data_fim || null
         if (data.observacoes !== undefined) updateData.descricao = data.observacoes || null
+        // Atualizar escritório de cobrança se informado
+        if (data.escritorio_id !== undefined) {
+          updateData.escritorio_cobranca_id = data.escritorio_id !== escritorioAtivo
+            ? data.escritorio_id
+            : null
+        }
 
         console.log('[updateContrato] Step 1: Atualizando dados básicos...', updateData)
         const { error: updateError } = await supabase

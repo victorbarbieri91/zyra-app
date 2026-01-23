@@ -7,10 +7,8 @@ import {
   LayoutDashboard,
   Clock,
   FileText,
-  Receipt,
   Building2,
   DollarSign,
-  BarChart3,
   TrendingUpDown,
   CreditCard,
 } from 'lucide-react'
@@ -51,11 +49,12 @@ const financeiroMenuItems = [
     icon: FileText,
     href: '/dashboard/financeiro/faturamento',
   },
-  {
-    title: 'Relatórios',
-    icon: BarChart3,
-    href: '/dashboard/financeiro/relatorios',
-  },
+  // TODO: Reativar quando implementar relatórios
+  // {
+  //   title: 'Relatórios',
+  //   icon: BarChart3,
+  //   href: '/dashboard/financeiro/relatorios',
+  // },
 ]
 
 export default function FinanceiroLayout({

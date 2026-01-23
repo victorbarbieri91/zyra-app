@@ -1,16 +1,31 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Building2, TrendingUp, TrendingDown, ArrowLeftRight, Plus, Minus, Calendar, Filter, Landmark } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Building2, Landmark, Pencil, Trash2, MoreVertical } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
-// Types defined locally
 import { cn } from '@/lib/utils'
 
 interface ContaBancaria {
@@ -22,89 +37,49 @@ interface ContaBancaria {
   tipo_conta: 'corrente' | 'poupanca' | 'investimento'
   titular: string
   saldo_atual: number
+  saldo_inicial?: number
   ativa: boolean
   created_at: string
   updated_at: string
-  // View fields
-  total_entradas?: number
-  total_saidas?: number
-  conta_id?: string
-  nome_conta?: string
 }
 
-interface Lancamento {
-  id: string
-  conta_id: string
-  tipo: 'entrada' | 'saida' | 'transferencia' | 'transferencia_recebida' | 'transferencia_enviada'
-  valor: number
-  descricao: string
-  categoria: string
-  data_lancamento: string
-  saldo_apos: number
-  saldo_apos_lancamento?: number
-  created_at: string
-}
-
-type SaldoView = ContaBancaria
-
-interface TransferDialogData {
-  contaOrigem: string
-  contaDestino: string
-  valor: string
-  descricao: string
-}
-
-interface ManualDialogData {
-  contaId: string
-  tipo: 'entrada' | 'saida'
-  valor: string
-  descricao: string
-  categoria: string
-}
-
-interface NovaContaForm {
+interface ContaForm {
+  id?: string
+  escritorio_id: string
   banco: string
   agencia: string
   numero_conta: string
   tipo_conta: 'corrente' | 'poupanca' | 'investimento'
   titular: string
-  saldo_inicial: string
+  saldo_atual: string
+}
+
+const TIPO_CONTA_LABELS: Record<string, string> = {
+  corrente: 'Conta Corrente',
+  poupanca: 'Poupança',
+  investimento: 'Investimento',
 }
 
 export default function ContasBancariasPage() {
-  const { escritorioAtivo } = useEscritorioAtivo()
+  const { escritorioAtivo, escritorios } = useEscritorioAtivo()
   const supabase = createClient()
 
-  const [contas, setContas] = useState<SaldoView[]>([])
-  const [contaSelecionada, setContaSelecionada] = useState<string | null>(null)
-  const [lancamentos, setLancamentos] = useState<Lancamento[]>([])
+  const [contas, setContas] = useState<ContaBancaria[]>([])
   const [loading, setLoading] = useState(true)
-  const [showTransferDialog, setShowTransferDialog] = useState(false)
-  const [showManualDialog, setShowManualDialog] = useState(false)
-  const [showNovaContaDialog, setShowNovaContaDialog] = useState(false)
+  const [showContaDialog, setShowContaDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [contaParaExcluir, setContaParaExcluir] = useState<ContaBancaria | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [transferData, setTransferData] = useState<TransferDialogData>({
-    contaOrigem: '',
-    contaDestino: '',
-    valor: '',
-    descricao: '',
-  })
-  const [manualData, setManualData] = useState<ManualDialogData>({
-    contaId: '',
-    tipo: 'entrada',
-    valor: '',
-    descricao: '',
-    categoria: '',
-  })
-  const [novaContaForm, setNovaContaForm] = useState<NovaContaForm>({
+  const [editMode, setEditMode] = useState(false)
+  const [contaForm, setContaForm] = useState<ContaForm>({
+    escritorio_id: '',
     banco: '',
     agencia: '',
     numero_conta: '',
     tipo_conta: 'corrente',
     titular: '',
-    saldo_inicial: '0',
+    saldo_atual: '0',
   })
-  const [dateFilter, setDateFilter] = useState<'semana' | 'mes' | 'todos'>('mes')
 
   useEffect(() => {
     if (escritorioAtivo) {
@@ -112,18 +87,11 @@ export default function ContasBancariasPage() {
     }
   }, [escritorioAtivo])
 
-  useEffect(() => {
-    if (contaSelecionada) {
-      loadLancamentos(contaSelecionada)
-    }
-  }, [contaSelecionada, dateFilter])
-
   const loadContas = async () => {
     if (!escritorioAtivo) return
 
     setLoading(true)
     try {
-      // Usar tabela diretamente ao invés da view
       const { data, error } = await supabase
         .from('financeiro_contas_bancarias')
         .select('*')
@@ -132,10 +100,7 @@ export default function ContasBancariasPage() {
         .order('banco', { ascending: true })
 
       if (error) throw error
-      setContas(data as any || [])
-      if (data && data.length > 0 && !contaSelecionada) {
-        setContaSelecionada(data[0].id!)
-      }
+      setContas(data || [])
     } catch (error) {
       console.error('Erro ao carregar contas:', error)
     } finally {
@@ -143,150 +108,110 @@ export default function ContasBancariasPage() {
     }
   }
 
-  const loadLancamentos = async (contaId: string) => {
-    try {
-      let query = supabase
-        .from('financeiro_contas_lancamentos')
-        .select('*')
-        .eq('conta_bancaria_id', contaId)
-
-      if (dateFilter === 'semana') {
-        const weekAgo = new Date()
-        weekAgo.setDate(weekAgo.getDate() - 7)
-        query = query.gte('data_lancamento', weekAgo.toISOString())
-      } else if (dateFilter === 'mes') {
-        const monthAgo = new Date()
-        monthAgo.setMonth(monthAgo.getMonth() - 1)
-        query = query.gte('data_lancamento', monthAgo.toISOString())
-      }
-
-      const { data, error } = await query.order('data_lancamento', { ascending: false })
-
-      if (error) throw error
-      setLancamentos(data || [])
-    } catch (error) {
-      console.error('Erro ao carregar lançamentos:', error)
-    }
+  const handleOpenCreate = () => {
+    setEditMode(false)
+    setContaForm({
+      escritorio_id: escritorioAtivo || '',
+      banco: '',
+      agencia: '',
+      numero_conta: '',
+      tipo_conta: 'corrente',
+      titular: '',
+      saldo_atual: '0',
+    })
+    setShowContaDialog(true)
   }
 
-  const handleTransfer = async () => {
-    if (!transferData.contaOrigem || !transferData.contaDestino || !transferData.valor) {
-      alert('Preencha todos os campos obrigatórios')
-      return
-    }
-
-    try {
-      const user = await supabase.auth.getUser()
-      const { error } = await supabase.rpc('transferir_entre_contas', {
-        p_conta_origem_id: transferData.contaOrigem,
-        p_conta_destino_id: transferData.contaDestino,
-        p_valor: parseFloat(transferData.valor),
-        p_descricao: transferData.descricao || 'Transferência interna',
-        p_user_id: user.data.user?.id,
-      })
-
-      if (error) throw error
-
-      alert('Transferência realizada com sucesso!')
-      setShowTransferDialog(false)
-      setTransferData({ contaOrigem: '', contaDestino: '', valor: '', descricao: '' })
-      loadContas()
-      if (contaSelecionada) loadLancamentos(contaSelecionada)
-    } catch (error) {
-      console.error('Erro ao realizar transferência:', error)
-      alert('Erro ao realizar transferência')
-    }
+  const handleOpenEdit = (conta: ContaBancaria) => {
+    setEditMode(true)
+    setContaForm({
+      id: conta.id,
+      escritorio_id: conta.escritorio_id,
+      banco: conta.banco,
+      agencia: conta.agencia || '',
+      numero_conta: conta.numero_conta || '',
+      tipo_conta: conta.tipo_conta,
+      titular: conta.titular || '',
+      saldo_atual: String(conta.saldo_atual || 0),
+    })
+    setShowContaDialog(true)
   }
 
-  const handleManualEntry = async () => {
-    if (!manualData.contaId || !manualData.valor || !manualData.descricao) {
-      alert('Preencha todos os campos obrigatórios')
-      return
-    }
-
-    try {
-      const user = await supabase.auth.getUser()
-      const rpcName = manualData.tipo === 'entrada' ? 'lancar_entrada_manual' : 'lancar_saida_manual'
-
-      const { error } = await supabase.rpc(rpcName, {
-        p_conta_bancaria_id: manualData.contaId,
-        p_valor: parseFloat(manualData.valor),
-        p_descricao: manualData.descricao,
-        p_categoria: manualData.categoria || 'outros',
-        p_user_id: user.data.user?.id,
-      })
-
-      if (error) throw error
-
-      alert('Lançamento realizado com sucesso!')
-      setShowManualDialog(false)
-      setManualData({ contaId: '', tipo: 'entrada', valor: '', descricao: '', categoria: '' })
-      loadContas()
-      if (contaSelecionada) loadLancamentos(contaSelecionada)
-    } catch (error) {
-      console.error('Erro ao realizar lançamento:', error)
-      alert('Erro ao realizar lançamento')
-    }
+  const handleOpenDelete = (conta: ContaBancaria) => {
+    setContaParaExcluir(conta)
+    setShowDeleteDialog(true)
   }
 
-  const handleNovaConta = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!escritorioAtivo) return
+    const escritorioId = contaForm.escritorio_id || escritorioAtivo
+    if (!escritorioId) return
 
     setSubmitting(true)
     try {
-      // Criar conta bancária
-      const { data: novaConta, error: contaError } = await supabase
-        .from('financeiro_contas_bancarias')
-        .insert({
-          escritorio_id: escritorioAtivo,
-          banco: novaContaForm.banco,
-          agencia: novaContaForm.agencia,
-          numero_conta: novaContaForm.numero_conta,
-          tipo_conta: novaContaForm.tipo_conta,
-          titular: novaContaForm.titular,
-          saldo_inicial: parseFloat(novaContaForm.saldo_inicial),
-          saldo_atual: parseFloat(novaContaForm.saldo_inicial),
-          ativa: true,
-        })
-        .select()
-        .single()
+      if (editMode && contaForm.id) {
+        // Atualizar conta existente
+        const { error } = await supabase
+          .from('financeiro_contas_bancarias')
+          .update({
+            banco: contaForm.banco,
+            agencia: contaForm.agencia,
+            numero_conta: contaForm.numero_conta,
+            tipo_conta: contaForm.tipo_conta,
+            titular: contaForm.titular,
+            saldo_atual: parseFloat(contaForm.saldo_atual),
+          })
+          .eq('id', contaForm.id)
 
-      if (contaError) throw contaError
-
-      // Se tem saldo inicial, criar lançamento
-      const saldoInicial = parseFloat(novaContaForm.saldo_inicial)
-      if (saldoInicial !== 0 && novaConta) {
-        const { error: lancamentoError } = await supabase
-          .from('financeiro_contas_lancamentos')
+        if (error) throw error
+      } else {
+        // Criar nova conta
+        const { error } = await supabase
+          .from('financeiro_contas_bancarias')
           .insert({
-            conta_bancaria_id: novaConta.id,
-            tipo: saldoInicial > 0 ? 'entrada' : 'saida',
-            valor: Math.abs(saldoInicial),
-            descricao: 'Saldo inicial',
-            data_lancamento: new Date().toISOString().split('T')[0],
-            origem_tipo: 'manual',
-            saldo_apos_lancamento: saldoInicial,
+            escritorio_id: escritorioId,
+            banco: contaForm.banco,
+            agencia: contaForm.agencia,
+            numero_conta: contaForm.numero_conta,
+            tipo_conta: contaForm.tipo_conta,
+            titular: contaForm.titular,
+            saldo_inicial: parseFloat(contaForm.saldo_atual),
+            saldo_atual: parseFloat(contaForm.saldo_atual),
+            ativa: true,
           })
 
-        if (lancamentoError) throw lancamentoError
+        if (error) throw error
       }
 
-      // Reset form e fechar modal
-      setNovaContaForm({
-        banco: '',
-        agencia: '',
-        numero_conta: '',
-        tipo_conta: 'corrente',
-        titular: '',
-        saldo_inicial: '0',
-      })
-      setShowNovaContaDialog(false)
+      setShowContaDialog(false)
       loadContas()
-      alert('Conta bancária criada com sucesso!')
     } catch (error) {
-      console.error('Erro ao criar conta bancária:', error)
-      alert('Erro ao criar conta bancária. Tente novamente.')
+      console.error('Erro ao salvar conta:', error)
+      alert('Erro ao salvar conta bancária. Tente novamente.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!contaParaExcluir) return
+
+    setSubmitting(true)
+    try {
+      // Desativar conta ao invés de excluir
+      const { error } = await supabase
+        .from('financeiro_contas_bancarias')
+        .update({ ativa: false })
+        .eq('id', contaParaExcluir.id)
+
+      if (error) throw error
+
+      setShowDeleteDialog(false)
+      setContaParaExcluir(null)
+      loadContas()
+    } catch (error) {
+      console.error('Erro ao excluir conta:', error)
+      alert('Erro ao excluir conta bancária. Tente novamente.')
     } finally {
       setSubmitting(false)
     }
@@ -303,8 +228,6 @@ export default function ContasBancariasPage() {
     return contas.reduce((sum, c) => sum + (Number(c.saldo_atual) || 0), 0)
   }
 
-  const contaAtiva = contas.find((c) => c.id === contaSelecionada)
-
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -312,446 +235,170 @@ export default function ContasBancariasPage() {
         <div>
           <h1 className="text-2xl font-semibold text-[#34495e]">Contas Bancárias</h1>
           <p className="text-sm text-slate-600 mt-1">
-            Gestão de contas bancárias e extratos virtuais
+            Consolidação e gestão de contas bancárias do escritório
           </p>
         </div>
-        <div className="flex gap-2.5">
-          <Button
-            onClick={() => setShowNovaContaDialog(true)}
-            className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white border-0 shadow-sm"
-          >
-            <Landmark className="h-4 w-4 mr-2" />
-            Nova Conta
-          </Button>
-          <Button
-            onClick={() => {
-              setManualData({ ...manualData, tipo: 'entrada', contaId: contaSelecionada || '' })
-              setShowManualDialog(true)
-            }}
-            className="bg-gradient-to-r from-[#89bcbe] to-[#aacfd0] text-[#34495e] border-0 shadow-sm"
-            disabled={!contaSelecionada}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Entrada
-          </Button>
-          <Button
-            onClick={() => {
-              setManualData({ ...manualData, tipo: 'saida', contaId: contaSelecionada || '' })
-              setShowManualDialog(true)
-            }}
-            className="bg-gradient-to-r from-[#46627f] to-[#6c757d] text-white border-0 shadow-sm"
-            disabled={!contaSelecionada}
-          >
-            <Minus className="h-4 w-4 mr-2" />
-            Saída
-          </Button>
-          <Button
-            onClick={() => setShowTransferDialog(true)}
-            className="bg-gradient-to-r from-[#1E3A8A] to-[#1e40af] text-white border-0 shadow-sm"
-          >
-            <ArrowLeftRight className="h-4 w-4 mr-2" />
-            Transferir
-          </Button>
-        </div>
+        <Button
+          onClick={handleOpenCreate}
+          className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white border-0 shadow-sm"
+        >
+          <Landmark className="h-4 w-4 mr-2" />
+          Nova Conta
+        </Button>
       </div>
 
-      {/* Saldo Total */}
-      <Card className="border-slate-200 shadow-sm bg-gradient-to-br from-[#89bcbe] to-[#aacfd0]">
-        <CardContent className="pt-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-[#34495e]">Saldo Total</p>
-              <p className="text-2xl font-bold text-[#34495e] mt-1">
+      {/* Saldo Consolidado */}
+      <Card className="border-slate-200 shadow-sm bg-gradient-to-br from-[#89bcbe] to-[#aacfd0] w-fit">
+        <CardContent className="py-4 px-5">
+          <div className="flex items-center gap-3">
+            <Building2 className="h-5 w-5 text-[#34495e]/70" />
+            <div className="flex items-baseline gap-2">
+              <span className="text-xs text-[#34495e]/80">Saldo Consolidado:</span>
+              <span className="text-lg font-bold text-[#34495e]">
                 {formatCurrency(getTotalSaldos())}
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-lg bg-white/40 flex items-center justify-center">
-              <Building2 className="h-5 w-5 text-[#34495e]" />
+              </span>
+              <span className="text-[10px] text-[#34495e]/60">
+                ({contas.length} {contas.length === 1 ? 'conta' : 'contas'})
+              </span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Contas Bancárias */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Lista de Contas */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-slate-700">Suas Contas</h2>
+
         {loading ? (
-          <div className="col-span-3 py-12 text-center">
+          <div className="py-12 text-center">
             <div className="h-8 w-8 mx-auto border-4 border-slate-200 border-t-[#1E3A8A] rounded-full animate-spin" />
             <p className="text-sm text-slate-500 mt-2">Carregando...</p>
           </div>
         ) : contas.length === 0 ? (
-          <div className="col-span-3 py-12 text-center">
-            <Building2 className="h-12 w-12 mx-auto text-slate-300" />
-            <p className="text-sm text-slate-500 mt-2">Nenhuma conta cadastrada</p>
-          </div>
+          <Card className="border-slate-200 border-dashed">
+            <CardContent className="py-12 text-center">
+              <Building2 className="h-12 w-12 mx-auto text-slate-300" />
+              <p className="text-sm text-slate-500 mt-2">Nenhuma conta cadastrada</p>
+              <p className="text-xs text-slate-400 mt-1">Clique em "Nova Conta" para adicionar</p>
+            </CardContent>
+          </Card>
         ) : (
-          contas.map((conta) => (
-            <Card
-              key={conta.id}
-              className={cn(
-                'border-slate-200 shadow-sm cursor-pointer transition-all hover:shadow-lg',
-                contaSelecionada === conta.id && 'ring-2 ring-[#1E3A8A] border-[#1E3A8A]'
-              )}
-              onClick={() => setContaSelecionada(conta.id!)}
-            >
-              <CardContent className="pt-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-slate-700">
-                      {conta.banco}
-                    </p>
-                    <p className="text-xs text-slate-600 mt-0.5">
-                      Ag {conta.agencia} - C/C {conta.numero_conta}
-                    </p>
-                    <div className="mt-2 pt-2 border-t border-slate-100">
-                      <p className="text-xs text-slate-600">Saldo Atual</p>
-                      <p className="text-base font-bold text-[#34495e] mt-0.5">
-                        {formatCurrency(Number(conta.saldo_atual))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {contas.map((conta) => (
+              <Card key={conta.id} className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-start justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-[#34495e] truncate">
+                        {conta.banco}
                       </p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {conta.agencia && `Ag ${conta.agencia}`}
+                        {conta.agencia && conta.numero_conta && ' • '}
+                        {conta.numero_conta && `C/C ${conta.numero_conta}`}
+                      </p>
+                      {conta.titular && (
+                        <p className="text-xs text-slate-400 mt-0.5 truncate">
+                          {conta.titular}
+                        </p>
+                      )}
                     </div>
-                    {conta.total_entradas || conta.total_saidas ? (
-                      <div className="mt-2 pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
-                        <div>
-                          <p className="text-[10px] text-emerald-600">Entradas</p>
-                          <p className="text-xs font-semibold text-emerald-700">
-                            {formatCurrency(Number(conta.total_entradas))}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-red-600">Saídas</p>
-                          <p className="text-xs font-semibold text-red-700">
-                            {formatCurrency(Number(conta.total_saidas))}
-                          </p>
-                        </div>
-                      </div>
-                    ) : null}
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 -mr-2">
+                          <MoreVertical className="h-4 w-4 text-slate-400" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleOpenEdit(conta)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleOpenDelete(conta)}
+                          className="text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                  {conta.ativa ? (
-                    <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 text-[10px]">
-                      Ativa
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="bg-slate-100 text-slate-600 text-[10px]">
-                      Inativa
-                    </Badge>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))
+
+                  <div className="mt-3 pt-3 border-t border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-slate-500">Saldo Atual</p>
+                        <p className={cn(
+                          "text-xl font-bold mt-0.5",
+                          Number(conta.saldo_atual) >= 0 ? "text-[#34495e]" : "text-red-600"
+                        )}>
+                          {formatCurrency(Number(conta.saldo_atual))}
+                        </p>
+                      </div>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "text-[10px]",
+                          conta.tipo_conta === 'corrente' && "bg-blue-100 text-blue-700",
+                          conta.tipo_conta === 'poupanca' && "bg-emerald-100 text-emerald-700",
+                          conta.tipo_conta === 'investimento' && "bg-purple-100 text-purple-700",
+                        )}
+                      >
+                        {TIPO_CONTA_LABELS[conta.tipo_conta] || conta.tipo_conta}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* Extrato */}
-      {contaSelecionada && (
-        <Card className="border-slate-200 shadow-sm">
-          <CardHeader className="pb-2 pt-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-slate-700">
-                Extrato - {contaAtiva?.banco} ({contaAtiva?.numero_conta})
-              </CardTitle>
-              <select
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value as any)}
-                className="h-10 rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
-              >
-                <option value="semana">Última semana</option>
-                <option value="mes">Último mês</option>
-                <option value="todos">Todos</option>
-              </select>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-2 pb-3">
-            {lancamentos.length === 0 ? (
-              <div className="py-12 text-center">
-                <Calendar className="h-12 w-12 mx-auto text-slate-300" />
-                <p className="text-sm text-slate-500 mt-2">Nenhum lançamento encontrado</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {lancamentos.map((lanc) => (
-                  <div
-                    key={lanc.id}
-                    className={cn(
-                      'flex items-center gap-3 p-3 rounded-lg border',
-                      lanc.tipo === 'entrada' || lanc.tipo === 'transferencia_recebida'
-                        ? 'border-emerald-100 bg-emerald-50/50'
-                        : 'border-red-100 bg-red-50/50'
-                    )}
-                  >
-                    {/* Ícone */}
-                    <div
-                      className={cn(
-                        'w-10 h-10 rounded-lg flex items-center justify-center',
-                        lanc.tipo === 'entrada' || lanc.tipo === 'transferencia_recebida'
-                          ? 'bg-emerald-200'
-                          : 'bg-red-200'
-                      )}
-                    >
-                      {lanc.tipo === 'transferencia_enviada' || lanc.tipo === 'transferencia_recebida' ? (
-                        <ArrowLeftRight
-                          className={cn(
-                            'h-5 w-5',
-                            lanc.tipo === 'transferencia_recebida' ? 'text-emerald-700' : 'text-red-700'
-                          )}
-                        />
-                      ) : lanc.tipo === 'entrada' ? (
-                        <TrendingUp className="h-5 w-5 text-emerald-700" />
-                      ) : (
-                        <TrendingDown className="h-5 w-5 text-red-700" />
-                      )}
-                    </div>
+      {/* Dialog Criar/Editar Conta */}
+      <Dialog open={showContaDialog} onOpenChange={setShowContaDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-[#34495e]">
+              {editMode ? 'Editar Conta Bancária' : 'Nova Conta Bancária'}
+            </DialogTitle>
+            <DialogDescription>
+              {editMode
+                ? 'Atualize as informações da conta bancária.'
+                : 'Adicione uma nova conta bancária para consolidação.'}
+            </DialogDescription>
+          </DialogHeader>
 
-                    <div className="flex-1 grid grid-cols-12 gap-3 items-center">
-                      {/* Descrição */}
-                      <div className="col-span-5">
-                        <p className="text-sm font-semibold text-slate-700">
-                          {lanc.descricao}
-                        </p>
-                        <p className="text-xs text-slate-600">
-                          {lanc.categoria || 'Sem categoria'}
-                        </p>
-                      </div>
-
-                      {/* Data */}
-                      <div className="col-span-3">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="h-3 w-3 text-slate-400" />
-                          <span className="text-xs text-slate-600">
-                            {new Date(lanc.data_lancamento).toLocaleDateString('pt-BR', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                            })}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-slate-500 mt-0.5">
-                          {new Date(lanc.data_lancamento).toLocaleTimeString('pt-BR', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      </div>
-
-                      {/* Valor */}
-                      <div className="col-span-2 text-right">
-                        <p
-                          className={cn(
-                            'text-base font-bold',
-                            lanc.tipo === 'entrada' || lanc.tipo === 'transferencia_recebida'
-                              ? 'text-emerald-700'
-                              : 'text-red-700'
-                          )}
-                        >
-                          {lanc.tipo === 'entrada' || lanc.tipo === 'transferencia_recebida' ? '+' : '-'}
-                          {formatCurrency(Number(lanc.valor))}
-                        </p>
-                      </div>
-
-                      {/* Saldo após */}
-                      <div className="col-span-2 text-right">
-                        <p className="text-[10px] text-slate-500">Saldo após</p>
-                        <p className="text-xs font-semibold text-slate-700">
-                          {formatCurrency(Number(lanc.saldo_apos_lancamento))}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Escritório (apenas na criação e se tiver mais de 1) */}
+            {!editMode && escritorios && escritorios.length > 1 && (
+              <div>
+                <Label htmlFor="escritorio_id">Escritório *</Label>
+                <select
+                  id="escritorio_id"
+                  value={contaForm.escritorio_id || escritorioAtivo || ''}
+                  onChange={(e) => setContaForm({ ...contaForm, escritorio_id: e.target.value })}
+                  className="w-full h-10 rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
+                  required
+                >
+                  {escritorios.map((esc) => (
+                    <option key={esc.id} value={esc.id}>
+                      {esc.nome}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Dialog Transferência */}
-      {showTransferDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md border-slate-200 shadow-lg">
-            <CardHeader className="pb-2 pt-3 bg-gradient-to-br from-[#34495e] to-[#46627f]">
-              <CardTitle className="text-sm font-medium text-white">Transferir entre Contas</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4 space-y-3">
-              <div>
-                <label className="text-xs font-medium text-slate-700">Conta Origem</label>
-                <select
-                  value={transferData.contaOrigem}
-                  onChange={(e) => setTransferData({ ...transferData, contaOrigem: e.target.value })}
-                  className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
-                >
-                  <option value="">Selecione...</option>
-                  {contas.map((c) => (
-                    <option key={c.id} value={c.id!}>
-                      {c.banco} - {c.numero_conta} - {formatCurrency(Number(c.saldo_atual))}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-slate-700">Conta Destino</label>
-                <select
-                  value={transferData.contaDestino}
-                  onChange={(e) => setTransferData({ ...transferData, contaDestino: e.target.value })}
-                  className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
-                >
-                  <option value="">Selecione...</option>
-                  {contas
-                    .filter((c) => c.conta_id !== transferData.contaOrigem)
-                    .map((c) => (
-                      <option key={c.conta_id} value={c.conta_id!}>
-                        {c.nome_conta} - {formatCurrency(Number(c.saldo_atual))}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-slate-700">Valor</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={transferData.valor}
-                  onChange={(e) => setTransferData({ ...transferData, valor: e.target.value })}
-                  placeholder="0,00"
-                  className="mt-1"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-slate-700">Descrição</label>
-                <Input
-                  value={transferData.descricao}
-                  onChange={(e) => setTransferData({ ...transferData, descricao: e.target.value })}
-                  placeholder="Descrição da transferência"
-                  className="mt-1"
-                />
-              </div>
-
-              <div className="flex gap-2.5 pt-2">
-                <Button
-                  onClick={() => setShowTransferDialog(false)}
-                  variant="outline"
-                  className="flex-1 border-slate-200"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleTransfer}
-                  className="flex-1 bg-gradient-to-r from-[#1E3A8A] to-[#1e40af] text-white border-0"
-                >
-                  Transferir
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Dialog Lançamento Manual */}
-      {showManualDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md border-slate-200 shadow-lg">
-            <CardHeader
-              className={cn(
-                'pb-2 pt-3',
-                manualData.tipo === 'entrada'
-                  ? 'bg-gradient-to-br from-emerald-600 to-emerald-700'
-                  : 'bg-gradient-to-br from-red-600 to-red-700'
-              )}
-            >
-              <CardTitle className="text-sm font-medium text-white">
-                Lançamento Manual - {manualData.tipo === 'entrada' ? 'Entrada' : 'Saída'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4 space-y-3">
-              <div>
-                <label className="text-xs font-medium text-slate-700">Conta</label>
-                <select
-                  value={manualData.contaId}
-                  onChange={(e) => setManualData({ ...manualData, contaId: e.target.value })}
-                  className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
-                >
-                  <option value="">Selecione...</option>
-                  {contas.map((c) => (
-                    <option key={c.id} value={c.id!}>
-                      {c.banco} - {c.numero_conta} - {formatCurrency(Number(c.saldo_atual))}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-slate-700">Valor</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={manualData.valor}
-                  onChange={(e) => setManualData({ ...manualData, valor: e.target.value })}
-                  placeholder="0,00"
-                  className="mt-1"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-slate-700">Descrição</label>
-                <Input
-                  value={manualData.descricao}
-                  onChange={(e) => setManualData({ ...manualData, descricao: e.target.value })}
-                  placeholder="Descrição do lançamento"
-                  className="mt-1"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-slate-700">Categoria</label>
-                <Input
-                  value={manualData.categoria}
-                  onChange={(e) => setManualData({ ...manualData, categoria: e.target.value })}
-                  placeholder="Ex: receita_honorario, despesa_operacional"
-                  className="mt-1"
-                />
-              </div>
-
-              <div className="flex gap-2.5 pt-2">
-                <Button
-                  onClick={() => setShowManualDialog(false)}
-                  variant="outline"
-                  className="flex-1 border-slate-200"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleManualEntry}
-                  className={cn(
-                    'flex-1 text-white border-0',
-                    manualData.tipo === 'entrada'
-                      ? 'bg-gradient-to-r from-emerald-600 to-emerald-700'
-                      : 'bg-gradient-to-r from-red-600 to-red-700'
-                  )}
-                >
-                  Lançar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Dialog Nova Conta Bancária */}
-      <Dialog open={showNovaContaDialog} onOpenChange={setShowNovaContaDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-[#34495e]">Nova Conta Bancária</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleNovaConta} className="space-y-4">
             {/* Banco */}
             <div>
               <Label htmlFor="banco">Banco *</Label>
               <Input
                 id="banco"
-                value={novaContaForm.banco}
-                onChange={(e) => setNovaContaForm({ ...novaContaForm, banco: e.target.value })}
+                value={contaForm.banco}
+                onChange={(e) => setContaForm({ ...contaForm, banco: e.target.value })}
                 placeholder="Ex: Banco do Brasil, Itaú, Bradesco"
                 required
               />
@@ -763,8 +410,8 @@ export default function ContasBancariasPage() {
                 <Label htmlFor="agencia">Agência</Label>
                 <Input
                   id="agencia"
-                  value={novaContaForm.agencia}
-                  onChange={(e) => setNovaContaForm({ ...novaContaForm, agencia: e.target.value })}
+                  value={contaForm.agencia}
+                  onChange={(e) => setContaForm({ ...contaForm, agencia: e.target.value })}
                   placeholder="0000"
                 />
               </div>
@@ -772,8 +419,8 @@ export default function ContasBancariasPage() {
                 <Label htmlFor="numero_conta">Número da Conta</Label>
                 <Input
                   id="numero_conta"
-                  value={novaContaForm.numero_conta}
-                  onChange={(e) => setNovaContaForm({ ...novaContaForm, numero_conta: e.target.value })}
+                  value={contaForm.numero_conta}
+                  onChange={(e) => setContaForm({ ...contaForm, numero_conta: e.target.value })}
                   placeholder="00000-0"
                 />
               </div>
@@ -781,13 +428,12 @@ export default function ContasBancariasPage() {
 
             {/* Titular */}
             <div>
-              <Label htmlFor="titular">Titular *</Label>
+              <Label htmlFor="titular">Titular</Label>
               <Input
                 id="titular"
-                value={novaContaForm.titular}
-                onChange={(e) => setNovaContaForm({ ...novaContaForm, titular: e.target.value })}
+                value={contaForm.titular}
+                onChange={(e) => setContaForm({ ...contaForm, titular: e.target.value })}
                 placeholder="Nome do titular da conta"
-                required
               />
             </div>
 
@@ -796,8 +442,8 @@ export default function ContasBancariasPage() {
               <Label htmlFor="tipo_conta">Tipo de Conta *</Label>
               <select
                 id="tipo_conta"
-                value={novaContaForm.tipo_conta}
-                onChange={(e) => setNovaContaForm({ ...novaContaForm, tipo_conta: e.target.value as any })}
+                value={contaForm.tipo_conta}
+                onChange={(e) => setContaForm({ ...contaForm, tipo_conta: e.target.value as any })}
                 className="w-full h-10 rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
               >
                 <option value="corrente">Conta Corrente</option>
@@ -806,19 +452,23 @@ export default function ContasBancariasPage() {
               </select>
             </div>
 
-            {/* Saldo Inicial */}
+            {/* Saldo */}
             <div>
-              <Label htmlFor="saldo_inicial">Saldo Inicial</Label>
+              <Label htmlFor="saldo_atual">
+                {editMode ? 'Saldo Atual' : 'Saldo Inicial'}
+              </Label>
               <Input
-                id="saldo_inicial"
+                id="saldo_atual"
                 type="number"
                 step="0.01"
-                value={novaContaForm.saldo_inicial}
-                onChange={(e) => setNovaContaForm({ ...novaContaForm, saldo_inicial: e.target.value })}
+                value={contaForm.saldo_atual}
+                onChange={(e) => setContaForm({ ...contaForm, saldo_atual: e.target.value })}
                 placeholder="0,00"
               />
               <p className="text-xs text-slate-500 mt-1">
-                Informe o saldo atual da conta. Será registrado como lançamento inicial.
+                {editMode
+                  ? 'Atualize o saldo conforme seu extrato bancário.'
+                  : 'Informe o saldo atual da conta para iniciar a consolidação.'}
               </p>
             </div>
 
@@ -827,7 +477,7 @@ export default function ContasBancariasPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setShowNovaContaDialog(false)}
+                onClick={() => setShowContaDialog(false)}
                 disabled={submitting}
               >
                 Cancelar
@@ -837,12 +487,37 @@ export default function ContasBancariasPage() {
                 className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white hover:from-[#2c3e50] hover:to-[#3d5469]"
                 disabled={submitting}
               >
-                {submitting ? 'Criando...' : 'Criar Conta'}
+                {submitting ? 'Salvando...' : (editMode ? 'Salvar' : 'Criar Conta')}
               </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog Confirmar Exclusão */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Conta Bancária</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a conta <strong>{contaParaExcluir?.banco}</strong>
+              {contaParaExcluir?.numero_conta && ` (${contaParaExcluir.numero_conta})`}?
+              <br /><br />
+              Esta ação irá desativar a conta. Os dados históricos serão mantidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={submitting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={submitting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {submitting ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

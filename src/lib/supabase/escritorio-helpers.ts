@@ -15,7 +15,15 @@ export interface Escritorio {
   owner_id?: string;
   grupo_id?: string;
   endereco?: any;
-  config?: any;
+  config?: {
+    fiscal?: any;
+    telefone?: string;
+    email?: string;
+    [key: string]: any;
+  };
+  telefone?: string;
+  email?: string;
+  site?: string;
   created_at: string;
   updated_at: string;
 }
@@ -144,10 +152,10 @@ export async function getEscritorioAtivo(): Promise<Escritorio | null> {
     return null;
   }
 
-  // Buscar os dados completos do escritório
+  // Buscar os dados completos do escritório (config contém configurações fiscais)
   const { data: escritorioData, error: escritorioError } = await supabase
     .from('escritorios')
-    .select('*')
+    .select('id, nome, cnpj, logo_url, plano, max_usuarios, ativo, owner_id, grupo_id, endereco, config, telefone, email, site, created_at, updated_at')
     .eq('id', escritorioId)
     .single();
 

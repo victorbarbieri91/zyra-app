@@ -1,5 +1,12 @@
 import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import {
+  ConfiguracaoFiscal,
+  ImpostosCalculados,
+  calcularImpostosLucroPresumido,
+  ALIQUOTAS_LUCRO_PRESUMIDO,
+  REGIME_TRIBUTARIO_LABELS,
+} from '@/types/escritorio'
 
 export interface EscritorioImpressao {
   id: string
@@ -17,6 +24,7 @@ export interface EscritorioImpressao {
   } | null
   telefone: string | null
   email: string | null
+  config_fiscal: ConfiguracaoFiscal | null
 }
 
 export interface ClienteImpressao {
@@ -74,6 +82,8 @@ export interface FaturaImpressaoData {
     soma_horas: number
     valor_total: number
   }
+  impostos: ImpostosCalculados | null
+  regime_tributario_label: string | null
 }
 
 export function useFaturaImpressao() {
@@ -177,8 +187,38 @@ export function useFaturaImpressao() {
           .filter((i) => i.tipo_item === 'timesheet')
           .reduce((sum, i) => sum + Number(i.quantidade || 0), 0)
 
-        // Extrair telefone e email do config do escritório (se existir)
+        // Extrair telefone, email e config fiscal do escritório
         const config = escritorioData.config || {}
+        const configFiscal: ConfiguracaoFiscal | null = config.fiscal || null
+
+        // Calcular impostos baseado na configuração fiscal
+        let impostosCalculados: ImpostosCalculados | null = null
+        let regimeTributarioLabel: string | null = null
+
+        if (configFiscal && configFiscal.exibir_impostos_fatura) {
+          const valorTotal = Number(faturaData.valor_total)
+          regimeTributarioLabel = REGIME_TRIBUTARIO_LABELS[configFiscal.regime_tributario]
+
+          if (configFiscal.regime_tributario === 'lucro_presumido') {
+            const impostos = configFiscal.lucro_presumido?.impostos || ALIQUOTAS_LUCRO_PRESUMIDO
+            impostosCalculados = calcularImpostosLucroPresumido(valorTotal, impostos)
+          } else if (configFiscal.regime_tributario === 'simples_nacional') {
+            // No Simples Nacional, geralmente não há retenções na fatura
+            // A tributação é paga pelo prestador via DAS
+            const aliquotaEfetiva = configFiscal.simples_nacional?.aliquota_efetiva || 0
+            impostosCalculados = {
+              base_calculo: valorTotal,
+              irrf: { aliquota: 0, valor: 0, retido: false },
+              pis: { aliquota: 0, valor: 0, retido: false },
+              cofins: { aliquota: 0, valor: 0, retido: false },
+              csll: { aliquota: 0, valor: 0, retido: false },
+              iss: { aliquota: 0, valor: 0, retido: false },
+              inss: { aliquota: 0, valor: 0, retido: false },
+              total_retencoes: 0,
+              valor_liquido: valorTotal,
+            }
+          }
+        }
 
         return {
           escritorio: {
@@ -189,6 +229,7 @@ export function useFaturaImpressao() {
             endereco: escritorioData.endereco,
             telefone: config.telefone || null,
             email: config.email || null,
+            config_fiscal: configFiscal,
           },
           fatura: {
             id: faturaData.id,
@@ -226,6 +267,8 @@ export function useFaturaImpressao() {
             soma_horas,
             valor_total: Number(faturaData.valor_total),
           },
+          impostos: impostosCalculados,
+          regime_tributario_label: regimeTributarioLabel,
         }
       } catch (err: any) {
         setError(err.message)

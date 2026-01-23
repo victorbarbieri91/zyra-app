@@ -149,7 +149,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [selectedContrato, setSelectedContrato] = useState<ContratoHonorario | null>(null)
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards')
-  const [activeTab, setActiveTab] = useState<'ativos' | 'vencer' | 'inadimplentes' | 'todos'>('ativos')
+  const [activeTab, setActiveTab] = useState<'ativos' | 'vencer' | 'configurado' | 'nao_configurado' | 'todos'>('ativos')
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false)
@@ -217,8 +217,11 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
           return dias >= 0 && dias <= 7
         })
         break
-      case 'inadimplentes':
-        filtered = filtered.filter((c) => c.inadimplente)
+      case 'configurado':
+        filtered = filtered.filter((c) => c.configurado)
+        break
+      case 'nao_configurado':
+        filtered = filtered.filter((c) => !c.configurado)
         break
       case 'todos':
         // Sem filtro adicional
@@ -278,7 +281,8 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
     const dias = differenceInDays(parseISO(c.proxima_parcela.vencimento), new Date())
     return dias >= 0 && dias <= 7
   }).length
-  const contratosInadimplentes = contratos.filter((c) => c.inadimplente).length
+  const contratosConfigurado = contratos.filter((c) => c.configurado).length
+  const contratosNaoConfigurado = contratos.filter((c) => !c.configurado).length
 
   if (loading && contratos.length === 0) {
     return (
@@ -316,9 +320,13 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                   <Clock className="w-3 h-3 mr-1" />
                   A Vencer ({contratosVencer})
                 </TabsTrigger>
-                <TabsTrigger value="inadimplentes" className="text-xs">
+                <TabsTrigger value="configurado" className="text-xs">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Configurado ({contratosConfigurado})
+                </TabsTrigger>
+                <TabsTrigger value="nao_configurado" className="text-xs">
                   <AlertCircle className="w-3 h-3 mr-1" />
-                  Inadimplentes ({contratosInadimplentes})
+                  Não Configurado ({contratosNaoConfigurado})
                 </TabsTrigger>
                 <TabsTrigger value="todos" className="text-xs">
                   <FileText className="w-3 h-3 mr-1" />
@@ -430,19 +438,30 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                           </p>
                         </div>
                         <div className="flex flex-col gap-1 items-end">
-                          {/* Múltiplas formas de cobrança */}
+                          {/* Badges de configuração ou forma de cobrança */}
                           <div className="flex flex-wrap gap-1 justify-end max-w-[180px]">
-                            {(contrato.formas_disponiveis || [contrato.forma_cobranca]).slice(0, 3).map((forma) => {
-                              const badge = getTipoBadge(forma)
-                              return (
-                                <Badge key={forma} className={cn('text-[10px] px-1.5 py-0', badge.class)}>
-                                  {badge.label}
-                                </Badge>
-                              )
-                            })}
-                            {(contrato.formas_disponiveis || []).length > 3 && (
-                              <Badge className="text-[10px] px-1.5 py-0 bg-slate-100 text-slate-600">
-                                +{(contrato.formas_disponiveis || []).length - 3}
+                            {contrato.configurado ? (
+                              // Se configurado, mostra as formas de cobrança configuradas
+                              <>
+                                {(contrato.formas_disponiveis || [contrato.forma_cobranca]).slice(0, 3).map((forma) => {
+                                  const badge = getTipoBadge(forma)
+                                  return (
+                                    <Badge key={forma} className={cn('text-[10px] px-1.5 py-0', badge.class)}>
+                                      {badge.label}
+                                    </Badge>
+                                  )
+                                })}
+                                {(contrato.formas_disponiveis || []).length > 3 && (
+                                  <Badge className="text-[10px] px-1.5 py-0 bg-slate-100 text-slate-600">
+                                    +{(contrato.formas_disponiveis || []).length - 3}
+                                  </Badge>
+                                )}
+                              </>
+                            ) : (
+                              // Se não configurado, mostra badge de não configurado
+                              <Badge className="text-[10px] px-1.5 py-0 bg-orange-100 text-orange-700">
+                                <AlertCircle className="w-3 h-3 mr-1" />
+                                Não Configurado
                               </Badge>
                             )}
                           </div>
@@ -586,17 +605,26 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1 max-w-[200px]">
-                            {(contrato.formas_disponiveis || [contrato.forma_cobranca]).slice(0, 3).map((forma) => {
-                              const badge = getTipoBadge(forma)
-                              return (
-                                <Badge key={forma} className={cn('text-[10px] px-1.5 py-0', badge.class)}>
-                                  {badge.label}
-                                </Badge>
-                              )
-                            })}
-                            {(contrato.formas_disponiveis || []).length > 3 && (
-                              <Badge className="text-[10px] px-1.5 py-0 bg-slate-100 text-slate-600">
-                                +{(contrato.formas_disponiveis || []).length - 3}
+                            {contrato.configurado ? (
+                              <>
+                                {(contrato.formas_disponiveis || [contrato.forma_cobranca]).slice(0, 3).map((forma) => {
+                                  const badge = getTipoBadge(forma)
+                                  return (
+                                    <Badge key={forma} className={cn('text-[10px] px-1.5 py-0', badge.class)}>
+                                      {badge.label}
+                                    </Badge>
+                                  )
+                                })}
+                                {(contrato.formas_disponiveis || []).length > 3 && (
+                                  <Badge className="text-[10px] px-1.5 py-0 bg-slate-100 text-slate-600">
+                                    +{(contrato.formas_disponiveis || []).length - 3}
+                                  </Badge>
+                                )}
+                              </>
+                            ) : (
+                              <Badge className="text-[10px] px-1.5 py-0 bg-orange-100 text-orange-700">
+                                <AlertCircle className="w-3 h-3 mr-1" />
+                                Não Configurado
                               </Badge>
                             )}
                           </div>

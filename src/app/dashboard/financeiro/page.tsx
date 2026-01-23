@@ -79,6 +79,14 @@ export default function FinanceiroDashboard() {
     loadEscritoriosGrupo()
   }, [])
 
+  // Obter IDs dos escritórios para query (consolidado = todos do grupo, atual = só o ativo)
+  const getEscritorioIds = useCallback((): string[] => {
+    if (modoVisualizacao === 'consolidado' && escritoriosGrupo.length > 1) {
+      return escritoriosGrupo.map(e => e.id)
+    }
+    return escritorioAtivo ? [escritorioAtivo] : []
+  }, [modoVisualizacao, escritoriosGrupo, escritorioAtivo])
+
   useEffect(() => {
     if (escritorioAtivo) {
       loadMetrics()
@@ -86,22 +94,61 @@ export default function FinanceiroDashboard() {
       loadChartData()
       loadInadimplencia()
     }
-  }, [escritorioAtivo, modoVisualizacao])
+  }, [escritorioAtivo, modoVisualizacao, escritoriosGrupo])
 
   const loadMetrics = async () => {
     if (!escritorioAtivo) return
 
+    const escritorioIds = getEscritorioIds()
+    if (escritorioIds.length === 0) return
+
     try {
-      const { data: cacheData } = await supabase
+      // Para modo consolidado, buscar e somar métricas de todos os escritórios
+      const { data: cacheDataArray } = await supabase
         .from('financeiro_dashboard_metricas')
         .select('*')
-        .eq('escritorio_id', escritorioAtivo)
+        .in('escritorio_id', escritorioIds)
         .eq('categoria', 'financeiro')
         .eq('metrica', 'dashboard')
-        .single()
 
-      if (cacheData?.dados_extras) {
-        setMetrics(cacheData.dados_extras as any)
+      if (cacheDataArray && cacheDataArray.length > 0) {
+        // Consolidar métricas de todos os escritórios
+        const metricsConsolidadas = cacheDataArray.reduce((acc, cache) => {
+          const dados = cache.dados_extras as DashboardMetrics | null
+          if (!dados) return acc
+          return {
+            receita_mes: acc.receita_mes + (dados.receita_mes || 0),
+            despesas_mes: acc.despesas_mes + (dados.despesas_mes || 0),
+            pendente_receber: acc.pendente_receber + (dados.pendente_receber || 0),
+            atrasado: acc.atrasado + (dados.atrasado || 0),
+            lucro_mes: acc.lucro_mes + (dados.lucro_mes || 0),
+            // Para variações, usar média ponderada ou do escritório ativo
+            variacao_receita: acc.variacao_receita,
+            variacao_lucro: acc.variacao_lucro,
+            taxa_inadimplencia: 0, // Será recalculada em loadInadimplencia
+          }
+        }, {
+          receita_mes: 0,
+          despesas_mes: 0,
+          pendente_receber: 0,
+          atrasado: 0,
+          lucro_mes: 0,
+          variacao_receita: 0,
+          variacao_lucro: 0,
+          taxa_inadimplencia: 0,
+        } as DashboardMetrics)
+
+        // Se for visualização do escritório atual, usar suas variações
+        if (modoVisualizacao === 'atual') {
+          const cacheAtual = cacheDataArray.find(c => c.escritorio_id === escritorioAtivo)
+          if (cacheAtual?.dados_extras) {
+            const dadosAtual = cacheAtual.dados_extras as DashboardMetrics
+            metricsConsolidadas.variacao_receita = dadosAtual.variacao_receita || 0
+            metricsConsolidadas.variacao_lucro = dadosAtual.variacao_lucro || 0
+          }
+        }
+
+        setMetrics(metricsConsolidadas)
       }
     } catch (error) {
       console.error('Erro ao carregar métricas:', error instanceof Error ? error.message : error)
@@ -113,6 +160,9 @@ export default function FinanceiroDashboard() {
   const loadContasProximas = async () => {
     if (!escritorioAtivo) return
 
+    const escritorioIds = getEscritorioIds()
+    if (escritorioIds.length === 0) return
+
     setLoadingContas(true)
     try {
       // Buscar contas dos próximos 7 dias da view v_contas_receber_pagar
@@ -121,7 +171,7 @@ export default function FinanceiroDashboard() {
       const { data, error } = await supabase
         .from('v_contas_receber_pagar')
         .select('id, tipo_conta, descricao, valor, data_vencimento, status, dias_atraso, cliente_fornecedor')
-        .eq('escritorio_id', escritorioAtivo)
+        .in('escritorio_id', escritorioIds)
         .lte('data_vencimento', dataLimite)
         .in('status', ['pendente', 'atrasado'])
         .order('data_vencimento', { ascending: true })
@@ -158,6 +208,9 @@ export default function FinanceiroDashboard() {
   const loadChartData = async () => {
     if (!escritorioAtivo) return
 
+    const escritorioIds = getEscritorioIds()
+    if (escritorioIds.length === 0) return
+
     setLoadingChart(true)
     try {
       // Buscar lançamentos dos últimos 6 meses
@@ -168,7 +221,7 @@ export default function FinanceiroDashboard() {
       const { data, error } = await supabase
         .from('financeiro_contas_lancamentos')
         .select('tipo, valor, data_lancamento')
-        .eq('escritorio_id', escritorioAtivo)
+        .in('escritorio_id', escritorioIds)
         .gte('data_lancamento', dataInicioStr)
         .order('data_lancamento', { ascending: true })
 
@@ -218,12 +271,15 @@ export default function FinanceiroDashboard() {
   const loadInadimplencia = async () => {
     if (!escritorioAtivo) return
 
+    const escritorioIds = getEscritorioIds()
+    if (escritorioIds.length === 0) return
+
     try {
       // Buscar receitas pendentes e atrasadas
       const { data: receitas, error } = await supabase
         .from('financeiro_receitas')
         .select('valor, valor_pago, status')
-        .eq('escritorio_id', escritorioAtivo)
+        .in('escritorio_id', escritorioIds)
         .in('status', ['pendente', 'atrasado', 'parcial'])
 
       if (error) throw error

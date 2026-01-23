@@ -5,8 +5,6 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { formatBrazilTime, formatBrazilDateTime, formatBrazilDate } from '@/lib/timezone'
 import {
-  ListTodo,
-  Gavel,
   Calendar,
   AlertCircle,
   Clock,
@@ -15,14 +13,10 @@ import {
   ExternalLink,
   CheckCheck,
   MapPin,
-  Briefcase,
-  PhoneCall,
-  UserCheck,
   ClipboardList,
   Zap,
   RotateCcw,
   Repeat,
-  ListTree,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -65,25 +59,21 @@ export interface EventDetailCardProps {
 
 const tipoConfig = {
   tarefa: {
-    icon: ListTodo,
     label: 'Tarefa',
     bg: 'bg-gradient-to-br from-[#34495e] to-[#46627f]',
     text: 'text-white',
   },
   audiencia: {
-    icon: Gavel,
     label: 'Audiência',
     bg: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
     text: 'text-white',
   },
   prazo: {
-    icon: AlertCircle,
     label: 'Prazo',
     bg: 'bg-gradient-to-br from-amber-500 to-amber-600',
     text: 'text-white',
   },
   compromisso: {
-    icon: Calendar,
     label: 'Compromisso',
     bg: 'bg-gradient-to-br from-[#89bcbe] to-[#aacfd0]',
     text: 'text-[#34495e]',
@@ -157,7 +147,6 @@ export default function EventDetailCard({
   onConsultivoClick,
 }: EventDetailCardProps) {
   const config = tipoConfig[tipo]
-  const Icon = config.icon
 
   const podeSerConcluido = tipo === 'tarefa' && status !== 'concluida'
   const estaConcluida = tipo === 'tarefa' && status === 'concluida'
@@ -172,44 +161,31 @@ export default function EventDetailCard({
       onClick={onViewDetails}
     >
       <CardContent className="p-2.5">
-        {/* Header com ícone e tipo */}
-        <div className="flex items-start gap-2 mb-2">
-          <div
-            className={cn(
-              'rounded-md flex items-center justify-center flex-shrink-0 w-7 h-7 shadow-sm',
-              config.bg
-            )}
+        {/* Header com título e tipo */}
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <h4 className={cn(
+            'text-xs font-bold text-[#34495e] leading-tight line-clamp-2',
+            tipo === 'tarefa' && status === 'concluida' && 'line-through opacity-60'
+          )}>
+            {titulo}
+          </h4>
+          <Badge
+            variant="outline"
+            className={cn('text-[10px] px-1.5 py-0 h-4 border font-medium flex-shrink-0', config.bg, config.text)}
           >
-            <Icon className={cn('w-3.5 h-3.5', config.text)} />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <h4 className={cn(
-                'text-xs font-bold text-[#34495e] leading-tight line-clamp-2',
-                tipo === 'tarefa' && status === 'concluida' && 'line-through opacity-60'
-              )}>
-                {titulo}
-              </h4>
-              <Badge
-                variant="outline"
-                className={cn('text-[10px] px-1.5 py-0 h-4 border font-medium flex-shrink-0', config.bg, config.text)}
-              >
-                {config.label}
-              </Badge>
-            </div>
-          </div>
+            {config.label}
+          </Badge>
         </div>
 
         {/* Descrição (se houver) */}
         {descricao && (
-          <p className="text-[11px] text-slate-600 mb-2 line-clamp-2 pl-9">
+          <p className="text-[11px] text-slate-600 mb-2 line-clamp-2">
             {descricao}
           </p>
         )}
 
-        {/* Info grid - 2 colunas compactas */}
-        <div className="space-y-1.5 pl-9">
+        {/* Info grid */}
+        <div className="space-y-1.5">
           {/* Tipo de Tarefa (só para tarefas) */}
           {tipo === 'tarefa' && subtipoLabel && (
             <div className="flex items-center gap-1.5">
@@ -346,7 +322,7 @@ export default function EventDetailCard({
 
         {/* Footer com ações */}
         {(podeSerConcluido || tipo === 'tarefa') && (
-          <div className="flex items-center justify-between gap-2 mt-2.5 pt-2 border-t border-slate-100 pl-9">
+          <div className="flex items-center justify-between gap-2 mt-2.5 pt-2 border-t border-slate-100">
             {/* Status badge para tarefas */}
             {tipo === 'tarefa' && (
               <Badge

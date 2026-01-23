@@ -183,6 +183,7 @@ export async function trocarEscritorio(escritorioId: string): Promise<boolean> {
 
 /**
  * Cria um novo escritório e define o usuário como owner
+ * Se o usuário já tem um escritório, o novo será do mesmo grupo
  */
 export async function criarEscritorio(dados: {
   nome: string;
@@ -193,6 +194,10 @@ export async function criarEscritorio(dados: {
 
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) throw new Error('Usuário não autenticado');
+
+  // Verificar se usuário já tem um escritório ativo (para herdar o grupo)
+  const escritorioAtivo = await getEscritorioAtivo();
+  const grupoId = escritorioAtivo?.id || null; // Se já tem escritório, usa como grupo
 
   // 1. Criar escritório
   const { data: escritorio, error: errorEscritorio } = await supabase
@@ -205,6 +210,8 @@ export async function criarEscritorio(dados: {
       ativo: true,
       plano: 'free',
       max_usuarios: 5,
+      // Se já tem escritório, usa o grupo dele. Senão, será preenchido pelo trigger/default
+      grupo_id: grupoId,
     })
     .select()
     .single();
@@ -214,7 +221,16 @@ export async function criarEscritorio(dados: {
     throw errorEscritorio;
   }
 
+  // Se é o primeiro escritório, atualizar grupo_id para apontar para si mesmo
+  if (!grupoId) {
+    await supabase
+      .from('escritorios')
+      .update({ grupo_id: escritorio.id })
+      .eq('id', escritorio.id);
+  }
+
   // 2. Criar relacionamento usuário-escritório (como owner)
+  // Nota: O trigger replicate_members_to_new_escritorio irá copiar os membros do grupo
   const { error: errorRelacao } = await supabase
     .from('escritorios_usuarios')
     .insert({
@@ -234,6 +250,77 @@ export async function criarEscritorio(dados: {
   await trocarEscritorio(escritorio.id);
 
   return escritorio as Escritorio;
+}
+
+/**
+ * Busca todos os escritórios do mesmo grupo do escritório ativo
+ */
+export async function getEscritoriosDoGrupo(): Promise<EscritorioComRole[]> {
+  const supabase = createClient();
+
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) {
+    console.error('Erro ao obter usuário:', userError);
+    return [];
+  }
+
+  // Buscar escritório ativo para obter o grupo_id
+  const escritorioAtivo = await getEscritorioAtivo();
+  if (!escritorioAtivo) return [];
+
+  // Buscar todos os escritórios do grupo
+  const { data, error } = await supabase
+    .from('escritorios')
+    .select(`
+      id,
+      nome,
+      cnpj,
+      logo_url,
+      plano,
+      max_usuarios,
+      ativo,
+      owner_id,
+      grupo_id,
+      created_at,
+      updated_at
+    `)
+    .eq('grupo_id', escritorioAtivo.id) // grupo_id aponta para o escritório principal
+    .eq('ativo', true)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    // Tentar busca alternativa usando RPC
+    const { data: rpcData, error: rpcError } = await supabase
+      .rpc('get_escritorios_do_grupo', { p_escritorio_id: escritorioAtivo.id });
+
+    if (rpcError) {
+      console.error('Erro ao buscar escritórios do grupo:', rpcError);
+      return [];
+    }
+
+    return (rpcData || []).map((e: any) => ({
+      ...e,
+      role: 'owner', // Simplificação - ajustar se necessário
+      is_owner: true,
+    }));
+  }
+
+  // Buscar roles do usuário em cada escritório
+  const escritoriosIds = (data || []).map(e => e.id);
+  const { data: rolesData } = await supabase
+    .from('escritorios_usuarios')
+    .select('escritorio_id, role, is_owner')
+    .eq('user_id', userData.user.id)
+    .in('escritorio_id', escritoriosIds)
+    .eq('ativo', true);
+
+  const rolesMap = new Map((rolesData || []).map(r => [r.escritorio_id, r]));
+
+  return (data || []).map(e => ({
+    ...e,
+    role: rolesMap.get(e.id)?.role || 'readonly',
+    is_owner: rolesMap.get(e.id)?.is_owner || false,
+  }));
 }
 
 /**

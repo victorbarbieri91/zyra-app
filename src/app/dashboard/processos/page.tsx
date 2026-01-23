@@ -843,10 +843,7 @@ export default function ProcessosPage() {
             setShowTarefaWizard(false)
             setSelectedProcessoId(null)
           }}
-          onSubmit={async (data) => {
-            await createTarefa(data)
-            loadProcessos()
-          }}
+          onCreated={loadProcessos}
           initialData={{
             processo_id: selectedProcessoId
           }}

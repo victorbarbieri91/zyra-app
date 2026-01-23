@@ -36,10 +36,12 @@ import {
   Gavel,
   Users,
   X,
+  Building2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
+import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 import { ContratoHonorario, ContratoFormData, FormaCobranca, ValorPorCargo, AtoContrato } from '@/hooks/useContratosHonorarios'
 import { Checkbox } from '@/components/ui/checkbox'
 import { formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
@@ -115,6 +117,10 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
   }>>([])
   const [loadingAtos, setLoadingAtos] = useState(false)
 
+  // Estados para multi-escritório (grupo)
+  const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
+  const [loadingEscritorios, setLoadingEscritorios] = useState(false)
+
   // Dados do formulário
   const [formData, setFormData] = useState<ContratoFormData>({
     cliente_id: '',
@@ -137,6 +143,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
     valores_por_cargo: [],
     area_juridica: 'civel',
     atos_configurados: [],
+    escritorio_id: undefined, // Escritório faturador (para multi-escritório)
   })
 
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null)
@@ -282,6 +289,30 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
 
     loadDefaultCliente()
   }, [defaultClienteId, open, contrato, supabase])
+
+  // Carregar escritórios do grupo (para multi-escritório)
+  useEffect(() => {
+    const loadEscritoriosGrupo = async () => {
+      if (!open) return
+
+      setLoadingEscritorios(true)
+      try {
+        const escritorios = await getEscritoriosDoGrupo()
+        setEscritoriosGrupo(escritorios)
+
+        // Se não tem escritório_id definido e tem escritório ativo, usar o ativo
+        if (!formData.escritorio_id && escritorioAtivo) {
+          setFormData(prev => ({ ...prev, escritorio_id: escritorioAtivo }))
+        }
+      } catch (error) {
+        console.error('Erro ao carregar escritórios do grupo:', error)
+      } finally {
+        setLoadingEscritorios(false)
+      }
+    }
+
+    loadEscritoriosGrupo()
+  }, [open, escritorioAtivo])
 
   // Buscar clientes do CRM
   const searchClientes = async (query: string) => {
@@ -616,6 +647,43 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                 Título de referência para identificar o contrato (opcional)
               </p>
             </div>
+
+            {/* Seleção de Escritório Faturador (só aparece se tem mais de 1 no grupo) */}
+            {escritoriosGrupo.length > 1 && (
+              <div className="space-y-2">
+                <Label htmlFor="escritorio_faturador" className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-[#89bcbe]" />
+                  Escritório Faturador
+                </Label>
+                <Select
+                  value={formData.escritorio_id || escritorioAtivo || ''}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, escritorio_id: value }))
+                  }
+                >
+                  <SelectTrigger id="escritorio_faturador">
+                    <SelectValue placeholder="Selecione o escritório" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {escritoriosGrupo.map((esc) => (
+                      <SelectItem key={esc.id} value={esc.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{esc.nome}</span>
+                          {esc.cnpj && (
+                            <span className="text-xs text-slate-400">
+                              ({esc.cnpj})
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500">
+                  Selecione qual CNPJ será usado para faturar este contrato
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -1060,6 +1128,18 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                       {formData.data_fim && ` até ${formatBrazilDate(parseDateInBrazil(formData.data_fim))}`}
                     </p>
                   </div>
+                  {/* Mostrar escritório faturador se tem múltiplos no grupo */}
+                  {escritoriosGrupo.length > 1 && (
+                    <div>
+                      <p className="text-xs text-slate-500">Escritório Faturador</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Building2 className="h-3.5 w-3.5 text-[#89bcbe]" />
+                        <p className="font-medium text-[#34495e]">
+                          {escritoriosGrupo.find((e) => e.id === (formData.escritorio_id || escritorioAtivo))?.nome || '-'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <Separator />

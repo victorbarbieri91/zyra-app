@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, Clock, AlertCircle, FileText, Users, Calendar, ArrowUpRight, ArrowDownRight, Target, Loader2 } from 'lucide-react'
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, Clock, AlertCircle, FileText, Users, Calendar, ArrowUpRight, ArrowDownRight, Target, Loader2, Building2 } from 'lucide-react'
 import { differenceInDays, parseISO, format, addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
@@ -14,8 +14,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
+import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 // Types defined locally
 import { cn } from '@/lib/utils'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface DashboardMetrics {
   receita_mes: number
@@ -60,6 +62,23 @@ export default function FinanceiroDashboard() {
   const [loadingContas, setLoadingContas] = useState(true)
   const [loadingChart, setLoadingChart] = useState(true)
 
+  // Estados para multi-escritório (grupo)
+  const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
+  const [modoVisualizacao, setModoVisualizacao] = useState<'atual' | 'consolidado'>('atual')
+
+  // Carregar escritórios do grupo
+  useEffect(() => {
+    const loadEscritoriosGrupo = async () => {
+      try {
+        const escritorios = await getEscritoriosDoGrupo()
+        setEscritoriosGrupo(escritorios)
+      } catch (error) {
+        console.error('Erro ao carregar escritórios do grupo:', error)
+      }
+    }
+    loadEscritoriosGrupo()
+  }, [])
+
   useEffect(() => {
     if (escritorioAtivo) {
       loadMetrics()
@@ -67,7 +86,7 @@ export default function FinanceiroDashboard() {
       loadChartData()
       loadInadimplencia()
     }
-  }, [escritorioAtivo])
+  }, [escritorioAtivo, modoVisualizacao])
 
   const loadMetrics = async () => {
     if (!escritorioAtivo) return
@@ -274,9 +293,33 @@ export default function FinanceiroDashboard() {
           <div>
             <h1 className="text-2xl font-semibold text-[#34495e]">Dashboard Financeiro</h1>
             <p className="text-sm text-slate-600 mt-1">
-              Visão geral consolidada das finanças do escritório
+              {modoVisualizacao === 'consolidado' && escritoriosGrupo.length > 1
+                ? 'Visão consolidada de todos os escritórios do grupo'
+                : 'Visão geral das finanças do escritório'}
             </p>
           </div>
+
+          {/* Toggle de visualização - só aparece se tem mais de 1 escritório no grupo */}
+          {escritoriosGrupo.length > 1 && (
+            <Tabs value={modoVisualizacao} onValueChange={(v) => setModoVisualizacao(v as 'atual' | 'consolidado')}>
+              <TabsList className="bg-slate-100">
+                <TabsTrigger
+                  value="atual"
+                  className="text-xs data-[state=active]:bg-white data-[state=active]:text-[#34495e]"
+                >
+                  <Building2 className="h-3.5 w-3.5 mr-1.5" />
+                  Atual
+                </TabsTrigger>
+                <TabsTrigger
+                  value="consolidado"
+                  className="text-xs data-[state=active]:bg-white data-[state=active]:text-[#34495e]"
+                >
+                  <Users className="h-3.5 w-3.5 mr-1.5" />
+                  Consolidado
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
         </div>
 
         {/* KPIs Top Row - 4 cards estratégicos */}

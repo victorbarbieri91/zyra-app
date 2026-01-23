@@ -748,18 +748,7 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
       <TarefaWizard
         escritorioId={escritorioId}
         onClose={() => setShowTarefaWizard(false)}
-        onSubmit={async (data: TarefaFormData) => {
-          // Insert direto na tabela
-          const { error } = await supabase
-            .from('agenda_tarefas')
-            .insert(data)
-
-          if (error) {
-            console.error('Erro ao criar tarefa:', error)
-            throw error
-          }
-
-          setShowTarefaWizard(false)
+        onCreated={async () => {
           // Recarregar agendamentos usando função RPC
           const { data: agendaData } = await supabase
             .rpc('get_agenda_processo', { p_processo_id: processo.id })

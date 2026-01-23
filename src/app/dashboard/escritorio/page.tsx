@@ -1,11 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useEscritorio } from '@/contexts/EscritorioContext';
 import { useEscritorioCargos } from '@/hooks/useEscritorioCargos';
 import { useEscritorioMembros } from '@/hooks/useEscritorioMembros';
 import { MembroCompleto } from '@/types/escritorio';
 import { toast } from 'sonner';
+import { getEscritoriosDoGrupo, EscritorioComRole, trocarEscritorio } from '@/lib/supabase/escritorio-helpers';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 // Componentes do novo layout
 import { EscritorioHeader } from '@/components/escritorio/EscritorioHeader';
@@ -20,9 +24,27 @@ import { ModalConvidarMembro } from '@/components/escritorio/ModalConvidarMembro
 import { ModalEditarMembro } from '@/components/escritorio/ModalEditarMembro';
 import { ModalEditarEscritorio } from '@/components/escritorio/ModalEditarEscritorio';
 import { ModalCargosPermissoes } from '@/components/escritorio/ModalCargosPermissoes';
+import { ModalCriarEscritorio } from '@/components/escritorio/ModalCriarEscritorio';
 
 export default function EscritorioPage() {
   const { escritorioAtivo, carregando: carregandoEscritorio, recarregar: recarregarEscritorio } = useEscritorio();
+
+  // Estado para escritórios do grupo
+  const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([]);
+
+  // Carregar escritórios do grupo
+  useEffect(() => {
+    async function loadEscritoriosGrupo() {
+      if (!escritorioAtivo?.id) return;
+      try {
+        const escritorios = await getEscritoriosDoGrupo();
+        setEscritoriosGrupo(escritorios);
+      } catch (error) {
+        console.error('Erro ao carregar escritórios do grupo:', error);
+      }
+    }
+    loadEscritoriosGrupo();
+  }, [escritorioAtivo?.id]);
 
   // Hooks para dados
   const {
@@ -50,6 +72,7 @@ export default function EscritorioPage() {
   const [modalConvidar, setModalConvidar] = useState(false);
   const [modalEditarEscritorio, setModalEditarEscritorio] = useState(false);
   const [modalCargosPermissoes, setModalCargosPermissoes] = useState(false);
+  const [modalCriarEscritorio, setModalCriarEscritorio] = useState(false);
   const [membroSelecionado, setMembroSelecionado] = useState<MembroCompleto | null>(null);
 
   // Estados de views expandidas
@@ -75,10 +98,28 @@ export default function EscritorioPage() {
     toast.info('Funcionalidade de upgrade em desenvolvimento');
   };
 
-  const handleSuccessModal = () => {
+  const handleTrocarEscritorio = async (escritorioId: string) => {
+    try {
+      await trocarEscritorio(escritorioId);
+      toast.success('Escritório alterado com sucesso');
+      window.location.reload();
+    } catch (error) {
+      console.error('Erro ao trocar escritório:', error);
+      toast.error('Erro ao trocar de escritório');
+    }
+  };
+
+  const handleSuccessModal = async () => {
     recarregarMembros();
     recarregarCargos();
     recarregarEscritorio();
+    // Recarregar escritórios do grupo
+    try {
+      const escritorios = await getEscritoriosDoGrupo();
+      setEscritoriosGrupo(escritorios);
+    } catch (error) {
+      console.error('Erro ao recarregar escritórios do grupo:', error);
+    }
   };
 
   // Loading state
@@ -111,11 +152,21 @@ export default function EscritorioPage() {
   return (
     <div className="p-6 space-y-6">
         {/* Header */}
-        <div className="mb-2">
-          <h1 className="text-2xl font-semibold text-[#34495e]">Gestao do Escritorio</h1>
-          <p className="text-sm text-[#6c757d] mt-0.5">
-            Gerencie membros, cargos e permissoes do escritorio
-          </p>
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <h1 className="text-2xl font-semibold text-[#34495e]">Gestão do Escritório</h1>
+            <p className="text-sm text-[#6c757d] mt-0.5">
+              Gerencie membros, cargos e permissões do escritório
+            </p>
+          </div>
+          <Button
+            onClick={() => setModalCriarEscritorio(true)}
+            size="sm"
+            className="bg-[#34495e] hover:bg-[#46627f] text-white"
+          >
+            <Plus className="w-4 h-4 mr-1.5" />
+            Novo Escritório
+          </Button>
         </div>
 
         {/* Header do Escritorio - Destacado */}
@@ -169,6 +220,51 @@ export default function EscritorioPage() {
             maxStorage={10}
             onUpgrade={handleUpgrade}
           />
+
+          {/* Card Escritórios do Grupo */}
+          {escritoriosGrupo.length > 1 && (
+            <Card className="border-slate-200">
+              <CardHeader className="pb-2 pt-4">
+                <CardTitle className="text-sm font-semibold text-[#34495e]">
+                  Escritórios do Grupo
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-2 pb-4">
+                <div className="space-y-2">
+                  {escritoriosGrupo.map((esc) => {
+                    const isAtivo = esc.id === escritorioAtivo.id;
+                    return (
+                      <div
+                        key={esc.id}
+                        className={`
+                          flex items-center justify-between p-2.5 rounded-lg border transition-colors
+                          ${isAtivo
+                            ? 'bg-slate-50 border-slate-300'
+                            : 'bg-white border-slate-200 hover:border-slate-300 cursor-pointer'
+                          }
+                        `}
+                        onClick={() => !isAtivo && handleTrocarEscritorio(esc.id)}
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-[#34495e]">
+                            {esc.nome}
+                          </p>
+                          {esc.cnpj && (
+                            <p className="text-xs text-slate-500">
+                              {esc.cnpj}
+                            </p>
+                          )}
+                        </div>
+                        {isAtivo && (
+                          <span className="text-xs text-slate-500">Ativo</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Modais */}
@@ -206,6 +302,12 @@ export default function EscritorioPage() {
           updateCargo={updateCargo}
           deleteCargo={deleteCargo}
           reorderCargos={reorderCargos}
+        />
+
+        <ModalCriarEscritorio
+          open={modalCriarEscritorio}
+          onOpenChange={setModalCriarEscritorio}
+          onSuccess={handleSuccessModal}
         />
     </div>
   );

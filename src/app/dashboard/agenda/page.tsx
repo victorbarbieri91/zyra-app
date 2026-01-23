@@ -804,20 +804,17 @@ export default function AgendaPage() {
             setTarefaModalOpen(false)
             setTarefaSelecionada(null)
           }}
-          onSubmit={async (data: TarefaFormData) => {
-            try {
-              if (tarefaSelecionada) {
-                await updateTarefa(tarefaSelecionada.id, data)
-                toast.success('Tarefa atualizada com sucesso!')
-              } else {
-                await createTarefa(data)
-                toast.success('Tarefa criada com sucesso!')
-              }
-              await refreshItems()
-            } catch (error) {
-              toast.error('Erro ao salvar tarefa')
-              throw error
+          onSubmit={tarefaSelecionada ? async (data: TarefaFormData) => {
+            // Só usado para edição - atualiza a tarefa
+            await updateTarefa(tarefaSelecionada.id, data)
+            toast.success('Tarefa atualizada com sucesso!')
+          } : undefined}
+          onCreated={async () => {
+            // Usado tanto na criação quanto na edição para atualizar a lista
+            if (!tarefaSelecionada) {
+              toast.success('Tarefa criada com sucesso!')
             }
+            await refreshItems()
           }}
           initialData={tarefaSelecionada || undefined}
         />

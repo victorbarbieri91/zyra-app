@@ -222,12 +222,9 @@ export default function ScheduledTaskCard({
             </div>
           )}
 
-          {/* Layout Compacto: 30min - Com ícone pequeno */}
+          {/* Layout Compacto: 30min - Sem ícone */}
           {isCompact && (
             <div className="flex items-center gap-0.5 pl-5 pr-5">
-              <div className="rounded-sm flex items-center justify-center flex-shrink-0 w-3 h-3 shadow-sm bg-gradient-to-br from-[#34495e] to-[#46627f]">
-                <ListTodo className="w-1.5 h-1.5 text-white" />
-              </div>
               <h4
                 className={cn(
                   'text-[8px] font-semibold text-[#34495e] leading-none truncate flex-1 min-w-0',
@@ -258,9 +255,6 @@ export default function ScheduledTaskCard({
           {isMedium && (
             <>
               <div className="flex items-center gap-1.5 mb-1 pl-5 pr-5">
-                <div className="rounded-md flex items-center justify-center flex-shrink-0 w-5 h-5 shadow-sm bg-gradient-to-br from-[#34495e] to-[#46627f]">
-                  <ListTodo className="w-2.5 h-2.5 text-white" />
-                </div>
                 <h4
                   className={cn(
                     'text-[10px] font-bold text-[#34495e] leading-tight line-clamp-1 flex-1 min-w-0',
@@ -270,7 +264,7 @@ export default function ScheduledTaskCard({
                   {tarefa.titulo}
                 </h4>
               </div>
-              <div className="flex items-center gap-1.5 pl-11 pr-5">
+              <div className="flex items-center gap-1.5 pl-5 pr-5">
                 {tarefa.horario_planejado_dia && (
                   <div className="flex items-center gap-0.5 text-[9px] text-slate-600 font-medium">
                     <Clock className="w-2 h-2 text-[#89bcbe] flex-shrink-0" />
@@ -300,12 +294,8 @@ export default function ScheduledTaskCard({
           {/* Layout Normal: > 90 min - Layout completo */}
           {!isUltraCompact && !isCompact && !isMedium && (
             <>
-              {/* Header com ícone e título */}
+              {/* Header com título */}
               <div className="flex items-start gap-1.5 mb-1 pl-5 pr-5">
-                <div className="rounded-md flex items-center justify-center flex-shrink-0 w-6 h-6 shadow-sm bg-gradient-to-br from-[#34495e] to-[#46627f]">
-                  <ListTodo className="w-3 h-3 text-white" />
-                </div>
-
                 <div className="flex-1 min-w-0">
                   <h4
                     className={cn(
@@ -319,7 +309,7 @@ export default function ScheduledTaskCard({
               </div>
 
               {/* Horário e Duração */}
-              <div className="flex items-center gap-1.5 mb-1.5 pl-12 pr-5">
+              <div className="flex items-center gap-1.5 mb-1.5 pl-5 pr-5">
                 <Clock className="w-2.5 h-2.5 text-[#89bcbe] flex-shrink-0" />
                 {tarefa.horario_planejado_dia && (
                   <div className="flex items-center gap-1 text-[10px] text-slate-600 font-medium">

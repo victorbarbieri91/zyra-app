@@ -28,7 +28,8 @@ import { parseDateInBrazil, formatBrazilDateLong } from '@/lib/timezone'
 interface TarefaWizardProps {
   escritorioId: string
   onClose: () => void
-  onSubmit: (data: TarefaFormData) => Promise<void>
+  onSubmit?: (data: TarefaFormData) => Promise<void> // Callback opcional após criação
+  onCreated?: () => void | Promise<void> // Callback após tarefa criada
   initialData?: Partial<TarefaFormData>
 }
 
@@ -69,7 +70,7 @@ const TIPO_CONFIG = {
   },
 }
 
-export default function TarefaWizard({ escritorioId, onClose, onSubmit, initialData }: TarefaWizardProps) {
+export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreated, initialData }: TarefaWizardProps) {
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -79,8 +80,11 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, initialD
   // Carregar membros do escritório para exibição na revisão
   const { membros } = useEscritorioMembros(escritorioId)
 
-  // Hook para salvar responsáveis
-  const { setResponsaveis } = useAgendaResponsaveis()
+  // Hook para criar tarefas diretamente
+  const { createTarefa } = useTarefas(escritorioId)
+
+  // Hook para salvar/carregar responsáveis
+  const { setResponsaveis, getResponsaveis } = useAgendaResponsaveis()
 
   // Form State
   const [tipo, setTipo] = useState<TipoTarefa>(initialData?.tipo || 'outro')
@@ -213,6 +217,21 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, initialD
     }
   }, [vinculacao])
 
+  // Carregar responsáveis existentes quando estamos editando (initialData tem id)
+  useEffect(() => {
+    const loadResponsaveis = async () => {
+      if (initialData?.id) {
+        console.log('[TarefaWizard] Carregando responsáveis para edição, tarefa:', initialData.id)
+        const responsaveis = await getResponsaveis('tarefa', initialData.id)
+        if (responsaveis.length > 0) {
+          setResponsaveisIds(responsaveis.map(r => r.user_id))
+          console.log('[TarefaWizard] Responsáveis carregados:', responsaveis.map(r => r.user_id))
+        }
+      }
+    }
+    loadResponsaveis()
+  }, [initialData?.id])
+
   // Step Definitions
   const steps: WizardStepType[] = [
     {
@@ -278,8 +297,11 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, initialD
         prazo_data_limite: (tipo === 'prazo_processual' && prazoFatal) ? prazoFatal : undefined,
       }
 
+      // Verificar se estamos editando (initialData tem id)
+      const isEditing = initialData?.id
+
       // Se tem recorrência, criar a recorrência em vez da tarefa direta
-      if (recorrencia && recorrencia.ativa) {
+      if (recorrencia && recorrencia.ativa && !isEditing) {
         await createRecorrencia({
           nome: titulo,
           descricao: descricao || undefined,
@@ -297,12 +319,33 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, initialD
           numeroOcorrencias: recorrencia.numeroOcorrencias,
           apenasUteis: recorrencia.apenasUteis,
         })
+      } else if (isEditing) {
+        // Modo edição - usar onSubmit do pai (se fornecido) para atualizar
+        if (onSubmit) {
+          await onSubmit(formData)
+        }
+        // Salvar responsáveis na tabela N:N
+        if (responsaveisIds.length > 0) {
+          console.log('[TarefaWizard] Atualizando responsáveis:', responsaveisIds, 'para tarefa:', initialData.id)
+          await setResponsaveis('tarefa', initialData.id as string, responsaveisIds)
+        }
+        // Callback opcional
+        if (onCreated) {
+          await onCreated()
+        }
       } else {
-        // Tarefa única - criar e depois salvar responsáveis
-        const novaTarefa = await onSubmit(formData)
-        // O onSubmit retorna a tarefa criada, salvar responsáveis na tabela N:N
-        if (novaTarefa && (novaTarefa as any).id && responsaveisIds.length > 0) {
-          await setResponsaveis('tarefa', (novaTarefa as any).id, responsaveisIds)
+        // Tarefa única nova - criar usando useTarefas diretamente
+        const novaTarefa = await createTarefa(formData)
+
+        // Salvar responsáveis na tabela N:N se a tarefa foi criada
+        if (novaTarefa?.id && responsaveisIds.length > 0) {
+          console.log('[TarefaWizard] Salvando responsáveis:', responsaveisIds, 'para tarefa:', novaTarefa.id)
+          await setResponsaveis('tarefa', novaTarefa.id, responsaveisIds)
+        }
+
+        // Callback opcional para o pai saber que foi criado (para atualizar listas)
+        if (onCreated) {
+          await onCreated()
         }
       }
 

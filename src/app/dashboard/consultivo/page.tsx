@@ -736,10 +736,7 @@ export default function ConsultivoPage() {
             setShowTarefaWizard(false)
             setSelectedConsultivoId(null)
           }}
-          onSubmit={async (data) => {
-            await createTarefa(data)
-            loadConsultas()
-          }}
+          onCreated={loadConsultas}
           initialData={{
             consultivo_id: selectedConsultivoId
           }}

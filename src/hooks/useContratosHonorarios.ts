@@ -95,6 +95,8 @@ export interface ContratoFormData {
   // Novos campos para por_ato
   area_juridica?: string
   atos_configurados?: AtoContrato[]
+  // Multi-escritório: escritório que vai faturar (se diferente do ativo)
+  escritorio_id?: string
 }
 
 export interface ContratosMetrics {

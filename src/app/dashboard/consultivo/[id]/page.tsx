@@ -689,12 +689,7 @@ export default function ConsultaDetalhePage() {
         <TarefaWizard
           escritorioId={escritorioId}
           onClose={() => setShowTarefaWizard(false)}
-          onSubmit={async (data: TarefaFormData) => {
-            const { error } = await supabase.from('agenda_tarefas').insert(data)
-            if (error) throw error
-            setShowTarefaWizard(false)
-            loadAgenda()
-          }}
+          onCreated={loadAgenda}
           initialData={{ consultivo_id: consulta.id }}
         />
       )}

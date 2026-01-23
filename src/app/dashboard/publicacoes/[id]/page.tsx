@@ -956,17 +956,9 @@ export default function PublicacaoDetalhesPage({ params }: { params: Promise<{ i
             setTarefaModalOpen(false)
             carregarPublicacao()
           }}
-          onSubmit={async (data: TarefaFormData) => {
-            try {
-              await createTarefa(data)
-              toast.success('Tarefa criada com sucesso!')
-              setTarefaModalOpen(false)
-              carregarPublicacao()
-            } catch (err) {
-              console.error('Erro ao criar tarefa:', err)
-              toast.error('Erro ao criar tarefa')
-              throw err
-            }
+          onCreated={() => {
+            toast.success('Tarefa criada com sucesso!')
+            carregarPublicacao()
           }}
           initialData={{
             titulo: `Tarefa: Publicação ${publicacao.tipo_publicacao || ''} - ${publicacao.numero_processo || 'Sem processo'}`,

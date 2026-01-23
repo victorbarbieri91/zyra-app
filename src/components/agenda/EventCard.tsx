@@ -248,6 +248,3 @@ export default function EventCard({
     </Card>
   )
 }
-
-// Importar Calendar do lucide-react
-import { Calendar } from 'lucide-react'

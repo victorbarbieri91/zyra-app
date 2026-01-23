@@ -3,7 +3,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ListTodo, Gavel, Calendar, Clock, MapPin, User, FileText, Repeat, AlertCircle, Check, ChevronRight } from 'lucide-react'
+import { Clock, MapPin, User, FileText, Repeat, AlertCircle, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AgendaItem } from '@/hooks/useAgendaConsolidada'
 import { formatTimeDisplay, formatBrazilTime } from '@/lib/timezone'
@@ -13,24 +13,6 @@ interface AgendaListCardProps {
   onClick: () => void
   onComplete?: () => void
   className?: string
-}
-
-const tipoConfig = {
-  tarefa: {
-    icon: ListTodo,
-    gradient: 'from-[#34495e] to-[#46627f]',
-    label: 'Tarefa',
-  },
-  audiencia: {
-    icon: Gavel,
-    gradient: 'from-emerald-500 to-emerald-600',
-    label: 'Audiência',
-  },
-  evento: {
-    icon: Calendar,
-    gradient: 'from-[#89bcbe] to-[#aacfd0]',
-    label: 'Compromisso',
-  },
 }
 
 const prioridadeConfig = {
@@ -88,9 +70,6 @@ const statusConfig = {
 }
 
 export default function AgendaListCard({ item, onClick, onComplete, className }: AgendaListCardProps) {
-  const config = tipoConfig[item.tipo_entidade] || tipoConfig.evento
-  const Icon = config.icon
-
   const prioridadeInfo = item.prioridade ? prioridadeConfig[item.prioridade] : null
   const statusInfo = statusConfig[item.status as keyof typeof statusConfig] || statusConfig.pendente
 
@@ -168,8 +147,8 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
           </div>
         </div>
 
-        {/* Info section - alinhado considerando checkbox + ícone */}
-        <div className={cn('space-y-1.5', onComplete ? 'pl-12' : 'pl-9')}>
+        {/* Info section */}
+        <div className={cn('space-y-1.5', onComplete ? 'pl-6' : '')}>
           {/* Horário */}
           {horarioDisplay && (
             <div className="flex items-center gap-1.5">

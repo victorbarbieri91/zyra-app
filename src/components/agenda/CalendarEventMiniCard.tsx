@@ -3,7 +3,6 @@
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ListTodo, Gavel, Calendar, AlertCircle, Repeat, ListTree } from 'lucide-react'
 
 interface CalendarEventMiniCardProps {
   id: string
@@ -21,29 +20,21 @@ const tipoStyles = {
     bg: 'bg-gradient-to-r from-[#34495e] to-[#46627f]',
     text: 'text-white',
     border: 'border-l-4 border-[#34495e]',
-    icon: ListTodo,
-    iconBg: 'bg-white/20',
   },
   audiencia: {
     bg: 'bg-gradient-to-r from-emerald-500 to-emerald-600',
     text: 'text-white',
     border: 'border-l-4 border-emerald-500',
-    icon: Gavel,
-    iconBg: 'bg-white/20',
   },
   prazo: {
     bg: 'bg-gradient-to-r from-amber-500 to-amber-600',
     text: 'text-white',
     border: 'border-l-4 border-amber-600',
-    icon: AlertCircle,
-    iconBg: 'bg-white/20',
   },
   compromisso: {
     bg: 'bg-gradient-to-r from-[#89bcbe] to-[#aacfd0]',
     text: 'text-[#34495e]',
     border: 'border-l-4 border-[#89bcbe]',
-    icon: Calendar,
-    iconBg: 'bg-white/30',
   },
 }
 
@@ -58,7 +49,6 @@ export default function CalendarEventMiniCard({
   onClick,
 }: CalendarEventMiniCardProps) {
   const styles = tipoStyles[tipo]
-  const Icon = styles.icon
   const temIndicadorEspecial = !!recorrencia_id
 
   return (
@@ -74,11 +64,6 @@ export default function CalendarEventMiniCard({
     >
 
       <div className="flex items-center gap-1.5 px-2 py-1.5">
-        {/* Ícone */}
-        <div className={cn('rounded flex items-center justify-center flex-shrink-0 w-5 h-5', styles.iconBg)}>
-          <Icon className="w-3 h-3 text-white" />
-        </div>
-
         {/* Conteúdo */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">

@@ -13,6 +13,7 @@ export interface Escritorio {
   max_usuarios: number;
   ativo: boolean;
   owner_id?: string;
+  grupo_id?: string;
   endereco?: any;
   config?: any;
   created_at: string;
@@ -184,6 +185,7 @@ export async function trocarEscritorio(escritorioId: string): Promise<boolean> {
 /**
  * Cria um novo escritório e define o usuário como owner
  * Se o usuário já tem um escritório, o novo será do mesmo grupo
+ * Usa RPC com SECURITY DEFINER para evitar problemas de RLS
  */
 export async function criarEscritorio(dados: {
   nome: string;
@@ -195,59 +197,28 @@ export async function criarEscritorio(dados: {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) throw new Error('Usuário não autenticado');
 
-  // Verificar se usuário já tem um escritório ativo (para herdar o grupo)
-  const escritorioAtivo = await getEscritorioAtivo();
-  const grupoId = escritorioAtivo?.id || null; // Se já tem escritório, usa como grupo
+  // Usar RPC que faz tudo em uma transação com SECURITY DEFINER
+  const { data: escritorioId, error: errorRpc } = await supabase.rpc('criar_escritorio', {
+    p_nome: dados.nome,
+    p_cnpj: dados.cnpj || null,
+  });
 
-  // 1. Criar escritório
-  const { data: escritorio, error: errorEscritorio } = await supabase
+  if (errorRpc) {
+    console.error('Erro ao criar escritório:', errorRpc);
+    throw errorRpc;
+  }
+
+  // Buscar os dados completos do escritório criado
+  const { data: escritorio, error: errorFetch } = await supabase
     .from('escritorios')
-    .insert({
-      nome: dados.nome,
-      cnpj: dados.cnpj,
-      endereco: dados.endereco,
-      owner_id: userData.user.id,
-      ativo: true,
-      plano: 'free',
-      max_usuarios: 5,
-      // Se já tem escritório, usa o grupo dele. Senão, será preenchido pelo trigger/default
-      grupo_id: grupoId,
-    })
-    .select()
+    .select('*')
+    .eq('id', escritorioId)
     .single();
 
-  if (errorEscritorio || !escritorio) {
-    console.error('Erro ao criar escritório:', errorEscritorio);
-    throw errorEscritorio;
+  if (errorFetch) {
+    console.error('Erro ao buscar escritório criado:', errorFetch);
+    throw errorFetch;
   }
-
-  // Se é o primeiro escritório, atualizar grupo_id para apontar para si mesmo
-  if (!grupoId) {
-    await supabase
-      .from('escritorios')
-      .update({ grupo_id: escritorio.id })
-      .eq('id', escritorio.id);
-  }
-
-  // 2. Criar relacionamento usuário-escritório (como owner)
-  // Nota: O trigger replicate_members_to_new_escritorio irá copiar os membros do grupo
-  const { error: errorRelacao } = await supabase
-    .from('escritorios_usuarios')
-    .insert({
-      user_id: userData.user.id,
-      escritorio_id: escritorio.id,
-      role: 'owner',
-      is_owner: true,
-      ativo: true,
-    });
-
-  if (errorRelacao) {
-    console.error('Erro ao criar relação usuário-escritório:', errorRelacao);
-    throw errorRelacao;
-  }
-
-  // 3. Definir como escritório ativo
-  await trocarEscritorio(escritorio.id);
 
   return escritorio as Escritorio;
 }
@@ -268,6 +239,9 @@ export async function getEscritoriosDoGrupo(): Promise<EscritorioComRole[]> {
   const escritorioAtivo = await getEscritorioAtivo();
   if (!escritorioAtivo) return [];
 
+  // O grupo_id do escritório ativo aponta para o escritório principal do grupo
+  const grupoId = escritorioAtivo.grupo_id || escritorioAtivo.id;
+
   // Buscar todos os escritórios do grupo
   const { data, error } = await supabase
     .from('escritorios')
@@ -284,14 +258,14 @@ export async function getEscritoriosDoGrupo(): Promise<EscritorioComRole[]> {
       created_at,
       updated_at
     `)
-    .eq('grupo_id', escritorioAtivo.id) // grupo_id aponta para o escritório principal
+    .eq('grupo_id', grupoId)
     .eq('ativo', true)
     .order('created_at', { ascending: true });
 
   if (error) {
     // Tentar busca alternativa usando RPC
     const { data: rpcData, error: rpcError } = await supabase
-      .rpc('get_escritorios_do_grupo', { p_escritorio_id: escritorioAtivo.id });
+      .rpc('get_escritorios_do_grupo', { p_escritorio_id: grupoId });
 
     if (rpcError) {
       console.error('Erro ao buscar escritórios do grupo:', rpcError);

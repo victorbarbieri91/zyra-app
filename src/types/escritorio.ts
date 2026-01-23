@@ -63,6 +63,7 @@ export interface ConviteEscritorio {
   email: string;
   cargo_id: string | null;
   cargo?: Cargo | null;
+  role: string;
   token: string;
   convidado_por: string;
   aceito: boolean;

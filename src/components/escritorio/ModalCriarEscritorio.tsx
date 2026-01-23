@@ -63,9 +63,9 @@ export function ModalCriarEscritorio({
         onOpenChange(false);
         if (onSuccess) onSuccess();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao criar escritório:', error);
-      toast.error('Erro ao criar escritório');
+      toast.error(error?.message || 'Erro ao criar escritório');
     } finally {
       setSalvando(false);
     }

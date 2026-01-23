@@ -4,7 +4,6 @@ import { useDraggable } from '@dnd-kit/core'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import {
-  ListTodo,
   AlertCircle,
   FileText,
   User,
@@ -112,7 +111,7 @@ export default function KanbanTaskCard({ tarefa, onClick, onComplete }: KanbanTa
       )}
     >
       <CardContent className="p-2.5">
-        {/* Header com checkbox, ícone e título */}
+        {/* Header com checkbox e título */}
         <div className="flex items-start gap-2 mb-2">
           {/* Checkbox de Concluir - ESQUERDA */}
           {onComplete && (
@@ -136,11 +135,6 @@ export default function KanbanTaskCard({ tarefa, onClick, onComplete }: KanbanTa
               )}
             </button>
           )}
-
-          {/* Ícone do Tipo */}
-          <div className="rounded-md flex items-center justify-center flex-shrink-0 w-7 h-7 shadow-sm bg-gradient-to-br from-[#34495e] to-[#46627f]">
-            <ListTodo className="w-3.5 h-3.5 text-white" />
-          </div>
 
           {/* Conteúdo Central */}
           <div className="flex-1 min-w-0">
@@ -174,13 +168,13 @@ export default function KanbanTaskCard({ tarefa, onClick, onComplete }: KanbanTa
 
         {/* Descrição (se houver) */}
         {tarefa.descricao && (
-          <p className={cn('text-[11px] text-slate-600 mb-2 line-clamp-2', onComplete ? 'pl-12' : 'pl-9')}>
+          <p className={cn('text-[11px] text-slate-600 mb-2 line-clamp-2', onComplete ? 'pl-6' : '')}>
             {tarefa.descricao}
           </p>
         )}
 
-        {/* Info grid - com padding left para alinhar com ícone */}
-        <div className={cn('space-y-1.5', onComplete ? 'pl-12' : 'pl-9')}>
+        {/* Info grid */}
+        <div className={cn('space-y-1.5', onComplete ? 'pl-6' : '')}>
           {/* Tipo de Tarefa */}
           <div className="flex items-center gap-1.5">
             <ClipboardList className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
@@ -241,7 +235,7 @@ export default function KanbanTaskCard({ tarefa, onClick, onComplete }: KanbanTa
         </div>
 
         {/* Footer com status */}
-        <div className={cn('mt-2.5 pt-2 border-t border-slate-100', onComplete ? 'pl-12' : 'pl-9')}>
+        <div className={cn('mt-2.5 pt-2 border-t border-slate-100', onComplete ? 'pl-6' : '')}>
           {/* Status Badge */}
           <Badge
             variant="outline"

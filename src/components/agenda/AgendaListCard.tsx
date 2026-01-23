@@ -123,7 +123,7 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
       )}
     >
       <CardContent className="p-2.5">
-        {/* Header com checkbox, ícone e título */}
+        {/* Header com checkbox e título */}
         <div className="flex items-start gap-2 mb-2">
           {/* Checkbox de Concluir - ESQUERDA */}
           {onComplete && (
@@ -146,16 +146,6 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
               )}
             </button>
           )}
-
-          {/* Ícone do Tipo */}
-          <div
-            className={cn(
-              'rounded-md flex items-center justify-center flex-shrink-0 w-7 h-7 shadow-sm',
-              `bg-gradient-to-br ${config.gradient}`
-            )}
-          >
-            <Icon className="w-3.5 h-3.5 text-white" />
-          </div>
 
           {/* Conteúdo Central - Título e Status */}
           <div className="flex-1 min-w-0">

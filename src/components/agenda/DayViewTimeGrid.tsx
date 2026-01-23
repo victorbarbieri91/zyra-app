@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Clock, Calendar as CalendarIcon, Gavel, ChevronRight } from 'lucide-react'
+import { Clock, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getHours, getMinutes } from 'date-fns'
 import { Tarefa } from '@/hooks/useTarefas'
@@ -265,12 +265,7 @@ export default function DayViewTimeGrid({
                     )}
                     onClick={() => onEventClick(evento)}
                   >
-                    <div className="flex items-center gap-1 mb-0.5">
-                      {isAudiencia ? (
-                        <Gavel className="w-3 h-3 flex-shrink-0" />
-                      ) : (
-                        <CalendarIcon className="w-3 h-3 flex-shrink-0" />
-                      )}
+                    <div className="mb-0.5">
                       <span className="font-semibold truncate">{evento.titulo}</span>
                     </div>
                     <div className="text-[10px] opacity-90">

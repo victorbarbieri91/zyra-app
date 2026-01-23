@@ -1,6 +1,6 @@
 'use client'
 
-import { LucideIcon, Clock, MapPin, User, FileText, Gavel, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Clock, MapPin, User, FileText } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -35,22 +35,18 @@ export interface EventCardProps {
 
 const tipoConfig = {
   compromisso: {
-    icon: Calendar,
     label: 'Compromisso',
     color: 'bg-blue-100 text-blue-700 border-blue-200',
   },
   audiencia: {
-    icon: Gavel,
     label: 'Audiência',
     color: 'bg-[#1E3A8A]/10 text-[#1E3A8A] border-[#1E3A8A]/20',
   },
   prazo: {
-    icon: AlertCircle,
     label: 'Prazo',
     color: 'bg-amber-100 text-amber-700 border-amber-200',
   },
   tarefa: {
-    icon: CheckCircle2,
     label: 'Tarefa',
     color: 'bg-[#34495e]/90 text-white border-[#34495e]',
   },
@@ -117,7 +113,6 @@ export default function EventCard({
   compact = false,
 }: EventCardProps) {
   const config = tipoConfig[tipo]
-  const Icon = config.icon
 
   // Para prazos, usar configuração de criticidade
   const isPrazo = tipo === 'prazo'
@@ -140,20 +135,7 @@ export default function EventCard({
       )}
     >
       <CardContent className={cn(compact ? 'p-2.5' : 'p-3')}>
-        <div className="flex items-start gap-2.5">
-          {/* Ícone */}
-          <div
-            className={cn(
-              'rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm',
-              compact ? 'w-7 h-7' : 'w-8 h-8',
-              isPrazo && critConfig ? `${critConfig.badge}` : config.color
-            )}
-          >
-            <Icon className={cn(compact ? 'w-3.5 h-3.5' : 'w-4 h-4')} />
-          </div>
-
-          {/* Conteúdo */}
-          <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0">
             {/* Header */}
             <div className="flex items-start justify-between gap-2 mb-1">
               <h4
@@ -261,7 +243,6 @@ export default function EventCard({
                 )}
               </div>
             )}
-          </div>
         </div>
       </CardContent>
     </Card>

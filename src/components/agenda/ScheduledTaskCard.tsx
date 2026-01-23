@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { ListTodo, Clock, AlertCircle, Check, Eye } from 'lucide-react'
+import { Clock, AlertCircle, Check, Eye } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tarefa } from '@/hooks/useTarefas'
 import { formatTimeDisplay, calcularHorarioFim } from '@/lib/timezone'
@@ -38,32 +38,6 @@ const prioridadeConfig = {
   },
 }
 
-const statusConfig = {
-  concluida: {
-    bg: 'bg-emerald-100',
-    text: 'text-emerald-700',
-    border: 'border-emerald-200',
-    label: 'Concluída',
-  },
-  em_andamento: {
-    bg: 'bg-blue-100',
-    text: 'text-blue-700',
-    border: 'border-blue-200',
-    label: 'Em andamento',
-  },
-  pendente: {
-    bg: 'bg-slate-100',
-    text: 'text-slate-700',
-    border: 'border-slate-200',
-    label: 'Pendente',
-  },
-  cancelada: {
-    bg: 'bg-red-100',
-    text: 'text-red-700',
-    border: 'border-red-200',
-    label: 'Cancelada',
-  },
-}
 
 export default function ScheduledTaskCard({
   tarefa,
@@ -94,7 +68,6 @@ export default function ScheduledTaskCard({
     : undefined
 
   const prioridadeInfo = prioridadeConfig[tarefa.prioridade] || prioridadeConfig.media
-  const statusInfo = statusConfig[tarefa.status] || statusConfig.pendente
 
   // Handlers de Resize
   const handleResizeStart = (e: React.MouseEvent) => {
@@ -327,7 +300,7 @@ export default function ScheduledTaskCard({
               </div>
 
               {/* Prioridade */}
-              <div className="flex items-center gap-1 pl-12 pr-5">
+              <div className="flex items-center gap-1 pl-5 pr-5">
                 <AlertCircle className={cn('w-2.5 h-2.5 flex-shrink-0', prioridadeInfo.color)} />
                 <Badge
                   variant="outline"

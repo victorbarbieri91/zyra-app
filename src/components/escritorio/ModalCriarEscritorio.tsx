@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -85,6 +86,9 @@ export function ModalCriarEscritorio({
           <DialogTitle className="text-[#34495e]">
             Novo Escritório
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Criar novo escritório no grupo
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">

@@ -13,9 +13,9 @@ export const metadata: Metadata = {
   title: 'Zyra Legal - Jurídico Inteligente',
   description: 'Sistema jurídico completo com IA para escritórios de advocacia',
   icons: {
-    icon: '/zyra.logo.png',
-    shortcut: '/zyra.logo.png',
-    apple: '/zyra.logo.png',
+    icon: '/zyra.icone.png',
+    shortcut: '/zyra.icone.png',
+    apple: '/zyra.icone.png',
   },
 }
 

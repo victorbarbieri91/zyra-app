@@ -91,11 +91,8 @@ export function useCentroComando() {
 
         setSessoes(data || [])
 
-        // Se tiver sessão ativa, carregar ela
-        const sessaoAtiva = data?.find(s => s.ativo)
-        if (sessaoAtiva) {
-          await carregarHistoricoDaSessao(sessaoAtiva.id)
-        }
+        // Sempre iniciar com nova conversa
+        // O usuário pode acessar conversas anteriores pelo histórico
       } catch (err) {
         console.error('[useCentroComando] Erro ao carregar sessões:', err)
       } finally {

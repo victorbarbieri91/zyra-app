@@ -103,53 +103,74 @@ export default function FinanceiroDashboard() {
     if (escritorioIds.length === 0) return
 
     try {
-      // Para modo consolidado, buscar e somar métricas de todos os escritórios
-      const { data: cacheDataArray } = await supabase
-        .from('financeiro_dashboard_metricas')
-        .select('*')
+      // Calcular métricas diretamente das tabelas fonte
+      const mesAtual = new Date()
+      const inicioMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1).toISOString().split('T')[0]
+      const fimMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0).toISOString().split('T')[0]
+
+      // Mês anterior para calcular variação
+      const mesAnterior = new Date(mesAtual.getFullYear(), mesAtual.getMonth() - 1, 1)
+      const inicioMesAnterior = mesAnterior.toISOString().split('T')[0]
+      const fimMesAnterior = new Date(mesAnterior.getFullYear(), mesAnterior.getMonth() + 1, 0).toISOString().split('T')[0]
+
+      // Buscar receitas do mês atual (pagas)
+      const { data: receitasMes } = await supabase
+        .from('financeiro_receitas')
+        .select('valor_pago')
         .in('escritorio_id', escritorioIds)
-        .eq('categoria', 'financeiro')
-        .eq('metrica', 'dashboard')
+        .eq('status', 'pago')
+        .gte('data_pagamento', inicioMes)
+        .lte('data_pagamento', fimMes)
 
-      if (cacheDataArray && cacheDataArray.length > 0) {
-        // Consolidar métricas de todos os escritórios
-        const metricsConsolidadas = cacheDataArray.reduce((acc, cache) => {
-          const dados = cache.dados_extras as DashboardMetrics | null
-          if (!dados) return acc
-          return {
-            receita_mes: acc.receita_mes + (dados.receita_mes || 0),
-            despesas_mes: acc.despesas_mes + (dados.despesas_mes || 0),
-            pendente_receber: acc.pendente_receber + (dados.pendente_receber || 0),
-            atrasado: acc.atrasado + (dados.atrasado || 0),
-            lucro_mes: acc.lucro_mes + (dados.lucro_mes || 0),
-            // Para variações, usar média ponderada ou do escritório ativo
-            variacao_receita: acc.variacao_receita,
-            variacao_lucro: acc.variacao_lucro,
-            taxa_inadimplencia: 0, // Será recalculada em loadInadimplencia
-          }
-        }, {
-          receita_mes: 0,
-          despesas_mes: 0,
-          pendente_receber: 0,
-          atrasado: 0,
-          lucro_mes: 0,
-          variacao_receita: 0,
-          variacao_lucro: 0,
-          taxa_inadimplencia: 0,
-        } as DashboardMetrics)
+      // Buscar despesas do mês atual (pagas)
+      const { data: despesasMes } = await supabase
+        .from('financeiro_despesas')
+        .select('valor')
+        .in('escritorio_id', escritorioIds)
+        .eq('status', 'pago')
+        .gte('data_pagamento', inicioMes)
+        .lte('data_pagamento', fimMes)
 
-        // Se for visualização do escritório atual, usar suas variações
-        if (modoVisualizacao === 'atual') {
-          const cacheAtual = cacheDataArray.find(c => c.escritorio_id === escritorioAtivo)
-          if (cacheAtual?.dados_extras) {
-            const dadosAtual = cacheAtual.dados_extras as DashboardMetrics
-            metricsConsolidadas.variacao_receita = dadosAtual.variacao_receita || 0
-            metricsConsolidadas.variacao_lucro = dadosAtual.variacao_lucro || 0
-          }
-        }
+      // Buscar receitas do mês anterior para variação
+      const { data: receitasMesAnterior } = await supabase
+        .from('financeiro_receitas')
+        .select('valor_pago')
+        .in('escritorio_id', escritorioIds)
+        .eq('status', 'pago')
+        .gte('data_pagamento', inicioMesAnterior)
+        .lte('data_pagamento', fimMesAnterior)
 
-        setMetrics(metricsConsolidadas)
-      }
+      // Garantir que são arrays
+      const receitasMesArray = Array.isArray(receitasMes) ? receitasMes : []
+      const despesasMesArray = Array.isArray(despesasMes) ? despesasMes : []
+      const receitasMesAnteriorArray = Array.isArray(receitasMesAnterior) ? receitasMesAnterior : []
+
+      // Calcular totais
+      const totalReceitaMes = receitasMesArray.reduce((sum, r) => sum + (Number(r.valor_pago) || 0), 0)
+      const totalDespesasMes = despesasMesArray.reduce((sum, d) => sum + (Number(d.valor) || 0), 0)
+      const totalReceitaMesAnterior = receitasMesAnteriorArray.reduce((sum, r) => sum + (Number(r.valor_pago) || 0), 0)
+
+      // Calcular variação
+      const variacaoReceita = totalReceitaMesAnterior > 0
+        ? ((totalReceitaMes - totalReceitaMesAnterior) / totalReceitaMesAnterior) * 100
+        : 0
+
+      const lucroMes = totalReceitaMes - totalDespesasMes
+      const lucroMesAnterior = totalReceitaMesAnterior - totalDespesasMes // Simplificado
+      const variacaoLucro = lucroMesAnterior !== 0
+        ? ((lucroMes - lucroMesAnterior) / Math.abs(lucroMesAnterior)) * 100
+        : 0
+
+      setMetrics({
+        receita_mes: totalReceitaMes,
+        despesas_mes: totalDespesasMes,
+        pendente_receber: 0, // Será calculado em loadInadimplencia
+        atrasado: 0, // Será calculado em loadInadimplencia
+        lucro_mes: lucroMes,
+        variacao_receita: variacaoReceita,
+        variacao_lucro: variacaoLucro,
+        taxa_inadimplencia: 0, // Será calculado em loadInadimplencia
+      })
     } catch (error) {
       console.error('Erro ao carregar métricas:', error instanceof Error ? error.message : error)
     } finally {
@@ -205,6 +226,7 @@ export default function FinanceiroDashboard() {
     }
   }
 
+  // ATUALIZADO: Agora busca direto de receitas/despesas (fonte única de verdade)
   const loadChartData = async () => {
     if (!escritorioAtivo) return
 
@@ -213,19 +235,33 @@ export default function FinanceiroDashboard() {
 
     setLoadingChart(true)
     try {
-      // Buscar lançamentos dos últimos 6 meses
+      // Buscar dados dos últimos 6 meses
       const dataInicio = new Date()
       dataInicio.setMonth(dataInicio.getMonth() - 6)
       const dataInicioStr = dataInicio.toISOString().split('T')[0]
 
-      const { data, error } = await supabase
-        .from('financeiro_contas_lancamentos')
-        .select('tipo, valor, data_lancamento')
+      // Buscar receitas pagas
+      const { data: receitas, error: errReceitas } = await supabase
+        .from('financeiro_receitas')
+        .select('valor_pago, data_pagamento')
         .in('escritorio_id', escritorioIds)
-        .gte('data_lancamento', dataInicioStr)
-        .order('data_lancamento', { ascending: true })
+        .eq('status', 'pago')
+        .gte('data_pagamento', dataInicioStr)
 
-      if (error) throw error
+      // Buscar despesas pagas
+      const { data: despesas, error: errDespesas } = await supabase
+        .from('financeiro_despesas')
+        .select('valor, data_pagamento')
+        .in('escritorio_id', escritorioIds)
+        .eq('status', 'pago')
+        .gte('data_pagamento', dataInicioStr)
+
+      if (errReceitas) throw errReceitas
+      if (errDespesas) throw errDespesas
+
+      // Garantir que os dados são arrays
+      const receitasArray = Array.isArray(receitas) ? receitas : []
+      const despesasArray = Array.isArray(despesas) ? despesas : []
 
       // Agrupar por mês
       const porMes: Record<string, { receitas: number; despesas: number }> = {}
@@ -238,17 +274,21 @@ export default function FinanceiroDashboard() {
         porMes[chave] = { receitas: 0, despesas: 0 }
       }
 
-      // Somar valores por mês
-      (data || []).forEach((lancamento) => {
-        if (!lancamento.data_lancamento) return
-        const chave = lancamento.data_lancamento.substring(0, 7) // yyyy-MM
+      // Somar receitas por mês
+      receitasArray.forEach((r) => {
+        if (!r.data_pagamento) return
+        const chave = r.data_pagamento.substring(0, 7)
         if (porMes[chave]) {
-          const valor = Number(lancamento.valor) || 0
-          if (lancamento.tipo === 'entrada') {
-            porMes[chave].receitas += valor
-          } else if (lancamento.tipo === 'saida') {
-            porMes[chave].despesas += valor
-          }
+          porMes[chave].receitas += Number(r.valor_pago) || 0
+        }
+      })
+
+      // Somar despesas por mês
+      despesasArray.forEach((d) => {
+        if (!d.data_pagamento) return
+        const chave = d.data_pagamento.substring(0, 7)
+        if (porMes[chave]) {
+          porMes[chave].despesas += Number(d.valor) || 0
         }
       })
 
@@ -284,11 +324,14 @@ export default function FinanceiroDashboard() {
 
       if (error) throw error
 
-      const totalPendente = (receitas || []).reduce(
+      // Garantir que os dados são arrays
+      const receitasArray = Array.isArray(receitas) ? receitas : []
+
+      const totalPendente = receitasArray.reduce(
         (sum, r) => sum + (Number(r.valor) || 0) - (Number(r.valor_pago) || 0),
         0
       )
-      const totalAtrasado = (receitas || [])
+      const totalAtrasado = receitasArray
         .filter((r) => r.status === 'atrasado')
         .reduce((sum, r) => sum + (Number(r.valor) || 0) - (Number(r.valor_pago) || 0), 0)
 

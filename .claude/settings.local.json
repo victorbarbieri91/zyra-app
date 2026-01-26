@@ -55,7 +55,15 @@
       "Bash(xargs:*)",
       "Bash(cut:*)",
       "Bash(iconv:*)",
-      "Bash(sort:*)"
+      "Bash(sort:*)",
+      "WebFetch(domain:api.escavador.com)",
+      "WebFetch(domain:blog.escavador.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:monitoramentos.escavador.com)",
+      "WebFetch(domain:suporte-api.escavador.com)",
+      "WebFetch(domain:pypi.org)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:suporte.escavador.com)"
     ],
     "deny": [],
     "ask": []

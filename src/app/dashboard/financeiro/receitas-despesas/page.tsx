@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Search,
   ChevronLeft,
@@ -39,6 +40,9 @@ import {
   Eye,
   Banknote,
   ArrowLeftRight,
+  Pencil,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
@@ -47,7 +51,7 @@ import { toast } from 'sonner'
 interface ExtratoItem {
   id: string
   escritorio_id: string
-  tipo_movimento: 'receita' | 'despesa'
+  tipo_movimento: 'receita' | 'despesa' | 'transferencia_saida' | 'transferencia_entrada'
   status: 'pendente' | 'efetivado' | 'vencido' | 'cancelado'
   origem: string
   categoria: string
@@ -59,6 +63,7 @@ interface ExtratoItem {
   data_efetivacao: string | null
   entidade: string | null
   conta_bancaria_id: string | null
+  conta_bancaria_nome: string | null
   origem_id: string | null
   processo_id: string | null
   cliente_id: string | null
@@ -86,6 +91,7 @@ const CATEGORIA_LABELS: Record<string, string> = {
   avulso: 'Avulso',
   parcela: 'Parcela',
   saldo: 'Saldo',
+  transferencia: 'Transf.',
 }
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100]
@@ -101,8 +107,9 @@ export default function ExtratoFinanceiroPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
   // Filtros
-  const [tipoFiltro, setTipoFiltro] = useState<'todos' | 'receita' | 'despesa'>('todos')
+  const [tipoFiltro, setTipoFiltro] = useState<'todos' | 'receita' | 'despesa' | 'transferencia'>('todos')
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pendente' | 'vencido' | 'efetivado'>('todos')
+  const [contaFiltro, setContaFiltro] = useState<string>('todas')  // 'todas' ou ID da conta
   const [mostrarHistorico, setMostrarHistorico] = useState(false)
 
   // Paginação
@@ -115,6 +122,16 @@ export default function ExtratoFinanceiroPage() {
   const [modalAlterarVencimento, setModalAlterarVencimento] = useState<ExtratoItem | null>(null)
   const [modalDetalhes, setModalDetalhes] = useState<ExtratoItem | null>(null)
   const [modalTransferencia, setModalTransferencia] = useState(false)
+  const [modalExcluir, setModalExcluir] = useState<ExtratoItem | null>(null)
+  const [modalEditar, setModalEditar] = useState<ExtratoItem | null>(null)
+
+  // Info para exclusão
+  const [exclusaoInfo, setExclusaoInfo] = useState<{
+    temParcelas: number
+    jaPago: boolean
+    temLancamentoBancario: boolean
+    valorEstorno: number
+  } | null>(null)
 
   // Form states
   const [valorParcial, setValorParcial] = useState('')
@@ -122,6 +139,16 @@ export default function ExtratoFinanceiroPage() {
   const [contaSelecionada, setContaSelecionada] = useState('')
   const [contasBancarias, setContasBancarias] = useState<any[]>([])
   const [submitting, setSubmitting] = useState(false)
+
+  // Form edição
+  const [editForm, setEditForm] = useState({
+    descricao: '',
+    valor: '',
+    data_vencimento: '',
+    categoria: '',
+    fornecedor: '',
+    observacoes: '',
+  })
 
   // Transferência
   const [transferenciaForm, setTransferenciaForm] = useState({
@@ -148,7 +175,7 @@ export default function ExtratoFinanceiroPage() {
   // Reset page on filter change
   useEffect(() => {
     setCurrentPage(1)
-  }, [tipoFiltro, statusFiltro, mostrarHistorico])
+  }, [tipoFiltro, statusFiltro, contaFiltro, mostrarHistorico])
 
   // Load data
   const loadExtrato = useCallback(async () => {
@@ -184,14 +211,32 @@ export default function ExtratoFinanceiroPage() {
         data_efetivacao: item.data_efetivacao,
         entidade: item.entidade,
         conta_bancaria_id: item.conta_bancaria_id,
+        conta_bancaria_nome: item.conta_bancaria_nome,  // NOVO
         origem_id: item.origem_id,
         processo_id: item.processo_id,
         cliente_id: item.cliente_id,
       }))
 
-      // Filtros
+      // Filtro por conta bancária
+      if (contaFiltro !== 'todas') {
+        // Quando filtra por conta específica: mostra todos os movimentos daquela conta
+        // (incluindo entrada E saída de transferências conforme a conta)
+        combinedData = combinedData.filter((item) => item.conta_bancaria_id === contaFiltro)
+      } else {
+        // Quando mostra TODAS as contas: transferências aparecem como um único registro
+        // Mostramos apenas transferencia_saida (que representa a transferência completa)
+        combinedData = combinedData.filter((item) => item.tipo_movimento !== 'transferencia_entrada')
+      }
+
+      // Filtro por tipo
       if (tipoFiltro !== 'todos') {
-        combinedData = combinedData.filter((item) => item.tipo_movimento === tipoFiltro)
+        if (tipoFiltro === 'transferencia') {
+          combinedData = combinedData.filter((item) =>
+            item.tipo_movimento === 'transferencia_saida' || item.tipo_movimento === 'transferencia_entrada'
+          )
+        } else {
+          combinedData = combinedData.filter((item) => item.tipo_movimento === tipoFiltro)
+        }
       }
 
       if (statusFiltro !== 'todos') {
@@ -243,7 +288,7 @@ export default function ExtratoFinanceiroPage() {
     } finally {
       setLoading(false)
     }
-  }, [escritorioAtivo, tipoFiltro, statusFiltro, debouncedSearch, mostrarHistorico, currentPage, pageSize, supabase])
+  }, [escritorioAtivo, tipoFiltro, statusFiltro, contaFiltro, debouncedSearch, mostrarHistorico, currentPage, pageSize, supabase])
 
   const loadContasBancarias = useCallback(async () => {
     if (!escritorioAtivo) return
@@ -263,6 +308,8 @@ export default function ExtratoFinanceiroPage() {
   }, [escritorioAtivo, loadExtrato, loadContasBancarias])
 
   // Handlers
+  // SIMPLIFICADO: Apenas atualiza status na tabela de receitas/faturas
+  // O saldo da conta é calculado dinamicamente pela função calcular_saldo_conta()
   const handleReceberTotal = async (item: ExtratoItem, contaId: string) => {
     if (!contaId || !escritorioAtivo) {
       toast.error('Selecione uma conta bancária')
@@ -270,32 +317,6 @@ export default function ExtratoFinanceiroPage() {
     }
 
     try {
-      const { data: conta } = await supabase
-        .from('financeiro_contas_bancarias')
-        .select('saldo_atual')
-        .eq('id', contaId)
-        .single()
-
-      const novoSaldo = (conta?.saldo_atual || 0) + Number(item.valor)
-
-      await supabase.from('financeiro_contas_lancamentos').insert({
-        escritorio_id: escritorioAtivo,
-        conta_bancaria_id: contaId,
-        tipo: 'entrada',
-        valor: item.valor,
-        descricao: item.descricao,
-        categoria: item.categoria,
-        data_lancamento: new Date().toISOString().split('T')[0],
-        origem_tipo: 'receita',
-        origem_id: item.origem_id,
-        saldo_apos_lancamento: novoSaldo,
-      })
-
-      await supabase
-        .from('financeiro_contas_bancarias')
-        .update({ saldo_atual: novoSaldo })
-        .eq('id', contaId)
-
       if (item.origem === 'fatura') {
         await supabase
           .from('financeiro_faturamento_faturas')
@@ -321,6 +342,8 @@ export default function ExtratoFinanceiroPage() {
     }
   }
 
+  // SIMPLIFICADO: Apenas atualiza status na tabela de despesas
+  // O saldo da conta é calculado dinamicamente pela função calcular_saldo_conta()
   const handlePagarDespesa = async (item: ExtratoItem, contaId: string) => {
     if (!contaId || !escritorioAtivo) {
       toast.error('Selecione uma conta bancária')
@@ -328,35 +351,13 @@ export default function ExtratoFinanceiroPage() {
     }
 
     try {
-      const { data: conta } = await supabase
-        .from('financeiro_contas_bancarias')
-        .select('saldo_atual')
-        .eq('id', contaId)
-        .single()
-
-      const novoSaldo = (conta?.saldo_atual || 0) - Number(item.valor)
-
-      await supabase.from('financeiro_contas_lancamentos').insert({
-        escritorio_id: escritorioAtivo,
-        conta_bancaria_id: contaId,
-        tipo: 'saida',
-        valor: item.valor,
-        descricao: item.descricao,
-        categoria: item.categoria,
-        data_lancamento: new Date().toISOString().split('T')[0],
-        origem_tipo: 'despesa',
-        origem_id: item.origem_id,
-        saldo_apos_lancamento: novoSaldo,
-      })
-
-      await supabase
-        .from('financeiro_contas_bancarias')
-        .update({ saldo_atual: novoSaldo })
-        .eq('id', contaId)
-
       await supabase
         .from('financeiro_despesas')
-        .update({ status: 'pago', data_pagamento: new Date().toISOString().split('T')[0] })
+        .update({
+          status: 'pago',
+          data_pagamento: new Date().toISOString().split('T')[0],
+          conta_bancaria_id: contaId,
+        })
         .eq('id', item.origem_id)
 
       toast.success('Despesa paga!')
@@ -367,6 +368,7 @@ export default function ExtratoFinanceiroPage() {
     }
   }
 
+  // SIMPLIFICADO: Apenas atualiza a receita e cria o saldo restante
   const handleRecebimentoParcial = async () => {
     if (!modalRecebimentoParcial || !contaSelecionada || !valorParcial) {
       toast.error('Preencha todos os campos')
@@ -384,33 +386,9 @@ export default function ExtratoFinanceiroPage() {
     try {
       setSubmitting(true)
 
-      const { data: conta } = await supabase
-        .from('financeiro_contas_bancarias')
-        .select('saldo_atual')
-        .eq('id', contaSelecionada)
-        .single()
-
-      const novoSaldo = (conta?.saldo_atual || 0) + valorRecebido
       const valorRestante = item.valor - valorRecebido
 
-      await supabase.from('financeiro_contas_lancamentos').insert({
-        escritorio_id: escritorioAtivo,
-        conta_bancaria_id: contaSelecionada,
-        tipo: 'entrada',
-        valor: valorRecebido,
-        descricao: `Parcial - ${item.descricao}`,
-        categoria: item.categoria,
-        data_lancamento: new Date().toISOString().split('T')[0],
-        origem_tipo: 'receita',
-        origem_id: item.origem_id,
-        saldo_apos_lancamento: novoSaldo,
-      })
-
-      await supabase
-        .from('financeiro_contas_bancarias')
-        .update({ saldo_atual: novoSaldo })
-        .eq('id', contaSelecionada)
-
+      // Atualizar receita original como parcialmente paga
       await supabase
         .from('financeiro_receitas')
         .update({
@@ -421,6 +399,7 @@ export default function ExtratoFinanceiroPage() {
         })
         .eq('id', item.origem_id)
 
+      // Criar nova receita para o saldo restante
       await supabase.from('financeiro_receitas').insert({
         escritorio_id: escritorioAtivo,
         tipo: 'saldo',
@@ -490,6 +469,8 @@ export default function ExtratoFinanceiroPage() {
     }
   }
 
+  // ATUALIZADO: Usa nova tabela financeiro_transferencias
+  // O saldo é calculado dinamicamente - não precisa atualizar manualmente
   const handleTransferencia = async () => {
     if (!transferenciaForm.conta_origem_id || !transferenciaForm.conta_destino_id || !transferenciaForm.valor) {
       toast.error('Preencha todos os campos obrigatórios')
@@ -510,65 +491,17 @@ export default function ExtratoFinanceiroPage() {
     try {
       setSubmitting(true)
 
-      // Buscar saldos atuais
-      const { data: contaOrigem } = await supabase
-        .from('financeiro_contas_bancarias')
-        .select('saldo_atual, banco, numero_conta')
-        .eq('id', transferenciaForm.conta_origem_id)
-        .single()
-
-      const { data: contaDestino } = await supabase
-        .from('financeiro_contas_bancarias')
-        .select('saldo_atual, banco, numero_conta')
-        .eq('id', transferenciaForm.conta_destino_id)
-        .single()
-
-      if (!contaOrigem || !contaDestino) {
-        toast.error('Erro ao buscar contas')
-        return
-      }
-
-      const novoSaldoOrigem = (contaOrigem.saldo_atual || 0) - valorTransf
-      const novoSaldoDestino = (contaDestino.saldo_atual || 0) + valorTransf
-
-      const descricaoTransf = transferenciaForm.descricao || `Transferência entre contas`
-
-      // Lançamento de saída na conta origem
-      await supabase.from('financeiro_contas_lancamentos').insert({
+      // Criar registro na tabela de transferências
+      const { error } = await supabase.from('financeiro_transferencias').insert({
         escritorio_id: escritorioAtivo,
-        conta_bancaria_id: transferenciaForm.conta_origem_id,
-        tipo: 'saida',
+        conta_origem_id: transferenciaForm.conta_origem_id,
+        conta_destino_id: transferenciaForm.conta_destino_id,
         valor: valorTransf,
-        descricao: `${descricaoTransf} → ${contaDestino.banco}`,
-        categoria: 'transferencia',
-        data_lancamento: new Date().toISOString().split('T')[0],
-        origem_tipo: 'transferencia',
-        saldo_apos_lancamento: novoSaldoOrigem,
+        data_transferencia: new Date().toISOString().split('T')[0],
+        descricao: transferenciaForm.descricao || 'Transferência entre contas',
       })
 
-      // Lançamento de entrada na conta destino
-      await supabase.from('financeiro_contas_lancamentos').insert({
-        escritorio_id: escritorioAtivo,
-        conta_bancaria_id: transferenciaForm.conta_destino_id,
-        tipo: 'entrada',
-        valor: valorTransf,
-        descricao: `${descricaoTransf} ← ${contaOrigem.banco}`,
-        categoria: 'transferencia',
-        data_lancamento: new Date().toISOString().split('T')[0],
-        origem_tipo: 'transferencia',
-        saldo_apos_lancamento: novoSaldoDestino,
-      })
-
-      // Atualizar saldos
-      await supabase
-        .from('financeiro_contas_bancarias')
-        .update({ saldo_atual: novoSaldoOrigem })
-        .eq('id', transferenciaForm.conta_origem_id)
-
-      await supabase
-        .from('financeiro_contas_bancarias')
-        .update({ saldo_atual: novoSaldoDestino })
-        .eq('id', transferenciaForm.conta_destino_id)
+      if (error) throw error
 
       toast.success('Transferência realizada!')
       setModalTransferencia(false)
@@ -577,6 +510,261 @@ export default function ExtratoFinanceiroPage() {
     } catch (error) {
       console.error('Erro:', error)
       toast.error('Erro ao transferir')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // SIMPLIFICADO: Apenas verifica parcelas vinculadas
+  // Não precisa mais verificar lançamentos bancários (não existem mais)
+  const handlePrepararExclusao = async (item: ExtratoItem) => {
+    if (!escritorioAtivo) return
+
+    try {
+      setSubmitting(true)
+
+      // Transferências não têm parcelas nem complicações
+      if (item.tipo_movimento === 'transferencia_saida' || item.tipo_movimento === 'transferencia_entrada') {
+        setExclusaoInfo({
+          temParcelas: 0,
+          jaPago: true,  // Transferências são sempre efetivadas
+          temLancamentoBancario: false,
+          valorEstorno: 0,
+        })
+        setModalExcluir(item)
+        return
+      }
+
+      let temParcelas = 0
+      const jaPago = item.status === 'efetivado'
+
+      if (item.tipo_movimento === 'receita' && item.origem !== 'fatura') {
+        // Verificar parcelas filhas
+        const { count } = await supabase
+          .from('financeiro_receitas')
+          .select('*', { count: 'exact', head: true })
+          .eq('receita_pai_id', item.origem_id)
+
+        temParcelas = count || 0
+      }
+
+      setExclusaoInfo({
+        temParcelas,
+        jaPago,
+        temLancamentoBancario: false,  // Não usamos mais
+        valorEstorno: 0,  // Não usamos mais
+      })
+      setModalExcluir(item)
+    } catch (error) {
+      console.error('Erro ao preparar exclusão:', error)
+      toast.error('Erro ao verificar dependências')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // SIMPLIFICADO: Apenas deleta o registro
+  // O saldo é recalculado automaticamente pela função calcular_saldo_conta()
+  const handleExcluir = async () => {
+    if (!modalExcluir || !escritorioAtivo || !exclusaoInfo) return
+
+    const item = modalExcluir
+
+    try {
+      setSubmitting(true)
+
+      // Deletar transferência (origem_id é o id da transferência)
+      if (item.tipo_movimento === 'transferencia_saida' || item.tipo_movimento === 'transferencia_entrada') {
+        const { error } = await supabase
+          .from('financeiro_transferencias')
+          .delete()
+          .eq('id', item.origem_id)
+
+        if (error) throw error
+
+        toast.success('Transferência excluída!')
+        setModalExcluir(null)
+        setExclusaoInfo(null)
+        loadExtrato()
+        return
+      }
+
+      // Deletar o registro principal (receita ou despesa)
+      if (item.tipo_movimento === 'receita') {
+        if (item.origem === 'fatura') {
+          const { error } = await supabase
+            .from('financeiro_faturamento_faturas')
+            .update({ status: 'cancelada', cancelada_em: new Date().toISOString() })
+            .eq('id', item.origem_id)
+
+          if (error) throw error
+        } else {
+          // Deletar receita (CASCADE vai deletar parcelas)
+          const { error } = await supabase
+            .from('financeiro_receitas')
+            .delete()
+            .eq('id', item.origem_id)
+
+          if (error) throw error
+
+          // Verificar se realmente deletou (RLS pode bloquear silenciosamente)
+          const { data: stillExists } = await supabase
+            .from('financeiro_receitas')
+            .select('id')
+            .eq('id', item.origem_id)
+            .single()
+
+          if (stillExists) {
+            toast.error('Sem permissão para excluir. Contate o administrador.')
+            return
+          }
+        }
+      } else {
+        // Deletar despesa
+        const { error } = await supabase
+          .from('financeiro_despesas')
+          .delete()
+          .eq('id', item.origem_id)
+
+        if (error) throw error
+
+        // Verificar se realmente deletou (RLS pode bloquear silenciosamente)
+        const { data: stillExists } = await supabase
+          .from('financeiro_despesas')
+          .select('id')
+          .eq('id', item.origem_id)
+          .single()
+
+        if (stillExists) {
+          toast.error('Sem permissão para excluir. Contate o administrador.')
+          return
+        }
+      }
+
+      toast.success('Lançamento excluído!')
+      setModalExcluir(null)
+      setExclusaoInfo(null)
+      loadExtrato()
+    } catch (error) {
+      console.error('Erro ao excluir:', error)
+      toast.error('Erro ao excluir lançamento')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Preparar edição
+  const handlePrepararEdicao = async (item: ExtratoItem) => {
+    if (!escritorioAtivo) return
+
+    try {
+      setSubmitting(true)
+
+      // Buscar dados completos do registro
+      if (item.tipo_movimento === 'receita' && item.origem !== 'fatura') {
+        const { data } = await supabase
+          .from('financeiro_receitas')
+          .select('*')
+          .eq('id', item.origem_id)
+          .single()
+
+        if (data) {
+          setEditForm({
+            descricao: data.descricao || '',
+            valor: String(data.valor || ''),
+            data_vencimento: data.data_vencimento || '',
+            categoria: data.categoria || '',
+            fornecedor: '',
+            observacoes: data.observacoes || '',
+          })
+        }
+      } else if (item.tipo_movimento === 'despesa') {
+        const { data } = await supabase
+          .from('financeiro_despesas')
+          .select('*')
+          .eq('id', item.origem_id)
+          .single()
+
+        if (data) {
+          setEditForm({
+            descricao: data.descricao || '',
+            valor: String(data.valor || ''),
+            data_vencimento: data.data_vencimento || '',
+            categoria: data.categoria || '',
+            fornecedor: data.fornecedor || '',
+            observacoes: '',
+          })
+        }
+      }
+
+      setModalEditar(item)
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error)
+      toast.error('Erro ao carregar dados para edição')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Salvar edição
+  const handleSalvarEdicao = async () => {
+    if (!modalEditar || !escritorioAtivo) return
+
+    const item = modalEditar
+
+    try {
+      setSubmitting(true)
+
+      // Validar campos obrigatórios
+      if (!editForm.descricao || !editForm.valor || !editForm.data_vencimento) {
+        toast.error('Preencha os campos obrigatórios')
+        return
+      }
+
+      const valor = parseFloat(editForm.valor)
+      if (isNaN(valor) || valor <= 0) {
+        toast.error('Valor inválido')
+        return
+      }
+
+      // Verificar se já foi pago - não permitir alterar valor
+      if (item.status === 'efetivado' && valor !== item.valor) {
+        toast.error('Não é possível alterar o valor de um lançamento já efetivado')
+        return
+      }
+
+      if (item.tipo_movimento === 'receita' && item.origem !== 'fatura') {
+        await supabase
+          .from('financeiro_receitas')
+          .update({
+            descricao: editForm.descricao,
+            valor: item.status === 'efetivado' ? item.valor : valor,
+            data_vencimento: editForm.data_vencimento,
+            categoria: editForm.categoria,
+            observacoes: editForm.observacoes,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', item.origem_id)
+      } else if (item.tipo_movimento === 'despesa') {
+        await supabase
+          .from('financeiro_despesas')
+          .update({
+            descricao: editForm.descricao,
+            valor: item.status === 'efetivado' ? item.valor : valor,
+            data_vencimento: editForm.data_vencimento,
+            categoria: editForm.categoria,
+            fornecedor: editForm.fornecedor,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', item.origem_id)
+      }
+
+      toast.success('Lançamento atualizado!')
+      setModalEditar(null)
+      loadExtrato()
+    } catch (error) {
+      console.error('Erro ao salvar:', error)
+      toast.error('Erro ao salvar alterações')
     } finally {
       setSubmitting(false)
     }
@@ -689,6 +877,7 @@ export default function ExtratoFinanceiroPage() {
               <option value="todos">Todos</option>
               <option value="receita">Receitas</option>
               <option value="despesa">Despesas</option>
+              <option value="transferencia">Transferências</option>
             </select>
 
             <select
@@ -700,6 +889,19 @@ export default function ExtratoFinanceiroPage() {
               <option value="pendente">Pendentes</option>
               <option value="vencido">Vencidos</option>
               <option value="efetivado">Efetivados</option>
+            </select>
+
+            <select
+              value={contaFiltro}
+              onChange={(e) => setContaFiltro(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#89bcbe]"
+            >
+              <option value="todas">Todas as contas</option>
+              {contasBancarias.map((cb) => (
+                <option key={cb.id} value={cb.id}>
+                  {cb.banco} - {cb.numero_conta}
+                </option>
+              ))}
             </select>
 
             <label className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer">
@@ -723,16 +925,17 @@ export default function ExtratoFinanceiroPage() {
               <tr>
                 <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Venc.</th>
                 <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide">Descrição</th>
-                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-44">Entidade</th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-36">Entidade</th>
                 <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Categ.</th>
-                <th className="text-right p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-32">Valor</th>
-                <th className="text-center p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-20">Ações</th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-32">Conta</th>
+                <th className="text-right p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-28">Valor</th>
+                <th className="text-center p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-16">Ações</th>
               </tr>
             </thead>
             <tbody className={loading ? 'opacity-50' : ''}>
               {loading && extrato.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center">
+                  <td colSpan={7} className="p-8 text-center">
                     <div className="flex items-center justify-center gap-3">
                       <Loader2 className="w-5 h-5 text-[#34495e] animate-spin" />
                       <span className="text-sm text-slate-600">Carregando...</span>
@@ -743,7 +946,7 @@ export default function ExtratoFinanceiroPage() {
 
               {!loading && extrato.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center">
+                  <td colSpan={7} className="p-8 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <FileText className="w-10 h-10 text-slate-300" />
                       <p className="text-sm text-slate-600">Nenhum lançamento encontrado</p>
@@ -786,7 +989,11 @@ export default function ExtratoFinanceiroPage() {
                       <div className="min-w-0">
                         <p className="text-sm text-slate-700 truncate">{item.descricao}</p>
                         <p className="text-[10px] text-slate-400">
-                          {item.origem === 'fatura' ? 'Fatura' : item.tipo_movimento === 'receita' ? 'Receita' : 'Despesa'}
+                          {item.origem === 'fatura' ? 'Fatura' :
+                           item.tipo_movimento === 'receita' ? 'Receita' :
+                           item.tipo_movimento === 'despesa' ? 'Despesa' :
+                           item.tipo_movimento === 'transferencia_saida' ? (contaFiltro === 'todas' ? 'Transferência' : 'Transf. Saída') :
+                           item.tipo_movimento === 'transferencia_entrada' ? 'Transf. Entrada' : 'Outro'}
                         </p>
                       </div>
                     </td>
@@ -803,16 +1010,62 @@ export default function ExtratoFinanceiroPage() {
                       </Badge>
                     </td>
 
+                    {/* Conta Bancária */}
+                    <td className="p-3">
+                      {item.conta_bancaria_nome ? (
+                        <span className="text-xs text-slate-600 truncate block" title={item.conta_bancaria_nome}>
+                          {item.conta_bancaria_nome}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">-</span>
+                      )}
+                    </td>
+
                     {/* Valor */}
                     <td className="p-3 text-right">
-                      <span className={`text-sm font-medium ${item.tipo_movimento === 'receita' ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {item.tipo_movimento === 'receita' ? '+' : '-'} {formatCurrency(item.valor)}
+                      <span className={`text-sm font-medium ${
+                        item.tipo_movimento === 'receita' ? 'text-emerald-600' :
+                        item.tipo_movimento === 'despesa' ? 'text-red-600' :
+                        // Transferências: azul quando extrato geral, verde/vermelho quando filtrado por conta
+                        item.tipo_movimento === 'transferencia_saida' ? (contaFiltro === 'todas' ? 'text-blue-600' : 'text-red-600') :
+                        item.tipo_movimento === 'transferencia_entrada' ? 'text-emerald-600' :
+                        'text-slate-600'
+                      }`}>
+                        {/* Transferência no extrato geral não tem sinal (é neutra) */}
+                        {item.tipo_movimento === 'receita' ? '+' :
+                         item.tipo_movimento === 'despesa' ? '-' :
+                         item.tipo_movimento === 'transferencia_saida' && contaFiltro !== 'todas' ? '-' :
+                         item.tipo_movimento === 'transferencia_entrada' ? '+' :
+                         ''} {formatCurrency(item.valor)}
                       </span>
                     </td>
 
                     {/* Ações */}
                     <td className="p-3 text-center">
-                      {isPendente ? (
+                      {/* Transferências têm menu simplificado */}
+                      {(item.tipo_movimento === 'transferencia_saida' || item.tipo_movimento === 'transferencia_entrada') ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                              <MoreVertical className="w-4 h-4 text-slate-400" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Ver Detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handlePrepararExclusao(item)}
+                              className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Excluir Transferência
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : isPendente ? (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
@@ -876,17 +1129,61 @@ export default function ExtratoFinanceiroPage() {
                               <Eye className="w-4 h-4 mr-2" />
                               Ver Detalhes
                             </DropdownMenuItem>
+
+                            {/* Editar - apenas receitas e despesas (não faturas) */}
+                            {item.origem !== 'fatura' && (
+                              <DropdownMenuItem onClick={() => handlePrepararEdicao(item)}>
+                                <Pencil className="w-4 h-4 mr-2" />
+                                Editar
+                              </DropdownMenuItem>
+                            )}
+
+                            <DropdownMenuSeparator />
+
+                            {/* Excluir */}
+                            <DropdownMenuItem
+                              onClick={() => handlePrepararExclusao(item)}
+                              className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0"
-                          onClick={() => setModalDetalhes(item)}
-                        >
-                          <Eye className="w-4 h-4 text-slate-400" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                              <MoreVertical className="w-4 h-4 text-slate-400" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            {/* Ver Detalhes */}
+                            <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Ver Detalhes
+                            </DropdownMenuItem>
+
+                            {/* Editar - apenas receitas e despesas (não faturas) */}
+                            {item.origem !== 'fatura' && (
+                              <DropdownMenuItem onClick={() => handlePrepararEdicao(item)}>
+                                <Pencil className="w-4 h-4 mr-2" />
+                                Editar
+                              </DropdownMenuItem>
+                            )}
+
+                            <DropdownMenuSeparator />
+
+                            {/* Excluir */}
+                            <DropdownMenuItem
+                              onClick={() => handlePrepararExclusao(item)}
+                              className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                     </td>
                   </tr>
@@ -1097,7 +1394,10 @@ export default function ExtratoFinanceiroPage() {
                 <div>
                   <p className="text-[10px] text-slate-400 uppercase">Tipo</p>
                   <p className="text-sm text-slate-700">
-                    {modalDetalhes.tipo_movimento === 'receita' ? 'Receita' : 'Despesa'}
+                    {modalDetalhes.tipo_movimento === 'receita' ? 'Receita' :
+                     modalDetalhes.tipo_movimento === 'despesa' ? 'Despesa' :
+                     modalDetalhes.tipo_movimento === 'transferencia_saida' ? 'Transferência (Saída)' :
+                     modalDetalhes.tipo_movimento === 'transferencia_entrada' ? 'Transferência (Entrada)' : 'Outro'}
                   </p>
                 </div>
                 <div>
@@ -1116,7 +1416,13 @@ export default function ExtratoFinanceiroPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-[10px] text-slate-400 uppercase">Valor</p>
-                  <p className={`text-lg font-bold ${modalDetalhes.tipo_movimento === 'receita' ? 'text-emerald-600' : 'text-red-600'}`}>
+                  <p className={`text-lg font-bold ${
+                    modalDetalhes.tipo_movimento === 'receita' || modalDetalhes.tipo_movimento === 'transferencia_entrada'
+                      ? 'text-emerald-600'
+                      : modalDetalhes.tipo_movimento === 'transferencia_saida'
+                      ? 'text-blue-600'
+                      : 'text-red-600'
+                  }`}>
                     {formatCurrency(modalDetalhes.valor)}
                   </p>
                 </div>
@@ -1230,6 +1536,256 @@ export default function ExtratoFinanceiroPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Confirmação Exclusão */}
+      <Dialog open={!!modalExcluir} onOpenChange={() => { setModalExcluir(null); setExclusaoInfo(null) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#34495e] flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Confirmar Exclusão
+            </DialogTitle>
+          </DialogHeader>
+          {modalExcluir && exclusaoInfo && (
+            <div className="space-y-4">
+              {/* Info do item */}
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-sm font-medium text-slate-700">{modalExcluir.descricao}</p>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className={`text-sm font-bold ${
+                    modalExcluir.tipo_movimento === 'receita' || modalExcluir.tipo_movimento === 'transferencia_entrada'
+                      ? 'text-emerald-600'
+                      : modalExcluir.tipo_movimento === 'transferencia_saida'
+                      ? 'text-blue-600'
+                      : 'text-red-600'
+                  }`}>
+                    {formatCurrency(modalExcluir.valor)}
+                  </span>
+                  <Badge variant="outline" className="text-[10px]">
+                    {modalExcluir.tipo_movimento === 'receita' ? 'Receita' :
+                     modalExcluir.tipo_movimento === 'despesa' ? 'Despesa' :
+                     modalExcluir.tipo_movimento === 'transferencia_saida' ? 'Transf. Saída' :
+                     modalExcluir.tipo_movimento === 'transferencia_entrada' ? 'Transf. Entrada' : 'Outro'}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Avisos */}
+              <div className="space-y-2">
+                {/* Aviso especial para transferências */}
+                {(modalExcluir.tipo_movimento === 'transferencia_saida' || modalExcluir.tipo_movimento === 'transferencia_entrada') && (
+                  <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <ArrowLeftRight className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-800">Transferência entre contas</p>
+                      <p className="text-xs text-blue-700 mt-0.5">
+                        Ao excluir esta transferência, tanto a saída quanto a entrada serão removidas.
+                        O saldo de ambas as contas será recalculado automaticamente.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {exclusaoInfo.jaPago && !(modalExcluir.tipo_movimento === 'transferencia_saida' || modalExcluir.tipo_movimento === 'transferencia_entrada') && (
+                  <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-amber-800">Lançamento já efetivado</p>
+                      <p className="text-xs text-amber-700 mt-0.5">
+                        Este {modalExcluir.tipo_movimento === 'receita' ? 'recebimento' : 'pagamento'} já foi registrado no sistema.
+                        O saldo da conta será recalculado automaticamente.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {exclusaoInfo.temParcelas > 0 && (
+                  <div className="flex items-start gap-2 p-3 bg-red-50 rounded-lg border border-red-200">
+                    <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-red-800">Parcelas vinculadas</p>
+                      <p className="text-xs text-red-700 mt-0.5">
+                        Esta receita possui {exclusaoInfo.temParcelas} parcela(s) que também serão excluídas.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {modalExcluir.processo_id && (
+                  <div className="flex items-start gap-2 p-3 bg-slate-100 rounded-lg">
+                    <FileText className="w-4 h-4 text-slate-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-slate-700">
+                        O vínculo com o processo será removido.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Confirmação */}
+              <p className="text-sm text-slate-600">
+                Tem certeza que deseja excluir este lançamento? Esta ação não pode ser desfeita.
+              </p>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setModalExcluir(null); setExclusaoInfo(null) }}
+                  disabled={submitting}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={handleExcluir}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      Excluindo...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Excluir
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Edição */}
+      <Dialog open={!!modalEditar} onOpenChange={() => setModalEditar(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#34495e]">
+              Editar {modalEditar?.tipo_movimento === 'receita' ? 'Receita' : 'Despesa'}
+            </DialogTitle>
+          </DialogHeader>
+          {modalEditar && (
+            <div className="space-y-4">
+              {/* Aviso se já foi pago */}
+              {modalEditar.status === 'efetivado' && (
+                <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-amber-700">
+                    Este lançamento já foi efetivado. O valor não pode ser alterado.
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <Label className="text-xs">Descrição *</Label>
+                <Input
+                  value={editForm.descricao}
+                  onChange={(e) => setEditForm({ ...editForm, descricao: e.target.value })}
+                  placeholder="Descrição do lançamento"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Valor *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={editForm.valor}
+                    onChange={(e) => setEditForm({ ...editForm, valor: e.target.value })}
+                    placeholder="0,00"
+                    disabled={modalEditar.status === 'efetivado'}
+                    className={modalEditar.status === 'efetivado' ? 'bg-slate-100' : ''}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Vencimento *</Label>
+                  <Input
+                    type="date"
+                    value={editForm.data_vencimento}
+                    onChange={(e) => setEditForm({ ...editForm, data_vencimento: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">Categoria</Label>
+                <select
+                  value={editForm.categoria}
+                  onChange={(e) => setEditForm({ ...editForm, categoria: e.target.value })}
+                  className="w-full h-9 rounded-md border border-slate-200 px-3 text-sm"
+                >
+                  {modalEditar.tipo_movimento === 'receita' ? (
+                    <>
+                      <option value="honorario">Honorário</option>
+                      <option value="honorario_avulso">Avulso</option>
+                      <option value="exito">Êxito</option>
+                      <option value="outras">Outras</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="custas">Custas</option>
+                      <option value="fornecedor">Fornecedor</option>
+                      <option value="folha">Folha</option>
+                      <option value="impostos">Impostos</option>
+                      <option value="aluguel">Aluguel</option>
+                      <option value="marketing">Marketing</option>
+                      <option value="tecnologia">Tecnologia</option>
+                      <option value="assinatura">Assinatura</option>
+                      <option value="outras">Outras</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              {modalEditar.tipo_movimento === 'despesa' && (
+                <div>
+                  <Label className="text-xs">Fornecedor</Label>
+                  <Input
+                    value={editForm.fornecedor}
+                    onChange={(e) => setEditForm({ ...editForm, fornecedor: e.target.value })}
+                    placeholder="Nome do fornecedor"
+                  />
+                </div>
+              )}
+
+              {modalEditar.tipo_movimento === 'receita' && (
+                <div>
+                  <Label className="text-xs">Observações</Label>
+                  <Textarea
+                    value={editForm.observacoes}
+                    onChange={(e) => setEditForm({ ...editForm, observacoes: e.target.value })}
+                    placeholder="Observações adicionais"
+                    rows={2}
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" size="sm" onClick={() => setModalEditar(null)} disabled={submitting}>
+                  Cancelar
+                </Button>
+                <Button size="sm" onClick={handleSalvarEdicao} disabled={submitting}>
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    'Salvar'
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

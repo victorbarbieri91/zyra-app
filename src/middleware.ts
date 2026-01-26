@@ -54,7 +54,39 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // Tentar obter usuario, tratando erros de sessao corrompida
+  let user = null
+  try {
+    const { data, error } = await supabase.auth.getUser()
+
+    if (error) {
+      // Se houver erro de sessao, limpar cookies e redirecionar para login
+      console.error('Erro de autenticacao no middleware:', error.message)
+
+      // Limpar cookies de autenticacao do Supabase
+      const cookiesToClear = [
+        'sb-lohakxdxgwgpkbmfmzzl-auth-token',
+        'sb-lohakxdxgwgpkbmfmzzl-auth-token.0',
+        'sb-lohakxdxgwgpkbmfmzzl-auth-token.1',
+      ]
+
+      for (const cookieName of cookiesToClear) {
+        response.cookies.set({
+          name: cookieName,
+          value: '',
+          maxAge: 0,
+          path: '/',
+        })
+      }
+
+      user = null
+    } else {
+      user = data.user
+    }
+  } catch (err) {
+    console.error('Erro inesperado no middleware:', err)
+    user = null
+  }
 
   // Protect routes (allow public access to login, cadastro, and convite pages)
   const isPublicRoute =

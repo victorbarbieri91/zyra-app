@@ -559,18 +559,49 @@ O módulo Financeiro é o maior e mais complexo do sistema, gerenciando:
 | `tipo_conta` | text | NO | - | Tipo: `corrente`, `poupanca`, `digital` |
 | `titular` | text | NO | - | Nome do titular |
 | `saldo_inicial` | numeric | NO | 0 | Saldo inicial |
-| `saldo_atual` | numeric | NO | 0 | Saldo atual calculado |
+| `saldo_atual` | numeric | NO | 0 | **DEPRECATED** - Use `calcular_saldo_conta(id)` |
 | `conta_principal` | boolean | YES | false | Se é a conta principal |
 | `data_abertura` | date | YES | - | Data de abertura |
 | `ativa` | boolean | YES | true | Se está ativa |
 | `created_at` | timestamptz | YES | now() | Data de criação |
 | `updated_at` | timestamptz | YES | now() | Data de atualização |
 
+**Função para cálculo de saldo**:
+```sql
+-- Calcula saldo dinamicamente: saldo_inicial + receitas_pagas - despesas_pagas + transf_entrada - transf_saida
+SELECT calcular_saldo_conta(conta_id);
+```
+
 ---
 
-### financeiro_contas_lancamentos
+### financeiro_transferencias
 
-**Descrição**: Lançamentos (entradas/saídas) nas contas bancárias.
+**Descrição**: Transferências internas entre contas bancárias do escritório. Cada registro representa uma transferência única. Na view `v_extrato_financeiro`, cada transferência aparece como dois registros: uma saída na conta de origem e uma entrada na conta de destino.
+
+**Colunas**:
+
+| Coluna | Tipo | Nullable | Default | Descrição |
+|--------|------|----------|---------|-----------|
+| `id` | uuid | NO | gen_random_uuid() | Identificador único |
+| `escritorio_id` | uuid | NO | - | FK para escritorios |
+| `conta_origem_id` | uuid | NO | - | FK para conta de origem |
+| `conta_destino_id` | uuid | NO | - | FK para conta de destino |
+| `valor` | numeric(15,2) | NO | - | Valor da transferência (deve ser > 0) |
+| `data_transferencia` | date | NO | CURRENT_DATE | Data da transferência |
+| `descricao` | text | YES | - | Descrição opcional |
+| `created_at` | timestamptz | YES | now() | Data de criação |
+| `created_by` | uuid | YES | - | FK para profiles |
+
+**Constraints**:
+- `transferencia_contas_diferentes`: conta_origem_id != conta_destino_id
+
+---
+
+### financeiro_extrato_bancario
+
+**Descrição**: Tabela para **consolidação bancária** APENAS. Usada para importar extratos bancários (OFX/CSV) e comparar com os lançamentos do sistema. **NÃO** é usada para controle diário - o controle diário é feito via `financeiro_receitas`, `financeiro_despesas` e `financeiro_transferencias`.
+
+**⚠️ IMPORTANTE**: Esta tabela foi renomeada de `financeiro_contas_lancamentos`. O nome antigo era confuso pois sugeria que era usada para lançamentos diários, quando na verdade é apenas para consolidação com extrato bancário.
 
 **Colunas**:
 
@@ -664,6 +695,55 @@ O módulo Financeiro é o maior e mais complexo do sistema, gerenciando:
 | `comprovante_url` | text | YES | - | URL do comprovante |
 | `observacoes` | text | YES | - | Observações |
 | `created_at` | timestamptz | YES | now() | Data de criação |
+
+---
+
+### v_extrato_financeiro (VIEW)
+
+**Descrição**: View unificada do extrato financeiro do escritório. Consolida receitas, faturas, despesas e transferências em uma única consulta, permitindo visualização do fluxo de caixa completo.
+
+**Tipos de movimento**:
+- `receita` - Receitas avulsas (sem cliente vinculado)
+- `despesa` - Despesas operacionais
+- `transferencia_saida` - Saída de transferência entre contas
+- `transferencia_entrada` - Entrada de transferência entre contas
+- Faturas aparecem como `receita` com `origem = 'fatura'`
+
+**Colunas retornadas**:
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `id` | uuid | ID do registro original |
+| `escritorio_id` | uuid | FK para escritorios |
+| `tipo_movimento` | text | `receita`, `despesa`, `transferencia_saida`, `transferencia_entrada` |
+| `status` | text | `efetivado`, `pendente`, `vencido`, `parcial`, `cancelado` |
+| `origem` | text | `honorario`, `fatura`, `despesa`, `cartao_credito`, `transferencia` |
+| `categoria` | text | Categoria do lançamento |
+| `descricao` | text | Descrição do lançamento |
+| `valor` | numeric | Valor do lançamento |
+| `valor_pago` | numeric | Valor já pago (para pagamentos parciais) |
+| `data_referencia` | date | Data de referência para ordenação |
+| `data_vencimento` | date | Data de vencimento |
+| `data_efetivacao` | date | Data em que foi efetivado |
+| `entidade` | text | Cliente, fornecedor ou conta (para transferências) |
+| `conta_bancaria_id` | uuid | FK para conta bancária vinculada |
+| `conta_bancaria_nome` | text | Nome da conta (Banco - Número) |
+| `origem_id` | uuid | ID na tabela de origem |
+| `processo_id` | uuid | FK para processo (se aplicável) |
+| `cliente_id` | uuid | FK para cliente (se aplicável) |
+
+**Exemplo de uso**:
+```sql
+-- Listar extrato completo do mês atual
+SELECT * FROM v_extrato_financeiro
+WHERE escritorio_id = 'xxx'
+  AND data_referencia >= date_trunc('month', CURRENT_DATE)
+ORDER BY data_referencia DESC;
+
+-- Filtrar apenas transferências
+SELECT * FROM v_extrato_financeiro
+WHERE tipo_movimento IN ('transferencia_saida', 'transferencia_entrada');
+```
 
 ---
 

@@ -51,8 +51,8 @@ import {
   PieChart,
   Activity,
   Loader2,
-  RotateCcw,
-  Trash2,
+  Power,
+  PowerOff,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { differenceInDays, parseISO } from 'date-fns'
@@ -122,7 +122,7 @@ const getStatusBadge = (ativo: boolean, inadimplente?: boolean) => {
     }
   }
   return {
-    label: 'Encerrado',
+    label: 'Inativo',
     class: 'bg-gray-100 text-gray-700',
     icon: <XCircle className="w-3 h-3" />,
   }
@@ -149,7 +149,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [selectedContrato, setSelectedContrato] = useState<ContratoHonorario | null>(null)
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards')
-  const [activeTab, setActiveTab] = useState<'ativos' | 'vencer' | 'configurado' | 'nao_configurado' | 'todos'>('ativos')
+  const [activeTab, setActiveTab] = useState<'ativos' | 'inativos' | 'vencer' | 'configurado' | 'nao_configurado' | 'todos'>('ativos')
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false)
@@ -209,6 +209,9 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
     switch (activeTab) {
       case 'ativos':
         filtered = filtered.filter((c) => c.ativo)
+        break
+      case 'inativos':
+        filtered = filtered.filter((c) => !c.ativo)
         break
       case 'vencer':
         filtered = filtered.filter((c) => {
@@ -276,6 +279,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
 
   // Contadores para tabs
   const contratosAtivos = contratos.filter((c) => c.ativo).length
+  const contratosInativos = contratos.filter((c) => !c.ativo).length
   const contratosVencer = contratos.filter((c) => {
     if (!c.proxima_parcela?.vencimento) return false
     const dias = differenceInDays(parseISO(c.proxima_parcela.vencimento), new Date())
@@ -315,6 +319,10 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                 <TabsTrigger value="ativos" className="text-xs">
                   <CheckCircle className="w-3 h-3 mr-1" />
                   Ativos ({contratosAtivos})
+                </TabsTrigger>
+                <TabsTrigger value="inativos" className="text-xs">
+                  <XCircle className="w-3 h-3 mr-1" />
+                  Inativos ({contratosInativos})
                 </TabsTrigger>
                 <TabsTrigger value="vencer" className="text-xs">
                   <Clock className="w-3 h-3 mr-1" />
@@ -397,7 +405,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
               <SelectContent>
                 <SelectItem value="all">Todos Status</SelectItem>
                 <SelectItem value="ativo">Ativo</SelectItem>
-                <SelectItem value="encerrado">Encerrado</SelectItem>
+                <SelectItem value="encerrado">Inativo</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -527,25 +535,27 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 px-2 text-red-600 hover:text-red-700"
+                              className="h-7 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleDeleteClick(contrato)
                               }}
+                              title="Desativar contrato"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <PowerOff className="w-3.5 h-3.5" />
                             </Button>
                           ) : (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 px-2 text-green-600 hover:text-green-700"
+                              className="h-7 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleReativar(contrato)
                               }}
+                              title="Ativar contrato"
                             >
-                              <RotateCcw className="w-3.5 h-3.5" />
+                              <Power className="w-3.5 h-3.5" />
                             </Button>
                           )}
                         </div>
@@ -677,25 +687,27 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 w-7 p-0 text-red-600"
+                                className="h-7 w-7 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleDeleteClick(contrato)
                                 }}
+                                title="Desativar contrato"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <PowerOff className="w-3.5 h-3.5" />
                               </Button>
                             ) : (
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 w-7 p-0 text-green-600"
+                                className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleReativar(contrato)
                                 }}
+                                title="Ativar contrato"
                               >
-                                <RotateCcw className="w-3.5 h-3.5" />
+                                <Power className="w-3.5 h-3.5" />
                               </Button>
                             )}
                           </div>
@@ -744,13 +756,13 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
         defaultClienteId={preSelectedClienteId}
       />
 
-      {/* Dialog de Confirmação de Exclusão */}
+      {/* Dialog de Confirmação de Desativação */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Encerrar Contrato</AlertDialogTitle>
+            <AlertDialogTitle>Desativar Contrato</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja encerrar o contrato{' '}
+              Tem certeza que deseja desativar o contrato{' '}
               <strong>{contratoToDelete?.numero_contrato}</strong>?
               <br />
               O contrato será marcado como inativo, mas poderá ser reativado posteriormente.
@@ -760,9 +772,9 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-amber-600 hover:bg-amber-700"
             >
-              Encerrar
+              Desativar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -34,7 +34,7 @@ interface ContaBancaria {
   banco: string
   agencia: string
   numero_conta: string
-  tipo_conta: 'corrente' | 'poupanca' | 'investimento'
+  tipo_conta: 'corrente' | 'poupanca' | 'investimento' | 'caixa'
   titular: string
   saldo_atual: number
   saldo_inicial?: number
@@ -49,7 +49,7 @@ interface ContaForm {
   banco: string
   agencia: string
   numero_conta: string
-  tipo_conta: 'corrente' | 'poupanca' | 'investimento'
+  tipo_conta: 'corrente' | 'poupanca' | 'investimento' | 'caixa'
   titular: string
   saldo_atual: string
 }
@@ -58,6 +58,33 @@ const TIPO_CONTA_LABELS: Record<string, string> = {
   corrente: 'Conta Corrente',
   poupanca: 'Poupança',
   investimento: 'Investimento',
+  caixa: 'Caixa',
+}
+
+// Funções para máscara de moeda brasileira
+const formatCurrencyInput = (value: string): string => {
+  // Remove tudo que não é dígito
+  const digits = value.replace(/\D/g, '')
+
+  // Converte para número com 2 casas decimais
+  const numValue = parseInt(digits || '0', 10) / 100
+
+  // Formata como moeda brasileira
+  return numValue.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  })
+}
+
+const parseCurrencyToNumber = (value: string): number => {
+  // Remove R$, pontos e espaços, troca vírgula por ponto
+  const cleaned = value
+    .replace(/R\$\s?/g, '')
+    .replace(/\./g, '')
+    .replace(',', '.')
+    .trim()
+
+  return parseFloat(cleaned) || 0
 }
 
 export default function ContasBancariasPage() {
@@ -78,7 +105,7 @@ export default function ContasBancariasPage() {
     numero_conta: '',
     tipo_conta: 'corrente',
     titular: '',
-    saldo_atual: '0',
+    saldo_atual: 'R$ 0,00',
   })
 
   useEffect(() => {
@@ -117,13 +144,17 @@ export default function ContasBancariasPage() {
       numero_conta: '',
       tipo_conta: 'corrente',
       titular: '',
-      saldo_atual: '0',
+      saldo_atual: 'R$ 0,00',
     })
     setShowContaDialog(true)
   }
 
   const handleOpenEdit = (conta: ContaBancaria) => {
     setEditMode(true)
+    const saldoFormatado = (conta.saldo_atual || 0).toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    })
     setContaForm({
       id: conta.id,
       escritorio_id: conta.escritorio_id,
@@ -132,7 +163,7 @@ export default function ContasBancariasPage() {
       numero_conta: conta.numero_conta || '',
       tipo_conta: conta.tipo_conta,
       titular: conta.titular || '',
-      saldo_atual: String(conta.saldo_atual || 0),
+      saldo_atual: saldoFormatado,
     })
     setShowContaDialog(true)
   }
@@ -149,17 +180,19 @@ export default function ContasBancariasPage() {
 
     setSubmitting(true)
     try {
+      const saldoNumerico = parseCurrencyToNumber(contaForm.saldo_atual)
+
       if (editMode && contaForm.id) {
         // Atualizar conta existente
         const { error } = await supabase
           .from('financeiro_contas_bancarias')
           .update({
             banco: contaForm.banco,
-            agencia: contaForm.agencia,
-            numero_conta: contaForm.numero_conta,
+            agencia: contaForm.agencia || null,
+            numero_conta: contaForm.numero_conta || null,
             tipo_conta: contaForm.tipo_conta,
-            titular: contaForm.titular,
-            saldo_atual: parseFloat(contaForm.saldo_atual),
+            titular: contaForm.titular || null,
+            saldo_atual: saldoNumerico,
           })
           .eq('id', contaForm.id)
 
@@ -171,12 +204,12 @@ export default function ContasBancariasPage() {
           .insert({
             escritorio_id: escritorioId,
             banco: contaForm.banco,
-            agencia: contaForm.agencia,
-            numero_conta: contaForm.numero_conta,
+            agencia: contaForm.agencia || null,
+            numero_conta: contaForm.numero_conta || null,
             tipo_conta: contaForm.tipo_conta,
-            titular: contaForm.titular,
-            saldo_inicial: parseFloat(contaForm.saldo_atual),
-            saldo_atual: parseFloat(contaForm.saldo_atual),
+            titular: contaForm.titular || null,
+            saldo_inicial: saldoNumerico,
+            saldo_atual: saldoNumerico,
             ativa: true,
           })
 
@@ -344,6 +377,7 @@ export default function ContasBancariasPage() {
                           conta.tipo_conta === 'corrente' && "bg-blue-100 text-blue-700",
                           conta.tipo_conta === 'poupanca' && "bg-emerald-100 text-emerald-700",
                           conta.tipo_conta === 'investimento' && "bg-purple-100 text-purple-700",
+                          conta.tipo_conta === 'caixa' && "bg-amber-100 text-amber-700",
                         )}
                       >
                         {TIPO_CONTA_LABELS[conta.tipo_conta] || conta.tipo_conta}
@@ -449,6 +483,7 @@ export default function ContasBancariasPage() {
                 <option value="corrente">Conta Corrente</option>
                 <option value="poupanca">Poupança</option>
                 <option value="investimento">Investimento</option>
+                <option value="caixa">Caixa</option>
               </select>
             </div>
 
@@ -459,11 +494,12 @@ export default function ContasBancariasPage() {
               </Label>
               <Input
                 id="saldo_atual"
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="numeric"
                 value={contaForm.saldo_atual}
-                onChange={(e) => setContaForm({ ...contaForm, saldo_atual: e.target.value })}
-                placeholder="0,00"
+                onChange={(e) => setContaForm({ ...contaForm, saldo_atual: formatCurrencyInput(e.target.value) })}
+                placeholder="R$ 0,00"
+                className="font-mono"
               />
               <p className="text-xs text-slate-500 mt-1">
                 {editMode

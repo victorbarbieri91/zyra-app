@@ -1,13 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Building2, Landmark, Pencil, Trash2, MoreVertical } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Building2, Landmark, Pencil, Trash2, MoreVertical, ChevronDown, Check } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +29,7 @@ import {
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 
 interface ContaBancaria {
   id: string
@@ -41,6 +44,7 @@ interface ContaBancaria {
   ativa: boolean
   created_at: string
   updated_at: string
+  escritorio_nome?: string
 }
 
 interface ContaForm {
@@ -108,32 +112,93 @@ export default function ContasBancariasPage() {
     saldo_atual: 'R$ 0,00',
   })
 
+  // Estados para multi-escritório
+  const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
+  const [escritoriosSelecionados, setEscritoriosSelecionados] = useState<string[]>([])
+  const [seletorAberto, setSeletorAberto] = useState(false)
+
+  // Carregar escritórios do grupo
   useEffect(() => {
-    if (escritorioAtivo) {
+    const loadEscritoriosGrupo = async () => {
+      try {
+        const escritorios = await getEscritoriosDoGrupo()
+        setEscritoriosGrupo(escritorios)
+        // Iniciar com todos os escritórios selecionados (visão consolidada)
+        if (escritorios.length > 0) {
+          setEscritoriosSelecionados(escritorios.map(e => e.id))
+        }
+      } catch (error) {
+        console.error('Erro ao carregar escritórios do grupo:', error)
+      }
+    }
+    loadEscritoriosGrupo()
+  }, [])
+
+  // Funções de seleção
+  const toggleEscritorio = (id: string) => {
+    setEscritoriosSelecionados(prev => {
+      if (prev.includes(id)) {
+        // Não permitir desmarcar se for o único selecionado
+        if (prev.length === 1) return prev
+        return prev.filter(e => e !== id)
+      }
+      return [...prev, id]
+    })
+  }
+
+  const selecionarTodos = () => {
+    setEscritoriosSelecionados(escritoriosGrupo.map(e => e.id))
+  }
+
+  const selecionarApenas = (id: string) => {
+    setEscritoriosSelecionados([id])
+  }
+
+  // Texto do botão do seletor
+  const getSeletorLabel = () => {
+    if (escritoriosSelecionados.length === 0) return 'Selecione'
+    if (escritoriosSelecionados.length === escritoriosGrupo.length) return 'Todos os escritórios'
+    if (escritoriosSelecionados.length === 1) {
+      const escritorio = escritoriosGrupo.find(e => e.id === escritoriosSelecionados[0])
+      return escritorio?.nome || 'Escritório'
+    }
+    return `${escritoriosSelecionados.length} escritórios`
+  }
+
+  // Recarregar contas quando escritórios selecionados mudarem
+  useEffect(() => {
+    if (escritoriosSelecionados.length > 0) {
       loadContas()
     }
-  }, [escritorioAtivo])
+  }, [escritoriosSelecionados])
 
-  const loadContas = async () => {
-    if (!escritorioAtivo) return
+  const loadContas = useCallback(async () => {
+    if (escritoriosSelecionados.length === 0) return
 
     setLoading(true)
     try {
       const { data, error } = await supabase
         .from('financeiro_contas_bancarias')
-        .select('*')
-        .eq('escritorio_id', escritorioAtivo)
+        .select('*, escritorios:escritorio_id(nome)')
+        .in('escritorio_id', escritoriosSelecionados)
         .eq('ativa', true)
         .order('banco', { ascending: true })
 
       if (error) throw error
-      setContas(data || [])
+
+      // Mapear os dados para incluir o nome do escritório
+      const contasComEscritorio = (data || []).map((conta: any) => ({
+        ...conta,
+        escritorio_nome: conta.escritorios?.nome || '',
+      }))
+
+      setContas(contasComEscritorio)
     } catch (error) {
       console.error('Erro ao carregar contas:', error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [escritoriosSelecionados, supabase])
 
   const handleOpenCreate = () => {
     setEditMode(false)
@@ -271,13 +336,128 @@ export default function ContasBancariasPage() {
             Consolidação e gestão de contas bancárias do escritório
           </p>
         </div>
-        <Button
-          onClick={handleOpenCreate}
-          className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white border-0 shadow-sm"
-        >
-          <Landmark className="h-4 w-4 mr-2" />
-          Nova Conta
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Seletor de Escritórios - só aparece se tem mais de 1 no grupo */}
+          {escritoriosGrupo.length > 1 && (
+            <Popover open={seletorAberto} onOpenChange={setSeletorAberto}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "h-9 px-3 gap-2 border-slate-200 hover:bg-slate-50",
+                    escritoriosSelecionados.length === escritoriosGrupo.length && "border-[#89bcbe] bg-[#f0f9f9]/50"
+                  )}
+                >
+                  <Building2 className="h-4 w-4 text-[#89bcbe]" />
+                  <span className="text-sm text-[#34495e] font-medium">
+                    {getSeletorLabel()}
+                  </span>
+                  <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-0" align="end">
+                <div className="p-3 border-b border-slate-100">
+                  <p className="text-xs font-medium text-[#34495e]">Visualizar contas de:</p>
+                </div>
+
+                {/* Opção "Todos" */}
+                <div
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 border-b border-slate-100",
+                    escritoriosSelecionados.length === escritoriosGrupo.length && "bg-[#f0f9f9]"
+                  )}
+                  onClick={selecionarTodos}
+                >
+                  <div className={cn(
+                    "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                    escritoriosSelecionados.length === escritoriosGrupo.length
+                      ? "bg-[#89bcbe] border-[#89bcbe]"
+                      : "border-slate-300"
+                  )}>
+                    {escritoriosSelecionados.length === escritoriosGrupo.length && (
+                      <Check className="h-3 w-3 text-white" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-[#34495e]">Todos os escritórios</p>
+                    <p className="text-[10px] text-slate-500">Visão consolidada do grupo</p>
+                  </div>
+                </div>
+
+                {/* Lista de escritórios */}
+                <div className="max-h-64 overflow-y-auto">
+                  {escritoriosGrupo.map((escritorio) => {
+                    const isSelected = escritoriosSelecionados.includes(escritorio.id)
+                    const isAtivo = escritorio.id === escritorioAtivo
+
+                    return (
+                      <div
+                        key={escritorio.id}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 border-b border-slate-50 last:border-0",
+                          isSelected && escritoriosSelecionados.length < escritoriosGrupo.length && "bg-[#f0f9f9]/50"
+                        )}
+                        onClick={() => toggleEscritorio(escritorio.id)}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleEscritorio(escritorio.id)}
+                          className="data-[state=checked]:bg-[#89bcbe] data-[state=checked]:border-[#89bcbe]"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-[#34495e] truncate">
+                              {escritorio.nome}
+                            </p>
+                            {isAtivo && (
+                              <span className="text-[9px] font-medium text-[#89bcbe] bg-[#89bcbe]/10 px-1.5 py-0.5 rounded">
+                                Atual
+                              </span>
+                            )}
+                          </div>
+                          {escritorio.cnpj && (
+                            <p className="text-[10px] text-slate-400 truncate">
+                              {escritorio.cnpj}
+                            </p>
+                          )}
+                        </div>
+                        {/* Botão "Apenas este" */}
+                        {escritoriosSelecionados.length > 1 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              selecionarApenas(escritorio.id)
+                            }}
+                            className="text-[10px] text-[#89bcbe] hover:text-[#6ba9ab] hover:underline whitespace-nowrap"
+                          >
+                            Apenas
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Rodapé com info */}
+                <div className="p-2.5 bg-slate-50 border-t border-slate-100">
+                  <p className="text-[10px] text-slate-500 text-center">
+                    {escritoriosSelecionados.length === 1
+                      ? 'Exibindo contas de 1 escritório'
+                      : `Exibindo contas de ${escritoriosSelecionados.length} escritórios`}
+                  </p>
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+
+          <Button
+            onClick={handleOpenCreate}
+            className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white border-0 shadow-sm"
+          >
+            <Landmark className="h-4 w-4 mr-2" />
+            Nova Conta
+          </Button>
+        </div>
       </div>
 
       {/* Saldo Consolidado */}
@@ -334,6 +514,12 @@ export default function ContasBancariasPage() {
                         <p className="text-xs text-slate-400 mt-0.5 truncate">
                           {conta.titular}
                         </p>
+                      )}
+                      {/* Mostrar escritório quando exibindo múltiplos */}
+                      {escritoriosSelecionados.length > 1 && conta.escritorio_nome && (
+                        <Badge variant="outline" className="text-[9px] mt-1.5 font-normal text-slate-500 border-slate-200">
+                          {conta.escritorio_nome}
+                        </Badge>
                       )}
                     </div>
 

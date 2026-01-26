@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -53,6 +55,9 @@ import {
   Loader2,
   Power,
   PowerOff,
+  Building2,
+  ChevronDown,
+  Check,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { differenceInDays, parseISO } from 'date-fns'
@@ -60,6 +65,8 @@ import { useContratosHonorarios, ContratoHonorario, ContratoFormData } from '@/h
 import { ContratoModal } from './ContratoModal'
 import ContratoDetailModal from './ContratoDetailModal'
 import { formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
+import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
+import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 
 interface HonorariosContratosProps {
   escritorioId: string
@@ -131,6 +138,60 @@ const getStatusBadge = (ativo: boolean, inadimplente?: boolean) => {
 export default function HonorariosContratos({ escritorioId }: HonorariosContratosProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { escritorioAtivo } = useEscritorioAtivo()
+
+  // Estados para multi-escritório
+  const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
+  const [escritoriosSelecionados, setEscritoriosSelecionados] = useState<string[]>([])
+  const [seletorAberto, setSeletorAberto] = useState(false)
+
+  // Carregar escritórios do grupo
+  useEffect(() => {
+    const loadEscritoriosGrupo = async () => {
+      try {
+        const escritorios = await getEscritoriosDoGrupo()
+        setEscritoriosGrupo(escritorios)
+        // Iniciar com todos os escritórios selecionados (visão consolidada)
+        if (escritorios.length > 0) {
+          setEscritoriosSelecionados(escritorios.map(e => e.id))
+        }
+      } catch (error) {
+        console.error('Erro ao carregar escritórios do grupo:', error)
+      }
+    }
+    loadEscritoriosGrupo()
+  }, [])
+
+  // Funções de seleção
+  const toggleEscritorio = (id: string) => {
+    setEscritoriosSelecionados(prev => {
+      if (prev.includes(id)) {
+        // Não permitir desmarcar se for o único selecionado
+        if (prev.length === 1) return prev
+        return prev.filter(e => e !== id)
+      }
+      return [...prev, id]
+    })
+  }
+
+  const selecionarTodos = () => {
+    setEscritoriosSelecionados(escritoriosGrupo.map(e => e.id))
+  }
+
+  const selecionarApenas = (id: string) => {
+    setEscritoriosSelecionados([id])
+  }
+
+  // Texto do botão do seletor
+  const getSeletorLabel = () => {
+    if (escritoriosSelecionados.length === 0) return 'Selecione'
+    if (escritoriosSelecionados.length === escritoriosGrupo.length) return 'Todos os escritórios'
+    if (escritoriosSelecionados.length === 1) {
+      const escritorio = escritoriosGrupo.find(e => e.id === escritoriosSelecionados[0])
+      return escritorio?.nome || 'Escritório'
+    }
+    return `${escritoriosSelecionados.length} escritórios`
+  }
 
   const {
     contratos,
@@ -142,7 +203,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
     updateContrato,
     deleteContrato,
     reativarContrato,
-  } = useContratosHonorarios()
+  } = useContratosHonorarios(escritoriosSelecionados.length > 0 ? escritoriosSelecionados : undefined)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [filterTipo, setFilterTipo] = useState<string>('all')
@@ -158,10 +219,12 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
   const [contratoToDelete, setContratoToDelete] = useState<ContratoHonorario | null>(null)
   const [preSelectedClienteId, setPreSelectedClienteId] = useState<string | null>(null)
 
-  // Carregar contratos ao montar
+  // Carregar contratos quando escritórios selecionados mudarem
   useEffect(() => {
-    loadContratos()
-  }, [loadContratos])
+    if (escritoriosSelecionados.length > 0) {
+      loadContratos()
+    }
+  }, [escritoriosSelecionados, loadContratos])
 
   // Processar parâmetros da URL (para abrir modal automaticamente)
   useEffect(() => {
@@ -302,11 +365,126 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
   return (
     <div className="p-6 space-y-6">
       {/* Header da Página */}
-      <div>
-        <h1 className="text-2xl font-semibold text-[#34495e]">Contratos de Honorários</h1>
-        <p className="text-sm text-[#6c757d] mt-0.5">
-          Gerencie todos os contratos de honorários do escritório
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-[#34495e]">Contratos de Honorários</h1>
+          <p className="text-sm text-[#6c757d] mt-0.5">
+            Gerencie todos os contratos de honorários do escritório
+          </p>
+        </div>
+
+        {/* Seletor de Escritórios - só aparece se tem mais de 1 no grupo */}
+        {escritoriosGrupo.length > 1 && (
+          <Popover open={seletorAberto} onOpenChange={setSeletorAberto}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "h-9 px-3 gap-2 border-slate-200 hover:bg-slate-50",
+                  escritoriosSelecionados.length === escritoriosGrupo.length && "border-[#89bcbe] bg-[#f0f9f9]/50"
+                )}
+              >
+                <Building2 className="h-4 w-4 text-[#89bcbe]" />
+                <span className="text-sm text-[#34495e] font-medium">
+                  {getSeletorLabel()}
+                </span>
+                <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-0" align="end">
+              <div className="p-3 border-b border-slate-100">
+                <p className="text-xs font-medium text-[#34495e]">Visualizar contratos de:</p>
+              </div>
+
+              {/* Opção "Todos" */}
+              <div
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 border-b border-slate-100",
+                  escritoriosSelecionados.length === escritoriosGrupo.length && "bg-[#f0f9f9]"
+                )}
+                onClick={selecionarTodos}
+              >
+                <div className={cn(
+                  "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                  escritoriosSelecionados.length === escritoriosGrupo.length
+                    ? "bg-[#89bcbe] border-[#89bcbe]"
+                    : "border-slate-300"
+                )}>
+                  {escritoriosSelecionados.length === escritoriosGrupo.length && (
+                    <Check className="h-3 w-3 text-white" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-[#34495e]">Todos os escritórios</p>
+                  <p className="text-[10px] text-slate-500">Visão consolidada do grupo</p>
+                </div>
+              </div>
+
+              {/* Lista de escritórios */}
+              <div className="max-h-64 overflow-y-auto">
+                {escritoriosGrupo.map((escritorio) => {
+                  const isSelected = escritoriosSelecionados.includes(escritorio.id)
+                  const isAtivo = escritorio.id === escritorioAtivo
+
+                  return (
+                    <div
+                      key={escritorio.id}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 border-b border-slate-50 last:border-0",
+                        isSelected && escritoriosSelecionados.length < escritoriosGrupo.length && "bg-[#f0f9f9]/50"
+                      )}
+                      onClick={() => toggleEscritorio(escritorio.id)}
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleEscritorio(escritorio.id)}
+                        className="data-[state=checked]:bg-[#89bcbe] data-[state=checked]:border-[#89bcbe]"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-[#34495e] truncate">
+                            {escritorio.nome}
+                          </p>
+                          {isAtivo && (
+                            <span className="text-[9px] font-medium text-[#89bcbe] bg-[#89bcbe]/10 px-1.5 py-0.5 rounded">
+                              Atual
+                            </span>
+                          )}
+                        </div>
+                        {escritorio.cnpj && (
+                          <p className="text-[10px] text-slate-400 truncate">
+                            {escritorio.cnpj}
+                          </p>
+                        )}
+                      </div>
+                      {/* Botão "Apenas este" */}
+                      {escritoriosSelecionados.length > 1 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            selecionarApenas(escritorio.id)
+                          }}
+                          className="text-[10px] text-[#89bcbe] hover:text-[#6ba9ab] hover:underline whitespace-nowrap"
+                        >
+                          Apenas
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Rodapé com info */}
+              <div className="p-2.5 bg-slate-50 border-t border-slate-100">
+                <p className="text-[10px] text-slate-500 text-center">
+                  {escritoriosSelecionados.length === 1
+                    ? 'Exibindo contratos de 1 escritório'
+                    : `Exibindo contratos de ${escritoriosSelecionados.length} escritórios`}
+                </p>
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
       </div>
 
       {/* Card Principal */}
@@ -444,6 +622,12 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                           )} title={contrato.cliente_nome}>
                             {contrato.cliente_nome}
                           </p>
+                          {/* Mostrar escritório quando exibindo múltiplos */}
+                          {escritoriosSelecionados.length > 1 && contrato.escritorio_nome && (
+                            <Badge variant="outline" className="text-[9px] mt-1.5 font-normal text-slate-500 border-slate-200 w-fit">
+                              {contrato.escritorio_nome}
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex flex-col gap-1 items-end">
                           {/* Badges de configuração ou forma de cobrança */}
@@ -584,6 +768,9 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                     <TableHead className="text-xs">Contrato</TableHead>
                     <TableHead className="text-xs">Título</TableHead>
                     <TableHead className="text-xs">Cliente</TableHead>
+                    {escritoriosSelecionados.length > 1 && (
+                      <TableHead className="text-xs">Escritório</TableHead>
+                    )}
                     <TableHead className="text-xs">Tipo de Cobrança</TableHead>
                     <TableHead className="text-xs">Vigência</TableHead>
                     <TableHead className="text-xs">Status</TableHead>
@@ -613,6 +800,11 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                         <TableCell className="text-xs text-slate-600">
                           {contrato.cliente_nome}
                         </TableCell>
+                        {escritoriosSelecionados.length > 1 && (
+                          <TableCell className="text-xs text-slate-500">
+                            {contrato.escritorio_nome || '-'}
+                          </TableCell>
+                        )}
                         <TableCell>
                           <div className="flex flex-wrap gap-1 max-w-[200px]">
                             {contrato.configurado ? (

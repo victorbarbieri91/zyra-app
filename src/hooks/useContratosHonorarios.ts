@@ -10,6 +10,7 @@ export type FormaCobranca = 'fixo' | 'por_hora' | 'por_etapa' | 'misto' | 'por_p
 export interface ContratoHonorario {
   id: string
   escritorio_id: string
+  escritorio_nome?: string // Nome do escritório (para visualização multi-escritório)
   escritorio_cobranca_id?: string | null // Escritório que fatura (CNPJ na nota)
   escritorio_cobranca_nome?: string // Nome do escritório de cobrança
   escritorio_cobranca_cnpj?: string // CNPJ do escritório de cobrança
@@ -114,9 +115,14 @@ export interface ContratosMetrics {
   valor_inadimplente: number
 }
 
-export function useContratosHonorarios() {
+export function useContratosHonorarios(escritorioIds?: string[]) {
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
+
+  // Usar escritorioIds se fornecido, senão usar escritorioAtivo como array
+  const idsParaConsulta = escritorioIds && escritorioIds.length > 0
+    ? escritorioIds
+    : (escritorioAtivo ? [escritorioAtivo] : [])
 
   const [contratos, setContratos] = useState<ContratoHonorario[]>([])
   const [loading, setLoading] = useState(false)
@@ -156,19 +162,22 @@ export function useContratosHonorarios() {
 
   // Carregar todos os contratos com dados relacionados
   const loadContratos = useCallback(async () => {
-    if (!escritorioAtivo) return
+    if (idsParaConsulta.length === 0) return
 
     setLoading(true)
     setError(null)
 
     try {
-      // Buscar contratos com join em crm_pessoas (clientes), escritório de cobrança e receitas
+      // Buscar contratos com join em crm_pessoas (clientes), escritório de cobrança, escritório e receitas
       const { data: contratosData, error: contratosError } = await supabase
         .from('financeiro_contratos_honorarios')
         .select(`
           *,
           crm_pessoas (
             nome_completo
+          ),
+          escritorios:escritorio_id (
+            nome
           ),
           escritorio_cobranca:escritorios!financeiro_contratos_honorarios_escritorio_cobranca_id_fkey (
             id,
@@ -186,7 +195,7 @@ export function useContratosHonorarios() {
             dias_atraso
           )
         `)
-        .eq('escritorio_id', escritorioAtivo)
+        .in('escritorio_id', idsParaConsulta)
         .order('created_at', { ascending: false })
 
       if (contratosError) throw contratosError
@@ -303,6 +312,7 @@ export function useContratosHonorarios() {
         return {
           id: contrato.id,
           escritorio_id: contrato.escritorio_id,
+          escritorio_nome: contrato.escritorios?.nome,
           escritorio_cobranca_id: contrato.escritorio_cobranca_id,
           escritorio_cobranca_nome: contrato.escritorio_cobranca?.nome,
           escritorio_cobranca_cnpj: contrato.escritorio_cobranca?.cnpj,
@@ -354,7 +364,7 @@ export function useContratosHonorarios() {
     } finally {
       setLoading(false)
     }
-  }, [escritorioAtivo, supabase])
+  }, [idsParaConsulta, supabase])
 
   // Criar novo contrato
   const createContrato = useCallback(

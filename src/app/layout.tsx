@@ -10,8 +10,13 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Zyra Legal - Sistema Jurídico Inteligente',
+  title: 'Zyra Legal - Jurídico Inteligente',
   description: 'Sistema jurídico completo com IA para escritórios de advocacia',
+  icons: {
+    icon: '/zyra.logo.png',
+    shortcut: '/zyra.logo.png',
+    apple: '/zyra.logo.png',
+  },
 }
 
 export default function RootLayout({

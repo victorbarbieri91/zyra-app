@@ -23,6 +23,7 @@ export interface CartaoCredito {
 }
 
 export interface CartaoComFaturaAtual extends CartaoCredito {
+  escritorio_nome?: string
   fatura_atual: {
     fatura_id: string | null
     mes_referencia: string
@@ -193,17 +194,25 @@ export const CORES_CARTAO = [
 // HOOK
 // =====================================================
 
-export function useCartoesCredito(escritorioId: string | null) {
+export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Normalizar para sempre ter um array de IDs
+  const escritorioIds = Array.isArray(escritorioIdOrIds)
+    ? escritorioIdOrIds
+    : (escritorioIdOrIds ? [escritorioIdOrIds] : [])
+
+  // Manter compatibilidade - pegar primeiro ID para operações de escrita
+  const escritorioIdPrincipal = escritorioIds[0] || null
 
   // ============================================
   // CARTÕES
   // ============================================
 
   const loadCartoes = useCallback(async (apenasAtivos = true): Promise<CartaoCredito[]> => {
-    if (!escritorioId) return []
+    if (escritorioIds.length === 0) return []
 
     try {
       setLoading(true)
@@ -212,7 +221,7 @@ export function useCartoesCredito(escritorioId: string | null) {
       let query = supabase
         .from('cartoes_credito')
         .select('*')
-        .eq('escritorio_id', escritorioId)
+        .in('escritorio_id', escritorioIds)
         .order('nome')
 
       if (apenasAtivos) {
@@ -231,10 +240,10 @@ export function useCartoesCredito(escritorioId: string | null) {
     } finally {
       setLoading(false)
     }
-  }, [escritorioId, supabase])
+  }, [escritorioIds, supabase])
 
   const loadCartoesComFaturaAtual = useCallback(async (): Promise<CartaoComFaturaAtual[]> => {
-    if (!escritorioId) return []
+    if (escritorioIds.length === 0) return []
 
     try {
       setLoading(true)
@@ -243,8 +252,8 @@ export function useCartoesCredito(escritorioId: string | null) {
       // Carregar cartões
       const { data: cartoes, error: cartoesError } = await supabase
         .from('cartoes_credito')
-        .select('*')
-        .eq('escritorio_id', escritorioId)
+        .select('*, escritorios(nome)')
+        .in('escritorio_id', escritorioIds)
         .eq('ativo', true)
         .order('nome')
 
@@ -252,12 +261,13 @@ export function useCartoesCredito(escritorioId: string | null) {
 
       // Para cada cartão, buscar fatura atual
       const cartoesComFatura: CartaoComFaturaAtual[] = await Promise.all(
-        (cartoes || []).map(async (cartao) => {
+        (cartoes || []).map(async (cartao: any) => {
           const { data: faturaAtual } = await supabase
             .rpc('obter_fatura_atual_cartao', { p_cartao_id: cartao.id })
 
           return {
             ...cartao,
+            escritorio_nome: cartao.escritorios?.nome,
             fatura_atual: faturaAtual?.[0] || null,
           }
         })
@@ -271,7 +281,7 @@ export function useCartoesCredito(escritorioId: string | null) {
     } finally {
       setLoading(false)
     }
-  }, [escritorioId, supabase])
+  }, [escritorioIds, supabase])
 
   const getCartao = useCallback(async (cartaoId: string): Promise<CartaoCredito | null> => {
     try {
@@ -291,8 +301,9 @@ export function useCartoesCredito(escritorioId: string | null) {
     }
   }, [supabase])
 
-  const createCartao = useCallback(async (data: CartaoFormData): Promise<string | null> => {
-    if (!escritorioId) return null
+  const createCartao = useCallback(async (data: CartaoFormData, escritorioIdOverride?: string): Promise<string | null> => {
+    const targetEscritorioId = escritorioIdOverride || escritorioIdPrincipal
+    if (!targetEscritorioId) return null
 
     try {
       setLoading(true)
@@ -301,7 +312,7 @@ export function useCartoesCredito(escritorioId: string | null) {
       const { data: novoCartao, error: insertError } = await supabase
         .from('cartoes_credito')
         .insert({
-          escritorio_id: escritorioId,
+          escritorio_id: targetEscritorioId,
           ...data,
         })
         .select()
@@ -317,7 +328,7 @@ export function useCartoesCredito(escritorioId: string | null) {
     } finally {
       setLoading(false)
     }
-  }, [escritorioId, supabase])
+  }, [escritorioIdPrincipal, supabase])
 
   const updateCartao = useCallback(async (cartaoId: string, data: Partial<CartaoFormData>): Promise<boolean> => {
     try {
@@ -372,7 +383,7 @@ export function useCartoesCredito(escritorioId: string | null) {
     cartaoId?: string,
     mesReferencia?: string
   ): Promise<DespesaCartao[]> => {
-    if (!escritorioId) return []
+    if (escritorioIds.length === 0) return []
 
     try {
       setLoading(true)
@@ -385,7 +396,7 @@ export function useCartoesCredito(escritorioId: string | null) {
           cartoes_credito(nome, banco),
           processos_processos(numero_cnj)
         `)
-        .eq('escritorio_id', escritorioId)
+        .in('escritorio_id', escritorioIds)
         .order('data_compra', { ascending: false })
 
       if (cartaoId) {
@@ -418,10 +429,10 @@ export function useCartoesCredito(escritorioId: string | null) {
     } finally {
       setLoading(false)
     }
-  }, [escritorioId, supabase])
+  }, [escritorioIds, supabase])
 
   const createDespesa = useCallback(async (data: DespesaCartaoFormData): Promise<string | null> => {
-    if (!escritorioId) return null
+    if (!escritorioIdPrincipal) return null
 
     try {
       setLoading(true)
@@ -453,7 +464,7 @@ export function useCartoesCredito(escritorioId: string | null) {
     } finally {
       setLoading(false)
     }
-  }, [escritorioId, supabase])
+  }, [escritorioIdPrincipal, supabase])
 
   const deleteDespesa = useCallback(async (despesaId: string): Promise<boolean> => {
     try {
@@ -548,7 +559,7 @@ export function useCartoesCredito(escritorioId: string | null) {
   // ============================================
 
   const loadFaturas = useCallback(async (cartaoId?: string): Promise<FaturaCartao[]> => {
-    if (!escritorioId) return []
+    if (escritorioIds.length === 0) return []
 
     try {
       setLoading(true)
@@ -560,7 +571,7 @@ export function useCartoesCredito(escritorioId: string | null) {
           *,
           cartoes_credito(nome, banco)
         `)
-        .eq('escritorio_id', escritorioId)
+        .in('escritorio_id', escritorioIds)
         .order('mes_referencia', { ascending: false })
 
       if (cartaoId) {
@@ -596,7 +607,7 @@ export function useCartoesCredito(escritorioId: string | null) {
     } finally {
       setLoading(false)
     }
-  }, [escritorioId, supabase])
+  }, [escritorioIds, supabase])
 
   const getFatura = useCallback(async (faturaId: string): Promise<FaturaCartao | null> => {
     try {
@@ -695,7 +706,7 @@ export function useCartoesCredito(escritorioId: string | null) {
   // ============================================
 
   const loadImportacoes = useCallback(async (cartaoId?: string): Promise<ImportacaoFatura[]> => {
-    if (!escritorioId) return []
+    if (escritorioIds.length === 0) return []
 
     try {
       setLoading(true)
@@ -704,7 +715,7 @@ export function useCartoesCredito(escritorioId: string | null) {
       let query = supabase
         .from('cartoes_credito_importacoes')
         .select('*')
-        .eq('escritorio_id', escritorioId)
+        .in('escritorio_id', escritorioIds)
         .order('created_at', { ascending: false })
 
       if (cartaoId) {
@@ -723,14 +734,14 @@ export function useCartoesCredito(escritorioId: string | null) {
     } finally {
       setLoading(false)
     }
-  }, [escritorioId, supabase])
+  }, [escritorioIds, supabase])
 
   const createImportacao = useCallback(async (
     cartaoId: string,
     arquivoNome: string,
     arquivoUrl: string
   ): Promise<string | null> => {
-    if (!escritorioId) return null
+    if (!escritorioIdPrincipal) return null
 
     try {
       setLoading(true)
@@ -739,7 +750,7 @@ export function useCartoesCredito(escritorioId: string | null) {
       const { data, error: insertError } = await supabase
         .from('cartoes_credito_importacoes')
         .insert({
-          escritorio_id: escritorioId,
+          escritorio_id: escritorioIdPrincipal,
           cartao_id: cartaoId,
           arquivo_nome: arquivoNome,
           arquivo_url: arquivoUrl,
@@ -758,7 +769,7 @@ export function useCartoesCredito(escritorioId: string | null) {
     } finally {
       setLoading(false)
     }
-  }, [escritorioId, supabase])
+  }, [escritorioIdPrincipal, supabase])
 
   const updateImportacao = useCallback(async (
     importacaoId: string,

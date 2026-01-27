@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, Clock, AlertCircle, FileText, Users, Calendar, ArrowUpRight, ArrowDownRight, Target, Loader2, Building2 } from 'lucide-react'
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, Clock, AlertCircle, FileText, Users, Calendar, ArrowUpRight, ArrowDownRight, Target, Loader2, Building2, ChevronDown, Check } from 'lucide-react'
 import { differenceInDays, parseISO, format, addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
@@ -12,12 +12,13 @@ import TimelineItem from '@/components/dashboard/TimelineItem'
 import QuickActionButton from '@/components/dashboard/QuickActionButton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
-// Types defined locally
 import { cn } from '@/lib/utils'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface DashboardMetrics {
   receita_mes: number
@@ -64,14 +65,19 @@ export default function FinanceiroDashboard() {
 
   // Estados para multi-escritório (grupo)
   const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
-  const [modoVisualizacao, setModoVisualizacao] = useState<'atual' | 'consolidado'>('atual')
+  const [escritoriosSelecionados, setEscritoriosSelecionados] = useState<string[]>([])
+  const [seletorAberto, setSeletorAberto] = useState(false)
 
-  // Carregar escritórios do grupo
+  // Carregar escritórios do grupo (com todos selecionados por padrão)
   useEffect(() => {
     const loadEscritoriosGrupo = async () => {
       try {
         const escritorios = await getEscritoriosDoGrupo()
         setEscritoriosGrupo(escritorios)
+        // Iniciar com TODOS selecionados (visão consolidada padrão)
+        if (escritorios.length > 0) {
+          setEscritoriosSelecionados(escritorios.map(e => e.id))
+        }
       } catch (error) {
         console.error('Erro ao carregar escritórios do grupo:', error)
       }
@@ -79,22 +85,50 @@ export default function FinanceiroDashboard() {
     loadEscritoriosGrupo()
   }, [])
 
-  // Obter IDs dos escritórios para query (consolidado = todos do grupo, atual = só o ativo)
-  const getEscritorioIds = useCallback((): string[] => {
-    if (modoVisualizacao === 'consolidado' && escritoriosGrupo.length > 1) {
-      return escritoriosGrupo.map(e => e.id)
+  // Funções do seletor de escritórios
+  const toggleEscritorio = (escritorioId: string) => {
+    setEscritoriosSelecionados(prev => {
+      if (prev.includes(escritorioId)) {
+        if (prev.length === 1) return prev
+        return prev.filter(id => id !== escritorioId)
+      } else {
+        return [...prev, escritorioId]
+      }
+    })
+  }
+
+  const selecionarTodos = () => {
+    setEscritoriosSelecionados(escritoriosGrupo.map(e => e.id))
+  }
+
+  const selecionarApenas = (escritorioId: string) => {
+    setEscritoriosSelecionados([escritorioId])
+  }
+
+  const getSeletorLabel = () => {
+    if (escritoriosSelecionados.length === escritoriosGrupo.length) {
+      return 'Todos os escritórios'
+    } else if (escritoriosSelecionados.length === 1) {
+      const escritorio = escritoriosGrupo.find(e => e.id === escritoriosSelecionados[0])
+      return escritorio?.nome || 'Escritório'
+    } else {
+      return `${escritoriosSelecionados.length} escritórios`
     }
-    return escritorioAtivo ? [escritorioAtivo] : []
-  }, [modoVisualizacao, escritoriosGrupo, escritorioAtivo])
+  }
+
+  // Obter IDs dos escritórios para query
+  const getEscritorioIds = useCallback((): string[] => {
+    return escritoriosSelecionados.length > 0 ? escritoriosSelecionados : []
+  }, [escritoriosSelecionados])
 
   useEffect(() => {
-    if (escritorioAtivo) {
+    if (escritoriosSelecionados.length > 0) {
       loadMetrics()
       loadContasProximas()
       loadChartData()
       loadInadimplencia()
     }
-  }, [escritorioAtivo, modoVisualizacao, escritoriosGrupo])
+  }, [escritoriosSelecionados])
 
   const loadMetrics = async () => {
     if (!escritorioAtivo) return
@@ -392,32 +426,73 @@ export default function FinanceiroDashboard() {
           <div>
             <h1 className="text-2xl font-semibold text-[#34495e]">Dashboard Financeiro</h1>
             <p className="text-sm text-slate-600 mt-1">
-              {modoVisualizacao === 'consolidado' && escritoriosGrupo.length > 1
+              {escritoriosSelecionados.length === escritoriosGrupo.length && escritoriosGrupo.length > 1
                 ? 'Visão consolidada de todos os escritórios do grupo'
                 : 'Visão geral das finanças do escritório'}
             </p>
           </div>
 
-          {/* Toggle de visualização - só aparece se tem mais de 1 escritório no grupo */}
+          {/* Seletor de Escritórios */}
           {escritoriosGrupo.length > 1 && (
-            <Tabs value={modoVisualizacao} onValueChange={(v) => setModoVisualizacao(v as 'atual' | 'consolidado')}>
-              <TabsList className="bg-slate-100">
-                <TabsTrigger
-                  value="atual"
-                  className="text-xs data-[state=active]:bg-white data-[state=active]:text-[#34495e]"
+            <Popover open={seletorAberto} onOpenChange={setSeletorAberto}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="border-slate-200 bg-white hover:bg-slate-50"
                 >
-                  <Building2 className="h-3.5 w-3.5 mr-1.5" />
-                  Atual
-                </TabsTrigger>
-                <TabsTrigger
-                  value="consolidado"
-                  className="text-xs data-[state=active]:bg-white data-[state=active]:text-[#34495e]"
-                >
-                  <Users className="h-3.5 w-3.5 mr-1.5" />
-                  Consolidado
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+                  <Building2 className="h-4 w-4 mr-2 text-[#34495e]" />
+                  <span className="text-sm">{getSeletorLabel()}</span>
+                  <ChevronDown className="h-4 w-4 ml-2 text-slate-400" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-2" align="end">
+                <div className="space-y-1">
+                  {/* Opção: Todos */}
+                  <button
+                    onClick={selecionarTodos}
+                    className={cn(
+                      'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors',
+                      escritoriosSelecionados.length === escritoriosGrupo.length
+                        ? 'bg-[#1E3A8A]/10 text-[#1E3A8A]'
+                        : 'hover:bg-slate-100 text-slate-700'
+                    )}
+                  >
+                    <span className="font-medium">Todos os escritórios</span>
+                    {escritoriosSelecionados.length === escritoriosGrupo.length && (
+                      <Check className="h-4 w-4" />
+                    )}
+                  </button>
+
+                  <div className="h-px bg-slate-200 my-2" />
+
+                  {/* Lista de escritórios */}
+                  {escritoriosGrupo.map((escritorio) => (
+                    <div
+                      key={escritorio.id}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50"
+                    >
+                      <Checkbox
+                        id={`esc-${escritorio.id}`}
+                        checked={escritoriosSelecionados.includes(escritorio.id)}
+                        onCheckedChange={() => toggleEscritorio(escritorio.id)}
+                      />
+                      <label
+                        htmlFor={`esc-${escritorio.id}`}
+                        className="flex-1 text-sm text-slate-700 cursor-pointer"
+                      >
+                        {escritorio.nome}
+                      </label>
+                      <button
+                        onClick={() => selecionarApenas(escritorio.id)}
+                        className="text-[10px] text-[#1E3A8A] hover:underline"
+                      >
+                        apenas
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
           )}
         </div>
 

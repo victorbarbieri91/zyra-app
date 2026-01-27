@@ -31,7 +31,8 @@ import {
   Copy,
   Check,
   Archive,
-  RotateCcw
+  RotateCcw,
+  ArrowRight
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
@@ -44,6 +45,7 @@ import EventoWizard from '@/components/agenda/EventoWizard'
 import TarefaDetailModal from '@/components/agenda/TarefaDetailModal'
 import EventoDetailModal from '@/components/agenda/EventoDetailModal'
 import VincularContratoConsultivoModal from '@/components/consultivo/VincularContratoConsultivoModal'
+import TransformarConsultivoWizard from '@/components/consultivo/TransformarConsultivoWizard'
 import type { TarefaFormData } from '@/hooks/useTarefas'
 import type { EventoFormData } from '@/hooks/useEventos'
 
@@ -105,6 +107,9 @@ export default function ConsultaDetalhePage() {
   // Estados para Financeiro
   const [contratoInfo, setContratoInfo] = useState<any | null>(null)
   const [vincularModalOpen, setVincularModalOpen] = useState(false)
+
+  // Estado para Transformar em Processo
+  const [transformarModalOpen, setTransformarModalOpen] = useState(false)
 
   // Carregar dados do usuário
   useEffect(() => {
@@ -360,6 +365,18 @@ export default function ConsultaDetalhePage() {
               Voltar
             </Button>
             <div className="flex items-center gap-2">
+              {consulta.status === 'ativo' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setTransformarModalOpen(true)}
+                  className="h-8 text-emerald-300 hover:text-emerald-200 hover:bg-emerald-500/20 gap-2"
+                >
+                  <Scale className="w-4 h-4" />
+                  <ArrowRight className="w-3 h-3" />
+                  Transformar em Processo
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -735,6 +752,16 @@ export default function ConsultaDetalhePage() {
         clienteId={consulta.cliente_id}
         clienteNome={consulta.cliente_nome}
         onSuccess={loadConsulta}
+      />
+
+      {/* Modal Transformar em Processo */}
+      <TransformarConsultivoWizard
+        open={transformarModalOpen}
+        onClose={() => setTransformarModalOpen(false)}
+        consulta={consulta}
+        onSuccess={(processoId, numeroPasta) => {
+          router.push(`/dashboard/processos/${processoId}`)
+        }}
       />
     </div>
   )

@@ -41,6 +41,7 @@ import MetricCard from '@/components/dashboard/MetricCard'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { useAaspSync } from '@/hooks/useAaspSync'
+import { useEscavadorTermos } from '@/hooks/useEscavadorTermos'
 import { toast } from 'sonner'
 
 // Tipos
@@ -101,7 +102,10 @@ export default function PublicacoesPage() {
   const router = useRouter()
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
-  const { sincronizarTodos, sincronizando } = useAaspSync(escritorioAtivo || undefined)
+  const { sincronizarTodos, sincronizando: sincronizandoAasp } = useAaspSync(escritorioAtivo || undefined)
+  const { sincronizar: sincronizarEscavador, sincronizando: sincronizandoEscavador, termos: termosEscavador } = useEscavadorTermos(escritorioAtivo || undefined)
+
+  const sincronizando = sincronizandoAasp || sincronizandoEscavador
 
   // Carregar publicações do banco
   const carregarPublicacoes = useCallback(async () => {
@@ -192,20 +196,50 @@ export default function PublicacoesPage() {
     carregarPublicacoes()
   }, [carregarPublicacoes])
 
-  // Sincronizar AASP
+  // Sincronizar todas as fontes (AASP + Escavador)
   const handleSincronizar = async () => {
-    toast.info('Iniciando sincronização AASP...')
-    const resultado = await sincronizarTodos()
+    toast.info('Iniciando sincronização...')
 
-    if (resultado.sucesso) {
-      toast.success(resultado.mensagem)
-      if (resultado.publicacoes_novas && resultado.publicacoes_novas > 0) {
-        toast.info(`${resultado.publicacoes_novas} novas publicações encontradas!`)
+    let totalNovas = 0
+    let erros: string[] = []
+
+    // Sincronizar AASP
+    try {
+      const resultadoAasp = await sincronizarTodos()
+      if (resultadoAasp.sucesso) {
+        totalNovas += resultadoAasp.publicacoes_novas || 0
+      } else {
+        erros.push(`AASP: ${resultadoAasp.mensagem}`)
       }
-      // Recarregar publicações após sync
-      await carregarPublicacoes()
+    } catch (e: any) {
+      erros.push(`AASP: ${e.message}`)
+    }
+
+    // Sincronizar Escavador (se tiver termos cadastrados)
+    if (termosEscavador.length > 0) {
+      try {
+        const resultadoEscavador = await sincronizarEscavador()
+        if (resultadoEscavador.sucesso) {
+          totalNovas += resultadoEscavador.publicacoes_novas || 0
+        } else {
+          erros.push(`Diário Oficial: ${resultadoEscavador.mensagem}`)
+        }
+      } catch (e: any) {
+        erros.push(`Diário Oficial: ${e.message}`)
+      }
+    }
+
+    // Recarregar publicações após sync
+    await carregarPublicacoes()
+
+    // Mostrar resultado
+    if (erros.length === 0) {
+      toast.success('Sincronização concluída!')
+      if (totalNovas > 0) {
+        toast.info(`${totalNovas} novas publicações encontradas!`)
+      }
     } else {
-      toast.error(resultado.mensagem)
+      toast.warning(`Sincronização parcial: ${erros.join(', ')}`)
     }
   }
 
@@ -332,7 +366,7 @@ export default function PublicacoesPage() {
         <div className="flex items-center justify-between mb-2">
           <div>
             <h1 className="text-2xl font-bold text-[#34495e]">Publicações & Intimações</h1>
-            <p className="text-sm text-slate-600">Gestão de publicações AASP e intimações</p>
+            <p className="text-sm text-slate-600">Gestão de publicações e intimações</p>
           </div>
 
           <div className="flex items-center gap-2.5">
@@ -348,14 +382,8 @@ export default function PublicacoesPage() {
               ) : (
                 <RefreshCw className="w-4 h-4" />
               )}
-              {sincronizando ? 'Sincronizando...' : 'Sincronizar AASP'}
+              {sincronizando ? 'Sincronizando...' : 'Sincronizar'}
             </Button>
-            <Link href="/dashboard/publicacoes/nova">
-              <Button size="sm" className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f]">
-                <Plus className="w-4 h-4" />
-                Adicionar Manual
-              </Button>
-            </Link>
             <Link href="/dashboard/publicacoes/config">
               <Button variant="outline" size="sm" className="gap-2">
                 <Settings className="w-4 h-4" />
@@ -500,25 +528,17 @@ export default function PublicacoesPage() {
             <h3 className="text-sm font-semibold text-slate-700 mb-1">Nenhuma publicação encontrada</h3>
             <p className="text-xs text-slate-500 mb-4">
               {publicacoes.length === 0
-                ? 'Não há publicações recebidas ainda. Configure a integração com AASP ou adicione manualmente.'
+                ? 'Não há publicações recebidas ainda. Configure as fontes de publicações.'
                 : 'Nenhuma publicação corresponde aos filtros selecionados.'}
             </p>
             <div className="flex items-center gap-2 justify-center">
               {publicacoes.length === 0 ? (
-                <>
-                  <Link href="/dashboard/publicacoes/config">
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Settings className="w-4 h-4" />
-                      Configurar AASP
-                    </Button>
-                  </Link>
-                  <Link href="/dashboard/publicacoes/nova">
-                    <Button size="sm" className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f]">
-                      <Plus className="w-4 h-4" />
-                      Adicionar Manual
-                    </Button>
-                  </Link>
-                </>
+                <Link href="/dashboard/publicacoes/config">
+                  <Button size="sm" className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f]">
+                    <Settings className="w-4 h-4" />
+                    Configurar Fontes
+                  </Button>
+                </Link>
               ) : (
                 <Button
                   variant="outline"

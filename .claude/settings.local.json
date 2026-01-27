@@ -63,7 +63,11 @@
       "WebFetch(domain:suporte-api.escavador.com)",
       "WebFetch(domain:pypi.org)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "WebFetch(domain:suporte.escavador.com)"
+      "WebFetch(domain:suporte.escavador.com)",
+      "mcp__supabase__get_project_url",
+      "mcp__supabase__get_publishable_keys",
+      "mcp__supabase__list_extensions",
+      "mcp__supabase__generate_typescript_types"
     ],
     "deny": [],
     "ask": []

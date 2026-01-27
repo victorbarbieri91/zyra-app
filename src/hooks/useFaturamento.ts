@@ -79,18 +79,26 @@ export interface ItemFatura {
   partes_resumo?: string | null // "João Silva vs Empresa ABC"
 }
 
-export function useFaturamento(escritorioId: string | null) {
+export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Normalizar para sempre ter um array de IDs
+  const escritorioIds = Array.isArray(escritorioIdOrIds)
+    ? escritorioIdOrIds
+    : (escritorioIdOrIds ? [escritorioIdOrIds] : [])
+
+  // Manter compatibilidade - pegar primeiro ID para operações de escrita
+  const escritorioIdPrincipal = escritorioIds[0] || null
 
   // ============================================
   // LANÇAMENTOS PRONTOS PARA FATURAR
   // ============================================
 
   const loadLancamentosProntos = useCallback(async (): Promise<LancamentoProntoFaturar[]> => {
-    if (!escritorioId) {
-      console.log('useFaturamento: escritorioId não definido')
+    if (escritorioIds.length === 0) {
+      console.log('useFaturamento: escritorioIds não definido')
       return []
     }
 
@@ -98,12 +106,12 @@ export function useFaturamento(escritorioId: string | null) {
       setLoading(true)
       setError(null)
 
-      console.log('useFaturamento: Buscando lançamentos para escritório:', escritorioId)
+      console.log('useFaturamento: Buscando lançamentos para escritórios:', escritorioIds)
 
       const { data, error: queryError } = await supabase
         .from('v_lancamentos_prontos_faturar')
         .select('*')
-        .eq('escritorio_id', escritorioId)
+        .in('escritorio_id', escritorioIds)
         .order('cliente_nome', { ascending: true })
         .order('created_at', { ascending: false })
 
@@ -122,10 +130,10 @@ export function useFaturamento(escritorioId: string | null) {
     } finally {
       setLoading(false)
     }
-  }, [escritorioId, supabase])
+  }, [escritorioIds, supabase])
 
   const loadClientesParaFaturar = useCallback(async (): Promise<ClienteParaFaturar[]> => {
-    if (!escritorioId) return []
+    if (escritorioIds.length === 0) return []
 
     try {
       setLoading(true)
@@ -176,11 +184,11 @@ export function useFaturamento(escritorioId: string | null) {
     } finally {
       setLoading(false)
     }
-  }, [escritorioId, loadLancamentosProntos])
+  }, [escritorioIds, loadLancamentosProntos])
 
   const loadLancamentosPorCliente = useCallback(
     async (clienteId: string): Promise<LancamentoProntoFaturar[]> => {
-      if (!escritorioId) return []
+      if (escritorioIds.length === 0) return []
 
       try {
         setLoading(true)
@@ -189,7 +197,7 @@ export function useFaturamento(escritorioId: string | null) {
         const { data, error: queryError } = await supabase
           .from('v_lancamentos_prontos_faturar')
           .select('*')
-          .eq('escritorio_id', escritorioId)
+          .in('escritorio_id', escritorioIds)
           .eq('cliente_id', clienteId)
           .order('tipo_lancamento', { ascending: true })
           .order('created_at', { ascending: false })
@@ -205,7 +213,7 @@ export function useFaturamento(escritorioId: string | null) {
         setLoading(false)
       }
     },
-    [escritorioId, supabase]
+    [escritorioIds, supabase]
   )
 
   // ============================================
@@ -213,8 +221,8 @@ export function useFaturamento(escritorioId: string | null) {
   // ============================================
 
   const loadFaturasGeradas = useCallback(async (): Promise<FaturaGerada[]> => {
-    if (!escritorioId) {
-      console.log('useFaturamento: escritorioId não definido para faturas')
+    if (escritorioIds.length === 0) {
+      console.log('useFaturamento: escritorioIds não definido para faturas')
       return []
     }
 
@@ -222,12 +230,12 @@ export function useFaturamento(escritorioId: string | null) {
       setLoading(true)
       setError(null)
 
-      console.log('useFaturamento: Buscando faturas para escritório:', escritorioId)
+      console.log('useFaturamento: Buscando faturas para escritórios:', escritorioIds)
 
       const { data, error: queryError } = await supabase
         .from('v_faturas_geradas')
         .select('*')
-        .eq('escritorio_id', escritorioId)
+        .in('escritorio_id', escritorioIds)
         .order('created_at', { ascending: false })
 
       if (queryError) {
@@ -245,7 +253,7 @@ export function useFaturamento(escritorioId: string | null) {
     } finally {
       setLoading(false)
     }
-  }, [escritorioId, supabase])
+  }, [escritorioIds, supabase])
 
   const loadItensFatura = useCallback(
     async (faturaId: string): Promise<ItemFatura[]> => {
@@ -330,9 +338,11 @@ export function useFaturamento(escritorioId: string | null) {
       honorariosIds: string[],
       timesheetIds: string[],
       observacoes?: string,
-      dataVencimento?: string
+      dataVencimento?: string,
+      escritorioIdOverride?: string
     ): Promise<string | null> => {
-      if (!escritorioId) {
+      const targetEscritorioId = escritorioIdOverride || escritorioIdPrincipal
+      if (!targetEscritorioId) {
         setError('Escritório não identificado')
         return null
       }
@@ -347,7 +357,7 @@ export function useFaturamento(escritorioId: string | null) {
         } = await supabase.auth.getUser()
 
         const { data, error: rpcError } = await supabase.rpc('gerar_fatura_v2', {
-          p_escritorio_id: escritorioId,
+          p_escritorio_id: targetEscritorioId,
           p_cliente_id: clienteId,
           p_honorarios_ids: honorariosIds.length > 0 ? honorariosIds : null,
           p_timesheet_ids: timesheetIds.length > 0 ? timesheetIds : null,
@@ -368,7 +378,7 @@ export function useFaturamento(escritorioId: string | null) {
         setLoading(false)
       }
     },
-    [escritorioId, supabase]
+    [escritorioIdPrincipal, supabase]
   )
 
   const desmontarFatura = useCallback(
@@ -454,13 +464,13 @@ export function useFaturamento(escritorioId: string | null) {
   // ============================================
 
   const loadContasBancarias = useCallback(async () => {
-    if (!escritorioId) return []
+    if (escritorioIds.length === 0) return []
 
     try {
       const { data, error: queryError } = await supabase
         .from('financeiro_contas_bancarias')
         .select('id, banco, agencia, numero_conta, saldo_atual')
-        .eq('escritorio_id', escritorioId)
+        .in('escritorio_id', escritorioIds)
         .eq('ativa', true)
         .order('banco', { ascending: true })
 
@@ -471,7 +481,7 @@ export function useFaturamento(escritorioId: string | null) {
       console.error('Erro ao carregar contas bancárias:', err)
       return []
     }
-  }, [escritorioId, supabase])
+  }, [escritorioIds, supabase])
 
   return {
     loading,

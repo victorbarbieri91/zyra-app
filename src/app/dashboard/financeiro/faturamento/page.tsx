@@ -10,11 +10,16 @@ import {
   RefreshCw,
   LayoutGrid,
   List,
+  Building2,
+  ChevronDown,
+  Check,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +32,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { useFaturamento } from '@/hooks/useFaturamento'
+import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 import { PreviewCollapsible } from '@/components/faturamento/PreviewCollapsible'
 import { FaturaGeradaCard } from '@/components/faturamento/FaturaGeradaCard'
 import { FaturasTable } from '@/components/faturamento/FaturasTable'
@@ -42,7 +48,12 @@ import type {
 export default function FaturamentoPage() {
   const { escritorioAtivo } = useEscritorioAtivo()
 
-  console.log('FaturamentoPage: escritorioAtivo =', escritorioAtivo)
+  // Multi-escritório states
+  const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
+  const [escritoriosSelecionados, setEscritoriosSelecionados] = useState<string[]>([])
+  const [seletorAberto, setSeletorAberto] = useState(false)
+
+  console.log('FaturamentoPage: escritoriosSelecionados =', escritoriosSelecionados)
 
   const {
     loading,
@@ -51,7 +62,7 @@ export default function FaturamentoPage() {
     loadFaturasGeradas,
     gerarFatura,
     desmontarFatura,
-  } = useFaturamento(escritorioAtivo)
+  } = useFaturamento(escritoriosSelecionados)
 
   const [activeTab, setActiveTab] = useState<'prontos' | 'faturados'>('prontos')
   const [clientes, setClientes] = useState<ClienteParaFaturar[]>([])
@@ -69,11 +80,59 @@ export default function FaturamentoPage() {
   // Dialog de confirmação para desmontar fatura
   const [faturaParaDesmontar, setFaturaParaDesmontar] = useState<string | null>(null)
 
+  // Carregar escritórios do grupo (com todos selecionados por padrão)
   useEffect(() => {
-    if (escritorioAtivo) {
+    const loadEscritoriosGrupo = async () => {
+      try {
+        const escritorios = await getEscritoriosDoGrupo()
+        setEscritoriosGrupo(escritorios)
+        // Iniciar com TODOS selecionados (visão consolidada padrão)
+        if (escritorios.length > 0) {
+          setEscritoriosSelecionados(escritorios.map(e => e.id))
+        }
+      } catch (error) {
+        console.error('Erro ao carregar escritórios do grupo:', error)
+      }
+    }
+    loadEscritoriosGrupo()
+  }, [])
+
+  // Funções do seletor de escritórios
+  const toggleEscritorio = (escritorioId: string) => {
+    setEscritoriosSelecionados(prev => {
+      if (prev.includes(escritorioId)) {
+        if (prev.length === 1) return prev
+        return prev.filter(id => id !== escritorioId)
+      } else {
+        return [...prev, escritorioId]
+      }
+    })
+  }
+
+  const selecionarTodos = () => {
+    setEscritoriosSelecionados(escritoriosGrupo.map(e => e.id))
+  }
+
+  const selecionarApenas = (escritorioId: string) => {
+    setEscritoriosSelecionados([escritorioId])
+  }
+
+  const getSeletorLabel = () => {
+    if (escritoriosSelecionados.length === escritoriosGrupo.length) {
+      return 'Todos os escritórios'
+    } else if (escritoriosSelecionados.length === 1) {
+      const escritorio = escritoriosGrupo.find(e => e.id === escritoriosSelecionados[0])
+      return escritorio?.nome || 'Escritório'
+    } else {
+      return `${escritoriosSelecionados.length} escritórios`
+    }
+  }
+
+  useEffect(() => {
+    if (escritoriosSelecionados.length > 0) {
       loadData()
     }
-  }, [escritorioAtivo])
+  }, [escritoriosSelecionados])
 
   const loadData = async () => {
     const [clientesData, faturasData] = await Promise.all([
@@ -187,16 +246,80 @@ export default function FaturamentoPage() {
             Gere faturas consolidadas automaticamente
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={loadData}
-          disabled={loading}
-          className="border-slate-200"
-        >
-          <RefreshCw className={cn('h-4 w-4 mr-2', loading && 'animate-spin')} />
-          Atualizar
-        </Button>
+        <div className="flex items-center gap-2.5">
+          {/* Seletor de Escritórios */}
+          {escritoriosGrupo.length > 1 && (
+            <Popover open={seletorAberto} onOpenChange={setSeletorAberto}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="border-slate-200 bg-white hover:bg-slate-50"
+                >
+                  <Building2 className="h-4 w-4 mr-2 text-[#34495e]" />
+                  <span className="text-sm">{getSeletorLabel()}</span>
+                  <ChevronDown className="h-4 w-4 ml-2 text-slate-400" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-2" align="end">
+                <div className="space-y-1">
+                  {/* Opção: Todos */}
+                  <button
+                    onClick={selecionarTodos}
+                    className={cn(
+                      'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors',
+                      escritoriosSelecionados.length === escritoriosGrupo.length
+                        ? 'bg-[#1E3A8A]/10 text-[#1E3A8A]'
+                        : 'hover:bg-slate-100 text-slate-700'
+                    )}
+                  >
+                    <span className="font-medium">Todos os escritórios</span>
+                    {escritoriosSelecionados.length === escritoriosGrupo.length && (
+                      <Check className="h-4 w-4" />
+                    )}
+                  </button>
+
+                  <div className="h-px bg-slate-200 my-2" />
+
+                  {/* Lista de escritórios */}
+                  {escritoriosGrupo.map((escritorio) => (
+                    <div
+                      key={escritorio.id}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50"
+                    >
+                      <Checkbox
+                        id={`esc-${escritorio.id}`}
+                        checked={escritoriosSelecionados.includes(escritorio.id)}
+                        onCheckedChange={() => toggleEscritorio(escritorio.id)}
+                      />
+                      <label
+                        htmlFor={`esc-${escritorio.id}`}
+                        className="flex-1 text-sm text-slate-700 cursor-pointer"
+                      >
+                        {escritorio.nome}
+                      </label>
+                      <button
+                        onClick={() => selecionarApenas(escritorio.id)}
+                        className="text-[10px] text-[#1E3A8A] hover:underline"
+                      >
+                        apenas
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadData}
+            disabled={loading}
+            className="border-slate-200"
+          >
+            <RefreshCw className={cn('h-4 w-4 mr-2', loading && 'animate-spin')} />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Tabs: Prontos para Faturar | Faturados */}

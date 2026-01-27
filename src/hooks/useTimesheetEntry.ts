@@ -9,12 +9,19 @@ import {
   DivisaoTimesheetItem,
 } from '@/types/timer';
 
+export interface EditarTimesheetData {
+  horas: number;
+  atividade: string;
+  faturavel: boolean;
+}
+
 interface UseTimesheetEntryReturn {
   criarRegistro: (dados: NovoTimesheetData) => Promise<string>;
   registrarRetroativo: (dados: RegistroRetroativoData) => Promise<string>;
   ajustarHorarios: (timesheetId: string, dados: AjusteHorariosData) => Promise<void>;
   dividirRegistro: (timesheetId: string, divisoes: DivisaoTimesheetItem[]) => Promise<string[]>;
   atualizarAtividade: (timesheetId: string, atividade: string) => Promise<void>;
+  editarTimesheet: (timesheetId: string, dados: EditarTimesheetData) => Promise<void>;
   deletarRegistro: (timesheetId: string) => Promise<void>;
 }
 
@@ -169,6 +176,25 @@ export function useTimesheetEntry(escritorioId: string | null): UseTimesheetEntr
     if (error) throw error;
   }, [supabase]);
 
+  // Editar timesheet durante revisão (horas, atividade, faturável)
+  const editarTimesheet = useCallback(async (
+    timesheetId: string,
+    dados: EditarTimesheetData
+  ): Promise<void> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
+    const { error } = await supabase.rpc('editar_timesheet', {
+      p_timesheet_id: timesheetId,
+      p_horas: dados.horas,
+      p_atividade: dados.atividade,
+      p_faturavel: dados.faturavel,
+      p_editado_por: user.id,
+    });
+
+    if (error) throw error;
+  }, [supabase]);
+
   // Deletar registro (apenas se não faturado)
   const deletarRegistro = useCallback(async (timesheetId: string): Promise<void> => {
     // Primeiro verificar se não está faturado
@@ -198,6 +224,7 @@ export function useTimesheetEntry(escritorioId: string | null): UseTimesheetEntr
     ajustarHorarios,
     dividirRegistro,
     atualizarAtividade,
+    editarTimesheet,
     deletarRegistro,
   };
 }

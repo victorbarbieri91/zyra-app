@@ -9,10 +9,16 @@ import {
   AlertCircle,
   FileText,
   Upload,
+  Building2,
+  ChevronDown,
+  Check,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +35,8 @@ import {
   CartaoComFaturaAtual,
   CartaoCredito,
 } from '@/hooks/useCartoesCredito'
+import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
+import { cn } from '@/lib/utils'
 import CartaoModal from '@/components/financeiro/cartoes/CartaoModal'
 import CartaoCard from '@/components/financeiro/cartoes/CartaoCard'
 import DespesaCartaoModal from '@/components/financeiro/cartoes/DespesaCartaoModal'
@@ -43,6 +51,11 @@ export default function CartoesPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
 
+  // Multi-escritório states
+  const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
+  const [escritoriosSelecionados, setEscritoriosSelecionados] = useState<string[]>([])
+  const [seletorAberto, setSeletorAberto] = useState(false)
+
   // Modais
   const [modalCartaoOpen, setModalCartaoOpen] = useState(false)
   const [modalDespesaOpen, setModalDespesaOpen] = useState(false)
@@ -50,11 +63,59 @@ export default function CartoesPage() {
   const [cartaoParaDespesa, setCartaoParaDespesa] = useState<string | undefined>()
   const [cartaoParaExcluir, setCartaoParaExcluir] = useState<string | null>(null)
 
-  const { loadCartoesComFaturaAtual, deleteCartao } = useCartoesCredito(escritorioAtivo)
+  const { loadCartoesComFaturaAtual, deleteCartao } = useCartoesCredito(escritoriosSelecionados)
+
+  // Carregar escritórios do grupo (com todos selecionados por padrão)
+  useEffect(() => {
+    const loadEscritoriosGrupo = async () => {
+      try {
+        const escritorios = await getEscritoriosDoGrupo()
+        setEscritoriosGrupo(escritorios)
+        // Iniciar com TODOS selecionados (visão consolidada padrão)
+        if (escritorios.length > 0) {
+          setEscritoriosSelecionados(escritorios.map(e => e.id))
+        }
+      } catch (error) {
+        console.error('Erro ao carregar escritórios do grupo:', error)
+      }
+    }
+    loadEscritoriosGrupo()
+  }, [])
+
+  // Funções do seletor de escritórios
+  const toggleEscritorio = (escritorioId: string) => {
+    setEscritoriosSelecionados(prev => {
+      if (prev.includes(escritorioId)) {
+        if (prev.length === 1) return prev
+        return prev.filter(id => id !== escritorioId)
+      } else {
+        return [...prev, escritorioId]
+      }
+    })
+  }
+
+  const selecionarTodos = () => {
+    setEscritoriosSelecionados(escritoriosGrupo.map(e => e.id))
+  }
+
+  const selecionarApenas = (escritorioId: string) => {
+    setEscritoriosSelecionados([escritorioId])
+  }
+
+  const getSeletorLabel = () => {
+    if (escritoriosSelecionados.length === escritoriosGrupo.length) {
+      return 'Todos os escritórios'
+    } else if (escritoriosSelecionados.length === 1) {
+      const escritorio = escritoriosGrupo.find(e => e.id === escritoriosSelecionados[0])
+      return escritorio?.nome || 'Escritório'
+    } else {
+      return `${escritoriosSelecionados.length} escritórios`
+    }
+  }
 
   // Carregar cartões
   const loadData = useCallback(async () => {
-    if (!escritorioAtivo) return
+    if (escritoriosSelecionados.length === 0) return
 
     setLoading(true)
     try {
@@ -66,11 +127,13 @@ export default function CartoesPage() {
     } finally {
       setLoading(false)
     }
-  }, [escritorioAtivo, loadCartoesComFaturaAtual])
+  }, [escritoriosSelecionados, loadCartoesComFaturaAtual])
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    if (escritoriosSelecionados.length > 0) {
+      loadData()
+    }
+  }, [loadData, escritoriosSelecionados])
 
   // Filtrar cartões
   const cartoesFiltrados = cartoes.filter((cartao) => {
@@ -152,6 +215,68 @@ export default function CartoesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2.5">
+          {/* Seletor de Escritórios */}
+          {escritoriosGrupo.length > 1 && (
+            <Popover open={seletorAberto} onOpenChange={setSeletorAberto}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="border-slate-200 bg-white hover:bg-slate-50"
+                >
+                  <Building2 className="h-4 w-4 mr-2 text-[#34495e]" />
+                  <span className="text-sm">{getSeletorLabel()}</span>
+                  <ChevronDown className="h-4 w-4 ml-2 text-slate-400" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-2" align="end">
+                <div className="space-y-1">
+                  {/* Opção: Todos */}
+                  <button
+                    onClick={selecionarTodos}
+                    className={cn(
+                      'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors',
+                      escritoriosSelecionados.length === escritoriosGrupo.length
+                        ? 'bg-[#1E3A8A]/10 text-[#1E3A8A]'
+                        : 'hover:bg-slate-100 text-slate-700'
+                    )}
+                  >
+                    <span className="font-medium">Todos os escritórios</span>
+                    {escritoriosSelecionados.length === escritoriosGrupo.length && (
+                      <Check className="h-4 w-4" />
+                    )}
+                  </button>
+
+                  <div className="h-px bg-slate-200 my-2" />
+
+                  {/* Lista de escritórios */}
+                  {escritoriosGrupo.map((escritorio) => (
+                    <div
+                      key={escritorio.id}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50"
+                    >
+                      <Checkbox
+                        id={`esc-${escritorio.id}`}
+                        checked={escritoriosSelecionados.includes(escritorio.id)}
+                        onCheckedChange={() => toggleEscritorio(escritorio.id)}
+                      />
+                      <label
+                        htmlFor={`esc-${escritorio.id}`}
+                        className="flex-1 text-sm text-slate-700 cursor-pointer"
+                      >
+                        {escritorio.nome}
+                      </label>
+                      <button
+                        onClick={() => selecionarApenas(escritorio.id)}
+                        className="text-[10px] text-[#1E3A8A] hover:underline"
+                      >
+                        apenas
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
           <Button
             variant="outline"
             onClick={() => router.push('/dashboard/financeiro/cartoes/importar')}
@@ -271,15 +396,25 @@ export default function CartoesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {cartoesFiltrados.map((cartao) => (
-            <CartaoCard
-              key={cartao.id}
-              cartao={cartao}
-              onViewDetails={handleViewDetails}
-              onAddExpense={handleAddExpense}
-              onViewInvoice={handleViewInvoice}
-              onEdit={handleEditCartao}
-              onDelete={(id) => setCartaoParaExcluir(id)}
-            />
+            <div key={cartao.id} className="relative">
+              {/* Badge do escritório quando mostrando múltiplos */}
+              {escritoriosSelecionados.length > 1 && cartao.escritorio_nome && (
+                <Badge
+                  variant="secondary"
+                  className="absolute -top-2 -right-2 z-10 bg-[#1E3A8A]/10 text-[#1E3A8A] text-[10px] border-0"
+                >
+                  {cartao.escritorio_nome}
+                </Badge>
+              )}
+              <CartaoCard
+                cartao={cartao}
+                onViewDetails={handleViewDetails}
+                onAddExpense={handleAddExpense}
+                onViewInvoice={handleViewInvoice}
+                onEdit={handleEditCartao}
+                onDelete={(id) => setCartaoParaExcluir(id)}
+              />
+            </div>
           ))}
         </div>
       )}

@@ -103,7 +103,7 @@ export default function ProcessoCobrancasCard({
     setModalCobrar(ato)
     setValorCobrar(
       ato.valor_calculado?.toString() ||
-        ato.valor_fixo_contrato?.toString() ||
+        ato.valor_minimo_contrato?.toString() ||
         ato.valor_fixo_padrao?.toString() ||
         ''
     )
@@ -174,14 +174,23 @@ export default function ProcessoCobrancasCard({
                     </p>
                   </div>
                   {ato.valor_calculado && ato.valor_calculado > 0 && (
-                    <p className="text-[10px] text-emerald-600 mt-0.5">
-                      {formatCurrency(ato.valor_calculado)}
-                      {ato.percentual_contrato && valorCausa && (
-                        <span className="text-slate-400 ml-1">
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <p className="text-[10px] font-medium text-emerald-600">
+                        {formatCurrency(ato.valor_calculado)}
+                      </p>
+                      {ato.usou_minimo ? (
+                        <Badge
+                          variant="outline"
+                          className="text-[8px] px-1 py-0 h-3.5 bg-amber-50 text-amber-600 border-amber-200"
+                        >
+                          mín.
+                        </Badge>
+                      ) : ato.percentual_contrato ? (
+                        <span className="text-[9px] text-slate-400">
                           ({ato.percentual_contrato}%)
                         </span>
-                      )}
-                    </p>
+                      ) : null}
+                    </div>
                   )}
                 </div>
                 <Button
@@ -219,6 +228,44 @@ export default function ProcessoCobrancasCard({
                 </p>
               </div>
             </div>
+
+            {/* Detalhes do Cálculo */}
+            {(modalCobrar?.valor_percentual || modalCobrar?.valor_minimo) && (
+              <div className="p-3 bg-slate-50/50 rounded-lg border border-slate-100">
+                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-2">
+                  Cálculo
+                </p>
+                <div className="space-y-1.5">
+                  {modalCobrar?.percentual_contrato && valorCausa && valorCausa > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-600">
+                        {modalCobrar.percentual_contrato}% de {formatCurrency(valorCausa)}
+                      </span>
+                      <span className={`text-xs font-medium ${!modalCobrar.usou_minimo ? 'text-emerald-600' : 'text-slate-400 line-through'}`}>
+                        {formatCurrency(modalCobrar.valor_percentual || 0)}
+                      </span>
+                    </div>
+                  )}
+                  {modalCobrar?.valor_minimo && modalCobrar.valor_minimo > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-600">Valor mínimo</span>
+                      <span className={`text-xs font-medium ${modalCobrar.usou_minimo ? 'text-amber-600' : 'text-slate-400'}`}>
+                        {formatCurrency(modalCobrar.valor_minimo)}
+                      </span>
+                    </div>
+                  )}
+                  {modalCobrar?.usou_minimo && (
+                    <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-200 mt-1.5">
+                      <AlertCircle className="w-3 h-3 text-amber-500" />
+                      <span className="text-[10px] text-amber-600">
+                        Aplicado valor mínimo (maior que o percentual)
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div>
               <Label className="text-sm">Valor da Cobrança</Label>
               <Input
@@ -230,15 +277,9 @@ export default function ProcessoCobrancasCard({
                 placeholder="0,00"
                 className="mt-1"
               />
-              {modalCobrar?.percentual_contrato && valorCausa && (
-                <p className="text-xs text-slate-500 mt-1">
-                  {modalCobrar.percentual_contrato}% de{' '}
-                  {formatCurrency(valorCausa)} ={' '}
-                  {formatCurrency(
-                    (modalCobrar.percentual_contrato / 100) * valorCausa
-                  )}
-                </p>
-              )}
+              <p className="text-[10px] text-slate-400 mt-1">
+                Você pode ajustar o valor se necessário
+              </p>
             </div>
           </div>
           <DialogFooter>

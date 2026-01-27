@@ -361,6 +361,7 @@ export default function CartoesPage() {
           open={modalCartaoOpen}
           onOpenChange={setModalCartaoOpen}
           escritorioId={escritorioAtivo}
+          escritorios={escritoriosGrupo}
           cartaoParaEditar={cartaoParaEditar}
           onSuccess={loadData}
         />

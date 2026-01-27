@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 export interface SyncLog {
@@ -42,7 +42,8 @@ export function useAaspSync(escritorioId: string | undefined): UseAaspSyncReturn
   const [historicoSync, setHistoricoSync] = useState<SyncLog[]>([]);
   const [carregandoHistorico, setCarregandoHistorico] = useState(false);
 
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
 
   const getHistorico = useCallback(async (limit: number = 10): Promise<SyncLog[]> => {
     if (!escritorioId) return [];
@@ -58,7 +59,7 @@ export function useAaspSync(escritorioId: string | undefined): UseAaspSyncReturn
         .limit(limit);
 
       if (error) {
-        console.error('Erro ao buscar histórico:', error);
+        console.error('Erro ao buscar histórico AASP:', error);
         return [];
       }
 
@@ -171,6 +172,13 @@ export function useAaspSync(escritorioId: string | undefined): UseAaspSyncReturn
       setSincronizando(false);
     }
   }, [escritorioId, supabase, getHistorico]);
+
+  // Carregar histórico automaticamente quando escritorioId estiver disponível
+  useEffect(() => {
+    if (escritorioId) {
+      getHistorico(10);
+    }
+  }, [escritorioId, getHistorico]);
 
   return {
     sincronizando,

@@ -236,6 +236,177 @@ export async function GET(request: NextRequest) {
 }
 
 /**
+ * PATCH /api/escavador/publicacoes/termos
+ *
+ * Ativa/Registra um termo existente no Escavador
+ * Usado para termos que foram criados mas não foram registrados na API
+ *
+ * Body: { termo_id: string }
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    // Autenticacao
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { sucesso: false, error: 'Nao autorizado' },
+        { status: 401 }
+      )
+    }
+
+    // Buscar escritorio do usuario
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('escritorio_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.escritorio_id) {
+      return NextResponse.json(
+        { sucesso: false, error: 'Escritorio nao encontrado' },
+        { status: 400 }
+      )
+    }
+
+    // Parsear body
+    let body: { termo_id?: string }
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json(
+        { sucesso: false, error: 'Body invalido' },
+        { status: 400 }
+      )
+    }
+
+    const { termo_id } = body
+
+    if (!termo_id) {
+      return NextResponse.json(
+        { sucesso: false, error: 'termo_id e obrigatorio' },
+        { status: 400 }
+      )
+    }
+
+    // Buscar termo existente
+    const { data: termo, error: selectError } = await supabase
+      .from('publicacoes_termos_escavador')
+      .select('*')
+      .eq('id', termo_id)
+      .eq('escritorio_id', profile.escritorio_id)
+      .single()
+
+    if (selectError || !termo) {
+      return NextResponse.json(
+        { sucesso: false, error: 'Termo nao encontrado' },
+        { status: 404 }
+      )
+    }
+
+    // Verificar se já tem monitoramento_id
+    if (termo.escavador_monitoramento_id) {
+      return NextResponse.json(
+        { sucesso: false, error: 'Termo ja esta registrado no Escavador' },
+        { status: 409 }
+      )
+    }
+
+    console.log('[API Termos PATCH] Registrando termo existente no Escavador:', termo.termo)
+
+    // Verificar se token Escavador está configurado
+    if (!process.env.ESCAVADOR_API_TOKEN) {
+      console.error('[API Termos PATCH] ESCAVADOR_API_TOKEN não configurado')
+      return NextResponse.json(
+        { sucesso: false, error: 'Token da API Escavador não configurado' },
+        { status: 500 }
+      )
+    }
+
+    // Criar monitoramento no Escavador
+    let resultadoEscavador
+    try {
+      resultadoEscavador = await criarMonitoramentoTermo({
+        termo: termo.termo,
+        variacoes: termo.variacoes || [],
+        origens_ids: termo.origens_ids || []
+      })
+      console.log('[API Termos PATCH] Resultado Escavador:', JSON.stringify(resultadoEscavador))
+    } catch (escavadorError: any) {
+      console.error('[API Termos PATCH] Exceção ao chamar Escavador:', escavadorError)
+
+      // Atualizar status de erro
+      await supabase
+        .from('publicacoes_termos_escavador')
+        .update({
+          escavador_status: 'erro',
+          escavador_erro: escavadorError.message
+        })
+        .eq('id', termo_id)
+
+      return NextResponse.json(
+        { sucesso: false, error: `Erro de conexão com Escavador: ${escavadorError.message}` },
+        { status: 500 }
+      )
+    }
+
+    if (!resultadoEscavador.sucesso) {
+      console.error('[API Termos PATCH] Erro no Escavador:', resultadoEscavador.erro)
+
+      // Atualizar status de erro
+      await supabase
+        .from('publicacoes_termos_escavador')
+        .update({
+          escavador_status: 'erro',
+          escavador_erro: resultadoEscavador.erro || 'Erro desconhecido'
+        })
+        .eq('id', termo_id)
+
+      return NextResponse.json(
+        { sucesso: false, error: resultadoEscavador.erro || 'Erro ao criar monitoramento no Escavador' },
+        { status: 400 }
+      )
+    }
+
+    // Atualizar termo com monitoramento_id
+    const { data: termoAtualizado, error: updateError } = await supabase
+      .from('publicacoes_termos_escavador')
+      .update({
+        escavador_monitoramento_id: resultadoEscavador.monitoramento_id?.toString(),
+        escavador_status: 'ativo',
+        escavador_erro: null
+      })
+      .eq('id', termo_id)
+      .select()
+      .single()
+
+    if (updateError) {
+      console.error('[API Termos PATCH] Erro ao atualizar termo:', updateError)
+      return NextResponse.json(
+        { sucesso: false, error: 'Erro ao atualizar termo no banco' },
+        { status: 500 }
+      )
+    }
+
+    console.log('[API Termos PATCH] Termo ativado com sucesso:', termo_id, '-> Monitoramento:', resultadoEscavador.monitoramento_id)
+
+    return NextResponse.json({
+      sucesso: true,
+      termo: termoAtualizado,
+      monitoramento_id: resultadoEscavador.monitoramento_id
+    })
+
+  } catch (error) {
+    console.error('[API Termos PATCH] Erro interno:', error)
+    return NextResponse.json(
+      { sucesso: false, error: 'Erro interno ao ativar termo' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
  * DELETE /api/escavador/publicacoes/termos
  *
  * Remove um termo de monitoramento

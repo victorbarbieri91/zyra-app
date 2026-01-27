@@ -156,6 +156,37 @@ export function useEscavadorTermos(escritorioId?: string) {
   }, [carregarTermos])
 
   /**
+   * Ativa/Registra um termo no Escavador (para termos sem monitoramento_id)
+   */
+  const ativarTermo = useCallback(async (termoId: string): Promise<{
+    sucesso: boolean
+    erro?: string
+  }> => {
+    try {
+      const response = await fetch('/api/escavador/publicacoes/termos', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ termo_id: termoId })
+      })
+
+      const data = await response.json()
+
+      if (!data.sucesso) {
+        return { sucesso: false, erro: data.error }
+      }
+
+      // Recarrega lista
+      await carregarTermos()
+
+      return { sucesso: true }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido'
+      console.error('[useEscavadorTermos] Erro ao ativar:', message)
+      return { sucesso: false, erro: message }
+    }
+  }, [carregarTermos])
+
+  /**
    * Sincroniza publicações de todos os termos ou de um específico
    */
   const sincronizar = useCallback(async (termoId?: string): Promise<SyncResult> => {
@@ -245,12 +276,15 @@ export function useEscavadorTermos(escritorioId?: string) {
     carregarTermos,
     adicionarTermo,
     removerTermo,
+    ativarTermo,
     sincronizar,
     carregarHistoricoSync,
 
     // Computed
     termosAtivos: termos.filter(t => t.ativo),
+    termosPendentes: termos.filter(t => t.ativo && !t.escavador_monitoramento_id),
     totalAparicoes: termos.reduce((acc, t) => acc + (t.total_aparicoes || 0), 0),
-    temErros: termos.some(t => t.escavador_status === 'erro')
+    temErros: termos.some(t => t.escavador_status === 'erro'),
+    temPendentes: termos.some(t => t.ativo && !t.escavador_monitoramento_id)
   }
 }

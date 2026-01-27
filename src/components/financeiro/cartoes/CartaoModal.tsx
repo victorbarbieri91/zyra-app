@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -18,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { CreditCard, Loader2, Info } from 'lucide-react'
+import { CreditCard, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useCartoesCredito,
@@ -28,10 +29,16 @@ import {
   CORES_CARTAO,
 } from '@/hooks/useCartoesCredito'
 
+interface EscritorioOption {
+  id: string
+  nome: string
+}
+
 interface CartaoModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   escritorioId: string
+  escritorios?: EscritorioOption[]
   cartaoParaEditar?: CartaoCredito | null
   onSuccess?: () => void
 }
@@ -48,17 +55,39 @@ const initialFormData: CartaoFormData = {
   observacoes: null,
 }
 
+// Funções para máscara de moeda brasileira
+const formatCurrencyInput = (value: string): string => {
+  const digits = value.replace(/\D/g, '')
+  const numValue = parseInt(digits || '0', 10) / 100
+  return numValue.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  })
+}
+
+const parseCurrencyToNumber = (value: string): number => {
+  const cleaned = value
+    .replace(/R\$\s?/g, '')
+    .replace(/\./g, '')
+    .replace(',', '.')
+    .trim()
+  return parseFloat(cleaned) || 0
+}
+
 export default function CartaoModal({
   open,
   onOpenChange,
   escritorioId,
+  escritorios,
   cartaoParaEditar,
   onSuccess,
 }: CartaoModalProps) {
   const [formData, setFormData] = useState<CartaoFormData>(initialFormData)
   const [submitting, setSubmitting] = useState(false)
+  const [escritorioSelecionado, setEscritorioSelecionado] = useState(escritorioId)
+  const [limiteFormatado, setLimiteFormatado] = useState('R$ 0,00')
 
-  const { createCartao, updateCartao } = useCartoesCredito(escritorioId)
+  const { createCartao, updateCartao } = useCartoesCredito(escritorioSelecionado)
 
   const isEditing = !!cartaoParaEditar
 
@@ -76,10 +105,22 @@ export default function CartaoModal({
         cor: cartaoParaEditar.cor,
         observacoes: cartaoParaEditar.observacoes,
       })
+      setEscritorioSelecionado(cartaoParaEditar.escritorio_id)
+      // Formatar limite se existir
+      if (cartaoParaEditar.limite_total) {
+        setLimiteFormatado(cartaoParaEditar.limite_total.toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        }))
+      } else {
+        setLimiteFormatado('R$ 0,00')
+      }
     } else if (open) {
       setFormData(initialFormData)
+      setEscritorioSelecionado(escritorioId)
+      setLimiteFormatado('R$ 0,00')
     }
-  }, [open, cartaoParaEditar])
+  }, [open, cartaoParaEditar, escritorioId])
 
   const updateField = (field: keyof CartaoFormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -119,7 +160,7 @@ export default function CartaoModal({
           toast.success('Cartão atualizado com sucesso!')
         }
       } else {
-        const cartaoId = await createCartao(formData)
+        const cartaoId = await createCartao(formData, escritorioSelecionado)
         success = !!cartaoId
         if (success) {
           toast.success('Cartão cadastrado com sucesso!')
@@ -128,6 +169,7 @@ export default function CartaoModal({
 
       if (success) {
         setFormData(initialFormData)
+        setLimiteFormatado('R$ 0,00')
         onOpenChange(false)
         onSuccess?.()
       } else {
@@ -149,9 +191,36 @@ export default function CartaoModal({
             <CreditCard className="w-5 h-5" />
             {isEditing ? 'Editar Cartão' : 'Novo Cartão de Crédito'}
           </DialogTitle>
+          <DialogDescription>
+            {isEditing
+              ? 'Atualize as informações do cartão de crédito.'
+              : 'Preencha as informações para cadastrar um novo cartão.'}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Seletor de Escritório (apenas na criação e se tiver mais de 1) */}
+          {!isEditing && escritorios && escritorios.length > 1 && (
+            <div>
+              <Label htmlFor="escritorio">Escritório *</Label>
+              <Select
+                value={escritorioSelecionado}
+                onValueChange={setEscritorioSelecionado}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o escritório..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {escritorios.map((esc) => (
+                    <SelectItem key={esc.id} value={esc.id}>
+                      {esc.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Nome e Banco */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -247,32 +316,22 @@ export default function CartaoModal({
             </div>
           </div>
 
-          {/* Info de fechamento */}
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
-            <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-            <div className="text-xs text-blue-700">
-              <p className="font-medium">Cálculo inteligente de fechamento</p>
-              <p>
-                A fatura fechará {formData.dias_antes_fechamento} dias antes do vencimento.
-                Se cair em fim de semana ou feriado, será antecipada para o dia útil anterior.
-              </p>
-            </div>
-          </div>
-
           {/* Limite (opcional) */}
           <div>
             <Label htmlFor="limite_total">Limite Total (opcional)</Label>
             <Input
               id="limite_total"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0,00"
-              value={formData.limite_total || ''}
+              type="text"
+              inputMode="numeric"
+              placeholder="R$ 0,00"
+              value={limiteFormatado}
               onChange={(e) => {
-                const value = e.target.value ? parseFloat(e.target.value) : null
-                updateField('limite_total', value)
+                const formatted = formatCurrencyInput(e.target.value)
+                setLimiteFormatado(formatted)
+                const numericValue = parseCurrencyToNumber(formatted)
+                updateField('limite_total', numericValue > 0 ? numericValue : null)
               }}
+              className="font-mono"
             />
           </div>
 

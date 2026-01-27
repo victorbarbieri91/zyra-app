@@ -40,8 +40,12 @@ export interface AtoDisponivel {
   valor_fixo_padrao: number | null;
   // Valores configurados no contrato
   percentual_contrato?: number | null;
-  valor_fixo_contrato?: number | null;
+  valor_minimo_contrato?: number | null; // Valor mínimo configurado no contrato
   valor_calculado?: number | null;
+  // Campos para exibição detalhada do cálculo
+  valor_percentual?: number | null; // Valor calculado pelo percentual
+  valor_minimo?: number | null; // Valor mínimo aplicável
+  usou_minimo?: boolean; // true se o valor mínimo foi aplicado
 }
 
 export interface ReceitaHonorario {
@@ -238,21 +242,31 @@ export function useCobrancaAtos(escritorioId: string | null): UseCobrancaAtosRet
         return []; // Sem contrato, sem atos disponíveis
       }
 
-      // Buscar contrato com atos configurados
+      // Buscar contrato com atos configurados (estão em config.atos_configurados)
       const { data: contrato, error: contratoError } = await supabase
         .from('financeiro_contratos_honorarios')
-        .select('forma_cobranca, atos')
+        .select('forma_cobranca, config')
         .eq('id', processo.contrato_id)
         .single();
 
       if (contratoError) throw contratoError;
 
-      // Extrair atos configurados no contrato
-      const atosContrato = (contrato?.atos || []) as Array<{
+      // Extrair atos configurados do campo config.atos_configurados
+      const configData = contrato?.config as { atos_configurados?: Array<{
         ato_tipo_id: string;
+        ato_nome?: string;
         percentual_valor_causa?: number;
         valor_fixo?: number;
-      }>;
+        ativo?: boolean;
+      }> } | null;
+
+      const atosContrato = (configData?.atos_configurados || [])
+        .filter(a => a.ativo !== false) // Apenas atos ativos
+        .map(a => ({
+          ato_tipo_id: a.ato_tipo_id,
+          percentual_valor_causa: a.percentual_valor_causa,
+          valor_fixo: a.valor_fixo,
+        }));
 
       // Se não há atos configurados no contrato, retornar vazio
       if (atosContrato.length === 0) {
@@ -275,18 +289,24 @@ export function useCobrancaAtos(escritorioId: string | null): UseCobrancaAtosRet
       const valorCausa = processo.valor_causa || 0;
 
       // Mapear apenas atos que estão configurados no contrato
+      // Lógica: valorCalculado = MAX(percentual × valor_causa, valor_minimo)
+      // O valor_fixo no contrato é tratado como VALOR MÍNIMO, não valor fixo
       return (tiposAtos || []).map((ato) => {
         const configContrato = atosContrato.find(a => a.ato_tipo_id === ato.id);
 
+        // Calcular valor baseado no percentual
+        const percentualUsado = configContrato?.percentual_valor_causa ?? ato.percentual_padrao ?? 0;
+        const valorPercentual = percentualUsado && valorCausa > 0
+          ? (percentualUsado / 100) * valorCausa
+          : 0;
+
+        // Valor mínimo (do contrato ou padrão do ato)
+        const valorMinimo = configContrato?.valor_fixo ?? ato.valor_fixo_padrao ?? 0;
+
+        // Valor final = MAX(valor_percentual, valor_minimo)
         let valorCalculado: number | null = null;
-        if (configContrato?.valor_fixo) {
-          valorCalculado = configContrato.valor_fixo;
-        } else if (configContrato?.percentual_valor_causa && valorCausa > 0) {
-          valorCalculado = (configContrato.percentual_valor_causa / 100) * valorCausa;
-        } else if (ato.valor_fixo_padrao) {
-          valorCalculado = ato.valor_fixo_padrao;
-        } else if (ato.percentual_padrao && valorCausa > 0) {
-          valorCalculado = (ato.percentual_padrao / 100) * valorCausa;
+        if (valorPercentual > 0 || valorMinimo > 0) {
+          valorCalculado = Math.max(valorPercentual, valorMinimo);
         }
 
         return {
@@ -296,8 +316,12 @@ export function useCobrancaAtos(escritorioId: string | null): UseCobrancaAtosRet
           percentual_padrao: ato.percentual_padrao,
           valor_fixo_padrao: ato.valor_fixo_padrao,
           percentual_contrato: configContrato?.percentual_valor_causa || null,
-          valor_fixo_contrato: configContrato?.valor_fixo || null,
+          valor_minimo_contrato: configContrato?.valor_fixo || null, // Renomeado para clareza
           valor_calculado: valorCalculado,
+          // Novos campos para mostrar na UI
+          valor_percentual: valorPercentual > 0 ? valorPercentual : null,
+          valor_minimo: valorMinimo > 0 ? valorMinimo : null,
+          usou_minimo: valorMinimo > 0 && valorPercentual < valorMinimo, // Indica se aplicou o mínimo
         };
       });
     } catch (err) {

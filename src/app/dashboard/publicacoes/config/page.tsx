@@ -98,10 +98,14 @@ export default function ConfiguracoesPublicacoesPage() {
     historicoSync: historicoEscavador,
     adicionarTermo,
     removerTermo,
+    ativarTermo,
     sincronizar: sincronizarEscavador,
     carregarTermos,
-    temErros: temErrosEscavador
+    temErros: temErrosEscavador,
+    temPendentes: temTermosPendentes
   } = useEscavadorTermos(escritorioId ?? undefined)
+
+  const [ativandoTermo, setAtivandoTermo] = useState<string | null>(null)
 
   const [activeTab, setActiveTab] = useState('associados')
 
@@ -134,12 +138,7 @@ export default function ConfiguracoesPublicacoesPage() {
   const [termoExcluir, setTermoExcluir] = useState<TermoEscavador | null>(null)
   const [excluindoTermo, setExcluindoTermo] = useState(false)
 
-  // Carregar histórico ao montar
-  useEffect(() => {
-    if (escritorioId) {
-      getHistorico(10)
-    }
-  }, [escritorioId, getHistorico])
+  // Histórico agora é carregado automaticamente pelo hook useAaspSync
 
   const handleAbrirModal = (associado?: AaspAssociado) => {
     if (associado) {
@@ -341,7 +340,32 @@ export default function ConfiguracoesPublicacoesPage() {
     }
   }
 
-  const getStatusBadge = (status: TermoEscavador['escavador_status']) => {
+  const handleAtivarTermo = async (termoId: string) => {
+    setAtivandoTermo(termoId)
+    toast.info('Registrando termo no Escavador...')
+
+    try {
+      const resultado = await ativarTermo(termoId)
+
+      if (resultado.sucesso) {
+        toast.success('Termo registrado com sucesso no Escavador!')
+      } else {
+        toast.error(resultado.erro || 'Erro ao ativar termo')
+      }
+    } catch (error: any) {
+      console.error('Erro ao ativar termo:', error)
+      toast.error(`Erro: ${error.message}`)
+    } finally {
+      setAtivandoTermo(null)
+    }
+  }
+
+  const getStatusBadge = (status: TermoEscavador['escavador_status'], temMonitoramentoId: boolean) => {
+    // Se não tem monitoramento_id, mostrar como "Não Registrado"
+    if (!temMonitoramentoId) {
+      return { label: 'Não Registrado', class: 'bg-orange-50 text-orange-700 border-orange-200' }
+    }
+
     const configs = {
       ativo: { label: 'Ativo', class: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
       pendente: { label: 'Pendente', class: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -676,7 +700,8 @@ export default function ConfiguracoesPublicacoesPage() {
               ) : (
                 <div className="divide-y divide-slate-200">
                   {termosEscavador.map((termo) => {
-                    const statusConfig = getStatusBadge(termo.escavador_status)
+                    const temMonitoramentoId = !!termo.escavador_monitoramento_id
+                    const statusConfig = getStatusBadge(termo.escavador_status, temMonitoramentoId)
                     return (
                       <div
                         key={termo.id}
@@ -688,7 +713,9 @@ export default function ConfiguracoesPublicacoesPage() {
                         <div className="flex items-center gap-4">
                           <div className={cn(
                             'w-10 h-10 rounded-full flex items-center justify-center text-white',
-                            termo.escavador_status === 'erro'
+                            !temMonitoramentoId
+                              ? 'bg-orange-500'
+                              : termo.escavador_status === 'erro'
                               ? 'bg-red-500'
                               : termo.ativo
                                 ? 'bg-gradient-to-br from-[#34495e] to-[#46627f]'
@@ -739,19 +766,37 @@ export default function ConfiguracoesPublicacoesPage() {
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSincronizarEscavador(termo.id)}
-                            disabled={sincronizandoEscavador}
-                            className="text-slate-500 hover:text-slate-700"
-                            title="Sincronizar este termo"
-                          >
-                            <RefreshCw className={cn(
-                              'w-4 h-4',
-                              sincronizandoEscavador && 'animate-spin'
-                            )} />
-                          </Button>
+                          {!temMonitoramentoId ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleAtivarTermo(termo.id)}
+                              disabled={ativandoTermo === termo.id}
+                              className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                              title="Registrar termo no Escavador"
+                            >
+                              {ativandoTermo === termo.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                              ) : (
+                                <CheckCircle2 className="w-4 h-4 mr-1" />
+                              )}
+                              Ativar
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleSincronizarEscavador(termo.id)}
+                              disabled={sincronizandoEscavador}
+                              className="text-slate-500 hover:text-slate-700"
+                              title="Sincronizar este termo"
+                            >
+                              <RefreshCw className={cn(
+                                'w-4 h-4',
+                                sincronizandoEscavador && 'animate-spin'
+                              )} />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -767,6 +812,22 @@ export default function ConfiguracoesPublicacoesPage() {
                 </div>
               )}
             </div>
+
+            {/* Alerta de termos não registrados */}
+            {temTermosPendentes && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <div className="flex gap-3">
+                  <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-medium text-orange-800">Termos aguardando ativação</h4>
+                    <p className="text-xs text-orange-700 mt-1">
+                      Alguns termos não foram registrados no Escavador. Clique em &quot;Ativar&quot; em cada termo
+                      para registrá-los e começar a receber publicações.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Info sobre Diário Oficial */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

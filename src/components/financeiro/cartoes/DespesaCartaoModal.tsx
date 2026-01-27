@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -185,6 +186,9 @@ export default function DespesaCartaoModal({
             <Receipt className="w-5 h-5" />
             Nova Despesa no Cartão
           </DialogTitle>
+          <DialogDescription>
+            Registre uma nova despesa no cartão de crédito.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">

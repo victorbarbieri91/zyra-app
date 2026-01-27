@@ -58,6 +58,8 @@ export function useTimesheetEntry(escritorioId: string | null): UseTimesheetEntr
       }
     }
 
+    // faturavel é calculado automaticamente pelo trigger trg_timesheet_set_faturavel
+    // baseado no contrato vinculado ao processo/consulta
     const { data, error } = await supabase
       .from('financeiro_timesheet')
       .insert({
@@ -69,7 +71,8 @@ export function useTimesheetEntry(escritorioId: string | null): UseTimesheetEntr
         data_trabalho: dados.data_trabalho,
         horas: dados.horas,
         atividade: dados.atividade,
-        faturavel: dados.faturavel,
+        // faturavel é setado automaticamente pelo trigger baseado no tipo de contrato:
+        // por_hora/por_cargo = true, fixo/por_pasta/por_ato/por_etapa = false, misto = configurável
         hora_inicio: dados.hora_inicio || null,
         hora_fim: dados.hora_fim || null,
         origem: dados.origem,
@@ -106,6 +109,8 @@ export function useTimesheetEntry(escritorioId: string | null): UseTimesheetEntr
       }
     }
 
+    // Nota: p_faturavel é passado mas será sobrescrito pelo trigger
+    // trg_timesheet_set_faturavel que calcula automaticamente baseado no contrato
     const { data, error } = await supabase.rpc('registrar_tempo_retroativo', {
       p_escritorio_id: escritorioId,
       p_user_id: user.id,
@@ -116,7 +121,7 @@ export function useTimesheetEntry(escritorioId: string | null): UseTimesheetEntr
       p_processo_id: dados.processo_id || null,
       p_consulta_id: dados.consulta_id || null,
       p_tarefa_id: dados.tarefa_id || null,
-      p_faturavel: dados.faturavel,
+      p_faturavel: dados.faturavel, // Sobrescrito pelo trigger baseado no contrato
     });
 
     if (error) throw error;

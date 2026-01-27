@@ -95,13 +95,7 @@ const menuItems: MenuItem[] = [
     href: '/dashboard/financeiro',
     group: 'management',
   },
-  {
-    title: 'Peças e Teses',
-    icon: FileText,
-    href: '/dashboard/pecas-teses',
-    group: 'management',
-    disabled: true,
-  },
+  // Peças e Teses removido temporariamente - módulo ainda não implementado
 ]
 
 export default function Sidebar() {

@@ -30,6 +30,9 @@ export interface ContratoHonorario {
   updated_at: string
   // Configuração de valores (join com contratos_honorarios_config)
   config?: ContratoConfig[]
+  // Para contratos misto: define se horas trabalhadas são cobráveis
+  // Usado pelo trigger trg_timesheet_set_faturavel para calcular faturavel automaticamente
+  horas_faturaveis?: boolean | null
   // Dados calculados
   valor_total?: number
   valor_recebido?: number
@@ -101,6 +104,8 @@ export interface ContratoFormData {
   // Novos campos para por_ato
   area_juridica?: string
   atos_configurados?: AtoContrato[]
+  // Para contratos misto: define se horas são cobráveis (default: true)
+  horas_faturaveis?: boolean
   // Multi-escritório: escritório que vai faturar (se diferente do ativo)
   escritorio_id?: string
 }
@@ -331,6 +336,8 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           created_at: contrato.created_at,
           updated_at: contrato.updated_at,
           config: contrato.config ? [contrato.config as ContratoConfig] : [],
+          // Para contratos misto: define se horas são cobráveis
+          horas_faturaveis: contrato.horas_faturaveis ?? true,
           valor_total: valorTotal,
           valor_recebido: valorRecebido,
           valor_pendente: valorPendente,
@@ -401,6 +408,8 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
             data_fim: data.data_fim || null,
             descricao: data.observacoes || null,
             ativo: true,
+            // Para contratos misto: define se horas são cobráveis (usado pelo trigger de timesheet)
+            horas_faturaveis: data.forma_cobranca === 'misto' ? (data.horas_faturaveis ?? true) : null,
           })
           .select('id')
           .single()
@@ -519,6 +528,10 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           updateData.escritorio_cobranca_id = data.escritorio_id !== escritorioAtivo
             ? data.escritorio_id
             : null
+        }
+        // Para contratos misto: atualizar se horas são cobráveis
+        if (data.horas_faturaveis !== undefined) {
+          updateData.horas_faturaveis = data.forma_cobranca === 'misto' ? data.horas_faturaveis : null
         }
 
         console.log('[updateContrato] Step 1: Atualizando dados básicos...', updateData)

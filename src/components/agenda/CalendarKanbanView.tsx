@@ -14,6 +14,17 @@ import KanbanColumn from './KanbanColumn'
 import KanbanTaskCard from './KanbanTaskCard'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { useTimer } from '@/contexts/TimerContext'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 interface CalendarKanbanViewProps {
   escritorioId?: string
@@ -38,9 +49,93 @@ export default function CalendarKanbanView({
   const { tarefas: todasTarefas, refreshTarefas: refetchTarefas } = useTarefas(escritorioId)
   const [activeTarefa, setActiveTarefa] = useState<Tarefa | null>(null)
 
+  // Hook de timers para automação
+  const {
+    timersAtivos,
+    iniciarTimer,
+    pausarTimer,
+    finalizarTimer,
+    descartarTimer,
+  } = useTimer()
+
+  // Estado para dialog de confirmação ao mover tarefa com timer ativo
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean
+    tarefa: Tarefa | null
+    timerId: string | null
+  }>({ open: false, tarefa: null, timerId: null })
+
   const previousDay = () => onDateSelect(subDays(selectedDate, 1))
   const nextDay = () => onDateSelect(addDays(selectedDate, 1))
   const goToToday = () => onDateSelect(new Date())
+
+  // Funções auxiliares para automação de timer
+  const getTimerParaTarefa = (tarefaId: string) => {
+    return timersAtivos.find((t) => t.tarefa_id === tarefaId)
+  }
+
+  const tarefaTemVinculo = (tarefa: Tarefa) => {
+    return tarefa.processo_id || tarefa.consultivo_id
+  }
+
+  // Função para atualizar status da tarefa no banco
+  const atualizarStatusTarefa = async (tarefaId: string, novoStatus: string) => {
+    try {
+      const updateData: Record<string, unknown> = { status: novoStatus }
+      if (novoStatus === 'concluida') {
+        updateData.data_conclusao = new Date().toISOString()
+      } else {
+        updateData.data_conclusao = null
+      }
+
+      const { error } = await supabase
+        .from('agenda_tarefas')
+        .update(updateData)
+        .eq('id', tarefaId)
+
+      if (error) throw error
+      await refetchTarefas()
+
+      const labels: Record<string, string> = {
+        pendente: 'Pendente',
+        em_andamento: 'Em Andamento',
+        concluida: 'Concluída',
+      }
+      toast.success(`Tarefa movida para ${labels[novoStatus]}`)
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error)
+      toast.error('Erro ao atualizar status da tarefa')
+    }
+  }
+
+  // Handlers do dialog de confirmação
+  const handlePausarEMover = async () => {
+    if (!confirmDialog.tarefa || !confirmDialog.timerId) return
+    try {
+      await pausarTimer(confirmDialog.timerId)
+      toast.info('Timer pausado')
+      await atualizarStatusTarefa(confirmDialog.tarefa.id, 'pendente')
+    } catch (error) {
+      console.error('Erro ao pausar timer:', error)
+      toast.error('Erro ao pausar timer')
+    } finally {
+      setConfirmDialog({ open: false, tarefa: null, timerId: null })
+    }
+  }
+
+  const handleDescartarEMover = async () => {
+    if (!confirmDialog.tarefa || !confirmDialog.timerId) return
+    try {
+      await descartarTimer(confirmDialog.timerId)
+      toast.info('Timer descartado')
+      await atualizarStatusTarefa(confirmDialog.tarefa.id, 'pendente')
+    } catch (error) {
+      console.error('Erro ao descartar timer:', error)
+      toast.error('Erro ao descartar timer')
+    } finally {
+      setConfirmDialog({ open: false, tarefa: null, timerId: null })
+    }
+  }
 
   // Ordenar por prioridade
   const ordenarPorPrioridade = (tarefas: Tarefa[]) => {
@@ -103,45 +198,74 @@ export default function CalendarKanbanView({
     if (!over || active.id === over.id) return
 
     const tarefaId = active.id as string
-    const novoStatus = over.id as string // 'pendente' | 'em_andamento' | 'concluida'
+    const novoStatus = over.id as string
+    const tarefa = todasTarefas?.find((t) => t.id === tarefaId)
 
-    // Validar status
-    if (!['pendente', 'em_andamento', 'concluida'].includes(novoStatus)) {
+    // Validações
+    if (!tarefa || !['pendente', 'em_andamento', 'concluida'].includes(novoStatus)) {
       return
     }
+    if (tarefa.status === novoStatus) return // Não mudou
 
-    try {
-      const updateData: any = { status: novoStatus }
+    const timerExistente = getTimerParaTarefa(tarefa.id)
 
-      // Se marcar como concluída, registrar data de conclusão
-      if (novoStatus === 'concluida') {
-        updateData.data_conclusao = new Date().toISOString()
-      } else {
-        // Se voltar para pendente ou em_andamento, limpar data_conclusao
-        updateData.data_conclusao = null
+    // ========================================
+    // LÓGICA DE TIMER BASEADA NA TRANSIÇÃO
+    // ========================================
+
+    // CASO 1: Movendo para EM_ANDAMENTO - Iniciar timer automaticamente
+    if (novoStatus === 'em_andamento') {
+      if (!timerExistente) {
+        if (tarefaTemVinculo(tarefa)) {
+          try {
+            await iniciarTimer({
+              titulo: tarefa.titulo,
+              descricao: `Trabalho na tarefa: ${tarefa.titulo}`,
+              processo_id: tarefa.processo_id || undefined,
+              consulta_id: tarefa.consultivo_id || undefined,
+              tarefa_id: tarefa.id,
+              faturavel: true,
+            })
+            toast.success('Timer iniciado automaticamente')
+          } catch (error) {
+            console.error('Erro ao iniciar timer:', error)
+            toast.error('Erro ao iniciar timer')
+          }
+        } else {
+          // Tarefa sem vínculo - mostrar aviso informativo
+          toast.info('Tarefa movida (sem timer - vincule a um processo/consulta para habilitar)')
+        }
       }
-
-      const { error } = await supabase
-        .from('agenda_tarefas')
-        .update(updateData)
-        .eq('id', tarefaId)
-
-      if (error) throw error
-
-      // Recarregar tarefas
-      await refetchTarefas()
-
-      // Feedback visual
-      const statusLabels = {
-        pendente: 'Pendente',
-        em_andamento: 'Em Andamento',
-        concluida: 'Concluída',
-      }
-      toast.success(`Tarefa movida para ${statusLabels[novoStatus as keyof typeof statusLabels]}`)
-    } catch (error) {
-      console.error('Erro ao atualizar status:', error)
-      toast.error('Erro ao atualizar status da tarefa')
     }
+
+    // CASO 2: Movendo para CONCLUÍDA - Finalizar timer e criar timesheet
+    if (novoStatus === 'concluida' && timerExistente) {
+      try {
+        await finalizarTimer(timerExistente.id, {
+          descricao: `Tarefa concluída: ${tarefa.titulo}`,
+        })
+        toast.success('Timer finalizado e horas registradas')
+      } catch (error) {
+        console.error('Erro ao finalizar timer:', error)
+        toast.error('Erro ao finalizar timer')
+      }
+    }
+
+    // CASO 3: Movendo de EM_ANDAMENTO para PENDENTE com timer ativo
+    if (novoStatus === 'pendente' && tarefa.status === 'em_andamento' && timerExistente) {
+      // Abrir dialog para decidir o que fazer com o timer
+      setConfirmDialog({
+        open: true,
+        tarefa,
+        timerId: timerExistente.id,
+      })
+      return // Aguardar decisão do usuário antes de mover
+    }
+
+    // ========================================
+    // ATUALIZAR STATUS DA TAREFA
+    // ========================================
+    await atualizarStatusTarefa(tarefaId, novoStatus)
   }
 
   const totalTarefas = pendente.length + em_andamento.length + concluida.length
@@ -236,6 +360,44 @@ export default function CalendarKanbanView({
           )}
         </DragOverlay>
       </DndContext>
+
+      {/* Dialog de confirmação ao mover tarefa com timer ativo */}
+      <AlertDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmDialog({ open: false, tarefa: null, timerId: null })
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Timer Ativo Detectado</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta tarefa tem um timer em execução. O que deseja fazer com o tempo registrado?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel
+              onClick={() => setConfirmDialog({ open: false, tarefa: null, timerId: null })}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handlePausarEMover}
+              className="bg-amber-500 hover:bg-amber-600"
+            >
+              Pausar Timer
+            </AlertDialogAction>
+            <AlertDialogAction
+              onClick={handleDescartarEMover}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Descartar Timer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

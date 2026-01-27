@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, use } from 'react'
+import { useState, useEffect, useCallback, use, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -132,7 +132,10 @@ export default function PublicacaoDetalhesPage({ params }: { params: Promise<{ i
   const [vinculando, setVinculando] = useState(false)
 
   const { escritorioAtivo } = useEscritorioAtivo()
-  const supabase = createClient()
+
+  // Usar useRef para manter a mesma referência do supabase client
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   // Hooks para criar agendamentos
   const { createTarefa } = useTarefas(escritorioAtivo || undefined)
@@ -175,7 +178,7 @@ export default function PublicacaoDetalhesPage({ params }: { params: Promise<{ i
         .from('publicacoes_analises')
         .select('*')
         .eq('publicacao_id', id)
-        .single()
+        .maybeSingle()
 
       // Buscar histórico
       const { data: historico } = await supabase
@@ -231,7 +234,7 @@ export default function PublicacaoDetalhesPage({ params }: { params: Promise<{ i
         .select('id, numero_cnj, parte_contraria, status')
         .eq('escritorio_id', escritorioAtivo)
         .eq('numero_cnj', publicacao.numero_processo)
-        .single()
+        .maybeSingle()
 
       if (error || !data) {
         setProcessoEncontrado(null)

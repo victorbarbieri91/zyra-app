@@ -1,8 +1,8 @@
 # Módulo: Financeiro
 
 **Status**: ✅ Completo
-**Última atualização**: 2025-01-21 (ENUMs padronizados)
-**Tabelas**: 30 tabelas (incluindo cartões de crédito)
+**Última atualização**: 2026-01-27 (Lógica de cobrança automática)
+**Tabelas**: 31 tabelas (incluindo cartões de crédito e mapeamento de atos)
 **View de Referência**: `v_financeiro_enums` - consulte para ENUMs atualizados
 
 ## Visão Geral
@@ -100,6 +100,7 @@ O módulo Financeiro é o maior e mais complexo do sistema, gerenciando:
 | `descricao` | text | YES | - | Descrição do escopo |
 | `clausulas` | text | YES | - | Cláusulas especiais |
 | `ativo` | boolean | YES | true | Se o contrato está ativo |
+| `horas_faturaveis` | boolean | YES | true | Para contratos `misto`: define se horas são cobráveis. Usado pelo trigger de timesheet para calcular `faturavel` automaticamente |
 | `created_at` | timestamptz | YES | now() | Data de criação |
 | `updated_at` | timestamptz | YES | now() | Data de atualização |
 
@@ -522,7 +523,8 @@ O módulo Financeiro é o maior e mais complexo do sistema, gerenciando:
 | `horas` | numeric | NO | - | Total de horas |
 | `atividade` | text | NO | - | Descrição da atividade |
 | `origem` | text | YES | 'manual' | Origem: `manual`, `timer` |
-| `faturavel` | boolean | YES | true | Se pode ser faturado |
+| `faturavel` | boolean | YES | true | Se pode ser faturado (calculado automaticamente pelo trigger) |
+| `faturavel_auto` | boolean | YES | NULL | Se `faturavel` foi calculado automaticamente (true) ou definido manualmente (false) |
 | `faturado` | boolean | YES | false | Se já foi faturado |
 | `fatura_id` | uuid | YES | - | FK para fatura |
 | `faturado_em` | timestamptz | YES | - | Data do faturamento |
@@ -1027,6 +1029,29 @@ WHERE tipo_movimento IN ('transferencia_saida', 'transferencia_entrada');
 
 ---
 
+### financeiro_mapeamento_atos_movimentacao
+
+**Descrição**: Mapeamento entre tipos de atos processuais e palavras-chave para detecção automática a partir de movimentações.
+
+**Relacionamentos**:
+- `FK escritorio_id` → `escritorios.id`
+- `FK ato_tipo_id` → `financeiro_atos_processuais_tipos.id`
+
+**Colunas**:
+
+| Coluna | Tipo | Nullable | Default | Descrição |
+|--------|------|----------|---------|-----------|
+| `id` | uuid | NO | gen_random_uuid() | Identificador único |
+| `escritorio_id` | uuid | NO | - | FK para escritorios |
+| `ato_tipo_id` | uuid | NO | - | FK para tipo de ato |
+| `palavras_chave` | text[] | NO | - | Lista de palavras-chave para detectar o ato |
+| `ativo` | boolean | YES | true | Se está ativo |
+| `created_at` | timestamptz | YES | now() | Data de criação |
+
+**Constraint única**: `(escritorio_id, ato_tipo_id)`
+
+---
+
 ### financeiro_dashboard_metricas
 
 **Descrição**: Cache de métricas do dashboard financeiro.
@@ -1099,6 +1124,76 @@ WHERE tipo_movimento IN ('transferencia_saida', 'transferencia_entrada');
 
 ---
 
+## 14. LÓGICA DE COBRANÇA AUTOMÁTICA
+
+### Determinação Automática de Cobrabilidade de Horas
+
+O sistema calcula automaticamente se um registro de timesheet é cobrável (`faturavel`) baseado no tipo de contrato vinculado ao processo/consulta:
+
+| Forma de Cobrança | Horas Cobráveis | Explicação |
+|-------------------|-----------------|------------|
+| `por_hora` | ✅ Sim | Fatura horas aprovadas |
+| `por_cargo` | ✅ Sim | Fatura horas × valor do cargo |
+| `fixo` | ❌ Não | Valor fixo mensal automático |
+| `por_pasta` | ❌ Não | Valor por processo ativo |
+| `por_ato` | ❌ Não | Cobra via atos processuais |
+| `por_etapa` | ❌ Não | Cobra por etapa do processo |
+| `misto` | ⚙️ Configurável | Usa campo `horas_faturaveis` do contrato |
+
+### Funções
+
+#### calcular_faturavel_timesheet(p_processo_id, p_consulta_id)
+Calcula se horas são cobráveis baseado no contrato vinculado.
+
+**Retorno**: `boolean` (true = cobrável, false = interno)
+
+#### get_tarefa_faturavel(p_tarefa_id)
+Calcula cobrabilidade para horas registradas a partir de uma tarefa.
+
+**Retorno**: `boolean`
+
+#### converter_alerta_em_receita(p_alerta_id, p_valor, p_descricao, p_user_id)
+Converte um alerta de cobrança pendente em receita de honorário.
+
+**Retorno**: `uuid` (ID da receita criada)
+
+#### ignorar_alerta_cobranca(p_alerta_id, p_justificativa, p_user_id)
+Ignora um alerta de cobrança com justificativa opcional.
+
+**Retorno**: `boolean`
+
+#### criar_alerta_cobranca_manual(p_processo_id, p_ato_tipo_id, p_valor_sugerido, p_titulo, p_descricao)
+Cria um alerta de cobrança manualmente.
+
+**Retorno**: `uuid` (ID do alerta criado)
+
+### Triggers
+
+#### trg_timesheet_set_faturavel
+- **Tabela**: `financeiro_timesheet`
+- **Evento**: BEFORE INSERT
+- **Ação**: Calcula e define `faturavel` e `faturavel_auto = true` automaticamente
+
+#### trg_movimentacao_detectar_ato
+- **Tabela**: `processos_movimentacoes`
+- **Evento**: AFTER INSERT
+- **Ação**: Detecta atos processuais cobráveis a partir de palavras-chave e cria alertas de cobrança automáticos
+
+### Views
+
+#### v_alertas_cobranca_pendentes
+Lista alertas pendentes com dados enriquecidos (processo, cliente, ato, movimentação).
+
+#### v_historico_cobrancas_processo
+Lista histórico de cobranças (receitas de honorário) por processo.
+
+#### v_timesheet_aprovacao
+View atualizada com campos adicionais:
+- `faturavel_auto`: indica se foi calculado automaticamente
+- `forma_cobranca_contrato`: forma de cobrança do contrato vinculado
+
+---
+
 ## Notas de Implementação
 
 ### Padrões Seguidos
@@ -1112,12 +1207,17 @@ WHERE tipo_movimento IN ('transferencia_saida', 'transferencia_entrada');
 - Ao faturar timesheet, marcar como `faturado = true`
 - Ao cancelar fatura, reverter status dos itens vinculados
 - Comissões são calculadas automaticamente baseadas em `escritorios_usuarios.percentual_comissao`
+- **Timesheet**: `faturavel` é calculado automaticamente pelo trigger - não passar no INSERT
+- **Contratos misto**: usar campo `horas_faturaveis` para definir se horas são cobráveis
+- **Alertas de cobrança**: criados automaticamente pelo trigger quando movimentação contém palavras-chave mapeadas
 
 ### Triggers Importantes
 - `atualizar_saldo_conta` - Atualiza saldo após lançamento
 - `gerar_parcelas_honorario` - Gera parcelas ao criar honorário parcelado
 - `atualizar_valor_fatura` - Recalcula total ao adicionar/remover itens
 - `criar_despesa_fatura_cartao` - Cria despesa ao fechar fatura de cartão
+- `trg_timesheet_set_faturavel` - Calcula `faturavel` automaticamente baseado no contrato
+- `trg_movimentacao_detectar_ato` - Detecta atos cobráveis a partir de movimentações
 
 ---
 

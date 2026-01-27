@@ -42,6 +42,7 @@ import EventoDetailModal from '@/components/agenda/EventoDetailModal'
 import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
 import ProcessoTimelineHorizontal from '@/components/processos/ProcessoTimelineHorizontal'
 import ProcessoFinanceiroCard from '@/components/processos/ProcessoFinanceiroCard'
+import ProcessoCobrancasCard from '@/components/processos/ProcessoCobrancasCard'
 import { useRouter } from 'next/navigation'
 import type { TarefaFormData } from '@/hooks/useTarefas'
 import type { EventoFormData } from '@/hooks/useEventos'
@@ -737,6 +738,12 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
             // TODO: Abrir modal de despesa
             console.log('Lançar despesa')
           }}
+        />
+
+        {/* Card de Cobrança de Atos (apenas para contratos por_ato) */}
+        <ProcessoCobrancasCard
+          processoId={processo.id}
+          valorCausa={processo.valor_causa}
         />
 
       </div>

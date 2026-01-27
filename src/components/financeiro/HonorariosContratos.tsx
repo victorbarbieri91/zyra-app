@@ -209,7 +209,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
   const [filterTipo, setFilterTipo] = useState<string>('all')
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [selectedContrato, setSelectedContrato] = useState<ContratoHonorario | null>(null)
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards')
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table')
   const [activeTab, setActiveTab] = useState<'ativos' | 'inativos' | 'vencer' | 'configurado' | 'nao_configurado' | 'todos'>('ativos')
 
   // Modal states

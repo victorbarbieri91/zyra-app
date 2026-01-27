@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils'
 
 interface CartaoCardProps {
   cartao: CartaoComFaturaAtual
+  showEscritorioNome?: boolean
   onViewDetails: (cartaoId: string) => void
   onAddExpense: (cartaoId: string) => void
   onViewInvoice: (cartaoId: string) => void
@@ -36,6 +37,7 @@ interface CartaoCardProps {
 
 export default function CartaoCard({
   cartao,
+  showEscritorioNome = false,
   onViewDetails,
   onAddExpense,
   onViewInvoice,
@@ -120,12 +122,12 @@ export default function CartaoCard({
 
         <div className="relative flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
               <CreditCard className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-semibold text-sm">{cartao.nome}</h3>
-              <p className="text-xs opacity-70">{cartao.banco}</p>
+              <h3 className="font-semibold text-sm text-white">{cartao.nome}</h3>
+              <p className="text-xs text-white/90">{cartao.banco}</p>
             </div>
           </div>
 
@@ -162,18 +164,27 @@ export default function CartaoCard({
 
         {/* Número do cartão */}
         <div className="relative mt-5 flex items-center">
-          <span className="text-base tracking-[0.2em] font-mono opacity-70">
+          <span className="text-base tracking-[0.2em] font-mono text-white/90">
             •••• •••• •••• {cartao.ultimos_digitos}
           </span>
         </div>
 
         {/* Bandeira e vencimento */}
         <div className="relative mt-4 flex items-center justify-between">
-          <span className="text-xs opacity-60">
+          <span className="text-xs text-white/80">
             Venc. dia {cartao.dia_vencimento}
           </span>
-          <span className="text-xs font-medium opacity-90">{bandeira?.label}</span>
+          <span className="text-xs font-medium text-white">{bandeira?.label}</span>
         </div>
+
+        {/* Badge do escritório */}
+        {showEscritorioNome && cartao.escritorio_nome && (
+          <div className="absolute top-2 right-12">
+            <Badge variant="secondary" className="bg-white/20 text-white border-0 text-[10px] px-1.5 py-0.5 backdrop-blur-sm">
+              {cartao.escritorio_nome}
+            </Badge>
+          </div>
+        )}
       </div>
 
       {/* Corpo do Card */}
@@ -240,34 +251,6 @@ export default function CartaoCard({
             Ver Fatura
           </Button>
         </div>
-
-        {/* Limite disponível (se configurado) */}
-        {cartao.limite_total && (
-          <div className="mt-3 pt-3 border-t border-slate-100">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-500">Limite disponível</span>
-              <span className="font-medium text-slate-700">
-                {formatCurrency(cartao.limite_total - (fatura?.valor_total || 0))}
-              </span>
-            </div>
-            {/* Barra de progresso */}
-            <div className="mt-1.5 h-1 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className={cn(
-                  'h-full rounded-full transition-all',
-                  ((fatura?.valor_total || 0) / cartao.limite_total) > 0.9
-                    ? 'bg-red-400'
-                    : ((fatura?.valor_total || 0) / cartao.limite_total) > 0.7
-                    ? 'bg-amber-400'
-                    : 'bg-emerald-400'
-                )}
-                style={{
-                  width: `${Math.min(((fatura?.valor_total || 0) / cartao.limite_total) * 100, 100)}%`,
-                }}
-              />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

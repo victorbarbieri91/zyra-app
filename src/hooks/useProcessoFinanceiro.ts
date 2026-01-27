@@ -524,18 +524,24 @@ export function useProcessoFinanceiro(processoId: string | null) {
     [processoId, escritorioAtivo, supabase, loadDados]
   )
 
-  // Validações baseadas na modalidade
-  const podelancarHoras = contratoInfo
-    ? ['por_hora', 'por_cargo', 'misto'].includes(contratoInfo.modalidade_cobranca || '')
-    : true // Se não tem contrato, permite
+  // Validações baseadas na forma de cobrança do contrato
+  // Usa forma_cobranca do contrato (prioritário) ou modalidade_cobranca do processo (fallback)
+  const formaCobranca = contratoInfo?.forma_cobranca || contratoInfo?.modalidade_cobranca || ''
+
+  // Horas podem ser lançadas em TODOS os tipos de contrato para monitoramento interno
+  // A diferença é se são cobráveis ou não (definido automaticamente pelo trigger trg_timesheet_set_faturavel):
+  // - por_hora, por_cargo = cobrável (faturavel = true)
+  // - fixo, por_pasta, por_ato, por_etapa = não cobrável (faturavel = false)
+  // - misto = configurável via campo horas_faturaveis do contrato
+  const podelancarHoras = !!contratoInfo // Permite lançar horas se tiver contrato vinculado
 
   const podeLancarEtapa = contratoInfo
-    ? ['por_etapa', 'misto'].includes(contratoInfo.modalidade_cobranca || '')
-    : true
+    ? ['por_etapa', 'misto'].includes(formaCobranca)
+    : false
 
   const podeLancarAto = contratoInfo
-    ? ['por_ato', 'misto'].includes(contratoInfo.modalidade_cobranca || '')
-    : true
+    ? ['por_ato', 'misto'].includes(formaCobranca)
+    : false
 
   // Despesas reembolsáveis pendentes
   const despesasReembolsaveisPendentes = despesas.filter(

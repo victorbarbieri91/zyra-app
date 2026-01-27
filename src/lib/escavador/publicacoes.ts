@@ -52,8 +52,10 @@ export interface EscavadorMonitoramentoDiario {
 export interface CriarMonitoramentoTermoRequest {
   termo: string
   origens_ids?: number[]
+  estados_ids?: number[]
   variacoes?: string[]
   termos_auxiliares?: string[][]
+  monitorar_em_todos_diarios?: boolean
 }
 
 export interface ResultadoMonitoramentoDiario {
@@ -171,13 +173,38 @@ export async function criarMonitoramentoTermo(
   try {
     console.log('[Escavador Publicacoes] Criando monitoramento para termo:', request.termo)
 
-    const body = {
+    // Construir body apenas com campos que têm valor
+    // A API EXIGE pelo menos um de: origens_ids, estados_ids, ou monitorar_em_todos_diarios
+    const body: Record<string, any> = {
       tipo: 'termo',
-      termo: request.termo,
-      origens_ids: request.origens_ids || [],
-      variacoes: request.variacoes || [],
-      termos_auxiliares: request.termos_auxiliares || []
+      termo: request.termo
     }
+
+    // Verificar se tem origens ou estados específicos
+    const temOrigens = request.origens_ids && request.origens_ids.length > 0
+    const temEstados = request.estados_ids && request.estados_ids.length > 0
+
+    // Se não tem origens nem estados específicos, monitorar em todos os diários
+    if (!temOrigens && !temEstados) {
+      body.monitorar_em_todos_diarios = request.monitorar_em_todos_diarios ?? true
+    }
+
+    // Só adiciona se tiver valores
+    if (temOrigens) {
+      body.origens_ids = request.origens_ids
+    }
+    if (temEstados) {
+      body.estados_ids = request.estados_ids
+    }
+    if (request.variacoes && request.variacoes.length > 0) {
+      body.variacoes = request.variacoes
+    }
+    if (request.termos_auxiliares && request.termos_auxiliares.length > 0) {
+      body.termos_auxiliares = request.termos_auxiliares
+    }
+
+    console.log('[Escavador Publicacoes] Body da requisição:', JSON.stringify(body))
+    console.log('[Escavador Publicacoes] URL:', `${ESCAVADOR_V1_BASE_URL}/monitoramentos`)
 
     const response = await fetch(
       `${ESCAVADOR_V1_BASE_URL}/monitoramentos`,
@@ -210,9 +237,19 @@ export async function criarMonitoramentoTermo(
       })
 
       if (response.status === 422) {
+        // Extrair mensagem de erro detalhada
+        let erroDetalhado = 'Termo já está sendo monitorado ou dados inválidos'
+        if (errorData?.errors && Array.isArray(errorData.errors)) {
+          erroDetalhado = errorData.errors.join('. ')
+        } else if (errorData?.message) {
+          erroDetalhado = errorData.message
+        } else if (errorData?.error?.message) {
+          erroDetalhado = errorData.error.message
+        }
+
         return {
           sucesso: false,
-          erro: errorData?.message || errorData?.error?.message || 'Termo já está sendo monitorado ou dados inválidos',
+          erro: erroDetalhado,
           creditos_utilizados: creditosUtilizados
         }
       }

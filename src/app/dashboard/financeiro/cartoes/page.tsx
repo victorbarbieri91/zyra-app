@@ -6,8 +6,6 @@ import {
   CreditCard,
   Plus,
   Search,
-  AlertCircle,
-  FileText,
   Upload,
   Building2,
   ChevronDown,
@@ -18,7 +16,6 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -183,19 +180,11 @@ export default function CartoesPage() {
     router.push(`/dashboard/financeiro/cartoes/${cartaoId}?tab=faturas`)
   }
 
-  // Calcular resumo
+  // Calcular total das faturas abertas
   const totalFaturaAtual = cartoes.reduce(
     (acc, c) => acc + (c.fatura_atual?.valor_total || 0),
     0
   )
-  const cartoesComFaturaAberta = cartoes.filter(
-    (c) => c.fatura_atual?.status === 'aberta'
-  ).length
-  const cartoesComFaturaVencendo = cartoes.filter(
-    (c) =>
-      c.fatura_atual?.status === 'fechada' &&
-      (c.fatura_atual?.dias_para_vencimento || 0) <= 5
-  ).length
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -294,64 +283,20 @@ export default function CartoesPage() {
         </div>
       </div>
 
-      {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-slate-200 bg-gradient-to-br from-[#34495e] to-[#46627f] text-white">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs opacity-80">Total Faturas Abertas</p>
-                <p className="text-2xl font-bold mt-1">{formatCurrency(totalFaturaAtual)}</p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                <CreditCard className="w-5 h-5" />
-              </div>
+      {/* Card de Resumo */}
+      <Card className="border-slate-200 bg-gradient-to-br from-[#34495e] to-[#46627f] text-white max-w-xs">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-white/90">Total Faturas Abertas</p>
+              <p className="text-2xl font-bold text-white mt-1">{formatCurrency(totalFaturaAtual)}</p>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-slate-500">Cartões Ativos</p>
-                <p className="text-2xl font-bold text-[#34495e] mt-1">{cartoes.length}</p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <CreditCard className="w-5 h-5 text-blue-600" />
-              </div>
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+              <CreditCard className="w-5 h-5 text-white" />
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-slate-500">Faturas Abertas</p>
-                <p className="text-2xl font-bold text-[#34495e] mt-1">{cartoesComFaturaAberta}</p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-emerald-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-slate-500">Vencendo em 5 dias</p>
-                <p className="text-2xl font-bold text-[#34495e] mt-1">{cartoesComFaturaVencendo}</p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-amber-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Busca */}
       <div className="flex items-center gap-4">
@@ -396,25 +341,16 @@ export default function CartoesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {cartoesFiltrados.map((cartao) => (
-            <div key={cartao.id} className="relative">
-              {/* Badge do escritório quando mostrando múltiplos */}
-              {escritoriosSelecionados.length > 1 && cartao.escritorio_nome && (
-                <Badge
-                  variant="secondary"
-                  className="absolute -top-2 -right-2 z-10 bg-[#1E3A8A]/10 text-[#1E3A8A] text-[10px] border-0"
-                >
-                  {cartao.escritorio_nome}
-                </Badge>
-              )}
-              <CartaoCard
-                cartao={cartao}
-                onViewDetails={handleViewDetails}
-                onAddExpense={handleAddExpense}
-                onViewInvoice={handleViewInvoice}
-                onEdit={handleEditCartao}
-                onDelete={(id) => setCartaoParaExcluir(id)}
-              />
-            </div>
+            <CartaoCard
+              key={cartao.id}
+              cartao={cartao}
+              showEscritorioNome={escritoriosSelecionados.length > 1}
+              onViewDetails={handleViewDetails}
+              onAddExpense={handleAddExpense}
+              onViewInvoice={handleViewInvoice}
+              onEdit={handleEditCartao}
+              onDelete={(id) => setCartaoParaExcluir(id)}
+            />
           ))}
         </div>
       )}

@@ -265,10 +265,24 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
           const { data: faturaAtual } = await supabase
             .rpc('obter_fatura_atual_cartao', { p_cartao_id: cartao.id })
 
+          // Mapear dados da fatura
+          const faturaData = faturaAtual?.[0]
+          const faturaFormatada = faturaData ? {
+            fatura_id: faturaData.fatura_id,
+            mes_referencia: faturaData.mes_referencia,
+            data_fechamento: faturaData.data_fechamento,
+            data_vencimento: faturaData.data_vencimento,
+            valor_total: Number(faturaData.valor_total) || 0,
+            status: faturaData.status,
+            total_despesas: Number(faturaData.total_despesas) || 0,
+            dias_para_fechamento: faturaData.dias_para_fechamento,
+            dias_para_vencimento: faturaData.dias_para_vencimento,
+          } : null
+
           return {
             ...cartao,
             escritorio_nome: cartao.escritorios?.nome,
-            fatura_atual: faturaAtual?.[0] || null,
+            fatura_atual: faturaFormatada,
           }
         })
       )

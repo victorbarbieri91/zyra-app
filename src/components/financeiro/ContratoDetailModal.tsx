@@ -28,7 +28,10 @@ import {
   Activity,
   Loader2,
   Info,
+  Scale,
+  ExternalLink,
 } from 'lucide-react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
 import { ContratoHonorario } from '@/hooks/useContratosHonorarios'
@@ -59,6 +62,16 @@ interface AtoConfigured {
   ato_nome?: string
   percentual_valor_causa?: number
   valor_fixo?: number
+}
+
+interface ProcessoVinculado {
+  id: string
+  numero_pasta: string
+  numero_cnj: string
+  cliente_nome: string
+  parte_contraria: string | null
+  status: string
+  area: string
 }
 
 const FORMA_LABELS: Record<string, { label: string; icon: React.ElementType }> = {
@@ -105,6 +118,7 @@ export default function ContratoDetailModal({
   const [formas, setFormas] = useState<ContratoForma[]>([])
   const [valoresCargo, setValoresCargo] = useState<ValorCargo[]>([])
   const [atos, setAtos] = useState<AtoConfigured[]>([])
+  const [processosVinculados, setProcessosVinculados] = useState<ProcessoVinculado[]>([])
 
   // Carregar dados complementares do contrato (agora dos campos JSONB)
   useEffect(() => {
@@ -160,6 +174,35 @@ export default function ContratoDetailModal({
               ato_nome: a.ato_nome || 'Ato',
               percentual_valor_causa: a.percentual_valor_causa,
               valor_fixo: a.valor_fixo,
+            }))
+          )
+        }
+
+        // Buscar processos vinculados a este contrato
+        const { data: processosData } = await supabase
+          .from('processos_processos')
+          .select(`
+            id,
+            numero_pasta,
+            numero_cnj,
+            parte_contraria,
+            status,
+            area,
+            cliente:crm_pessoas!processos_processos_cliente_id_fkey(nome_completo)
+          `)
+          .eq('contrato_id', contrato.id)
+          .order('numero_pasta', { ascending: true })
+
+        if (processosData) {
+          setProcessosVinculados(
+            processosData.map(p => ({
+              id: p.id,
+              numero_pasta: p.numero_pasta,
+              numero_cnj: p.numero_cnj,
+              cliente_nome: (p.cliente as { nome_completo: string } | null)?.nome_completo || 'N/A',
+              parte_contraria: p.parte_contraria,
+              status: p.status,
+              area: p.area,
             }))
           )
         }
@@ -356,7 +399,7 @@ export default function ContratoDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
         <DialogHeader className="pb-4 border-b border-slate-100">
           <div className="flex items-start justify-between">
             <div>
@@ -460,6 +503,62 @@ export default function ContratoDetailModal({
                       </div>
                     )
                   })}
+                </div>
+              )}
+            </div>
+
+            {/* Processos Vinculados */}
+            <div>
+              <p className="text-xs font-semibold text-[#46627f] uppercase tracking-wide mb-3">
+                Processos Vinculados ({processosVinculados.length})
+              </p>
+              {processosVinculados.length === 0 ? (
+                <div className="text-center py-4 bg-slate-50 rounded-lg">
+                  <Scale className="w-5 h-5 mx-auto text-slate-300 mb-1" />
+                  <p className="text-xs text-slate-400">Nenhum processo vinculado</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                  {processosVinculados.map(processo => (
+                    <Link
+                      key={processo.id}
+                      href={`/dashboard/processos/${processo.id}`}
+                      className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 hover:border-[#89bcbe]/30 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-7 h-7 rounded-md bg-white border border-slate-200 flex items-center justify-center flex-shrink-0">
+                          <Scale className="w-3.5 h-3.5 text-[#89bcbe]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-[#34495e]">
+                              {processo.numero_pasta}
+                            </span>
+                            <Badge
+                              className={cn(
+                                'text-[9px] px-1.5 py-0',
+                                processo.status === 'ativo'
+                                  ? 'bg-emerald-100 text-emerald-700'
+                                  : 'bg-slate-100 text-slate-600'
+                              )}
+                            >
+                              {processo.status}
+                            </Badge>
+                          </div>
+                          <p className="text-[10px] text-slate-500 truncate">
+                            {processo.cliente_nome}
+                            {processo.parte_contraria && (
+                              <span className="text-slate-400"> vs {processo.parte_contraria}</span>
+                            )}
+                          </p>
+                          <p className="text-[10px] text-slate-400 font-mono truncate">
+                            {processo.numero_cnj}
+                          </p>
+                        </div>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-slate-300 group-hover:text-[#89bcbe] transition-colors flex-shrink-0" />
+                    </Link>
+                  ))}
                 </div>
               )}
             </div>

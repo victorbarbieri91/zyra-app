@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatDateTimeForDB } from '@/lib/timezone'
 
@@ -69,7 +69,8 @@ export function useAudiencias(escritorioId?: string) {
   const [audiencias, setAudiencias] = useState<Audiencia[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   const loadAudiencias = async () => {
     try {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   Escritorio,
   EscritorioComRole,
@@ -38,7 +38,10 @@ export function EscritorioProvider({ children }: { children: React.ReactNode }) 
   const [isOwner, setIsOwner] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const router = useRouter();
-  const supabase = createClient();
+
+  // Usar useRef para manter a mesma referência do supabase client
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
 
   const carregarDados = useCallback(async () => {
     try {
@@ -110,7 +113,7 @@ export function EscritorioProvider({ children }: { children: React.ReactNode }) 
     return () => {
       subscription.unsubscribe();
     };
-  }, [carregarDados, supabase.auth]);
+  }, [carregarDados, supabase]);
 
   return (
     <EscritorioContext.Provider

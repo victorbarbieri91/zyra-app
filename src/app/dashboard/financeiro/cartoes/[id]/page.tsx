@@ -111,11 +111,13 @@ export default function CartaoDetalhePage() {
     } finally {
       setLoading(false)
     }
-  }, [escritorioAtivo, cartaoId, getCartao, loadDespesas, loadFaturas, loadParcelas])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [escritorioAtivo, cartaoId])
 
   useEffect(() => {
     loadData()
-  }, [loadData])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [escritorioAtivo, cartaoId])
 
   // Handlers
   const handleDeleteDespesa = async () => {

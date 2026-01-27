@@ -57,6 +57,7 @@ interface Processo {
   tags: string[]
   data_transito_julgado?: string
   data_arquivamento?: string
+  contrato_id?: string | null
   created_at: string
   updated_at: string
 }
@@ -141,6 +142,7 @@ export default function ProcessoDetalhe() {
         tags: data.tags || [],
         data_transito_julgado: data.data_transito_julgado || undefined,
         data_arquivamento: data.data_arquivamento || undefined,
+        contrato_id: data.contrato_id || undefined,
         created_at: data.created_at,
         updated_at: data.updated_at
       }

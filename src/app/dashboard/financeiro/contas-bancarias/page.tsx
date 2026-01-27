@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Building2, Landmark, Pencil, Trash2, MoreVertical, ChevronDown, Check } from 'lucide-react'
+import { Building2, Landmark, Pencil, Trash2, MoreVertical, ChevronDown, Check, BarChart3 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,6 +26,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
@@ -111,6 +119,7 @@ export default function ContasBancariasPage() {
     titular: '',
     saldo_atual: 'R$ 0,00',
   })
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table')
 
   // Estados para multi-escritório
   const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
@@ -451,6 +460,19 @@ export default function ContasBancariasPage() {
           )}
 
           <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setViewMode(viewMode === 'cards' ? 'table' : 'cards')}
+            className="text-xs"
+          >
+            {viewMode === 'cards' ? (
+              <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
+            ) : (
+              <Landmark className="w-3.5 h-3.5 mr-1.5" />
+            )}
+            {viewMode === 'cards' ? 'Lista' : 'Cards'}
+          </Button>
+          <Button
             onClick={handleOpenCreate}
             className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white border-0 shadow-sm"
           >
@@ -495,7 +517,92 @@ export default function ContasBancariasPage() {
               <p className="text-xs text-slate-400 mt-1">Clique em "Nova Conta" para adicionar</p>
             </CardContent>
           </Card>
+        ) : viewMode === 'table' ? (
+          /* Table View */
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Banco</TableHead>
+                  <TableHead className="text-xs">Agência / Conta</TableHead>
+                  <TableHead className="text-xs">Titular</TableHead>
+                  {escritoriosSelecionados.length > 1 && (
+                    <TableHead className="text-xs">Escritório</TableHead>
+                  )}
+                  <TableHead className="text-xs">Tipo</TableHead>
+                  <TableHead className="text-xs text-right">Saldo Atual</TableHead>
+                  <TableHead className="text-xs text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {contas.map((conta) => (
+                  <TableRow key={conta.id} className="hover:bg-slate-50">
+                    <TableCell className="text-sm font-semibold text-[#34495e]">
+                      {conta.banco}
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-600">
+                      {conta.agencia && `Ag ${conta.agencia}`}
+                      {conta.agencia && conta.numero_conta && ' • '}
+                      {conta.numero_conta && `C/C ${conta.numero_conta}`}
+                      {!conta.agencia && !conta.numero_conta && '-'}
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-500">
+                      {conta.titular || '-'}
+                    </TableCell>
+                    {escritoriosSelecionados.length > 1 && (
+                      <TableCell className="text-xs text-slate-500">
+                        {conta.escritorio_nome || '-'}
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "text-[10px]",
+                          conta.tipo_conta === 'corrente' && "bg-blue-100 text-blue-700",
+                          conta.tipo_conta === 'poupanca' && "bg-emerald-100 text-emerald-700",
+                          conta.tipo_conta === 'investimento' && "bg-purple-100 text-purple-700",
+                          conta.tipo_conta === 'caixa' && "bg-amber-100 text-amber-700",
+                        )}
+                      >
+                        {TIPO_CONTA_LABELS[conta.tipo_conta] || conta.tipo_conta}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span className={cn(
+                        "text-sm font-semibold",
+                        Number(conta.saldo_atual) >= 0 ? "text-[#34495e]" : "text-red-600"
+                      )}>
+                        {formatCurrency(Number(conta.saldo_atual))}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => handleOpenEdit(conta)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleOpenDelete(conta)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         ) : (
+          /* Cards View */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {contas.map((conta) => (
               <Card key={conta.id} className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">

@@ -188,7 +188,7 @@ export default function ProcessoFinanceiroCard({
               {contratoInfo.numero_contrato}
             </span>
             <Badge variant="outline" className="text-[10px] font-medium h-5 bg-slate-50 text-slate-600 border-slate-200">
-              {MODALIDADE_LABELS[contratoInfo.modalidade_cobranca || ''] || 'Padrão'}
+              {MODALIDADE_LABELS[contratoInfo.forma_cobranca || ''] || 'Padrão'}
             </Badge>
           </div>
         </div>

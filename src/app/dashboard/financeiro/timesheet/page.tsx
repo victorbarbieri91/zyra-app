@@ -68,6 +68,7 @@ export default function TimesheetPage() {
     return { from: startOfMonth(hoje), to: endOfMonth(hoje) }
   })
   const [statusFiltro, setStatusFiltro] = useState<'pendente' | 'aprovado'>('pendente')
+  const [filtroFaturavel, setFiltroFaturavel] = useState<'todos' | 'cobravel' | 'interno'>('todos')
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([])
   const [colaboradoresSelecionados, setColaboradoresSelecionados] = useState<string[]>([])
   const [seletorColaboradorAberto, setSeletorColaboradorAberto] = useState(false)
@@ -148,7 +149,7 @@ export default function TimesheetPage() {
     if (escritoriosSelecionados.length > 0 && periodoSelecionado?.from) {
       loadTimesheets()
     }
-  }, [escritoriosSelecionados, periodoSelecionado, statusFiltro, colaboradoresSelecionados])
+  }, [escritoriosSelecionados, periodoSelecionado, statusFiltro, filtroFaturavel, colaboradoresSelecionados])
 
   // Funções do seletor de escritórios
   const toggleEscritorio = (escritorioId: string) => {
@@ -228,6 +229,13 @@ export default function TimesheetPage() {
         .gte('data_trabalho', dataInicio)
         .lte('data_trabalho', dataFim)
 
+      // Aplicar filtro de faturável/interno
+      if (filtroFaturavel === 'cobravel') {
+        query = query.eq('faturavel', true)
+      } else if (filtroFaturavel === 'interno') {
+        query = query.eq('faturavel', false)
+      }
+
       const { data, error } = await query.order('data_trabalho', { ascending: false })
 
       if (error) throw error
@@ -238,7 +246,7 @@ export default function TimesheetPage() {
     } finally {
       setLoading(false)
     }
-  }, [escritoriosSelecionados, colaboradoresSelecionados, periodoSelecionado, statusFiltro, supabase])
+  }, [escritoriosSelecionados, colaboradoresSelecionados, periodoSelecionado, statusFiltro, filtroFaturavel, supabase])
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -532,6 +540,43 @@ export default function TimesheetPage() {
             )}
           >
             Aprovados
+          </button>
+        </div>
+
+        {/* Toggle Faturável/Interno */}
+        <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+          <button
+            onClick={() => setFiltroFaturavel('todos')}
+            className={cn(
+              'px-3 py-2 text-sm font-medium transition-colors',
+              filtroFaturavel === 'todos'
+                ? 'bg-slate-200 text-slate-800'
+                : 'bg-white text-slate-600 hover:bg-slate-50'
+            )}
+          >
+            Todos
+          </button>
+          <button
+            onClick={() => setFiltroFaturavel('cobravel')}
+            className={cn(
+              'px-3 py-2 text-sm font-medium transition-colors border-l border-slate-200',
+              filtroFaturavel === 'cobravel'
+                ? 'bg-emerald-100 text-emerald-800'
+                : 'bg-white text-slate-600 hover:bg-slate-50'
+            )}
+          >
+            Cobráveis
+          </button>
+          <button
+            onClick={() => setFiltroFaturavel('interno')}
+            className={cn(
+              'px-3 py-2 text-sm font-medium transition-colors border-l border-slate-200',
+              filtroFaturavel === 'interno'
+                ? 'bg-slate-100 text-slate-700'
+                : 'bg-white text-slate-600 hover:bg-slate-50'
+            )}
+          >
+            Internos
           </button>
         </div>
       </div>

@@ -376,9 +376,16 @@ export default function ContratoDetailModal({
                   <span className="font-semibold text-[#34495e]">
                     {ato.percentual_valor_causa
                       ? `${ato.percentual_valor_causa}%`
-                      : ato.valor_fixo
+                      : ''}
+                    {ato.percentual_valor_causa && ato.valor_fixo && (
+                      <span className="font-normal text-[10px] text-slate-400 ml-0.5">
+                        (mín: {formatCurrency(ato.valor_fixo)})
+                      </span>
+                    )}
+                    {!ato.percentual_valor_causa && ato.valor_fixo
                       ? formatCurrency(ato.valor_fixo)
-                      : '-'}
+                      : ''}
+                    {!ato.percentual_valor_causa && !ato.valor_fixo && '-'}
                   </span>
                 </p>
               ))}

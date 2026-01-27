@@ -234,7 +234,7 @@ async function sincronizarEscavador(supabase: any, escritorioId: string) {
     return resultado
   }
 
-  const escavadorToken = Deno.env.get('ESCAVADOR_API_KEY')
+  const escavadorToken = Deno.env.get('ESCAVADOR_API_TOKEN')
   if (!escavadorToken) {
     resultado.erros.push('Token Escavador não configurado')
     return resultado

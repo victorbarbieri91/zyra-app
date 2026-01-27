@@ -1,16 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   Filter,
   Search,
   RefreshCw,
-  Plus,
   Settings,
   Eye,
-  Play,
   Archive,
   AlertTriangle,
   CheckCircle2,
@@ -21,21 +19,28 @@ import {
   CalendarPlus,
   CheckSquare,
   Gavel,
-  Copy,
-  Check,
-  X
+  FolderPlus,
+  MoreHorizontal,
+  ListChecks,
+  X,
+  ChevronDown
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import MetricCard from '@/components/dashboard/MetricCard'
 import { createClient } from '@/lib/supabase/client'
@@ -69,11 +74,6 @@ interface Publicacao {
   duplicata_revisada?: boolean
 }
 
-interface DuplicataGrupo {
-  hash: string
-  publicacoes: Publicacao[]
-}
-
 interface Stats {
   pendentes: number
   processadasHoje: number
@@ -81,13 +81,24 @@ interface Stats {
   prazosCriados: number
 }
 
+// Filtros rápidos pré-definidos
+const FILTROS_RAPIDOS = [
+  { id: 'pendentes', label: 'Pendentes', filtro: { status: 'pendente' } },
+  { id: 'urgentes', label: 'Urgentes', filtro: { apenasUrgentes: true } },
+  { id: 'sem_pasta', label: 'Sem Pasta', filtro: { semPasta: true } },
+  { id: 'intimacoes', label: 'Intimações', filtro: { tipo: 'intimacao' } },
+  { id: 'sentencas', label: 'Sentenças', filtro: { tipo: 'sentenca' } },
+]
+
 export default function PublicacoesPage() {
   const [filtros, setFiltros] = useState({
     busca: '',
     status: 'todos',
     tipo: 'todos',
-    apenasUrgentes: false
+    apenasUrgentes: false,
+    semPasta: false
   })
+  const [filtroRapidoAtivo, setFiltroRapidoAtivo] = useState<string | null>(null)
   const [publicacoes, setPublicacoes] = useState<Publicacao[]>([])
   const [stats, setStats] = useState<Stats>({
     pendentes: 0,
@@ -96,8 +107,10 @@ export default function PublicacoesPage() {
     prazosCriados: 0
   })
   const [carregando, setCarregando] = useState(true)
-  const [abaAtiva, setAbaAtiva] = useState<'todas' | 'duplicatas'>('todas')
-  const [duplicataGrupos, setDuplicataGrupos] = useState<DuplicataGrupo[]>([])
+
+  // Seleção em massa
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
+  const [mostrarFiltrosAvancados, setMostrarFiltrosAvancados] = useState(false)
 
   const router = useRouter()
   const supabase = createClient()
@@ -126,71 +139,69 @@ export default function PublicacoesPage() {
         return
       }
 
-      setPublicacoes(data || [])
+      // Auto-deduplicação: agrupar por hash e manter apenas a mais recente de cada grupo
+      const publicacoesUnicas = dedupPublicacoes(data || [])
+      setPublicacoes(publicacoesUnicas)
 
       // Calcular estatísticas
       const hoje = new Date().toISOString().split('T')[0]
-      const pendentes = data?.filter(p => p.status === 'pendente').length || 0
-      const processadasHoje = data?.filter(p => p.status === 'processada' && p.updated_at?.startsWith(hoje)).length || 0
-      const urgentes = data?.filter(p => p.urgente).length || 0
+      const pendentes = publicacoesUnicas.filter(p => p.status === 'pendente').length
+      const processadasHoje = publicacoesUnicas.filter(p => p.status === 'processada' && p.updated_at?.startsWith(hoje)).length
+      const urgentes = publicacoesUnicas.filter(p => p.urgente).length
 
       setStats({
         pendentes,
         processadasHoje,
         urgentes,
-        prazosCriados: 0 // TODO: calcular prazos criados
+        prazosCriados: 0
       })
-
-      // Detectar possíveis duplicatas (por hash_conteudo ou numero_processo + data)
-      const gruposDuplicatas: DuplicataGrupo[] = []
-      const pubsNaoRevisadas = (data || []).filter(p => !p.duplicata_revisada && p.status !== 'arquivada')
-
-      // Agrupar por hash_conteudo
-      const porHash = new Map<string, Publicacao[]>()
-      pubsNaoRevisadas.forEach(pub => {
-        if (pub.hash_conteudo) {
-          const grupo = porHash.get(pub.hash_conteudo) || []
-          grupo.push(pub)
-          porHash.set(pub.hash_conteudo, grupo)
-        }
-      })
-
-      // Adicionar grupos com mais de uma publicação
-      porHash.forEach((pubs, hash) => {
-        if (pubs.length > 1) {
-          gruposDuplicatas.push({ hash, publicacoes: pubs })
-        }
-      })
-
-      // Também verificar por numero_processo + data_publicacao (se hash diferente)
-      const porProcessoData = new Map<string, Publicacao[]>()
-      pubsNaoRevisadas.forEach(pub => {
-        if (pub.numero_processo && pub.data_publicacao) {
-          const chave = `${pub.numero_processo}-${pub.data_publicacao}`
-          const grupo = porProcessoData.get(chave) || []
-          grupo.push(pub)
-          porProcessoData.set(chave, grupo)
-        }
-      })
-
-      porProcessoData.forEach((pubs, chave) => {
-        // Só adiciona se não já estiver no grupo por hash
-        if (pubs.length > 1) {
-          const hashesNoGrupo = new Set(pubs.map(p => p.hash_conteudo).filter(Boolean))
-          const jaNoGrupoHash = gruposDuplicatas.some(g =>
-            pubs.every(p => p.hash_conteudo === g.hash)
-          )
-          if (!jaNoGrupoHash) {
-            gruposDuplicatas.push({ hash: chave, publicacoes: pubs })
-          }
-        }
-      })
-
-      setDuplicataGrupos(gruposDuplicatas)
     } finally {
       setCarregando(false)
     }
   }, [escritorioAtivo, supabase])
+
+  // Auto-deduplicação inteligente
+  const dedupPublicacoes = (pubs: any[]): Publicacao[] => {
+    const grupos = new Map<string, any[]>()
+
+    pubs.forEach(pub => {
+      // Criar chave de deduplicação: hash OU (numero_processo + data + tipo)
+      let chave = pub.hash_conteudo
+      if (!chave && pub.numero_processo && pub.data_publicacao) {
+        chave = `${pub.numero_processo}-${pub.data_publicacao}-${pub.tipo_publicacao || 'outro'}`
+      }
+
+      if (chave) {
+        const grupo = grupos.get(chave) || []
+        grupo.push(pub)
+        grupos.set(chave, grupo)
+      } else {
+        // Sem chave de deduplicação, adicionar direto
+        grupos.set(pub.id, [pub])
+      }
+    })
+
+    // De cada grupo, manter a mais recente (ou a que já foi processada)
+    const resultado: Publicacao[] = []
+    grupos.forEach((grupo) => {
+      if (grupo.length === 1) {
+        resultado.push(grupo[0])
+      } else {
+        // Priorizar: processada > em_analise > pendente > arquivada
+        // Se mesmo status, pegar a mais recente
+        const ordenado = grupo.sort((a, b) => {
+          const prioridade = { processada: 1, em_analise: 2, pendente: 3, arquivada: 4 }
+          const prioA = prioridade[a.status as keyof typeof prioridade] || 5
+          const prioB = prioridade[b.status as keyof typeof prioridade] || 5
+          if (prioA !== prioB) return prioA - prioB
+          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+        })
+        resultado.push(ordenado[0])
+      }
+    })
+
+    return resultado
+  }
 
   useEffect(() => {
     carregarPublicacoes()
@@ -243,86 +254,212 @@ export default function PublicacoesPage() {
     }
   }
 
-  // Marcar publicação como não duplicata (revisada)
-  const marcarComoRevisada = async (pubId: string) => {
-    try {
-      const { error } = await supabase
-        .from('publicacoes_publicacoes')
-        .update({ duplicata_revisada: true })
-        .eq('id', pubId)
-
-      if (error) throw error
-
-      toast.success('Publicação marcada como revisada')
-      await carregarPublicacoes()
-    } catch (err) {
-      console.error('Erro ao marcar como revisada:', err)
-      toast.error('Erro ao atualizar publicação')
+  // Aplicar filtro rápido
+  const aplicarFiltroRapido = (id: string) => {
+    if (filtroRapidoAtivo === id) {
+      // Desativar filtro
+      setFiltroRapidoAtivo(null)
+      setFiltros({ busca: '', status: 'todos', tipo: 'todos', apenasUrgentes: false, semPasta: false })
+    } else {
+      setFiltroRapidoAtivo(id)
+      const config = FILTROS_RAPIDOS.find(f => f.id === id)
+      if (config) {
+        setFiltros({
+          busca: '',
+          status: config.filtro.status || 'todos',
+          tipo: config.filtro.tipo || 'todos',
+          apenasUrgentes: config.filtro.apenasUrgentes || false,
+          semPasta: config.filtro.semPasta || false
+        })
+      }
     }
   }
 
-  // Arquivar duplicata
-  const arquivarDuplicata = async (pubId: string) => {
-    try {
-      const { error } = await supabase
-        .from('publicacoes_publicacoes')
-        .update({ status: 'arquivada', duplicata_revisada: true })
-        .eq('id', pubId)
-
-      if (error) throw error
-
-      toast.success('Duplicata arquivada')
-      await carregarPublicacoes()
-    } catch (err) {
-      console.error('Erro ao arquivar:', err)
-      toast.error('Erro ao arquivar publicação')
-    }
-  }
-
-  // Manter apenas uma publicação (arquiva as outras)
-  const manterApenas = async (pubIdManter: string, grupoHash: string) => {
-    const grupo = duplicataGrupos.find(g => g.hash === grupoHash)
-    if (!grupo) return
-
-    try {
-      const idsArquivar = grupo.publicacoes.filter(p => p.id !== pubIdManter).map(p => p.id)
-
-      const { error } = await supabase
-        .from('publicacoes_publicacoes')
-        .update({ status: 'arquivada', duplicata_revisada: true })
-        .in('id', idsArquivar)
-
-      if (error) throw error
-
-      // Marcar a mantida como revisada também
-      await supabase
-        .from('publicacoes_publicacoes')
-        .update({ duplicata_revisada: true })
-        .eq('id', pubIdManter)
-
-      toast.success('Duplicatas arquivadas com sucesso')
-      await carregarPublicacoes()
-    } catch (err) {
-      console.error('Erro ao arquivar duplicatas:', err)
-      toast.error('Erro ao processar duplicatas')
-    }
+  // Limpar todos os filtros
+  const limparFiltros = () => {
+    setFiltroRapidoAtivo(null)
+    setFiltros({ busca: '', status: 'todos', tipo: 'todos', apenasUrgentes: false, semPasta: false })
   }
 
   // Filtrar publicações
-  const publicacoesFiltradas = publicacoes.filter(pub => {
-    if (filtros.busca) {
-      const busca = filtros.busca.toLowerCase()
-      const matchBusca =
-        pub.numero_processo?.toLowerCase().includes(busca) ||
-        pub.tribunal?.toLowerCase().includes(busca) ||
-        pub.texto_completo?.toLowerCase().includes(busca)
-      if (!matchBusca) return false
+  const publicacoesFiltradas = useMemo(() => {
+    return publicacoes.filter(pub => {
+      if (filtros.busca) {
+        const busca = filtros.busca.toLowerCase()
+        const matchBusca =
+          pub.numero_processo?.toLowerCase().includes(busca) ||
+          pub.tribunal?.toLowerCase().includes(busca) ||
+          pub.texto_completo?.toLowerCase().includes(busca)
+        if (!matchBusca) return false
+      }
+      if (filtros.status !== 'todos' && pub.status !== filtros.status) return false
+      if (filtros.tipo !== 'todos' && pub.tipo_publicacao !== filtros.tipo) return false
+      if (filtros.apenasUrgentes && !pub.urgente) return false
+      if (filtros.semPasta && pub.processo_id) return false
+      if (filtros.semPasta && !pub.numero_processo) return false // Precisa ter número mas não ter pasta
+      return true
+    })
+  }, [publicacoes, filtros])
+
+  // Verificar se há filtros ativos
+  const temFiltrosAtivos = filtros.busca || filtros.status !== 'todos' || filtros.tipo !== 'todos' || filtros.apenasUrgentes || filtros.semPasta
+
+  // ========================================
+  // Seleção em Massa
+  // ========================================
+
+  const toggleSelecao = (id: string) => {
+    const novoSet = new Set(selecionados)
+    if (novoSet.has(id)) {
+      novoSet.delete(id)
+    } else {
+      novoSet.add(id)
     }
-    if (filtros.status !== 'todos' && pub.status !== filtros.status) return false
-    if (filtros.tipo !== 'todos' && pub.tipo_publicacao !== filtros.tipo) return false
-    if (filtros.apenasUrgentes && !pub.urgente) return false
-    return true
-  })
+    setSelecionados(novoSet)
+  }
+
+  const selecionarTodos = () => {
+    if (selecionados.size === publicacoesFiltradas.length) {
+      setSelecionados(new Set())
+    } else {
+      setSelecionados(new Set(publicacoesFiltradas.map(p => p.id)))
+    }
+  }
+
+  const limparSelecao = () => {
+    setSelecionados(new Set())
+  }
+
+  // ========================================
+  // Ações em Massa
+  // ========================================
+
+  const arquivarSelecionados = async () => {
+    if (selecionados.size === 0) return
+
+    try {
+      const { error } = await supabase
+        .from('publicacoes_publicacoes')
+        .update({ status: 'arquivada' })
+        .in('id', Array.from(selecionados))
+
+      if (error) throw error
+
+      toast.success(`${selecionados.size} publicação(ões) arquivada(s)`)
+      limparSelecao()
+      await carregarPublicacoes()
+    } catch (err) {
+      console.error('Erro ao arquivar:', err)
+      toast.error('Erro ao arquivar publicações')
+    }
+  }
+
+  const marcarComoProcessada = async () => {
+    if (selecionados.size === 0) return
+
+    try {
+      const { error } = await supabase
+        .from('publicacoes_publicacoes')
+        .update({ status: 'processada' })
+        .in('id', Array.from(selecionados))
+
+      if (error) throw error
+
+      toast.success(`${selecionados.size} publicação(ões) marcada(s) como processada(s)`)
+      limparSelecao()
+      await carregarPublicacoes()
+    } catch (err) {
+      console.error('Erro ao atualizar:', err)
+      toast.error('Erro ao atualizar publicações')
+    }
+  }
+
+  // ========================================
+  // Ações Individuais
+  // ========================================
+
+  const arquivarPublicacao = async (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    try {
+      const { error } = await supabase
+        .from('publicacoes_publicacoes')
+        .update({ status: 'arquivada' })
+        .eq('id', id)
+
+      if (error) throw error
+      toast.success('Publicação arquivada')
+      await carregarPublicacoes()
+    } catch (err) {
+      console.error('Erro ao arquivar:', err)
+      toast.error('Erro ao arquivar')
+    }
+  }
+
+  const marcarProcessada = async (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    try {
+      const { error } = await supabase
+        .from('publicacoes_publicacoes')
+        .update({ status: 'processada' })
+        .eq('id', id)
+
+      if (error) throw error
+      toast.success('Marcada como processada')
+      await carregarPublicacoes()
+    } catch (err) {
+      console.error('Erro ao atualizar:', err)
+      toast.error('Erro ao atualizar')
+    }
+  }
+
+  // Navegar para criar agendamento com dados da publicação
+  const criarAgendamento = (pub: Publicacao, tipo: 'tarefa' | 'compromisso' | 'audiencia', e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    // Criar descrição com conteúdo da publicação
+    const descricao = encodeURIComponent(
+      `Publicação: ${pub.tipo_publicacao?.toUpperCase() || 'PUBLICAÇÃO'}\n` +
+      `Data: ${new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}\n` +
+      `Tribunal: ${pub.tribunal}\n` +
+      (pub.numero_processo ? `Processo: ${pub.numero_processo}\n` : '') +
+      `\n---\n${pub.texto_completo?.substring(0, 500) || ''}`
+    )
+
+    const params = new URLSearchParams({
+      tipo,
+      publicacao_id: pub.id,
+      descricao,
+      ...(pub.processo_id && { processo_id: pub.processo_id }),
+      ...(pub.numero_processo && { titulo: `${getTipoLabel(pub.tipo_publicacao)} - ${pub.numero_processo}` })
+    })
+
+    router.push(`/dashboard/agenda/novo?${params.toString()}`)
+  }
+
+  // Registrar na pasta do processo
+  const registrarNaPasta = async (pub: Publicacao, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+
+    if (!pub.processo_id) {
+      toast.error('Publicação não está vinculada a um processo')
+      return
+    }
+
+    try {
+      // Marcar como processada (tratada) automaticamente ao registrar na pasta
+      const { error } = await supabase
+        .from('publicacoes_publicacoes')
+        .update({ status: 'processada' })
+        .eq('id', pub.id)
+
+      if (error) throw error
+
+      toast.success('Publicação registrada na pasta e marcada como tratada')
+      await carregarPublicacoes()
+    } catch (err) {
+      console.error('Erro ao registrar:', err)
+      toast.error('Erro ao registrar na pasta')
+    }
+  }
 
   const getStatusBadge = (status: StatusPublicacao) => {
     const variants = {
@@ -335,7 +472,7 @@ export default function PublicacoesPage() {
     const labels = {
       pendente: 'Pendente',
       em_analise: 'Em Análise',
-      processada: 'Processada',
+      processada: 'Tratada',
       arquivada: 'Arquivada'
     }
 
@@ -405,7 +542,7 @@ export default function PublicacoesPage() {
         />
 
         <MetricCard
-          title="Processadas Hoje"
+          title="Tratadas Hoje"
           value={stats.processadasHoje}
           subtitle="Nas últimas 24h"
           icon={CheckCircle2}
@@ -429,91 +566,232 @@ export default function PublicacoesPage() {
         />
       </div>
 
-      {/* Filtros */}
-      <div className="bg-white rounded-lg border border-slate-200 p-4 mb-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-3">
-          <Filter className="w-4 h-4 text-slate-600" />
-          <span className="text-sm font-semibold text-slate-700">Filtros</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              placeholder="Buscar por processo, cliente..."
-              className="pl-9"
-              value={filtros.busca}
-              onChange={(e) => setFiltros({ ...filtros, busca: e.target.value })}
-            />
-          </div>
-
-          <Select value={filtros.status} onValueChange={(value) => setFiltros({ ...filtros, status: value })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os Status</SelectItem>
-              <SelectItem value="pendente">Pendente</SelectItem>
-              <SelectItem value="em_analise">Em Análise</SelectItem>
-              <SelectItem value="processada">Processada</SelectItem>
-              <SelectItem value="arquivada">Arquivada</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={filtros.tipo} onValueChange={(value) => setFiltros({ ...filtros, tipo: value })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os Tipos</SelectItem>
-              <SelectItem value="intimacao">Intimação</SelectItem>
-              <SelectItem value="sentenca">Sentença</SelectItem>
-              <SelectItem value="despacho">Despacho</SelectItem>
-              <SelectItem value="decisao">Decisão</SelectItem>
-              <SelectItem value="acordao">Acórdão</SelectItem>
-            </SelectContent>
-          </Select>
-
+      {/* Filtros Rápidos */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <span className="text-xs font-medium text-slate-500 mr-1">Filtros rápidos:</span>
+        {FILTROS_RAPIDOS.map(filtro => (
           <Button
-            variant={filtros.apenasUrgentes ? 'default' : 'outline'}
+            key={filtro.id}
+            variant={filtroRapidoAtivo === filtro.id ? 'default' : 'outline'}
+            size="sm"
             className={cn(
-              'gap-2',
-              filtros.apenasUrgentes && 'bg-red-600 hover:bg-red-700'
+              'h-7 text-xs px-3',
+              filtroRapidoAtivo === filtro.id && 'bg-[#34495e] hover:bg-[#46627f]'
             )}
-            onClick={() => setFiltros({ ...filtros, apenasUrgentes: !filtros.apenasUrgentes })}
+            onClick={() => aplicarFiltroRapido(filtro.id)}
           >
-            <AlertTriangle className="w-4 h-4" />
-            {filtros.apenasUrgentes ? 'Mostrando Urgentes' : 'Apenas Urgentes'}
-          </Button>
-        </div>
-      </div>
-
-      {/* Tabs: Todas / Duplicatas */}
-      <Tabs value={abaAtiva} onValueChange={(v) => setAbaAtiva(v as 'todas' | 'duplicatas')} className="mb-4">
-        <TabsList className="bg-slate-100">
-          <TabsTrigger value="todas" className="gap-2">
-            Todas
-            <Badge variant="outline" className="text-[10px] ml-1">{publicacoes.length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="duplicatas" className="gap-2">
-            <Copy className="w-3.5 h-3.5" />
-            Possíveis Duplicatas
-            {duplicataGrupos.length > 0 && (
-              <Badge variant="outline" className="text-[10px] ml-1 bg-amber-100 text-amber-700 border-amber-200">
-                {duplicataGrupos.length}
+            {filtro.label}
+            {filtro.id === 'pendentes' && stats.pendentes > 0 && (
+              <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">
+                {stats.pendentes}
               </Badge>
             )}
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+            {filtro.id === 'urgentes' && stats.urgentes > 0 && (
+              <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px] bg-red-100 text-red-700">
+                {stats.urgentes}
+              </Badge>
+            )}
+          </Button>
+        ))}
 
-      {/* Conteúdo baseado na aba ativa */}
-      {abaAtiva === 'todas' ? (
-        /* Tabela de Publicações */
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
-          <div className="p-4 border-b border-slate-200">
-            <h2 className="text-sm font-semibold text-slate-700">Publicações Recebidas</h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs px-2 text-slate-500"
+          onClick={() => setMostrarFiltrosAvancados(!mostrarFiltrosAvancados)}
+        >
+          <Filter className="w-3.5 h-3.5 mr-1" />
+          Mais filtros
+          <ChevronDown className={cn('w-3.5 h-3.5 ml-1 transition-transform', mostrarFiltrosAvancados && 'rotate-180')} />
+        </Button>
+
+        {temFiltrosAtivos && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
+            onClick={limparFiltros}
+          >
+            <X className="w-3.5 h-3.5 mr-1" />
+            Limpar
+          </Button>
+        )}
+      </div>
+
+      {/* Filtros Avançados (colapsável) */}
+      {mostrarFiltrosAvancados && (
+        <div className="bg-white rounded-lg border border-slate-200 p-4 mb-4 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                placeholder="Buscar por processo, tribunal..."
+                className="pl-9 h-9"
+                value={filtros.busca}
+                onChange={(e) => {
+                  setFiltroRapidoAtivo(null)
+                  setFiltros({ ...filtros, busca: e.target.value })
+                }}
+              />
+            </div>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="h-9 justify-between">
+                  <span className="text-sm">
+                    {filtros.status === 'todos' ? 'Status' :
+                      filtros.status === 'pendente' ? 'Pendente' :
+                      filtros.status === 'em_analise' ? 'Em Análise' :
+                      filtros.status === 'processada' ? 'Tratada' : 'Arquivada'}
+                  </span>
+                  <ChevronDown className="w-4 h-4 ml-2 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-1">
+                {[
+                  { value: 'todos', label: 'Todos os Status' },
+                  { value: 'pendente', label: 'Pendente' },
+                  { value: 'em_analise', label: 'Em Análise' },
+                  { value: 'processada', label: 'Tratada' },
+                  { value: 'arquivada', label: 'Arquivada' }
+                ].map(opt => (
+                  <Button
+                    key={opt.value}
+                    variant="ghost"
+                    className={cn(
+                      'w-full justify-start h-8 text-sm',
+                      filtros.status === opt.value && 'bg-slate-100'
+                    )}
+                    onClick={() => {
+                      setFiltroRapidoAtivo(null)
+                      setFiltros({ ...filtros, status: opt.value })
+                    }}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </PopoverContent>
+            </Popover>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="h-9 justify-between">
+                  <span className="text-sm">
+                    {filtros.tipo === 'todos' ? 'Tipo' : getTipoLabel(filtros.tipo as TipoPublicacao)}
+                  </span>
+                  <ChevronDown className="w-4 h-4 ml-2 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-1">
+                {[
+                  { value: 'todos', label: 'Todos os Tipos' },
+                  { value: 'intimacao', label: 'Intimação' },
+                  { value: 'sentenca', label: 'Sentença' },
+                  { value: 'despacho', label: 'Despacho' },
+                  { value: 'decisao', label: 'Decisão' },
+                  { value: 'acordao', label: 'Acórdão' },
+                  { value: 'citacao', label: 'Citação' },
+                  { value: 'outro', label: 'Outro' }
+                ].map(opt => (
+                  <Button
+                    key={opt.value}
+                    variant="ghost"
+                    className={cn(
+                      'w-full justify-start h-8 text-sm',
+                      filtros.tipo === opt.value && 'bg-slate-100'
+                    )}
+                    onClick={() => {
+                      setFiltroRapidoAtivo(null)
+                      setFiltros({ ...filtros, tipo: opt.value })
+                    }}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </PopoverContent>
+            </Popover>
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="sem-pasta"
+                checked={filtros.semPasta}
+                onCheckedChange={(checked) => {
+                  setFiltroRapidoAtivo(null)
+                  setFiltros({ ...filtros, semPasta: !!checked })
+                }}
+              />
+              <label htmlFor="sem-pasta" className="text-sm text-slate-600 cursor-pointer">
+                Sem pasta vinculada
+              </label>
+            </div>
           </div>
+        </div>
+      )}
+
+      {/* Barra de ações em massa (quando há seleção) */}
+      {selecionados.size > 0 && (
+        <div className="bg-[#34495e] text-white rounded-lg p-3 mb-4 flex items-center justify-between shadow-lg">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium">
+              {selecionados.size} selecionada{selecionados.size > 1 ? 's' : ''}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-white/80 hover:text-white hover:bg-white/10"
+              onClick={limparSelecao}
+            >
+              Limpar seleção
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-8 gap-2"
+              onClick={marcarComoProcessada}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Marcar como Tratada
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-8 gap-2"
+              onClick={arquivarSelecionados}
+            >
+              <Archive className="w-3.5 h-3.5" />
+              Arquivar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Tabela de Publicações */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
+        <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-700">
+            Publicações Recebidas
+            {publicacoesFiltradas.length !== publicacoes.length && (
+              <span className="text-slate-400 font-normal ml-2">
+                ({publicacoesFiltradas.length} de {publicacoes.length})
+              </span>
+            )}
+          </h2>
+
+          {publicacoesFiltradas.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs gap-1.5"
+              onClick={selecionarTodos}
+            >
+              <ListChecks className="w-3.5 h-3.5" />
+              {selecionados.size === publicacoesFiltradas.length ? 'Desmarcar todos' : 'Selecionar todos'}
+            </Button>
+          )}
+        </div>
 
         {carregando ? (
           <div className="p-12 text-center">
@@ -540,11 +818,7 @@ export default function PublicacoesPage() {
                   </Button>
                 </Link>
               ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setFiltros({ busca: '', status: 'todos', tipo: 'todos', apenasUrgentes: false })}
-                >
+                <Button variant="outline" size="sm" onClick={limparFiltros}>
                   Limpar Filtros
                 </Button>
               )}
@@ -555,13 +829,17 @@ export default function PublicacoesPage() {
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
+                  <th className="w-10 p-3">
+                    <Checkbox
+                      checked={selecionados.size === publicacoesFiltradas.length && publicacoesFiltradas.length > 0}
+                      onCheckedChange={selecionarTodos}
+                    />
+                  </th>
                   <th className="text-left text-xs font-medium text-slate-600 p-3">Status</th>
                   <th className="text-left text-xs font-medium text-slate-600 p-3">Data</th>
                   <th className="text-left text-xs font-medium text-slate-600 p-3">Tribunal</th>
                   <th className="text-left text-xs font-medium text-slate-600 p-3">Tipo</th>
                   <th className="text-left text-xs font-medium text-slate-600 p-3">Processo</th>
-                  <th className="text-left text-xs font-medium text-slate-600 p-3">Cliente</th>
-                  <th className="text-left text-xs font-medium text-slate-600 p-3">Prazo</th>
                   <th className="text-right text-xs font-medium text-slate-600 p-3">Ações</th>
                 </tr>
               </thead>
@@ -569,9 +847,18 @@ export default function PublicacoesPage() {
                 {publicacoesFiltradas.map((pub) => (
                   <tr
                     key={pub.id}
-                    className="hover:bg-slate-50 transition-colors cursor-pointer"
+                    className={cn(
+                      'hover:bg-slate-50 transition-colors cursor-pointer',
+                      selecionados.has(pub.id) && 'bg-blue-50 hover:bg-blue-100'
+                    )}
                     onClick={() => router.push(`/dashboard/publicacoes/${pub.id}`)}
                   >
+                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selecionados.has(pub.id)}
+                        onCheckedChange={() => toggleSelecao(pub.id)}
+                      />
+                    </td>
                     <td className="p-3">
                       <div className="flex items-center gap-2 flex-wrap">
                         {getStatusBadge(pub.status)}
@@ -620,23 +907,10 @@ export default function PublicacoesPage() {
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-mono text-slate-700">{pub.numero_processo}</span>
                             <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
-                              <AlertTriangle className="w-3 h-3 mr-1" />
                               Sem pasta
                             </Badge>
                           </div>
                         )
-                      ) : (
-                        <span className="text-sm text-slate-400">-</span>
-                      )}
-                    </td>
-                    <td className="p-3">
-                      <span className="text-sm text-slate-700">{pub.cliente_nome || '-'}</span>
-                    </td>
-                    <td className="p-3">
-                      {pub.tem_prazo ? (
-                        <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
-                          {pub.prazo_dias} dias
-                        </Badge>
                       ) : (
                         <span className="text-sm text-slate-400">-</span>
                       )}
@@ -647,21 +921,79 @@ export default function PublicacoesPage() {
                           variant="ghost"
                           size="sm"
                           className="h-8 w-8 p-0"
+                          title="Ver detalhes"
                           onClick={() => router.push(`/dashboard/publicacoes/${pub.id}`)}
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => router.push(`/dashboard/publicacoes/processar/${pub.id}`)}
-                        >
-                          <Play className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <Archive className="w-3.5 h-3.5" />
-                        </Button>
+
+                        {/* Menu de ações */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="w-3.5 h-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-52">
+                            {/* Agendar */}
+                            <DropdownMenuItem
+                              className="gap-2 cursor-pointer"
+                              onClick={(e) => criarAgendamento(pub, 'tarefa', e as any)}
+                            >
+                              <CheckSquare className="w-4 h-4" />
+                              Criar Tarefa
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="gap-2 cursor-pointer"
+                              onClick={(e) => criarAgendamento(pub, 'compromisso', e as any)}
+                            >
+                              <CalendarPlus className="w-4 h-4" />
+                              Criar Compromisso
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="gap-2 cursor-pointer"
+                              onClick={(e) => criarAgendamento(pub, 'audiencia', e as any)}
+                            >
+                              <Gavel className="w-4 h-4" />
+                              Criar Audiência
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator />
+
+                            {/* Registrar na pasta */}
+                            {pub.processo_id && (
+                              <DropdownMenuItem
+                                className="gap-2 cursor-pointer"
+                                onClick={(e) => registrarNaPasta(pub, e as any)}
+                              >
+                                <FolderPlus className="w-4 h-4" />
+                                Registrar na Pasta
+                              </DropdownMenuItem>
+                            )}
+
+                            {/* Marcar como tratada */}
+                            {pub.status !== 'processada' && (
+                              <DropdownMenuItem
+                                className="gap-2 cursor-pointer"
+                                onClick={(e) => marcarProcessada(pub.id, e as any)}
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                                Marcar como Tratada
+                              </DropdownMenuItem>
+                            )}
+
+                            <DropdownMenuSeparator />
+
+                            {/* Arquivar */}
+                            <DropdownMenuItem
+                              className="gap-2 cursor-pointer text-red-600 focus:text-red-600"
+                              onClick={(e) => arquivarPublicacao(pub.id, e as any)}
+                            >
+                              <Archive className="w-4 h-4" />
+                              Arquivar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </td>
                   </tr>
@@ -670,149 +1002,7 @@ export default function PublicacoesPage() {
             </table>
           </div>
         )}
-        </div>
-      ) : (
-        /* Aba de Duplicatas */
-        <div className="space-y-4">
-          {duplicataGrupos.length === 0 ? (
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-                <Check className="w-8 h-8 text-emerald-600" />
-              </div>
-              <h3 className="text-sm font-semibold text-slate-700 mb-1">Nenhuma duplicata encontrada</h3>
-              <p className="text-xs text-slate-500">
-                Todas as publicações foram revisadas ou não há duplicatas detectadas.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h3 className="text-sm font-semibold text-amber-800">
-                      {duplicataGrupos.length} grupo{duplicataGrupos.length > 1 ? 's' : ''} de possíveis duplicatas
-                    </h3>
-                    <p className="text-xs text-amber-700 mt-1">
-                      Revise cada grupo e decida qual publicação manter. As duplicatas serão arquivadas.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {duplicataGrupos.map((grupo, index) => (
-                <div key={grupo.hash} className="bg-white rounded-lg border border-slate-200 shadow-sm">
-                  <div className="p-4 border-b border-slate-200 bg-slate-50">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-slate-700">
-                        Grupo {index + 1}: {grupo.publicacoes.length} publicações similares
-                      </h3>
-                      <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
-                        <Copy className="w-3 h-3 mr-1" />
-                        Possível duplicata
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {grupo.publicacoes.map((pub) => (
-                        <div
-                          key={pub.id}
-                          className="border border-slate-200 rounded-lg p-4 hover:border-slate-300 transition-colors"
-                        >
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                {getStatusBadge(pub.status)}
-                                {pub.urgente && (
-                                  <Badge variant="outline" className="text-[10px] bg-red-50 text-red-700 border-red-200">
-                                    Urgente
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="text-xs text-slate-500">
-                                {new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="space-y-2 mb-4">
-                            <div>
-                              <div className="text-xs text-slate-500">Tribunal</div>
-                              <div className="text-sm font-medium text-slate-700">{pub.tribunal}</div>
-                            </div>
-                            {pub.numero_processo && (
-                              <div>
-                                <div className="text-xs text-slate-500">Processo</div>
-                                <div className="text-sm font-mono text-slate-700">{pub.numero_processo}</div>
-                              </div>
-                            )}
-                            <div>
-                              <div className="text-xs text-slate-500">Tipo</div>
-                              <div className="text-sm text-slate-700">{getTipoLabel(pub.tipo_publicacao)}</div>
-                            </div>
-                            {pub.texto_completo && (
-                              <div>
-                                <div className="text-xs text-slate-500">Trecho</div>
-                                <div className="text-xs text-slate-600 line-clamp-3 bg-slate-50 p-2 rounded">
-                                  {pub.texto_completo.substring(0, 200)}...
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
-                            <Button
-                              size="sm"
-                              className="flex-1 gap-2 bg-gradient-to-r from-[#1E3A8A] to-[#3B82F6]"
-                              onClick={() => manterApenas(pub.id, grupo.hash)}
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                              Manter Esta
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-2"
-                              onClick={() => router.push(`/dashboard/publicacoes/${pub.id}`)}
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => arquivarDuplicata(pub.id)}
-                            >
-                              <Archive className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-4 pt-4 border-t border-slate-200 flex justify-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => {
-                          // Marcar todas como revisadas (manter todas)
-                          grupo.publicacoes.forEach(pub => marcarComoRevisada(pub.id))
-                        }}
-                      >
-                        <X className="w-3.5 h-3.5" />
-                        Não são duplicatas - Manter todas
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
-        </div>
-      )}
+      </div>
     </div>
   )
 }

@@ -323,9 +323,14 @@ export async function listarMonitoramentosDiario(): Promise<{
     }
 
     const data = await response.json()
+    console.log('[Escavador Publicacoes] Resposta bruta da API:', JSON.stringify(data, null, 2))
+
     const monitoramentos = data.items || data.data || data || []
 
     console.log(`[Escavador Publicacoes] ${monitoramentos.length} monitoramentos encontrados`)
+    if (monitoramentos.length > 0) {
+      console.log('[Escavador Publicacoes] Primeiro monitoramento:', JSON.stringify(monitoramentos[0], null, 2))
+    }
 
     return {
       sucesso: true,

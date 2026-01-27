@@ -28,6 +28,8 @@ export interface PerformanceData {
   // Equipe
   equipe: EquipeMember[]
   totalHorasEquipe: number
+  currentUserId: string | null
+  currentUserPosition: number
 
   // Por Área
   areas: AreaPerformance[]
@@ -51,6 +53,8 @@ const cores = [
 const defaultPerformance: PerformanceData = {
   equipe: [],
   totalHorasEquipe: 0,
+  currentUserId: null,
+  currentUserPosition: -1,
   areas: [],
   maxReceita: 0,
   totalAReceber: 0,
@@ -75,6 +79,10 @@ export function useDashboardPerformance() {
     try {
       setLoading(true)
       setError(null)
+
+      // Obter usuário logado para destacar no ranking
+      const { data: { user } } = await supabase.auth.getUser()
+      const currentUserId = user?.id || null
 
       const hoje = new Date()
       const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
@@ -129,37 +137,44 @@ export function useDashboardPerformance() {
 
       // Processar horas por membro da equipe
       const horasPorUsuario: Record<string, number> = {}
-      timesheetResult.data?.forEach(ts => {
+      timesheetResult.data?.forEach((ts: { user_id: string | null; horas: number | null }) => {
         if (ts.user_id) {
           horasPorUsuario[ts.user_id] = (horasPorUsuario[ts.user_id] || 0) + Number(ts.horas || 0)
         }
       })
 
       // Mapear nomes (agora vem de escritorios_usuarios com join em profiles)
+      // E incluir TODOS os usuários do escritório, mesmo sem horas
       const profilesMap: Record<string, string> = {}
+      const todosUsuariosIds: string[] = []
       profilesResult.data?.forEach((eu: any) => {
         const profile = eu.profiles as { id: string; nome_completo: string } | null
         if (profile?.id) {
           profilesMap[profile.id] = profile.nome_completo || 'Usuário'
+          todosUsuariosIds.push(profile.id)
         }
       })
 
-      // Criar lista de equipe ordenada por horas
-      const equipe: EquipeMember[] = Object.entries(horasPorUsuario)
-        .map(([userId, horas], index) => ({
-          id: userId,
-          nome: profilesMap[userId] || 'Membro',
-          horas: Math.round(horas * 10) / 10,
+      // Criar lista de equipe com TODOS os membros (incluindo os sem horas)
+      const equipe: EquipeMember[] = todosUsuariosIds
+        .map((odUserId, index) => ({
+          id: odUserId,
+          nome: profilesMap[odUserId] || 'Membro',
+          horas: Math.round((horasPorUsuario[odUserId] || 0) * 10) / 10,
           cor: cores[index % cores.length],
         }))
         .sort((a, b) => b.horas - a.horas)
-        .slice(0, 6)
 
       const totalHorasEquipe = equipe.reduce((acc, m) => acc + m.horas, 0)
 
+      // Encontrar posição do usuário atual no ranking
+      const currentUserPosition = currentUserId
+        ? equipe.findIndex(m => m.id === currentUserId) + 1
+        : -1
+
       // Processar áreas
       const areaMap: Record<string, { qtd: number; receita: number }> = {}
-      processosResult.data?.forEach(p => {
+      processosResult.data?.forEach((p: { area: string | null; valor_causa: number | null }) => {
         const area = p.area || 'Geral'
         if (!areaMap[area]) {
           areaMap[area] = { qtd: 0, receita: 0 }
@@ -182,7 +197,7 @@ export function useDashboardPerformance() {
 
       // Processar top clientes
       const clienteValores: Record<string, { nome: string; valor: number }> = {}
-      parcelasResult.data?.forEach(receita => {
+      parcelasResult.data?.forEach((receita: { valor_pago: number | null; cliente: unknown }) => {
         const cliente = receita.cliente as { id: string; nome_completo: string } | null
         if (cliente?.id) {
           if (!clienteValores[cliente.id]) {
@@ -205,7 +220,7 @@ export function useDashboardPerformance() {
       let totalVencido = 0
       let totalPendente = 0
 
-      parcelasPendentesResult.data?.forEach(p => {
+      parcelasPendentesResult.data?.forEach((p: { status: string; data_vencimento: string; valor: number | null }) => {
         if (p.status === 'atrasado' || (p.status === 'pendente' && new Date(p.data_vencimento) < new Date())) {
           totalVencido += Number(p.valor || 0)
         }
@@ -221,6 +236,8 @@ export function useDashboardPerformance() {
       setData({
         equipe,
         totalHorasEquipe: Math.round(totalHorasEquipe * 10) / 10,
+        currentUserId,
+        currentUserPosition,
         areas,
         maxReceita,
         totalAReceber: totalPendente,

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 // =====================================================
@@ -199,10 +199,13 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Normalizar para sempre ter um array de IDs
-  const escritorioIds = Array.isArray(escritorioIdOrIds)
-    ? escritorioIdOrIds
-    : (escritorioIdOrIds ? [escritorioIdOrIds] : [])
+  // Normalizar para sempre ter um array de IDs - usando useMemo para estabilidade
+  const escritorioIds = useMemo(() => {
+    if (Array.isArray(escritorioIdOrIds)) {
+      return escritorioIdOrIds.filter(Boolean)
+    }
+    return escritorioIdOrIds ? [escritorioIdOrIds] : []
+  }, [escritorioIdOrIds ? (Array.isArray(escritorioIdOrIds) ? escritorioIdOrIds.join(',') : escritorioIdOrIds) : ''])
 
   // Manter compatibilidade - pegar primeiro ID para operações de escrita
   const escritorioIdPrincipal = escritorioIds[0] || null
@@ -753,9 +756,11 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
   const createImportacao = useCallback(async (
     cartaoId: string,
     arquivoNome: string,
-    arquivoUrl: string
+    arquivoUrl: string,
+    escritorioIdOverride?: string
   ): Promise<string | null> => {
-    if (!escritorioIdPrincipal) return null
+    const targetEscritorioId = escritorioIdOverride || escritorioIdPrincipal
+    if (!targetEscritorioId) return null
 
     try {
       setLoading(true)
@@ -764,7 +769,7 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
       const { data, error: insertError } = await supabase
         .from('cartoes_credito_importacoes')
         .insert({
-          escritorio_id: escritorioIdPrincipal,
+          escritorio_id: targetEscritorioId,
           cartao_id: cartaoId,
           arquivo_nome: arquivoNome,
           arquivo_url: arquivoUrl,

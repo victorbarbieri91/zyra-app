@@ -108,6 +108,9 @@ export interface ContratoFormData {
   horas_faturaveis?: boolean
   // Multi-escritório: escritório que vai faturar (se diferente do ativo)
   escritorio_id?: string
+  // Limites mensais para contratos por_hora e por_cargo
+  valor_minimo_mensal?: number | null
+  valor_maximo_mensal?: number | null
 }
 
 export interface ContratosMetrics {
@@ -455,6 +458,16 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           configJsonb.valores_por_cargo = data.valores_por_cargo
         }
 
+        // Limites mensais (para por_hora e por_cargo)
+        if (formas.includes('por_hora') || formas.includes('por_cargo')) {
+          if (data.valor_minimo_mensal !== undefined && data.valor_minimo_mensal !== null) {
+            configJsonb.valor_minimo_mensal = data.valor_minimo_mensal
+          }
+          if (data.valor_maximo_mensal !== undefined && data.valor_maximo_mensal !== null) {
+            configJsonb.valor_maximo_mensal = data.valor_maximo_mensal
+          }
+        }
+
         // Por Ato
         if (formas.includes('por_ato') && data.atos_configurados) {
           configJsonb.atos_configurados = data.atos_configurados.filter(
@@ -584,6 +597,16 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
         // Por Cargo
         if (formas.includes('por_cargo') && data.valores_por_cargo) {
           configJsonb.valores_por_cargo = data.valores_por_cargo
+        }
+
+        // Limites mensais (para por_hora e por_cargo)
+        if (formas.includes('por_hora') || formas.includes('por_cargo')) {
+          if (data.valor_minimo_mensal !== undefined && data.valor_minimo_mensal !== null) {
+            configJsonb.valor_minimo_mensal = data.valor_minimo_mensal
+          }
+          if (data.valor_maximo_mensal !== undefined && data.valor_maximo_mensal !== null) {
+            configJsonb.valor_maximo_mensal = data.valor_maximo_mensal
+          }
         }
 
         // Por Ato

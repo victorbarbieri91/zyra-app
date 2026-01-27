@@ -36,6 +36,10 @@ interface AudienciaModalProps {
   // Props de pré-preenchimento (para criar nova audiência com dados iniciais)
   processoIdPadrao?: string
   descricaoPadrao?: string
+  // Props adicionais para pré-preenchimento (usado por análise IA de publicações)
+  dataHoraPadrao?: string
+  tribunalPadrao?: string
+  varaPadrao?: string
 }
 
 const TIPO_AUDIENCIA_CONFIG = {
@@ -54,6 +58,9 @@ export default function AudienciaModal({
   escritorioId,
   processoIdPadrao,
   descricaoPadrao,
+  dataHoraPadrao,
+  tribunalPadrao,
+  varaPadrao,
 }: AudienciaModalProps) {
   const { createAudiencia, updateAudiencia } = useAudiencias()
   const { getResponsaveis, setResponsaveis } = useAgendaResponsaveis()
@@ -128,10 +135,14 @@ export default function AudienciaModal({
         resetForm()
         // Aplicar valores padrão se fornecidos
         if (descricaoPadrao) setObservacoes(descricaoPadrao)
+        // Props adicionais para análise IA de publicações
+        if (dataHoraPadrao) setDataHora(dataHoraPadrao)
+        if (tribunalPadrao) setTribunal(tribunalPadrao)
+        if (varaPadrao) setVara(varaPadrao)
       }
     }
     loadData()
-  }, [audiencia, descricaoPadrao])
+  }, [audiencia, descricaoPadrao, dataHoraPadrao, tribunalPadrao, varaPadrao])
 
   const resetForm = () => {
     setProcessoId(processoIdPadrao || '')

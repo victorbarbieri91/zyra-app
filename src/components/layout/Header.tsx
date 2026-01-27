@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
-  Search,
   User,
   ChevronDown,
   HelpCircle,
@@ -17,6 +16,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useEscritorio } from '@/contexts/EscritorioContext'
+import SearchDropdown from '@/components/search/SearchDropdown'
 
 export default function Header() {
   const [user, setUser] = useState<any>(null)
@@ -53,16 +53,7 @@ export default function Header() {
     <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shadow-sm">
       {/* Left Section - Search */}
       <div className="flex items-center flex-1 max-w-xl">
-        <div className="relative w-full group">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-gradient-to-br from-[#89bcbe]/10 to-[#aacfd0]/10 rounded-md flex items-center justify-center group-focus-within:from-[#89bcbe]/20 group-focus-within:to-[#aacfd0]/20 transition-all">
-            <Search className="w-4 h-4 text-[#89bcbe] group-focus-within:scale-110 transition-transform" />
-          </div>
-          <input
-            type="text"
-            placeholder="Buscar processos, clientes, documentos..."
-            className="w-full pl-12 pr-4 py-2.5 bg-white border-2 border-[#89bcbe]/30 rounded-lg text-sm text-[#34495e] placeholder:text-slate-400 focus:outline-none focus:border-[#89bcbe] focus:shadow-sm focus:shadow-[#89bcbe]/10 transition-all"
-          />
-        </div>
+        <SearchDropdown />
       </div>
 
       {/* Right Section */}

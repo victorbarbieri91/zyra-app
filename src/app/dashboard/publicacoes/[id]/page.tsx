@@ -1,1028 +1,589 @@
 'use client'
 
-import { useState, useEffect, useCallback, use, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import {
   ArrowLeft,
-  ExternalLink,
-  Calendar,
-  Building2,
-  Scale,
-  User,
-  FileText,
-  Clock,
-  AlertTriangle,
-  CheckCircle2,
   Brain,
-  Sparkles,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Play,
-  Edit,
-  Archive,
-  Download,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  FileText,
   Loader2,
+  Sparkles,
+  AlertTriangle,
   CalendarPlus,
-  Gavel,
   CheckSquare,
-  Link2
+  Gavel,
+  Archive,
+  ExternalLink,
+  Copy,
+  Check
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
-import { formatBrazilDate, formatBrazilDateTime } from '@/lib/timezone'
-import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
-import TarefaWizard from '@/components/agenda/TarefaWizard'
-import EventoWizard from '@/components/agenda/EventoWizard'
-import AudienciaWizard from '@/components/agenda/AudienciaWizard'
-import { useTarefas, TarefaFormData } from '@/hooks/useTarefas'
-import { useEventos, EventoFormData } from '@/hooks/useEventos'
-import { useAudiencias, AudienciaFormData } from '@/hooks/useAudiencias'
 import { toast } from 'sonner'
 
+// Modais padrão da agenda
+import TarefaModal from '@/components/agenda/TarefaModal'
+import AudienciaModal from '@/components/agenda/AudienciaModal'
+import EventoModal from '@/components/agenda/EventoModal'
+
+// Tipos
 type StatusPublicacao = 'pendente' | 'em_analise' | 'processada' | 'arquivada'
-
-interface PublicacaoAnalise {
-  id: string
-  resumo_executivo: string | null
-  tipo_decisao: string | null
-  sentimento: string | null
-  pontos_principais: string[] | null
-  tem_prazo: boolean
-  tipo_prazo: string | null
-  prazo_dias: number | null
-  prazo_tipo_dias: string | null
-  data_intimacao: string | null
-  data_limite: string | null
-  fundamentacao_legal: string | null
-  tem_determinacao: boolean
-  determinacoes: string[] | null
-  requer_manifestacao: boolean
-  acoes_sugeridas: string[] | null
-  template_sugerido: string | null
-  confianca_analise: number | null
-}
-
-interface PublicacaoHistorico {
-  id: string
-  acao: string
-  user_id: string | null
-  detalhes: Record<string, unknown>
-  created_at: string
-  user_nome?: string
-}
+type TipoPublicacao = 'intimacao' | 'sentenca' | 'despacho' | 'decisao' | 'acordao' | 'citacao' | 'outro'
+type TipoAgendamento = 'tarefa' | 'evento' | 'audiencia'
 
 interface Publicacao {
   id: string
-  escritorio_id: string
-  aasp_id: string | null
-  data_publicacao: string | null
-  data_captura: string | null
-  tribunal: string | null
-  vara: string | null
-  tipo_publicacao: string | null
-  numero_processo: string | null
-  processo_id: string | null
-  cliente_id: string | null
-  partes: string[] | null
-  texto_completo: string | null
-  pdf_url: string | null
+  data_publicacao: string
+  tribunal: string
+  vara?: string
+  tipo_publicacao: TipoPublicacao
+  numero_processo?: string
+  processo_id?: string
   status: StatusPublicacao
   urgente: boolean
-  source: string | null
+  texto_completo?: string
   created_at: string
-  updated_at: string
-  associado_id: string | null
-  agendamento_id: string | null
-  agendamento_tipo: 'tarefa' | 'compromisso' | 'audiencia' | null
-  // Joined data
-  analise?: PublicacaoAnalise | null
-  historico?: PublicacaoHistorico[]
-  cliente?: { nome: string } | null
+  escritorio_id: string
 }
 
-export default function PublicacaoDetalhesPage({ params }: { params: Promise<{ id: string }> }) {
+interface AnaliseIA {
+  resumo: string
+  tipo_publicacao: TipoPublicacao
+  tem_prazo: boolean
+  prazo_dias?: number
+  prazo_tipo?: 'uteis' | 'corridos'
+  data_limite_sugerida?: string
+  urgente: boolean
+  acao_sugerida?: string
+  fundamentacao_legal?: string
+}
+
+export default function PublicacaoDetalhePage() {
+  const params = useParams()
   const router = useRouter()
-  const { id } = use(params)
+  const supabase = createClient()
+  const publicacaoId = params.id as string
 
   const [publicacao, setPublicacao] = useState<Publicacao | null>(null)
+  const [analise, setAnalise] = useState<AnaliseIA | null>(null)
   const [carregando, setCarregando] = useState(true)
-  const [erro, setErro] = useState<string | null>(null)
-  const [isEditing, setIsEditing] = useState(false)
+  const [analisando, setAnalisando] = useState(false)
+  const [copiado, setCopiado] = useState(false)
+
+  // Modais de agendamento
   const [tarefaModalOpen, setTarefaModalOpen] = useState(false)
-  const [eventoModalOpen, setEventoModalOpen] = useState(false)
   const [audienciaModalOpen, setAudienciaModalOpen] = useState(false)
-  const [processoEncontrado, setProcessoEncontrado] = useState<{
-    id: string
-    numero_cnj: string
-    parte_contraria: string | null
-    status: string
-  } | null>(null)
-  const [buscandoProcesso, setBuscandoProcesso] = useState(false)
-  const [vinculando, setVinculando] = useState(false)
+  const [eventoModalOpen, setEventoModalOpen] = useState(false)
 
-  const { escritorioAtivo } = useEscritorioAtivo()
-
-  // Usar useRef para manter a mesma referência do supabase client
-  const supabaseRef = useRef(createClient())
-  const supabase = supabaseRef.current
-
-  // Hooks para criar agendamentos
-  const { createTarefa } = useTarefas(escritorioAtivo || undefined)
-  const { createEvento } = useEventos(escritorioAtivo || undefined)
-  const { createAudiencia } = useAudiencias(escritorioAtivo || undefined)
-
+  // Carregar publicacao
   const carregarPublicacao = useCallback(async () => {
-    if (!id) return
-
     setCarregando(true)
-    setErro(null)
-
     try {
-      // Buscar publicação
-      const { data: pub, error: pubError } = await supabase
+      const { data, error } = await supabase
         .from('publicacoes_publicacoes')
         .select('*')
-        .eq('id', id)
+        .eq('id', publicacaoId)
         .single()
 
-      if (pubError || !pub) {
-        console.error('Erro ao buscar publicação:', pubError)
-        setErro('Publicação não encontrada')
-        return
-      }
+      if (error) throw error
+      setPublicacao(data)
 
-      // Buscar nome do cliente se existir cliente_id
-      let clienteNome = null
-      if (pub.cliente_id) {
-        const { data: cliente } = await supabase
-          .from('crm_pessoas')
-          .select('nome')
-          .eq('id', pub.cliente_id)
-          .single()
-        clienteNome = cliente?.nome
-      }
-
-      // Buscar análise IA (se existir)
-      const { data: analise } = await supabase
+      // Verificar se ja tem analise em cache
+      const { data: analiseCache } = await supabase
         .from('publicacoes_analises')
-        .select('*')
-        .eq('publicacao_id', id)
-        .maybeSingle()
+        .select('resultado')
+        .eq('publicacao_id', publicacaoId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
 
-      // Buscar histórico
-      const { data: historico } = await supabase
-        .from('publicacoes_historico')
-        .select('*')
-        .eq('publicacao_id', id)
-        .order('created_at', { ascending: true })
-
-      // Buscar nomes dos usuários do histórico
-      const historicoComNomes = await Promise.all(
-        (historico || []).map(async (item) => {
-          if (item.user_id) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('nome')
-              .eq('id', item.user_id)
-              .single()
-            return { ...item, user_nome: profile?.nome || 'Sistema' }
-          }
-          return { ...item, user_nome: 'Sistema' }
-        })
-      )
-
-      setPublicacao({
-        ...pub,
-        analise: analise || null,
-        historico: historicoComNomes,
-        cliente: clienteNome ? { nome: clienteNome } : null
-      })
+      if (analiseCache?.resultado) {
+        setAnalise(analiseCache.resultado as AnaliseIA)
+      }
     } catch (err) {
-      console.error('Erro ao carregar publicação:', err)
-      setErro('Erro ao carregar dados')
+      console.error('Erro ao carregar publicacao:', err)
+      toast.error('Erro ao carregar publicacao')
     } finally {
       setCarregando(false)
     }
-  }, [id, supabase])
+  }, [publicacaoId, supabase])
 
   useEffect(() => {
     carregarPublicacao()
   }, [carregarPublicacao])
 
-  // Busca inteligente de processo existente
-  const buscarProcessoExistente = useCallback(async () => {
-    if (!publicacao?.numero_processo || publicacao.processo_id || !escritorioAtivo) {
-      setProcessoEncontrado(null)
-      return
-    }
-
-    setBuscandoProcesso(true)
+  // Analisar com IA
+  const analisarComIA = async () => {
+    setAnalisando(true)
     try {
-      const { data, error } = await supabase
-        .from('processos_processos')
-        .select('id, numero_cnj, parte_contraria, status')
-        .eq('escritorio_id', escritorioAtivo)
-        .eq('numero_cnj', publicacao.numero_processo)
-        .maybeSingle()
+      const response = await fetch('/api/publicacoes/analisar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ publicacao_id: publicacaoId })
+      })
 
-      if (error || !data) {
-        setProcessoEncontrado(null)
-      } else {
-        setProcessoEncontrado(data)
+      const data = await response.json()
+
+      if (!data.sucesso) {
+        throw new Error(data.error)
       }
-    } catch (err) {
-      console.error('Erro ao buscar processo:', err)
-      setProcessoEncontrado(null)
+
+      setAnalise(data.analise)
+      toast.success(data.cached ? 'Analise carregada do cache' : 'Analise concluida!')
+
+      // Recarregar publicacao para pegar atualizacoes
+      await carregarPublicacao()
+    } catch (err: any) {
+      console.error('Erro ao analisar:', err)
+      toast.error(err.message || 'Erro ao analisar publicacao')
     } finally {
-      setBuscandoProcesso(false)
+      setAnalisando(false)
     }
-  }, [publicacao?.numero_processo, publicacao?.processo_id, escritorioAtivo, supabase])
+  }
 
-  // Executar busca quando a publicação for carregada
-  useEffect(() => {
-    buscarProcessoExistente()
-  }, [buscarProcessoExistente])
-
-  // Vincular publicação ao processo existente
-  const vincularProcesso = async (processoId: string) => {
-    if (!publicacao) return
-
-    setVinculando(true)
+  // Arquivar publicacao
+  const arquivarPublicacao = async () => {
     try {
       const { error } = await supabase
         .from('publicacoes_publicacoes')
-        .update({ processo_id: processoId })
-        .eq('id', publicacao.id)
+        .update({ status: 'arquivada' })
+        .eq('id', publicacaoId)
 
       if (error) throw error
-
-      // Recarregar publicação para atualizar UI
-      await carregarPublicacao()
-      setProcessoEncontrado(null)
+      toast.success('Publicacao arquivada')
+      router.push('/dashboard/publicacoes')
     } catch (err) {
-      console.error('Erro ao vincular processo:', err)
-    } finally {
-      setVinculando(false)
+      console.error('Erro ao arquivar:', err)
+      toast.error('Erro ao arquivar')
     }
   }
 
-  const getStatusConfig = (status: StatusPublicacao) => {
-    const configs = {
-      pendente: {
-        badge: 'bg-red-100 text-red-700 border-red-200',
-        label: 'Pendente de Análise',
-        icon: Clock
-      },
-      em_analise: {
-        badge: 'bg-amber-100 text-amber-700 border-amber-200',
-        label: 'Em Análise',
-        icon: Brain
-      },
-      processada: {
-        badge: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-        label: 'Processada',
-        icon: CheckCircle2
-      },
-      arquivada: {
-        badge: 'bg-slate-100 text-slate-600 border-slate-200',
-        label: 'Arquivada',
-        icon: Archive
-      }
+  // Marcar como tratada
+  const marcarTratada = async () => {
+    try {
+      const { error } = await supabase
+        .from('publicacoes_publicacoes')
+        .update({ status: 'processada' })
+        .eq('id', publicacaoId)
+
+      if (error) throw error
+      toast.success('Marcada como tratada')
+      await carregarPublicacao()
+    } catch (err) {
+      console.error('Erro ao atualizar:', err)
+      toast.error('Erro ao atualizar')
     }
-    return configs[status] || configs.pendente
   }
 
-  const getSentimentoConfig = (sentimento: string | null) => {
-    const configs = {
-      favoravel: {
-        icon: TrendingUp,
-        color: 'text-emerald-600',
-        bg: 'bg-emerald-50',
-        border: 'border-emerald-200',
-        label: 'Favorável'
-      },
-      desfavoravel: {
-        icon: TrendingDown,
-        color: 'text-red-600',
-        bg: 'bg-red-50',
-        border: 'border-red-200',
-        label: 'Desfavorável'
-      },
-      neutro: {
-        icon: Minus,
-        color: 'text-slate-600',
-        bg: 'bg-slate-50',
-        border: 'border-slate-200',
-        label: 'Neutro'
-      }
+  // Copiar texto
+  const copiarTexto = () => {
+    if (publicacao?.texto_completo) {
+      navigator.clipboard.writeText(publicacao.texto_completo)
+      setCopiado(true)
+      toast.success('Texto copiado!')
+      setTimeout(() => setCopiado(false), 2000)
     }
-    return configs[sentimento as keyof typeof configs] || configs.neutro
   }
 
-  // Loading state
+  // Callbacks para quando os modais fecham (para atualizar status)
+  const handleModalClose = async (tipo: TipoAgendamento, open: boolean) => {
+    if (tipo === 'tarefa') setTarefaModalOpen(open)
+    else if (tipo === 'audiencia') setAudienciaModalOpen(open)
+    else setEventoModalOpen(open)
+
+    // Se fechou o modal, atualizar status da publicação para processada
+    if (!open && publicacao?.status === 'pendente') {
+      await supabase
+        .from('publicacoes_publicacoes')
+        .update({ status: 'processada' })
+        .eq('id', publicacaoId)
+      await carregarPublicacao()
+    }
+  }
+
+  const getStatusBadge = (status: StatusPublicacao) => {
+    const variants = {
+      pendente: 'bg-red-100 text-red-700 border-red-200',
+      em_analise: 'bg-amber-100 text-amber-700 border-amber-200',
+      processada: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+      arquivada: 'bg-slate-100 text-slate-600 border-slate-200'
+    }
+    const labels = {
+      pendente: 'Pendente',
+      em_analise: 'Em Analise',
+      processada: 'Tratada',
+      arquivada: 'Arquivada'
+    }
+    return (
+      <Badge variant="outline" className={cn('text-xs font-medium border', variants[status])}>
+        {labels[status]}
+      </Badge>
+    )
+  }
+
+  const getTipoLabel = (tipo: TipoPublicacao) => {
+    const labels: Record<TipoPublicacao, string> = {
+      intimacao: 'Intimacao',
+      sentenca: 'Sentenca',
+      despacho: 'Despacho',
+      decisao: 'Decisao',
+      acordao: 'Acordao',
+      citacao: 'Citacao',
+      outro: 'Outro'
+    }
+    return labels[tipo] || tipo
+  }
+
+  // Gerar descricao para os modais
+  const gerarDescricao = () => {
+    const partes = [
+      `Publicacao: ${getTipoLabel(publicacao?.tipo_publicacao || 'outro')}`,
+      `Data: ${publicacao?.data_publicacao ? new Date(publicacao.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A'}`,
+      `Tribunal: ${publicacao?.tribunal || 'N/A'}`,
+      publicacao?.vara ? `Vara: ${publicacao.vara}` : '',
+      publicacao?.numero_processo ? `Processo: ${publicacao.numero_processo}` : '',
+      '',
+      analise?.resumo ? `Resumo IA: ${analise.resumo}` : '',
+      analise?.fundamentacao_legal ? `Fundamentacao: ${analise.fundamentacao_legal}` : '',
+    ]
+    return partes.filter(Boolean).join('\n')
+  }
+
   if (carregando) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-[#1E3A8A]" />
-          <p className="text-sm text-slate-600">Carregando publicação...</p>
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white p-6 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+      </div>
+    )
+  }
+
+  if (!publicacao) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white p-6">
+        <div className="text-center py-12">
+          <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-slate-700">Publicacao nao encontrada</h2>
+          <Link href="/dashboard/publicacoes">
+            <Button variant="outline" className="mt-4">Voltar para lista</Button>
+          </Link>
         </div>
       </div>
     )
   }
 
-  // Error state
-  if (erro || !publicacao) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <AlertTriangle className="w-12 h-12 text-amber-500" />
-          <p className="text-sm text-slate-600">{erro || 'Publicação não encontrada'}</p>
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-4">
           <Button
-            variant="outline"
+            variant="ghost"
+            size="sm"
             onClick={() => router.push('/dashboard/publicacoes')}
             className="gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
-            Voltar para Publicações
+            Voltar
           </Button>
         </div>
-      </div>
-    )
-  }
 
-  const statusConfig = getStatusConfig(publicacao.status)
-  const StatusIcon = statusConfig.icon
-  const analise = publicacao.analise
-  const sentimentoConfig = analise ? getSentimentoConfig(analise.sentimento) : getSentimentoConfig('neutro')
-  const SentimentoIcon = sentimentoConfig.icon
-
-  // Calcular dias restantes se houver prazo
-  const diasRestantes = analise?.data_limite
-    ? Math.ceil(
-        (new Date(analise.data_limite).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-      )
-    : null
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      {/* Header Compacto */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-        <div className="px-6 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push('/dashboard/publicacoes')}
-                className="gap-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Voltar
-              </Button>
-              <Separator orientation="vertical" className="h-6" />
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className={cn('text-xs border', statusConfig.badge)}>
-                  <StatusIcon className="w-3 h-3 mr-1" />
-                  {statusConfig.label}
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-xl font-bold text-[#34495e]">
+                {getTipoLabel(publicacao.tipo_publicacao)}
+              </h1>
+              {getStatusBadge(publicacao.status)}
+              {publicacao.urgente && (
+                <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  Urgente
                 </Badge>
-                {publicacao.urgente && (
-                  <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
-                    <AlertTriangle className="w-3 h-3 mr-1" />
-                    Urgente
-                  </Badge>
-                )}
-                {analise?.tem_prazo && diasRestantes !== null && (
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      'text-xs',
-                      diasRestantes <= 3
-                        ? 'bg-red-50 text-red-700 border-red-200'
-                        : diasRestantes <= 7
-                        ? 'bg-amber-50 text-amber-700 border-amber-200'
-                        : 'bg-blue-50 text-blue-700 border-blue-200'
-                    )}
-                  >
-                    <Clock className="w-3 h-3 mr-1" />
-                    {diasRestantes} dias restantes
-                  </Badge>
-                )}
-                {publicacao.agendamento_tipo && (
-                  <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
-                    {publicacao.agendamento_tipo === 'tarefa' && <CheckSquare className="w-3 h-3 mr-1" />}
-                    {publicacao.agendamento_tipo === 'compromisso' && <Calendar className="w-3 h-3 mr-1" />}
-                    {publicacao.agendamento_tipo === 'audiencia' && <Gavel className="w-3 h-3 mr-1" />}
-                    {publicacao.agendamento_tipo === 'tarefa' && 'Tarefa agendada'}
-                    {publicacao.agendamento_tipo === 'compromisso' && 'Compromisso agendado'}
-                    {publicacao.agendamento_tipo === 'audiencia' && 'Audiência agendada'}
-                  </Badge>
-                )}
-              </div>
+              )}
             </div>
+            <p className="text-sm text-slate-600">
+              {publicacao.tribunal} {publicacao.vara && `- ${publicacao.vara}`}
+            </p>
+            <p className="text-sm text-slate-500">
+              Publicado em {new Date(publicacao.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}
+            </p>
+          </div>
 
-            <div className="flex items-center gap-2">
-              {publicacao.status !== 'processada' && (
-                <Button
-                  size="sm"
-                  className="gap-2 bg-gradient-to-r from-[#1E3A8A] to-[#3B82F6] hover:from-[#1E3A8A] hover:to-[#2563EB]"
-                  onClick={() => router.push(`/dashboard/publicacoes/processar/${publicacao.id}`)}
-                >
-                  <Play className="w-4 h-4" />
-                  Processar com IA
-                </Button>
-              )}
-              {!publicacao.agendamento_id && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <CalendarPlus className="w-4 h-4" />
-                      Agendar
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setTarefaModalOpen(true)}>
-                      <CheckSquare className="w-4 h-4 mr-2" />
-                      Nova Tarefa
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setEventoModalOpen(true)}>
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Novo Compromisso
-                    </DropdownMenuItem>
-                    {publicacao.processo_id && (
-                      <DropdownMenuItem onClick={() => setAudienciaModalOpen(true)}>
-                        <Gavel className="w-4 h-4 mr-2" />
-                        Nova Audiência
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
+          <div className="flex items-center gap-2">
+            {publicacao.status !== 'processada' && (
               <Button
                 variant="outline"
                 size="sm"
+                onClick={marcarTratada}
                 className="gap-2"
-                onClick={() => setIsEditing(!isEditing)}
               >
-                <Edit className="w-4 h-4" />
-                Editar Análise
+                <CheckCircle2 className="w-4 h-4" />
+                Marcar como Tratada
               </Button>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Archive className="w-4 h-4" />
-                Arquivar
-              </Button>
-            </div>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={arquivarPublicacao}
+              className="gap-2 text-red-600 hover:text-red-700"
+            >
+              <Archive className="w-4 h-4" />
+              Arquivar
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Conteúdo - Layout 2 Colunas */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 p-6">
-        {/* COLUNA ESQUERDA (2/3) */}
-        <div className="xl:col-span-2 space-y-4">
-          {/* Card: Informações da Publicação */}
-          <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
-            <div className="px-4 py-3 border-b border-slate-200">
-              <h2 className="text-sm font-semibold text-slate-700">Informações da Publicação</h2>
-            </div>
-            <div className="p-4 space-y-3">
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                <div className="flex items-start gap-2">
-                  <Calendar className="w-4 h-4 text-slate-400 mt-0.5" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Coluna principal - Texto */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Processo vinculado */}
+          {publicacao.numero_processo && (
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                  </div>
                   <div>
-                    <div className="text-xs text-slate-500">Data da Publicação</div>
-                    <div className="text-sm font-medium text-slate-700">
-                      {publicacao.data_publicacao
-                        ? formatBrazilDate(publicacao.data_publicacao)
-                        : '-'}
-                    </div>
+                    <p className="text-sm text-slate-500">Processo</p>
+                    <p className="text-sm font-mono font-medium text-slate-700">
+                      {publicacao.numero_processo}
+                    </p>
                   </div>
                 </div>
-
-                <div className="flex items-start gap-2">
-                  <Building2 className="w-4 h-4 text-slate-400 mt-0.5" />
-                  <div>
-                    <div className="text-xs text-slate-500">Tribunal / Vara</div>
-                    <div className="text-sm font-medium text-slate-700">
-                      {publicacao.tribunal || '-'}
-                    </div>
-                    {publicacao.vara && (
-                      <div className="text-xs text-slate-500">{publicacao.vara}</div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2">
-                  <FileText className="w-4 h-4 text-slate-400 mt-0.5" />
-                  <div>
-                    <div className="text-xs text-slate-500">Tipo de Publicação</div>
-                    <div className="text-sm font-medium text-slate-700 capitalize">
-                      {publicacao.tipo_publicacao || '-'}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2">
-                  <Scale className="w-4 h-4 text-slate-400 mt-0.5" />
-                  <div>
-                    <div className="text-xs text-slate-500">Número do Processo</div>
-                    {publicacao.numero_processo ? (
-                      publicacao.processo_id ? (
-                        <Link
-                          href={`/dashboard/processos/${publicacao.processo_id}`}
-                          className="text-sm font-medium text-[#1E3A8A] hover:underline flex items-center gap-1"
-                        >
-                          {publicacao.numero_processo}
-                          <ExternalLink className="w-3 h-3" />
-                        </Link>
-                      ) : (
-                        <div className="text-sm font-medium text-slate-700">
-                          {publicacao.numero_processo}
-                        </div>
-                      )
-                    ) : (
-                      <div className="text-sm text-slate-400">Não informado</div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2">
-                  <User className="w-4 h-4 text-slate-400 mt-0.5" />
-                  <div>
-                    <div className="text-xs text-slate-500">Cliente</div>
-                    <div className="text-sm font-medium text-slate-700">
-                      {publicacao.cliente?.nome || '-'}
-                    </div>
-                  </div>
-                </div>
-
-                {publicacao.partes && publicacao.partes.length > 0 && (
-                  <div className="flex items-start gap-2">
-                    <User className="w-4 h-4 text-slate-400 mt-0.5" />
-                    <div>
-                      <div className="text-xs text-slate-500">Partes</div>
-                      <div className="text-sm text-slate-700">
-                        {publicacao.partes.join(' x ')}
-                      </div>
-                    </div>
-                  </div>
+                {publicacao.processo_id ? (
+                  <Link href={`/dashboard/processos/${publicacao.processo_id}`}>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <ExternalLink className="w-4 h-4" />
+                      Ver Processo
+                    </Button>
+                  </Link>
+                ) : (
+                  <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700">
+                    Sem pasta vinculada
+                  </Badge>
                 )}
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Card: Texto Completo */}
-          <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
-            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-700">Texto da Publicação</h2>
-              {publicacao.pdf_url && (
-                <Button variant="outline" size="sm" className="gap-2" asChild>
-                  <a href={publicacao.pdf_url} target="_blank" rel="noopener noreferrer">
-                    <Download className="w-3.5 h-3.5" />
-                    PDF Original
-                  </a>
-                </Button>
-              )}
+          {/* Texto da publicacao */}
+          <div className="bg-white rounded-lg border border-slate-200">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-700">Texto da Publicacao</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={copiarTexto}
+                className="gap-2 h-8"
+              >
+                {copiado ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copiado ? 'Copiado!' : 'Copiar'}
+              </Button>
             </div>
             <div className="p-4">
-              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                <pre className="text-xs text-slate-700 whitespace-pre-wrap font-mono leading-relaxed">
-                  {publicacao.texto_completo || 'Texto não disponível'}
-                </pre>
+              <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                {publicacao.texto_completo || 'Sem texto disponivel'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Coluna lateral - Analise IA */}
+        <div className="space-y-4">
+          {/* Card de Analise IA */}
+          <div className="bg-white rounded-lg border border-slate-200">
+            <div className="p-4 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+                  <Brain className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-700">Analise com IA</h2>
+                  <p className="text-xs text-slate-500">DeepSeek Reasoner</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Card: Histórico de Ações */}
-          <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
-            <div className="px-4 py-3 border-b border-slate-200">
-              <h2 className="text-sm font-semibold text-slate-700">Histórico de Ações</h2>
-            </div>
             <div className="p-4">
-              {publicacao.historico && publicacao.historico.length > 0 ? (
-                <div className="space-y-3">
-                  {publicacao.historico.map((item, index) => (
-                    <div key={item.id} className="flex gap-3">
-                      <div className="flex flex-col items-center">
-                        <div className={cn(
-                          "w-2 h-2 rounded-full",
-                          item.acao === 'recebida' ? 'bg-blue-500' :
-                          item.acao === 'analisada_ia' ? 'bg-purple-500' :
-                          item.acao === 'visualizada' ? 'bg-slate-400' :
-                          item.acao === 'processada' ? 'bg-emerald-500' :
-                          item.acao === 'arquivada' ? 'bg-slate-500' :
-                          'bg-amber-500'
-                        )} />
-                        {index < publicacao.historico!.length - 1 && (
-                          <div className="w-px h-full bg-slate-200 my-1" />
-                        )}
-                      </div>
-                      <div className="flex-1 pb-3">
-                        <div className="flex items-center justify-between">
-                          <div className="text-xs font-medium text-slate-700 capitalize">
-                            {item.acao.replace(/_/g, ' ')}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            {formatBrazilDateTime(item.created_at)}
-                          </div>
-                        </div>
-                        <div className="text-xs text-slate-600 mt-0.5">
-                          {item.user_nome}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+              {!analise ? (
+                <div className="text-center py-6">
+                  <Sparkles className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                  <p className="text-sm text-slate-500 mb-4">
+                    Clique para analisar o texto e extrair prazos e acoes sugeridas
+                  </p>
+                  <Button
+                    onClick={analisarComIA}
+                    disabled={analisando}
+                    className="gap-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                  >
+                    {analisando ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Analisando...
+                      </>
+                    ) : (
+                      <>
+                        <Brain className="w-4 h-4" />
+                        Analisar com IA
+                      </>
+                    )}
+                  </Button>
                 </div>
               ) : (
-                <p className="text-xs text-slate-500 text-center py-4">
-                  Nenhum histórico registrado
-                </p>
+                <div className="space-y-4">
+                  {/* Resumo */}
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 mb-1">Resumo</p>
+                    <p className="text-sm text-slate-700">{analise.resumo}</p>
+                  </div>
+
+                  {/* Prazo */}
+                  {analise.tem_prazo && (
+                    <div className={cn(
+                      'rounded-lg p-3',
+                      analise.urgente ? 'bg-red-50 border border-red-200' : 'bg-amber-50 border border-amber-200'
+                    )}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className={cn('w-4 h-4', analise.urgente ? 'text-red-600' : 'text-amber-600')} />
+                        <span className={cn('text-sm font-medium', analise.urgente ? 'text-red-700' : 'text-amber-700')}>
+                          Prazo Identificado
+                        </span>
+                        {analise.urgente && (
+                          <Badge variant="outline" className="text-[10px] bg-red-100 text-red-700 border-red-200">
+                            Urgente
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-slate-700">
+                          <strong>{analise.prazo_dias}</strong> dias {analise.prazo_tipo}
+                        </p>
+                        {analise.data_limite_sugerida && (
+                          <p className="text-sm text-slate-600">
+                            Data limite: <strong>{new Date(analise.data_limite_sugerida + 'T00:00:00').toLocaleDateString('pt-BR')}</strong>
+                          </p>
+                        )}
+                        {analise.fundamentacao_legal && (
+                          <p className="text-xs text-slate-500 mt-1">{analise.fundamentacao_legal}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Acao sugerida */}
+                  {analise.acao_sugerida && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 mb-1">Acao Sugerida</p>
+                      <p className="text-sm text-slate-700">{analise.acao_sugerida}</p>
+                    </div>
+                  )}
+
+                  {/* Botoes de acao - Agora abre modais padrão */}
+                  <div className="pt-3 border-t border-slate-100 space-y-2">
+                    <p className="text-xs font-medium text-slate-500 mb-2">Agendar a partir desta analise:</p>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start gap-2"
+                        onClick={() => setTarefaModalOpen(true)}
+                      >
+                        <CheckSquare className="w-4 h-4" />
+                        Criar Tarefa
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start gap-2"
+                        onClick={() => setEventoModalOpen(true)}
+                      >
+                        <CalendarPlus className="w-4 h-4" />
+                        Criar Compromisso
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start gap-2"
+                        onClick={() => setAudienciaModalOpen(true)}
+                      >
+                        <Gavel className="w-4 h-4" />
+                        Criar Audiencia
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Botao para re-analisar */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={analisarComIA}
+                    disabled={analisando}
+                    className="w-full text-slate-500 hover:text-slate-700"
+                  >
+                    {analisando ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <Brain className="w-4 h-4 mr-2" />
+                    )}
+                    Analisar novamente
+                  </Button>
+                </div>
               )}
             </div>
           </div>
         </div>
-
-        {/* COLUNA DIREITA (1/3) */}
-        <div className="space-y-4">
-          {/* Card: Análise IA */}
-          {analise ? (
-            <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border border-purple-200 shadow-sm">
-              <div className="px-4 py-3 border-b border-purple-200 bg-white/50">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <Brain className="w-4 h-4 text-purple-600" />
-                    Análise por IA
-                  </h2>
-                  {analise.confianca_analise && (
-                    <Badge variant="outline" className="text-xs bg-white border-purple-300 text-purple-700">
-                      {Math.round(analise.confianca_analise * 100)}% confiança
-                    </Badge>
-                  )}
-                </div>
-              </div>
-              <div className="p-4 space-y-4">
-                {/* Resumo Executivo */}
-                {analise.resumo_executivo && (
-                  <div>
-                    <div className="text-xs font-medium text-slate-600 mb-1.5">Resumo Executivo</div>
-                    <p className="text-xs text-slate-700 leading-relaxed">
-                      {analise.resumo_executivo}
-                    </p>
-                  </div>
-                )}
-
-                {/* Tipo e Sentimento */}
-                <div className="grid grid-cols-2 gap-3">
-                  {analise.tipo_decisao && (
-                    <div>
-                      <div className="text-xs text-slate-500 mb-1">Tipo de Decisão</div>
-                      <div className="text-xs font-medium text-slate-700">
-                        {analise.tipo_decisao}
-                      </div>
-                    </div>
-                  )}
-                  {analise.sentimento && (
-                    <div>
-                      <div className="text-xs text-slate-500 mb-1">Sentimento</div>
-                      <Badge
-                        variant="outline"
-                        className={cn('text-xs border', sentimentoConfig.bg, sentimentoConfig.color, sentimentoConfig.border)}
-                      >
-                        <SentimentoIcon className="w-3 h-3 mr-1" />
-                        {sentimentoConfig.label}
-                      </Badge>
-                    </div>
-                  )}
-                </div>
-
-                {/* Pontos Principais */}
-                {analise.pontos_principais && analise.pontos_principais.length > 0 && (
-                  <div>
-                    <div className="text-xs font-medium text-slate-600 mb-2">Pontos Principais</div>
-                    <ul className="space-y-1.5">
-                      {analise.pontos_principais.map((ponto, index) => (
-                        <li key={index} className="flex gap-2 text-xs text-slate-700">
-                          <span className="text-purple-500 mt-0.5">•</span>
-                          <span className="flex-1">{ponto}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="bg-slate-50 rounded-lg border border-slate-200 shadow-sm p-6">
-              <div className="flex flex-col items-center gap-3 text-center">
-                <Brain className="w-10 h-10 text-slate-300" />
-                <div>
-                  <h3 className="text-sm font-medium text-slate-700">Análise não disponível</h3>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Clique em "Processar com IA" para gerar uma análise automática desta publicação.
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  className="gap-2 bg-gradient-to-r from-[#1E3A8A] to-[#3B82F6] hover:from-[#1E3A8A] hover:to-[#2563EB] mt-2"
-                  onClick={() => router.push(`/dashboard/publicacoes/processar/${publicacao.id}`)}
-                >
-                  <Play className="w-4 h-4" />
-                  Processar com IA
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Card: Prazo Detectado */}
-          {analise?.tem_prazo && diasRestantes !== null && (
-            <div className={cn(
-              'rounded-lg border shadow-sm',
-              diasRestantes <= 3
-                ? 'bg-gradient-to-br from-red-50 to-orange-50 border-red-200'
-                : diasRestantes <= 7
-                ? 'bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200'
-                : 'bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200'
-            )}>
-              <div className={cn(
-                'px-4 py-3 border-b bg-white/50',
-                diasRestantes <= 3 ? 'border-red-200' :
-                diasRestantes <= 7 ? 'border-amber-200' : 'border-blue-200'
-              )}>
-                <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <Clock className={cn(
-                    'w-4 h-4',
-                    diasRestantes <= 3 ? 'text-red-600' :
-                    diasRestantes <= 7 ? 'text-amber-600' : 'text-blue-600'
-                  )} />
-                  Prazo Detectado
-                </h2>
-              </div>
-              <div className="p-4 space-y-3">
-                {analise.tipo_prazo && (
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1">Tipo de Prazo</div>
-                    <div className="text-sm font-semibold text-slate-700">
-                      {analise.tipo_prazo}
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-3">
-                  {analise.prazo_dias && (
-                    <div>
-                      <div className="text-xs text-slate-500 mb-1">Prazo</div>
-                      <div className="text-sm font-medium text-slate-700">
-                        {analise.prazo_dias} dias {analise.prazo_tipo_dias || ''}
-                      </div>
-                    </div>
-                  )}
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1">Restam</div>
-                    <div className={cn(
-                      'text-sm font-bold',
-                      diasRestantes <= 3 ? 'text-red-600' :
-                      diasRestantes <= 7 ? 'text-amber-600' : 'text-blue-600'
-                    )}>
-                      {diasRestantes} dias
-                    </div>
-                  </div>
-                </div>
-
-                {analise.data_intimacao && analise.data_limite && (
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1">Intimação → Limite</div>
-                    <div className="text-xs font-medium text-slate-700">
-                      {formatBrazilDate(analise.data_intimacao)}
-                      {' → '}
-                      {formatBrazilDate(analise.data_limite)}
-                    </div>
-                  </div>
-                )}
-
-                {analise.fundamentacao_legal && (
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1">Fundamentação Legal</div>
-                    <p className="text-xs text-slate-700 leading-relaxed">
-                      {analise.fundamentacao_legal}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Card: Ações Sugeridas */}
-          {analise?.acoes_sugeridas && analise.acoes_sugeridas.length > 0 && (
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
-              <div className="px-4 py-3 border-b border-slate-200">
-                <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-500" />
-                  Ações Sugeridas
-                </h2>
-              </div>
-              <div className="p-4">
-                <ul className="space-y-2">
-                  {analise.acoes_sugeridas.map((acao, index) => (
-                    <li key={index} className="flex gap-2 text-xs text-slate-700">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
-                      <span className="flex-1">{acao}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {analise.template_sugerido && (
-                  <div className="mt-4 pt-4 border-t border-slate-200">
-                    <div className="text-xs text-slate-500 mb-2">Template Sugerido</div>
-                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                      <FileText className="w-3 h-3 mr-1" />
-                      {analise.template_sugerido}
-                    </Badge>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Card: Processo não vinculado - Vinculação Inteligente */}
-          {publicacao.numero_processo && !publicacao.processo_id && (
-            <div className={cn(
-              'rounded-lg border shadow-sm',
-              processoEncontrado
-                ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200'
-                : 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200'
-            )}>
-              <div className={cn(
-                'px-4 py-3 border-b bg-white/50',
-                processoEncontrado ? 'border-emerald-200' : 'border-amber-200'
-              )}>
-                <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  {buscandoProcesso ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
-                      Buscando processo...
-                    </>
-                  ) : processoEncontrado ? (
-                    <>
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      Processo encontrado no sistema
-                    </>
-                  ) : (
-                    <>
-                      <AlertTriangle className="w-4 h-4 text-amber-600" />
-                      Processo não cadastrado
-                    </>
-                  )}
-                </h2>
-              </div>
-              <div className="p-4 space-y-3">
-                {buscandoProcesso ? (
-                  <p className="text-xs text-slate-500 text-center py-2">
-                    Verificando se o processo existe no sistema...
-                  </p>
-                ) : processoEncontrado ? (
-                  <>
-                    <p className="text-xs text-slate-600">
-                      Encontramos o processo <span className="font-mono font-medium">{processoEncontrado.numero_cnj}</span> no sistema.
-                    </p>
-                    <div className="bg-white/60 rounded-lg p-3 border border-emerald-100">
-                      <div className="text-xs text-slate-500 mb-1">Parte contrária</div>
-                      <div className="text-sm font-medium text-slate-700">
-                        {processoEncontrado.parte_contraria || 'Não informada'}
-                      </div>
-                      <div className="text-xs text-slate-500 mt-2">Status</div>
-                      <Badge variant="outline" className="text-[10px] mt-1">
-                        {processoEncontrado.status}
-                      </Badge>
-                    </div>
-                    <Button
-                      size="sm"
-                      className="w-full gap-2 text-xs bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-                      onClick={() => vincularProcesso(processoEncontrado.id)}
-                      disabled={vinculando}
-                    >
-                      {vinculando ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Link2 className="w-3.5 h-3.5" />
-                      )}
-                      {vinculando ? 'Vinculando...' : 'Vincular a este processo'}
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-xs text-slate-600">
-                      O processo <span className="font-mono font-medium">{publicacao.numero_processo}</span> não está cadastrado no sistema.
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 gap-2 text-xs"
-                        onClick={() => router.push(`/dashboard/processos?busca=${publicacao.numero_processo}`)}
-                      >
-                        <Link2 className="w-3.5 h-3.5" />
-                        Buscar Manual
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="flex-1 gap-2 text-xs bg-gradient-to-r from-[#1E3A8A] to-[#3B82F6]"
-                        onClick={() => router.push(`/dashboard/processos/novo?numero=${publicacao.numero_processo}`)}
-                      >
-                        <Scale className="w-3.5 h-3.5" />
-                        Criar Pasta
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* Wizards de Agendamento - Padrão da Agenda */}
-      {escritorioAtivo && tarefaModalOpen && (
-        <TarefaWizard
-          escritorioId={escritorioAtivo}
-          onClose={() => {
-            setTarefaModalOpen(false)
-            carregarPublicacao()
-          }}
-          onCreated={() => {
-            toast.success('Tarefa criada com sucesso!')
-            carregarPublicacao()
-          }}
-          initialData={{
-            titulo: `Tarefa: Publicação ${publicacao.tipo_publicacao || ''} - ${publicacao.numero_processo || 'Sem processo'}`,
-            descricao: publicacao.texto_completo || '',
-            processo_id: publicacao.processo_id || undefined,
-          }}
-        />
-      )}
+      {/* Modal de Tarefa (padrão da agenda) */}
+      <TarefaModal
+        open={tarefaModalOpen}
+        onOpenChange={(open) => handleModalClose('tarefa', open)}
+        escritorioId={publicacao.escritorio_id}
+        // Pré-preenchimento com dados da análise IA
+        tituloPadrao={analise?.acao_sugerida || `${getTipoLabel(publicacao.tipo_publicacao)} - ${publicacao.numero_processo || 'Sem processo'}`}
+        descricaoPadrao={gerarDescricao()}
+        processoIdPadrao={publicacao.processo_id || undefined}
+        tipoPadrao="prazo_processual"
+        prioridadePadrao={analise?.urgente ? 'alta' : 'media'}
+        dataInicioPadrao={new Date().toISOString().split('T')[0]}
+        dataLimitePadrao={analise?.data_limite_sugerida || undefined}
+        prazoDataIntimacaoPadrao={publicacao.data_publicacao}
+        prazoQuantidadeDiasPadrao={analise?.prazo_dias || undefined}
+        prazoDiasUteisPadrao={analise?.prazo_tipo === 'uteis'}
+      />
 
-      {escritorioAtivo && eventoModalOpen && (
-        <EventoWizard
-          escritorioId={escritorioAtivo}
-          onClose={() => {
-            setEventoModalOpen(false)
-            carregarPublicacao()
-          }}
-          onSubmit={async (data: EventoFormData) => {
-            try {
-              await createEvento(data)
-              toast.success('Compromisso criado com sucesso!')
-              setEventoModalOpen(false)
-              carregarPublicacao()
-            } catch (err) {
-              console.error('Erro ao criar compromisso:', err)
-              toast.error('Erro ao criar compromisso')
-              throw err
-            }
-          }}
-          initialData={{
-            titulo: `Compromisso: ${publicacao.tipo_publicacao || 'Publicação'}`,
-            descricao: publicacao.texto_completo || '',
-            processo_id: publicacao.processo_id || undefined,
-          }}
-        />
-      )}
+      {/* Modal de Evento/Compromisso (padrão da agenda) */}
+      <EventoModal
+        open={eventoModalOpen}
+        onOpenChange={(open) => handleModalClose('evento', open)}
+        escritorioId={publicacao.escritorio_id}
+        // Pré-preenchimento com dados da análise IA
+        tituloPadrao={analise?.acao_sugerida || `${getTipoLabel(publicacao.tipo_publicacao)} - ${publicacao.numero_processo || 'Sem processo'}`}
+        descricaoPadrao={gerarDescricao()}
+        processoIdPadrao={publicacao.processo_id || undefined}
+        dataInicioPadrao={analise?.data_limite_sugerida ? `${analise.data_limite_sugerida}T09:00` : undefined}
+      />
 
-      {escritorioAtivo && audienciaModalOpen && publicacao.processo_id && (
-        <AudienciaWizard
-          escritorioId={escritorioAtivo}
-          processoId={publicacao.processo_id}
-          onClose={() => {
-            setAudienciaModalOpen(false)
-            carregarPublicacao()
-          }}
-          onSubmit={async (data: AudienciaFormData) => {
-            try {
-              await createAudiencia(data)
-              toast.success('Audiência criada com sucesso!')
-              setAudienciaModalOpen(false)
-              carregarPublicacao()
-            } catch (err) {
-              console.error('Erro ao criar audiência:', err)
-              toast.error('Erro ao criar audiência')
-              throw err
-            }
-          }}
-          initialData={{
-            observacoes: publicacao.texto_completo || '',
-          }}
-        />
-      )}
+      {/* Modal de Audiência (padrão da agenda) */}
+      <AudienciaModal
+        open={audienciaModalOpen}
+        onOpenChange={(open) => handleModalClose('audiencia', open)}
+        escritorioId={publicacao.escritorio_id}
+        // Pré-preenchimento com dados da análise IA
+        processoIdPadrao={publicacao.processo_id || undefined}
+        descricaoPadrao={gerarDescricao()}
+        dataHoraPadrao={analise?.data_limite_sugerida ? `${analise.data_limite_sugerida}T09:00` : undefined}
+        tribunalPadrao={publicacao.tribunal}
+        varaPadrao={publicacao.vara}
+      />
     </div>
   )
 }

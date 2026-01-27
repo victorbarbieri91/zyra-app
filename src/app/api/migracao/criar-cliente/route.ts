@@ -70,9 +70,9 @@ export async function POST(request: NextRequest) {
       .insert({
         escritorio_id,
         nome_completo: nome_completo.trim(),
-        tipo_contato: tipo_contato || 'cliente'
+        tipo_cadastro: tipo_contato || 'cliente'
       })
-      .select('id, nome_completo, tipo_contato')
+      .select('id, nome_completo, tipo_cadastro')
       .single()
 
     if (insertError) {

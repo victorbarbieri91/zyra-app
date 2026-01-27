@@ -41,6 +41,14 @@ interface TarefaModalProps {
   tituloPadrao?: string
   descricaoPadrao?: string
   processoIdPadrao?: string
+  // Props adicionais para pré-preenchimento (usado por análise IA de publicações)
+  tipoPadrao?: Tarefa['tipo']
+  prioridadePadrao?: Tarefa['prioridade']
+  dataInicioPadrao?: string
+  dataLimitePadrao?: string
+  prazoDataIntimacaoPadrao?: string
+  prazoQuantidadeDiasPadrao?: number
+  prazoDiasUteisPadrao?: boolean
 }
 
 const TIPO_CONFIG = {
@@ -84,6 +92,13 @@ export default function TarefaModal({
   tituloPadrao,
   descricaoPadrao,
   processoIdPadrao,
+  tipoPadrao,
+  prioridadePadrao,
+  dataInicioPadrao,
+  dataLimitePadrao,
+  prazoDataIntimacaoPadrao,
+  prazoQuantidadeDiasPadrao,
+  prazoDiasUteisPadrao,
 }: TarefaModalProps) {
   const { createTarefa, updateTarefa } = useTarefas()
   const { getResponsaveis, setResponsaveis } = useAgendaResponsaveis()
@@ -143,10 +158,21 @@ export default function TarefaModal({
         if (processoIdPadrao) {
           setVinculacao({ modulo: 'processo', modulo_registro_id: processoIdPadrao })
         }
+        // Props adicionais para análise IA de publicações
+        if (tipoPadrao) setTipo(tipoPadrao)
+        if (prioridadePadrao) setPrioridade(prioridadePadrao)
+        if (dataInicioPadrao) setDataInicio(dataInicioPadrao)
+        if (dataLimitePadrao) {
+          setDataFim(dataLimitePadrao)
+          setPrazoDataLimite(dataLimitePadrao)
+        }
+        if (prazoDataIntimacaoPadrao) setPrazoDataIntimacao(prazoDataIntimacaoPadrao)
+        if (prazoQuantidadeDiasPadrao !== undefined) setPrazoQuantidadeDias(prazoQuantidadeDiasPadrao)
+        if (prazoDiasUteisPadrao !== undefined) setPrazoDiasUteis(prazoDiasUteisPadrao)
       }
     }
     loadData()
-  }, [tarefa, tituloPadrao, descricaoPadrao, processoIdPadrao])
+  }, [tarefa, tituloPadrao, descricaoPadrao, processoIdPadrao, tipoPadrao, prioridadePadrao, dataInicioPadrao, dataLimitePadrao, prazoDataIntimacaoPadrao, prazoQuantidadeDiasPadrao, prazoDiasUteisPadrao])
 
   const resetForm = () => {
     setTipo('prazo_processual')

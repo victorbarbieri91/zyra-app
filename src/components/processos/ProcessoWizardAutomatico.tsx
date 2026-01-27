@@ -171,7 +171,7 @@ export default function ProcessoWizardAutomatico({
         .from('crm_pessoas')
         .select('id, nome_completo, tipo_pessoa, cpf_cnpj')
         .eq('escritorio_id', profile.escritorio_id)
-        .eq('tipo_contato', 'cliente')
+        .eq('tipo_cadastro', 'cliente')
         .order('nome_completo')
         .limit(20)
 

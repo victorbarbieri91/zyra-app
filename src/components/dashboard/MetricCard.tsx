@@ -15,6 +15,7 @@ interface MetricCardProps {
   }
   gradient?: 'kpi1' | 'kpi2' | 'kpi3' | 'kpi4'
   className?: string
+  compact?: boolean
 }
 
 const gradientSchemes = {
@@ -56,8 +57,37 @@ export default function MetricCard({
   trend,
   gradient = 'kpi1',
   className,
+  compact = false,
 }: MetricCardProps) {
   const scheme = gradientSchemes[gradient]
+
+  if (compact) {
+    return (
+      <Card className={cn(
+        'hover:shadow-lg transition-all duration-300 border-0',
+        scheme.cardBg,
+        className
+      )}>
+        <CardContent className="p-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className={cn('text-[10px] font-medium', scheme.textColor)}>{title}</span>
+            <div className={cn('w-6 h-6 rounded-md flex items-center justify-center', scheme.iconBg)}>
+              <Icon className={cn('h-3 w-3', scheme.iconColor)} />
+            </div>
+          </div>
+          <div className={cn('text-xl font-bold', scheme.textColor)}>{value}</div>
+          {trend && (
+            <div className={cn('text-[9px] mt-0.5', scheme.trendColor)}>
+              {trend.positive !== false && '+'}{trend.value} {trend.label}
+            </div>
+          )}
+          {subtitle && !trend && (
+            <p className={cn('text-[9px] mt-0.5', scheme.trendColor)}>{subtitle}</p>
+          )}
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card className={cn(

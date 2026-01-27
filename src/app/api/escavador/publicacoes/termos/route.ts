@@ -324,7 +324,78 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    // Criar monitoramento no Escavador
+    // Primeiro, verificar se o termo já existe no Escavador
+    // Isso evita criar duplicatas e recupera o ID se já existir
+    console.log('[API Termos PATCH] Verificando se termo já existe no Escavador...')
+    console.log('[API Termos PATCH] Termo local:', termo.termo)
+    const monitoramentosExistentes = await listarMonitoramentosDiario()
+
+    if (monitoramentosExistentes.sucesso && monitoramentosExistentes.monitoramentos) {
+      // Log detalhado de todos os monitoramentos para debug
+      console.log('[API Termos PATCH] Monitoramentos existentes:', JSON.stringify(monitoramentosExistentes.monitoramentos, null, 2))
+
+      // Função para normalizar texto (remove acentos e lowercase)
+      const normalizar = (str: string) => {
+        return str
+          .toLowerCase()
+          .trim()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      }
+
+      const termoNormalizado = normalizar(termo.termo)
+      console.log('[API Termos PATCH] Termo normalizado:', termoNormalizado)
+
+      // Tentar várias estratégias de correspondência
+      let monitoramentoExistente = monitoramentosExistentes.monitoramentos.find(m => {
+        const termoApi = m.termo || ''
+        const termoApiNorm = normalizar(termoApi)
+
+        console.log(`[API Termos PATCH] Comparando: "${termoNormalizado}" com "${termoApiNorm}"`)
+
+        // Correspondência exata normalizada
+        if (termoApiNorm === termoNormalizado) return true
+        // Um contém o outro
+        if (termoApiNorm.includes(termoNormalizado) || termoNormalizado.includes(termoApiNorm)) return true
+
+        return false
+      })
+
+      if (monitoramentoExistente) {
+        console.log('[API Termos PATCH] Termo já existe no Escavador, ID:', monitoramentoExistente.id)
+
+        // Atualizar termo com monitoramento_id existente
+        const { data: termoAtualizado, error: updateError } = await supabase
+          .from('publicacoes_termos_escavador')
+          .update({
+            escavador_monitoramento_id: monitoramentoExistente.id.toString(),
+            escavador_status: 'ativo',
+            escavador_erro: null
+          })
+          .eq('id', termo_id)
+          .select()
+          .single()
+
+        if (updateError) {
+          console.error('[API Termos PATCH] Erro ao atualizar termo:', updateError)
+          return NextResponse.json(
+            { sucesso: false, error: 'Erro ao atualizar termo no banco' },
+            { status: 500 }
+          )
+        }
+
+        console.log('[API Termos PATCH] Termo vinculado a monitoramento existente:', monitoramentoExistente.id)
+
+        return NextResponse.json({
+          sucesso: true,
+          termo: termoAtualizado,
+          monitoramento_id: monitoramentoExistente.id,
+          mensagem: 'Termo já estava registrado no Escavador e foi vinculado'
+        })
+      }
+    }
+
+    // Se não existe, criar novo monitoramento
     let resultadoEscavador
     try {
       resultadoEscavador = await criarMonitoramentoTermo({
@@ -354,7 +425,78 @@ export async function PATCH(request: NextRequest) {
     if (!resultadoEscavador.sucesso) {
       console.error('[API Termos PATCH] Erro no Escavador:', resultadoEscavador.erro)
 
-      // Atualizar status de erro
+      // Se o erro indica que já monitora, tentar buscar o ID existente
+      const erroJaMonitora = resultadoEscavador.erro?.toLowerCase().includes('já monitora') ||
+                            resultadoEscavador.erro?.toLowerCase().includes('ja monitora')
+
+      if (erroJaMonitora) {
+        console.log('[API Termos PATCH] Termo já existe no Escavador, buscando ID existente...')
+
+        // Listar todos os monitoramentos e buscar o correto
+        const todosMonitoramentos = await listarMonitoramentosDiario()
+
+        if (todosMonitoramentos.sucesso && todosMonitoramentos.monitoramentos) {
+          console.log('[API Termos PATCH] Monitoramentos encontrados:', todosMonitoramentos.monitoramentos.length)
+          console.log('[API Termos PATCH] Dados completos:', JSON.stringify(todosMonitoramentos.monitoramentos, null, 2))
+
+          // Função para normalizar texto (remove acentos e lowercase)
+          const normalizar = (str: string) => {
+            return str
+              .toLowerCase()
+              .trim()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+          }
+
+          const termoNormalizado = normalizar(termo.termo)
+          console.log('[API Termos PATCH] Buscando termo normalizado:', termoNormalizado)
+
+          const monitoramentoEncontrado = todosMonitoramentos.monitoramentos.find(m => {
+            const termoApi = normalizar(m.termo || '')
+            console.log(`[API Termos PATCH] Comparando: "${termoNormalizado}" com "${termoApi}"`)
+            // Verificar correspondência exata ou se um contém o outro
+            return termoApi === termoNormalizado ||
+                   termoApi.includes(termoNormalizado) ||
+                   termoNormalizado.includes(termoApi)
+          })
+
+          if (monitoramentoEncontrado) {
+            console.log('[API Termos PATCH] Monitoramento encontrado:', monitoramentoEncontrado.id, '-', monitoramentoEncontrado.termo)
+
+            // Atualizar termo com monitoramento_id encontrado
+            const { data: termoAtualizado, error: updateError } = await supabase
+              .from('publicacoes_termos_escavador')
+              .update({
+                escavador_monitoramento_id: monitoramentoEncontrado.id.toString(),
+                escavador_status: 'ativo',
+                escavador_erro: null
+              })
+              .eq('id', termo_id)
+              .select()
+              .single()
+
+            if (updateError) {
+              console.error('[API Termos PATCH] Erro ao atualizar termo:', updateError)
+              return NextResponse.json(
+                { sucesso: false, error: 'Erro ao atualizar termo no banco' },
+                { status: 500 }
+              )
+            }
+
+            return NextResponse.json({
+              sucesso: true,
+              termo: termoAtualizado,
+              monitoramento_id: monitoramentoEncontrado.id,
+              mensagem: 'Termo já existia no Escavador e foi vinculado'
+            })
+          } else {
+            // Logar todos os termos para debug
+            console.log('[API Termos PATCH] Termos no Escavador:', todosMonitoramentos.monitoramentos.map(m => m.termo))
+          }
+        }
+      }
+
+      // Se não conseguiu recuperar, salvar erro
       await supabase
         .from('publicacoes_termos_escavador')
         .update({

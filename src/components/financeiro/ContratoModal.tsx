@@ -37,6 +37,7 @@ import {
   Users,
   X,
   Building2,
+  Clock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -71,6 +72,7 @@ const TIPO_SERVICO_OPTIONS = [
 
 const FORMA_COBRANCA_OPTIONS = [
   { value: 'fixo', label: 'Valor Fixo', description: 'Valor único ou parcelado', icon: DollarSign },
+  { value: 'por_hora', label: 'Por Hora/Timesheet', description: 'Taxa única por hora para toda equipe', icon: Clock },
   { value: 'por_cargo', label: 'Por Cargo/Timesheet', description: 'Valor hora por cargo (sênior, pleno, etc)', icon: Users },
   { value: 'por_pasta', label: 'Por Pasta Mensal', description: 'Valor fixo × número de processos', icon: Folders },
   { value: 'por_ato', label: 'Por Ato Processual', description: '% do valor da causa por ato', icon: Gavel },
@@ -225,6 +227,9 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
           dia_cobranca: diaCobranca || undefined,
           valores_por_cargo: valoresPorCargo,
           atos_configurados: atosConfigurados,
+          // Limites mensais
+          valor_minimo_mensal: (configJsonb.valor_minimo_mensal as number) || undefined,
+          valor_maximo_mensal: (configJsonb.valor_maximo_mensal as number) || undefined,
         })
         setSelectedCliente({
           id: contrato.cliente_id,
@@ -254,6 +259,9 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
           valores_por_cargo: [],
           area_juridica: 'civel',
           atos_configurados: [],
+          // Limites mensais
+          valor_minimo_mensal: undefined,
+          valor_maximo_mensal: undefined,
         })
         setSelectedCliente(null)
         setStep(1)
@@ -327,7 +335,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
         .from('crm_pessoas')
         .select('id, nome_completo, cpf_cnpj, tipo_pessoa')
         .eq('escritorio_id', escritorioAtivo)
-        .eq('tipo_contato', 'cliente')
+        .eq('tipo_cadastro', 'cliente')
         .or(`nome_completo.ilike.%${query}%,cpf_cnpj.ilike.%${query}%`)
         .order('nome_completo', { ascending: true })
         .limit(10)
@@ -478,6 +486,9 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
         if (formas.includes('fixo') && (formData.valor_fixo || 0) > 0) {
           hasValidValue = true
         }
+        if (formas.includes('por_hora') && (formData.valor_hora || 0) > 0) {
+          hasValidValue = true
+        }
         if (formas.includes('por_pasta') && (formData.valor_por_processo || 0) > 0) {
           hasValidValue = true
         }
@@ -493,6 +504,14 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
             hasValidValue = true
           }
         }
+
+        // Validar min <= max quando ambos são fornecidos
+        if (formData.valor_minimo_mensal && formData.valor_maximo_mensal) {
+          if (formData.valor_minimo_mensal > formData.valor_maximo_mensal) {
+            return false // Inválido: mínimo maior que máximo
+          }
+        }
+
         return hasValidValue || formas.length === 0
       default:
         return true
@@ -903,6 +922,40 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
               </div>
             )}
 
+            {/* Por Hora/Timesheet - Taxa única para toda equipe */}
+            {(formData.formas_selecionadas || []).includes('por_hora') && (
+              <Card>
+                <CardHeader className="pb-2 pt-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-[#89bcbe]" />
+                    Valor Hora (Taxa Única)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pb-3">
+                  <div>
+                    <Label htmlFor="valor_hora" className="text-xs">Valor por Hora (R$)</Label>
+                    <Input
+                      id="valor_hora"
+                      type="number"
+                      step="0.01"
+                      placeholder="0,00"
+                      value={formData.valor_hora || ''}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          valor_hora: e.target.value ? parseFloat(e.target.value) : undefined,
+                        }))
+                      }
+                      className="mt-1 max-w-[200px]"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Este valor será aplicado a todas as horas, independente do cargo
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Por Cargo/Timesheet - Grid 2 colunas */}
             {(formData.formas_selecionadas || []).includes('por_cargo') && (
               <Card>
@@ -949,15 +1002,77 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
               </Card>
             )}
 
+            {/* Limites Mensais - para por_hora e por_cargo */}
+            {((formData.formas_selecionadas || []).includes('por_hora') ||
+              (formData.formas_selecionadas || []).includes('por_cargo')) && (
+              <Card>
+                <CardHeader className="pb-2 pt-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-[#89bcbe]" />
+                    Limites Mensais (Opcional)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pb-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="valor_minimo_mensal" className="text-xs">Mínimo Mensal (R$)</Label>
+                      <Input
+                        id="valor_minimo_mensal"
+                        type="number"
+                        step="0.01"
+                        placeholder="0,00"
+                        value={formData.valor_minimo_mensal || ''}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            valor_minimo_mensal: e.target.value ? parseFloat(e.target.value) : undefined,
+                          }))
+                        }
+                        className="mt-1"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        Piso garantido por mês
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="valor_maximo_mensal" className="text-xs">Máximo Mensal (R$)</Label>
+                      <Input
+                        id="valor_maximo_mensal"
+                        type="number"
+                        step="0.01"
+                        placeholder="0,00"
+                        value={formData.valor_maximo_mensal || ''}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            valor_maximo_mensal: e.target.value ? parseFloat(e.target.value) : undefined,
+                          }))
+                        }
+                        className="mt-1"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        Teto máximo por mês
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Por Ato Processual - Otimizado */}
             {(formData.formas_selecionadas || []).includes('por_ato') && (
               <Card>
                 <CardHeader className="pb-2 pt-3">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Gavel className="h-4 w-4 text-[#89bcbe]" />
-                      Cobrança por Ato Processual
-                    </CardTitle>
+                    <div>
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Gavel className="h-4 w-4 text-[#89bcbe]" />
+                        Cobrança por Ato Processual
+                      </CardTitle>
+                      <p className="text-[10px] text-slate-400 mt-1 ml-6">
+                        % sobre valor da causa + valor mínimo garantido
+                      </p>
+                    </div>
                     <Select
                       value={formData.area_juridica || 'civel'}
                       onValueChange={(value) =>
@@ -1024,43 +1139,45 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                                 <X className="h-3 w-3" />
                               </Button>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-1">
-                                <Input
-                                  type="number"
-                                  step="0.1"
-                                  placeholder="0"
-                                  value={ato.percentual_valor_causa || ''}
-                                  onChange={(e) => {
-                                    const newAtos = [...(formData.atos_configurados || [])]
-                                    newAtos[realIndex] = {
-                                      ...newAtos[realIndex],
-                                      percentual_valor_causa: e.target.value ? parseFloat(e.target.value) : undefined,
-                                    }
-                                    setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
-                                  }}
-                                  className="h-8 w-20 text-center"
-                                />
-                                <span className="text-xs text-slate-500">%</span>
-                              </div>
-                              <span className="text-slate-300">ou</span>
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs text-slate-500">R$</span>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="0,00"
-                                  value={ato.valor_fixo || ''}
-                                  onChange={(e) => {
-                                    const newAtos = [...(formData.atos_configurados || [])]
-                                    newAtos[realIndex] = {
-                                      ...newAtos[realIndex],
-                                      valor_fixo: e.target.value ? parseFloat(e.target.value) : undefined,
-                                    }
-                                    setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
-                                  }}
-                                  className="h-8 w-24"
-                                />
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
+                                  <Input
+                                    type="number"
+                                    step="0.1"
+                                    placeholder="0"
+                                    value={ato.percentual_valor_causa || ''}
+                                    onChange={(e) => {
+                                      const newAtos = [...(formData.atos_configurados || [])]
+                                      newAtos[realIndex] = {
+                                        ...newAtos[realIndex],
+                                        percentual_valor_causa: e.target.value ? parseFloat(e.target.value) : undefined,
+                                      }
+                                      setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
+                                    }}
+                                    className="h-8 w-20 text-center"
+                                  />
+                                  <span className="text-xs text-slate-500">%</span>
+                                </div>
+                                <span className="text-[10px] text-slate-400 px-1">mín:</span>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs text-slate-500">R$</span>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0,00"
+                                    value={ato.valor_fixo || ''}
+                                    onChange={(e) => {
+                                      const newAtos = [...(formData.atos_configurados || [])]
+                                      newAtos[realIndex] = {
+                                        ...newAtos[realIndex],
+                                        valor_fixo: e.target.value ? parseFloat(e.target.value) : undefined,
+                                      }
+                                      setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
+                                    }}
+                                    className="h-8 w-24"
+                                  />
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1153,6 +1270,12 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                         <span className="font-medium">{formatCurrency(formData.valor_fixo)}</span>
                       </div>
                     )}
+                    {formData.valor_hora && (formData.formas_selecionadas || []).includes('por_hora') && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">Valor Hora (Taxa Única):</span>
+                        <span className="font-medium">{formatCurrency(formData.valor_hora)}/h</span>
+                      </div>
+                    )}
                     {formData.valor_por_processo && (
                       <div className="flex justify-between text-sm">
                         <span className="text-slate-600">Valor por Processo:</span>
@@ -1196,11 +1319,31 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                               <span className="text-slate-600">{a.ato_nome}:</span>
                               <span className="font-medium">
                                 {a.percentual_valor_causa ? `${a.percentual_valor_causa}%` : ''}
-                                {a.percentual_valor_causa && a.valor_fixo ? ' ou ' : ''}
-                                {a.valor_fixo ? formatCurrency(a.valor_fixo) : ''}
+                                {a.percentual_valor_causa && a.valor_fixo && (
+                                  <span className="text-slate-400 text-xs ml-1">(mín: {formatCurrency(a.valor_fixo)})</span>
+                                )}
+                                {!a.percentual_valor_causa && a.valor_fixo ? formatCurrency(a.valor_fixo) : ''}
                               </span>
                             </div>
                           ))}
+                      </div>
+                    )}
+                    {/* Limites Mensais */}
+                    {(formData.valor_minimo_mensal || formData.valor_maximo_mensal) && (
+                      <div className="mt-2 pt-2 border-t border-slate-100">
+                        <p className="text-xs text-slate-500 mb-1">Limites Mensais:</p>
+                        {formData.valor_minimo_mensal && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Mínimo Mensal:</span>
+                            <span className="font-medium">{formatCurrency(formData.valor_minimo_mensal)}</span>
+                          </div>
+                        )}
+                        {formData.valor_maximo_mensal && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Máximo Mensal:</span>
+                            <span className="font-medium">{formatCurrency(formData.valor_maximo_mensal)}</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

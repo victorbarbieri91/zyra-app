@@ -68,7 +68,10 @@
       "mcp__supabase__get_publishable_keys",
       "mcp__supabase__list_extensions",
       "mcp__supabase__generate_typescript_types",
-      "WebFetch(domain:api.github.com)"
+      "WebFetch(domain:api.github.com)",
+      "Bash(npm run lint)",
+      "mcp__supabase__get_edge_function",
+      "Bash(\"c:/Users/victo/Zyra Legal/src/app/dashboard/publicacoes/[id]/page.tsx\")"
     ],
     "deny": [],
     "ask": []

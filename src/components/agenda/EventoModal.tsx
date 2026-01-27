@@ -22,6 +22,9 @@ interface EventoModalProps {
   tituloPadrao?: string
   descricaoPadrao?: string
   processoIdPadrao?: string
+  // Props adicionais para pré-preenchimento (usado por análise IA de publicações)
+  dataInicioPadrao?: string
+  dataFimPadrao?: string
 }
 
 export default function EventoModal({
@@ -32,6 +35,8 @@ export default function EventoModal({
   tituloPadrao,
   descricaoPadrao,
   processoIdPadrao,
+  dataInicioPadrao,
+  dataFimPadrao,
 }: EventoModalProps) {
   const { createEvento, updateEvento } = useEventos()
 
@@ -72,8 +77,11 @@ export default function EventoModal({
       if (processoIdPadrao) {
         setVinculacao({ modulo: 'processo', modulo_registro_id: processoIdPadrao })
       }
+      // Props adicionais para análise IA de publicações
+      if (dataInicioPadrao) setDataInicio(dataInicioPadrao)
+      if (dataFimPadrao) setDataFim(dataFimPadrao)
     }
-  }, [evento, tituloPadrao, descricaoPadrao, processoIdPadrao])
+  }, [evento, tituloPadrao, descricaoPadrao, processoIdPadrao, dataInicioPadrao, dataFimPadrao])
 
   const resetForm = () => {
     setTitulo('')

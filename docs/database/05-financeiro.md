@@ -1,8 +1,8 @@
 # Módulo: Financeiro
 
 **Status**: ✅ Completo
-**Última atualização**: 2026-01-27 (Lógica de cobrança automática)
-**Tabelas**: 31 tabelas (incluindo cartões de crédito e mapeamento de atos)
+**Última atualização**: 2026-01-28 (Reestruturação de cartões de crédito)
+**Tabelas**: 30 tabelas (incluindo cartões de crédito simplificados e mapeamento de atos)
 **View de Referência**: `v_financeiro_enums` - consulte para ENUMs atualizados
 
 ## Visão Geral
@@ -62,10 +62,7 @@ O módulo Financeiro é o maior e mais complexo do sistema, gerenciando:
         ┌───────────┼───────────┐
         │           │           │
         ▼           ▼           ▼
-    _faturas    _despesas    _importacoes
-        │           │
-        ▼           ▼
-              _parcelas
+    _faturas   _lancamentos  _importacoes
 ```
 
 ---
@@ -810,6 +807,8 @@ WHERE tipo_movimento IN ('transferencia_saida', 'transferencia_entrada');
 
 ## 7. CARTÕES DE CRÉDITO
 
+> **Reestruturação**: Em 2026-01-28, as tabelas `cartoes_credito_despesas` e `cartoes_credito_parcelas` foram unificadas em `cartoes_credito_lancamentos`, simplificando o modelo de 5 para 4 tabelas e adicionando suporte para 3 tipos de transações.
+
 ### cartoes_credito
 
 **Descrição**: Cartões de crédito corporativos cadastrados.
@@ -831,6 +830,69 @@ WHERE tipo_movimento IN ('transferencia_saida', 'transferencia_entrada');
 | `ativo` | boolean | YES | true | Se está ativo |
 | `created_at` | timestamptz | YES | now() | Data de criação |
 | `updated_at` | timestamptz | YES | now() | Data de atualização |
+
+---
+
+### cartoes_credito_lancamentos
+
+**Descrição**: Lançamentos do cartão de crédito. Substitui as antigas tabelas `cartoes_credito_despesas` e `cartoes_credito_parcelas`, unificando-as em uma única tabela com suporte a 3 tipos de transação.
+
+**Tipos de Lançamento**:
+- `unica` - Compra avulsa, aparece uma vez na fatura
+- `parcelada` - Compra parcelada em X vezes, gera X registros com mesmo `compra_id`
+- `recorrente` - Assinatura mensal (Netflix, Spotify), gera automaticamente em meses futuros
+
+**Relacionamentos**:
+- `FK escritorio_id` → `escritorios.id`
+- `FK cartao_id` → `cartoes_credito.id`
+- `FK fatura_id` → `cartoes_credito_faturas.id` (quando faturado)
+- `FK processo_id` → `processos_processos.id` (opcional)
+
+**Colunas**:
+
+| Coluna | Tipo | Nullable | Default | Descrição |
+|--------|------|----------|---------|-----------|
+| `id` | uuid | NO | gen_random_uuid() | Identificador único |
+| `escritorio_id` | uuid | NO | - | FK para escritorios |
+| `cartao_id` | uuid | NO | - | FK para cartão |
+| `fatura_id` | uuid | YES | - | FK para fatura (quando faturado) |
+| `descricao` | text | NO | - | Descrição da compra |
+| `categoria` | text | NO | - | Categoria da despesa |
+| `fornecedor` | text | YES | - | Estabelecimento/Fornecedor |
+| `valor` | numeric(15,2) | NO | - | Valor do lançamento (parcela) |
+| `tipo` | text | NO | - | Tipo: `unica`, `parcelada`, `recorrente` |
+| `parcela_numero` | integer | YES | 1 | Número da parcela (1, 2, 3...) |
+| `parcela_total` | integer | YES | 1 | Total de parcelas |
+| `compra_id` | uuid | YES | - | Agrupa parcelas da mesma compra |
+| `data_compra` | date | NO | - | Data da compra original |
+| `mes_referencia` | date | NO | - | Mês de faturamento (primeiro dia) |
+| `recorrente_ativo` | boolean | YES | true | Se recorrente ainda está ativo |
+| `recorrente_data_fim` | date | YES | - | Data de cancelamento do recorrente |
+| `faturado` | boolean | YES | false | Se está em uma fatura |
+| `importado_de_fatura` | boolean | YES | false | Se veio de importação PDF |
+| `hash_transacao` | text | YES | - | Hash para evitar duplicidade |
+| `processo_id` | uuid | YES | - | Processo relacionado |
+| `documento_fiscal` | text | YES | - | Número do documento |
+| `comprovante_url` | text | YES | - | URL do comprovante |
+| `observacoes` | text | YES | - | Observações |
+| `created_at` | timestamptz | YES | now() | Data de criação |
+| `updated_at` | timestamptz | YES | now() | Data de atualização |
+
+**Índices**:
+- `idx_lancamentos_cartao` - Por cartão
+- `idx_lancamentos_mes` - Por mês de referência
+- `idx_lancamentos_compra` - Por compra_id (para agrupar parcelas)
+- `idx_lancamentos_fatura` - Por fatura
+
+**Funções Relacionadas**:
+
+| Função | Descrição |
+|--------|-----------|
+| `criar_lancamento_cartao(...)` | Cria lançamento único, parcelado ou recorrente |
+| `gerar_lancamentos_recorrentes(cartao_id, mes_referencia)` | Gera lançamentos recorrentes para um mês |
+| `cancelar_lancamento_recorrente(compra_id, data_fim)` | Cancela uma assinatura recorrente |
+| `reativar_lancamento_recorrente(compra_id)` | Reativa uma assinatura cancelada |
+| `obter_lancamentos_mes_cartao(cartao_id, mes_referencia)` | Lista lançamentos de um mês |
 
 ---
 
@@ -856,53 +918,6 @@ WHERE tipo_movimento IN ('transferencia_saida', 'transferencia_entrada');
 | `forma_pagamento` | text | YES | - | Forma de pagamento |
 | `created_at` | timestamptz | YES | now() | Data de criação |
 | `updated_at` | timestamptz | YES | now() | Data de atualização |
-
----
-
-### cartoes_credito_despesas
-
-**Descrição**: Despesas lançadas no cartão.
-
-**Colunas**:
-
-| Coluna | Tipo | Nullable | Default | Descrição |
-|--------|------|----------|---------|-----------|
-| `id` | uuid | NO | gen_random_uuid() | Identificador único |
-| `escritorio_id` | uuid | NO | - | FK para escritorios |
-| `cartao_id` | uuid | NO | - | FK para cartão |
-| `descricao` | text | NO | - | Descrição da compra |
-| `categoria` | text | NO | - | Categoria da despesa |
-| `fornecedor` | text | YES | - | Estabelecimento |
-| `valor_total` | numeric | NO | - | Valor total da compra |
-| `numero_parcelas` | integer | NO | 1 | Número de parcelas |
-| `valor_parcela` | numeric | NO | - | Valor de cada parcela |
-| `data_compra` | date | NO | - | Data da compra |
-| `processo_id` | uuid | YES | - | Processo relacionado |
-| `documento_fiscal` | text | YES | - | Número do documento |
-| `comprovante_url` | text | YES | - | URL do comprovante |
-| `importado_de_fatura` | boolean | YES | false | Se veio de importação |
-| `hash_transacao` | text | YES | - | Hash para evitar duplicidade |
-| `created_at` | timestamptz | YES | now() | Data de criação |
-| `updated_at` | timestamptz | YES | now() | Data de atualização |
-
----
-
-### cartoes_credito_parcelas
-
-**Descrição**: Parcelas das despesas parceladas no cartão.
-
-**Colunas**:
-
-| Coluna | Tipo | Nullable | Default | Descrição |
-|--------|------|----------|---------|-----------|
-| `id` | uuid | NO | gen_random_uuid() | Identificador único |
-| `despesa_id` | uuid | NO | - | FK para despesa do cartão |
-| `fatura_id` | uuid | YES | - | FK para fatura que contém |
-| `numero_parcela` | integer | NO | - | Número da parcela (1, 2, 3...) |
-| `valor` | numeric | NO | - | Valor da parcela |
-| `mes_referencia` | date | NO | - | Mês de referência |
-| `faturada` | boolean | YES | false | Se está em uma fatura |
-| `created_at` | timestamptz | YES | now() | Data de criação |
 
 ---
 
@@ -1312,3 +1327,22 @@ Usado em: `financeiro_despesas` (quando vinculado a processo)
 | 2025-01-21 | Funções de cartões de crédito | 20250121000002_cartoes_credito_functions.sql |
 | 2025-01-21 | RLS de cartões de crédito | 20250121000003_cartoes_credito_rls.sql |
 | 2025-01-21 | Padronização de ENUMs | 20250121000004_padronizar_enums_financeiro.sql |
+| 2026-01-28 | Reestruturação: cartoes_credito_lancamentos | 20260128000001_cartoes_credito_lancamentos.sql |
+
+### Migração 2026-01-28: Reestruturação de Cartões
+
+**Objetivo**: Simplificar de 5 para 4 tabelas e adicionar suporte a lançamentos recorrentes.
+
+**Mudanças**:
+- `cartoes_credito_despesas` + `cartoes_credito_parcelas` → `cartoes_credito_lancamentos`
+- Novo campo `tipo`: `unica`, `parcelada`, `recorrente`
+- Novo campo `compra_id`: agrupa parcelas da mesma compra
+- Novo campo `recorrente_ativo`: controla assinaturas ativas
+
+**Novas Funções**:
+- `criar_lancamento_cartao()` - Cria lançamentos com suporte a 3 tipos
+- `gerar_lancamentos_recorrentes()` - Auto-gera recorrentes ao navegar meses
+- `cancelar_lancamento_recorrente()` - Cancela assinaturas
+- `reativar_lancamento_recorrente()` - Reativa assinaturas canceladas
+
+**Dados migrados**: Todos os dados de `despesas` + `parcelas` foram migrados para `lancamentos` preservando o histórico.

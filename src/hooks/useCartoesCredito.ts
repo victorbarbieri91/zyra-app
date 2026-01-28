@@ -31,28 +31,36 @@ export interface CartaoComFaturaAtual extends CartaoCredito {
     data_vencimento: string
     valor_total: number
     status: 'aberta' | 'fechada' | 'paga' | 'cancelada'
-    total_despesas: number
+    total_lancamentos: number
     dias_para_fechamento: number
     dias_para_vencimento: number
   } | null
 }
 
-export interface DespesaCartao {
+// Nova interface para lançamentos unificados
+export interface LancamentoCartao {
   id: string
   escritorio_id: string
   cartao_id: string
+  fatura_id: string | null
   descricao: string
   categoria: string
   fornecedor: string | null
-  valor_total: number
-  numero_parcelas: number
-  valor_parcela: number
+  valor: number
+  tipo: 'unica' | 'parcelada' | 'recorrente'
+  parcela_numero: number
+  parcela_total: number
+  compra_id: string
   data_compra: string
+  mes_referencia: string
+  recorrente_ativo: boolean
+  recorrente_data_fim: string | null
+  faturado: boolean
+  importado_de_fatura: boolean
+  hash_transacao: string | null
   processo_id: string | null
   documento_fiscal: string | null
   comprovante_url: string | null
-  importado_de_fatura: boolean
-  hash_transacao: string | null
   observacoes: string | null
   created_at: string
   updated_at: string
@@ -60,21 +68,6 @@ export interface DespesaCartao {
   cartao_nome?: string
   cartao_banco?: string
   processo_numero?: string
-}
-
-export interface ParcelaCartao {
-  id: string
-  despesa_id: string
-  fatura_id: string | null
-  numero_parcela: number
-  valor: number
-  mes_referencia: string
-  faturada: boolean
-  created_at: string
-  // Campos de JOIN
-  despesa_descricao?: string
-  despesa_categoria?: string
-  despesa_fornecedor?: string
 }
 
 export interface FaturaCartao {
@@ -96,7 +89,7 @@ export interface FaturaCartao {
   // Campos de JOIN
   cartao_nome?: string
   cartao_banco?: string
-  total_parcelas?: number
+  total_lancamentos?: number
 }
 
 export interface ImportacaoFatura {
@@ -131,24 +124,27 @@ export interface CartaoFormData {
   observacoes: string | null
 }
 
-export interface DespesaCartaoFormData {
+// Nova interface para criar lançamentos
+export interface LancamentoFormData {
   cartao_id: string
   descricao: string
   categoria: string
-  fornecedor: string
-  valor_total: number
-  numero_parcelas: number
+  fornecedor?: string
+  valor: number
+  tipo: 'unica' | 'parcelada' | 'recorrente'
+  parcelas?: number // Para parceladas
   data_compra: string
-  processo_id: string | null
-  documento_fiscal: string | null
-  observacoes: string | null
+  mes_referencia?: string // Para importações - força o mês de referência (formato: YYYY-MM-DD)
+  processo_id?: string | null
+  documento_fiscal?: string | null
+  observacoes?: string | null
+  importado_de_fatura?: boolean
 }
 
 // =====================================================
 // CATEGORIAS DE DESPESA DO CARTÃO
 // =====================================================
 
-// Valores padronizados conforme v_financeiro_enums
 export const CATEGORIAS_DESPESA_CARTAO = [
   { value: 'custas', label: 'Custas Processuais' },
   { value: 'fornecedor', label: 'Fornecedor' },
@@ -166,7 +162,6 @@ export const CATEGORIAS_DESPESA_CARTAO = [
   { value: 'outros', label: 'Outros' },
 ]
 
-// Bandeiras conforme v_financeiro_enums
 export const BANDEIRAS_CARTAO = [
   { value: 'visa', label: 'Visa', cor: '#1A1F71' },
   { value: 'mastercard', label: 'Mastercard', cor: '#EB001B' },
@@ -178,16 +173,22 @@ export const BANDEIRAS_CARTAO = [
 ]
 
 export const CORES_CARTAO = [
-  '#64748b', // Slate-500 (neutro elegante)
-  '#78716c', // Stone-500 (terroso suave)
-  '#57534e', // Stone-600 (marrom fosco)
-  '#52525b', // Zinc-600 (cinza chumbo)
-  '#4b5563', // Gray-600 (cinza médio)
-  '#334155', // Slate-700 (azul acinzentado)
-  '#374151', // Gray-700 (grafite)
-  '#44403c', // Stone-700 (marrom escuro)
-  '#3f3f46', // Zinc-700 (chumbo escuro)
-  '#1e293b', // Slate-800 (quase preto)
+  '#64748b',
+  '#78716c',
+  '#57534e',
+  '#52525b',
+  '#4b5563',
+  '#334155',
+  '#374151',
+  '#44403c',
+  '#3f3f46',
+  '#1e293b',
+]
+
+export const TIPOS_LANCAMENTO = [
+  { value: 'unica', label: 'À vista', description: 'Compra única, aparece uma vez' },
+  { value: 'parcelada', label: 'Parcelado', description: 'Compra em X parcelas' },
+  { value: 'recorrente', label: 'Recorrente', description: 'Assinatura mensal (Netflix, etc.)' },
 ]
 
 // =====================================================
@@ -199,7 +200,6 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Normalizar para sempre ter um array de IDs - usando useMemo para estabilidade
   const escritorioIds = useMemo(() => {
     if (Array.isArray(escritorioIdOrIds)) {
       return escritorioIdOrIds.filter(Boolean)
@@ -207,7 +207,6 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
     return escritorioIdOrIds ? [escritorioIdOrIds] : []
   }, [escritorioIdOrIds ? (Array.isArray(escritorioIdOrIds) ? escritorioIdOrIds.join(',') : escritorioIdOrIds) : ''])
 
-  // Manter compatibilidade - pegar primeiro ID para operações de escrita
   const escritorioIdPrincipal = escritorioIds[0] || null
 
   // ============================================
@@ -252,7 +251,6 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
       setLoading(true)
       setError(null)
 
-      // Carregar cartões
       const { data: cartoes, error: cartoesError } = await supabase
         .from('cartoes_credito')
         .select('*, escritorios(nome)')
@@ -262,13 +260,11 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
 
       if (cartoesError) throw cartoesError
 
-      // Para cada cartão, buscar fatura atual
       const cartoesComFatura: CartaoComFaturaAtual[] = await Promise.all(
         (cartoes || []).map(async (cartao: any) => {
           const { data: faturaAtual } = await supabase
             .rpc('obter_fatura_atual_cartao', { p_cartao_id: cartao.id })
 
-          // Mapear dados da fatura
           const faturaData = faturaAtual?.[0]
           const faturaFormatada = faturaData ? {
             fatura_id: faturaData.fatura_id,
@@ -277,7 +273,7 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
             data_vencimento: faturaData.data_vencimento,
             valor_total: Number(faturaData.valor_total) || 0,
             status: faturaData.status,
-            total_despesas: Number(faturaData.total_despesas) || 0,
+            total_lancamentos: Number(faturaData.total_lancamentos) || 0,
             dias_para_fechamento: faturaData.dias_para_fechamento,
             dias_para_vencimento: faturaData.dias_para_vencimento,
           } : null
@@ -374,7 +370,6 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
       setLoading(true)
       setError(null)
 
-      // Soft delete - apenas desativa
       const { error: updateError } = await supabase
         .from('cartoes_credito')
         .update({ ativo: false })
@@ -393,13 +388,40 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
   }, [supabase])
 
   // ============================================
-  // DESPESAS DO CARTÃO
+  // LANÇAMENTOS (NOVA ESTRUTURA UNIFICADA)
   // ============================================
 
-  const loadDespesas = useCallback(async (
+  const loadLancamentosMes = useCallback(async (
+    cartaoId: string,
+    mesReferencia: string
+  ): Promise<LancamentoCartao[]> => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Usar função do banco que gera recorrentes automaticamente
+      const { data, error: rpcError } = await supabase
+        .rpc('obter_lancamentos_mes', {
+          p_cartao_id: cartaoId,
+          p_mes_referencia: mesReferencia,
+        })
+
+      if (rpcError) throw rpcError
+
+      return data || []
+    } catch (err: any) {
+      console.error('Erro ao carregar lançamentos:', err)
+      setError(err.message)
+      return []
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase])
+
+  const loadLancamentos = useCallback(async (
     cartaoId?: string,
     mesReferencia?: string
-  ): Promise<DespesaCartao[]> => {
+  ): Promise<LancamentoCartao[]> => {
     if (escritorioIds.length === 0) return []
 
     try {
@@ -407,7 +429,7 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
       setError(null)
 
       let query = supabase
-        .from('cartoes_credito_despesas')
+        .from('cartoes_credito_lancamentos')
         .select(`
           *,
           cartoes_credito(nome, banco),
@@ -421,26 +443,22 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
       }
 
       if (mesReferencia) {
-        // Filtrar por mês de referência (despesas que têm parcelas nesse mês)
-        const inicioMes = mesReferencia.substring(0, 7) + '-01'
-        const fimMes = new Date(new Date(inicioMes).setMonth(new Date(inicioMes).getMonth() + 1) - 1)
-          .toISOString().split('T')[0]
-        query = query.gte('data_compra', inicioMes).lte('data_compra', fimMes)
+        const mes = mesReferencia.substring(0, 7) + '-01'
+        query = query.eq('mes_referencia', mes)
       }
 
       const { data, error: queryError } = await query
 
       if (queryError) throw queryError
 
-      // Processar dados
-      return (data || []).map((d: any) => ({
-        ...d,
-        cartao_nome: d.cartoes_credito?.nome,
-        cartao_banco: d.cartoes_credito?.banco,
-        processo_numero: d.processos_processos?.numero_cnj,
+      return (data || []).map((l: any) => ({
+        ...l,
+        cartao_nome: l.cartoes_credito?.nome,
+        cartao_banco: l.cartoes_credito?.banco,
+        processo_numero: l.processos_processos?.numero_cnj,
       }))
     } catch (err: any) {
-      console.error('Erro ao carregar despesas:', err)
+      console.error('Erro ao carregar lançamentos:', err)
       setError(err.message)
       return []
     } finally {
@@ -448,67 +466,55 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
     }
   }, [escritorioIds, supabase])
 
-  const createDespesa = useCallback(async (data: DespesaCartaoFormData): Promise<string | null> => {
-    if (!escritorioIdPrincipal) return null
-
+  const createLancamento = useCallback(async (data: LancamentoFormData): Promise<string | null> => {
     try {
       setLoading(true)
       setError(null)
 
-      // Usar função do banco que cria despesa e parcelas
-      const { data: despesaId, error: rpcError } = await supabase
-        .rpc('criar_despesa_cartao', {
+      const { data: compraId, error: rpcError } = await supabase
+        .rpc('criar_lancamento_cartao', {
           p_cartao_id: data.cartao_id,
           p_descricao: data.descricao,
           p_categoria: data.categoria,
           p_fornecedor: data.fornecedor || null,
-          p_valor_total: data.valor_total,
-          p_numero_parcelas: data.numero_parcelas,
+          p_valor: data.valor,
+          p_tipo: data.tipo,
+          p_parcelas: data.parcelas || 1,
           p_data_compra: data.data_compra,
+          p_mes_referencia: data.mes_referencia || null,
           p_processo_id: data.processo_id || null,
           p_documento_fiscal: data.documento_fiscal || null,
           p_observacoes: data.observacoes || null,
-          p_importado_de_fatura: false,
+          p_importado_de_fatura: data.importado_de_fatura || false,
         })
 
       if (rpcError) throw rpcError
 
-      return despesaId
+      return compraId
     } catch (err: any) {
-      console.error('Erro ao criar despesa:', err)
+      console.error('Erro ao criar lançamento:', err)
       setError(err.message)
       return null
     } finally {
       setLoading(false)
     }
-  }, [escritorioIdPrincipal, supabase])
+  }, [supabase])
 
-  const deleteDespesa = useCallback(async (despesaId: string): Promise<boolean> => {
+  const deleteLancamento = useCallback(async (lancamentoId: string): Promise<boolean> => {
     try {
       setLoading(true)
       setError(null)
 
-      // Verifica se alguma parcela já foi faturada
-      const { data: parcelas } = await supabase
-        .from('cartoes_credito_parcelas')
-        .select('id, faturada')
-        .eq('despesa_id', despesaId)
-        .eq('faturada', true)
+      const { data: success, error: rpcError } = await supabase
+        .rpc('excluir_lancamento_cartao', {
+          p_lancamento_id: lancamentoId,
+        })
 
-      if (parcelas && parcelas.length > 0) {
-        throw new Error('Não é possível excluir despesa com parcelas já faturadas')
-      }
+      if (rpcError) throw rpcError
 
-      const { error: deleteError } = await supabase
-        .from('cartoes_credito_despesas')
-        .delete()
-        .eq('id', despesaId)
-
-      if (deleteError) throw deleteError
-
-      return true
+      return success
     } catch (err: any) {
-      console.error('Erro ao excluir despesa:', err)
+      console.error('Erro ao excluir lançamento:', err)
       setError(err.message)
       return false
     } finally {
@@ -516,56 +522,71 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
     }
   }, [supabase])
 
-  // ============================================
-  // PARCELAS
-  // ============================================
-
-  const loadParcelas = useCallback(async (
-    cartaoId: string,
-    mesReferencia?: string
-  ): Promise<ParcelaCartao[]> => {
+  const cancelarRecorrente = useCallback(async (compraId: string, dataFim?: string): Promise<boolean> => {
     try {
       setLoading(true)
       setError(null)
 
-      let query = supabase
-        .from('cartoes_credito_parcelas')
-        .select(`
-          *,
-          cartoes_credito_despesas(descricao, categoria, fornecedor, cartao_id)
-        `)
-        .order('mes_referencia', { ascending: true })
-        .order('numero_parcela', { ascending: true })
+      const { data: success, error: rpcError } = await supabase
+        .rpc('cancelar_lancamento_recorrente', {
+          p_compra_id: compraId,
+          p_data_fim: dataFim || new Date().toISOString().split('T')[0],
+        })
 
-      // Filtrar por despesas do cartão
-      const { data: despesas } = await supabase
-        .from('cartoes_credito_despesas')
-        .select('id')
-        .eq('cartao_id', cartaoId)
+      if (rpcError) throw rpcError
 
-      if (!despesas || despesas.length === 0) return []
-
-      const despesaIds = despesas.map(d => d.id)
-      query = query.in('despesa_id', despesaIds)
-
-      if (mesReferencia) {
-        query = query.eq('mes_referencia', mesReferencia)
-      }
-
-      const { data, error: queryError } = await query
-
-      if (queryError) throw queryError
-
-      return (data || []).map((p: any) => ({
-        ...p,
-        despesa_descricao: p.cartoes_credito_despesas?.descricao,
-        despesa_categoria: p.cartoes_credito_despesas?.categoria,
-        despesa_fornecedor: p.cartoes_credito_despesas?.fornecedor,
-      }))
+      return success
     } catch (err: any) {
-      console.error('Erro ao carregar parcelas:', err)
+      console.error('Erro ao cancelar recorrente:', err)
       setError(err.message)
-      return []
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase])
+
+  const reativarRecorrente = useCallback(async (compraId: string): Promise<boolean> => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const { data: success, error: rpcError } = await supabase
+        .rpc('reativar_lancamento_recorrente', {
+          p_compra_id: compraId,
+        })
+
+      if (rpcError) throw rpcError
+
+      return success
+    } catch (err: any) {
+      console.error('Erro ao reativar recorrente:', err)
+      setError(err.message)
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase])
+
+  const updateLancamento = useCallback(async (
+    lancamentoId: string,
+    data: Partial<LancamentoCartao>
+  ): Promise<boolean> => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const { error: updateError } = await supabase
+        .from('cartoes_credito_lancamentos')
+        .update(data)
+        .eq('id', lancamentoId)
+
+      if (updateError) throw updateError
+
+      return true
+    } catch (err: any) {
+      console.error('Erro ao atualizar lançamento:', err)
+      setError(err.message)
+      return false
     } finally {
       setLoading(false)
     }
@@ -599,11 +620,11 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
 
       if (queryError) throw queryError
 
-      // Contar parcelas por fatura
-      const faturasComParcelas = await Promise.all(
+      // Contar lançamentos por fatura
+      const faturasComLancamentos = await Promise.all(
         (data || []).map(async (f: any) => {
           const { count } = await supabase
-            .from('cartoes_credito_parcelas')
+            .from('cartoes_credito_lancamentos')
             .select('*', { count: 'exact', head: true })
             .eq('fatura_id', f.id)
 
@@ -611,12 +632,12 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
             ...f,
             cartao_nome: f.cartoes_credito?.nome,
             cartao_banco: f.cartoes_credito?.banco,
-            total_parcelas: count || 0,
+            total_lancamentos: count || 0,
           }
         })
       )
 
-      return faturasComParcelas
+      return faturasComLancamentos
     } catch (err: any) {
       console.error('Erro ao carregar faturas:', err)
       setError(err.message)
@@ -683,7 +704,6 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
       setLoading(true)
       setError(null)
 
-      // Buscar fatura para pegar despesa_id
       const { data: fatura } = await supabase
         .from('cartoes_credito_faturas')
         .select('despesa_id')
@@ -694,7 +714,6 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
         throw new Error('Fatura não possui despesa vinculada')
       }
 
-      // Atualizar despesa como paga
       const { error: despesaError } = await supabase
         .from('financeiro_despesas')
         .update({
@@ -705,8 +724,6 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
         .eq('id', fatura.despesa_id)
 
       if (despesaError) throw despesaError
-
-      // O trigger vai atualizar a fatura automaticamente
 
       return true
     } catch (err: any) {
@@ -821,7 +838,6 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
     valor: number
   ): Promise<boolean> => {
     try {
-      // Calcular hash
       const hash = `${dataCompra}|${descricao.toLowerCase().trim()}|${valor.toFixed(2)}`
       const hashMd5 = await crypto.subtle.digest(
         'SHA-256',
@@ -829,7 +845,7 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
       ).then(buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''))
 
       const { data } = await supabase
-        .from('cartoes_credito_despesas')
+        .from('cartoes_credito_lancamentos')
         .select('id')
         .eq('cartao_id', cartaoId)
         .eq('hash_transacao', hashMd5.substring(0, 32))
@@ -850,12 +866,14 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
     createCartao,
     updateCartao,
     deleteCartao,
-    // Despesas
-    loadDespesas,
-    createDespesa,
-    deleteDespesa,
-    // Parcelas
-    loadParcelas,
+    // Lançamentos (nova estrutura)
+    loadLancamentosMes,
+    loadLancamentos,
+    createLancamento,
+    updateLancamento,
+    deleteLancamento,
+    cancelarRecorrente,
+    reativarRecorrente,
     // Faturas
     loadFaturas,
     getFatura,

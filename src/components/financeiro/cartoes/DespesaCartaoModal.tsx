@@ -11,7 +11,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -19,17 +18,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Receipt, Loader2, CreditCard, Info } from 'lucide-react'
+import { Receipt, Loader2, CreditCard, Info, Repeat, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import {
   useCartoesCredito,
-  DespesaCartaoFormData,
+  LancamentoFormData,
   CartaoCredito,
   CATEGORIAS_DESPESA_CARTAO,
+  TIPOS_LANCAMENTO,
 } from '@/hooks/useCartoesCredito'
-import { formatBrazilDate } from '@/lib/timezone'
+import { cn } from '@/lib/utils'
 
 interface DespesaCartaoModalProps {
   open: boolean
@@ -45,13 +44,14 @@ interface ProcessoOption {
   pasta: string
 }
 
-const initialFormData: DespesaCartaoFormData = {
+const initialFormData: LancamentoFormData = {
   cartao_id: '',
   descricao: '',
-  categoria: 'outras',
+  categoria: 'outros',
   fornecedor: '',
-  valor_total: 0,
-  numero_parcelas: 1,
+  valor: 0,
+  tipo: 'unica',
+  parcelas: 2,
   data_compra: new Date().toISOString().split('T')[0],
   processo_id: null,
   documento_fiscal: null,
@@ -65,15 +65,14 @@ export default function DespesaCartaoModal({
   cartaoId,
   onSuccess,
 }: DespesaCartaoModalProps) {
-  const [formData, setFormData] = useState<DespesaCartaoFormData>(initialFormData)
+  const [formData, setFormData] = useState<LancamentoFormData>(initialFormData)
   const [submitting, setSubmitting] = useState(false)
   const [cartoes, setCartoes] = useState<CartaoCredito[]>([])
   const [processos, setProcessos] = useState<ProcessoOption[]>([])
-  const [parcelado, setParcelado] = useState(false)
   const [loadingCartoes, setLoadingCartoes] = useState(false)
 
   const supabase = createClient()
-  const { loadCartoes, createDespesa } = useCartoesCredito(escritorioId)
+  const { loadCartoes, createLancamento } = useCartoesCredito(escritorioId)
 
   // Carregar cartões
   useEffect(() => {
@@ -112,11 +111,10 @@ export default function DespesaCartaoModal({
         ...initialFormData,
         cartao_id: cartaoId || '',
       })
-      setParcelado(false)
     }
   }, [open, cartaoId])
 
-  const updateField = (field: keyof DespesaCartaoFormData, value: any) => {
+  const updateField = (field: keyof LancamentoFormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -127,14 +125,14 @@ export default function DespesaCartaoModal({
       return
     }
     if (!formData.descricao.trim()) {
-      toast.error('Informe a descrição da despesa')
+      toast.error('Informe a descrição')
       return
     }
     if (!formData.categoria) {
       toast.error('Selecione uma categoria')
       return
     }
-    if (!formData.valor_total || formData.valor_total <= 0) {
+    if (!formData.valor || formData.valor <= 0) {
       toast.error('Informe um valor válido')
       return
     }
@@ -142,7 +140,7 @@ export default function DespesaCartaoModal({
       toast.error('Informe a data da compra')
       return
     }
-    if (parcelado && formData.numero_parcelas < 2) {
+    if (formData.tipo === 'parcelada' && (!formData.parcelas || formData.parcelas < 2)) {
       toast.error('Número de parcelas deve ser pelo menos 2')
       return
     }
@@ -150,27 +148,30 @@ export default function DespesaCartaoModal({
     try {
       setSubmitting(true)
 
-      const despesaId = await createDespesa({
-        ...formData,
-        numero_parcelas: parcelado ? formData.numero_parcelas : 1,
-      })
+      const compraId = await createLancamento(formData)
 
-      if (despesaId) {
-        toast.success(
-          parcelado
-            ? `Despesa parcelada em ${formData.numero_parcelas}x criada com sucesso!`
-            : 'Despesa registrada com sucesso!'
-        )
+      if (compraId) {
+        let mensagem = ''
+        switch (formData.tipo) {
+          case 'parcelada':
+            mensagem = `Compra parcelada em ${formData.parcelas}x criada com sucesso!`
+            break
+          case 'recorrente':
+            mensagem = 'Assinatura recorrente criada com sucesso!'
+            break
+          default:
+            mensagem = 'Lançamento registrado com sucesso!'
+        }
+        toast.success(mensagem)
         setFormData(initialFormData)
-        setParcelado(false)
         onOpenChange(false)
         onSuccess?.()
       } else {
-        toast.error('Erro ao registrar despesa. Tente novamente.')
+        toast.error('Erro ao registrar lançamento. Tente novamente.')
       }
     } catch (error) {
-      console.error('Erro ao criar despesa:', error)
-      toast.error('Erro ao registrar despesa. Tente novamente.')
+      console.error('Erro ao criar lançamento:', error)
+      toast.error('Erro ao registrar lançamento. Tente novamente.')
     } finally {
       setSubmitting(false)
     }
@@ -178,16 +179,21 @@ export default function DespesaCartaoModal({
 
   const cartaoSelecionado = cartoes.find((c) => c.id === formData.cartao_id)
 
+  // Calcula valor da parcela
+  const valorParcela = formData.tipo === 'parcelada' && formData.parcelas
+    ? formData.valor / formData.parcelas
+    : formData.valor
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-[#34495e]">
             <Receipt className="w-5 h-5" />
-            Nova Despesa no Cartão
+            Novo Lançamento no Cartão
           </DialogTitle>
           <DialogDescription>
-            Registre uma nova despesa no cartão de crédito.
+            Registre uma compra, parcela ou assinatura no cartão de crédito.
           </DialogDescription>
         </DialogHeader>
 
@@ -232,17 +238,58 @@ export default function DespesaCartaoModal({
             </div>
           )}
 
-          {/* Descrição e Fornecedor */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <Label htmlFor="descricao">Descrição *</Label>
-              <Input
-                id="descricao"
-                placeholder="Ex: Material de escritório"
-                value={formData.descricao}
-                onChange={(e) => updateField('descricao', e.target.value)}
-              />
+          {/* Tipo de Lançamento */}
+          <div>
+            <Label>Tipo de Lançamento *</Label>
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              {TIPOS_LANCAMENTO.map((tipo) => (
+                <button
+                  key={tipo.value}
+                  type="button"
+                  onClick={() => updateField('tipo', tipo.value)}
+                  className={cn(
+                    'p-3 rounded-lg border text-left transition-all',
+                    formData.tipo === tipo.value
+                      ? 'border-[#1E3A8A] bg-blue-50 ring-1 ring-[#1E3A8A]'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    {tipo.value === 'recorrente' && (
+                      <Repeat className="w-4 h-4 text-purple-600" />
+                    )}
+                    {tipo.value === 'parcelada' && (
+                      <Calendar className="w-4 h-4 text-blue-600" />
+                    )}
+                    {tipo.value === 'unica' && (
+                      <Receipt className="w-4 h-4 text-slate-600" />
+                    )}
+                    <span className={cn(
+                      'font-medium text-sm',
+                      formData.tipo === tipo.value ? 'text-[#1E3A8A]' : 'text-slate-700'
+                    )}>
+                      {tipo.label}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">{tipo.description}</p>
+                </button>
+              ))}
             </div>
+          </div>
+
+          {/* Descrição */}
+          <div>
+            <Label htmlFor="descricao">Descrição *</Label>
+            <Input
+              id="descricao"
+              placeholder={
+                formData.tipo === 'recorrente'
+                  ? 'Ex: Netflix, Spotify, AWS'
+                  : 'Ex: Material de escritório'
+              }
+              value={formData.descricao}
+              onChange={(e) => updateField('descricao', e.target.value)}
+            />
           </div>
 
           {/* Categoria e Fornecedor */}
@@ -270,7 +317,7 @@ export default function DespesaCartaoModal({
               <Input
                 id="fornecedor"
                 placeholder="Ex: Amazon"
-                value={formData.fornecedor}
+                value={formData.fornecedor || ''}
                 onChange={(e) => updateField('fornecedor', e.target.value)}
               />
             </div>
@@ -279,19 +326,23 @@ export default function DespesaCartaoModal({
           {/* Valor e Data */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="valor_total">Valor Total (R$) *</Label>
+              <Label htmlFor="valor">
+                {formData.tipo === 'parcelada' ? 'Valor Total (R$) *' : 'Valor (R$) *'}
+              </Label>
               <Input
-                id="valor_total"
+                id="valor"
                 type="number"
                 step="0.01"
                 min="0"
                 placeholder="0,00"
-                value={formData.valor_total || ''}
-                onChange={(e) => updateField('valor_total', parseFloat(e.target.value) || 0)}
+                value={formData.valor || ''}
+                onChange={(e) => updateField('valor', parseFloat(e.target.value) || 0)}
               />
             </div>
             <div>
-              <Label htmlFor="data_compra">Data da Compra *</Label>
+              <Label htmlFor="data_compra">
+                {formData.tipo === 'recorrente' ? 'Data de Início *' : 'Data da Compra *'}
+              </Label>
               <Input
                 id="data_compra"
                 type="date"
@@ -301,51 +352,52 @@ export default function DespesaCartaoModal({
             </div>
           </div>
 
-          {/* Parcelamento */}
-          <div className="p-4 rounded-lg border border-slate-200 bg-slate-50 space-y-3">
-            <div className="flex items-start gap-3">
-              <Checkbox
-                id="parcelado"
-                checked={parcelado}
-                onCheckedChange={(checked) => setParcelado(!!checked)}
-              />
-              <div className="flex-1">
-                <Label htmlFor="parcelado" className="cursor-pointer">
-                  <span className="font-medium">Compra parcelada</span>
-                </Label>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Distribui o valor em várias faturas mensais
-                </p>
+          {/* Opções para Parcelado */}
+          {formData.tipo === 'parcelada' && (
+            <div className="p-4 rounded-lg border border-blue-200 bg-blue-50 space-y-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-600" />
+                <span className="font-medium text-blue-800 text-sm">Configuração do Parcelamento</span>
               </div>
-            </div>
-
-            {parcelado && (
-              <div className="pt-3 border-t border-slate-200">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="numero_parcelas">Número de Parcelas</Label>
-                    <Input
-                      id="numero_parcelas"
-                      type="number"
-                      min={2}
-                      max={48}
-                      value={formData.numero_parcelas}
-                      onChange={(e) => updateField('numero_parcelas', parseInt(e.target.value) || 2)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Valor da Parcela</Label>
-                    <div className="h-10 flex items-center px-3 rounded-lg bg-white border border-slate-200 text-sm font-medium text-[#34495e]">
-                      {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      }).format(formData.valor_total / (formData.numero_parcelas || 1))}
-                    </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="numero_parcelas">Número de Parcelas</Label>
+                  <Input
+                    id="numero_parcelas"
+                    type="number"
+                    min={2}
+                    max={48}
+                    value={formData.parcelas || 2}
+                    onChange={(e) => updateField('parcelas', parseInt(e.target.value) || 2)}
+                  />
+                </div>
+                <div>
+                  <Label>Valor da Parcela</Label>
+                  <div className="h-10 flex items-center px-3 rounded-lg bg-white border border-blue-200 text-sm font-medium text-[#34495e]">
+                    {new Intl.NumberFormat('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL',
+                    }).format(valorParcela)}
                   </div>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Info para Recorrente */}
+          {formData.tipo === 'recorrente' && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-purple-50 border border-purple-200">
+              <Repeat className="w-4 h-4 text-purple-600 mt-0.5 shrink-0" />
+              <div className="text-xs text-purple-700">
+                <p className="font-medium">Assinatura Recorrente</p>
+                <p>
+                  Este lançamento aparecerá automaticamente em todas as faturas futuras
+                  até ser cancelado. Você pode cancelar a recorrência a qualquer momento
+                  na página de detalhes do cartão.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Vincular a Processo (opcional) */}
           <div>
@@ -391,16 +443,18 @@ export default function DespesaCartaoModal({
           </div>
 
           {/* Info sobre faturamento */}
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
-            <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-            <div className="text-xs text-blue-700">
-              <p className="font-medium">Quando esta despesa será faturada?</p>
-              <p>
-                Depende da data de fechamento do cartão. Compras feitas antes do
-                fechamento entram na fatura atual, após entram na próxima.
-              </p>
+          {formData.tipo !== 'recorrente' && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-slate-50 border border-slate-200">
+              <Info className="w-4 h-4 text-slate-500 mt-0.5 shrink-0" />
+              <div className="text-xs text-slate-600">
+                <p className="font-medium">Quando será faturado?</p>
+                <p>
+                  Depende da data de fechamento do cartão. Compras feitas antes do
+                  fechamento entram na fatura atual, após entram na próxima.
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Botões */}
@@ -421,7 +475,7 @@ export default function DespesaCartaoModal({
             ) : (
               <>
                 <Receipt className="w-4 h-4 mr-2" />
-                Registrar Despesa
+                {formData.tipo === 'recorrente' ? 'Criar Assinatura' : 'Registrar Lançamento'}
               </>
             )}
           </Button>

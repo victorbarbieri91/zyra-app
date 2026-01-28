@@ -10,12 +10,24 @@ import {
   Building2,
   ChevronDown,
   Check,
+  Pencil,
+  Trash2,
+  Eye,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,13 +42,10 @@ import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import {
   useCartoesCredito,
   CartaoComFaturaAtual,
-  CartaoCredito,
 } from '@/hooks/useCartoesCredito'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 import { cn } from '@/lib/utils'
 import CartaoModal from '@/components/financeiro/cartoes/CartaoModal'
-import CartaoCard from '@/components/financeiro/cartoes/CartaoCard'
-import DespesaCartaoModal from '@/components/financeiro/cartoes/DespesaCartaoModal'
 import { toast } from 'sonner'
 
 export default function CartoesPage() {
@@ -55,9 +64,7 @@ export default function CartoesPage() {
 
   // Modais
   const [modalCartaoOpen, setModalCartaoOpen] = useState(false)
-  const [modalDespesaOpen, setModalDespesaOpen] = useState(false)
   const [cartaoParaEditar, setCartaoParaEditar] = useState<CartaoComFaturaAtual | null>(null)
-  const [cartaoParaDespesa, setCartaoParaDespesa] = useState<string | undefined>()
   const [cartaoParaExcluir, setCartaoParaExcluir] = useState<string | null>(null)
 
   const { loadCartoesComFaturaAtual, deleteCartao } = useCartoesCredito(escritoriosSelecionados)
@@ -167,17 +174,8 @@ export default function CartoesPage() {
     setCartaoParaExcluir(null)
   }
 
-  const handleAddExpense = (cartaoId: string) => {
-    setCartaoParaDespesa(cartaoId)
-    setModalDespesaOpen(true)
-  }
-
   const handleViewDetails = (cartaoId: string) => {
     router.push(`/dashboard/financeiro/cartoes/${cartaoId}`)
-  }
-
-  const handleViewInvoice = (cartaoId: string) => {
-    router.push(`/dashboard/financeiro/cartoes/${cartaoId}?tab=faturas`)
   }
 
   // Calcular total das faturas abertas
@@ -339,19 +337,120 @@ export default function CartoesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {cartoesFiltrados.map((cartao) => (
-            <CartaoCard
-              key={cartao.id}
-              cartao={cartao}
-              showEscritorioNome={escritoriosSelecionados.length > 1}
-              onViewDetails={handleViewDetails}
-              onAddExpense={handleAddExpense}
-              onViewInvoice={handleViewInvoice}
-              onEdit={handleEditCartao}
-              onDelete={(id) => setCartaoParaExcluir(id)}
-            />
-          ))}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-xs">Cartão</TableHead>
+                <TableHead className="text-xs">Banco</TableHead>
+                <TableHead className="text-xs">Vencimento</TableHead>
+                {escritoriosSelecionados.length > 1 && (
+                  <TableHead className="text-xs">Escritório</TableHead>
+                )}
+                <TableHead className="text-xs text-right">Fatura Atual</TableHead>
+                <TableHead className="text-xs">Status</TableHead>
+                <TableHead className="text-xs text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {cartoesFiltrados.map((cartao) => {
+                const faturaStatus = cartao.fatura_atual?.status
+                const faturaValor = cartao.fatura_atual?.valor_total || 0
+
+                return (
+                  <TableRow
+                    key={cartao.id}
+                    className="hover:bg-slate-50 cursor-pointer"
+                    onClick={() => handleViewDetails(cartao.id)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-6 h-6 rounded flex items-center justify-center"
+                          style={{ backgroundColor: cartao.cor }}
+                        >
+                          <CreditCard className="w-3.5 h-3.5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-[#34495e]">{cartao.nome}</p>
+                          <p className="text-[10px] text-slate-400">•••• {cartao.ultimos_digitos}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-slate-600">
+                      {cartao.banco}
+                    </TableCell>
+                    <TableCell className="text-sm text-slate-600">
+                      Dia {cartao.dia_vencimento}
+                    </TableCell>
+                    {escritoriosSelecionados.length > 1 && (
+                      <TableCell className="text-xs text-slate-500">
+                        {cartao.escritorio_nome || '-'}
+                      </TableCell>
+                    )}
+                    <TableCell className="text-right">
+                      <span className="text-sm font-semibold text-[#34495e]">
+                        {formatCurrency(faturaValor)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      {faturaStatus ? (
+                        <Badge
+                          variant="secondary"
+                          className={cn(
+                            "text-[10px]",
+                            faturaStatus === 'aberta' && "bg-blue-100 text-blue-700",
+                            faturaStatus === 'fechada' && "bg-amber-100 text-amber-700",
+                            faturaStatus === 'paga' && "bg-emerald-100 text-emerald-700"
+                          )}
+                        >
+                          {faturaStatus === 'aberta' && 'Aberta'}
+                          {faturaStatus === 'fechada' && 'Fechada'}
+                          {faturaStatus === 'paga' && 'Paga'}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-slate-400">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div
+                        className="flex items-center justify-end gap-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => handleViewDetails(cartao.id)}
+                          title="Ver detalhes"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => handleEditCartao(cartao)}
+                          title="Editar"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => setCartaoParaExcluir(cartao.id)}
+                          title="Desativar"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
         </div>
       )}
 
@@ -363,20 +462,6 @@ export default function CartoesPage() {
           escritorioId={escritorioAtivo}
           escritorios={escritoriosGrupo}
           cartaoParaEditar={cartaoParaEditar}
-          onSuccess={loadData}
-        />
-      )}
-
-      {/* Modal de Despesa */}
-      {escritorioAtivo && (
-        <DespesaCartaoModal
-          open={modalDespesaOpen}
-          onOpenChange={(open) => {
-            setModalDespesaOpen(open)
-            if (!open) setCartaoParaDespesa(undefined)
-          }}
-          escritorioId={escritorioAtivo}
-          cartaoId={cartaoParaDespesa}
           onSuccess={loadData}
         />
       )}

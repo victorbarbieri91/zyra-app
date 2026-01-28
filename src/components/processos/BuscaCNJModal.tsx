@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Search,
   Loader2,
@@ -21,17 +21,27 @@ interface BuscaCNJModalProps {
   onClose: () => void
   onDadosEncontrados: (dados: ProcessoEscavadorNormalizado) => void
   onCadastroManual: () => void
+  initialCNJ?: string
 }
 
 export function BuscaCNJModal({
   open,
   onClose,
   onDadosEncontrados,
-  onCadastroManual
+  onCadastroManual,
+  initialCNJ
 }: BuscaCNJModalProps) {
   const [numeroCNJ, setNumeroCNJ] = useState('')
   const [buscando, setBuscando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+
+  // Preencher CNJ inicial quando o modal abrir
+  useEffect(() => {
+    if (open && initialCNJ) {
+      setNumeroCNJ(initialCNJ)
+      setErro(null)
+    }
+  }, [open, initialCNJ])
 
   // Reset ao fechar
   const handleClose = () => {

@@ -71,7 +71,9 @@
       "WebFetch(domain:api.github.com)",
       "Bash(npm run lint)",
       "mcp__supabase__get_edge_function",
-      "Bash(\"c:/Users/victo/Zyra Legal/src/app/dashboard/publicacoes/[id]/page.tsx\")"
+      "Bash(\"c:/Users/victo/Zyra Legal/src/app/dashboard/publicacoes/[id]/page.tsx\")",
+      "WebFetch(domain:scvawfrqhuqdxegsqzjb.supabase.co)",
+      "Bash(ping:*)"
     ],
     "deny": [],
     "ask": []

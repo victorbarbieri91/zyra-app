@@ -1,0 +1,693 @@
+{
+  "arquivos": [
+    {
+      "filename": "migracao-financeiro10.12.csv",
+      "excluidos": {
+        "porCategoria": {
+          "Baixa de aplicação": {
+            "count": 48,
+            "valor": 110675.51999999993,
+            "registros": [
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Resgate automático aplicação financeira -Rende Fácil",
+                "valor": 1000
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Resgate automático aplicação financeira -Rende Fácil",
+                "valor": 111.06
+              },
+              {
+                "cliente": "BANCO ITAU S/A",
+                "descricao": "Rendimento aplicação financeira automática - Aut Mais",
+                "valor": 0.01
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação financeira automática - INVEST FÁCIL",
+                "valor": 0.01
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação financeira automática - INVEST FÁCIL",
+                "valor": 0.01
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação financeira automática - INVEST FÁCIL",
+                "valor": 0.04
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Resgate automático aplicação financeira -Rende Fácil",
+                "valor": 777.42
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação financeira automática - INVEST FÁCIL",
+                "valor": 0.15
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação financeira automática - INVEST FÁCIL",
+                "valor": 0.02
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação financeira automática - Invest Fácil",
+                "valor": 0.02
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Resgate automático aplicação financeira -Rende Fácil",
+                "valor": 81.4
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação financeira automática - Invest Fácil",
+                "valor": 0.02
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação financeira automática - Invest Fácil",
+                "valor": 0.04
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Resgate automático aplicação financeira -Rende Fácil",
+                "valor": 44.87
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação financeira automática - Invest Fácil",
+                "valor": 0.01
+              },
+              {
+                "cliente": "BANCO ITAU S/A",
+                "descricao": "Rendimento aplicação financeira automática - Aut Mais",
+                "valor": 0.04
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Resgate automático aplicação financeira -Rende Fácil",
+                "valor": 417.31
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Resgate automático aplicação financeira _ Rende Fácil",
+                "valor": 564.46
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação automática - Invest Fácil",
+                "valor": 0.15
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Baixa automática aplicação financeira _ Rende Fácil",
+                "valor": 74233.52
+              },
+              {
+                "cliente": "BANCO ITAU S/A",
+                "descricao": "RENDIMENTO APLICAÇÃO AUTOMATICA",
+                "valor": 0.01
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação automática - Invest Fácil",
+                "valor": 0.11
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação automática - Invest Fácil",
+                "valor": 1.7
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Baixa automática aplicação financeira _ Rende Fácil",
+                "valor": 279.93
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Resgate de aplicação automática _ Rende Fácil",
+                "valor": 41.2
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Resgate de aplicação automática _ Rende Fácil",
+                "valor": 81.4
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação automática - Invest Fácil",
+                "valor": 0.02
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação automática - Invest Fácil",
+                "valor": 0.05
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação automática - Invest Fácil",
+                "valor": 0.03
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação automática - Invest Fácil",
+                "valor": 0.04
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação automática - Invest Fácil",
+                "valor": 0.11
+              },
+              {
+                "cliente": "BANCO C6 S.A.",
+                "descricao": "Resgate CDB",
+                "valor": 8135.34
+              },
+              {
+                "cliente": "BANCO C6 S.A.",
+                "descricao": "Resgate de CDB",
+                "valor": 23227.4
+              },
+              {
+                "cliente": "BANCO ITAU S/A",
+                "descricao": "Rendimento aplicação automática_Auto Mais",
+                "valor": 0.03
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Baixa automática aplicação financeira _ Rende Fácil",
+                "valor": 777.42
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação automática _ Invest Fácil",
+                "valor": 0.03
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Aplicação financeira automática _ Rende Fácil",
+                "valor": 220.93
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação automática _ Invest Fácil",
+                "valor": 0.01
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Baixa automática aplicação financeira _ Rende Fácil",
+                "valor": 81.4
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Baixa automática aplicação financeira _ Rende Fácil",
+                "valor": 20
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação automática _ Invest Fácil",
+                "valor": 0.18
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação automática _ Invest Fácil",
+                "valor": 0.12
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação automática _ Invest Fácil",
+                "valor": 0.13
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação automática _ Invest Fácil",
+                "valor": 0.12
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação automática _ Invest Fácil",
+                "valor": 0.1
+              },
+              {
+                "cliente": "BANCO ITAU S/A",
+                "descricao": "Rendimento aplicação automática _ Auto Mais",
+                "valor": 0.08
+              },
+              {
+                "cliente": "BANCO BRADESCO S/A",
+                "descricao": "Rendimento aplicação automática _ Invest Fácil",
+                "valor": 0.76
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Baixa automática aplicação financeira _ Rende Fácil",
+                "valor": 576.31
+              }
+            ]
+          },
+          "Conta Investimento": {
+            "count": 6,
+            "valor": 189111.74,
+            "registros": [
+              {
+                "cliente": "Btg Pactual - Cnpj 30.306.294/0001-45",
+                "descricao": "Baixa CDB para conta corrente BTG/Apoio",
+                "valor": 2500.01
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Aplicação financeira automático-Rende Fácil",
+                "valor": 75211.73
+              },
+              {
+                "cliente": "Btg Pactual - Cnpj 30.306.294/0001-45",
+                "descricao": "TEF BTG PARA BTG INVESTIMENTOS",
+                "valor": 4000
+              },
+              {
+                "cliente": "BANCO C6 S.A.",
+                "descricao": "Emissão de CDB",
+                "valor": 71400
+              },
+              {
+                "cliente": "BANCO C6 S.A.",
+                "descricao": "Emissão de CDB",
+                "valor": 16000
+              },
+              {
+                "cliente": "BANCO C6 S.A.",
+                "descricao": "Emissão de CDB",
+                "valor": 20000
+              }
+            ]
+          },
+          "Transferência de valores entre contas": {
+            "count": 2,
+            "valor": 5000,
+            "registros": [
+              {
+                "cliente": "Polycarpo Apoio Empresarial Ltda",
+                "descricao": "Transferência do C6 Apoio para BTG Apoio",
+                "valor": 4000
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Aplicação financeira automática - Rende Fácil",
+                "valor": 1000
+              }
+            ]
+          },
+          "Entre contas correntes": {
+            "count": 1,
+            "valor": 4000,
+            "registros": [
+              {
+                "cliente": "Polycarpo Apoio Empresarial Ltda",
+                "descricao": "Transferência da C6 Apoio para BTG Apoio",
+                "valor": 4000
+              }
+            ]
+          },
+          "Aplicação de valores em investimento": {
+            "count": 3,
+            "valor": 1161.65,
+            "registros": [
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Baixa automática aplicação financeira - Rende fácil",
+                "valor": 440
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Baixa automática aplicação financeira - Rende fácil",
+                "valor": 150.68
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "Baixa automática aplicação financeira - Rende fácil",
+                "valor": 570.97
+              }
+            ]
+          },
+          "Cartão de Crédito": {
+            "count": 1,
+            "valor": 13.83,
+            "registros": [
+              {
+                "cliente": "Ourocard Bb. S.a.",
+                "descricao": "ANUIDADE DIFERENCIADA 002/012",
+                "valor": 13.83
+              }
+            ]
+          }
+        },
+        "porFornecedorCartao": {
+          "BANCO BRADESCO CARTOES S/A": {
+            "count": 6,
+            "valor": 2387.89,
+            "registros": [
+              {
+                "descricao": "ANUIDADE 01/04\n\n\nESTACIONAMENTO\n\n\nGAMMA. APP\n\n\nIOF SOBRE TRANSAÇÕES EXTERIOR  - ",
+                "valor": 224.54
+              },
+              {
+                "descricao": "ADOBE\n\n\nANUIDADE PARCELA 007/012",
+                "valor": 350.16
+              },
+              {
+                "descricao": "ANUIDADE 002/004\n\n\nCENTRO AUTOMOTIVO DUBA\n\n\nGAMMA.APP\n\n\nIOF S/TRANS INTER REAIS\n",
+                "valor": 790.42
+              },
+              {
+                "descricao": "Anuidade cartão - Parcela 008/012\n\n\nUso 99- aplicativo transporte",
+                "valor": 35.36
+              },
+              {
+                "descricao": "Allpark Empreendimentos\n\n\nAnuidade Cartão - 003/004\n\n\nOAB - Anuidade parcela 010",
+                "valor": 200.14
+              },
+              {
+                "descricao": "99*\n\n\nADOBE *ADOBE\n\n\nANUIDADE 009/012\n\n\nEBN *ADOBE",
+                "valor": 787.27
+              }
+            ]
+          },
+          "BTG PACTUAL": {
+            "count": 5,
+            "valor": 6169.18,
+            "registros": [
+              {
+                "descricao": "Claude AI Subscription\n\n\nGamma App\n\n\nOpenAI\n\n\nRegistro BR\n\n\nRestaurante Outback\n",
+                "valor": 1400.55
+              },
+              {
+                "descricao": "IOF SOBRE CDB -VENDA",
+                "valor": 6.51
+              },
+              {
+                "descricao": "IRRF SOBRE CDB - VENDA",
+                "valor": 1.94
+              },
+              {
+                "descricao": "Allpark estacioamento\n\n\nAuto posto Casarão\n\n\nAuto posto Cinco Skina\n\n\nCashtrack\n",
+                "valor": 2739.09
+              },
+              {
+                "descricao": "Cashtrack\n\n\nChange Now\n\n\nClaude AI Subscription \n\n\nGamma App\n\n\nOpenAI\n\n\nRead Mee",
+                "valor": 2021.09
+              }
+            ]
+          },
+          "CARTAO DE CREDITO SANTANDER": {
+            "count": 3,
+            "valor": 7606.49,
+            "registros": [
+              {
+                "descricao": "AASP PARCELA 004/012\n\n\nALIMENTAÇAO\n\n\n\nPECORINO REBOUÇAS\n\n\nAUTO POSTO RIGA - CAMA",
+                "valor": 3678.63
+              },
+              {
+                "descricao": "AASP - Parc. 005/012\n\n\nAssinatura O GLobo - Jornal Valor Econômico\n\n\nCentro Auto",
+                "valor": 1575.37
+              },
+              {
+                "descricao": "AASP - Parcela 006/012\n\n\nEDITORA O GLOBO  - VALOR ECONOMICO\n\n\nFGNOVA REBOUÇAS - ",
+                "valor": 2352.49
+              }
+            ]
+          },
+          "C6 CARTAO DE CREDITO": {
+            "count": 3,
+            "valor": 31848.769999999997,
+            "registros": [
+              {
+                "descricao": "ASA *TECHLEGAL SERVIÇOS\n\n\nCONTABILIZEI TECNOLOGIA\n\n\nDELL-  Parcela 011/012\n\n\nDM ",
+                "valor": 10959.67
+              },
+              {
+                "descricao": "99FOOD *KIT GOURMET RE\n\n\nALIMENTAÇÃO\n\n\n\nOUTBACK REBOUÇAS\n\n\nALLPARK EMPREENDIMENT",
+                "valor": 12141.64
+              },
+              {
+                "descricao": "ALLPARK EMPREENDIMENTO\n\n\nALUGUEL VEÍCULO\n\n\n\nTURBI\n\n\n\n \n\n\nAMAZON BR - PARCELA 001",
+                "valor": 8747.46
+              }
+            ]
+          },
+          "BANCO ITAUCARD S/A": {
+            "count": 3,
+            "valor": 32689.920000000006,
+            "registros": [
+              {
+                "descricao": "GOODSTORAGE *AL*27382\n\n\n\nGUARDA MOVEIS - BOX\n\n\nMICROSOFT G113857555\n\n\nPPRO *MICR",
+                "valor": 9285.77
+              },
+              {
+                "descricao": "GOODSTORAGE\n\n\n\nLOCAÇÃO GUARDA MOVEIS - BOX\n\n\nHQ BRASIL - COWORK - CAMPINAS\n\n\n\nRE",
+                "valor": 8851.78
+              },
+              {
+                "descricao": "GOODST*AL*27382\n\n\n\nGUARDA MOVEIS - GOODSTORAGE \n\n\n\nBOX \n\n\nHQ BRASIL - REGUS \n\n\nH",
+                "valor": 14552.37
+              }
+            ]
+          },
+          "OUROCARD": {
+            "count": 1,
+            "valor": 94.83,
+            "registros": [
+              {
+                "descricao": "ALLPARK ESTACIONAMENTO CAMPINAS\n\n\nANUIDADE PARCELA 001/012\n\n\nRODOSNACK LANCHONET",
+                "valor": 94.83
+              }
+            ]
+          }
+        },
+        "totalRegistros": 82,
+        "totalValor": 390759.82000000007
+      },
+      "incluidos": {
+        "despesas": 209,
+        "receitas": 82,
+        "valorDespesas": 572360.9899999998,
+        "valorReceitas": 617686.0999999999
+      },
+      "totalOriginal": 373
+    },
+    {
+      "filename": "migracao-financeiro07.09.csv",
+      "excluidos": {
+        "porCategoria": {
+          "Conta Investimento": {
+            "count": 3,
+            "valor": 14246.689999999999,
+            "registros": [
+              {
+                "cliente": "Polycarpo Advogados",
+                "descricao": "",
+                "valor": 70.38
+              },
+              {
+                "cliente": "Polycarpo Advogados",
+                "descricao": "",
+                "valor": 447.66
+              },
+              {
+                "cliente": "BANCO DO BRASIL S/A",
+                "descricao": "",
+                "valor": 13728.65
+              }
+            ]
+          },
+          "Entre contas correntes": {
+            "count": 1,
+            "valor": 6000,
+            "registros": [
+              {
+                "cliente": "Btg Pactual - Cnpj 30.306.294/0001-45",
+                "descricao": "",
+                "valor": 6000
+              }
+            ]
+          }
+        },
+        "porFornecedorCartao": {
+          "BANCO BRADESCO CARTOES S/A": {
+            "count": 6,
+            "valor": 2700.4499999999994,
+            "registros": [
+              {
+                "descricao": "",
+                "valor": 644.68
+              },
+              {
+                "descricao": "",
+                "valor": 1094.37
+              },
+              {
+                "descricao": "",
+                "valor": 171.94
+              },
+              {
+                "descricao": "",
+                "valor": 350.16
+              },
+              {
+                "descricao": "",
+                "valor": 89.14
+              },
+              {
+                "descricao": "",
+                "valor": 350.16
+              }
+            ]
+          },
+          "C6 CARTAO DE CREDITO": {
+            "count": 5,
+            "valor": 25987.52,
+            "registros": [
+              {
+                "descricao": "",
+                "valor": 8176.73
+              },
+              {
+                "descricao": "",
+                "valor": 3939.17
+              },
+              {
+                "descricao": "",
+                "valor": 5000
+              },
+              {
+                "descricao": "",
+                "valor": 5000
+              },
+              {
+                "descricao": "",
+                "valor": 3871.62
+              }
+            ]
+          },
+          "CARTAO DE CREDITO SANTANDER": {
+            "count": 3,
+            "valor": 4064.2699999999995,
+            "registros": [
+              {
+                "descricao": "",
+                "valor": 1620.53
+              },
+              {
+                "descricao": "",
+                "valor": 451.44
+              },
+              {
+                "descricao": "",
+                "valor": 1992.3
+              }
+            ]
+          },
+          "BANCO ITAUCARD S/A": {
+            "count": 2,
+            "valor": 17342.56,
+            "registros": [
+              {
+                "descricao": "",
+                "valor": 8705.2
+              },
+              {
+                "descricao": "",
+                "valor": 8637.36
+              }
+            ]
+          }
+        },
+        "totalRegistros": 20,
+        "totalValor": 70341.49000000002
+      },
+      "incluidos": {
+        "despesas": 196,
+        "receitas": 161,
+        "valorDespesas": 528515.19,
+        "valorReceitas": 703944.0700000003
+      },
+      "totalOriginal": 377
+    },
+    {
+      "filename": "migracao-financeiro04.06.csv",
+      "excluidos": {
+        "porCategoria": {},
+        "porFornecedorCartao": {},
+        "totalRegistros": 0,
+        "totalValor": 0
+      },
+      "incluidos": {
+        "despesas": 0,
+        "receitas": 0,
+        "valorDespesas": 0,
+        "valorReceitas": 0
+      },
+      "totalOriginal": 0
+    }
+  ],
+  "resumo": {
+    "totalExcluidos": 102,
+    "valorExcluido": 461101.31000000006,
+    "porCategoria": {
+      "Baixa de aplicação": {
+        "count": 48,
+        "valor": 110675.51999999993
+      },
+      "Conta Investimento": {
+        "count": 9,
+        "valor": 203358.43
+      },
+      "Transferência de valores entre contas": {
+        "count": 2,
+        "valor": 5000
+      },
+      "Entre contas correntes": {
+        "count": 2,
+        "valor": 10000
+      },
+      "Aplicação de valores em investimento": {
+        "count": 3,
+        "valor": 1161.65
+      },
+      "Cartão de Crédito": {
+        "count": 1,
+        "valor": 13.83
+      }
+    },
+    "porFornecedorCartao": {
+      "BANCO BRADESCO CARTOES S/A": {
+        "count": 12,
+        "valor": 5088.339999999999
+      },
+      "BTG PACTUAL": {
+        "count": 5,
+        "valor": 6169.18
+      },
+      "CARTAO DE CREDITO SANTANDER": {
+        "count": 6,
+        "valor": 11670.759999999998
+      },
+      "C6 CARTAO DE CREDITO": {
+        "count": 8,
+        "valor": 57836.28999999999
+      },
+      "BANCO ITAUCARD S/A": {
+        "count": 5,
+        "valor": 50032.48000000001
+      },
+      "OUROCARD": {
+        "count": 1,
+        "valor": 94.83
+      }
+    }
+  }
+}

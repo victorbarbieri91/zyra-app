@@ -1,0 +1,174 @@
+{
+  "resultados": [
+    {
+      "filename": "migracao-financeiro04.06-utf8.csv",
+      "cartaoIncluidos": {
+        "porFornecedor": {
+          "BANCO BRADESCO CARTOES": {
+            "count": 2,
+            "valor": 40.32
+          }
+        },
+        "total": 2,
+        "valor": 40.32,
+        "registros": [
+          {
+            "data": "25/04/2025",
+            "fornecedor": "BANCO BRADESCO CARTOES S/A",
+            "descricao": "Anuidade 01/12",
+            "valor": 20.16
+          },
+          {
+            "data": "25/06/2025",
+            "fornecedor": "BANCO BRADESCO CARTOES S/A",
+            "descricao": "Anuidade 003/012",
+            "valor": 20.16
+          }
+        ]
+      },
+      "outros": {
+        "despesas": 179,
+        "receitas": 58,
+        "valorDespesas": 408860.24,
+        "valorReceitas": 358343.7199999999
+      }
+    },
+    {
+      "filename": "migracao-financeiro01a03.25-utf8.csv",
+      "cartaoIncluidos": {
+        "porFornecedor": {
+          "C6 CARTAO DE CREDITO": {
+            "count": 17,
+            "valor": 3545.93
+          }
+        },
+        "total": 17,
+        "valor": 3545.93,
+        "registros": [
+          {
+            "data": "10/02/2025",
+            "fornecedor": "C6 CARTAO DE CREDITO",
+            "descricao": "Estacionamento",
+            "valor": 20.29
+          },
+          {
+            "data": "10/02/2025",
+            "fornecedor": "C6 CARTAO DE CREDITO",
+            "descricao": "AlimentaçãoEmporio Alme Campina",
+            "valor": 430.08
+          },
+          {
+            "data": "10/02/2025",
+            "fornecedor": "C6 CARTAO DE CREDITO",
+            "descricao": "CombustívelAuto Posto Molon",
+            "valor": 96.42
+          },
+          {
+            "data": "10/02/2025",
+            "fornecedor": "C6 CARTAO DE CREDITO",
+            "descricao": "CombustívelAuto Posto Cardeal",
+            "valor": 273
+          },
+          {
+            "data": "10/02/2025",
+            "fornecedor": "C6 CARTAO DE CREDITO",
+            "descricao": "LINKEDIN",
+            "valor": 2.93
+          },
+          {
+            "data": "10/02/2025",
+            "fornecedor": "C6 CARTAO DE CREDITO",
+            "descricao": "Linkedin",
+            "valor": 30
+          },
+          {
+            "data": "10/02/2025",
+            "fornecedor": "C6 CARTAO DE CREDITO",
+            "descricao": "OAB/MG - Almir - 8 parcelasParc 01/08",
+            "valor": 122.26
+          },
+          {
+            "data": "10/02/2025",
+            "fornecedor": "C6 CARTAO DE CREDITO",
+            "descricao": "OAB/RJ - Almir",
+            "valor": 157.13
+          },
+          {
+            "data": "10/02/2025",
+            "fornecedor": "C6 CARTAO DE CREDITO",
+            "descricao": "Anuidade OAB - Almir - 5 parcelas de R$ 199,54001/005",
+            "valor": 199.56
+          },
+          {
+            "data": "10/02/2025",
+            "fornecedor": "C6 CARTAO DE CREDITO",
+            "descricao": "Debit/Compra: 43542Reemissão do certificado digital da Belco",
+            "valor": 232.05
+          },
+          {
+            "data": "10/02/2025",
+            "fornecedor": "C6 CARTAO DE CREDITO",
+            "descricao": "JURÍDICO AI",
+            "valor": 99
+          },
+          {
+            "data": "10/02/2025",
+            "fornecedor": "C6 CARTAO DE CREDITO",
+            "descricao": "MP EC* TECHLEGAL",
+            "valor": 187
+          },
+          {
+            "data": "10/02/2025",
+            "fornecedor": "C6 CARTAO DE CREDITO",
+            "descricao": "DELLParcela 003/012",
+            "valor": 550.58
+          },
+          {
+            "data": "10/02/2025",
+            "fornecedor": "C6 CARTAO DE CREDITO",
+            "descricao": "Notebook - DELLParc 003/012",
+            "valor": 518.9
+          },
+          {
+            "data": "10/02/2025",
+            "fornecedor": "C6 CARTAO DE CREDITO",
+            "descricao": "OPENAI *CHATGPT (US$ Transações exterior)",
+            "valor": 125.6
+          },
+          {
+            "data": "10/02/2025",
+            "fornecedor": "C6 CARTAO DE CREDITO",
+            "descricao": "OPENAI *CHATGPT SUBSCR + 1 (IOF Transações exterior)",
+            "valor": 4.25
+          },
+          {
+            "data": "10/02/2025",
+            "fornecedor": "C6 CARTAO DE CREDITO",
+            "descricao": "Seguro Responsabilidade CivilPORTO SEGURO - 10/10",
+            "valor": 496.88
+          }
+        ]
+      },
+      "outros": {
+        "despesas": 204,
+        "receitas": 164,
+        "valorDespesas": 356050.45999999956,
+        "valorReceitas": 171892.88899999994
+      }
+    }
+  ],
+  "resumo": {
+    "totalCartao": 19,
+    "valorCartao": 3586.25,
+    "porFornecedor": {
+      "BANCO BRADESCO CARTOES": {
+        "count": 2,
+        "valor": 40.32
+      },
+      "C6 CARTAO DE CREDITO": {
+        "count": 17,
+        "valor": 3545.93
+      }
+    }
+  }
+}

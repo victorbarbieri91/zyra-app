@@ -44,7 +44,7 @@ import EmptyState from '@/components/dashboard/EmptyState'
 import AlertasCard from '@/components/dashboard/AlertasCard'
 
 // Modais de ações rápidas
-import TarefaModal from '@/components/agenda/TarefaModal'
+import TarefaWizard from '@/components/agenda/TarefaWizard'
 import { ConsultaWizardModal } from '@/components/consultivo/ConsultaWizardModal'
 import ProcessoWizard from '@/components/processos/ProcessoWizard'
 
@@ -853,11 +853,12 @@ export default function DashboardPage() {
         </div>
 
         {/* Modais de Ações Rápidas */}
-        <TarefaModal
-          open={tarefaModalOpen}
-          onOpenChange={setTarefaModalOpen}
-          escritorioId={escritorioAtivo}
-        />
+        {tarefaModalOpen && escritorioAtivo && (
+          <TarefaWizard
+            escritorioId={escritorioAtivo}
+            onClose={() => setTarefaModalOpen(false)}
+          />
+        )}
 
         <ConsultaWizardModal
           open={consultaModalOpen}

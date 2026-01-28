@@ -1,0 +1,89 @@
+{
+  "total": 182,
+  "pagar": {
+    "count": 102,
+    "valor": 92583.95000000003,
+    "categorias": {
+      "OAB e Associações": 1,
+      "Informática - Softwares": 22,
+      "Combustível": 6,
+      "Materiais de escritório": 3,
+      "Alimentação": 4,
+      "Cartão de Crédito": 3,
+      "IOF": 2,
+      "undefined": 15,
+      "Tarifas e custos bancários": 3,
+      "Retirada dos sócios": 10,
+      "Pró-labore": 5,
+      "Pagamento de juros": 2,
+      "Estacionamento": 6,
+      "Estadia": 1,
+      "Prestadores de Serviço": 1,
+      "ISS": 1,
+      "Aluguel": 4,
+      "Pagamento de empréstimos": 4,
+      "Despesas de Marketing": 7,
+      "Telefonia": 1,
+      "Outros tributos e taxas": 1
+    },
+    "formas": {
+      "Debito Automatico": 27,
+      "Pix": 17,
+      "Boleto": 11,
+      "Cartão de crédito": 47
+    },
+    "fornecedores": [
+      "BANCO BRADESCO CARTOES S/A",
+      "BANCO C6 S.A.",
+      "ALMIR POLYCARPO",
+      "ANDREI GOMES DA SILVA PINTO",
+      "BANCO ITAU",
+      "FLAVIA MARTINS FUZARO POLYCARPO",
+      "Marcia Xavier de Melo e Silva",
+      "Paloma Luczka dos Santos",
+      "Victor Tavolaro Barbieri",
+      "VIOS DES.COM.PROG.COMPUTADOR LTDA",
+      "BRADESCO SAUDE S/A",
+      "Ourocard Bb. S.a.",
+      "QUALI CONTABIL EIRELI",
+      "Btg Pactual - Cnpj 30.306.294/0001-45",
+      "PREFEITURA DO MUNICIPIO DE SAO PAULO",
+      "BANCO BRADESCO S/A",
+      "BANCO DO BRASIL S/A",
+      "REGUS DO BRASIL LTDA",
+      "CARTAO DE CREDITO SANTANDER",
+      "C6 CARTAO DE CREDITO",
+      "CLARO EMPRESAS",
+      "RECEITA FEDERAL",
+      "SECRETARIA DA RECEITA FEDERAL",
+      "ODONTOPREV S.A.",
+      "TRIBUNAL DE JUSTICA DO ESPIRITO SANTO"
+    ]
+  },
+  "receber": {
+    "count": 13,
+    "valor": 5381.14,
+    "categorias": {
+      "undefined": 11,
+      "Reembolso de valores": 2
+    },
+    "formas": {
+      "Pix": 12,
+      "Debito Automatico": 1
+    },
+    "contratos": {},
+    "clientes": [
+      "Zait Engenharia Ltda.",
+      "REGUS DO BRASIL LTDA",
+      "Belcorp do Brasil Distribuidora de Cosmeticos Ltda.",
+      "Inova Ts Engenharia Ltda.",
+      "Ourocard Bb. S.a.",
+      "PROHABITAT SOLUCOES AMBIENTAIS LTDA.",
+      "Yofc Brasil Cabos e Solucoes Ltda"
+    ]
+  },
+  "periodo": {
+    "inicio": "---",
+    "fim": "850"
+  }
+}

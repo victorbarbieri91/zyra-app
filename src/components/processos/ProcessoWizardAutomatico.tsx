@@ -47,7 +47,7 @@ interface ProcessoWizardAutomaticoProps {
   open: boolean
   onClose: () => void
   dadosEscavador: ProcessoEscavadorNormalizado
-  onProcessoCriado?: () => void
+  onProcessoCriado?: (processoId: string) => void
 }
 
 interface ClienteOption {
@@ -249,46 +249,84 @@ export default function ProcessoWizardAutomatico({
     setLoading(true)
 
     try {
+      // Obter escritorio_id do usuário
+      const { data: user } = await supabase.auth.getUser()
+      if (!user.user) {
+        toast.error('Usuário não autenticado')
+        return
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('escritorio_id')
+        .eq('id', user.user.id)
+        .single()
+
+      if (!profile?.escritorio_id) {
+        toast.error('Escritório não encontrado')
+        return
+      }
+
       // Extrair parte contraria do polo oposto
       const parteContraria = partesPassivas[0]?.nome ||
                              dadosEscavador.titulo_polo_passivo ||
                              partesAtivas[0]?.nome ||
                              dadosEscavador.titulo_polo_ativo || ''
 
-      // Montar dados do processo
+      // Determinar área jurídica (mapear se necessário)
+      const areaJuridica = mapearArea(dadosEscavador.area || dadosEscavador.classe || 'Cível')
+
+      // Montar dados do processo para inserção
       const processData = {
+        escritorio_id: profile.escritorio_id,
         numero_cnj: dadosEscavador.numero_cnj,
-        outros_numeros: [], // Escavador sempre retorna CNJ, outros números ficam vazios
-        tipo: dadosEscavador.tipo,
-        area: dadosEscavador.area,
-        classe: dadosEscavador.classe,
-        objeto_acao: dadosEscavador.assunto || dadosEscavador.assunto_principal,
+        outros_numeros: [],
+        tipo: dadosEscavador.tipo || 'judicial',
+        area: areaJuridica,
+        objeto_acao: dadosEscavador.assunto || dadosEscavador.assunto_principal || dadosEscavador.classe || '',
         tribunal: dadosEscavador.tribunal,
-        instancia: dadosEscavador.instancia,
-        comarca: dadosEscavador.comarca,
-        vara: dadosEscavador.vara || dadosEscavador.orgao_julgador,
-        valor_causa: dadosEscavador.valor_causa,
-        data_distribuicao: dadosEscavador.data_distribuicao,
+        instancia: mapearInstancia(dadosEscavador.instancia),
+        comarca: dadosEscavador.comarca || dadosEscavador.cidade || '',
+        vara: dadosEscavador.vara || dadosEscavador.orgao_julgador || '',
+        uf: dadosEscavador.estado || '',
+        valor_causa: dadosEscavador.valor_causa || null,
+        data_distribuicao: dadosEscavador.data_distribuicao || new Date().toISOString().split('T')[0],
         cliente_id: clienteId,
         responsavel_id: responsavelId,
         fase: 'conhecimento',
         status: 'ativo',
         parte_contraria: parteContraria,
         polo_cliente: partesAtivas.length > 0 ? 'ativo' : 'passivo',
+        created_by: user.user.id,
       }
 
-      // TODO: Chamar function create_processo() do Supabase
-      console.log('Dados do processo:', processData)
+      // Inserir processo no banco
+      const { data: novoProcesso, error } = await supabase
+        .from('processos_processos')
+        .insert(processData)
+        .select('id')
+        .single()
+
+      if (error) {
+        console.error('Erro ao criar processo:', error)
+        if (error.code === '23505') {
+          toast.error('Já existe um processo com este número CNJ')
+        } else {
+          toast.error(`Erro ao criar processo: ${error.message}`)
+        }
+        return
+      }
 
       // Se ativar monitoramento, chamar API
-      if (ativarMonitoramento) {
+      if (ativarMonitoramento && novoProcesso) {
         try {
           const monitorResponse = await fetch('/api/escavador/monitoramento', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               numero_cnj: dadosEscavador.numero_cnj,
-              tribunal: dadosEscavador.tribunal
+              tribunal: dadosEscavador.tribunal,
+              processo_id: novoProcesso.id
             })
           })
 
@@ -303,13 +341,37 @@ export default function ProcessoWizardAutomatico({
 
       toast.success('Processo criado com sucesso!')
       handleClose()
-      onProcessoCriado?.()
+      onProcessoCriado?.(novoProcesso.id)
     } catch (error) {
       console.error('Erro ao criar processo:', error)
       toast.error('Erro ao criar processo. Tente novamente.')
     } finally {
       setLoading(false)
     }
+  }
+
+  // Mapear área jurídica
+  const mapearArea = (area: string): string => {
+    const areaLower = area.toLowerCase()
+    if (areaLower.includes('trabalhist') || areaLower.includes('trabalho')) return 'Trabalhista'
+    if (areaLower.includes('família') || areaLower.includes('familia')) return 'Família'
+    if (areaLower.includes('criminal') || areaLower.includes('penal')) return 'Criminal'
+    if (areaLower.includes('tributár') || areaLower.includes('tributar') || areaLower.includes('fiscal')) return 'Tributária'
+    if (areaLower.includes('consumidor') || areaLower.includes('cdc')) return 'Consumidor'
+    if (areaLower.includes('empresar') || areaLower.includes('falência')) return 'Empresarial'
+    return 'Cível'
+  }
+
+  // Mapear instância
+  const mapearInstancia = (instancia: string | number | undefined): string => {
+    if (!instancia) return '1ª'
+    const inst = String(instancia)
+    if (inst === '1' || inst.includes('1')) return '1ª'
+    if (inst === '2' || inst.includes('2')) return '2ª'
+    if (inst.toLowerCase().includes('stj')) return 'STJ'
+    if (inst.toLowerCase().includes('stf')) return 'STF'
+    if (inst.toLowerCase().includes('tst')) return 'TST'
+    return '1ª'
   }
 
   // Componente para exibir uma parte

@@ -1,0 +1,16 @@
+INSERT INTO financeiro_despesas (escritorio_id, descricao, valor, data_vencimento, data_pagamento, status, categoria, forma_pagamento, fornecedor) VALUES
+('f2568999-0ae6-47db-9293-a6f1672ed421', 'DARF UNIFICADA PIS COD 8109 COFINS COD 2172', 109.48, '2025-09-25', '2025-09-25', 'pago', 'impostos', 'boleto', 'Receita Federal'),
+('f2568999-0ae6-47db-9293-a6f1672ed421', 'Regus Aluguel _ Taxa de endereço Escritório São Paulo', 281.33, '2025-09-25', '2025-09-15', 'pago', 'aluguel', 'boleto', 'Regus do Brasil LTDA'),
+('f2568999-0ae6-47db-9293-a6f1672ed421', 'REFERENTE A IRPJ RETIDO NA NOTA FISCAL PAR ALMEIDA ENGENHARIA NO VALOR DE 3000,00', 45, '2025-09-26', '2025-09-23', 'pago', 'impostos', 'pix', 'Almeida Engenharia Consultoria e Construções LTDA.'),
+('f2568999-0ae6-47db-9293-a6f1672ed421', 'Retirada antecipada', 5000, '2025-09-26', '2025-09-26', 'pago', 'retirada_socios', 'pix', 'Almir Polycarpo'),
+('f2568999-0ae6-47db-9293-a6f1672ed421', 'Empréstimo para liquidação de cheque especial', 2653.98, '2025-09-26', '2025-08-29', 'pago', 'emprestimos', 'ted', 'Banco C6 S.A.'),
+('f2568999-0ae6-47db-9293-a6f1672ed421', 'Pagamento de despesa reembolsável de Custas Judiciais do cliente EDVALDO AILDER CATALANI MORATA - Origem: Atendimento (CI: 751) - Custas para retificação de registro civil em Santo Anastácio.', 308.63, '2025-09-26', '2025-09-26', 'pago', 'custas', 'pix', 'Cartorio'),
+('f2568999-0ae6-47db-9293-a6f1672ed421', 'PEDÁGIO', 6, '2025-09-27', '2025-09-27', 'pago', 'deslocamento', 'ted', 'Banco C6 S.A.'),
+('f2568999-0ae6-47db-9293-a6f1672ed421', 'Pagamento de despesa reembolsável de Custas Judiciais do cliente EDVALDO AILDER CATALANI MORATA - Origem: Atendimento (CI: 751) - Custas para apostilamento da certidão de casamento retificada.', 334, '2025-09-29', '2025-09-29', 'pago', 'custas', 'pix', '12 Cartorio de Notas'),
+('f2568999-0ae6-47db-9293-a6f1672ed421', 'TARIFA PIX ENVIADO', 10, '2025-09-29', '2025-09-29', 'pago', 'taxas_bancarias', 'ted', 'Banco do Brasil S/A'),
+('f2568999-0ae6-47db-9293-a6f1672ed421', 'TARIFA PIX ENVIADO', 10, '2025-09-30', '2025-09-30', 'pago', 'taxas_bancarias', 'ted', 'Banco do Brasil S/A'),
+('f2568999-0ae6-47db-9293-a6f1672ed421', 'Representação legal em audiência em 03/09/2025 - PROCESSO 0100290-78.2025.5.01.0071', 1800.04, '2025-09-30', '2025-09-30', 'pago', 'outra', 'pix', 'Chalfin,goldberg e Vainboim Advogados Associados'),
+('f2568999-0ae6-47db-9293-a6f1672ed421', 'PPI - Parcelamento de débitos Parcela 48/80', 478.48, '2025-09-30', '2025-09-30', 'pago', 'impostos', 'boleto', 'Prefeitura do Municipio de Sao Paulo'),
+('f2568999-0ae6-47db-9293-a6f1672ed421', 'DARF UNIFICADA CSLL E IRPJ Cota 03 - 1º Trimestre 2025', 7554.77, '2025-09-30', '2025-09-30', 'pago', 'impostos', 'boleto', 'Receita Federal'),
+('f2568999-0ae6-47db-9293-a6f1672ed421', 'DARF PARCELAMENTO 774022 DEBITO AUTOMÁTICO BRADESCO', 2797.53, '2025-09-30', '2025-09-30', 'pago', 'impostos', 'ted', 'Receita Federal'),
+('f2568999-0ae6-47db-9293-a6f1672ed421', 'Tributo federal em atraso- parcelamento DARF/RFB Código 1124 Parc. 10/49 parcelas, em debito automático no Banco do Brasil', 558.25, '2025-09-30', '2025-09-30', 'pago', 'impostos', 'boleto', 'Secretaria da Receita Federal do Brasil');

@@ -1,15 +1,12 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, Clock, AlertCircle, FileText, Users, Calendar, ArrowUpRight, ArrowDownRight, Target, Loader2, Building2, ChevronDown, Check } from 'lucide-react'
-import { differenceInDays, parseISO, format, addDays } from 'date-fns'
+import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Calendar, ArrowUpRight, ArrowDownRight, Target, Building2, ChevronDown, ChevronLeft, ChevronRight, Check } from 'lucide-react'
+import { differenceInDays, parseISO, format, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import MetricCard from '@/components/dashboard/MetricCard'
 import InsightCard from '@/components/dashboard/InsightCard'
-import TimelineItem from '@/components/dashboard/TimelineItem'
-import QuickActionButton from '@/components/dashboard/QuickActionButton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -44,7 +41,6 @@ interface ContaProxima {
 export default function FinanceiroDashboard() {
   const { escritorioAtivo } = useEscritorioAtivo()
   const supabase = createClient()
-  const router = useRouter()
 
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     receita_mes: 0,
@@ -59,14 +55,22 @@ export default function FinanceiroDashboard() {
 
   const [contasProximas, setContasProximas] = useState<ContaProxima[]>([])
   const [chartData, setChartData] = useState<{ mes: string; receitas: number; despesas: number }[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadingContas, setLoadingContas] = useState(true)
-  const [loadingChart, setLoadingChart] = useState(true)
+
+  // Estado para navegação de mês
+  const [mesSelecionado, setMesSelecionado] = useState<Date>(new Date())
 
   // Estados para multi-escritório (grupo)
   const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
   const [escritoriosSelecionados, setEscritoriosSelecionados] = useState<string[]>([])
   const [seletorAberto, setSeletorAberto] = useState(false)
+
+  // Funções de navegação de mês
+  const irMesAnterior = () => setMesSelecionado(prev => subMonths(prev, 1))
+  const irProximoMes = () => setMesSelecionado(prev => addMonths(prev, 1))
+  const irMesAtual = () => setMesSelecionado(new Date())
+  const mesNomeRaw = format(mesSelecionado, "MMMM 'de' yyyy", { locale: ptBR })
+  const mesNome = mesNomeRaw.charAt(0).toUpperCase() + mesNomeRaw.slice(1)
+  const isMesAtual = isSameMonth(mesSelecionado, new Date())
 
   // Carregar escritórios do grupo (com todos selecionados por padrão)
   useEffect(() => {
@@ -128,7 +132,7 @@ export default function FinanceiroDashboard() {
       loadChartData()
       loadInadimplencia()
     }
-  }, [escritoriosSelecionados])
+  }, [escritoriosSelecionados, mesSelecionado])
 
   const loadMetrics = async () => {
     if (!escritorioAtivo) return
@@ -137,20 +141,19 @@ export default function FinanceiroDashboard() {
     if (escritorioIds.length === 0) return
 
     try {
-      // Calcular métricas diretamente das tabelas fonte
-      const mesAtual = new Date()
-      const inicioMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1).toISOString().split('T')[0]
-      const fimMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0).toISOString().split('T')[0]
+      // Calcular métricas usando o mês selecionado
+      const inicioMes = format(startOfMonth(mesSelecionado), 'yyyy-MM-dd')
+      const fimMes = format(endOfMonth(mesSelecionado), 'yyyy-MM-dd')
 
       // Mês anterior para calcular variação
-      const mesAnterior = new Date(mesAtual.getFullYear(), mesAtual.getMonth() - 1, 1)
-      const inicioMesAnterior = mesAnterior.toISOString().split('T')[0]
-      const fimMesAnterior = new Date(mesAnterior.getFullYear(), mesAnterior.getMonth() + 1, 0).toISOString().split('T')[0]
+      const mesAnterior = subMonths(mesSelecionado, 1)
+      const inicioMesAnterior = format(startOfMonth(mesAnterior), 'yyyy-MM-dd')
+      const fimMesAnterior = format(endOfMonth(mesAnterior), 'yyyy-MM-dd')
 
-      // Buscar receitas do mês atual (pagas)
+      // Buscar receitas do mês atual (pagas) - inclui valor para casos onde valor_pago não foi preenchido
       const { data: receitasMes } = await supabase
         .from('financeiro_receitas')
-        .select('valor_pago')
+        .select('valor, valor_pago')
         .in('escritorio_id', escritorioIds)
         .eq('status', 'pago')
         .gte('data_pagamento', inicioMes)
@@ -168,7 +171,7 @@ export default function FinanceiroDashboard() {
       // Buscar receitas do mês anterior para variação
       const { data: receitasMesAnterior } = await supabase
         .from('financeiro_receitas')
-        .select('valor_pago')
+        .select('valor, valor_pago')
         .in('escritorio_id', escritorioIds)
         .eq('status', 'pago')
         .gte('data_pagamento', inicioMesAnterior)
@@ -179,10 +182,14 @@ export default function FinanceiroDashboard() {
       const despesasMesArray = Array.isArray(despesasMes) ? despesasMes : []
       const receitasMesAnteriorArray = Array.isArray(receitasMesAnterior) ? receitasMesAnterior : []
 
-      // Calcular totais
-      const totalReceitaMes = receitasMesArray.reduce((sum, r) => sum + (Number(r.valor_pago) || 0), 0)
+      // Calcular totais (usa valor_pago se preenchido, senão usa valor)
+      const getValorReceita = (r: { valor?: number; valor_pago?: number }) => {
+        const vp = Number(r.valor_pago) || 0
+        return vp > 0 ? vp : Number(r.valor) || 0
+      }
+      const totalReceitaMes = receitasMesArray.reduce((sum, r) => sum + getValorReceita(r), 0)
       const totalDespesasMes = despesasMesArray.reduce((sum, d) => sum + (Number(d.valor) || 0), 0)
-      const totalReceitaMesAnterior = receitasMesAnteriorArray.reduce((sum, r) => sum + (Number(r.valor_pago) || 0), 0)
+      const totalReceitaMesAnterior = receitasMesAnteriorArray.reduce((sum, r) => sum + getValorReceita(r), 0)
 
       // Calcular variação
       const variacaoReceita = totalReceitaMesAnterior > 0
@@ -207,8 +214,6 @@ export default function FinanceiroDashboard() {
       })
     } catch (error) {
       console.error('Erro ao carregar métricas:', error instanceof Error ? error.message : error)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -218,23 +223,32 @@ export default function FinanceiroDashboard() {
     const escritorioIds = getEscritorioIds()
     if (escritorioIds.length === 0) return
 
-    setLoadingContas(true)
     try {
-      // Buscar contas dos próximos 7 dias da view v_contas_receber_pagar
-      const dataLimite = addDays(new Date(), 7).toISOString().split('T')[0]
+      // Se é o mês atual, busca próximos 7 dias. Senão, busca todo o mês selecionado
+      const inicioMes = format(startOfMonth(mesSelecionado), 'yyyy-MM-dd')
+      const fimMes = format(endOfMonth(mesSelecionado), 'yyyy-MM-dd')
 
       const { data, error } = await supabase
         .from('v_contas_receber_pagar')
         .select('id, tipo_conta, descricao, valor, data_vencimento, status, dias_atraso, cliente_fornecedor')
         .in('escritorio_id', escritorioIds)
-        .lte('data_vencimento', dataLimite)
-        .in('status', ['pendente', 'atrasado'])
+        .gte('data_vencimento', inicioMes)
+        .lte('data_vencimento', fimMes)
         .order('data_vencimento', { ascending: true })
         .limit(10)
 
       if (error) throw error
 
-      const contas: ContaProxima[] = (data || []).map((c) => {
+      const contas: ContaProxima[] = (data || []).map((c: {
+        id: string
+        tipo_conta: string
+        descricao: string | null
+        valor: number | null
+        data_vencimento: string | null
+        status: string | null
+        dias_atraso: number | null
+        cliente_fornecedor: string | null
+      }) => {
         const vencimento = c.data_vencimento || ''
         const diasAteVencimento = vencimento
           ? differenceInDays(parseISO(vencimento), new Date())
@@ -255,8 +269,6 @@ export default function FinanceiroDashboard() {
     } catch (error) {
       console.error('Erro ao carregar contas próximas:', error instanceof Error ? error.message : error)
       setContasProximas([])
-    } finally {
-      setLoadingContas(false)
     }
   }
 
@@ -267,20 +279,20 @@ export default function FinanceiroDashboard() {
     const escritorioIds = getEscritorioIds()
     if (escritorioIds.length === 0) return
 
-    setLoadingChart(true)
     try {
-      // Buscar dados dos últimos 6 meses
-      const dataInicio = new Date()
-      dataInicio.setMonth(dataInicio.getMonth() - 6)
-      const dataInicioStr = dataInicio.toISOString().split('T')[0]
+      // Buscar dados dos 6 meses terminando no mês selecionado
+      const dataInicio = subMonths(startOfMonth(mesSelecionado), 5)
+      const dataInicioStr = format(dataInicio, 'yyyy-MM-dd')
+      const dataFimStr = format(endOfMonth(mesSelecionado), 'yyyy-MM-dd')
 
-      // Buscar receitas pagas
+      // Buscar receitas pagas (incluindo valor para casos onde valor_pago não foi preenchido)
       const { data: receitas, error: errReceitas } = await supabase
         .from('financeiro_receitas')
-        .select('valor_pago, data_pagamento')
+        .select('valor, valor_pago, data_pagamento')
         .in('escritorio_id', escritorioIds)
         .eq('status', 'pago')
         .gte('data_pagamento', dataInicioStr)
+        .lte('data_pagamento', dataFimStr)
 
       // Buscar despesas pagas
       const { data: despesas, error: errDespesas } = await supabase
@@ -289,6 +301,7 @@ export default function FinanceiroDashboard() {
         .in('escritorio_id', escritorioIds)
         .eq('status', 'pago')
         .gte('data_pagamento', dataInicioStr)
+        .lte('data_pagamento', dataFimStr)
 
       if (errReceitas) throw errReceitas
       if (errDespesas) throw errDespesas
@@ -300,20 +313,20 @@ export default function FinanceiroDashboard() {
       // Agrupar por mês
       const porMes: Record<string, { receitas: number; despesas: number }> = {}
 
-      // Inicializar últimos 6 meses
+      // Inicializar 6 meses terminando no mês selecionado
       for (let i = 5; i >= 0; i--) {
-        const mes = new Date()
-        mes.setMonth(mes.getMonth() - i)
+        const mes = subMonths(mesSelecionado, i)
         const chave = format(mes, 'yyyy-MM')
         porMes[chave] = { receitas: 0, despesas: 0 }
       }
 
-      // Somar receitas por mês
+      // Somar receitas por mês (usa valor_pago se preenchido, senão usa valor)
       receitasArray.forEach((r) => {
         if (!r.data_pagamento) return
         const chave = r.data_pagamento.substring(0, 7)
         if (porMes[chave]) {
-          porMes[chave].receitas += Number(r.valor_pago) || 0
+          const valorRecebido = (Number(r.valor_pago) || 0) > 0 ? Number(r.valor_pago) : Number(r.valor) || 0
+          porMes[chave].receitas += valorRecebido
         }
       })
 
@@ -337,8 +350,6 @@ export default function FinanceiroDashboard() {
     } catch (error) {
       console.error('Erro ao carregar dados do gráfico:', error instanceof Error ? error.message : error)
       setChartData([])
-    } finally {
-      setLoadingChart(false)
     }
   }
 
@@ -349,12 +360,17 @@ export default function FinanceiroDashboard() {
     if (escritorioIds.length === 0) return
 
     try {
-      // Buscar receitas pendentes e atrasadas
+      // Buscar receitas pendentes e atrasadas com vencimento no mês selecionado
+      const inicioMes = format(startOfMonth(mesSelecionado), 'yyyy-MM-dd')
+      const fimMes = format(endOfMonth(mesSelecionado), 'yyyy-MM-dd')
+
       const { data: receitas, error } = await supabase
         .from('financeiro_receitas')
         .select('valor, valor_pago, status')
         .in('escritorio_id', escritorioIds)
         .in('status', ['pendente', 'atrasado', 'parcial'])
+        .gte('data_vencimento', inicioMes)
+        .lte('data_vencimento', fimMes)
 
       if (error) throw error
 
@@ -496,6 +512,40 @@ export default function FinanceiroDashboard() {
           )}
         </div>
 
+        {/* Navegador de Mês - Minimalista */}
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={irMesAnterior}
+            className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e] hover:bg-slate-100"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+
+          <button
+            onClick={irMesAtual}
+            className={cn(
+              "text-sm font-medium px-3 py-1 rounded-md transition-colors",
+              isMesAtual
+                ? "text-[#34495e]"
+                : "text-[#1E3A8A] hover:bg-[#1E3A8A]/5 cursor-pointer"
+            )}
+            title={!isMesAtual ? "Clique para voltar ao mês atual" : undefined}
+          >
+            {mesNome}
+          </button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={irProximoMes}
+            className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e] hover:bg-slate-100"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
         {/* KPIs Top Row - 4 cards estratégicos */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {/* 1. Receita do Mês */}
@@ -580,45 +630,6 @@ export default function FinanceiroDashboard() {
           />
         </div>
 
-        {/* Ações Rápidas */}
-        <Card className="border-slate-200 shadow-sm">
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-sm font-medium text-slate-700">
-              Ações Rápidas
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-2 pb-3">
-            <div className="grid grid-cols-3 md:grid-cols-5 gap-2.5">
-              <QuickActionButton
-                icon={FileText}
-                label="Novo Contrato"
-                onClick={() => router.push('/dashboard/financeiro/contratos-honorarios')}
-                variant="highlight"
-              />
-              <QuickActionButton
-                icon={DollarSign}
-                label="Novo Honorário"
-                onClick={() => router.push('/dashboard/financeiro/contratos-honorarios')}
-              />
-              <QuickActionButton
-                icon={CreditCard}
-                label="Nova Fatura"
-                onClick={() => router.push('/dashboard/financeiro/faturamento')}
-              />
-              <QuickActionButton
-                icon={TrendingDown}
-                label="Nova Despesa"
-                onClick={() => router.push('/dashboard/financeiro/receitas-despesas')}
-              />
-              <QuickActionButton
-                icon={Clock}
-                label="Timesheet"
-                onClick={() => router.push('/dashboard/financeiro/timesheet')}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Grid Principal - 3 colunas */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
@@ -654,23 +665,46 @@ export default function FinanceiroDashboard() {
                         borderRadius: '8px',
                         boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                       }}
-                      formatter={(value: number) => formatCurrency(value)}
                       labelStyle={{ color: '#34495e', fontWeight: 600, fontSize: '12px' }}
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          const receitas = payload.find(p => p.dataKey === 'receitas')?.value || 0
+                          const despesas = payload.find(p => p.dataKey === 'despesas')?.value || 0
+                          return (
+                            <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3">
+                              <p className="text-xs font-semibold text-[#34495e] mb-2">{label}</p>
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2.5 h-2.5 rounded-full bg-[#89bcbe]" />
+                                  <span className="text-xs text-slate-600">Receitas:</span>
+                                  <span className="text-xs font-semibold text-[#34495e]">{formatCurrency(Number(receitas))}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2.5 h-2.5 rounded-full bg-[#46627f]" />
+                                  <span className="text-xs text-slate-600">Despesas:</span>
+                                  <span className="text-xs font-semibold text-[#34495e]">{formatCurrency(Number(despesas))}</span>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        }
+                        return null
+                      }}
                     />
                     <Legend
                       wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}
                       iconType="circle"
-                      formatter={(value) => value === 'receitas' ? 'Receitas' : 'Despesas'}
-                    />
-                    <Bar
-                      dataKey="receitas"
-                      fill="#89bcbe"
-                      radius={[8, 8, 0, 0]}
-                      maxBarSize={60}
+                      formatter={(value) => value === 'despesas' ? 'Despesas' : 'Receitas'}
                     />
                     <Bar
                       dataKey="despesas"
                       fill="#46627f"
+                      radius={[8, 8, 0, 0]}
+                      maxBarSize={60}
+                    />
+                    <Bar
+                      dataKey="receitas"
+                      fill="#89bcbe"
                       radius={[8, 8, 0, 0]}
                       maxBarSize={60}
                     />
@@ -714,11 +748,11 @@ export default function FinanceiroDashboard() {
 
           {/* Coluna Direita */}
           <div className="space-y-4">
-            {/* Resumo 7 Dias - PRIMEIRO */}
+            {/* Resumo do Mês */}
             <Card className="border-slate-200 shadow-sm bg-gradient-to-br from-slate-50 to-white">
               <CardHeader className="pb-2 pt-3">
                 <CardTitle className="text-sm font-medium text-slate-700">
-                  Próximos 7 Dias
+                  Resumo de {format(mesSelecionado, 'MMMM', { locale: ptBR })}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-2 pb-3">
@@ -757,7 +791,7 @@ export default function FinanceiroDashboard() {
                       <TrendingUp className="h-3.5 w-3.5 text-white" />
                     </div>
                     <CardTitle className="text-sm font-medium text-[#34495e]">
-                      Recebimentos Próximos
+                      Recebimentos
                     </CardTitle>
                   </div>
                   <button className="text-xs text-[#89bcbe] hover:text-[#6ba9ab] hover:underline font-medium">
@@ -787,7 +821,7 @@ export default function FinanceiroDashboard() {
                           <div className="flex items-center gap-1.5">
                             <Calendar className="h-3 w-3 text-[#89bcbe] flex-shrink-0" />
                             <p className="text-[10px] text-[#46627f]">
-                              Vence em {conta.dias_ate_vencimento} {conta.dias_ate_vencimento === 1 ? 'dia' : 'dias'}
+                              {conta.vencimento ? format(parseISO(conta.vencimento), 'dd/MM/yyyy') : '-'}
                             </p>
                           </div>
                         </div>
@@ -810,7 +844,7 @@ export default function FinanceiroDashboard() {
                       <TrendingDown className="h-3.5 w-3.5 text-white" />
                     </div>
                     <CardTitle className="text-sm font-medium text-[#34495e]">
-                      Despesas Próximas
+                      Despesas a Pagar
                     </CardTitle>
                   </div>
                   <button className="text-xs text-[#46627f] hover:text-[#34495e] hover:underline font-medium">
@@ -837,7 +871,7 @@ export default function FinanceiroDashboard() {
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <Calendar className="h-3 w-3 text-slate-500 flex-shrink-0" />
                             <p className="text-[10px] text-[#46627f]">
-                              Vence em {conta.dias_ate_vencimento} {conta.dias_ate_vencimento === 1 ? 'dia' : 'dias'}
+                              {conta.vencimento ? format(parseISO(conta.vencimento), 'dd/MM/yyyy') : '-'}
                             </p>
                           </div>
                         </div>

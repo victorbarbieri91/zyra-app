@@ -1,21 +1,22 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import {
   CreditCard,
   ArrowLeft,
   Plus,
-  Calendar,
-  DollarSign,
   FileText,
   Receipt,
   Trash2,
   Edit2,
-  Download,
   CheckCircle,
   AlertCircle,
-  Clock,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCcw,
+  XCircle,
+  Repeat,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -39,13 +40,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import {
   useCartoesCredito,
   CartaoCredito,
-  DespesaCartao,
+  LancamentoCartao,
   FaturaCartao,
-  ParcelaCartao,
   CATEGORIAS_DESPESA_CARTAO,
   BANDEIRAS_CARTAO,
 } from '@/hooks/useCartoesCredito'
@@ -53,91 +59,172 @@ import CartaoModal from '@/components/financeiro/cartoes/CartaoModal'
 import DespesaCartaoModal from '@/components/financeiro/cartoes/DespesaCartaoModal'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { formatBrazilDate, formatBrazilDateTime } from '@/lib/timezone'
+import { formatBrazilDate } from '@/lib/timezone'
 
 export default function CartaoDetalhePage() {
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
   const cartaoId = params.id as string
-  const tabInicial = searchParams.get('tab') || 'despesas'
+  const tabInicial = searchParams.get('tab') || 'lancamentos'
 
   const { escritorioAtivo } = useEscritorioAtivo()
 
   // States
   const [cartao, setCartao] = useState<CartaoCredito | null>(null)
-  const [despesas, setDespesas] = useState<DespesaCartao[]>([])
+  const [lancamentos, setLancamentos] = useState<LancamentoCartao[]>([])
   const [faturas, setFaturas] = useState<FaturaCartao[]>([])
-  const [parcelas, setParcelas] = useState<ParcelaCartao[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState(tabInicial)
+
+  // Navegação de meses
+  const [mesAtual, setMesAtual] = useState<Date>(() => {
+    const hoje = new Date()
+    return new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+  })
 
   // Modais
   const [modalCartaoOpen, setModalCartaoOpen] = useState(false)
   const [modalDespesaOpen, setModalDespesaOpen] = useState(false)
-  const [despesaParaExcluir, setDespesaParaExcluir] = useState<string | null>(null)
+  const [lancamentoParaExcluir, setLancamentoParaExcluir] = useState<string | null>(null)
+  const [recorrenteParaCancelar, setRecorrenteParaCancelar] = useState<string | null>(null)
+  const [recorrenteParaReativar, setRecorrenteParaReativar] = useState<string | null>(null)
   const [faturaParaFechar, setFaturaParaFechar] = useState<string | null>(null)
 
   const {
     getCartao,
-    loadDespesas,
+    loadLancamentosMes,
     loadFaturas,
-    loadParcelas,
-    deleteDespesa,
+    deleteLancamento,
+    cancelarRecorrente,
+    reativarRecorrente,
     fecharFatura,
     pagarFatura,
   } = useCartoesCredito(escritorioAtivo)
 
+  // Formatação do mês de referência
+  const mesReferenciaStr = useMemo(() => {
+    return mesAtual.toISOString().slice(0, 10)
+  }, [mesAtual])
+
+  const mesNome = useMemo(() => {
+    return mesAtual.toLocaleDateString('pt-BR', {
+      month: 'long',
+      year: 'numeric',
+    })
+  }, [mesAtual])
+
   // Carregar dados
-  const loadData = useCallback(async () => {
+  const loadCartaoData = useCallback(async () => {
     if (!escritorioAtivo || !cartaoId) return
 
-    setLoading(true)
     try {
-      const [cartaoData, despesasData, faturasData, parcelasData] = await Promise.all([
-        getCartao(cartaoId),
-        loadDespesas(cartaoId),
-        loadFaturas(cartaoId),
-        loadParcelas(cartaoId),
-      ])
-
+      const cartaoData = await getCartao(cartaoId)
       setCartao(cartaoData)
-      setDespesas(despesasData)
-      setFaturas(faturasData)
-      setParcelas(parcelasData)
     } catch (error) {
-      console.error('Erro ao carregar dados:', error)
+      console.error('Erro ao carregar cartão:', error)
       toast.error('Erro ao carregar dados do cartão')
-    } finally {
-      setLoading(false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [escritorioAtivo, cartaoId])
+  }, [escritorioAtivo, cartaoId, getCartao])
+
+  const loadLancamentosData = useCallback(async () => {
+    if (!escritorioAtivo || !cartaoId) return
+
+    try {
+      const lancamentosData = await loadLancamentosMes(cartaoId, mesReferenciaStr)
+      setLancamentos(lancamentosData)
+    } catch (error) {
+      console.error('Erro ao carregar lançamentos:', error)
+      toast.error('Erro ao carregar lançamentos')
+    }
+  }, [escritorioAtivo, cartaoId, mesReferenciaStr, loadLancamentosMes])
+
+  const loadFaturasData = useCallback(async () => {
+    if (!escritorioAtivo || !cartaoId) return
+
+    try {
+      const faturasData = await loadFaturas(cartaoId)
+      setFaturas(faturasData)
+    } catch (error) {
+      console.error('Erro ao carregar faturas:', error)
+    }
+  }, [escritorioAtivo, cartaoId, loadFaturas])
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    await Promise.all([loadCartaoData(), loadLancamentosData(), loadFaturasData()])
+    setLoading(false)
+  }, [loadCartaoData, loadLancamentosData, loadFaturasData])
 
   useEffect(() => {
     loadData()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [escritorioAtivo, cartaoId])
+  }, [loadData])
+
+  // Recarregar lançamentos quando mudar o mês
+  useEffect(() => {
+    if (cartao) {
+      loadLancamentosData()
+    }
+  }, [mesReferenciaStr, cartao, loadLancamentosData])
+
+  // Navegação de meses
+  const irMesAnterior = () => {
+    setMesAtual(new Date(mesAtual.getFullYear(), mesAtual.getMonth() - 1, 1))
+  }
+
+  const irProximoMes = () => {
+    setMesAtual(new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 1))
+  }
+
+  const irMesAtual = () => {
+    const hoje = new Date()
+    setMesAtual(new Date(hoje.getFullYear(), hoje.getMonth(), 1))
+  }
 
   // Handlers
-  const handleDeleteDespesa = async () => {
-    if (!despesaParaExcluir) return
+  const handleDeleteLancamento = async () => {
+    if (!lancamentoParaExcluir) return
 
-    const success = await deleteDespesa(despesaParaExcluir)
+    const success = await deleteLancamento(lancamentoParaExcluir)
     if (success) {
-      toast.success('Despesa excluída com sucesso')
-      loadData()
+      toast.success('Lançamento excluído com sucesso')
+      loadLancamentosData()
     } else {
-      toast.error('Erro ao excluir despesa')
+      toast.error('Erro ao excluir lançamento')
     }
-    setDespesaParaExcluir(null)
+    setLancamentoParaExcluir(null)
+  }
+
+  const handleCancelarRecorrente = async () => {
+    if (!recorrenteParaCancelar) return
+
+    const success = await cancelarRecorrente(recorrenteParaCancelar)
+    if (success) {
+      toast.success('Recorrência cancelada com sucesso')
+      loadLancamentosData()
+    } else {
+      toast.error('Erro ao cancelar recorrência')
+    }
+    setRecorrenteParaCancelar(null)
+  }
+
+  const handleReativarRecorrente = async () => {
+    if (!recorrenteParaReativar) return
+
+    const success = await reativarRecorrente(recorrenteParaReativar)
+    if (success) {
+      toast.success('Recorrência reativada com sucesso')
+      loadLancamentosData()
+    } else {
+      toast.error('Erro ao reativar recorrência')
+    }
+    setRecorrenteParaReativar(null)
   }
 
   const handleFecharFatura = async () => {
     if (!faturaParaFechar || !cartao) return
 
-    const mesReferencia = new Date().toISOString().slice(0, 7) + '-01'
-    const faturaId = await fecharFatura(cartao.id, mesReferencia)
+    const faturaId = await fecharFatura(cartao.id, mesReferenciaStr)
 
     if (faturaId) {
       toast.success('Fatura fechada com sucesso! Um lançamento foi criado em Despesas.')
@@ -152,7 +239,7 @@ export default function CartaoDetalhePage() {
     const success = await pagarFatura(faturaId, 'pix')
     if (success) {
       toast.success('Fatura marcada como paga!')
-      loadData()
+      loadFaturasData()
     } else {
       toast.error('Erro ao pagar fatura')
     }
@@ -180,6 +267,37 @@ export default function CartaoDetalhePage() {
         return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Paga</Badge>
       case 'cancelada':
         return <Badge className="bg-slate-100 text-slate-700 border-slate-200">Cancelada</Badge>
+      default:
+        return null
+    }
+  }
+
+  const getTipoBadge = (lancamento: LancamentoCartao) => {
+    switch (lancamento.tipo) {
+      case 'unica':
+        return (
+          <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200">
+            À vista
+          </Badge>
+        )
+      case 'parcelada':
+        return (
+          <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+            {lancamento.parcela_numero}/{lancamento.parcela_total}
+          </Badge>
+        )
+      case 'recorrente':
+        return (
+          <Badge className={cn(
+            "border",
+            lancamento.recorrente_ativo
+              ? "bg-purple-100 text-purple-700 border-purple-200"
+              : "bg-slate-100 text-slate-500 border-slate-200"
+          )}>
+            <Repeat className="w-3 h-3 mr-1" />
+            {lancamento.recorrente_ativo ? 'Recorrente' : 'Cancelado'}
+          </Badge>
+        )
       default:
         return null
     }
@@ -218,37 +336,36 @@ export default function CartaoDetalhePage() {
 
   const bandeira = BANDEIRAS_CARTAO.find((b) => b.value === cartao.bandeira)
 
-  // Calcular fatura atual
-  const mesAtual = new Date().toISOString().slice(0, 7) + '-01'
-  const faturaAtual = faturas.find((f) => f.mes_referencia.startsWith(mesAtual.slice(0, 7)))
-  const valorFaturaAtual = parcelas
-    .filter((p) => p.mes_referencia.startsWith(mesAtual.slice(0, 7)))
-    .reduce((acc, p) => acc + p.valor, 0)
+  // Calcular valores do mês atual
+  const valorFaturaAtual = lancamentos.reduce((acc, l) => acc + l.valor, 0)
+  const faturaAtual = faturas.find((f) =>
+    f.mes_referencia.startsWith(mesReferenciaStr.slice(0, 7))
+  )
 
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="sm"
+            className="h-8 w-8 p-0"
             onClick={() => router.push('/dashboard/financeiro/cartoes')}
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
+            <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center"
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{ backgroundColor: cartao.cor }}
             >
-              <CreditCard className="w-6 h-6 text-white" />
+              <CreditCard className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-semibold text-[#34495e]">{cartao.nome}</h1>
-              <p className="text-sm text-slate-600">
-                {cartao.banco} - •••• {cartao.ultimos_digitos} - {bandeira?.label}
+              <h1 className="text-base font-medium text-[#34495e]">{cartao.nome}</h1>
+              <p className="text-xs text-slate-500">
+                {cartao.banco} •••• {cartao.ultimos_digitos}
               </p>
             </div>
           </div>
@@ -263,153 +380,168 @@ export default function CartaoDetalhePage() {
             className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Nova Despesa
+            Novo Lançamento
           </Button>
         </div>
-      </div>
-
-      {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-slate-200">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-500">Vencimento</p>
-                <p className="text-lg font-semibold text-[#34495e]">Dia {cartao.dia_vencimento}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-500">Fecha</p>
-                <p className="text-lg font-semibold text-[#34495e]">
-                  {cartao.dias_antes_fechamento} dias antes
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-500">Fatura Atual</p>
-                <p className="text-lg font-semibold text-[#34495e]">
-                  {formatCurrency(valorFaturaAtual)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                <Receipt className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-500">Despesas este mês</p>
-                <p className="text-lg font-semibold text-[#34495e]">
-                  {parcelas.filter((p) => p.mes_referencia.startsWith(mesAtual.slice(0, 7))).length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="bg-slate-100">
-          <TabsTrigger value="despesas">Despesas ({despesas.length})</TabsTrigger>
+          <TabsTrigger value="lancamentos">Lançamentos ({lancamentos.length})</TabsTrigger>
           <TabsTrigger value="faturas">Faturas ({faturas.length})</TabsTrigger>
-          <TabsTrigger value="parcelas">Parcelas ({parcelas.length})</TabsTrigger>
         </TabsList>
 
-        {/* Despesas */}
-        <TabsContent value="despesas">
+        {/* Lançamentos */}
+        <TabsContent value="lancamentos" className="space-y-4">
+          {/* Navegador de Meses com Destaque */}
+          <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={irMesAnterior}
+                className="h-9 w-9 p-0 hover:bg-white"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+
+              <div className="text-center min-w-[180px]">
+                <p className="text-lg font-semibold text-[#34495e] capitalize">{mesNome}</p>
+                <p className="text-xs text-slate-500">{lancamentos.length} lançamentos</p>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={irProximoMes}
+                className="h-9 w-9 p-0 hover:bg-white"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-xs text-slate-500">Total do mês</p>
+                <p className="text-lg font-bold text-[#34495e]">{formatCurrency(valorFaturaAtual)}</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={irMesAtual}
+                className="h-8 text-xs"
+              >
+                Hoje
+              </Button>
+            </div>
+          </div>
+
           <Card className="border-slate-200">
-            <CardHeader className="pb-2 pt-3">
-              <CardTitle className="text-sm font-medium text-slate-700">
-                Despesas do Cartão
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-2 pb-3">
-              {despesas.length === 0 ? (
+            <CardContent className="pt-4 pb-3">
+              {lancamentos.length === 0 ? (
                 <div className="py-8 text-center">
                   <Receipt className="h-10 w-10 mx-auto text-slate-300" />
-                  <p className="text-sm text-slate-500 mt-2">Nenhuma despesa registrada</p>
+                  <p className="text-sm text-slate-500 mt-2">
+                    Nenhum lançamento em {mesNome}
+                  </p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Data</TableHead>
+                      <TableHead>Data Compra</TableHead>
                       <TableHead>Descrição</TableHead>
                       <TableHead>Categoria</TableHead>
                       <TableHead>Fornecedor</TableHead>
-                      <TableHead className="text-center">Parcelas</TableHead>
-                      <TableHead className="text-right">Valor Total</TableHead>
+                      <TableHead className="text-center">Tipo</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {despesas.map((despesa) => (
-                      <TableRow key={despesa.id}>
+                    {lancamentos.map((lancamento) => (
+                      <TableRow key={lancamento.id}>
                         <TableCell className="text-sm">
-                          {formatBrazilDate(despesa.data_compra)}
+                          {formatBrazilDate(lancamento.data_compra)}
                         </TableCell>
-                        <TableCell className="font-medium">{despesa.descricao}</TableCell>
+                        <TableCell className="font-medium">{lancamento.descricao}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-xs">
-                            {getCategoriaLabel(despesa.categoria)}
+                            {getCategoriaLabel(lancamento.categoria)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-slate-600">
-                          {despesa.fornecedor || '-'}
+                          {lancamento.fornecedor || '-'}
                         </TableCell>
                         <TableCell className="text-center">
-                          {despesa.numero_parcelas > 1 ? (
-                            <Badge className="bg-blue-100 text-blue-700">
-                              {despesa.numero_parcelas}x
-                            </Badge>
-                          ) : (
-                            'À vista'
-                          )}
+                          {getTipoBadge(lancamento)}
                         </TableCell>
                         <TableCell className="text-right font-semibold">
-                          {formatCurrency(despesa.valor_total)}
+                          {formatCurrency(lancamento.valor)}
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => setDespesaParaExcluir(despesa.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                              >
+                                <span className="sr-only">Menu</span>
+                                <svg
+                                  className="h-4 w-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                                  />
+                                </svg>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {lancamento.tipo === 'recorrente' && (
+                                <>
+                                  {lancamento.recorrente_ativo ? (
+                                    <DropdownMenuItem
+                                      onClick={() => setRecorrenteParaCancelar(lancamento.compra_id)}
+                                      className="text-amber-600"
+                                    >
+                                      <XCircle className="h-4 w-4 mr-2" />
+                                      Cancelar Recorrência
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem
+                                      onClick={() => setRecorrenteParaReativar(lancamento.compra_id)}
+                                      className="text-emerald-600"
+                                    >
+                                      <RefreshCcw className="h-4 w-4 mr-2" />
+                                      Reativar Recorrência
+                                    </DropdownMenuItem>
+                                  )}
+                                </>
+                              )}
+                              <DropdownMenuItem
+                                onClick={() => setLancamentoParaExcluir(lancamento.id)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               )}
+
             </CardContent>
           </Card>
         </TabsContent>
@@ -446,6 +578,7 @@ export default function CartaoDetalhePage() {
                       <TableHead>Fechamento</TableHead>
                       <TableHead>Vencimento</TableHead>
                       <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-center">Lançamentos</TableHead>
                       <TableHead className="text-right">Valor</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
@@ -453,7 +586,7 @@ export default function CartaoDetalhePage() {
                   <TableBody>
                     {faturas.map((fatura) => (
                       <TableRow key={fatura.id}>
-                        <TableCell className="font-medium">
+                        <TableCell className="font-medium capitalize">
                           {new Date(fatura.mes_referencia).toLocaleDateString('pt-BR', {
                             month: 'long',
                             year: 'numeric',
@@ -463,6 +596,9 @@ export default function CartaoDetalhePage() {
                         <TableCell>{formatBrazilDate(fatura.data_vencimento)}</TableCell>
                         <TableCell className="text-center">
                           {getStatusBadge(fatura.status)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {fatura.total_lancamentos || 0}
                         </TableCell>
                         <TableCell className="text-right font-semibold">
                           {formatCurrency(fatura.valor_total)}
@@ -478,69 +614,6 @@ export default function CartaoDetalhePage() {
                               Pagar
                             </Button>
                           )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Parcelas */}
-        <TabsContent value="parcelas">
-          <Card className="border-slate-200">
-            <CardHeader className="pb-2 pt-3">
-              <CardTitle className="text-sm font-medium text-slate-700">
-                Todas as Parcelas
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-2 pb-3">
-              {parcelas.length === 0 ? (
-                <div className="py-8 text-center">
-                  <Receipt className="h-10 w-10 mx-auto text-slate-300" />
-                  <p className="text-sm text-slate-500 mt-2">Nenhuma parcela encontrada</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Mês Referência</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead className="text-center">Parcela</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {parcelas.map((parcela) => (
-                      <TableRow key={parcela.id}>
-                        <TableCell className="font-medium">
-                          {new Date(parcela.mes_referencia).toLocaleDateString('pt-BR', {
-                            month: 'long',
-                            year: 'numeric',
-                          })}
-                        </TableCell>
-                        <TableCell>{parcela.despesa_descricao}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {getCategoriaLabel(parcela.despesa_categoria || '')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {parcela.numero_parcela}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {parcela.faturada ? (
-                            <Badge className="bg-emerald-100 text-emerald-700">Faturada</Badge>
-                          ) : (
-                            <Badge className="bg-slate-100 text-slate-700">Pendente</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          {formatCurrency(parcela.valor)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -567,25 +640,32 @@ export default function CartaoDetalhePage() {
             onOpenChange={setModalDespesaOpen}
             escritorioId={escritorioAtivo}
             cartaoId={cartao.id}
-            onSuccess={loadData}
+            onSuccess={() => {
+              loadLancamentosData()
+              loadFaturasData()
+            }}
           />
         </>
       )}
 
-      {/* Dialogs */}
-      <AlertDialog open={!!despesaParaExcluir} onOpenChange={() => setDespesaParaExcluir(null)}>
+      {/* Dialog Excluir Lançamento */}
+      <AlertDialog open={!!lancamentoParaExcluir} onOpenChange={() => setLancamentoParaExcluir(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Despesa</AlertDialogTitle>
+            <AlertDialogTitle>Excluir Lançamento</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir esta despesa? Esta ação não pode ser desfeita.
-              Se a despesa for parcelada, todas as parcelas serão removidas.
+              Tem certeza que deseja excluir este lançamento? Esta ação não pode ser desfeita.
+              {lancamentos.find(l => l.id === lancamentoParaExcluir)?.tipo === 'parcelada' && (
+                <span className="block mt-2 text-amber-600 font-medium">
+                  Atenção: Esta é uma parcela. Todas as parcelas desta compra serão removidas.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeleteDespesa}
+              onClick={handleDeleteLancamento}
               className="bg-red-600 hover:bg-red-700"
             >
               Excluir
@@ -594,13 +674,57 @@ export default function CartaoDetalhePage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Dialog Cancelar Recorrente */}
+      <AlertDialog open={!!recorrenteParaCancelar} onOpenChange={() => setRecorrenteParaCancelar(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar Recorrência</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja cancelar esta recorrência? O lançamento não aparecerá mais
+              nos meses futuros, mas os lançamentos já gerados serão mantidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelarRecorrente}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              Cancelar Recorrência
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog Reativar Recorrente */}
+      <AlertDialog open={!!recorrenteParaReativar} onOpenChange={() => setRecorrenteParaReativar(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reativar Recorrência</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja reativar esta recorrência? O lançamento voltará a aparecer nos meses futuros.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleReativarRecorrente}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              Reativar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog Fechar Fatura */}
       <AlertDialog open={!!faturaParaFechar} onOpenChange={() => setFaturaParaFechar(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Fechar Fatura</AlertDialogTitle>
             <AlertDialogDescription>
               Ao fechar a fatura, um lançamento único será criado em Despesas com o valor
-              total de {formatCurrency(valorFaturaAtual)}. As novas despesas irão para a
+              total de {formatCurrency(valorFaturaAtual)}. Os novos lançamentos irão para a
               próxima fatura.
             </AlertDialogDescription>
           </AlertDialogHeader>

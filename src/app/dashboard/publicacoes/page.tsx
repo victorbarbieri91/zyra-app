@@ -20,7 +20,6 @@ import {
   CheckSquare,
   Gavel,
   FolderPlus,
-  MoreHorizontal,
   ListChecks,
   X,
   ChevronDown
@@ -33,7 +32,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -41,6 +39,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import MetricCard from '@/components/dashboard/MetricCard'
 import { createClient } from '@/lib/supabase/client'
@@ -48,6 +53,15 @@ import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { useAaspSync } from '@/hooks/useAaspSync'
 import { useEscavadorTermos } from '@/hooks/useEscavadorTermos'
 import { toast } from 'sonner'
+import TarefaWizard from '@/components/agenda/TarefaWizard'
+import EventoWizard from '@/components/agenda/EventoWizard'
+import AudienciaWizard from '@/components/agenda/AudienciaWizard'
+import ProcessoWizard from '@/components/processos/ProcessoWizard'
+import { BuscaCNJModal } from '@/components/processos/BuscaCNJModal'
+import ProcessoWizardAutomatico from '@/components/processos/ProcessoWizardAutomatico'
+import { useEventos } from '@/hooks/useEventos'
+import { useAudiencias } from '@/hooks/useAudiencias'
+import type { ProcessoEscavadorNormalizado } from '@/lib/escavador/types'
 
 // Tipos
 type StatusPublicacao = 'pendente' | 'em_analise' | 'processada' | 'arquivada'
@@ -79,13 +93,18 @@ interface Stats {
   processadasHoje: number
   urgentes: number
   prazosCriados: number
+  comProcesso: number
+  semProcesso: number
+  arquivadas: number
+  total: number
 }
+
+type AbaPublicacoes = 'todas' | 'com_processo' | 'sem_processo' | 'arquivadas'
 
 // Filtros rápidos pré-definidos
 const FILTROS_RAPIDOS = [
   { id: 'pendentes', label: 'Pendentes', filtro: { status: 'pendente' } },
   { id: 'urgentes', label: 'Urgentes', filtro: { apenasUrgentes: true } },
-  { id: 'sem_pasta', label: 'Sem Pasta', filtro: { semPasta: true } },
   { id: 'intimacoes', label: 'Intimações', filtro: { tipo: 'intimacao' } },
   { id: 'sentencas', label: 'Sentenças', filtro: { tipo: 'sentenca' } },
 ]
@@ -104,19 +123,36 @@ export default function PublicacoesPage() {
     pendentes: 0,
     processadasHoje: 0,
     urgentes: 0,
-    prazosCriados: 0
+    prazosCriados: 0,
+    comProcesso: 0,
+    semProcesso: 0,
+    arquivadas: 0,
+    total: 0
   })
   const [carregando, setCarregando] = useState(true)
+  const [abaAtiva, setAbaAtiva] = useState<AbaPublicacoes>('todas')
 
   // Seleção em massa
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [mostrarFiltrosAvancados, setMostrarFiltrosAvancados] = useState(false)
+
+  // Wizards para ações rápidas
+  const [wizardTarefa, setWizardTarefa] = useState<{ open: boolean; pub: Publicacao | null }>({ open: false, pub: null })
+  const [wizardEvento, setWizardEvento] = useState<{ open: boolean; pub: Publicacao | null }>({ open: false, pub: null })
+  const [wizardAudiencia, setWizardAudiencia] = useState<{ open: boolean; pub: Publicacao | null }>({ open: false, pub: null })
+
+  // Estado para criação de processo (fluxo com busca automática)
+  const [buscaCNJModal, setBuscaCNJModal] = useState<{ open: boolean; cnj: string }>({ open: false, cnj: '' })
+  const [wizardProcessoAuto, setWizardProcessoAuto] = useState<{ open: boolean; dados: ProcessoEscavadorNormalizado | null }>({ open: false, dados: null })
+  const [wizardProcessoManual, setWizardProcessoManual] = useState(false)
 
   const router = useRouter()
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
   const { sincronizarTodos, sincronizando: sincronizandoAasp } = useAaspSync(escritorioAtivo || undefined)
   const { sincronizar: sincronizarEscavador, sincronizando: sincronizandoEscavador, termos: termosEscavador } = useEscavadorTermos(escritorioAtivo || undefined)
+  const { createEvento } = useEventos(escritorioAtivo || undefined)
+  const { createAudiencia } = useAudiencias(escritorioAtivo || undefined)
 
   const sincronizando = sincronizandoAasp || sincronizandoEscavador
 
@@ -145,15 +181,23 @@ export default function PublicacoesPage() {
 
       // Calcular estatísticas
       const hoje = new Date().toISOString().split('T')[0]
-      const pendentes = publicacoesUnicas.filter(p => p.status === 'pendente').length
-      const processadasHoje = publicacoesUnicas.filter(p => p.status === 'processada' && p.updated_at?.startsWith(hoje)).length
-      const urgentes = publicacoesUnicas.filter(p => p.urgente).length
+      const naoArquivadas = publicacoesUnicas.filter(p => p.status !== 'arquivada')
+      const pendentes = naoArquivadas.filter(p => p.status === 'pendente').length
+      const processadasHoje = naoArquivadas.filter(p => p.status === 'processada' && p.updated_at?.startsWith(hoje)).length
+      const urgentes = naoArquivadas.filter(p => p.urgente).length
+      const comProcesso = naoArquivadas.filter(p => p.processo_id).length
+      const semProcesso = naoArquivadas.filter(p => !p.processo_id && p.numero_processo).length
+      const arquivadas = publicacoesUnicas.filter(p => p.status === 'arquivada').length
 
       setStats({
         pendentes,
         processadasHoje,
         urgentes,
-        prazosCriados: 0
+        prazosCriados: 0,
+        comProcesso,
+        semProcesso,
+        arquivadas,
+        total: naoArquivadas.length
       })
     } finally {
       setCarregando(false)
@@ -284,6 +328,18 @@ export default function PublicacoesPage() {
   // Filtrar publicações
   const publicacoesFiltradas = useMemo(() => {
     return publicacoes.filter(pub => {
+      // Filtro por aba
+      if (abaAtiva === 'arquivadas') {
+        if (pub.status !== 'arquivada') return false
+      } else {
+        // Nas outras abas, não mostrar arquivadas
+        if (pub.status === 'arquivada') return false
+
+        if (abaAtiva === 'com_processo' && !pub.processo_id) return false
+        if (abaAtiva === 'sem_processo' && pub.processo_id) return false
+      }
+
+      // Filtros adicionais
       if (filtros.busca) {
         const busca = filtros.busca.toLowerCase()
         const matchBusca =
@@ -299,7 +355,7 @@ export default function PublicacoesPage() {
       if (filtros.semPasta && !pub.numero_processo) return false // Precisa ter número mas não ter pasta
       return true
     })
-  }, [publicacoes, filtros])
+  }, [publicacoes, filtros, abaAtiva])
 
   // Verificar se há filtros ativos
   const temFiltrosAtivos = filtros.busca || filtros.status !== 'todos' || filtros.tipo !== 'todos' || filtros.apenasUrgentes || filtros.semPasta
@@ -412,28 +468,61 @@ export default function PublicacoesPage() {
     }
   }
 
-  // Navegar para criar agendamento com dados da publicação
-  const criarAgendamento = (pub: Publicacao, tipo: 'tarefa' | 'compromisso' | 'audiencia', e?: React.MouseEvent) => {
+  // Funções para abrir wizards com dados da publicação
+  const abrirWizardTarefa = (pub: Publicacao, e?: React.MouseEvent) => {
     e?.stopPropagation()
-    // Criar descrição com conteúdo da publicação
-    const descricao = encodeURIComponent(
-      `Publicação: ${pub.tipo_publicacao?.toUpperCase() || 'PUBLICAÇÃO'}\n` +
-      `Data: ${new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}\n` +
-      `Tribunal: ${pub.tribunal}\n` +
-      (pub.numero_processo ? `Processo: ${pub.numero_processo}\n` : '') +
-      `\n---\n${pub.texto_completo?.substring(0, 500) || ''}`
-    )
-
-    const params = new URLSearchParams({
-      tipo,
-      publicacao_id: pub.id,
-      descricao,
-      ...(pub.processo_id && { processo_id: pub.processo_id }),
-      ...(pub.numero_processo && { titulo: `${getTipoLabel(pub.tipo_publicacao)} - ${pub.numero_processo}` })
-    })
-
-    router.push(`/dashboard/agenda/novo?${params.toString()}`)
+    setWizardTarefa({ open: true, pub })
   }
+
+  const abrirWizardEvento = (pub: Publicacao, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    setWizardEvento({ open: true, pub })
+  }
+
+  const abrirWizardAudiencia = (pub: Publicacao, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    setWizardAudiencia({ open: true, pub })
+  }
+
+  const abrirWizardProcesso = (cnj: string, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    // Abre o modal de busca por CNJ com o número já preenchido
+    setBuscaCNJModal({ open: true, cnj })
+  }
+
+  // Handlers para o fluxo de criação de processo
+  const handleDadosEncontrados = (dados: ProcessoEscavadorNormalizado) => {
+    setBuscaCNJModal({ open: false, cnj: '' })
+    setWizardProcessoAuto({ open: true, dados })
+  }
+
+  const handleCadastroManual = () => {
+    setBuscaCNJModal({ open: false, cnj: '' })
+    setWizardProcessoManual(true)
+  }
+
+  // Gerar dados iniciais para os wizards baseado na publicação
+  const getInitialDataTarefa = (pub: Publicacao) => ({
+    titulo: `${getTipoLabel(pub.tipo_publicacao)} - ${pub.numero_processo || 'Publicação'}`,
+    descricao: `Publicação: ${pub.tipo_publicacao?.toUpperCase() || 'PUBLICAÇÃO'}\nData: ${new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}\nTribunal: ${pub.tribunal}\n${pub.numero_processo ? `Processo: ${pub.numero_processo}\n` : ''}\n---\n${pub.texto_completo?.substring(0, 500) || ''}`,
+    processo_id: pub.processo_id || undefined,
+    tipo: pub.tem_prazo ? 'prazo_processual' as const : 'outro' as const,
+    prioridade: pub.urgente ? 'alta' as const : 'media' as const,
+  })
+
+  const getInitialDataEvento = (pub: Publicacao) => ({
+    titulo: `${getTipoLabel(pub.tipo_publicacao)} - ${pub.numero_processo || 'Publicação'}`,
+    descricao: `Publicação: ${pub.tipo_publicacao?.toUpperCase() || 'PUBLICAÇÃO'}\nData: ${new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}\nTribunal: ${pub.tribunal}\n${pub.numero_processo ? `Processo: ${pub.numero_processo}\n` : ''}\n---\n${pub.texto_completo?.substring(0, 500) || ''}`,
+    processo_id: pub.processo_id || undefined,
+  })
+
+  const getInitialDataAudiencia = (pub: Publicacao) => ({
+    titulo: `Audiência - ${pub.numero_processo || 'Publicação'}`,
+    observacoes: `Publicação: ${pub.tipo_publicacao?.toUpperCase() || 'PUBLICAÇÃO'}\nData: ${new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}\nTribunal: ${pub.tribunal}\n${pub.numero_processo ? `Processo: ${pub.numero_processo}\n` : ''}\n---\n${pub.texto_completo?.substring(0, 500) || ''}`,
+    processo_id: pub.processo_id || undefined,
+    local: pub.tribunal || '',
+    vara: pub.vara || '',
+  })
 
   // Registrar na pasta do processo
   const registrarNaPasta = async (pub: Publicacao, e?: React.MouseEvent) => {
@@ -770,12 +859,56 @@ export default function PublicacoesPage() {
 
       {/* Tabela de Publicações */}
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-700">
-            Publicações Recebidas
-            {publicacoesFiltradas.length !== publicacoes.length && (
-              <span className="text-slate-400 font-normal ml-2">
-                ({publicacoesFiltradas.length} de {publicacoes.length})
+        {/* Abas dentro do card */}
+        <div className="p-4 border-b border-slate-200">
+          <Tabs value={abaAtiva} onValueChange={(v) => setAbaAtiva(v as AbaPublicacoes)}>
+            <TabsList className="bg-slate-100 p-1 h-9">
+              <TabsTrigger
+                value="todas"
+                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-3 text-sm h-7"
+              >
+                Todas
+                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px] bg-slate-200/80 text-slate-600">
+                  {stats.total}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger
+                value="com_processo"
+                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-3 text-sm h-7"
+              >
+                Com Pasta
+                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px] bg-[#89bcbe]/30 text-[#34495e]">
+                  {stats.comProcesso}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger
+                value="sem_processo"
+                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-3 text-sm h-7"
+              >
+                Sem Pasta
+                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px] bg-[#34495e]/10 text-[#46627f]">
+                  {stats.semProcesso}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger
+                value="arquivadas"
+                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-3 text-sm h-7"
+              >
+                Arquivadas
+                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px] bg-slate-200/80 text-slate-500">
+                  {stats.arquivadas}
+                </Badge>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-slate-600">
+            {publicacoesFiltradas.length} {publicacoesFiltradas.length === 1 ? 'publicação' : 'publicações'}
+            {temFiltrosAtivos && (
+              <span className="text-slate-400 font-normal ml-1">
+                (filtradas)
               </span>
             )}
           </h2>
@@ -784,7 +917,7 @@ export default function PublicacoesPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-xs gap-1.5"
+              className="h-7 text-xs gap-1.5 text-slate-500"
               onClick={selecionarTodos}
             >
               <ListChecks className="w-3.5 h-3.5" />
@@ -916,85 +1049,126 @@ export default function PublicacoesPage() {
                       )}
                     </td>
                     <td className="p-3">
-                      <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          title="Ver detalhes"
-                          onClick={() => router.push(`/dashboard/publicacoes/${pub.id}`)}
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </Button>
+                      <TooltipProvider delayDuration={200}>
+                        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                          {/* Botão Check Verde - Marcar como Tratada */}
+                          {pub.status !== 'processada' && pub.status !== 'arquivada' && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700"
+                                  onClick={(e) => marcarProcessada(pub.id, e)}
+                                >
+                                  <CheckCircle2 className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Marcar como tratada</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
 
-                        {/* Menu de ações */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="w-3.5 h-3.5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-52">
-                            {/* Agendar */}
-                            <DropdownMenuItem
-                              className="gap-2 cursor-pointer"
-                              onClick={(e) => criarAgendamento(pub, 'tarefa', e as any)}
-                            >
-                              <CheckSquare className="w-4 h-4" />
-                              Criar Tarefa
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="gap-2 cursor-pointer"
-                              onClick={(e) => criarAgendamento(pub, 'compromisso', e as any)}
-                            >
-                              <CalendarPlus className="w-4 h-4" />
-                              Criar Compromisso
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="gap-2 cursor-pointer"
-                              onClick={(e) => criarAgendamento(pub, 'audiencia', e as any)}
-                            >
-                              <Gavel className="w-4 h-4" />
-                              Criar Audiência
-                            </DropdownMenuItem>
-
-                            <DropdownMenuSeparator />
-
-                            {/* Registrar na pasta */}
-                            {pub.processo_id && (
+                          {/* Botão Calendário Azul - Dropdown para Agendamentos */}
+                          <DropdownMenu>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 hover:bg-blue-50 text-blue-600 hover:text-blue-700"
+                                  >
+                                    <CalendarPlus className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Agendar</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <DropdownMenuContent align="end" className="w-44">
                               <DropdownMenuItem
                                 className="gap-2 cursor-pointer"
-                                onClick={(e) => registrarNaPasta(pub, e as any)}
+                                onClick={(e) => abrirWizardTarefa(pub, e as any)}
                               >
-                                <FolderPlus className="w-4 h-4" />
-                                Registrar na Pasta
+                                <CheckSquare className="w-4 h-4" />
+                                Criar Tarefa
                               </DropdownMenuItem>
-                            )}
-
-                            {/* Marcar como tratada */}
-                            {pub.status !== 'processada' && (
                               <DropdownMenuItem
                                 className="gap-2 cursor-pointer"
-                                onClick={(e) => marcarProcessada(pub.id, e as any)}
+                                onClick={(e) => abrirWizardEvento(pub, e as any)}
                               >
-                                <CheckCircle2 className="w-4 h-4" />
-                                Marcar como Tratada
+                                <Calendar className="w-4 h-4" />
+                                Criar Compromisso
                               </DropdownMenuItem>
-                            )}
+                              <DropdownMenuItem
+                                className="gap-2 cursor-pointer"
+                                onClick={(e) => abrirWizardAudiencia(pub, e as any)}
+                              >
+                                <Gavel className="w-4 h-4" />
+                                Criar Audiência
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
 
-                            <DropdownMenuSeparator />
+                          {/* Botão Criar Pasta - Só aparece se tem número mas não tem pasta */}
+                          {pub.numero_processo && !pub.processo_id && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-slate-100 text-slate-500 hover:text-slate-700"
+                                  onClick={(e) => abrirWizardProcesso(pub.numero_processo!, e)}
+                                >
+                                  <FolderPlus className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Criar pasta do processo</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
 
-                            {/* Arquivar */}
-                            <DropdownMenuItem
-                              className="gap-2 cursor-pointer text-red-600 focus:text-red-600"
-                              onClick={(e) => arquivarPublicacao(pub.id, e as any)}
-                            >
-                              <Archive className="w-4 h-4" />
-                              Arquivar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                          {/* Botão Arquivar - Não aparece se já está arquivada */}
+                          {pub.status !== 'arquivada' && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+                                  onClick={(e) => arquivarPublicacao(pub.id, e)}
+                                >
+                                  <Archive className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Arquivar</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+
+                          {/* Botão Ver Detalhes */}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => router.push(`/dashboard/publicacoes/${pub.id}`)}
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Ver detalhes</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TooltipProvider>
                     </td>
                   </tr>
                 ))}
@@ -1003,6 +1177,132 @@ export default function PublicacoesPage() {
           </div>
         )}
       </div>
+
+      {/* Wizard de Tarefa */}
+      {wizardTarefa.open && wizardTarefa.pub && escritorioAtivo && (
+        <TarefaWizard
+          escritorioId={escritorioAtivo}
+          onClose={() => setWizardTarefa({ open: false, pub: null })}
+          initialData={getInitialDataTarefa(wizardTarefa.pub)}
+          onCreated={async () => {
+            // Marcar publicação como tratada após criar tarefa
+            if (wizardTarefa.pub) {
+              await supabase
+                .from('publicacoes_publicacoes')
+                .update({ status: 'processada', agendamento_tipo: 'tarefa' })
+                .eq('id', wizardTarefa.pub.id)
+            }
+            toast.success('Tarefa criada e publicação marcada como tratada')
+            setWizardTarefa({ open: false, pub: null })
+            carregarPublicacoes()
+          }}
+        />
+      )}
+
+      {/* Wizard de Evento/Compromisso */}
+      {wizardEvento.open && wizardEvento.pub && escritorioAtivo && (
+        <EventoWizard
+          escritorioId={escritorioAtivo}
+          onClose={() => setWizardEvento({ open: false, pub: null })}
+          initialData={getInitialDataEvento(wizardEvento.pub)}
+          onSubmit={async (data) => {
+            // Criar o evento
+            await createEvento({
+              ...data,
+              escritorio_id: escritorioAtivo,
+            })
+            // Marcar publicação como tratada após criar evento
+            if (wizardEvento.pub) {
+              await supabase
+                .from('publicacoes_publicacoes')
+                .update({ status: 'processada', agendamento_tipo: 'compromisso' })
+                .eq('id', wizardEvento.pub.id)
+            }
+            toast.success('Compromisso criado e publicação marcada como tratada')
+            setWizardEvento({ open: false, pub: null })
+            carregarPublicacoes()
+          }}
+        />
+      )}
+
+      {/* Wizard de Audiência */}
+      {wizardAudiencia.open && wizardAudiencia.pub && escritorioAtivo && (
+        <AudienciaWizard
+          escritorioId={escritorioAtivo}
+          onClose={() => setWizardAudiencia({ open: false, pub: null })}
+          initialData={getInitialDataAudiencia(wizardAudiencia.pub)}
+          onSubmit={async (data) => {
+            // Criar a audiência
+            await createAudiencia({
+              ...data,
+              escritorio_id: escritorioAtivo,
+            })
+            // Marcar publicação como tratada após criar audiência
+            if (wizardAudiencia.pub) {
+              await supabase
+                .from('publicacoes_publicacoes')
+                .update({ status: 'processada', agendamento_tipo: 'audiencia' })
+                .eq('id', wizardAudiencia.pub.id)
+            }
+            toast.success('Audiência criada e publicação marcada como tratada')
+            setWizardAudiencia({ open: false, pub: null })
+            carregarPublicacoes()
+          }}
+        />
+      )}
+
+      {/* Modal de Busca por CNJ (Criar Pasta) */}
+      <BuscaCNJModal
+        open={buscaCNJModal.open}
+        onClose={() => setBuscaCNJModal({ open: false, cnj: '' })}
+        onDadosEncontrados={handleDadosEncontrados}
+        onCadastroManual={handleCadastroManual}
+        initialCNJ={buscaCNJModal.cnj}
+      />
+
+      {/* Wizard Automático (com dados do Escavador) */}
+      {wizardProcessoAuto.open && wizardProcessoAuto.dados && (
+        <ProcessoWizardAutomatico
+          open={wizardProcessoAuto.open}
+          onClose={() => setWizardProcessoAuto({ open: false, dados: null })}
+          dadosEscavador={wizardProcessoAuto.dados}
+          onProcessoCriado={async (processoId: string) => {
+            // Vincular publicações ao processo criado (pelo número CNJ)
+            if (wizardProcessoAuto.dados?.numero_cnj && processoId) {
+              try {
+                const { error } = await supabase
+                  .from('publicacoes_publicacoes')
+                  .update({ processo_id: processoId })
+                  .eq('numero_processo', wizardProcessoAuto.dados.numero_cnj)
+                  .eq('escritorio_id', escritorioAtivo)
+
+                if (error) {
+                  console.error('Erro ao vincular publicações:', error)
+                } else {
+                  toast.success('Pasta criada e publicações vinculadas!')
+                }
+              } catch (err) {
+                console.error('Erro ao vincular publicações:', err)
+              }
+            }
+            setWizardProcessoAuto({ open: false, dados: null })
+            carregarPublicacoes()
+          }}
+        />
+      )}
+
+      {/* Wizard Manual (fallback) */}
+      {wizardProcessoManual && (
+        <ProcessoWizard
+          open={wizardProcessoManual}
+          onClose={() => setWizardProcessoManual(false)}
+          onSuccess={async (processoId) => {
+            toast.success('Pasta criada com sucesso!')
+            setWizardProcessoManual(false)
+            carregarPublicacoes()
+          }}
+        />
+      )}
     </div>
   )
 }

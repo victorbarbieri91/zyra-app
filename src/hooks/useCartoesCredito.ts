@@ -856,6 +856,87 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
     }
   }, [supabase])
 
+  // Verificar se existe fatura para um mês (retorna a fatura se existir)
+  const verificarFaturaExistente = useCallback(async (
+    cartaoId: string,
+    mesReferencia: string // formato: YYYY-MM-01
+  ): Promise<FaturaCartao | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('cartoes_credito_faturas')
+        .select('*')
+        .eq('cartao_id', cartaoId)
+        .eq('mes_referencia', mesReferencia)
+        .maybeSingle()
+
+      if (error) throw error
+      return data
+    } catch (err) {
+      console.error('Erro ao verificar fatura existente:', err)
+      return null
+    }
+  }, [supabase])
+
+  // Vincular lançamentos a uma fatura existente e atualizar o total
+  const vincularLancamentosAFatura = useCallback(async (
+    faturaId: string,
+    lancamentoIds: string[]
+  ): Promise<boolean> => {
+    try {
+      // 1. Vincular os lançamentos à fatura
+      const { error: updateError } = await supabase
+        .from('cartoes_credito_lancamentos')
+        .update({
+          fatura_id: faturaId,
+          faturado: true,
+          updated_at: new Date().toISOString(),
+        })
+        .in('id', lancamentoIds)
+
+      if (updateError) throw updateError
+
+      // 2. Recalcular o total da fatura
+      const { data: lancamentos } = await supabase
+        .from('cartoes_credito_lancamentos')
+        .select('valor')
+        .eq('fatura_id', faturaId)
+
+      const novoTotal = (lancamentos || []).reduce((sum, l) => sum + Number(l.valor), 0)
+
+      // 3. Atualizar o valor total da fatura
+      const { error: faturaError } = await supabase
+        .from('cartoes_credito_faturas')
+        .update({
+          valor_total: novoTotal,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', faturaId)
+
+      if (faturaError) throw faturaError
+
+      return true
+    } catch (err) {
+      console.error('Erro ao vincular lançamentos à fatura:', err)
+      return false
+    }
+  }, [supabase])
+
+  // Verificar duplicatas em lote (para importação)
+  const verificarDuplicatasEmLote = useCallback(async (
+    cartaoId: string,
+    transacoes: Array<{ data: string; descricao: string; valor: number }>
+  ): Promise<Map<string, boolean>> => {
+    const resultados = new Map<string, boolean>()
+
+    for (const t of transacoes) {
+      const key = `${t.data}|${t.descricao}|${t.valor}`
+      const isDuplicate = await verificarDuplicata(cartaoId, t.data, t.descricao, t.valor)
+      resultados.set(key, isDuplicate)
+    }
+
+    return resultados
+  }, [verificarDuplicata])
+
   return {
     loading,
     error,
@@ -885,5 +966,8 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
     updateImportacao,
     // Utilitários
     verificarDuplicata,
+    verificarDuplicatasEmLote,
+    verificarFaturaExistente,
+    vincularLancamentosAFatura,
   }
 }

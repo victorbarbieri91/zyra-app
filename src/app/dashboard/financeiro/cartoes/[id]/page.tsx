@@ -108,10 +108,11 @@ export default function CartaoDetalhePage() {
   }, [mesAtual])
 
   const mesNome = useMemo(() => {
-    return mesAtual.toLocaleDateString('pt-BR', {
+    const raw = mesAtual.toLocaleDateString('pt-BR', {
       month: 'long',
       year: 'numeric',
     })
+    return raw.charAt(0).toUpperCase() + raw.slice(1)
   }, [mesAtual])
 
   // Carregar dados
@@ -394,46 +395,39 @@ export default function CartaoDetalhePage() {
 
         {/* Lançamentos */}
         <TabsContent value="lancamentos" className="space-y-4">
-          {/* Navegador de Meses com Destaque */}
-          <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200">
-            <div className="flex items-center gap-3">
+          {/* Navegador de Meses */}
+          <div className="flex items-center justify-between">
+            <div className="flex-1" />
+
+            <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={irMesAnterior}
-                className="h-9 w-9 p-0 hover:bg-white"
+                className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e] hover:bg-slate-100"
               >
-                <ChevronLeft className="h-5 w-5" />
+                <ChevronLeft className="h-4 w-4" />
               </Button>
 
-              <div className="text-center min-w-[180px]">
-                <p className="text-lg font-semibold text-[#34495e] capitalize">{mesNome}</p>
-                <p className="text-xs text-slate-500">{lancamentos.length} lançamentos</p>
-              </div>
+              <span className="text-sm font-medium text-[#34495e] min-w-[140px] text-center">
+                {mesNome}
+              </span>
 
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={irProximoMes}
-                className="h-9 w-9 p-0 hover:bg-white"
+                className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e] hover:bg-slate-100"
               >
-                <ChevronRight className="h-5 w-5" />
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex-1 flex justify-end">
               <div className="text-right">
-                <p className="text-xs text-slate-500">Total do mês</p>
-                <p className="text-lg font-bold text-[#34495e]">{formatCurrency(valorFaturaAtual)}</p>
+                <p className="text-[10px] text-slate-400">Total</p>
+                <p className="text-sm font-semibold text-[#34495e]">{formatCurrency(valorFaturaAtual)}</p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={irMesAtual}
-                className="h-8 text-xs"
-              >
-                Hoje
-              </Button>
             </div>
           </div>
 

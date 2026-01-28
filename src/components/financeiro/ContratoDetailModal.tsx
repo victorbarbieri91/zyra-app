@@ -224,44 +224,47 @@ export default function ContratoDetailModal({
     ? { label: 'Ativo', class: 'bg-green-100 text-green-700', Icon: CheckCircle }
     : { label: 'Encerrado', class: 'bg-gray-100 text-gray-700', Icon: XCircle }
 
-  // Parse config para extrair valores
-  const getConfigValue = (tipoConfig: string) => {
-    return contrato.config?.find(c => c.tipo_config === tipoConfig)
-  }
+  // Parse config - o config é um objeto JSONB direto, não um array com tipo_config
+  // O hook coloca em [config], então pegamos o primeiro elemento
+  const configData = contrato.config?.[0] as Record<string, unknown> | undefined
 
-  const configFixo = getConfigValue('fixo')
-  const configHora = getConfigValue('hora')
-  const configEtapa = getConfigValue('etapa')
-  const configExito = getConfigValue('exito')
-  const configPasta = getConfigValue('pasta')
+  // Criar objetos de config baseados no configData
+  const configFixo = configData?.valor_fixo ? { valor_fixo: Number(configData.valor_fixo) } : null
+  const configHora = configData?.valor_hora ? {
+    valor_hora: Number(configData.valor_hora),
+    descricao: configData.horas_estimadas ? `Horas estimadas: ${configData.horas_estimadas}` : undefined
+  } : null
+  const configEtapa = configData?.etapas_valores ? {
+    descricao: JSON.stringify(configData.etapas_valores)
+  } : null
+  const configExito = configData?.percentual_exito ? {
+    percentual: Number(configData.percentual_exito),
+    valor_minimo: configData.valor_minimo_exito ? Number(configData.valor_minimo_exito) : undefined
+  } : null
+  const configPasta = configData?.valor_por_processo ? {
+    valor_por_processo: Number(configData.valor_por_processo),
+    dia_cobranca: configData.dia_cobranca ? Number(configData.dia_cobranca) : undefined
+  } : null
 
-  // Parse etapas_valores do campo descricao
+  // Parse etapas_valores diretamente do configData
   let etapasValores: Record<string, number> = {}
-  if (configEtapa?.descricao) {
-    try {
-      etapasValores = JSON.parse(configEtapa.descricao as string)
-    } catch {
-      // ignore
-    }
+  if (configData?.etapas_valores) {
+    etapasValores = configData.etapas_valores as Record<string, number>
   }
 
-  // Parse exito do campo descricao
+  // Exito config já extraído do configData
   let exitoConfig: { percentual?: number; valor_minimo?: number } = {}
-  if (configExito?.descricao) {
-    try {
-      exitoConfig = JSON.parse(configExito.descricao as string)
-    } catch {
-      // ignore
+  if (configExito) {
+    exitoConfig = {
+      percentual: configExito.percentual,
+      valor_minimo: configExito.valor_minimo,
     }
   }
 
-  // Parse horas estimadas do campo descricao
+  // Horas estimadas diretamente do configData
   let horasEstimadas: number | null = null
-  if (configHora?.descricao) {
-    const match = configHora.descricao.match(/Horas estimadas:\s*(\d+)/)
-    if (match) {
-      horasEstimadas = parseInt(match[1], 10)
-    }
+  if (configData?.horas_estimadas) {
+    horasEstimadas = Number(configData.horas_estimadas)
   }
 
   // Função para renderizar valores de cada forma
@@ -407,20 +410,20 @@ export default function ContratoDetailModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader className="pb-4 border-b border-slate-100">
+        <DialogHeader className="pb-4 border-b border-slate-100 pr-8">
           <div className="flex items-start justify-between">
-            <div>
+            <div className="flex-1 min-w-0">
               <DialogTitle className="text-lg font-semibold text-[#34495e] flex items-center gap-2">
                 <FileText className="w-4 h-4 text-[#89bcbe]" />
                 {contrato.numero_contrato}
               </DialogTitle>
-              <p className="text-sm text-slate-500 mt-0.5">{contrato.cliente_nome}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge className={cn('text-[10px]', statusBadge.class)}>
-                <statusBadge.Icon className="w-3 h-3 mr-1" />
-                {statusBadge.label}
-              </Badge>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-sm text-slate-500">{contrato.cliente_nome}</p>
+                <Badge className={cn('text-[10px]', statusBadge.class)}>
+                  <statusBadge.Icon className="w-3 h-3 mr-1" />
+                  {statusBadge.label}
+                </Badge>
+              </div>
             </div>
           </div>
         </DialogHeader>

@@ -163,7 +163,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
 
         // Extrair formas de cobrança do JSONB
         const formasPagamento = (contratoData?.formas_pagamento || []) as Array<{ forma: string }>
-        const formasValidas = ['fixo', 'por_cargo', 'por_pasta', 'por_ato']
+        const formasValidas = ['fixo', 'por_hora', 'por_cargo', 'por_pasta', 'por_ato', 'por_etapa', 'misto']
         const formasSelecionadas = formasPagamento.length > 0
           ? formasPagamento.map(f => f.forma).filter(f => formasValidas.includes(f))
           : [contrato.forma_cobranca].filter(f => formasValidas.includes(f))

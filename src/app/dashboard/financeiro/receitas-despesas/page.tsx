@@ -1233,17 +1233,13 @@ export default function ExtratoFinanceiroPage() {
             <Popover open={periodoAberto} onOpenChange={setPeriodoAberto}>
               <PopoverTrigger asChild>
                 <Button
-                  variant="outline"
-                  className={cn(
-                    "h-9 px-3 gap-2 border-slate-200 hover:bg-slate-50 min-w-[140px]",
-                    periodoPreset !== 'mes_atual' && "border-[#89bcbe] bg-[#f0f9f9]/50"
-                  )}
+                  className="h-9 px-3 gap-2 min-w-[140px] bg-[#34495e] hover:bg-[#46627f] text-white"
                 >
-                  <CalendarDays className="h-4 w-4 text-[#89bcbe]" />
-                  <span className="text-sm text-[#34495e] font-medium">
+                  <CalendarDays className="h-4 w-4" />
+                  <span className="text-sm font-medium">
                     {getPeriodoLabel()}
                   </span>
-                  <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                  <ChevronDown className="h-3.5 w-3.5" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-72 p-0" align="start">

@@ -281,7 +281,7 @@ export default function ProcessoWizardAutomatico({
         escritorio_id: profile.escritorio_id,
         numero_cnj: dadosEscavador.numero_cnj,
         outros_numeros: [],
-        tipo: dadosEscavador.tipo || 'judicial',
+        tipo: mapearTipo(dadosEscavador.tipo),
         area: areaJuridica,
         objeto_acao: dadosEscavador.assunto || dadosEscavador.assunto_principal || dadosEscavador.classe || '',
         tribunal: dadosEscavador.tribunal,
@@ -350,28 +350,40 @@ export default function ProcessoWizardAutomatico({
     }
   }
 
-  // Mapear área jurídica
+  // Mapear área jurídica (valores do banco: civel, trabalhista, tributaria, familia, criminal, previdenciaria, consumidor, empresarial, ambiental, outra)
   const mapearArea = (area: string): string => {
     const areaLower = area.toLowerCase()
-    if (areaLower.includes('trabalhist') || areaLower.includes('trabalho')) return 'Trabalhista'
-    if (areaLower.includes('família') || areaLower.includes('familia')) return 'Família'
-    if (areaLower.includes('criminal') || areaLower.includes('penal')) return 'Criminal'
-    if (areaLower.includes('tributár') || areaLower.includes('tributar') || areaLower.includes('fiscal')) return 'Tributária'
-    if (areaLower.includes('consumidor') || areaLower.includes('cdc')) return 'Consumidor'
-    if (areaLower.includes('empresar') || areaLower.includes('falência')) return 'Empresarial'
-    return 'Cível'
+    if (areaLower.includes('trabalhist') || areaLower.includes('trabalho')) return 'trabalhista'
+    if (areaLower.includes('família') || areaLower.includes('familia')) return 'familia'
+    if (areaLower.includes('criminal') || areaLower.includes('penal')) return 'criminal'
+    if (areaLower.includes('tributár') || areaLower.includes('tributar') || areaLower.includes('fiscal')) return 'tributaria'
+    if (areaLower.includes('consumidor') || areaLower.includes('cdc')) return 'consumidor'
+    if (areaLower.includes('empresar') || areaLower.includes('falência') || areaLower.includes('falencia')) return 'empresarial'
+    if (areaLower.includes('previdenci') || areaLower.includes('inss')) return 'previdenciaria'
+    if (areaLower.includes('ambiental') || areaLower.includes('meio ambiente')) return 'ambiental'
+    return 'civel'
   }
 
-  // Mapear instância
+  // Mapear instância (valores do banco: 1a, 2a, 3a, stj, stf, tst, administrativa)
   const mapearInstancia = (instancia: string | number | undefined): string => {
-    if (!instancia) return '1ª'
-    const inst = String(instancia)
-    if (inst === '1' || inst.includes('1')) return '1ª'
-    if (inst === '2' || inst.includes('2')) return '2ª'
-    if (inst.toLowerCase().includes('stj')) return 'STJ'
-    if (inst.toLowerCase().includes('stf')) return 'STF'
-    if (inst.toLowerCase().includes('tst')) return 'TST'
-    return '1ª'
+    if (!instancia) return '1a'
+    const inst = String(instancia).toLowerCase()
+    if (inst.includes('stj')) return 'stj'
+    if (inst.includes('stf')) return 'stf'
+    if (inst.includes('tst')) return 'tst'
+    if (inst.includes('administ')) return 'administrativa'
+    if (inst === '3' || inst.includes('3')) return '3a'
+    if (inst === '2' || inst.includes('2')) return '2a'
+    return '1a'
+  }
+
+  // Mapear tipo (valores do banco: judicial, administrativo, arbitragem)
+  const mapearTipo = (tipo: string | undefined): string => {
+    if (!tipo) return 'judicial'
+    const tipoLower = tipo.toLowerCase()
+    if (tipoLower.includes('administ')) return 'administrativo'
+    if (tipoLower.includes('arbitr')) return 'arbitragem'
+    return 'judicial'
   }
 
   // Componente para exibir uma parte

@@ -18,6 +18,8 @@ import {
   Calendar,
   DollarSign,
   Tag,
+  AlertTriangle,
+  Info,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -43,6 +45,7 @@ import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import {
   useCartoesCredito,
   CartaoCredito,
+  FaturaCartao,
   CATEGORIAS_DESPESA_CARTAO,
 } from '@/hooks/useCartoesCredito'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
@@ -62,6 +65,7 @@ interface TransacaoExtraida {
   confianca: number
   selecionada: boolean
   tipo: 'unica' | 'parcelada' | 'recorrente'
+  possivelDuplicata?: boolean
 }
 
 // Usar CATEGORIAS_DESPESA_CARTAO e TIPOS_LANCAMENTO do hook
@@ -113,7 +117,17 @@ export default function ImportarFaturaPage() {
   const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
   const escritorioIds = escritoriosGrupo.map(e => e.id)
 
-  const { loadCartoes, createLancamento } = useCartoesCredito(escritorioIds.length > 0 ? escritorioIds : escritorioAtivo)
+  const {
+    loadCartoes,
+    createLancamento,
+    verificarDuplicata,
+    verificarFaturaExistente,
+    vincularLancamentosAFatura,
+  } = useCartoesCredito(escritorioIds.length > 0 ? escritorioIds : escritorioAtivo)
+
+  // Estado para fatura existente
+  const [faturaExistente, setFaturaExistente] = useState<FaturaCartao | null>(null)
+  const [verificandoDuplicatas, setVerificandoDuplicatas] = useState(false)
 
   // Carregar escritórios do grupo
   useEffect(() => {
@@ -148,6 +162,47 @@ export default function ImportarFaturaPage() {
     }
     loadData()
   }, [escritorioIds.length, escritorioAtivo, loadCartoes])
+
+  // Verificar fatura existente quando mês é selecionado
+  useEffect(() => {
+    const checkFatura = async () => {
+      if (!selectedCartao || !mesReferenciaFatura) {
+        setFaturaExistente(null)
+        return
+      }
+
+      const fatura = await verificarFaturaExistente(selectedCartao, `${mesReferenciaFatura}-01`)
+      setFaturaExistente(fatura)
+    }
+    checkFatura()
+  }, [selectedCartao, mesReferenciaFatura, verificarFaturaExistente])
+
+  // Verificar duplicatas quando transações são carregadas
+  useEffect(() => {
+    const checkDuplicatas = async () => {
+      if (!selectedCartao || transacoes.length === 0) return
+
+      setVerificandoDuplicatas(true)
+      try {
+        const updatedTransacoes = await Promise.all(
+          transacoes.map(async (t) => {
+            const isDuplicate = await verificarDuplicata(selectedCartao, t.data, t.descricao, t.valor)
+            return { ...t, possivelDuplicata: isDuplicate }
+          })
+        )
+        setTransacoes(updatedTransacoes)
+      } catch (error) {
+        console.error('Erro ao verificar duplicatas:', error)
+      } finally {
+        setVerificandoDuplicatas(false)
+      }
+    }
+
+    // Só executa uma vez quando transações são carregadas
+    if (transacoes.length > 0 && !transacoes.some(t => t.possivelDuplicata !== undefined)) {
+      checkDuplicatas()
+    }
+  }, [selectedCartao, transacoes.length, verificarDuplicata])
 
   // Dropzone
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -434,12 +489,13 @@ export default function ImportarFaturaPage() {
     setImportando(true)
     try {
       let importados = 0
+      const lancamentosImportados: string[] = []
 
       // Importar cada transação usando createLancamento
       for (const t of selecionadas) {
         // Nota: Importamos cada linha do PDF como lançamento único
         // porque o PDF já mostra cada parcela individualmente
-        const result = await createLancamento({
+        const compraId = await createLancamento({
           cartao_id: cartao.id,
           descricao: t.descricao,
           categoria: t.categoria_sugerida,
@@ -452,8 +508,23 @@ export default function ImportarFaturaPage() {
           importado_de_fatura: true,
         })
 
-        if (result) {
+        if (compraId) {
           importados++
+          lancamentosImportados.push(compraId)
+        }
+      }
+
+      // Se existe fatura para este mês, vincular os lançamentos a ela
+      if (faturaExistente && lancamentosImportados.length > 0) {
+        // Buscar os IDs dos lançamentos criados (compra_id é retornado, precisamos do lancamento.id)
+        const { data: lancamentos } = await supabase
+          .from('cartoes_credito_lancamentos')
+          .select('id')
+          .in('compra_id', lancamentosImportados)
+
+        if (lancamentos && lancamentos.length > 0) {
+          const lancamentoIds = lancamentos.map((l: { id: string }) => l.id)
+          await vincularLancamentosAFatura(faturaExistente.id, lancamentoIds)
         }
       }
 
@@ -473,7 +544,12 @@ export default function ImportarFaturaPage() {
       setValorTotalImportado(selecionadas.reduce((acc, t) => acc + t.valor, 0))
       setImportacaoConcluida(true)
       setEtapa(3)
-      toast.success('Lançamentos importados com sucesso!')
+
+      if (faturaExistente) {
+        toast.success(`Lançamentos importados e vinculados à fatura de ${mesReferenciaFatura}!`)
+      } else {
+        toast.success('Lançamentos importados com sucesso!')
+      }
     } catch (error: any) {
       console.error('Erro:', error)
       toast.error(error.message || 'Erro ao importar')
@@ -749,6 +825,38 @@ export default function ImportarFaturaPage() {
             </CardContent>
           </Card>
 
+          {/* Alertas de fatura existente e duplicatas */}
+          {(faturaExistente || transacoes.some(t => t.possivelDuplicata)) && (
+            <div className="space-y-2">
+              {faturaExistente && (
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                  <Info className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-amber-800">
+                      Já existe uma fatura {faturaExistente.status === 'fechada' ? 'fechada' : faturaExistente.status === 'paga' ? 'paga' : 'aberta'} para este mês
+                    </p>
+                    <p className="text-[11px] text-amber-600 mt-0.5">
+                      Os lançamentos serão adicionados à fatura existente ({formatCurrency(faturaExistente.valor_total || 0)})
+                    </p>
+                  </div>
+                </div>
+              )}
+              {transacoes.some(t => t.possivelDuplicata) && (
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-slate-50 border border-slate-200">
+                  <AlertTriangle className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-slate-700">
+                      {transacoes.filter(t => t.possivelDuplicata).length} possíveis duplicatas encontradas
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Lançamentos marcados já podem existir no sistema
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Lista de transações */}
           <Card className="border-slate-200">
             <CardContent className="py-4">
@@ -806,11 +914,16 @@ export default function ImportarFaturaPage() {
                             t.selecionada ? 'bg-white' : 'bg-slate-50/50 opacity-60'
                           )}
                         >
-                          <div className="col-span-1">
+                          <div className="col-span-1 flex items-center gap-1">
                             <Checkbox
                               checked={t.selecionada}
                               onCheckedChange={() => toggleTransacao(t.id)}
                             />
+                            {t.possivelDuplicata && (
+                              <span title="Possível duplicata">
+                                <AlertTriangle className="w-3 h-3 text-amber-500" />
+                              </span>
+                            )}
                           </div>
                           {/* Data editável inline */}
                           <div className="col-span-2">

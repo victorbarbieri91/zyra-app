@@ -22,7 +22,8 @@ import {
   FolderPlus,
   ListChecks,
   X,
-  ChevronDown
+  ChevronDown,
+  ExternalLink
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -181,13 +182,16 @@ export default function PublicacoesPage() {
 
       // Calcular estatísticas
       const hoje = new Date().toISOString().split('T')[0]
-      const naoArquivadas = publicacoesUnicas.filter(p => p.status !== 'arquivada')
-      const pendentes = naoArquivadas.filter(p => p.status === 'pendente').length
-      const processadasHoje = naoArquivadas.filter(p => p.status === 'processada' && p.updated_at?.startsWith(hoje)).length
-      const urgentes = naoArquivadas.filter(p => p.urgente).length
-      const comProcesso = naoArquivadas.filter(p => p.processo_id).length
-      const semProcesso = naoArquivadas.filter(p => !p.processo_id && p.numero_processo).length
-      const arquivadas = publicacoesUnicas.filter(p => p.status === 'arquivada').length
+      // Ativas = pendentes ou em_analise (não tratadas nem arquivadas)
+      const ativas = publicacoesUnicas.filter(p => p.status !== 'arquivada' && p.status !== 'processada')
+      const pendentes = ativas.filter(p => p.status === 'pendente').length
+      // Tratadas hoje = processadas hoje
+      const processadasHoje = publicacoesUnicas.filter(p => p.status === 'processada' && p.updated_at?.startsWith(hoje)).length
+      const urgentes = ativas.filter(p => p.urgente).length
+      const comProcesso = ativas.filter(p => p.processo_id).length
+      const semProcesso = ativas.filter(p => !p.processo_id && p.numero_processo).length
+      // Histórico = tratadas + arquivadas
+      const arquivadas = publicacoesUnicas.filter(p => p.status === 'arquivada' || p.status === 'processada').length
 
       setStats({
         pendentes,
@@ -197,7 +201,7 @@ export default function PublicacoesPage() {
         comProcesso,
         semProcesso,
         arquivadas,
-        total: naoArquivadas.length
+        total: ativas.length
       })
     } finally {
       setCarregando(false)
@@ -329,11 +333,12 @@ export default function PublicacoesPage() {
   const publicacoesFiltradas = useMemo(() => {
     return publicacoes.filter(pub => {
       // Filtro por aba
+      // Aba "Arquivadas" mostra tanto 'processada' (tratada) quanto 'arquivada'
       if (abaAtiva === 'arquivadas') {
-        if (pub.status !== 'arquivada') return false
+        if (pub.status !== 'arquivada' && pub.status !== 'processada') return false
       } else {
-        // Nas outras abas, não mostrar arquivadas
-        if (pub.status === 'arquivada') return false
+        // Nas outras abas, não mostrar arquivadas nem processadas (tratadas)
+        if (pub.status === 'arquivada' || pub.status === 'processada') return false
 
         if (abaAtiva === 'com_processo' && !pub.processo_id) return false
         if (abaAtiva === 'sem_processo' && pub.processo_id) return false
@@ -348,7 +353,8 @@ export default function PublicacoesPage() {
           pub.texto_completo?.toLowerCase().includes(busca)
         if (!matchBusca) return false
       }
-      if (filtros.status !== 'todos' && pub.status !== filtros.status) return false
+      // Não aplicar filtro de status na aba arquivadas (já filtra por status arquivada/processada)
+      if (abaAtiva !== 'arquivadas' && filtros.status !== 'todos' && pub.status !== filtros.status) return false
       if (filtros.tipo !== 'todos' && pub.tipo_publicacao !== filtros.tipo) return false
       if (filtros.apenasUrgentes && !pub.urgente) return false
       if (filtros.semPasta && pub.processo_id) return false
@@ -421,7 +427,7 @@ export default function PublicacoesPage() {
 
       if (error) throw error
 
-      toast.success(`${selecionados.size} publicação(ões) marcada(s) como processada(s)`)
+      toast.success(`${selecionados.size} publicação(ões) marcada(s) como tratada(s)`)
       limparSelecao()
       await carregarPublicacoes()
     } catch (err) {
@@ -460,7 +466,7 @@ export default function PublicacoesPage() {
         .eq('id', id)
 
       if (error) throw error
-      toast.success('Marcada como processada')
+      toast.success('Publicação marcada como tratada')
       await carregarPublicacoes()
     } catch (err) {
       console.error('Erro ao atualizar:', err)
@@ -1028,13 +1034,14 @@ export default function PublicacoesPage() {
                       {pub.numero_processo ? (
                         pub.processo_id ? (
                           <span
-                            className="text-sm text-[#1E3A8A] font-mono hover:underline"
+                            className="inline-flex items-center gap-1.5 text-sm font-mono font-medium text-[#3B82F6] hover:text-[#2563EB] cursor-pointer hover:underline underline-offset-2"
                             onClick={(e) => {
                               e.stopPropagation()
                               router.push(`/dashboard/processos/${pub.processo_id}`)
                             }}
                           >
                             {pub.numero_processo}
+                            <ExternalLink className="w-3 h-3 opacity-60" />
                           </span>
                         ) : (
                           <div className="flex items-center gap-2">
@@ -1268,18 +1275,25 @@ export default function PublicacoesPage() {
           dadosEscavador={wizardProcessoAuto.dados}
           onProcessoCriado={async (processoId: string) => {
             // Vincular publicações ao processo criado (pelo número CNJ)
-            if (wizardProcessoAuto.dados?.numero_cnj && processoId) {
+            const cnj = wizardProcessoAuto.dados?.numero_cnj
+            if (cnj && processoId && escritorioAtivo) {
               try {
-                const { error } = await supabase
+                // Tentar vincular pelo número CNJ exato ou apenas dígitos
+                const cnjSomenteDigitos = cnj.replace(/\D/g, '')
+
+                const { data: updated, error } = await supabase
                   .from('publicacoes_publicacoes')
                   .update({ processo_id: processoId })
-                  .eq('numero_processo', wizardProcessoAuto.dados.numero_cnj)
                   .eq('escritorio_id', escritorioAtivo)
+                  .or(`numero_processo.eq.${cnj},numero_processo.eq.${cnjSomenteDigitos}`)
+                  .select('id')
 
                 if (error) {
-                  console.error('Erro ao vincular publicações:', error)
+                  console.error('Erro ao vincular publicações:', error.message, error.details, error.hint)
+                } else if (updated && updated.length > 0) {
+                  toast.success(`Pasta criada e ${updated.length} publicação(ões) vinculada(s)!`)
                 } else {
-                  toast.success('Pasta criada e publicações vinculadas!')
+                  toast.success('Pasta criada com sucesso!')
                 }
               } catch (err) {
                 console.error('Erro ao vincular publicações:', err)

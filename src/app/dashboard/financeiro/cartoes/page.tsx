@@ -13,6 +13,7 @@ import {
   Pencil,
   Trash2,
   Eye,
+  FileText,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -414,17 +415,16 @@ export default function CartoesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div
-                        className="flex items-center justify-end gap-1"
+                        className="flex items-center justify-end gap-1.5"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          className="h-7 w-7 p-0"
+                          className="h-7 px-2.5 text-xs font-medium text-[#34495e] border-slate-200 hover:bg-slate-50 hover:border-slate-300"
                           onClick={() => handleViewDetails(cartao.id)}
-                          title="Ver detalhes"
                         >
-                          <Eye className="h-3.5 w-3.5" />
+                          Ver Fatura
                         </Button>
                         <Button
                           variant="ghost"

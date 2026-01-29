@@ -20,6 +20,7 @@ interface SidebarDinamicaProps {
   onCreateEvent: (date: Date) => void
   onCompleteTask?: (taskId: string) => void
   onReopenTask?: (taskId: string) => void
+  onLancarHoras?: (taskId: string) => void
   onProcessoClick?: (processoId: string) => void
   onConsultivoClick?: (consultivoId: string) => void
   className?: string
@@ -34,6 +35,7 @@ export default function SidebarDinamica({
   onCreateEvent,
   onCompleteTask,
   onReopenTask,
+  onLancarHoras,
   onProcessoClick,
   onConsultivoClick,
   className,
@@ -80,16 +82,17 @@ export default function SidebarDinamica({
       {/* Sidebar */}
       <div
         className={cn(
-          'fixed right-0 top-0 h-full w-[400px] bg-white shadow-2xl z-50',
+          'fixed right-0 top-0 h-full w-[400px] max-w-[90vw] bg-white shadow-2xl z-50',
           'transform transition-transform duration-300 ease-in-out',
           'border-l border-slate-200',
+          'overflow-hidden', // Evita overflow da sidebar
           isOpen ? 'translate-x-0' : 'translate-x-full',
           className
         )}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-gradient-to-br from-slate-50 to-white">
+          <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-slate-200 bg-gradient-to-br from-slate-50 to-white">
             <div>
               <h3 className="text-base font-semibold text-[#34495e]">
                 {format(selectedDate, "d 'de' MMMM", { locale: ptBR })}
@@ -109,7 +112,7 @@ export default function SidebarDinamica({
           </div>
 
           {/* Botão de Criar Evento */}
-          <div className="p-4 border-b border-slate-200">
+          <div className="flex-shrink-0 p-4 border-b border-slate-200">
             <Button
               onClick={() => onCreateEvent(selectedDate)}
               className="w-full bg-gradient-to-br from-[#34495e] to-[#46627f] hover:from-[#2c3e50] hover:to-[#34495e] text-white text-sm"
@@ -120,60 +123,63 @@ export default function SidebarDinamica({
           </div>
 
           {/* Lista de Eventos */}
-          <ScrollArea className="flex-1 p-4">
-            {eventos.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                  <Calendar className="w-8 h-8 text-slate-400" />
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="p-4">
+              {eventos.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                    <Calendar className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <p className="text-sm text-[#6c757d] mb-1">Nenhum evento neste dia</p>
+                  <p className="text-xs text-slate-400">
+                    Clique em "Novo Evento" para adicionar
+                  </p>
                 </div>
-                <p className="text-sm text-[#6c757d] mb-1">Nenhum evento neste dia</p>
-                <p className="text-xs text-slate-400">
-                  Clique em "Novo Evento" para adicionar
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-xs font-medium text-[#46627f] mb-3">
-                  {eventos.length} {eventos.length === 1 ? 'evento' : 'eventos'}
-                </p>
-                {eventosOrdenados.map((evento) => (
-                  <EventDetailCard
-                    key={evento.id}
-                    id={evento.id}
-                    titulo={evento.titulo}
-                    descricao={evento.descricao}
-                    tipo={evento.tipo_entidade === 'tarefa' ? 'tarefa' : evento.tipo_entidade === 'audiencia' ? 'audiencia' : evento.subtipo === 'prazo_processual' ? 'prazo' : 'compromisso'}
-                    data_inicio={parseDBDate(evento.data_inicio)}
-                    data_fim={evento.data_fim ? parseDBDate(evento.data_fim) : undefined}
-                    dia_inteiro={evento.dia_inteiro}
-                    local={evento.local}
-                    responsavel_nome={evento.responsavel_nome}
-                    status={evento.status}
-                    prioridade={evento.prioridade}
-                    processo_numero={evento.processo_numero}
-                    processo_id={evento.processo_id}
-                    consultivo_titulo={evento.consultivo_titulo}
-                    consultivo_id={evento.consultivo_id}
-                    prazo_data_limite={evento.prazo_data_limite}
-                    prazo_tipo={evento.prazo_tipo}
-                    prazo_cumprido={evento.prazo_cumprido}
-                    subtipo={evento.subtipo}
-                    // Recorrência
-                    recorrencia_id={evento.recorrencia_id}
-                    onViewDetails={() => onEventClick(evento)}
-                    onComplete={() => onCompleteTask?.(evento.id)}
-                    onReopen={() => onReopenTask?.(evento.id)}
-                    onProcessoClick={onProcessoClick}
-                    onConsultivoClick={onConsultivoClick}
-                  />
-                ))}
-              </div>
-            )}
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs font-medium text-[#46627f] mb-3">
+                    {eventos.length} {eventos.length === 1 ? 'evento' : 'eventos'}
+                  </p>
+                  {eventosOrdenados.map((evento) => (
+                    <EventDetailCard
+                      key={evento.id}
+                      id={evento.id}
+                      titulo={evento.titulo}
+                      descricao={evento.descricao}
+                      tipo={evento.tipo_entidade === 'tarefa' ? 'tarefa' : evento.tipo_entidade === 'audiencia' ? 'audiencia' : evento.subtipo === 'prazo_processual' ? 'prazo' : 'compromisso'}
+                      data_inicio={parseDBDate(evento.data_inicio)}
+                      data_fim={evento.data_fim ? parseDBDate(evento.data_fim) : undefined}
+                      dia_inteiro={evento.dia_inteiro}
+                      local={evento.local}
+                      responsavel_nome={evento.responsavel_nome}
+                      status={evento.status}
+                      prioridade={evento.prioridade}
+                      processo_numero={evento.processo_numero}
+                      processo_id={evento.processo_id}
+                      consultivo_titulo={evento.consultivo_titulo}
+                      consultivo_id={evento.consultivo_id}
+                      prazo_data_limite={evento.prazo_data_limite}
+                      prazo_tipo={evento.prazo_tipo}
+                      prazo_cumprido={evento.prazo_cumprido}
+                      subtipo={evento.subtipo}
+                      // Recorrência
+                      recorrencia_id={evento.recorrencia_id}
+                      onViewDetails={() => onEventClick(evento)}
+                      onComplete={() => onCompleteTask?.(evento.id)}
+                      onReopen={() => onReopenTask?.(evento.id)}
+                      onLancarHoras={() => onLancarHoras?.(evento.id)}
+                      onProcessoClick={onProcessoClick}
+                      onConsultivoClick={onConsultivoClick}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </ScrollArea>
 
           {/* Footer (opcional - estatísticas rápidas) */}
           {eventos.length > 0 && (
-            <div className="p-4 border-t border-slate-200 bg-slate-50/50">
+            <div className="flex-shrink-0 p-4 border-t border-slate-200 bg-slate-50/50">
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
                   <p className="text-xs font-semibold text-[#34495e]">

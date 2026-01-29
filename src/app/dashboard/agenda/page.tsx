@@ -4,6 +4,16 @@ import { useState, useMemo, useEffect } from 'react'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   Calendar,
   CalendarDays,
   List,
@@ -30,6 +40,7 @@ import AudienciaWizard from '@/components/agenda/AudienciaWizard'
 import TarefaDetailModal from '@/components/agenda/TarefaDetailModal'
 import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
 import EventoDetailModal from '@/components/agenda/EventoDetailModal'
+import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import { EventCardProps } from '@/components/agenda/EventCard'
 
 // Hooks
@@ -59,6 +70,14 @@ export default function AgendaPage() {
   const [tarefaModalOpen, setTarefaModalOpen] = useState(false)
   const [audienciaModalOpen, setAudienciaModalOpen] = useState(false)
   const [eventoModalOpen, setEventoModalOpen] = useState(false)
+
+  // Modal de horas (timesheet) para conclusão de tarefa
+  const [timesheetModalOpen, setTimesheetModalOpen] = useState(false)
+  const [tarefaParaConcluir, setTarefaParaConcluir] = useState<Tarefa | null>(null)
+  const [confirmConcluirSemHoras, setConfirmConcluirSemHoras] = useState(false)
+  const [horasRegistradasComSucesso, setHorasRegistradasComSucesso] = useState(false)
+  // Flag para diferenciar: lançamento de horas avulso vs conclusão de tarefa
+  const [modoLancamentoAvulso, setModoLancamentoAvulso] = useState(false)
 
   const [tarefaSelecionada, setTarefaSelecionada] = useState<Tarefa | null>(null)
   const [audienciaSelecionada, setAudienciaSelecionada] = useState<Audiencia | null>(null)
@@ -317,19 +336,96 @@ export default function AgendaPage() {
     }
   }
 
+  // Handler para lançar horas manualmente (sem concluir)
+  const handleLancarHoras = (taskId: string) => {
+    // Buscar a tarefa
+    let tarefa = tarefas.find(t => t.id === taskId)
+
+    // Se não encontrou no hook, buscar na agenda consolidada
+    if (!tarefa) {
+      const itemCompleto = agendaItems.find(item => item.id === taskId)
+      if (itemCompleto) {
+        tarefa = {
+          id: itemCompleto.id,
+          escritorio_id: itemCompleto.escritorio_id,
+          titulo: itemCompleto.titulo,
+          descricao: itemCompleto.descricao,
+          tipo: itemCompleto.subtipo || 'outro',
+          prioridade: itemCompleto.prioridade || 'media',
+          status: itemCompleto.status || 'pendente',
+          data_inicio: itemCompleto.data_inicio,
+          data_fim: itemCompleto.data_fim,
+          responsavel_id: itemCompleto.responsavel_id,
+          responsavel_nome: itemCompleto.responsavel_nome,
+          processo_id: itemCompleto.processo_id,
+          consultivo_id: itemCompleto.consultivo_id,
+          created_at: itemCompleto.created_at,
+          updated_at: itemCompleto.updated_at,
+        } as Tarefa
+      }
+    }
+
+    if (!tarefa) {
+      toast.error('Tarefa não encontrada')
+      return
+    }
+
+    // Verificar se a tarefa tem processo ou consulta vinculada
+    if (!tarefa.processo_id && !tarefa.consultivo_id) {
+      toast.error('Esta tarefa não tem processo ou consulta vinculada. Vincule primeiro para lançar horas.')
+      return
+    }
+
+    // Abrir modal de horas em modo avulso (sem concluir depois)
+    setModoLancamentoAvulso(true)
+    setTarefaParaConcluir(tarefa)
+    setHorasRegistradasComSucesso(false)
+    setTimesheetModalOpen(true)
+  }
+
   // Handler para conclusão rápida de tarefa (toggle)
   const handleCompleteTask = async (taskId: string) => {
     try {
       // Encontrar a tarefa para verificar o status atual
-      const tarefa = tarefas.find(t => t.id === taskId)
+      let tarefa = tarefas.find(t => t.id === taskId)
+
+      // Se não encontrou no hook, buscar na agenda consolidada
+      if (!tarefa) {
+        const itemCompleto = agendaItems.find(item => item.id === taskId)
+        if (itemCompleto) {
+          tarefa = {
+            id: itemCompleto.id,
+            escritorio_id: itemCompleto.escritorio_id,
+            titulo: itemCompleto.titulo,
+            descricao: itemCompleto.descricao,
+            tipo: itemCompleto.subtipo || 'outro',
+            prioridade: itemCompleto.prioridade || 'media',
+            status: itemCompleto.status || 'pendente',
+            data_inicio: itemCompleto.data_inicio,
+            data_fim: itemCompleto.data_fim,
+            responsavel_id: itemCompleto.responsavel_id,
+            responsavel_nome: itemCompleto.responsavel_nome,
+            processo_id: itemCompleto.processo_id,
+            consultivo_id: itemCompleto.consultivo_id,
+            created_at: itemCompleto.created_at,
+            updated_at: itemCompleto.updated_at,
+          } as Tarefa
+        }
+      }
 
       if (tarefa?.status === 'concluida') {
-        // Se já está concluída, reabrir
+        // Se já está concluída, reabrir diretamente
         await reabrirTarefa(taskId)
         await refreshItems()
         toast.success('Tarefa reaberta com sucesso!')
+      } else if (tarefa?.processo_id || tarefa?.consultivo_id) {
+        // Se tem processo ou consultivo vinculado, abrir modal de horas ANTES de concluir
+        setModoLancamentoAvulso(false) // Modo conclusão - vai concluir após registrar horas
+        setTarefaParaConcluir(tarefa)
+        setHorasRegistradasComSucesso(false)
+        setTimesheetModalOpen(true)
       } else {
-        // Se não está concluída, concluir
+        // Se não tem vínculo, concluir diretamente
         await concluirTarefa(taskId)
         await refreshItems()
         toast.success('Tarefa concluída com sucesso!')
@@ -338,6 +434,71 @@ export default function AgendaPage() {
       console.error('Erro ao alterar status da tarefa:', error)
       toast.error('Erro ao alterar status da tarefa')
     }
+  }
+
+  // Handler quando o modal de horas é fechado (com sucesso)
+  const handleTimesheetSuccess = async () => {
+    setHorasRegistradasComSucesso(true)
+
+    if (modoLancamentoAvulso) {
+      // Modo avulso: apenas registrar horas, não concluir
+      toast.success('Horas registradas com sucesso!')
+      setTarefaParaConcluir(null)
+      setModoLancamentoAvulso(false)
+      setTimesheetModalOpen(false)
+    } else if (tarefaParaConcluir) {
+      // Modo conclusão: registrar horas E concluir
+      try {
+        await concluirTarefa(tarefaParaConcluir.id)
+        await refreshItems()
+        toast.success('Horas registradas e tarefa concluída!')
+      } catch (error) {
+        console.error('Erro ao concluir tarefa:', error)
+        toast.error('Horas registradas, mas erro ao concluir tarefa')
+      }
+      setTarefaParaConcluir(null)
+      setTimesheetModalOpen(false)
+    }
+  }
+
+  // Handler quando o modal de horas é fechado sem registrar
+  const handleTimesheetClose = (open: boolean) => {
+    if (!open) {
+      if (modoLancamentoAvulso) {
+        // Modo avulso: apenas fechar, sem perguntar
+        setTarefaParaConcluir(null)
+        setModoLancamentoAvulso(false)
+      } else if (tarefaParaConcluir && !horasRegistradasComSucesso) {
+        // Modo conclusão: modal foi fechado sem registrar horas - perguntar se quer concluir mesmo assim
+        setConfirmConcluirSemHoras(true)
+      } else {
+        // Já registrou com sucesso, apenas limpar estado
+        setTarefaParaConcluir(null)
+      }
+    }
+    setTimesheetModalOpen(open)
+  }
+
+  // Handler para concluir sem registrar horas
+  const handleConcluirSemHoras = async () => {
+    if (tarefaParaConcluir) {
+      try {
+        await concluirTarefa(tarefaParaConcluir.id)
+        await refreshItems()
+        toast.success('Tarefa concluída!')
+      } catch (error) {
+        console.error('Erro ao concluir tarefa:', error)
+        toast.error('Erro ao concluir tarefa')
+      }
+    }
+    setTarefaParaConcluir(null)
+    setConfirmConcluirSemHoras(false)
+  }
+
+  // Handler para cancelar conclusão
+  const handleCancelarConclusao = () => {
+    setTarefaParaConcluir(null)
+    setConfirmConcluirSemHoras(false)
   }
 
   // Handler para reabrir tarefa
@@ -643,6 +804,7 @@ export default function AgendaPage() {
                   setTarefaSelecionada(null)
                   setTarefaModalOpen(true)
                 }}
+                onTaskComplete={handleCompleteTask}
               />
             )}
 
@@ -731,6 +893,7 @@ export default function AgendaPage() {
         onCreateEvent={handleCreateEvent}
         onCompleteTask={handleCompleteTask}
         onReopenTask={handleReopenTask}
+        onLancarHoras={handleLancarHoras}
         onProcessoClick={handleProcessoClick}
         onConsultivoClick={handleConsultivoClick}
       />
@@ -750,6 +913,10 @@ export default function AgendaPage() {
           onDelete={() => handleDeleteTarefa(tarefaSelecionada.id)}
           onConcluir={() => handleCompleteTask(tarefaSelecionada.id)}
           onReabrir={() => handleReopenTask(tarefaSelecionada.id)}
+          onLancarHoras={() => {
+            setTarefaDetailOpen(false) // Fechar modal de detalhes
+            handleLancarHoras(tarefaSelecionada.id)
+          }}
           onProcessoClick={handleProcessoClick}
           onConsultivoClick={handleConsultivoClick}
           onUpdate={refreshItems}
@@ -871,6 +1038,40 @@ export default function AgendaPage() {
           initialData={eventoSelecionado || undefined}
         />
       )}
+
+      {/* Modal de Lançamento de Horas */}
+      <TimesheetModal
+        open={timesheetModalOpen}
+        onOpenChange={handleTimesheetClose}
+        processoId={tarefaParaConcluir?.processo_id || undefined}
+        consultaId={tarefaParaConcluir?.consultivo_id || undefined}
+        tarefaId={tarefaParaConcluir?.id}
+        onSuccess={handleTimesheetSuccess}
+      />
+
+      {/* Dialog de Confirmação - Concluir sem Lançar Horas */}
+      <AlertDialog open={confirmConcluirSemHoras} onOpenChange={setConfirmConcluirSemHoras}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Concluir sem lançar horas?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você fechou o modal sem registrar as horas trabalhadas.
+              Deseja concluir a tarefa mesmo assim ou cancelar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelarConclusao}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConcluirSemHoras}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              Concluir sem horas
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

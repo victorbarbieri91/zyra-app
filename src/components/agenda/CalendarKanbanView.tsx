@@ -33,6 +33,7 @@ interface CalendarKanbanViewProps {
   onDateSelect: (date: Date) => void
   onClickTarefa: (tarefa: Tarefa) => void
   onCreateTarefa: (status: 'pendente' | 'em_andamento' | 'concluida') => void
+  onTaskComplete?: (tarefaId: string) => void // Callback externo para conclusão (abre modal de horas)
   className?: string
 }
 
@@ -43,6 +44,7 @@ export default function CalendarKanbanView({
   onDateSelect,
   onClickTarefa,
   onCreateTarefa,
+  onTaskComplete,
   className,
 }: CalendarKanbanViewProps) {
   const supabase = createClient()
@@ -238,16 +240,23 @@ export default function CalendarKanbanView({
       }
     }
 
-    // CASO 2: Movendo para CONCLUÍDA - Finalizar timer e criar timesheet
-    if (novoStatus === 'concluida' && timerExistente) {
-      try {
-        await finalizarTimer(timerExistente.id, {
-          descricao: `Tarefa concluída: ${tarefa.titulo}`,
-        })
-        toast.success('Timer finalizado e horas registradas')
-      } catch (error) {
-        console.error('Erro ao finalizar timer:', error)
-        toast.error('Erro ao finalizar timer')
+    // CASO 2: Movendo para CONCLUÍDA
+    if (novoStatus === 'concluida') {
+      if (timerExistente) {
+        // Tem timer ativo - finalizar e criar timesheet automaticamente
+        try {
+          await finalizarTimer(timerExistente.id, {
+            descricao: `Tarefa concluída: ${tarefa.titulo}`,
+          })
+          toast.success('Timer finalizado e horas registradas')
+        } catch (error) {
+          console.error('Erro ao finalizar timer:', error)
+          toast.error('Erro ao finalizar timer')
+        }
+      } else if (tarefaTemVinculo(tarefa) && onTaskComplete) {
+        // Não tem timer mas tem vínculo - usar callback externo (abre modal de horas)
+        onTaskComplete(tarefa.id)
+        return // Não atualiza status aqui, o callback externo vai fazer isso
       }
     }
 

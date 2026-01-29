@@ -43,6 +43,7 @@ import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
 import ProcessoTimelineHorizontal from '@/components/processos/ProcessoTimelineHorizontal'
 import ProcessoFinanceiroCard from '@/components/processos/ProcessoFinanceiroCard'
 import ProcessoCobrancasCard from '@/components/processos/ProcessoCobrancasCard'
+import ProcessoCobrancaFixaCard from '@/components/processos/ProcessoCobrancaFixaCard'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import { useRouter } from 'next/navigation'
 import type { TarefaFormData } from '@/hooks/useTarefas'
@@ -746,6 +747,9 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           processoId={processo.id}
           valorCausa={processo.valor_causa}
         />
+
+        {/* Card de Cobrança Fixa (apenas para contratos fixo) */}
+        <ProcessoCobrancaFixaCard processoId={processo.id} />
 
       </div>
 

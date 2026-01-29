@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Clock,
   CalendarDays,
+  Timer,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatBrazilDate, formatDateTimeForDB, parseDBDate } from '@/lib/timezone'
@@ -38,6 +39,7 @@ interface TarefaDetailModalProps {
   onDelete?: () => void
   onConcluir?: () => void
   onReabrir?: () => void
+  onLancarHoras?: () => void
   onProcessoClick?: (processoId: string) => void
   onConsultivoClick?: (consultivoId: string) => void
   onUpdate?: () => void | Promise<void>
@@ -77,6 +79,7 @@ export default function TarefaDetailModal({
   onDelete,
   onConcluir,
   onReabrir,
+  onLancarHoras,
   onProcessoClick,
   onConsultivoClick,
   onUpdate,
@@ -659,6 +662,19 @@ export default function TarefaDetailModal({
                   >
                     <RotateCcw className="w-3 h-3 mr-1" />
                     Reabrir
+                  </Button>
+                )}
+
+                {/* Botão Lançar Horas - só aparece se tem processo ou consultivo vinculado */}
+                {onLancarHoras && (tarefa.processo_id || tarefa.consultivo_id) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={onLancarHoras}
+                    className="h-8 text-xs border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
+                  >
+                    <Timer className="w-3 h-3 mr-1" />
+                    Lançar Horas
                   </Button>
                 )}
 

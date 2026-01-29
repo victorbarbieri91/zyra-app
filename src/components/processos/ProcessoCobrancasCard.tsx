@@ -15,23 +15,42 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
+import {
   Receipt,
   Loader2,
   DollarSign,
   Check,
   X,
   AlertCircle,
-  Scale,
+  ChevronDown,
+  Pencil,
+  Send,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
-import { useCobrancaAtos, AtoDisponivel } from '@/hooks/useCobrancaAtos'
+import { useCobrancaAtos, AtoDisponivel, calcularValorAto } from '@/hooks/useCobrancaAtos'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
+import { cn } from '@/lib/utils'
 
 interface ProcessoCobrancasCardProps {
   processoId: string
   valorCausa?: number
+}
+
+interface AtoComEstado extends AtoDisponivel {
+  baseAlternativa: string
+  usandoBaseAlternativa: boolean
+  valorFinal: number
+  calculoAtualizado: {
+    valorCalculado: number
+    valorPercentual: number
+    usouMinimo: boolean
+  }
 }
 
 export default function ProcessoCobrancasCard({
@@ -43,12 +62,12 @@ export default function ProcessoCobrancasCard({
   const supabase = createClient()
 
   const [loading, setLoading] = useState(true)
-  const [atosDisponiveis, setAtosDisponiveis] = useState<AtoDisponivel[]>([])
+  const [atosComEstado, setAtosComEstado] = useState<AtoComEstado[]>([])
   const [contratoForma, setContratoForma] = useState<string | null>(null)
+  const [atoExpandido, setAtoExpandido] = useState<string | null>(null)
 
-  // Modal de cobrança
-  const [modalCobrar, setModalCobrar] = useState<AtoDisponivel | null>(null)
-  const [valorCobrar, setValorCobrar] = useState('')
+  // Modal de confirmação
+  const [modalConfirmacao, setModalConfirmacao] = useState<AtoComEstado | null>(null)
   const [cobrando, setCobrando] = useState(false)
 
   // Carregar dados
@@ -57,7 +76,6 @@ export default function ProcessoCobrancasCard({
 
     setLoading(true)
     try {
-      // Verificar se processo tem contrato e qual a forma de cobrança
       const { data: processo } = await supabase
         .from('processos_processos')
         .select('contrato_id')
@@ -82,69 +100,119 @@ export default function ProcessoCobrancasCard({
 
       setContratoForma(contrato.forma_cobranca)
 
-      // Apenas carregar atos se for por_ato
       if (contrato.forma_cobranca === 'por_ato') {
         const atos = await loadAtosDisponiveis(processoId)
-        setAtosDisponiveis(atos)
+
+        // Inicializar estado de cada ato
+        const atosComEstadoInicial: AtoComEstado[] = atos.map(ato => {
+          const calculo = calcularValorAto(
+            ato.percentual_contrato || ato.percentual_padrao,
+            ato.valor_minimo_contrato || ato.valor_fixo_padrao,
+            ato.base_calculo_padrao || valorCausa || 0
+          )
+          return {
+            ...ato,
+            baseAlternativa: '',
+            usandoBaseAlternativa: false,
+            valorFinal: calculo.valorCalculado,
+            calculoAtualizado: calculo,
+          }
+        })
+        setAtosComEstado(atosComEstadoInicial)
       }
     } catch (error) {
       console.error('Erro ao carregar dados de cobrança:', error)
     } finally {
       setLoading(false)
     }
-  }, [processoId, escritorioAtivo, supabase, loadAtosDisponiveis])
+  }, [processoId, escritorioAtivo, supabase, loadAtosDisponiveis, valorCausa])
 
   useEffect(() => {
     loadData()
   }, [loadData])
 
-  // Handler para abrir modal
-  const handleAbrirCobrar = (ato: AtoDisponivel) => {
-    setModalCobrar(ato)
-    setValorCobrar(
-      ato.valor_calculado?.toString() ||
-        ato.valor_minimo_contrato?.toString() ||
-        ato.valor_fixo_padrao?.toString() ||
-        ''
-    )
+  // Atualizar base alternativa de um ato
+  const handleAlterarBase = (atoId: string, novaBase: string) => {
+    setAtosComEstado(prev => prev.map(ato => {
+      if (ato.id !== atoId) return ato
+
+      const baseCalculo = novaBase ? parseFloat(novaBase) : (ato.base_calculo_padrao || valorCausa || 0)
+      const calculo = calcularValorAto(
+        ato.percentual_contrato || ato.percentual_padrao,
+        ato.valor_minimo_contrato || ato.valor_fixo_padrao,
+        baseCalculo
+      )
+
+      return {
+        ...ato,
+        baseAlternativa: novaBase,
+        usandoBaseAlternativa: !!novaBase,
+        valorFinal: calculo.valorCalculado,
+        calculoAtualizado: calculo,
+      }
+    }))
   }
 
-  // Handler para cobrar
-  const handleCobrar = async () => {
-    if (!modalCobrar) return
+  // Alternar uso de base alternativa
+  const toggleBaseAlternativa = (atoId: string) => {
+    setAtosComEstado(prev => prev.map(ato => {
+      if (ato.id !== atoId) return ato
 
-    if (!valorCobrar || parseFloat(valorCobrar) <= 0) {
-      toast.error('Informe um valor válido')
-      return
-    }
+      if (ato.usandoBaseAlternativa) {
+        // Voltar para valor da causa
+        const calculo = calcularValorAto(
+          ato.percentual_contrato || ato.percentual_padrao,
+          ato.valor_minimo_contrato || ato.valor_fixo_padrao,
+          ato.base_calculo_padrao || valorCausa || 0
+        )
+        return {
+          ...ato,
+          baseAlternativa: '',
+          usandoBaseAlternativa: false,
+          valorFinal: calculo.valorCalculado,
+          calculoAtualizado: calculo,
+        }
+      } else {
+        // Expandir para editar
+        setAtoExpandido(atoId)
+        return ato
+      }
+    }))
+  }
+
+  // Abrir modal de confirmação
+  const handleAbrirConfirmacao = (ato: AtoComEstado) => {
+    setModalConfirmacao(ato)
+  }
+
+  // Confirmar cobrança
+  const handleConfirmarCobranca = async () => {
+    if (!modalConfirmacao) return
 
     setCobrando(true)
     try {
       await cobrarAto(
         processoId,
-        modalCobrar.id,
-        parseFloat(valorCobrar),
-        modalCobrar.nome
+        modalConfirmacao.id,
+        modalConfirmacao.valorFinal,
+        modalConfirmacao.nome
       )
-      toast.success('Ato cobrado com sucesso!')
-      setModalCobrar(null)
-      setValorCobrar('')
+      toast.success('Honorário enviado ao faturamento!')
+      setModalConfirmacao(null)
       loadData()
     } catch (error) {
       console.error('Erro ao cobrar ato:', error)
-      toast.error('Erro ao cobrar ato')
+      toast.error('Erro ao enviar ao faturamento')
     } finally {
       setCobrando(false)
     }
   }
 
-  // Não mostrar se estiver carregando
   if (loading) {
     return null
   }
 
-  // Não mostrar se não for contrato por_ato ou se não tiver atos configurados
-  if (contratoForma !== 'por_ato' || atosDisponiveis.length === 0) {
+  if (contratoForma !== 'por_ato' || atosComEstado.length === 0) {
     return null
   }
 
@@ -158,143 +226,157 @@ export default function ProcessoCobrancasCard({
           </CardTitle>
         </CardHeader>
         <CardContent className="p-5 pt-0">
-          <div className="space-y-2">
-            {atosDisponiveis.map(ato => (
+          <div className="space-y-3">
+            {atosComEstado.map(ato => (
               <div
                 key={ato.id}
-                className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-100 hover:border-[#89bcbe]/30 transition-colors"
+                className="p-3 bg-slate-50 rounded-lg border border-slate-200"
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4">
-                      {ato.codigo}
-                    </Badge>
+                {/* Cabeçalho do Ato */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-[#34495e] truncate">
                       {ato.nome}
                     </p>
-                  </div>
-                  {ato.valor_calculado && ato.valor_calculado > 0 && (
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <p className="text-[10px] font-medium text-emerald-600">
-                        {formatCurrency(ato.valor_calculado)}
-                      </p>
-                      {ato.usou_minimo ? (
-                        <Badge
-                          variant="outline"
-                          className="text-[8px] px-1 py-0 h-3.5 bg-amber-50 text-amber-600 border-amber-200"
-                        >
-                          mín.
-                        </Badge>
-                      ) : ato.percentual_contrato ? (
-                        <span className="text-[9px] text-slate-400">
-                          ({ato.percentual_contrato}%)
+
+                    {/* Info do Cálculo */}
+                    <div className="mt-2 space-y-1">
+                      <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                        <span>
+                          {ato.percentual_contrato || ato.percentual_padrao}% de{' '}
+                          {formatCurrency(
+                            ato.usandoBaseAlternativa && ato.baseAlternativa
+                              ? parseFloat(ato.baseAlternativa)
+                              : (ato.base_calculo_padrao || valorCausa || 0)
+                          )}
                         </span>
-                      ) : null}
+                        {ato.calculoAtualizado.usouMinimo && (
+                          <Badge className="text-[8px] px-1 py-0 h-3.5 bg-amber-100 text-amber-700 border-amber-200">
+                            mín. aplicado
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold text-emerald-600">
+                        {formatCurrency(ato.valorFinal)}
+                      </p>
                     </div>
-                  )}
+                  </div>
+
+                  {/* Botão Cobrar */}
+                  <Button
+                    size="sm"
+                    onClick={() => handleAbrirConfirmacao(ato)}
+                    className="h-8 px-3 bg-emerald-500 hover:bg-emerald-600 text-white shrink-0"
+                  >
+                    <Send className="w-3.5 h-3.5 mr-1.5" />
+                    Cobrar
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleAbrirCobrar(ato)}
-                  className="h-7 px-2.5 text-xs text-[#89bcbe] hover:text-[#6ba9ab] hover:bg-[#89bcbe]/10"
+
+                {/* Opção de Alterar Base */}
+                <Collapsible
+                  open={atoExpandido === ato.id}
+                  onOpenChange={(open) => setAtoExpandido(open ? ato.id : null)}
                 >
-                  <DollarSign className="w-3.5 h-3.5 mr-1" />
-                  Cobrar
-                </Button>
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 h-6 px-2 text-[10px] text-slate-500 hover:text-[#34495e] w-full justify-start"
+                    >
+                      <Pencil className="w-3 h-3 mr-1" />
+                      {ato.usandoBaseAlternativa ? 'Usando base alternativa' : 'Alterar base de cálculo'}
+                      <ChevronDown className={cn(
+                        "w-3 h-3 ml-auto transition-transform",
+                        atoExpandido === ato.id && "rotate-180"
+                      )} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-2">
+                    <div className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-[10px] text-slate-500 whitespace-nowrap">
+                          Base alternativa:
+                        </Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={ato.baseAlternativa}
+                          onChange={e => handleAlterarBase(ato.id, e.target.value)}
+                          placeholder={formatCurrency(ato.base_calculo_padrao || valorCausa || 0)}
+                          className="h-7 text-xs flex-1"
+                        />
+                      </div>
+                      {ato.usandoBaseAlternativa && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleBaseAlternativa(ato.id)}
+                          className="h-6 px-2 text-[10px] text-slate-500"
+                        >
+                          <X className="w-3 h-3 mr-1" />
+                          Usar valor da causa
+                        </Button>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Modal de Cobrança */}
-      <Dialog open={!!modalCobrar} onOpenChange={() => setModalCobrar(null)}>
-        <DialogContent className="max-w-sm">
+      {/* Modal de Confirmação */}
+      <Dialog open={!!modalConfirmacao} onOpenChange={() => setModalConfirmacao(null)}>
+        <DialogContent className="max-w-xs">
           <DialogHeader>
-            <DialogTitle className="text-base">Cobrar Ato Processual</DialogTitle>
-            <DialogDescription>
-              Registre a cobrança deste ato processual.
-            </DialogDescription>
+            <DialogTitle className="text-base flex items-center gap-2">
+              <Send className="w-4 h-4 text-emerald-500" />
+              Confirmar Cobrança
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="p-3 bg-slate-50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[10px]">
-                  {modalCobrar?.codigo}
-                </Badge>
-                <p className="text-sm font-medium text-[#34495e]">
-                  {modalCobrar?.nome}
-                </p>
+          <div className="py-4">
+            <div className="p-3 bg-slate-50 rounded-lg space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-500">Ato:</span>
+                <span className="text-xs font-medium text-[#34495e]">
+                  {modalConfirmacao?.nome}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-500">Base:</span>
+                <span className="text-xs text-slate-600">
+                  {modalConfirmacao?.usandoBaseAlternativa && modalConfirmacao?.baseAlternativa
+                    ? formatCurrency(parseFloat(modalConfirmacao.baseAlternativa))
+                    : formatCurrency(modalConfirmacao?.base_calculo_padrao || valorCausa || 0)
+                  }
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                <span className="text-sm font-medium text-[#34495e]">Valor:</span>
+                <span className="text-sm font-bold text-emerald-600">
+                  {formatCurrency(modalConfirmacao?.valorFinal || 0)}
+                </span>
               </div>
             </div>
-
-            {/* Detalhes do Cálculo */}
-            {(modalCobrar?.valor_percentual || modalCobrar?.valor_minimo) && (
-              <div className="p-3 bg-slate-50/50 rounded-lg border border-slate-100">
-                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-2">
-                  Cálculo
-                </p>
-                <div className="space-y-1.5">
-                  {modalCobrar?.percentual_contrato && valorCausa && valorCausa > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-slate-600">
-                        {modalCobrar.percentual_contrato}% de {formatCurrency(valorCausa)}
-                      </span>
-                      <span className={`text-xs font-medium ${!modalCobrar.usou_minimo ? 'text-emerald-600' : 'text-slate-400 line-through'}`}>
-                        {formatCurrency(modalCobrar.valor_percentual || 0)}
-                      </span>
-                    </div>
-                  )}
-                  {modalCobrar?.valor_minimo && modalCobrar.valor_minimo > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-slate-600">Valor mínimo</span>
-                      <span className={`text-xs font-medium ${modalCobrar.usou_minimo ? 'text-amber-600' : 'text-slate-400'}`}>
-                        {formatCurrency(modalCobrar.valor_minimo)}
-                      </span>
-                    </div>
-                  )}
-                  {modalCobrar?.usou_minimo && (
-                    <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-200 mt-1.5">
-                      <AlertCircle className="w-3 h-3 text-amber-500" />
-                      <span className="text-[10px] text-amber-600">
-                        Aplicado valor mínimo (maior que o percentual)
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div>
-              <Label className="text-sm">Valor da Cobrança</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={valorCobrar}
-                onChange={e => setValorCobrar(e.target.value)}
-                placeholder="0,00"
-                className="mt-1"
-              />
-              <p className="text-[10px] text-slate-400 mt-1">
-                Você pode ajustar o valor se necessário
-              </p>
-            </div>
+            <p className="text-[10px] text-slate-400 mt-3 text-center">
+              O honorário será enviado para o faturamento
+            </p>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              onClick={() => setModalCobrar(null)}
+              onClick={() => setModalConfirmacao(null)}
               disabled={cobrando}
             >
-              <X className="w-4 h-4 mr-1" />
               Cancelar
             </Button>
             <Button
               size="sm"
-              onClick={handleCobrar}
+              onClick={handleConfirmarCobranca}
               disabled={cobrando}
               className="bg-emerald-500 hover:bg-emerald-600 text-white"
             >

@@ -46,6 +46,41 @@ export interface AtoDisponivel {
   valor_percentual?: number | null; // Valor calculado pelo percentual
   valor_minimo?: number | null; // Valor mínimo aplicável
   usou_minimo?: boolean; // true se o valor mínimo foi aplicado
+  // Base de cálculo padrão (valor da causa)
+  base_calculo_padrao?: number | null;
+}
+
+// =====================================================
+// FUNÇÃO UTILITÁRIA - CÁLCULO DE ATO
+// =====================================================
+
+export interface ResultadoCalculoAto {
+  valorCalculado: number;
+  valorPercentual: number;
+  usouMinimo: boolean;
+}
+
+/**
+ * Calcula o valor de um ato baseado na base de cálculo
+ * Lógica: MAX(percentual × base, valor_minimo)
+ */
+export function calcularValorAto(
+  percentual: number | null,
+  valorMinimo: number | null,
+  baseCalculo: number
+): ResultadoCalculoAto {
+  const valorPercentual = percentual && baseCalculo > 0
+    ? (percentual / 100) * baseCalculo
+    : 0;
+
+  const valorMinFinal = valorMinimo || 0;
+  const valorCalculado = Math.max(valorPercentual, valorMinFinal);
+
+  return {
+    valorCalculado,
+    valorPercentual,
+    usouMinimo: valorMinFinal > 0 && valorPercentual < valorMinFinal,
+  };
 }
 
 export interface ReceitaHonorario {
@@ -322,6 +357,8 @@ export function useCobrancaAtos(escritorioId: string | null): UseCobrancaAtosRet
           valor_percentual: valorPercentual > 0 ? valorPercentual : null,
           valor_minimo: valorMinimo > 0 ? valorMinimo : null,
           usou_minimo: valorMinimo > 0 && valorPercentual < valorMinimo, // Indica se aplicou o mínimo
+          // Base de cálculo padrão (valor da causa do processo)
+          base_calculo_padrao: valorCausa > 0 ? valorCausa : null,
         };
       });
     } catch (err) {

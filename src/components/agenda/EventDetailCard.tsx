@@ -17,6 +17,7 @@ import {
   Zap,
   RotateCcw,
   Repeat,
+  Timer,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -53,6 +54,7 @@ export interface EventDetailCardProps {
   onViewDetails?: () => void
   onComplete?: () => void
   onReopen?: () => void
+  onLancarHoras?: () => void
   onProcessoClick?: (processoId: string) => void
   onConsultivoClick?: (consultivoId: string) => void
 }
@@ -143,6 +145,7 @@ export default function EventDetailCard({
   onViewDetails,
   onComplete,
   onReopen,
+  onLancarHoras,
   onProcessoClick,
   onConsultivoClick,
 }: EventDetailCardProps) {
@@ -321,7 +324,7 @@ export default function EventDetailCard({
         </div>
 
         {/* Footer com ações */}
-        {(podeSerConcluido || tipo === 'tarefa') && (
+        {(podeSerConcluido || tipo === 'tarefa' || onLancarHoras) && (
           <div className="flex items-center justify-between gap-2 mt-2.5 pt-2 border-t border-slate-100">
             {/* Status badge para tarefas */}
             {tipo === 'tarefa' && (
@@ -342,35 +345,53 @@ export default function EventDetailCard({
               </Badge>
             )}
 
-            {/* Botão concluir para tarefas pendentes */}
-            {podeSerConcluido && (
-              <Button
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onComplete?.()
-                }}
-                className="h-6 px-2 text-[10px] bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white ml-auto"
-              >
-                <CheckCheck className="w-3 h-3 mr-1" />
-                Concluir
-              </Button>
-            )}
+            <div className="flex items-center gap-1.5 ml-auto">
+              {/* Botão Lançar Horas - só aparece se tem vínculo */}
+              {onLancarHoras && (processo_id || consultivo_id) && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onLancarHoras()
+                  }}
+                  className="h-6 px-2 text-[10px] border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
+                >
+                  <Timer className="w-3 h-3 mr-1" />
+                  Horas
+                </Button>
+              )}
 
-            {/* Botão reabrir para tarefas concluídas */}
-            {estaConcluida && onReopen && (
-              <Button
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onReopen()
-                }}
-                className="h-6 px-2 text-[10px] bg-gradient-to-br from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white ml-auto"
-              >
-                <RotateCcw className="w-3 h-3 mr-1" />
-                Reabrir
-              </Button>
-            )}
+              {/* Botão concluir para tarefas pendentes */}
+              {podeSerConcluido && (
+                <Button
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onComplete?.()
+                  }}
+                  className="h-6 px-2 text-[10px] bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white"
+                >
+                  <CheckCheck className="w-3 h-3 mr-1" />
+                  Concluir
+                </Button>
+              )}
+
+              {/* Botão reabrir para tarefas concluídas */}
+              {estaConcluida && onReopen && (
+                <Button
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onReopen()
+                  }}
+                  className="h-6 px-2 text-[10px] bg-gradient-to-br from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white"
+                >
+                  <RotateCcw className="w-3 h-3 mr-1" />
+                  Reabrir
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </CardContent>

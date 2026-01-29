@@ -59,6 +59,8 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
+import ReceitaModal from '@/components/financeiro/ReceitaModal'
+import DespesaModal from '@/components/financeiro/DespesaModal'
 
 interface ExtratoItem {
   id: string
@@ -192,6 +194,8 @@ export default function ExtratoFinanceiroPage() {
   const [modalTransferencia, setModalTransferencia] = useState(false)
   const [modalExcluir, setModalExcluir] = useState<ExtratoItem | null>(null)
   const [modalEditar, setModalEditar] = useState<ExtratoItem | null>(null)
+  const [modalReceita, setModalReceita] = useState(false)
+  const [modalDespesa, setModalDespesa] = useState(false)
 
   // Info para exclusão
   const [exclusaoInfo, setExclusaoInfo] = useState<{
@@ -1193,14 +1197,14 @@ export default function ExtratoFinanceiroPage() {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => window.location.href = '/dashboard/financeiro/receitas-despesas?tipo=despesa'}
+            onClick={() => setModalDespesa(true)}
           >
             <Plus className="w-4 h-4 mr-1" />
             Despesa
           </Button>
           <Button
             size="sm"
-            onClick={() => window.location.href = '/dashboard/financeiro/receitas-despesas?tipo=receita'}
+            onClick={() => setModalReceita(true)}
             className="bg-[#34495e] hover:bg-[#46627f] text-white"
           >
             <Plus className="w-4 h-4 mr-1" />
@@ -2497,6 +2501,20 @@ export default function ExtratoFinanceiroPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal Nova Receita */}
+      <ReceitaModal
+        open={modalReceita}
+        onOpenChange={setModalReceita}
+        onSuccess={() => loadExtrato()}
+      />
+
+      {/* Modal Nova Despesa */}
+      <DespesaModal
+        open={modalDespesa}
+        onOpenChange={setModalDespesa}
+        onSuccess={() => loadExtrato()}
+      />
     </div>
   )
 }

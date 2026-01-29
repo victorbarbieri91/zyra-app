@@ -47,6 +47,7 @@ import AlertasCard from '@/components/dashboard/AlertasCard'
 import TarefaWizard from '@/components/agenda/TarefaWizard'
 import { ConsultaWizardModal } from '@/components/consultivo/ConsultaWizardModal'
 import ProcessoWizard from '@/components/processos/ProcessoWizard'
+import TimesheetModal from '@/components/financeiro/TimesheetModal'
 
 // Hooks de dados reais
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics'
@@ -71,6 +72,7 @@ export default function DashboardPage() {
   const [tarefaModalOpen, setTarefaModalOpen] = useState(false)
   const [consultaModalOpen, setConsultaModalOpen] = useState(false)
   const [processoModalOpen, setProcessoModalOpen] = useState(false)
+  const [timesheetModalOpen, setTimesheetModalOpen] = useState(false)
 
   // Estados para multi-escritório
   const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
@@ -614,7 +616,7 @@ export default function DashboardPage() {
                     <span className="text-[10px] font-medium text-[#46627f]">Novo Consultivo</span>
                   </button>
                   <button
-                    onClick={() => router.push('/dashboard/financeiro/timesheet')}
+                    onClick={() => setTimesheetModalOpen(true)}
                     className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg border border-slate-200 hover:border-[#89bcbe] hover:bg-[#f0f9f9] transition-all"
                   >
                     <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
@@ -871,6 +873,14 @@ export default function DashboardPage() {
           onOpenChange={setProcessoModalOpen}
           onSuccess={() => {
             setProcessoModalOpen(false)
+          }}
+        />
+
+        <TimesheetModal
+          open={timesheetModalOpen}
+          onOpenChange={setTimesheetModalOpen}
+          onSuccess={() => {
+            setTimesheetModalOpen(false)
           }}
         />
     </div>

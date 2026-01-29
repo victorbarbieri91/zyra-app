@@ -40,12 +40,30 @@ export async function GET(request: NextRequest) {
 
     console.log('[Debug Aparicoes] Resultado:', JSON.stringify(resultado, null, 2))
 
+    // Para debug: mostrar estrutura completa das aparições incluindo todos os campos
+    const aparicoesCampetos = resultado.aparicoes?.slice(0, 5).map((ap: any) => ({
+      _raw_keys: Object.keys(ap),
+      _diario_keys: ap.diario ? Object.keys(ap.diario) : null,
+      _publicacao_keys: ap.publicacao ? Object.keys(ap.publicacao) : null,
+      _tem_texto: Boolean(ap.texto),
+      _tem_conteudo: Boolean(ap.conteudo),
+      _tem_content: Boolean(ap.content),
+      _tem_descricao: Boolean(ap.descricao),
+      _texto_length: ap.texto?.length || 0,
+      _conteudo_length: ap.conteudo?.length || 0,
+      ...ap
+    })) || []
+
     return NextResponse.json({
       sucesso: resultado.sucesso,
       monitoramento_id: monitoramentoId,
       total: resultado.total || 0,
-      aparicoes: resultado.aparicoes?.slice(0, 5) || [], // Limitar a 5 para não poluir
-      erro: resultado.erro
+      aparicoes: aparicoesCampetos,
+      erro: resultado.erro,
+      _debug_info: {
+        timestamp: new Date().toISOString(),
+        aparicoes_raw_count: resultado.aparicoes?.length || 0
+      }
     })
 
   } catch (error) {

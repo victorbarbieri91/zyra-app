@@ -12,7 +12,9 @@ export interface DashboardMetrics {
   clientes_novos_mes: number
   consultas_abertas: number
 
-  // Financeiro (dados do USUÁRIO logado para "Seus Números do Mês")
+  // Financeiro - "Seus Números do Mês" (dados do USUÁRIO logado)
+  // Horas: filtrado por user_id no timesheet
+  // Receitas: filtrado por responsavel_id em financeiro_receitas
   faturamento_mes: number
   a_receber: number
   horas_faturadas_mes: number
@@ -244,20 +246,24 @@ export function useDashboardMetrics() {
           .gte('data_fim', hoje.toISOString().split('T')[0])
           .lte('data_inicio', hoje.toISOString().split('T')[0]),
 
-        // Receitas recebidas no mês (faturamento)
-        supabase
+        // Receitas recebidas no mês DO USUÁRIO LOGADO (para "Seus Números do Mês")
+        userId ? supabase
           .from('financeiro_receitas')
           .select('valor_pago')
           .eq('escritorio_id', escritorioAtivo)
+          .eq('responsavel_id', userId)
           .in('status', ['pago', 'parcial'])
-          .gte('data_pagamento', inicioMes.toISOString().split('T')[0]),
+          .gte('data_pagamento', inicioMes.toISOString().split('T')[0])
+        : Promise.resolve({ data: [] }),
 
-        // A receber (receitas pendentes)
-        supabase
+        // A receber DO USUÁRIO LOGADO (receitas pendentes)
+        userId ? supabase
           .from('financeiro_receitas')
           .select('valor, valor_pago')
           .eq('escritorio_id', escritorioAtivo)
-          .in('status', ['pendente', 'atrasado', 'parcial']),
+          .eq('responsavel_id', userId)
+          .in('status', ['pendente', 'atrasado', 'parcial'])
+        : Promise.resolve({ data: [] }),
       ])
 
       // Processar resultados - Horas do USUÁRIO LOGADO

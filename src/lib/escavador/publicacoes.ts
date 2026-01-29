@@ -609,6 +609,35 @@ export function extrairNumeroCNJ(texto: string): string | null {
 /**
  * Normaliza uma aparição do Escavador para o formato interno
  */
+/**
+ * Extrai texto de uma aparição verificando múltiplos campos possíveis
+ * A API do Escavador pode retornar o texto em diferentes campos dependendo da versão/diário
+ */
+export function extrairTextoAparicao(aparicao: any): string {
+  // IMPORTANTE: A API do Escavador retorna o texto em movimentacao.conteudo
+  const texto =
+    aparicao.movimentacao?.conteudo ||         // Campo CORRETO da API Escavador
+    aparicao.movimentacao?.snippet ||          // Snippet como fallback
+    aparicao.texto ||                          // Campo padrão esperado
+    aparicao.conteudo ||                       // Campo alternativo comum
+    aparicao.conteudo_snippet ||               // Snippet direto
+    aparicao.content ||                        // Versão em inglês
+    aparicao.texto_publicacao ||               // Variante
+    aparicao.texto_completo ||                 // Variante
+    aparicao.descricao ||                      // Descrição como fallback
+    aparicao.publicacao?.texto ||              // Objeto aninhado
+    aparicao.publicacao?.conteudo ||           // Objeto aninhado
+    aparicao.diario?.texto ||                  // Dentro do diário
+    aparicao.diario?.conteudo ||               // Dentro do diário
+    ''
+
+  if (!texto) {
+    console.warn(`[Escavador] Aparição ${aparicao.id} sem texto. Campos disponíveis:`, Object.keys(aparicao))
+  }
+
+  return texto
+}
+
 export function normalizarAparicao(
   aparicao: EscavadorAparicao,
   monitoramentoId: number,
@@ -626,14 +655,16 @@ export function normalizarAparicao(
   status: 'pendente'
   urgente: boolean
 } {
-  const numeroCNJ = extrairNumeroCNJ(aparicao.texto)
+  // Usar função que verifica múltiplos campos possíveis
+  const textoCompleto = extrairTextoAparicao(aparicao)
+  const numeroCNJ = textoCompleto ? extrairNumeroCNJ(textoCompleto) : null
 
   // Detecta urgência por palavras-chave
   const palavrasUrgentes = [
     'urgente', 'imediato', 'citação', 'intimação',
     'prazo fatal', 'último dia', 'mandado'
   ]
-  const textoLower = aparicao.texto.toLowerCase()
+  const textoLower = textoCompleto.toLowerCase()
   const urgente = palavrasUrgentes.some(p => textoLower.includes(p))
 
   return {
@@ -644,7 +675,7 @@ export function normalizarAparicao(
     data_publicacao: aparicao.data_publicacao || aparicao.diario?.data,
     data_captura: new Date().toISOString(),
     tribunal: aparicao.diario?.nome || aparicao.diario?.sigla || 'Diário Oficial',
-    texto_completo: aparicao.texto,
+    texto_completo: textoCompleto,
     numero_processo: numeroCNJ,
     status: 'pendente',
     urgente

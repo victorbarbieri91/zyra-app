@@ -191,15 +191,48 @@ export default function PublicacaoDetalhePage() {
 
   // Marcar como tratada
   const marcarTratada = async () => {
+    if (!publicacao) return
+
     setMarcandoTratada(true)
     try {
+      // Se a publicação está vinculada a um processo, criar andamento
+      if (publicacao.processo_id) {
+        const { error: movError } = await supabase
+          .from('processos_movimentacoes')
+          .insert({
+            processo_id: publicacao.processo_id,
+            escritorio_id: publicacao.escritorio_id,
+            data_movimento: publicacao.data_publicacao,
+            tipo_codigo: publicacao.tipo_publicacao?.toUpperCase() || 'PUBLICACAO',
+            tipo_descricao: publicacao.tipo_publicacao
+              ? publicacao.tipo_publicacao.charAt(0).toUpperCase() + publicacao.tipo_publicacao.slice(1)
+              : 'Publicação',
+            descricao: `${publicacao.tribunal || 'Diário Oficial'} - ${publicacao.tipo_publicacao || 'Publicação'}`,
+            conteudo_completo: publicacao.texto_completo || '',
+            origem: 'publicacao_diario',
+            importante: publicacao.urgente || false,
+            lida: true,
+          })
+
+        if (movError) {
+          console.error('Erro ao criar andamento:', movError)
+          // Continua mesmo se falhar o andamento
+        }
+      }
+
+      // Atualizar status da publicação
       const { error } = await supabase
         .from('publicacoes_publicacoes')
         .update({ status: 'processada' })
         .eq('id', publicacaoId)
 
       if (error) throw error
-      toast.success('Marcada como tratada')
+
+      if (publicacao.processo_id) {
+        toast.success('Marcada como tratada e salva nos andamentos do processo')
+      } else {
+        toast.success('Marcada como tratada')
+      }
       await carregarPublicacao()
     } catch (err) {
       console.error('Erro ao atualizar:', err)

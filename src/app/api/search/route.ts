@@ -76,6 +76,7 @@ export async function GET(request: NextRequest) {
           id,
           numero_cnj,
           numero_pasta,
+          parte_contraria,
           area,
           tribunal,
           status,
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
           cliente:cliente_id(nome_completo)
         `)
         .eq('escritorio_id', escritorioId)
-        .or(`numero_cnj.ilike.${termoBusca},numero_pasta.ilike.${termoBusca},observacoes.ilike.${termoBusca}`)
+        .or(`numero_cnj.ilike.${termoBusca},numero_pasta.ilike.${termoBusca},parte_contraria.ilike.${termoBusca},observacoes.ilike.${termoBusca}`)
         .limit(MAX_RESULTADOS_POR_TIPO)
 
       if (processos) {
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest) {
             id: p.id,
             tipo: 'processo',
             titulo: p.numero_cnj || p.numero_pasta || 'Processo sem número',
-            subtitulo: p.cliente?.nome_completo || 'Sem cliente',
+            subtitulo: p.cliente?.nome_completo || p.parte_contraria || 'Sem cliente',
             navegacao: `/dashboard/processos?id=${p.id}`,
             destaque: p.area ? `${p.area} - ${p.tribunal || 'N/A'}` : undefined,
             icone: 'Scale',
@@ -103,7 +104,8 @@ export async function GET(request: NextRequest) {
             numero_pasta: p.numero_pasta,
             area: p.area,
             tribunal: p.tribunal,
-            cliente_nome: p.cliente?.nome_completo
+            cliente_nome: p.cliente?.nome_completo,
+            parte_contraria: p.parte_contraria
           })
         })
       }
@@ -115,6 +117,7 @@ export async function GET(request: NextRequest) {
           id,
           numero_cnj,
           numero_pasta,
+          parte_contraria,
           area,
           tribunal,
           status,
@@ -132,7 +135,7 @@ export async function GET(request: NextRequest) {
               id: p.id,
               tipo: 'processo',
               titulo: p.numero_cnj || p.numero_pasta || 'Processo sem número',
-              subtitulo: p.cliente?.nome_completo || 'Sem cliente',
+              subtitulo: p.cliente?.nome_completo || p.parte_contraria || 'Sem cliente',
               navegacao: `/dashboard/processos?id=${p.id}`,
               destaque: p.area ? `${p.area} - ${p.tribunal || 'N/A'}` : undefined,
               icone: 'Scale',
@@ -142,7 +145,8 @@ export async function GET(request: NextRequest) {
               numero_pasta: p.numero_pasta,
               area: p.area,
               tribunal: p.tribunal,
-              cliente_nome: p.cliente?.nome_completo
+              cliente_nome: p.cliente?.nome_completo,
+              parte_contraria: p.parte_contraria
             })
           }
         })
@@ -321,18 +325,17 @@ export async function GET(request: NextRequest) {
     // ========================================
     if (tiposSolicitados.includes('contrato')) {
       const { data: contratos } = await supabase
-        .from('contratos_honorarios')
+        .from('financeiro_contratos_honorarios')
         .select(`
           id,
-          numero_contrato,
-          tipo_servico,
+          titulo,
           forma_cobranca,
           valor_total,
           status,
           cliente:cliente_id(nome_completo)
         `)
         .eq('escritorio_id', escritorioId)
-        .or(`numero_contrato.ilike.${termoBusca},tipo_servico.ilike.${termoBusca}`)
+        .or(`titulo.ilike.${termoBusca}`)
         .limit(MAX_RESULTADOS_POR_TIPO)
 
       if (contratos) {
@@ -340,14 +343,13 @@ export async function GET(request: NextRequest) {
           resultados.push({
             id: c.id,
             tipo: 'contrato',
-            titulo: c.numero_contrato || `Contrato ${c.tipo_servico}`,
+            titulo: c.titulo || 'Contrato sem título',
             subtitulo: c.cliente?.nome_completo,
-            navegacao: `/dashboard/financeiro?contrato=${c.id}`,
+            navegacao: `/dashboard/financeiro/contratos?id=${c.id}`,
             destaque: c.forma_cobranca,
             icone: 'FileText',
             modulo: 'Financeiro',
             status: c.status,
-            numero_contrato: c.numero_contrato,
             cliente_nome: c.cliente?.nome_completo,
             valor: c.valor_total,
             forma_cobranca: c.forma_cobranca
@@ -357,11 +359,10 @@ export async function GET(request: NextRequest) {
 
       // Busca adicional por nome do cliente
       const { data: contratosPorCliente } = await supabase
-        .from('contratos_honorarios')
+        .from('financeiro_contratos_honorarios')
         .select(`
           id,
-          numero_contrato,
-          tipo_servico,
+          titulo,
           forma_cobranca,
           valor_total,
           status,
@@ -377,14 +378,13 @@ export async function GET(request: NextRequest) {
             resultados.push({
               id: c.id,
               tipo: 'contrato',
-              titulo: c.numero_contrato || `Contrato ${c.tipo_servico}`,
+              titulo: c.titulo || 'Contrato sem título',
               subtitulo: c.cliente?.nome_completo,
-              navegacao: `/dashboard/financeiro?contrato=${c.id}`,
+              navegacao: `/dashboard/financeiro/contratos?id=${c.id}`,
               destaque: c.forma_cobranca,
               icone: 'FileText',
               modulo: 'Financeiro',
               status: c.status,
-              numero_contrato: c.numero_contrato,
               cliente_nome: c.cliente?.nome_completo,
               valor: c.valor_total,
               forma_cobranca: c.forma_cobranca
@@ -469,6 +469,42 @@ export async function GET(request: NextRequest) {
           })
         })
       }
+
+      // Busca adicional por nome do cliente
+      const { data: consultivosPorCliente } = await supabase
+        .from('consultivo_consultas')
+        .select(`
+          id,
+          numero,
+          titulo,
+          descricao,
+          status,
+          cliente:cliente_id!inner(nome_completo)
+        `)
+        .eq('escritorio_id', escritorioId)
+        .ilike('cliente.nome_completo', termoBusca)
+        .limit(MAX_RESULTADOS_POR_TIPO)
+
+      if (consultivosPorCliente) {
+        consultivosPorCliente.forEach((c: any) => {
+          // Evitar duplicatas
+          if (!resultados.find(r => r.id === c.id && r.tipo === 'consultivo')) {
+            resultados.push({
+              id: c.id,
+              tipo: 'consultivo',
+              titulo: c.titulo || `Consulta ${c.numero}`,
+              subtitulo: c.cliente?.nome_completo || c.descricao?.substring(0, 100),
+              navegacao: `/dashboard/consultivo?id=${c.id}`,
+              destaque: c.numero,
+              icone: 'BookOpen',
+              modulo: 'Consultivo',
+              status: c.status,
+              numero: c.numero,
+              cliente_nome: c.cliente?.nome_completo
+            })
+          }
+        })
+      }
     }
 
     // ========================================
@@ -540,6 +576,39 @@ export async function GET(request: NextRequest) {
             status: p.status,
             cliente_nome: p.cliente?.nome_completo
           })
+        })
+      }
+
+      // Busca adicional por nome do cliente
+      const { data: projetosPorCliente } = await supabase
+        .from('portfolio_projetos')
+        .select(`
+          id,
+          nome,
+          descricao,
+          status,
+          cliente:cliente_id!inner(nome_completo)
+        `)
+        .eq('escritorio_id', escritorioId)
+        .ilike('cliente.nome_completo', termoBusca)
+        .limit(MAX_RESULTADOS_POR_TIPO)
+
+      if (projetosPorCliente) {
+        projetosPorCliente.forEach((p: any) => {
+          // Evitar duplicatas
+          if (!resultados.find(r => r.id === p.id && r.tipo === 'projeto')) {
+            resultados.push({
+              id: p.id,
+              tipo: 'projeto',
+              titulo: p.nome,
+              subtitulo: p.cliente?.nome_completo || p.descricao?.substring(0, 100),
+              navegacao: `/dashboard/portfolio?projeto=${p.id}`,
+              icone: 'Briefcase',
+              modulo: 'Portfólio',
+              status: p.status,
+              cliente_nome: p.cliente?.nome_completo
+            })
+          }
         })
       }
     }

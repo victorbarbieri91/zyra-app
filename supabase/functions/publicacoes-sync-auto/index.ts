@@ -373,6 +373,10 @@ async function salvarPublicacaoEscavador(
 ): Promise<'nova' | 'existente' | 'vinculada'> {
   const escavadorId = String(aparicao.id || aparicao.aparicao_id)
 
+  // DEBUG: Logar estrutura completa da aparição para diagnóstico
+  console.log(`[DEBUG Escavador] Aparição ${escavadorId} - Estrutura completa:`, JSON.stringify(aparicao, null, 2))
+  console.log(`[DEBUG Escavador] Aparição ${escavadorId} - Campos disponíveis:`, Object.keys(aparicao))
+
   // Verificar se já existe
   const { data: existente } = await supabase
     .from('publicacoes_publicacoes')
@@ -383,13 +387,65 @@ async function salvarPublicacaoEscavador(
 
   if (existente) return 'existente'
 
-  const textoCompleto = aparicao.texto || aparicao.conteudo || ''
-  const hashConteudo = await gerarHash(textoCompleto)
+  // Extrair texto de múltiplos campos possíveis (ordem de prioridade)
+  // IMPORTANTE: A API do Escavador retorna o texto em movimentacao.conteudo
+  const textoCompleto =
+    aparicao.movimentacao?.conteudo ||         // Campo CORRETO da API Escavador
+    aparicao.movimentacao?.snippet ||          // Snippet como fallback
+    aparicao.texto ||                          // Campo padrão esperado
+    aparicao.conteudo ||                       // Campo alternativo
+    aparicao.conteudo_snippet ||               // Snippet direto
+    aparicao.content ||                        // Inglês
+    aparicao.texto_publicacao ||               // Variante
+    aparicao.texto_completo ||                 // Variante
+    aparicao.descricao ||                      // Descrição como fallback
+    aparicao.publicacao?.texto ||              // Objeto aninhado
+    aparicao.publicacao?.conteudo ||           // Objeto aninhado
+    aparicao.diario?.texto ||                  // Dentro do diário
+    aparicao.diario?.conteudo ||               // Dentro do diário
+    ''
 
-  // Extrair CNJ do texto
+  // DEBUG: Logar qual campo foi usado e se texto está vazio
+  if (!textoCompleto) {
+    console.warn(`[DEBUG Escavador] ⚠️ Aparição ${escavadorId} SEM TEXTO! Campos verificados: texto, conteudo, content, texto_publicacao, texto_completo, descricao, publicacao.texto, publicacao.conteudo, diario.texto, diario.conteudo`)
+    console.warn(`[DEBUG Escavador] Raw aparicao keys:`, Object.keys(aparicao))
+    if (aparicao.diario) console.warn(`[DEBUG Escavador] Raw diario keys:`, Object.keys(aparicao.diario))
+    if (aparicao.publicacao) console.warn(`[DEBUG Escavador] Raw publicacao keys:`, Object.keys(aparicao.publicacao))
+  } else {
+    console.log(`[DEBUG Escavador] Aparição ${escavadorId} - Texto extraído com ${textoCompleto.length} caracteres`)
+  }
+
+  // Limpar HTML do texto para exibição
+  const textoLimpo = limparHTML(textoCompleto)
+  const hashConteudo = await gerarHash(textoLimpo)
+
+  // Extrair CNJ - primeiro da resposta da API, depois do texto como fallback
   const cnjRegex = /\d{7}-\d{2}\.\d{4}\.\d{1}\.\d{2}\.\d{4}/g
-  const matches = textoCompleto.match(cnjRegex)
-  const numeroCNJ = matches && matches.length > 0 ? matches[0] : null
+  const numeroCNJ =
+    aparicao.numero_processo ||                           // Campo direto da API
+    aparicao.movimentacao?.processo?.numero_novo ||       // Dentro da movimentação
+    (textoCompleto.match(cnjRegex)?.[0] || null)          // Extrair do texto
+
+  // Extrair data da publicação
+  const dataPublicacao =
+    aparicao.data_diario?.date?.split(' ')[0] ||          // Formato da API: { date: "2026-01-28 00:00:00" }
+    aparicao.data_publicacao ||
+    aparicao.movimentacao?.data?.date?.split(' ')[0] ||
+    new Date().toISOString().split('T')[0]
+
+  // Extrair tribunal/diário
+  const tribunal =
+    aparicao.nome_diario ||                               // Campo direto da API
+    aparicao.diario?.nome ||
+    aparicao.fonte ||
+    'Diário Oficial'
+
+  // Extrair tipo de publicação
+  const tipoPublicacao = mapearTipo(
+    aparicao.movimentacao?.tipo ||                        // Tipo da movimentação
+    aparicao.tipo ||
+    ''
+  )
 
   // Verificar se existe processo com este CNJ
   let processoId = null
@@ -397,7 +453,7 @@ async function salvarPublicacaoEscavador(
 
   if (numeroCNJ) {
     const { data: processo } = await supabase
-      .from('processos')
+      .from('processos_processos')  // CORRIGIDO: tabela correta
       .select('id')
       .eq('escritorio_id', escritorioId)
       .eq('numero_cnj', numeroCNJ)
@@ -406,6 +462,9 @@ async function salvarPublicacaoEscavador(
     if (processo) {
       processoId = processo.id
       vinculado = true
+      console.log(`[DEBUG Escavador] Processo vinculado: ${processoId} (CNJ: ${numeroCNJ})`)
+    } else {
+      console.log(`[DEBUG Escavador] Processo não encontrado para CNJ: ${numeroCNJ}`)
     }
   }
 
@@ -413,19 +472,19 @@ async function salvarPublicacaoEscavador(
     escritorio_id: escritorioId,
     escavador_aparicao_id: escavadorId,
     escavador_monitoramento_id: termoId,
-    data_publicacao: aparicao.data_publicacao || new Date().toISOString().split('T')[0],
+    data_publicacao: dataPublicacao,
     data_captura: new Date().toISOString(),
-    tribunal: aparicao.diario?.nome || aparicao.fonte || 'Diário Oficial',
-    tipo_publicacao: mapearTipo(aparicao.tipo || ''),
+    tribunal: tribunal,
+    tipo_publicacao: tipoPublicacao,
     numero_processo: numeroCNJ,
     processo_id: processoId,
-    texto_completo: textoCompleto,
+    texto_completo: textoLimpo,
     hash_conteudo: hashConteudo,
     status: 'pendente',
-    urgente: detectarUrgencia(textoCompleto),
+    urgente: detectarUrgencia(textoLimpo),
     source: 'escavador',
     source_type: 'escavador_termo',
-    confianca_vinculacao: vinculado ? 100 : null,
+    confianca_vinculacao: vinculado ? 1.00 : null,  // numeric(3,2): 1.00 = 100%
   })
 
   return vinculado ? 'vinculada' : 'nova'
@@ -434,6 +493,35 @@ async function salvarPublicacaoEscavador(
 // ============================================
 // HELPERS
 // ============================================
+
+/**
+ * Remove tags HTML e limpa o texto para exibição
+ */
+function limparHTML(html: string): string {
+  if (!html) return ''
+
+  return html
+    // Substituir <br>, <br/>, <p>, </p> por quebras de linha
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<p[^>]*>/gi, '')
+    // Substituir </td><td> por " | " para tabelas
+    .replace(/<\/td>\s*<td[^>]*>/gi, ': ')
+    .replace(/<\/tr>\s*<tr[^>]*>/gi, '\n')
+    // Remover todas as tags HTML restantes
+    .replace(/<[^>]+>/g, '')
+    // Decodificar entidades HTML comuns
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    // Limpar espaços extras e quebras de linha múltiplas
+    .replace(/\n\s*\n\s*\n/g, '\n\n')
+    .replace(/  +/g, ' ')
+    .trim()
+}
 
 function mapearTipo(tipo: string): string {
   const t = tipo.toLowerCase()

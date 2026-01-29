@@ -32,7 +32,8 @@ import {
   Check,
   Archive,
   RotateCcw,
-  ArrowRight
+  ArrowRight,
+  Clock
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
@@ -46,6 +47,7 @@ import TarefaDetailModal from '@/components/agenda/TarefaDetailModal'
 import EventoDetailModal from '@/components/agenda/EventoDetailModal'
 import VincularContratoConsultivoModal from '@/components/consultivo/VincularContratoConsultivoModal'
 import TransformarConsultivoWizard from '@/components/consultivo/TransformarConsultivoWizard'
+import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import type { TarefaFormData } from '@/hooks/useTarefas'
 import type { EventoFormData } from '@/hooks/useEventos'
 
@@ -107,6 +109,7 @@ export default function ConsultaDetalhePage() {
   // Estados para Financeiro
   const [contratoInfo, setContratoInfo] = useState<any | null>(null)
   const [vincularModalOpen, setVincularModalOpen] = useState(false)
+  const [timesheetModalOpen, setTimesheetModalOpen] = useState(false)
 
   // Estado para Transformar em Processo
   const [transformarModalOpen, setTransformarModalOpen] = useState(false)
@@ -693,6 +696,15 @@ export default function ConsultaDetalhePage() {
                         <span className="text-sm font-semibold text-[#34495e]">{formatCurrency(contratoInfo.valor_total)}</span>
                       </div>
                     )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full text-xs h-8 mt-2"
+                      onClick={() => setTimesheetModalOpen(true)}
+                    >
+                      <Clock className="w-3.5 h-3.5 mr-1.5" />
+                      Lançar Horas
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -762,6 +774,13 @@ export default function ConsultaDetalhePage() {
         onSuccess={(processoId, numeroPasta) => {
           router.push(`/dashboard/processos/${processoId}`)
         }}
+      />
+
+      {/* Modal Lançar Horas */}
+      <TimesheetModal
+        open={timesheetModalOpen}
+        onOpenChange={setTimesheetModalOpen}
+        consultaId={consulta.id}
       />
     </div>
   )

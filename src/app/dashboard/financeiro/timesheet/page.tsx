@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Clock, CheckCircle, XCircle, User, Building2, ChevronDown, Check, Pencil, X, Save, Users } from 'lucide-react'
+import { Clock, CheckCircle, XCircle, User, Building2, ChevronDown, Check, Pencil, X, Save, Users, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { DateRange } from 'react-day-picker'
@@ -17,6 +17,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 import { cn } from '@/lib/utils'
 import { formatBrazilDate } from '@/lib/timezone'
+import TimesheetModal from '@/components/financeiro/TimesheetModal'
 
 interface TimesheetRow {
   id: string
@@ -82,6 +83,9 @@ export default function TimesheetPage() {
   const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
   const [escritoriosSelecionados, setEscritoriosSelecionados] = useState<string[]>([])
   const [seletorAberto, setSeletorAberto] = useState(false)
+
+  // Modal de adicionar horas
+  const [modalTimesheetOpen, setModalTimesheetOpen] = useState(false)
 
   // Carregar escritórios do grupo
   useEffect(() => {
@@ -388,8 +392,18 @@ export default function TimesheetPage() {
           </p>
         </div>
 
-        {/* Seletor de Escritórios */}
-        {escritoriosGrupo.length > 1 && (
+        <div className="flex items-center gap-3">
+          {/* Botão Adicionar */}
+          <Button
+            onClick={() => setModalTimesheetOpen(true)}
+            className="bg-[#34495e] hover:bg-[#46627f] text-white"
+          >
+            <Plus className="w-4 h-4 mr-1.5" />
+            Lançar Horas
+          </Button>
+
+          {/* Seletor de Escritórios */}
+          {escritoriosGrupo.length > 1 && (
           <Popover open={seletorAberto} onOpenChange={setSeletorAberto}>
             <PopoverTrigger asChild>
               <Button
@@ -447,7 +461,8 @@ export default function TimesheetPage() {
               </div>
             </PopoverContent>
           </Popover>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Filtros */}
@@ -848,6 +863,16 @@ export default function TimesheetPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal Lançar Horas */}
+      <TimesheetModal
+        open={modalTimesheetOpen}
+        onOpenChange={setModalTimesheetOpen}
+        onSuccess={() => {
+          setModalTimesheetOpen(false)
+          loadTimesheets()
+        }}
+      />
     </div>
   )
 }

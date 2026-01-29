@@ -43,6 +43,7 @@ import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
 import ProcessoTimelineHorizontal from '@/components/processos/ProcessoTimelineHorizontal'
 import ProcessoFinanceiroCard from '@/components/processos/ProcessoFinanceiroCard'
 import ProcessoCobrancasCard from '@/components/processos/ProcessoCobrancasCard'
+import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import { useRouter } from 'next/navigation'
 import type { TarefaFormData } from '@/hooks/useTarefas'
 import type { EventoFormData } from '@/hooks/useEventos'
@@ -113,6 +114,7 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
   const [showTarefaWizard, setShowTarefaWizard] = useState(false)
   const [showEventoWizard, setShowEventoWizard] = useState(false)
   const [showAudienciaWizard, setShowAudienciaWizard] = useState(false)
+  const [showTimesheetModal, setShowTimesheetModal] = useState(false)
   const [escritorioId, setEscritorioId] = useState<string | null>(null)
 
   // Estados para Modais de Detalhes
@@ -730,10 +732,7 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
             // TODO: Abrir modal de honorário
             console.log('Lançar honorário')
           }}
-          onLancarHoras={() => {
-            // TODO: Abrir modal de timesheet
-            console.log('Lançar horas')
-          }}
+          onLancarHoras={() => setShowTimesheetModal(true)}
           onLancarDespesa={() => {
             // TODO: Abrir modal de despesa
             console.log('Lançar despesa')
@@ -923,6 +922,13 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Timesheet */}
+      <TimesheetModal
+        open={showTimesheetModal}
+        onOpenChange={setShowTimesheetModal}
+        processoId={processo.id}
+      />
     </>
   )
 }

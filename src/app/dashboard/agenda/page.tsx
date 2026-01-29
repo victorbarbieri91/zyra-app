@@ -453,7 +453,7 @@ export default function AgendaPage() {
         await refreshItems()
         toast.success('Horas registradas e tarefa concluída!')
       } catch (error) {
-        console.error('Erro ao concluir tarefa:', error)
+        console.error('Erro ao concluir tarefa após timesheet:', error)
         toast.error('Horas registradas, mas erro ao concluir tarefa')
       }
       setTarefaParaConcluir(null)

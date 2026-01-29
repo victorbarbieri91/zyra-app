@@ -890,7 +890,6 @@ export default function AgendaPage() {
           }
           handleEventClick(eventoProps)
         }}
-        onCreateEvent={handleCreateEvent}
         onCompleteTask={handleCompleteTask}
         onReopenTask={handleReopenTask}
         onLancarHoras={handleLancarHoras}

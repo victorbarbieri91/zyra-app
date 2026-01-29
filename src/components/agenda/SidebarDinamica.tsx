@@ -1,6 +1,6 @@
 'use client'
 
-import { X, Plus, Calendar } from 'lucide-react'
+import { X, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -15,7 +15,6 @@ interface SidebarDinamicaProps {
   selectedDate?: Date
   eventos: AgendaItem[]
   onEventClick: (evento: AgendaItem) => void
-  onCreateEvent: (date: Date) => void
   onCompleteTask?: (taskId: string) => void
   onReopenTask?: (taskId: string) => void
   onLancarHoras?: (taskId: string) => void
@@ -30,7 +29,6 @@ export default function SidebarDinamica({
   selectedDate,
   eventos,
   onEventClick,
-  onCreateEvent,
   onCompleteTask,
   onReopenTask,
   onLancarHoras,
@@ -80,7 +78,7 @@ export default function SidebarDinamica({
       {/* Sidebar */}
       <div
         className={cn(
-          'fixed right-0 top-0 bottom-0 w-[400px] max-w-[90vw] bg-white shadow-2xl z-50',
+          'fixed right-0 top-0 bottom-0 w-[540px] max-w-[90vw] bg-white shadow-2xl z-50',
           'transform transition-transform duration-300 ease-in-out',
           'border-l border-slate-200',
           'flex flex-col',
@@ -105,17 +103,6 @@ export default function SidebarDinamica({
             className="h-8 w-8 p-0 hover:bg-slate-100"
           >
             <X className="w-4 h-4 text-[#6c757d]" />
-          </Button>
-        </div>
-
-        {/* Botão de Criar Evento */}
-        <div className="p-4 border-b border-slate-200">
-          <Button
-            onClick={() => onCreateEvent(selectedDate)}
-            className="w-full bg-gradient-to-br from-[#34495e] to-[#46627f] hover:from-[#2c3e50] hover:to-[#34495e] text-white text-sm"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Evento
           </Button>
         </div>
 

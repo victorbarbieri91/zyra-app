@@ -87,7 +87,9 @@ Relacionamentos externos:
 | `valor_causa` | numeric | YES | - | Valor da causa |
 | `valor_acordo` | numeric | YES | - | Valor do acordo (se houver) |
 | `valor_condenacao` | numeric | YES | - | Valor da condenação (se houver) |
-| `valor_atualizado` | numeric | YES | - | Valor atualizado do processo |
+| `valor_atualizado` | numeric | YES | - | Valor da causa corrigido monetariamente (atualizado automaticamente) |
+| `indice_correcao` | text | YES | 'INPC' | Índice de correção monetária: INPC (padrão), IPCA, IGP-M, SELIC |
+| `data_ultima_atualizacao_monetaria` | date | YES | - | Data da última atualização do valor corrigido |
 | `provisao_sugerida` | numeric | YES | - | Valor sugerido para provisão |
 | `objeto_acao` | text | YES | - | Descrição do objeto da ação |
 | `observacoes` | text | YES | - | Observações gerais |
@@ -143,6 +145,9 @@ Relacionamentos externos:
 | `processos_updated_at` | BEFORE UPDATE | update_processos_updated_at() | Atualiza updated_at |
 | `processos_historico_auto` | AFTER INSERT/UPDATE | registrar_historico_processo() | Registra alterações no histórico |
 | `trigger_validar_modalidade` | BEFORE INSERT/UPDATE | validar_modalidade_processo() | Valida modalidade de cobrança |
+| `trg_processo_definir_indice` | BEFORE INSERT | trigger_definir_indice_processo() | Define índice padrão (SELIC para tributário, INPC para demais) |
+
+**Ver também**: [Módulo de Correção Monetária](12-correcao-monetaria.md) para detalhes sobre atualização automática de valores.
 
 ---
 

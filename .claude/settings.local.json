@@ -73,7 +73,8 @@
       "mcp__supabase__get_edge_function",
       "Bash(\"c:/Users/victo/Zyra Legal/src/app/dashboard/publicacoes/[id]/page.tsx\")",
       "WebFetch(domain:scvawfrqhuqdxegsqzjb.supabase.co)",
-      "Bash(ping:*)"
+      "Bash(ping:*)",
+      "WebFetch(domain:dadosabertos.bcb.gov.br)"
     ],
     "deny": [],
     "ask": []

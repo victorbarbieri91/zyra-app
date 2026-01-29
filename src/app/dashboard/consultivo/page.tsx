@@ -31,18 +31,24 @@ import {
   ListTodo,
   Calendar,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  Edit,
+  Archive,
+  ArchiveRestore,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { ConsultaWizardModal } from '@/components/consultivo/ConsultaWizardModal'
+import EditarConsultivoModal from '@/components/consultivo/EditarConsultivoModal'
 import TarefaWizard from '@/components/agenda/TarefaWizard'
 import EventoWizard from '@/components/agenda/EventoWizard'
 import { useTarefas } from '@/hooks/useTarefas'
 import { useEventos } from '@/hooks/useEventos'
 import { BulkActionsToolbarCRM, BulkActionCRM } from '@/components/crm/BulkActionsToolbarCRM'
+import { VincularContratoModal } from '@/components/financeiro/VincularContratoModal'
 
 interface Consulta {
   id: string
@@ -89,9 +95,17 @@ export default function ConsultivoPage() {
   // Estados para selecao em massa
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkLoading, setBulkLoading] = useState(false)
+  const [showVincularContratoModal, setShowVincularContratoModal] = useState(false)
+
+  // Estados para modal de edição
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [consultaParaEditar, setConsultaParaEditar] = useState<Consulta | null>(null)
 
   // Debounce timer ref
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Ref para evitar múltiplas chamadas
+  const isLoadingRef = useRef(false)
 
   const router = useRouter()
   const supabase = createClient()
@@ -152,7 +166,33 @@ export default function ConsultivoPage() {
     loadConsultas()
   }, [currentView, debouncedSearch, currentPage, pageSize])
 
+  // Recarregar dados quando a página volta a ter foco (ex: usuário voltou da página de detalhes)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !isLoadingRef.current) {
+        loadConsultas()
+      }
+    }
+
+    const handleFocus = () => {
+      if (!isLoadingRef.current) {
+        loadConsultas()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [currentView, debouncedSearch, currentPage, pageSize])
+
   const loadConsultas = async () => {
+    if (isLoadingRef.current) return
+    isLoadingRef.current = true
+
     try {
       setLoading(true)
 
@@ -213,6 +253,7 @@ export default function ConsultivoPage() {
       if (error) {
         console.error('Erro ao carregar consultas:', error)
         setLoading(false)
+        isLoadingRef.current = false
         return
       }
 
@@ -240,9 +281,11 @@ export default function ConsultivoPage() {
 
       setConsultas(consultasFormatadas)
       setLoading(false)
+      isLoadingRef.current = false
     } catch (error) {
       console.error('Erro:', error)
       setLoading(false)
+      isLoadingRef.current = false
     }
   }
 
@@ -250,15 +293,22 @@ export default function ConsultivoPage() {
     const map: Record<string, string> = {
       'civel': 'Cível',
       'trabalhista': 'Trabalhista',
-      'tributario': 'Tributário',
-      'societario': 'Societário',
+      'tributaria': 'Tributária',
+      'tributario': 'Tributário', // suporte legado
+      'societaria': 'Societária',
+      'societario': 'Societário', // suporte legado
+      'empresarial': 'Empresarial',
       'contratual': 'Contratual',
       'familia': 'Família',
+      'criminal': 'Criminal',
+      'previdenciaria': 'Previdenciária',
       'consumidor': 'Consumidor',
       'ambiental': 'Ambiental',
       'imobiliario': 'Imobiliário',
       'propriedade_intelectual': 'Prop. Intelectual',
-      'outros': 'Outros'
+      'compliance': 'Compliance',
+      'outra': 'Outra',
+      'outros': 'Outros' // suporte legado
     }
     return map[area] || area
   }
@@ -332,6 +382,33 @@ export default function ConsultivoPage() {
     }
   }
 
+  // ============= Handlers de Edição e Arquivamento =============
+  const handleEditar = (consulta: Consulta) => {
+    setConsultaParaEditar(consulta)
+    setEditModalOpen(true)
+  }
+
+  const handleArquivar = async (consulta: Consulta) => {
+    const novoStatus = consulta.status === 'arquivado' ? 'ativo' : 'arquivado'
+    const acao = novoStatus === 'arquivado' ? 'arquivada' : 'reativada'
+
+    try {
+      const { error } = await supabase
+        .from('consultivo_consultas')
+        .update({ status: novoStatus })
+        .eq('id', consulta.id)
+
+      if (error) throw error
+
+      toast.success(`Consulta ${acao} com sucesso`)
+      // Recarregar a lista
+      loadConsultas()
+    } catch (err) {
+      console.error(`Erro ao arquivar/desarquivar consulta:`, err)
+      toast.error('Erro ao atualizar consulta. Tente novamente.')
+    }
+  }
+
   // ============= Handlers de Selecao =============
   const toggleSelection = (id: string) => {
     setSelectedIds(prev => {
@@ -358,8 +435,12 @@ export default function ConsultivoPage() {
   }
 
   const handleBulkAction = async (action: BulkActionCRM) => {
-    // Vamos implementar ações em massa depois se necessário
-    console.log('Bulk action:', action, selectedIds)
+    if (action === 'vincular_contrato') {
+      setShowVincularContratoModal(true)
+    } else {
+      // Outras ações a implementar depois se necessário
+      console.log('Bulk action:', action, selectedIds)
+    }
   }
 
   return (
@@ -590,11 +671,39 @@ export default function ConsultivoPage() {
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation()
+                              handleEditar(consulta)
+                            }}
+                          >
+                            <Edit className="w-4 h-4 mr-2 text-[#34495e]" />
+                            <span className="text-sm">Editar</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
                               window.open(`/dashboard/consultivo/${consulta.id}`, '_blank')
                             }}
                           >
                             <ExternalLink className="w-4 h-4 mr-2 text-slate-500" />
                             <span className="text-sm">Abrir em nova aba</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleArquivar(consulta)
+                            }}
+                            className={consulta.status === 'arquivado' ? 'text-emerald-600' : 'text-amber-600'}
+                          >
+                            {consulta.status === 'arquivado' ? (
+                              <>
+                                <ArchiveRestore className="w-4 h-4 mr-2" />
+                                <span className="text-sm">Desarquivar</span>
+                              </>
+                            ) : (
+                              <>
+                                <Archive className="w-4 h-4 mr-2" />
+                                <span className="text-sm">Arquivar</span>
+                              </>
+                            )}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -728,6 +837,29 @@ export default function ConsultivoPage() {
         escritorioId={escritorioId || undefined}
       />
 
+      {/* Modal Editar Consulta */}
+      {consultaParaEditar && (
+        <EditarConsultivoModal
+          open={editModalOpen}
+          onOpenChange={(open) => {
+            setEditModalOpen(open)
+            if (!open) setConsultaParaEditar(null)
+          }}
+          consulta={{
+            id: consultaParaEditar.id,
+            titulo: consultaParaEditar.titulo,
+            descricao: consultaParaEditar.descricao,
+            cliente_id: consultaParaEditar.cliente_id,
+            cliente_nome: consultaParaEditar.cliente_nome,
+            area: consultaParaEditar.area,
+            prioridade: consultaParaEditar.prioridade,
+            prazo: consultaParaEditar.prazo,
+            responsavel_id: consultaParaEditar.responsavel_id,
+          }}
+          onSuccess={loadConsultas}
+        />
+      )}
+
       {/* Wizards de Agenda vinculados a consulta */}
       {showTarefaWizard && escritorioId && selectedConsultivoId && (
         <TarefaWizard
@@ -769,6 +901,18 @@ export default function ConsultivoPage() {
           loading={bulkLoading}
         />
       )}
+
+      {/* Modal de Vincular Contrato */}
+      <VincularContratoModal
+        open={showVincularContratoModal}
+        onOpenChange={setShowVincularContratoModal}
+        tipo="consultivo"
+        selectedIds={Array.from(selectedIds)}
+        onSuccess={() => {
+          loadConsultas()
+          clearSelection()
+        }}
+      />
     </div>
   )
 }

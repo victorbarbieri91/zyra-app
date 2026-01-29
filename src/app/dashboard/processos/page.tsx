@@ -49,6 +49,7 @@ import { BulkActionsToolbar, BulkAction } from '@/components/processos/BulkActio
 import { BulkEditModal } from '@/components/processos/BulkEditModal'
 import { MonitoramentoModal } from '@/components/processos/MonitoramentoModal'
 import { AndamentosModal } from '@/components/processos/AndamentosModal'
+import { VincularContratoModal } from '@/components/financeiro/VincularContratoModal'
 import TarefaWizard from '@/components/agenda/TarefaWizard'
 import EventoWizard from '@/components/agenda/EventoWizard'
 import AudienciaWizard from '@/components/agenda/AudienciaWizard'
@@ -115,6 +116,7 @@ export default function ProcessosPage() {
   const [showMonitoramentoModal, setShowMonitoramentoModal] = useState(false)
   const [monitoramentoAction, setMonitoramentoAction] = useState<'ativar' | 'desativar'>('ativar')
   const [showAndamentosModal, setShowAndamentosModal] = useState(false)
+  const [showVincularContratoModal, setShowVincularContratoModal] = useState(false)
   const [bulkLoading, setBulkLoading] = useState(false)
 
   // Debounce timer ref
@@ -421,6 +423,8 @@ export default function ProcessosPage() {
     } else if (action === 'adicionar_tags') {
       setBulkEditField('tags')
       setShowBulkEditModal(true)
+    } else if (action === 'vincular_contrato') {
+      setShowVincularContratoModal(true)
     }
   }
 
@@ -958,6 +962,18 @@ export default function ProcessosPage() {
           }}
         />
       )}
+
+      {/* Modal de Vincular Contrato */}
+      <VincularContratoModal
+        open={showVincularContratoModal}
+        onOpenChange={setShowVincularContratoModal}
+        tipo="processo"
+        selectedIds={Array.from(selectedIds)}
+        onSuccess={() => {
+          loadProcessos()
+          clearSelection()
+        }}
+      />
     </div>
   )
 }

@@ -74,6 +74,8 @@ interface Processo {
   colaboradores_nomes: string[]
   status: string
   valor_causa?: number
+  valor_atualizado?: number
+  data_ultima_atualizacao_monetaria?: string
   valor_acordo?: number
   valor_condenacao?: number
   provisao_sugerida?: number
@@ -116,6 +118,7 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
   const [showAudienciaWizard, setShowAudienciaWizard] = useState(false)
   const [showTimesheetModal, setShowTimesheetModal] = useState(false)
   const [escritorioId, setEscritorioId] = useState<string | null>(null)
+  const [financeiroRefreshTrigger, setFinanceiroRefreshTrigger] = useState(0)
 
   // Estados para Modais de Detalhes
   const [selectedTarefa, setSelectedTarefa] = useState<any | null>(null)
@@ -333,21 +336,19 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
                       </span>
                     </div>
 
-                    {processo.valor_acordo && (
+                    {processo.valor_atualizado && processo.valor_atualizado !== processo.valor_causa && (
                       <div className="flex justify-between items-baseline">
-                        <span className="text-xs text-slate-600">Acordo:</span>
-                        <span className="text-sm font-semibold text-emerald-700">
-                          {formatCurrency(processo.valor_acordo)}
-                        </span>
-                      </div>
-                    )}
-
-                    {processo.valor_condenacao && (
-                      <div className="flex justify-between items-baseline">
-                        <span className="text-xs text-slate-600">Condenação:</span>
-                        <span className="text-sm font-semibold text-red-700">
-                          {formatCurrency(processo.valor_condenacao)}
-                        </span>
+                        <span className="text-xs text-slate-600">Valor Atualizado:</span>
+                        <div className="text-right">
+                          <span className="text-sm font-semibold text-emerald-700">
+                            {formatCurrency(processo.valor_atualizado)}
+                          </span>
+                          {processo.data_ultima_atualizacao_monetaria && (
+                            <p className="text-[10px] text-slate-500">
+                              Atualizado em {format(new Date(processo.data_ultima_atualizacao_monetaria), "dd/MM/yyyy", { locale: ptBR })}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -737,6 +738,7 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
             // TODO: Abrir modal de despesa
             console.log('Lançar despesa')
           }}
+          refreshTrigger={financeiroRefreshTrigger}
         />
 
         {/* Card de Cobrança de Atos (apenas para contratos por_ato) */}
@@ -928,6 +930,10 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
         open={showTimesheetModal}
         onOpenChange={setShowTimesheetModal}
         processoId={processo.id}
+        onSuccess={() => {
+          setShowTimesheetModal(false)
+          setFinanceiroRefreshTrigger(prev => prev + 1)
+        }}
       />
     </>
   )

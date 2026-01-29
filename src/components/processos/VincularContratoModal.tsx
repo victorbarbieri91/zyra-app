@@ -34,7 +34,7 @@ import { formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
 import { formatCurrency } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 
-type FormaCobranca = 'fixo' | 'por_hora' | 'por_etapa' | 'misto' | 'por_pasta' | 'por_ato' | 'por_cargo'
+type FormaCobranca = 'fixo' | 'por_hora' | 'misto' | 'por_pasta' | 'por_ato' | 'por_cargo'
 
 interface ContratoDisponivel {
   id: string

@@ -89,6 +89,7 @@ export interface NovoTimesheetData {
   processo_id?: string;
   consulta_id?: string;
   tarefa_id?: string;
+  ato_tipo_id?: string; // Para contratos por_ato com modo hora
   data_trabalho: string;
   horas: number;
   atividade: string;
@@ -106,6 +107,7 @@ export interface RegistroRetroativoData {
   processo_id?: string;
   consulta_id?: string;
   tarefa_id?: string;
+  ato_tipo_id?: string; // Para contratos por_ato com modo hora
   faturavel: boolean;
 }
 

@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 
 // Tipos baseados nas tabelas do banco
-export type FormaCobranca = 'fixo' | 'por_hora' | 'por_etapa' | 'misto' | 'por_pasta' | 'por_ato' | 'por_cargo'
+export type FormaCobranca = 'fixo' | 'por_hora' | 'misto' | 'por_pasta' | 'por_ato' | 'por_cargo' | 'pro_bono'
 
 export interface ContratoHonorario {
   id: string
@@ -48,6 +48,13 @@ export interface ContratoHonorario {
   }
   // Indica se o contrato tem configuração de valores preenchida
   configurado?: boolean
+  // Grupo de clientes (grupo econômico)
+  grupo_clientes?: GrupoClientes | null
+  // Reajuste monetário (contratos fixos)
+  reajuste_ativo?: boolean
+  valor_atualizado?: number | null
+  data_ultimo_reajuste?: string | null
+  indice_reajuste?: string | null // INPC, IPCA, IGP-M, SELIC
 }
 
 export interface ContratoConfig {
@@ -72,12 +79,44 @@ export interface ValorPorCargo {
   valor_negociado: number | null
 }
 
+export type ModoCobrancaAto = 'percentual' | 'por_hora'
+
 export interface AtoContrato {
   ato_tipo_id: string
   ato_nome?: string
+  // Modo de cobrança: percentual (padrão) ou por_hora (novo)
+  modo_cobranca?: ModoCobrancaAto
+  // Campos para modo percentual (existentes)
   percentual_valor_causa?: number
-  valor_fixo?: number
+  valor_fixo?: number // Valor mínimo para modo percentual
+  // Campos para modo por_hora (novos)
+  valor_hora?: number
+  horas_minimas?: number
+  horas_maximas?: number
+  // Controle de ativação
   ativo?: boolean // Para permitir excluir atos não usados
+}
+
+// Valor fixo individual (para múltiplos valores fixos por contrato)
+export interface ValorFixoItem {
+  id: string // UUID temporário para identificação no frontend
+  descricao: string // Ex: "Inicial", "Sentença", "Recurso"
+  valor: number
+  atualizacao_monetaria?: boolean
+  atualizacao_indice?: 'ipca' | 'ipca_e' | 'inpc' | 'igpm'
+}
+
+// Cliente no grupo econômico
+export interface ClienteGrupo {
+  cliente_id: string
+  nome: string
+}
+
+// Configuração de grupo de clientes para faturamento consolidado
+export interface GrupoClientes {
+  habilitado: boolean
+  cliente_pagador_id: string // CNPJ que constará na fatura
+  clientes: ClienteGrupo[] // Lista de clientes do grupo
 }
 
 export interface ContratoFormData {
@@ -90,7 +129,8 @@ export interface ContratoFormData {
   data_fim?: string
   observacoes?: string
   // Configuração de valores baseada na forma de cobrança
-  valor_fixo?: number
+  valor_fixo?: number // DEPRECATED: usar valores_fixos para múltiplos valores
+  valores_fixos?: ValorFixoItem[] // Array de valores fixos (novo)
   valor_hora?: number
   horas_estimadas?: number
   etapas_valores?: Record<string, number>
@@ -99,6 +139,7 @@ export interface ContratoFormData {
   // Novos campos para por_pasta
   valor_por_processo?: number
   dia_cobranca?: number
+  limite_meses?: number // Limite de meses para fechamento mensal (padrão: 24)
   // Novos campos para por_cargo
   valores_por_cargo?: ValorPorCargo[]
   // Novos campos para por_ato
@@ -111,6 +152,14 @@ export interface ContratoFormData {
   // Limites mensais para contratos por_hora e por_cargo
   valor_minimo_mensal?: number | null
   valor_maximo_mensal?: number | null
+  // DEPRECATED: atualização monetária agora fica em cada ValorFixoItem
+  atualizacao_monetaria?: boolean
+  atualizacao_indice?: 'ipca' | 'ipca_e' | 'inpc' | 'igpm'
+  atualizacao_data_base?: string
+  // Grupo de clientes (grupo econômico)
+  grupo_habilitado?: boolean
+  grupo_clientes?: ClienteGrupo[]
+  cliente_pagador_id?: string
 }
 
 export interface ContratosMetrics {
@@ -145,27 +194,28 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
     valor_inadimplente: 0,
   })
 
-  // Gerar próximo número de contrato
+  // Gerar próximo número de contrato (formato: CONT-0001)
   const gerarNumeroContrato = useCallback(async (): Promise<string> => {
     if (!escritorioAtivo) return ''
 
-    const ano = new Date().getFullYear()
     const { data } = await supabase
       .from('financeiro_contratos_honorarios')
       .select('numero_contrato')
       .eq('escritorio_id', escritorioAtivo)
-      .ilike('numero_contrato', `CONT-${ano}-%`)
+      .ilike('numero_contrato', 'CONT-%')
       .order('numero_contrato', { ascending: false })
       .limit(1)
 
     if (data && data.length > 0) {
       const ultimoNumero = data[0].numero_contrato
+      // Extrair número sequencial (último segmento após CONT-)
       const partes = ultimoNumero.split('-')
-      const sequencial = parseInt(partes[2] || '0', 10) + 1
-      return `CONT-${ano}-${String(sequencial).padStart(4, '0')}`
+      const ultimaParte = partes[partes.length - 1]
+      const sequencial = parseInt(ultimaParte || '0', 10) + 1
+      return `CONT-${String(sequencial).padStart(4, '0')}`
     }
 
-    return `CONT-${ano}-0001`
+    return 'CONT-0001'
   }, [escritorioAtivo, supabase])
 
   // Carregar todos os contratos com dados relacionados
@@ -294,10 +344,6 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
               configurado = Array.isArray(configData.valores_por_cargo) &&
                 (configData.valores_por_cargo as unknown[]).length > 0
               break
-            case 'por_etapa':
-              configurado = !!configData.etapas_valores &&
-                Object.keys(configData.etapas_valores as object).length > 0
-              break
             case 'por_pasta':
               configurado = !!configData.valor_por_processo
               break
@@ -350,6 +396,8 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           dias_atraso: diasAtraso,
           proxima_parcela: proximaParcela,
           configurado,
+          // Grupo de clientes (carregado do campo JSONB)
+          grupo_clientes: contrato.grupo_clientes as GrupoClientes | null,
         }
       })
 
@@ -425,8 +473,12 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
         // Construir objeto de configuração JSONB
         const configJsonb: Record<string, unknown> = {}
 
-        // Valor Fixo
-        if ((formas.includes('fixo') || formas.includes('misto')) && data.valor_fixo) {
+        // Valores Fixos (array com atualização monetária individual)
+        if ((formas.includes('fixo') || formas.includes('misto')) && data.valores_fixos && data.valores_fixos.length > 0) {
+          configJsonb.valores_fixos = data.valores_fixos.filter(v => v.valor > 0)
+        }
+        // Compatibilidade: valor_fixo único (deprecated)
+        if ((formas.includes('fixo') || formas.includes('misto')) && data.valor_fixo && !data.valores_fixos?.length) {
           configJsonb.valor_fixo = data.valor_fixo
         }
 
@@ -436,8 +488,8 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           if (data.horas_estimadas) configJsonb.horas_estimadas = data.horas_estimadas
         }
 
-        // Por Etapa
-        if ((formas.includes('por_etapa') || formas.includes('misto')) && data.etapas_valores) {
+        // Etapas para compatibilidade (apenas em misto)
+        if (formas.includes('misto') && data.etapas_valores) {
           configJsonb.etapas_valores = data.etapas_valores
         }
 
@@ -450,7 +502,9 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
         // Por Pasta
         if (formas.includes('por_pasta') && data.valor_por_processo) {
           configJsonb.valor_por_processo = data.valor_por_processo
-          if (data.dia_cobranca) configJsonb.dia_cobranca = data.dia_cobranca
+          configJsonb.dia_cobranca = data.dia_cobranca || 1
+          configJsonb.limite_meses = data.limite_meses || 24
+          configJsonb.meses_cobrados = 0 // Inicializa contador para novos contratos
         }
 
         // Por Cargo
@@ -471,8 +525,22 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
         // Por Ato
         if (formas.includes('por_ato') && data.atos_configurados) {
           configJsonb.atos_configurados = data.atos_configurados.filter(
-            (a) => a.ativo !== false && (a.percentual_valor_causa || a.valor_fixo)
+            (a) => a.ativo !== false && (
+              // Modo percentual: precisa ter percentual ou valor fixo
+              (a.modo_cobranca !== 'por_hora' && (a.percentual_valor_causa || a.valor_fixo)) ||
+              // Modo por_hora: precisa ter valor_hora
+              (a.modo_cobranca === 'por_hora' && a.valor_hora)
+            )
           )
+        }
+
+        // Atualização Monetária (para valores fixos)
+        if (data.atualizacao_monetaria) {
+          configJsonb.atualizacao_monetaria = {
+            habilitada: true,
+            indice: data.atualizacao_indice || 'ipca',
+            data_base: data.atualizacao_data_base || data.data_inicio,
+          }
         }
 
         // Construir array de formas de pagamento JSONB
@@ -481,13 +549,24 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           ordem: index,
         }))
 
-        // Atualizar contrato com config e formas JSONB
-        if (Object.keys(configJsonb).length > 0 || formasPagamentoJsonb.length > 0) {
+        // Grupo de Clientes (grupo econômico)
+        let grupoClientesData: GrupoClientes | null = null
+        if (data.grupo_habilitado && data.grupo_clientes && data.grupo_clientes.length > 0 && data.cliente_pagador_id) {
+          grupoClientesData = {
+            habilitado: true,
+            cliente_pagador_id: data.cliente_pagador_id,
+            clientes: data.grupo_clientes,
+          }
+        }
+
+        // Atualizar contrato com config, formas e grupo JSONB
+        if (Object.keys(configJsonb).length > 0 || formasPagamentoJsonb.length > 0 || grupoClientesData) {
           const { error: updateError } = await supabase
             .from('financeiro_contratos_honorarios')
             .update({
               config: Object.keys(configJsonb).length > 0 ? configJsonb : null,
               formas_pagamento: formasPagamentoJsonb.length > 0 ? formasPagamentoJsonb : null,
+              grupo_clientes: grupoClientesData,
             })
             .eq('id', novoContrato.id)
 
@@ -566,8 +645,12 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
         // Construir objeto de configuração JSONB
         const configJsonb: Record<string, unknown> = {}
 
-        // Valor Fixo
-        if ((formas.includes('fixo') || formas.includes('misto')) && data.valor_fixo) {
+        // Valores Fixos (array com atualização monetária individual)
+        if ((formas.includes('fixo') || formas.includes('misto')) && data.valores_fixos && data.valores_fixos.length > 0) {
+          configJsonb.valores_fixos = data.valores_fixos.filter(v => v.valor > 0)
+        }
+        // Compatibilidade: valor_fixo único (deprecated)
+        if ((formas.includes('fixo') || formas.includes('misto')) && data.valor_fixo && !data.valores_fixos?.length) {
           configJsonb.valor_fixo = data.valor_fixo
         }
 
@@ -577,8 +660,8 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           if (data.horas_estimadas) configJsonb.horas_estimadas = data.horas_estimadas
         }
 
-        // Por Etapa
-        if ((formas.includes('por_etapa') || formas.includes('misto')) && data.etapas_valores) {
+        // Etapas para compatibilidade (apenas em misto)
+        if (formas.includes('misto') && data.etapas_valores) {
           configJsonb.etapas_valores = data.etapas_valores
         }
 
@@ -591,7 +674,9 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
         // Por Pasta
         if (formas.includes('por_pasta') && data.valor_por_processo) {
           configJsonb.valor_por_processo = data.valor_por_processo
-          if (data.dia_cobranca) configJsonb.dia_cobranca = data.dia_cobranca
+          configJsonb.dia_cobranca = data.dia_cobranca || 1
+          configJsonb.limite_meses = data.limite_meses || 24
+          // Nota: meses_cobrados NÃO é resetado na atualização - controlado pelo sistema de fechamento
         }
 
         // Por Cargo
@@ -612,8 +697,22 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
         // Por Ato
         if (formas.includes('por_ato') && data.atos_configurados) {
           configJsonb.atos_configurados = data.atos_configurados.filter(
-            (a) => a.ativo !== false && (a.percentual_valor_causa || a.valor_fixo)
+            (a) => a.ativo !== false && (
+              // Modo percentual: precisa ter percentual ou valor fixo
+              (a.modo_cobranca !== 'por_hora' && (a.percentual_valor_causa || a.valor_fixo)) ||
+              // Modo por_hora: precisa ter valor_hora
+              (a.modo_cobranca === 'por_hora' && a.valor_hora)
+            )
           )
+        }
+
+        // Atualização Monetária (para valores fixos)
+        if (data.atualizacao_monetaria) {
+          configJsonb.atualizacao_monetaria = {
+            habilitada: true,
+            indice: data.atualizacao_indice || 'ipca',
+            data_base: data.atualizacao_data_base || data.data_inicio,
+          }
         }
 
         // Construir array de formas de pagamento JSONB
@@ -622,13 +721,27 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           ordem: index,
         }))
 
-        // Atualizar contrato com config e formas JSONB
+        // Grupo de Clientes (grupo econômico)
+        let grupoClientesData: GrupoClientes | null = null
+        if (data.grupo_habilitado && data.grupo_clientes && data.grupo_clientes.length > 0 && data.cliente_pagador_id) {
+          grupoClientesData = {
+            habilitado: true,
+            cliente_pagador_id: data.cliente_pagador_id,
+            clientes: data.grupo_clientes,
+          }
+        }
+
+        // Atualizar contrato com config, formas e grupo JSONB
         const jsonbUpdateData: Record<string, unknown> = {}
         if (Object.keys(configJsonb).length > 0) {
           jsonbUpdateData.config = configJsonb
         }
         if (formasPagamentoJsonb.length > 0) {
           jsonbUpdateData.formas_pagamento = formasPagamentoJsonb
+        }
+        // Sempre atualizar grupo_clientes (pode ser null para remover)
+        if (data.grupo_habilitado !== undefined) {
+          jsonbUpdateData.grupo_clientes = grupoClientesData
         }
 
         if (Object.keys(jsonbUpdateData).length > 0) {

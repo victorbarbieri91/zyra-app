@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -38,13 +38,17 @@ import {
   X,
   Building2,
   Clock,
+  Plus,
+  Heart,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
-import { ContratoHonorario, ContratoFormData, FormaCobranca, ValorPorCargo, AtoContrato } from '@/hooks/useContratosHonorarios'
+import { ContratoHonorario, ContratoFormData, FormaCobranca, ValorPorCargo, AtoContrato, ValorFixoItem, ClienteGrupo, GrupoClientes } from '@/hooks/useContratosHonorarios'
+import { AtoConfigCard } from './AtoConfigCard'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
 import { format } from 'date-fns'
 
@@ -75,7 +79,8 @@ const FORMA_COBRANCA_OPTIONS = [
   { value: 'por_hora', label: 'Por Hora/Timesheet', description: 'Taxa única por hora para toda equipe', icon: Clock },
   { value: 'por_cargo', label: 'Por Cargo/Timesheet', description: 'Valor hora por cargo (sênior, pleno, etc)', icon: Users },
   { value: 'por_pasta', label: 'Por Pasta Mensal', description: 'Valor fixo × número de processos', icon: Folders },
-  { value: 'por_ato', label: 'Por Ato Processual', description: '% do valor da causa por ato', icon: Gavel },
+  { value: 'por_ato', label: 'Por Ato Processual', description: 'Por % da causa ou por hora trabalhada', icon: Gavel },
+  { value: 'pro_bono', label: 'Pró-Bono', description: 'Sem cobrança - horas registradas para controle', icon: Heart },
 ]
 
 const AREAS_JURIDICAS = [
@@ -88,6 +93,42 @@ const AREAS_JURIDICAS = [
   { value: 'consumidor', label: 'Consumidor' },
 ]
 
+// Funções de máscara de moeda
+const formatCurrencyInput = (value: number | null | undefined): string => {
+  if (value === undefined || value === null || value === 0) return ''
+  return value.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+
+const parseCurrencyInput = (value: string): number => {
+  if (!value) return 0
+  // Remove tudo exceto números e vírgula/ponto
+  const cleaned = value.replace(/[^\d,.-]/g, '')
+  // Converte vírgula para ponto e remove pontos de milhar
+  const normalized = cleaned.replace(/\./g, '').replace(',', '.')
+  const parsed = parseFloat(normalized)
+  return isNaN(parsed) ? 0 : parsed
+}
+
+const handleCurrencyChange = (
+  e: React.ChangeEvent<HTMLInputElement>,
+  setValue: (value: number) => void
+) => {
+  const input = e.target
+  const rawValue = input.value
+
+  // Se está vazio, define como 0
+  if (!rawValue) {
+    setValue(0)
+    return
+  }
+
+  // Parse o valor e atualiza o estado
+  const numericValue = parseCurrencyInput(rawValue)
+  setValue(numericValue)
+}
 
 export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultClienteId }: ContratoModalProps) {
   const supabase = createClient()
@@ -99,6 +140,9 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
   const [searchCliente, setSearchCliente] = useState('')
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [loadingClientes, setLoadingClientes] = useState(false)
+  const [showSearchResults, setShowSearchResults] = useState(true)
+  const searchResultsRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Estados para novos tipos de cobrança
   const [cargos, setCargos] = useState<Array<{
@@ -123,6 +167,11 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
   const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
   const [loadingEscritorios, setLoadingEscritorios] = useState(false)
 
+  // Estados para grupo de clientes (grupo econômico)
+  const [searchClienteGrupo, setSearchClienteGrupo] = useState('')
+  const [clientesGrupoSearch, setClientesGrupoSearch] = useState<Cliente[]>([])
+  const [loadingClientesGrupo, setLoadingClientesGrupo] = useState(false)
+
   // Dados do formulário
   const [formData, setFormData] = useState<ContratoFormData>({
     cliente_id: '',
@@ -146,6 +195,10 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
     area_juridica: 'civel',
     atos_configurados: [],
     escritorio_id: undefined, // Escritório faturador (para multi-escritório)
+    // Grupo de clientes (grupo econômico)
+    grupo_habilitado: false,
+    grupo_clientes: [],
+    cliente_pagador_id: undefined,
   })
 
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null)
@@ -157,13 +210,13 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
         // Buscar contrato com campos JSONB
         const { data: contratoData } = await supabase
           .from('financeiro_contratos_honorarios')
-          .select('formas_pagamento, config')
+          .select('formas_pagamento, config, grupo_clientes')
           .eq('id', contrato.id)
           .single()
 
         // Extrair formas de cobrança do JSONB
         const formasPagamento = (contratoData?.formas_pagamento || []) as Array<{ forma: string }>
-        const formasValidas = ['fixo', 'por_hora', 'por_cargo', 'por_pasta', 'por_ato', 'por_etapa', 'misto']
+        const formasValidas = ['fixo', 'por_hora', 'por_cargo', 'por_pasta', 'por_ato', 'misto']
         const formasSelecionadas = formasPagamento.length > 0
           ? formasPagamento.map(f => f.forma).filter(f => formasValidas.includes(f))
           : [contrato.forma_cobranca].filter(f => formasValidas.includes(f))
@@ -208,6 +261,45 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
         const valorPorProcesso = configJsonb.valor_por_processo as number | undefined
         const diaCobranca = configJsonb.dia_cobranca as number | undefined
 
+        // Extrair valores fixos múltiplos do JSONB config
+        let valoresFixos: ValorFixoItem[] = []
+        if (formasSelecionadas.includes('fixo') || formasSelecionadas.includes('misto')) {
+          if (configJsonb.valores_fixos) {
+            // Formato novo: array de valores fixos
+            const valoresData = configJsonb.valores_fixos as Array<{
+              id?: string
+              descricao: string
+              valor: number
+              atualizacao_monetaria?: boolean
+              atualizacao_indice?: 'ipca' | 'ipca_e' | 'inpc' | 'igpm'
+            }>
+            valoresFixos = valoresData.map(v => ({
+              id: v.id || crypto.randomUUID(),
+              descricao: v.descricao || '',
+              valor: v.valor || 0,
+              atualizacao_monetaria: v.atualizacao_monetaria || false,
+              atualizacao_indice: v.atualizacao_indice || 'ipca',
+            }))
+          } else if (configJsonb.valor_fixo) {
+            // Formato antigo: valor único - converter para array para compatibilidade
+            const valorAntigo = configJsonb.valor_fixo as number
+            const atualizacaoConfig = configJsonb.atualizacao_monetaria as {
+              habilitada?: boolean
+              indice?: 'ipca' | 'ipca_e' | 'inpc' | 'igpm'
+            } | undefined
+            valoresFixos = [{
+              id: crypto.randomUUID(),
+              descricao: 'Valor Fixo',
+              valor: valorAntigo,
+              atualizacao_monetaria: atualizacaoConfig?.habilitada || false,
+              atualizacao_indice: atualizacaoConfig?.indice || 'ipca',
+            }]
+          }
+        }
+
+        // Extrair grupo de clientes do JSONB
+        const grupoClientes = contratoData?.grupo_clientes as GrupoClientes | null
+
         setFormData({
           cliente_id: contrato.cliente_id,
           titulo: contrato.titulo || '',
@@ -217,6 +309,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
           data_inicio: contrato.data_inicio,
           data_fim: contrato.data_fim || '',
           observacoes: contrato.observacoes || '',
+          valores_fixos: valoresFixos.length > 0 ? valoresFixos : undefined,
           valor_fixo: (configJsonb.valor_fixo as number) || undefined,
           valor_hora: (configJsonb.valor_hora as number) || undefined,
           horas_estimadas: (configJsonb.horas_estimadas as number) || undefined,
@@ -230,6 +323,14 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
           // Limites mensais
           valor_minimo_mensal: (configJsonb.valor_minimo_mensal as number) || undefined,
           valor_maximo_mensal: (configJsonb.valor_maximo_mensal as number) || undefined,
+          // Atualização monetária
+          atualizacao_monetaria: (configJsonb.atualizacao_monetaria as { habilitada?: boolean })?.habilitada || false,
+          atualizacao_indice: (configJsonb.atualizacao_monetaria as { indice?: 'ipca' | 'ipca_e' | 'inpc' | 'igpm' })?.indice || undefined,
+          atualizacao_data_base: (configJsonb.atualizacao_monetaria as { data_base?: string })?.data_base || undefined,
+          // Grupo de clientes (grupo econômico)
+          grupo_habilitado: grupoClientes?.habilitado || false,
+          grupo_clientes: grupoClientes?.clientes || [],
+          cliente_pagador_id: grupoClientes?.cliente_pagador_id || undefined,
         })
         setSelectedCliente({
           id: contrato.cliente_id,
@@ -262,8 +363,14 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
           // Limites mensais
           valor_minimo_mensal: undefined,
           valor_maximo_mensal: undefined,
+          // Grupo de clientes
+          grupo_habilitado: false,
+          grupo_clientes: [],
+          cliente_pagador_id: undefined,
         })
         setSelectedCliente(null)
+        setSearchClienteGrupo('')
+        setClientesGrupoSearch([])
         setStep(1)
       }
     }
@@ -354,10 +461,72 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
     const timer = setTimeout(() => {
       if (searchCliente.length >= 2) {
         searchClientes(searchCliente)
+        setShowSearchResults(true)
       }
     }, 300)
     return () => clearTimeout(timer)
   }, [searchCliente])
+
+  // Fechar resultados ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchResultsRef.current &&
+        !searchResultsRef.current.contains(event.target as Node) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node)
+      ) {
+        setShowSearchResults(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
+  // Buscar clientes para adicionar ao grupo
+  const searchClientesGrupo = async (query: string) => {
+    if (!escritorioAtivo || query.length < 2) {
+      setClientesGrupoSearch([])
+      return
+    }
+
+    setLoadingClientesGrupo(true)
+    try {
+      const { data, error } = await supabase
+        .from('crm_pessoas')
+        .select('id, nome_completo, cpf_cnpj, tipo_pessoa')
+        .eq('escritorio_id', escritorioAtivo)
+        .eq('tipo_cadastro', 'cliente')
+        .or(`nome_completo.ilike.%${query}%,cpf_cnpj.ilike.%${query}%`)
+        .order('nome_completo', { ascending: true })
+        .limit(10)
+
+      if (error) throw error
+      // Filtrar clientes já no grupo e o cliente principal
+      const clientesNoGrupo = formData.grupo_clientes?.map(c => c.cliente_id) || []
+      const clientesFiltrados = (data || []).filter(
+        c => c.id !== formData.cliente_id && !clientesNoGrupo.includes(c.id)
+      )
+      setClientesGrupoSearch(clientesFiltrados)
+    } catch (error) {
+      console.error('Erro ao buscar clientes para grupo:', error)
+    } finally {
+      setLoadingClientesGrupo(false)
+    }
+  }
+
+  // Debounce na busca de clientes do grupo
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchClienteGrupo.length >= 2) {
+        searchClientesGrupo(searchClienteGrupo)
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchClienteGrupo])
 
   // Carregar cargos do escritório
   const loadCargos = async () => {
@@ -480,11 +649,21 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
       case 2:
         return Boolean(formData.tipo_servico) && formas.length > 0
       case 3:
+        // Pró-bono não precisa de valores - pode prosseguir diretamente
+        if (formas.includes('pro_bono') && formas.length === 1) {
+          return true
+        }
+
         // Valida que pelo menos uma forma selecionada tem valor configurado
         let hasValidValue = false
 
-        if (formas.includes('fixo') && (formData.valor_fixo || 0) > 0) {
-          hasValidValue = true
+        if (formas.includes('fixo')) {
+          // Verificar valores_fixos (novo) ou valor_fixo (deprecated)
+          const temValoresFixos = formData.valores_fixos && formData.valores_fixos.some(v => v.valor > 0)
+          const temValorFixo = (formData.valor_fixo || 0) > 0
+          if (temValoresFixos || temValorFixo) {
+            hasValidValue = true
+          }
         }
         if (formas.includes('por_hora') && (formData.valor_hora || 0) > 0) {
           hasValidValue = true
@@ -503,6 +682,10 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
           if (atos.some((a) => (a.percentual_valor_causa || a.valor_fixo || 0) > 0)) {
             hasValidValue = true
           }
+        }
+        // Pró-bono em combinação com outras formas também é válido
+        if (formas.includes('pro_bono')) {
+          hasValidValue = true
         }
 
         // Validar min <= max quando ambos são fornecidos
@@ -523,12 +706,6 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
       style: 'currency',
       currency: 'BRL',
     }).format(value)
-  }
-
-  const calcularValorTotal = () => {
-    let total = 0
-    if (formData.valor_fixo) total += formData.valor_fixo
-    return total
   }
 
   return (
@@ -582,73 +759,268 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
 
         {/* Step 1: Seleção de Cliente */}
         {step === 1 && (
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Buscar Cliente</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Digite o nome do cliente..."
-                  value={searchCliente}
-                  onChange={(e) => setSearchCliente(e.target.value)}
-                  className="pl-10"
-                />
+          <div className="space-y-3 py-4">
+            {/* Toggle Único/Grupo - PRIMEIRO */}
+            <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-slate-400" />
+                <span className="text-sm text-slate-600">Tipo de Contrato</span>
+              </div>
+              <div className="flex items-center bg-white rounded-md border border-slate-200 p-0.5">
+                <button
+                  type="button"
+                  className={cn(
+                    'px-3 py-1 text-xs font-medium rounded transition-colors',
+                    !formData.grupo_habilitado
+                      ? 'bg-[#89bcbe] text-white'
+                      : 'text-slate-500 hover:text-slate-700'
+                  )}
+                  onClick={() => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      grupo_habilitado: false,
+                      grupo_clientes: [],
+                      cliente_pagador_id: undefined,
+                    }))
+                    setSelectedCliente(null)
+                  }}
+                >
+                  Cliente Único
+                </button>
+                <button
+                  type="button"
+                  className={cn(
+                    'px-3 py-1 text-xs font-medium rounded transition-colors',
+                    formData.grupo_habilitado
+                      ? 'bg-[#89bcbe] text-white'
+                      : 'text-slate-500 hover:text-slate-700'
+                  )}
+                  onClick={() => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      grupo_habilitado: true,
+                      grupo_clientes: prev.cliente_id && selectedCliente ? [{
+                        cliente_id: prev.cliente_id,
+                        nome: selectedCliente.nome_completo,
+                      }] : [],
+                      cliente_pagador_id: prev.cliente_id || undefined,
+                    }))
+                  }}
+                >
+                  Grupo
+                </button>
               </div>
             </div>
 
-            {loadingClientes && (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-6 w-6 animate-spin text-[#89bcbe]" />
-              </div>
-            )}
+            {/* Busca de Cliente */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                ref={searchInputRef}
+                placeholder={formData.grupo_habilitado ? "Buscar clientes para adicionar ao grupo..." : "Buscar cliente..."}
+                value={searchCliente}
+                onChange={(e) => setSearchCliente(e.target.value)}
+                onFocus={() => setShowSearchResults(true)}
+                className="pl-9 h-9"
+              />
+            </div>
 
-            {!loadingClientes && clientes.length > 0 && (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {clientes.map((cliente) => (
-                  <Card
-                    key={cliente.id}
+            {/* Clientes Selecionados (Grupo) */}
+            {formData.grupo_habilitado && (formData.grupo_clientes || []).length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-lg bg-[#f0f9f9]/50 border border-[#89bcbe]/20">
+                {(formData.grupo_clientes || []).map((cliente) => (
+                  <Badge
+                    key={cliente.cliente_id}
+                    variant="secondary"
                     className={cn(
-                      'cursor-pointer transition-colors hover:bg-slate-50',
-                      formData.cliente_id === cliente.id && 'border-[#89bcbe] bg-[#f0f9f9]'
+                      'h-6 pl-2 pr-1 gap-1 text-xs font-normal',
+                      formData.cliente_pagador_id === cliente.cliente_id
+                        ? 'bg-[#89bcbe]/20 text-[#34495e] border border-[#89bcbe]/40'
+                        : 'bg-white text-slate-600 border border-slate-200'
                     )}
-                    onClick={() => {
-                      setFormData((prev) => ({ ...prev, cliente_id: cliente.id }))
-                      setSelectedCliente(cliente)
-                    }}
                   >
-                    <CardContent className="p-3 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#89bcbe]/10 flex items-center justify-center">
-                          <User className="h-5 w-5 text-[#89bcbe]" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-[#34495e]">{cliente.nome_completo}</p>
-                          <p className="text-xs text-slate-500">
-                            {cliente.tipo_pessoa === 'juridica' ? 'PJ' : 'PF'}
-                            {cliente.cpf_cnpj && ` - ${cliente.cpf_cnpj}`}
-                          </p>
-                        </div>
-                      </div>
-                      {formData.cliente_id === cliente.id && (
-                        <CheckCircle className="h-5 w-5 text-[#89bcbe]" />
-                      )}
-                    </CardContent>
-                  </Card>
+                    <span className="truncate max-w-[150px]">{cliente.nome.split(' ').slice(0, 3).join(' ')}</span>
+                    <button
+                      type="button"
+                      className="hover:text-red-500 transition-colors"
+                      onClick={() => {
+                        const novosClientes = (formData.grupo_clientes || []).filter(
+                          (c) => c.cliente_id !== cliente.cliente_id
+                        )
+                        // Se removeu todos, limpa seleção
+                        if (novosClientes.length === 0) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            cliente_id: '',
+                            grupo_clientes: [],
+                            cliente_pagador_id: undefined,
+                          }))
+                          setSelectedCliente(null)
+                        } else {
+                          // Se removeu o pagador, define o primeiro como pagador
+                          const novoPagadorId = formData.cliente_pagador_id === cliente.cliente_id
+                            ? novosClientes[0].cliente_id
+                            : formData.cliente_pagador_id
+                          // Se removeu o cliente principal, define o primeiro como principal
+                          const novoClienteId = formData.cliente_id === cliente.cliente_id
+                            ? novosClientes[0].cliente_id
+                            : formData.cliente_id
+                          setFormData((prev) => ({
+                            ...prev,
+                            cliente_id: novoClienteId,
+                            grupo_clientes: novosClientes,
+                            cliente_pagador_id: novoPagadorId,
+                          }))
+                        }
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
                 ))}
+                {/* Seletor de CNPJ Pagador inline */}
+                {(formData.grupo_clientes || []).length > 1 && (
+                  <Select
+                    value={formData.cliente_pagador_id || ''}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, cliente_pagador_id: value }))
+                    }
+                  >
+                    <SelectTrigger className="h-6 w-auto min-w-[140px] text-[10px] border-dashed bg-white">
+                      <span className="text-slate-400 mr-1">Pagador:</span>
+                      <SelectValue placeholder="..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(formData.grupo_clientes || []).map((cliente) => (
+                        <SelectItem key={cliente.cliente_id} value={cliente.cliente_id} className="text-xs">
+                          {cliente.nome.split(' ').slice(0, 3).join(' ')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             )}
 
-            {!loadingClientes && searchCliente.length >= 2 && clientes.length === 0 && (
-              <p className="text-center text-slate-500 py-4">Nenhum cliente encontrado</p>
+            {/* Cliente Selecionado (Único) */}
+            {!formData.grupo_habilitado && selectedCliente && (
+              <div className="flex items-center justify-between p-2 rounded-lg bg-[#f0f9f9]/50 border border-[#89bcbe]/30">
+                <div className="flex items-center gap-2 min-w-0">
+                  <CheckCircle className="h-4 w-4 text-[#89bcbe] flex-shrink-0" />
+                  <span className="text-sm font-medium text-[#34495e] truncate">{selectedCliente.nome_completo}</span>
+                  <span className="text-[10px] text-slate-400 flex-shrink-0">
+                    {selectedCliente.tipo_pessoa === 'juridica' ? 'PJ' : 'PF'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="text-slate-400 hover:text-red-500 transition-colors p-1"
+                  onClick={() => {
+                    setFormData((prev) => ({ ...prev, cliente_id: '' }))
+                    setSelectedCliente(null)
+                  }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
             )}
 
-            {selectedCliente && (
-              <Card className="bg-[#f0f9f9]/50 border-[#89bcbe]/30">
-                <CardContent className="p-3">
-                  <p className="text-xs text-slate-500 mb-1">Cliente selecionado:</p>
-                  <p className="font-medium text-[#34495e]">{selectedCliente.nome_completo}</p>
-                </CardContent>
-              </Card>
+            {/* Loading */}
+            {loadingClientes && (
+              <div className="flex items-center justify-center py-3">
+                <Loader2 className="h-5 w-5 animate-spin text-[#89bcbe]" />
+              </div>
+            )}
+
+            {/* Lista de Resultados - Compacta */}
+            {!loadingClientes && clientes.length > 0 && showSearchResults && (
+              <div ref={searchResultsRef} className="space-y-1 max-h-[200px] overflow-y-auto border border-slate-200 rounded-md p-1 bg-white">
+                {clientes.map((cliente) => {
+                  const isSelected = formData.grupo_habilitado
+                    ? (formData.grupo_clientes || []).some(c => c.cliente_id === cliente.id)
+                    : formData.cliente_id === cliente.id
+
+                  return (
+                    <div
+                      key={cliente.id}
+                      className={cn(
+                        'flex items-center justify-between px-2.5 py-2 rounded-md cursor-pointer transition-colors',
+                        isSelected
+                          ? 'bg-[#89bcbe]/10 border border-[#89bcbe]/30'
+                          : 'hover:bg-slate-50 border border-transparent'
+                      )}
+                      onClick={() => {
+                        if (formData.grupo_habilitado) {
+                          // Modo grupo: toggle seleção
+                          const jaNoGrupo = (formData.grupo_clientes || []).some(c => c.cliente_id === cliente.id)
+                          if (jaNoGrupo) {
+                            // Remover do grupo
+                            const novosClientes = (formData.grupo_clientes || []).filter(c => c.cliente_id !== cliente.id)
+                            if (novosClientes.length === 0) {
+                              setFormData((prev) => ({
+                                ...prev,
+                                cliente_id: '',
+                                grupo_clientes: [],
+                                cliente_pagador_id: undefined,
+                              }))
+                              setSelectedCliente(null)
+                            } else {
+                              const novoPagadorId = formData.cliente_pagador_id === cliente.id
+                                ? novosClientes[0].cliente_id
+                                : formData.cliente_pagador_id
+                              setFormData((prev) => ({
+                                ...prev,
+                                cliente_id: novosClientes[0].cliente_id,
+                                grupo_clientes: novosClientes,
+                                cliente_pagador_id: novoPagadorId,
+                              }))
+                            }
+                          } else {
+                            // Adicionar ao grupo
+                            const novoCliente: ClienteGrupo = {
+                              cliente_id: cliente.id,
+                              nome: cliente.nome_completo,
+                            }
+                            const novosClientes = [...(formData.grupo_clientes || []), novoCliente]
+                            setFormData((prev) => ({
+                              ...prev,
+                              cliente_id: prev.cliente_id || cliente.id,
+                              grupo_clientes: novosClientes,
+                              cliente_pagador_id: prev.cliente_pagador_id || cliente.id,
+                            }))
+                            if (!selectedCliente) {
+                              setSelectedCliente(cliente)
+                            }
+                          }
+                        } else {
+                          // Modo único: seleciona cliente e fecha resultados
+                          setFormData((prev) => ({ ...prev, cliente_id: cliente.id }))
+                          setSelectedCliente(cliente)
+                          setShowSearchResults(false)
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="text-sm text-[#34495e] truncate">{cliente.nome_completo}</span>
+                        <span className="text-[10px] text-slate-400 flex-shrink-0">
+                          {cliente.tipo_pessoa === 'juridica' ? 'PJ' : 'PF'}
+                        </span>
+                      </div>
+                      {isSelected && (
+                        <CheckCircle className="h-4 w-4 text-[#89bcbe] flex-shrink-0" />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {!loadingClientes && searchCliente.length >= 2 && clientes.length === 0 && showSearchResults && (
+              <p className="text-center text-slate-400 text-sm py-3">Nenhum cliente encontrado</p>
+            )}
+
+            {!loadingClientes && searchCliente.length < 2 && !selectedCliente && (formData.grupo_clientes || []).length === 0 && (
+              <p className="text-center text-slate-400 text-xs py-3">Digite ao menos 2 caracteres para buscar</p>
             )}
 
             {/* Campo de Título do Contrato */}
@@ -834,72 +1206,197 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
         {/* Step 3: Valores */}
         {step === 3 && (
           <div className="space-y-4 py-4">
-            {/* Grid para Valor Fixo e Por Pasta lado a lado */}
-            {((formData.formas_selecionadas || []).includes('fixo') || (formData.formas_selecionadas || []).includes('por_pasta')) && (
-              <div className="grid grid-cols-2 gap-4">
-                {/* Valor Fixo */}
-                {(formData.formas_selecionadas || []).includes('fixo') && (
-                  <Card>
-                    <CardHeader className="pb-2 pt-3">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-[#89bcbe]" />
-                        Valor Fixo
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pb-3">
-                      <Label htmlFor="valor_fixo" className="text-xs">Valor Total (R$)</Label>
-                      <Input
-                        id="valor_fixo"
-                        type="number"
-                        placeholder="0,00"
-                        value={formData.valor_fixo || ''}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            valor_fixo: e.target.value ? parseFloat(e.target.value) : undefined,
-                          }))
+            {/* Valores Fixos - seção separada */}
+            {(formData.formas_selecionadas || []).includes('fixo') && (
+              <Card>
+                <CardHeader className="pb-2 pt-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-[#89bcbe]" />
+                      Valores Fixos
+                    </CardTitle>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => {
+                        const novoValor: ValorFixoItem = {
+                          id: crypto.randomUUID(),
+                          descricao: '',
+                          valor: 0,
+                          atualizacao_monetaria: false,
+                          atualizacao_indice: 'ipca',
                         }
-                        className="mt-1"
-                      />
-                    </CardContent>
-                  </Card>
-                )}
+                        setFormData((prev) => ({
+                          ...prev,
+                          valores_fixos: [...(prev.valores_fixos || []), novoValor],
+                        }))
+                      }}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Adicionar
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="pb-3">
+                  {(!formData.valores_fixos || formData.valores_fixos.length === 0) ? (
+                    <div className="text-center py-4 text-slate-400 text-xs">
+                      Clique em "Adicionar" para incluir valores fixos
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {formData.valores_fixos.map((valorFixo, index) => (
+                        <div
+                          key={valorFixo.id}
+                          className="p-3 rounded-lg bg-slate-50 border border-slate-100 space-y-2"
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className="flex-1 grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-[10px] text-slate-500">Descrição</Label>
+                                <Input
+                                  placeholder="Ex: Inicial, Sentença..."
+                                  value={valorFixo.descricao}
+                                  onChange={(e) => {
+                                    const novosValores = [...(formData.valores_fixos || [])]
+                                    novosValores[index] = { ...novosValores[index], descricao: e.target.value }
+                                    setFormData((prev) => ({ ...prev, valores_fixos: novosValores }))
+                                  }}
+                                  className="h-8 text-xs"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-[10px] text-slate-500">Valor (R$)</Label>
+                                <div className="relative">
+                                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">R$</span>
+                                  <Input
+                                    type="text"
+                                    inputMode="decimal"
+                                    placeholder="0,00"
+                                    value={formatCurrencyInput(valorFixo.valor)}
+                                    onChange={(e) => {
+                                      handleCurrencyChange(e, (newValue) => {
+                                        const novosValores = [...(formData.valores_fixos || [])]
+                                        novosValores[index] = {
+                                          ...novosValores[index],
+                                          valor: newValue,
+                                        }
+                                        setFormData((prev) => ({ ...prev, valores_fixos: novosValores }))
+                                      })
+                                    }}
+                                    className="h-8 text-xs pl-8"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-slate-300 hover:text-red-500 hover:bg-red-50 mt-4"
+                              onClick={() => {
+                                const novosValores = (formData.valores_fixos || []).filter((_, i) => i !== index)
+                                setFormData((prev) => ({ ...prev, valores_fixos: novosValores }))
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          {/* Atualização Monetária por item */}
+                          <div className="flex items-center gap-3 pt-1">
+                            <div className="flex items-center gap-1.5">
+                              <Checkbox
+                                id={`atualizacao_${valorFixo.id}`}
+                                checked={valorFixo.atualizacao_monetaria || false}
+                                onCheckedChange={(checked) => {
+                                  const novosValores = [...(formData.valores_fixos || [])]
+                                  novosValores[index] = {
+                                    ...novosValores[index],
+                                    atualizacao_monetaria: checked === true,
+                                    atualizacao_indice: checked ? (novosValores[index].atualizacao_indice || 'ipca') : undefined,
+                                  }
+                                  setFormData((prev) => ({ ...prev, valores_fixos: novosValores }))
+                                }}
+                                className="h-3.5 w-3.5 data-[state=checked]:bg-[#89bcbe] data-[state=checked]:border-[#89bcbe]"
+                              />
+                              <Label htmlFor={`atualizacao_${valorFixo.id}`} className="text-[10px] cursor-pointer text-slate-500">
+                                Atualizar
+                              </Label>
+                            </div>
+                            {valorFixo.atualizacao_monetaria && (
+                              <Select
+                                value={valorFixo.atualizacao_indice || 'ipca'}
+                                onValueChange={(value) => {
+                                  const novosValores = [...(formData.valores_fixos || [])]
+                                  novosValores[index] = {
+                                    ...novosValores[index],
+                                    atualizacao_indice: value as 'ipca' | 'ipca_e' | 'inpc' | 'igpm',
+                                  }
+                                  setFormData((prev) => ({ ...prev, valores_fixos: novosValores }))
+                                }}
+                              >
+                                <SelectTrigger className="h-6 w-24 text-[10px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="ipca">IPCA</SelectItem>
+                                  <SelectItem value="ipca_e">IPCA-E</SelectItem>
+                                  <SelectItem value="inpc">INPC</SelectItem>
+                                  <SelectItem value="igpm">IGP-M</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
-                {/* Por Pasta Mensal */}
-                {(formData.formas_selecionadas || []).includes('por_pasta') && (
-                  <Card>
+            {/* Por Pasta Mensal */}
+            {(formData.formas_selecionadas || []).includes('por_pasta') && (
+              <Card>
                     <CardHeader className="pb-2 pt-3">
                       <CardTitle className="text-sm flex items-center gap-2">
                         <Folders className="h-4 w-4 text-[#89bcbe]" />
                         Por Pasta
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="pb-3">
-                      <div className="grid grid-cols-2 gap-2">
+                    <CardContent className="pb-3 space-y-3">
+                      <div className="grid grid-cols-3 gap-2">
                         <div>
                           <Label htmlFor="valor_por_processo" className="text-xs">R$/Processo</Label>
-                          <Input
-                            id="valor_por_processo"
-                            type="number"
-                            placeholder="0,00"
-                            value={formData.valor_por_processo || ''}
-                            onChange={(e) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                valor_por_processo: e.target.value ? parseFloat(e.target.value) : undefined,
-                              }))
-                            }
-                            className="mt-1"
-                          />
+                          <div className="relative mt-1">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">R$</span>
+                            <Input
+                              id="valor_por_processo"
+                              type="text"
+                              inputMode="decimal"
+                              placeholder="0,00"
+                              value={formatCurrencyInput(formData.valor_por_processo)}
+                              onChange={(e) =>
+                                handleCurrencyChange(e, (newValue) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    valor_por_processo: newValue || undefined,
+                                  }))
+                                )
+                              }
+                              className="pl-8"
+                            />
+                          </div>
                         </div>
                         <div>
                           <Label htmlFor="dia_cobranca" className="text-xs">Dia Cobrança</Label>
                           <Select
-                            value={formData.dia_cobranca?.toString() || ''}
+                            value={formData.dia_cobranca?.toString() || '1'}
                             onValueChange={(value) =>
                               setFormData((prev) => ({
                                 ...prev,
-                                dia_cobranca: value ? parseInt(value) : undefined,
+                                dia_cobranca: value ? parseInt(value) : 1,
                               }))
                             }
                           >
@@ -915,11 +1412,46 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                             </SelectContent>
                           </Select>
                         </div>
+                        <div>
+                          <Label htmlFor="limite_meses" className="text-xs">Limite Meses</Label>
+                          <Input
+                            id="limite_meses"
+                            type="number"
+                            placeholder="24"
+                            value={formData.limite_meses || ''}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                limite_meses: e.target.value ? parseInt(e.target.value) : undefined,
+                              }))
+                            }
+                            className="mt-1"
+                          />
+                          <p className="text-[10px] text-slate-400 mt-1">
+                            Padrão: 24 meses
+                          </p>
+                        </div>
                       </div>
+                      {/* Mostrar contador de meses se for edição */}
+                      {contrato && contrato.config?.meses_cobrados !== undefined && (
+                        <div className="p-2 bg-slate-50 rounded border border-slate-100">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-slate-500">
+                              Meses já cobrados: <strong className="text-[#34495e]">{contrato.config.meses_cobrados || 0}</strong>
+                              {contrato.config.limite_meses && (
+                                <span className="text-slate-400"> / {contrato.config.limite_meses}</span>
+                              )}
+                            </span>
+                            {contrato.config.meses_cobrados >= (contrato.config.limite_meses || 24) && (
+                              <Badge variant="outline" className="text-[10px] h-5 bg-amber-50 text-amber-700 border-amber-200">
+                                Limite atingido
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
-                  </Card>
-                )}
-              </div>
+              </Card>
             )}
 
             {/* Por Hora/Timesheet - Taxa única para toda equipe */}
@@ -934,20 +1466,25 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                 <CardContent className="pb-3">
                   <div>
                     <Label htmlFor="valor_hora" className="text-xs">Valor por Hora (R$)</Label>
-                    <Input
-                      id="valor_hora"
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
-                      value={formData.valor_hora || ''}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          valor_hora: e.target.value ? parseFloat(e.target.value) : undefined,
-                        }))
-                      }
-                      className="mt-1 max-w-[200px]"
-                    />
+                    <div className="relative mt-1 max-w-[200px]">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">R$</span>
+                      <Input
+                        id="valor_hora"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        value={formatCurrencyInput(formData.valor_hora)}
+                        onChange={(e) =>
+                          handleCurrencyChange(e, (newValue) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              valor_hora: newValue || undefined,
+                            }))
+                          )
+                        }
+                        className="pl-8"
+                      />
+                    </div>
                     <p className="text-[10px] text-slate-400 mt-1">
                       Este valor será aplicado a todas as horas, independente do cargo
                     </p>
@@ -980,20 +1517,26 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                               Padrão: {valorCargo.valor_padrao ? formatCurrency(valorCargo.valor_padrao) : '—'}
                             </p>
                           </div>
-                          <Input
-                            type="number"
-                            placeholder="R$/h"
-                            value={valorCargo.valor_negociado ?? valorCargo.valor_padrao ?? ''}
-                            onChange={(e) => {
-                              const newValores = [...(formData.valores_por_cargo || [])]
-                              newValores[index] = {
-                                ...newValores[index],
-                                valor_negociado: e.target.value ? parseFloat(e.target.value) : null,
+                          <div className="relative">
+                            <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">R$</span>
+                            <Input
+                              type="text"
+                              inputMode="decimal"
+                              placeholder="0,00"
+                              value={formatCurrencyInput(valorCargo.valor_negociado ?? valorCargo.valor_padrao ?? undefined)}
+                              onChange={(e) =>
+                                handleCurrencyChange(e, (newValue) => {
+                                  const newValores = [...(formData.valores_por_cargo || [])]
+                                  newValores[index] = {
+                                    ...newValores[index],
+                                    valor_negociado: newValue || null,
+                                  }
+                                  setFormData((prev) => ({ ...prev, valores_por_cargo: newValores }))
+                                })
                               }
-                              setFormData((prev) => ({ ...prev, valores_por_cargo: newValores }))
-                            }}
-                            className="h-7 w-24"
-                          />
+                              className="h-7 w-28 pl-6 text-xs"
+                            />
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1016,40 +1559,50 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="valor_minimo_mensal" className="text-xs">Mínimo Mensal (R$)</Label>
-                      <Input
-                        id="valor_minimo_mensal"
-                        type="number"
-                        step="0.01"
-                        placeholder="0,00"
-                        value={formData.valor_minimo_mensal || ''}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            valor_minimo_mensal: e.target.value ? parseFloat(e.target.value) : undefined,
-                          }))
-                        }
-                        className="mt-1"
-                      />
+                      <div className="relative mt-1">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">R$</span>
+                        <Input
+                          id="valor_minimo_mensal"
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0,00"
+                          value={formatCurrencyInput(formData.valor_minimo_mensal)}
+                          onChange={(e) =>
+                            handleCurrencyChange(e, (newValue) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                valor_minimo_mensal: newValue || undefined,
+                              }))
+                            )
+                          }
+                          className="pl-8"
+                        />
+                      </div>
                       <p className="text-[10px] text-slate-400 mt-1">
                         Piso garantido por mês
                       </p>
                     </div>
                     <div>
                       <Label htmlFor="valor_maximo_mensal" className="text-xs">Máximo Mensal (R$)</Label>
-                      <Input
-                        id="valor_maximo_mensal"
-                        type="number"
-                        step="0.01"
-                        placeholder="0,00"
-                        value={formData.valor_maximo_mensal || ''}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            valor_maximo_mensal: e.target.value ? parseFloat(e.target.value) : undefined,
-                          }))
-                        }
-                        className="mt-1"
-                      />
+                      <div className="relative mt-1">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">R$</span>
+                        <Input
+                          id="valor_maximo_mensal"
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0,00"
+                          value={formatCurrencyInput(formData.valor_maximo_mensal)}
+                          onChange={(e) =>
+                            handleCurrencyChange(e, (newValue) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                valor_maximo_mensal: newValue || undefined,
+                              }))
+                            )
+                          }
+                          className="pl-8"
+                        />
+                      </div>
                       <p className="text-[10px] text-slate-400 mt-1">
                         Teto máximo por mês
                       </p>
@@ -1069,122 +1622,171 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                         <Gavel className="h-4 w-4 text-[#89bcbe]" />
                         Cobrança por Ato Processual
                       </CardTitle>
-                      <p className="text-[10px] text-slate-400 mt-1 ml-6">
-                        % sobre valor da causa + valor mínimo garantido
-                      </p>
                     </div>
-                    <Select
-                      value={formData.area_juridica || 'civel'}
-                      onValueChange={(value) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          area_juridica: value,
-                        }))
-                      }
-                    >
-                      <SelectTrigger className="w-32 h-7 text-xs">
-                        <SelectValue placeholder="Área" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {AREAS_JURIDICAS.map((area) => (
-                          <SelectItem key={area.value} value={area.value}>
-                            {area.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={formData.area_juridica || 'civel'}
+                        onValueChange={(value) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            area_juridica: value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-32 h-7 text-xs">
+                          <SelectValue placeholder="Área" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {AREAS_JURIDICAS.map((area) => (
+                            <SelectItem key={area.value} value={area.value}>
+                              {area.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => {
+                          // Determinar modo padrão baseado nos atos existentes
+                          const atosAtivos = formData.atos_configurados?.filter(a => a.ativo !== false) || []
+                          const modoMaisUsado = atosAtivos.length > 0
+                            ? (atosAtivos.filter(a => a.modo_cobranca === 'por_hora').length > atosAtivos.length / 2 ? 'por_hora' : 'percentual')
+                            : 'percentual'
+                          const novoAto: AtoContrato = {
+                            ato_tipo_id: crypto.randomUUID(),
+                            ato_nome: '',
+                            modo_cobranca: modoMaisUsado as 'percentual' | 'por_hora',
+                            percentual_valor_causa: undefined,
+                            valor_fixo: undefined,
+                            valor_hora: undefined,
+                            horas_minimas: undefined,
+                            horas_maximas: undefined,
+                            ativo: true,
+                          }
+                          setFormData((prev) => ({
+                            ...prev,
+                            atos_configurados: [...(prev.atos_configurados || []), novoAto],
+                          }))
+                        }}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Adicionar
+                      </Button>
+                    </div>
                   </div>
+
                 </CardHeader>
-                <CardContent className="pb-3">
+
+                {/* Toggle global de modo de cobrança */}
+                <div className="mx-4 mb-2 p-2 bg-slate-50 rounded-md border border-slate-100">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[9px] text-slate-500">
+                      Modo padrão:
+                    </p>
+                    <div className="flex gap-0.5 bg-white rounded p-0.5 border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newAtos = (formData.atos_configurados || []).map(ato => ({
+                            ...ato,
+                            modo_cobranca: 'percentual' as const,
+                          }))
+                          setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
+                        }}
+                        className={cn(
+                          "px-2 py-0.5 text-[9px] font-medium rounded transition-all",
+                          (formData.atos_configurados?.filter(a => a.ativo !== false) || []).every(a => (a.modo_cobranca || 'percentual') === 'percentual')
+                            ? "bg-[#34495e] text-white"
+                            : "text-slate-500 hover:bg-slate-100"
+                        )}
+                      >
+                        % Causa
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newAtos = (formData.atos_configurados || []).map(ato => ({
+                            ...ato,
+                            modo_cobranca: 'por_hora' as const,
+                          }))
+                          setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
+                        }}
+                        className={cn(
+                          "px-2 py-0.5 text-[9px] font-medium rounded transition-all",
+                          (formData.atos_configurados?.filter(a => a.ativo !== false) || []).length > 0 &&
+                          (formData.atos_configurados?.filter(a => a.ativo !== false) || []).every(a => a.modo_cobranca === 'por_hora')
+                            ? "bg-[#34495e] text-white"
+                            : "text-slate-500 hover:bg-slate-100"
+                        )}
+                      >
+                        Por Hora
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <CardContent className="pt-0 pb-3">
                   {loadingAtos ? (
-                    <div className="flex items-center justify-center py-3">
-                      <Loader2 className="h-5 w-5 animate-spin text-[#89bcbe]" />
+                    <div className="flex items-center justify-center py-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-[#89bcbe]" />
                     </div>
                   ) : formData.atos_configurados?.filter(a => a.ativo !== false).length === 0 ? (
-                    <div className="text-center py-3 text-slate-500">
-                      <p className="text-xs">Nenhum ato cadastrado para esta área</p>
+                    <div className="text-center py-3 text-slate-400 text-[10px]">
+                      Clique em "Adicionar" para incluir atos processuais
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-3">
-                      {formData.atos_configurados?.filter(a => a.ativo !== false).map((ato, index) => {
-                        const realIndex = formData.atos_configurados?.findIndex(a => a.ato_tipo_id === ato.ato_tipo_id) ?? index
+                    <div className="grid grid-cols-2 gap-2">
+                      {formData.atos_configurados?.filter(a => a.ativo !== false).map((ato) => {
+                        const realIndex = formData.atos_configurados?.findIndex(a => a.ato_tipo_id === ato.ato_tipo_id) ?? 0
                         return (
-                          <div key={ato.ato_tipo_id} className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                            <div className="flex items-center justify-between gap-2 mb-2">
-                              <Input
-                                type="text"
-                                value={ato.ato_nome || ''}
-                                onChange={(e) => {
-                                  const newAtos = [...(formData.atos_configurados || [])]
-                                  newAtos[realIndex] = {
-                                    ...newAtos[realIndex],
-                                    ato_nome: e.target.value,
-                                  }
-                                  setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
-                                }}
-                                placeholder="Nome do ato"
-                                className="h-7 text-xs font-medium text-[#34495e] bg-white border border-slate-200 hover:border-[#89bcbe] focus:border-[#89bcbe] px-2 flex-1"
-                              />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 text-slate-300 hover:text-red-500 hover:bg-red-50 flex-shrink-0"
-                                onClick={() => {
-                                  const newAtos = [...(formData.atos_configurados || [])]
-                                  newAtos[realIndex] = { ...newAtos[realIndex], ativo: false }
-                                  setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
-                                }}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1">
-                                  <Input
-                                    type="number"
-                                    step="0.1"
-                                    placeholder="0"
-                                    value={ato.percentual_valor_causa || ''}
-                                    onChange={(e) => {
-                                      const newAtos = [...(formData.atos_configurados || [])]
-                                      newAtos[realIndex] = {
-                                        ...newAtos[realIndex],
-                                        percentual_valor_causa: e.target.value ? parseFloat(e.target.value) : undefined,
-                                      }
-                                      setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
-                                    }}
-                                    className="h-8 w-20 text-center"
-                                  />
-                                  <span className="text-xs text-slate-500">%</span>
-                                </div>
-                                <span className="text-[10px] text-slate-400 px-1">mín:</span>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs text-slate-500">R$</span>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    placeholder="0,00"
-                                    value={ato.valor_fixo || ''}
-                                    onChange={(e) => {
-                                      const newAtos = [...(formData.atos_configurados || [])]
-                                      newAtos[realIndex] = {
-                                        ...newAtos[realIndex],
-                                        valor_fixo: e.target.value ? parseFloat(e.target.value) : undefined,
-                                      }
-                                      setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
-                                    }}
-                                    className="h-8 w-24"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+                          <AtoConfigCard
+                            key={ato.ato_tipo_id}
+                            ato={ato}
+                            onUpdate={(updates) => {
+                              const newAtos = [...(formData.atos_configurados || [])]
+                              newAtos[realIndex] = { ...newAtos[realIndex], ...updates }
+                              setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
+                            }}
+                            onRemove={() => {
+                              const newAtos = [...(formData.atos_configurados || [])]
+                              newAtos[realIndex] = { ...newAtos[realIndex], ativo: false }
+                              setFormData((prev) => ({ ...prev, atos_configurados: newAtos }))
+                            }}
+                          />
                         )
                       })}
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Pró-Bono - Card informativo */}
+            {(formData.formas_selecionadas || []).includes('pro_bono') && (
+              <Card className="border-pink-200 bg-pink-50/30">
+                <CardHeader className="pb-2 pt-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Heart className="h-4 w-4 text-pink-500" />
+                    Contrato Pró-Bono
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pb-3">
+                  <p className="text-xs text-slate-600">
+                    Este contrato não terá cobrança de honorários. As horas registradas serão
+                    automaticamente marcadas como <strong>não faturáveis</strong>, permitindo
+                    controle interno do tempo dedicado sem gerar cobranças ao cliente.
+                  </p>
+                  <div className="mt-3 p-2 bg-white rounded border border-pink-100">
+                    <p className="text-[10px] text-slate-500 font-medium mb-1">O que você pode fazer:</p>
+                    <ul className="text-[10px] text-slate-500 space-y-0.5 list-disc list-inside">
+                      <li>Registrar horas de trabalho (timesheet)</li>
+                      <li>Registrar despesas (se houver)</li>
+                      <li>Acompanhar o histórico de atividades</li>
+                    </ul>
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -1259,12 +1861,57 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                   )}
                 </div>
 
+                {/* Mostrar grupo de clientes se habilitado */}
+                {formData.grupo_habilitado && formData.grupo_clientes && formData.grupo_clientes.length > 0 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Users className="h-4 w-4 text-[#89bcbe]" />
+                        <p className="text-xs text-slate-500">Grupo de Clientes</p>
+                      </div>
+                      <div className="space-y-1">
+                        {formData.grupo_clientes.map((cliente) => (
+                          <div key={cliente.cliente_id} className="flex items-center justify-between">
+                            <span className="text-sm text-[#34495e]">{cliente.nome}</span>
+                            {formData.cliente_pagador_id === cliente.cliente_id && (
+                              <Badge variant="outline" className="text-[10px] h-5 bg-[#89bcbe]/10 text-[#46627f] border-[#89bcbe]/30">
+                                CNPJ Pagador
+                              </Badge>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
                 <Separator />
 
                 <div>
                   <p className="text-xs text-slate-500 mb-2">Valores Configurados</p>
                   <div className="space-y-1">
-                    {formData.valor_fixo && (
+                    {/* Valores Fixos Múltiplos */}
+                    {formData.valores_fixos && formData.valores_fixos.length > 0 && (
+                      <div className="mb-2">
+                        <p className="text-xs text-slate-500 mb-1">Valores Fixos:</p>
+                        {formData.valores_fixos.filter(v => v.valor > 0).map((vf) => (
+                          <div key={vf.id} className="flex justify-between text-sm">
+                            <span className="text-slate-600">
+                              {vf.descricao || 'Valor Fixo'}
+                              {vf.atualizacao_monetaria && (
+                                <span className="text-[10px] text-[#89bcbe] ml-1">
+                                  (atualizar por {vf.atualizacao_indice?.toUpperCase()})
+                                </span>
+                              )}
+                            </span>
+                            <span className="font-medium">{formatCurrency(vf.valor)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* Valor Fixo único (deprecated - compatibilidade) */}
+                    {formData.valor_fixo && (!formData.valores_fixos || formData.valores_fixos.length === 0) && (
                       <div className="flex justify-between text-sm">
                         <span className="text-slate-600">Valor Fixo:</span>
                         <span className="font-medium">{formatCurrency(formData.valor_fixo)}</span>
@@ -1313,16 +1960,34 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                           Atos ({AREAS_JURIDICAS.find((a) => a.value === formData.area_juridica)?.label}):
                         </p>
                         {formData.atos_configurados
-                          .filter((a) => a.percentual_valor_causa || a.valor_fixo)
+                          .filter((a) => a.ativo !== false && (a.percentual_valor_causa || a.valor_fixo || a.valor_hora))
                           .map((a) => (
                             <div key={a.ato_tipo_id} className="flex justify-between text-sm">
                               <span className="text-slate-600">{a.ato_nome}:</span>
                               <span className="font-medium">
-                                {a.percentual_valor_causa ? `${a.percentual_valor_causa}%` : ''}
-                                {a.percentual_valor_causa && a.valor_fixo && (
-                                  <span className="text-slate-400 text-xs ml-1">(mín: {formatCurrency(a.valor_fixo)})</span>
+                                {/* Modo Percentual */}
+                                {(a.modo_cobranca || 'percentual') === 'percentual' && (
+                                  <>
+                                    {a.percentual_valor_causa ? `${a.percentual_valor_causa}%` : ''}
+                                    {a.percentual_valor_causa && a.valor_fixo && (
+                                      <span className="text-slate-400 text-xs ml-1">(mín: {formatCurrency(a.valor_fixo)})</span>
+                                    )}
+                                    {!a.percentual_valor_causa && a.valor_fixo ? formatCurrency(a.valor_fixo) : ''}
+                                  </>
                                 )}
-                                {!a.percentual_valor_causa && a.valor_fixo ? formatCurrency(a.valor_fixo) : ''}
+                                {/* Modo Por Hora */}
+                                {a.modo_cobranca === 'por_hora' && (
+                                  <>
+                                    {formatCurrency(a.valor_hora || 0)}/h
+                                    {(a.horas_minimas || a.horas_maximas) && (
+                                      <span className="text-slate-400 text-xs ml-1">
+                                        ({a.horas_minimas ? `${a.horas_minimas}h` : ''}
+                                        {a.horas_minimas && a.horas_maximas ? '-' : ''}
+                                        {a.horas_maximas ? `${a.horas_maximas}h` : ''})
+                                      </span>
+                                    )}
+                                  </>
+                                )}
                               </span>
                             </div>
                           ))}
@@ -1349,17 +2014,6 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                   </div>
                 </div>
 
-                {calcularValorTotal() > 0 && (
-                  <>
-                    <Separator />
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-[#34495e]">Valor Total Estimado:</span>
-                      <span className="text-xl font-bold text-[#89bcbe]">
-                        {formatCurrency(calcularValorTotal())}
-                      </span>
-                    </div>
-                  </>
-                )}
 
                 {formData.observacoes && (
                   <>

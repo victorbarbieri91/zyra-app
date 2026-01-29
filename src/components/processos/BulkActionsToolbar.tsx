@@ -20,7 +20,8 @@ import {
   X,
   ChevronDown,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  FileText
 } from 'lucide-react'
 
 export type BulkAction =
@@ -32,6 +33,7 @@ export type BulkAction =
   | 'alterar_status'
   | 'alterar_prioridade'
   | 'adicionar_tags'
+  | 'vincular_contrato'
 
 interface BulkActionsToolbarProps {
   selectedCount: number
@@ -146,6 +148,11 @@ export function BulkActionsToolbar({
             <DropdownMenuItem onClick={() => onAction('adicionar_tags')}>
               <Tag className="w-4 h-4 mr-2 text-teal-600" />
               <span>Adicionar Tags</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onAction('vincular_contrato')}>
+              <FileText className="w-4 h-4 mr-2 text-[#89bcbe]" />
+              <span>Vincular Contrato</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -53,6 +53,7 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  RefreshCw,
 } from 'lucide-react'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
@@ -196,6 +197,33 @@ export default function ExtratoFinanceiroPage() {
   const [modalEditar, setModalEditar] = useState<ExtratoItem | null>(null)
   const [modalReceita, setModalReceita] = useState(false)
   const [modalDespesa, setModalDespesa] = useState(false)
+
+  // Modais para alterar categoria/tipo individual
+  const [modalAlterarCategoriaItem, setModalAlterarCategoriaItem] = useState<ExtratoItem | null>(null)
+  const [novaCategoriaItem, setNovaCategoriaItem] = useState('')
+  const [modalAlterarTipo, setModalAlterarTipo] = useState(false)
+  const [itemParaAlterarTipo, setItemParaAlterarTipo] = useState<ExtratoItem | null>(null)
+  const [novoTipo, setNovoTipo] = useState<'receita' | 'despesa' | 'transferencia'>('despesa')
+  const [contaOrigemTransf, setContaOrigemTransf] = useState('')
+  const [contaDestinoTransf, setContaDestinoTransf] = useState('')
+  const [modalEfetivarMassa, setModalEfetivarMassa] = useState(false)
+  const [contaEfetivarMassa, setContaEfetivarMassa] = useState('')
+
+  // Participação de advogados ao efetivar
+  const [temParticipacao, setTemParticipacao] = useState(false)
+  const [advogadoSelecionado, setAdvogadoSelecionado] = useState('')
+  const [percentualParticipacao, setPercentualParticipacao] = useState<number>(0)
+  const [advogadosEscritorio, setAdvogadosEscritorio] = useState<Array<{
+    id: string
+    user_id: string
+    nome: string
+    percentual_comissao: number | null
+  }>>([])
+  const [modalEfetivarItem, setModalEfetivarItem] = useState<ExtratoItem | null>(null)
+
+  // Alterar status
+  const [modalAlterarStatus, setModalAlterarStatus] = useState<ExtratoItem | null>(null)
+  const [novoStatus, setNovoStatus] = useState<'pendente' | 'vencido' | 'pago'>('pendente')
 
   // Info para exclusão
   const [exclusaoInfo, setExclusaoInfo] = useState<{
@@ -465,12 +493,37 @@ export default function ExtratoFinanceiroPage() {
     setContasBancarias(data || [])
   }, [escritoriosSelecionados, supabase])
 
+  // Carregar advogados do escritório para participação
+  const loadAdvogadosEscritorio = useCallback(async () => {
+    if (escritoriosSelecionados.length === 0) return
+    const { data } = await supabase
+      .from('escritorios_usuarios')
+      .select(`
+        id,
+        user_id,
+        percentual_comissao,
+        profiles!inner(nome_completo)
+      `)
+      .in('escritorio_id', escritoriosSelecionados)
+      .eq('ativo', true)
+
+    if (data) {
+      setAdvogadosEscritorio(data.map((u: any) => ({
+        id: u.id,
+        user_id: u.user_id,
+        nome: u.profiles?.nome_completo || 'Usuário',
+        percentual_comissao: u.percentual_comissao,
+      })))
+    }
+  }, [escritoriosSelecionados, supabase])
+
   useEffect(() => {
     if (escritoriosSelecionados.length > 0) {
       loadExtrato()
       loadContasBancarias()
+      loadAdvogadosEscritorio()
     }
-  }, [escritoriosSelecionados, loadExtrato, loadContasBancarias])
+  }, [escritoriosSelecionados, loadExtrato, loadContasBancarias, loadAdvogadosEscritorio])
 
   // Handlers
   // SIMPLIFICADO: Apenas atualiza status na tabela de receitas/faturas
@@ -530,6 +583,149 @@ export default function ExtratoFinanceiroPage() {
     } catch (error) {
       console.error('Erro:', error)
       toast.error('Erro ao pagar')
+    }
+  }
+
+  // Efetivar receita com opção de participação de advogado
+  const handleEfetivarComParticipacao = async () => {
+    if (!modalEfetivarItem || !contaSelecionada) {
+      toast.error('Selecione uma conta bancária')
+      return
+    }
+
+    if (temParticipacao && (!advogadoSelecionado || !percentualParticipacao)) {
+      toast.error('Selecione o advogado e o percentual de participação')
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      const item = modalEfetivarItem
+      const hoje = new Date().toISOString().split('T')[0]
+
+      // 1. Efetivar a receita
+      if (item.tipo_movimento === 'receita') {
+        if (item.origem === 'fatura') {
+          await supabase
+            .from('financeiro_faturamento_faturas')
+            .update({ status: 'paga', paga_em: new Date().toISOString() })
+            .eq('id', item.origem_id)
+        } else {
+          await supabase
+            .from('financeiro_receitas')
+            .update({
+              status: 'pago',
+              valor_pago: item.valor,
+              data_pagamento: hoje,
+              conta_bancaria_id: contaSelecionada,
+            })
+            .eq('id', item.origem_id)
+        }
+      } else {
+        // Despesa
+        await supabase
+          .from('financeiro_despesas')
+          .update({
+            status: 'pago',
+            data_pagamento: hoje,
+            conta_bancaria_id: contaSelecionada,
+          })
+          .eq('id', item.origem_id)
+      }
+
+      // 2. Se tem participação, criar despesa para o advogado
+      if (temParticipacao && advogadoSelecionado && percentualParticipacao > 0) {
+        const valorParticipacao = (item.valor * percentualParticipacao) / 100
+        const advogado = advogadosEscritorio.find(a => a.id === advogadoSelecionado)
+
+        await supabase.from('financeiro_despesas').insert({
+          escritorio_id: item.escritorio_id,
+          categoria: 'pessoal',
+          descricao: `Participação ${advogado?.nome || 'Advogado'} - ${item.descricao}`,
+          valor: valorParticipacao,
+          data_vencimento: hoje,
+          data_pagamento: hoje,
+          status: 'pago',
+          conta_bancaria_id: contaSelecionada,
+          observacoes: `Participação de ${percentualParticipacao}% sobre receita de R$ ${item.valor.toFixed(2)}`,
+          processo_id: item.processo_id,
+          cliente_id: item.cliente_id,
+        })
+
+        toast.success(`Efetivado! Participação de R$ ${valorParticipacao.toFixed(2)} gerada para ${advogado?.nome}`)
+      } else {
+        toast.success(item.tipo_movimento === 'receita' ? 'Receita recebida!' : 'Despesa paga!')
+      }
+
+      // Limpar estados
+      setModalEfetivarItem(null)
+      setTemParticipacao(false)
+      setAdvogadoSelecionado('')
+      setPercentualParticipacao(0)
+      setContaSelecionada('')
+      loadExtrato()
+    } catch (error) {
+      console.error('Erro ao efetivar:', error)
+      toast.error('Erro ao efetivar')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Alterar status de um lançamento (pendente, vencido, pago)
+  const handleAlterarStatus = async () => {
+    if (!modalAlterarStatus) return
+
+    try {
+      setSubmitting(true)
+      const item = modalAlterarStatus
+      const hoje = new Date().toISOString().split('T')[0]
+
+      // Mapear status para o formato do banco
+      let statusBanco = novoStatus
+      if (novoStatus === 'pago') {
+        statusBanco = 'pago' // receitas e despesas usam 'pago'
+      }
+
+      if (item.tipo_movimento === 'receita') {
+        if (item.origem === 'fatura') {
+          // Faturas têm status diferente
+          const statusFatura = novoStatus === 'pago' ? 'paga' : novoStatus === 'vencido' ? 'atrasada' : 'pendente'
+          await supabase
+            .from('financeiro_faturamento_faturas')
+            .update({
+              status: statusFatura,
+              paga_em: novoStatus === 'pago' ? new Date().toISOString() : null,
+            })
+            .eq('id', item.origem_id)
+        } else {
+          await supabase
+            .from('financeiro_receitas')
+            .update({
+              status: statusBanco,
+              data_pagamento: novoStatus === 'pago' ? hoje : null,
+              valor_pago: novoStatus === 'pago' ? item.valor : null,
+            })
+            .eq('id', item.origem_id)
+        }
+      } else if (item.tipo_movimento === 'despesa') {
+        await supabase
+          .from('financeiro_despesas')
+          .update({
+            status: statusBanco,
+            data_pagamento: novoStatus === 'pago' ? hoje : null,
+          })
+          .eq('id', item.origem_id)
+      }
+
+      toast.success('Status alterado com sucesso')
+      setModalAlterarStatus(null)
+      loadExtrato()
+    } catch (error) {
+      console.error('Erro ao alterar status:', error)
+      toast.error('Erro ao alterar status')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -984,8 +1180,354 @@ export default function ExtratoFinanceiroPage() {
     }
   }
 
+  // Efetivar em massa
+  const handleEfetivarEmMassa = async () => {
+    if (!contaEfetivarMassa || itensSelecionados.length === 0) {
+      toast.error('Selecione uma conta bancária')
+      return
+    }
+
+    try {
+      setSubmitting(true)
+
+      // Filtrar apenas itens pendentes/vencidos
+      const itensSelecionadosData = extrato.filter(
+        item => itensSelecionados.includes(item.id) &&
+        (item.status === 'pendente' || item.status === 'vencido') &&
+        (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa')
+      )
+
+      const receitas = itensSelecionadosData.filter(i => i.tipo_movimento === 'receita')
+      const despesas = itensSelecionadosData.filter(i => i.tipo_movimento === 'despesa')
+
+      const hoje = new Date().toISOString().split('T')[0]
+
+      // Efetivar receitas
+      for (const receita of receitas) {
+        if (receita.origem === 'fatura') {
+          await supabase
+            .from('financeiro_faturamento_faturas')
+            .update({ status: 'paga', paga_em: new Date().toISOString() })
+            .eq('id', receita.origem_id)
+        } else {
+          await supabase
+            .from('financeiro_receitas')
+            .update({
+              status: 'pago',
+              valor_pago: receita.valor,
+              data_pagamento: hoje,
+              conta_bancaria_id: contaEfetivarMassa,
+            })
+            .eq('id', receita.origem_id)
+        }
+      }
+
+      // Efetivar despesas
+      for (const despesa of despesas) {
+        await supabase
+          .from('financeiro_despesas')
+          .update({
+            status: 'pago',
+            data_pagamento: hoje,
+            conta_bancaria_id: contaEfetivarMassa,
+          })
+          .eq('id', despesa.origem_id)
+      }
+
+      toast.success(`${receitas.length + despesas.length} lançamento(s) efetivado(s)`)
+      setModalEfetivarMassa(false)
+      setContaEfetivarMassa('')
+      setItensSelecionados([])
+      loadExtrato()
+    } catch (error) {
+      console.error('Erro ao efetivar:', error)
+      toast.error('Erro ao efetivar lançamentos')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const limparSelecao = () => {
     setItensSelecionados([])
+  }
+
+  // Alterar categoria de um item individual
+  const handleAlterarCategoriaItem = async () => {
+    if (!modalAlterarCategoriaItem || !novaCategoriaItem) {
+      toast.error('Selecione uma categoria')
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      const item = modalAlterarCategoriaItem
+      const tabela = item.tipo_movimento === 'receita' ? 'financeiro_receitas' : 'financeiro_despesas'
+
+      const { error } = await supabase
+        .from(tabela)
+        .update({ categoria: novaCategoriaItem })
+        .eq('id', item.origem_id)
+
+      if (error) throw error
+
+      toast.success('Categoria alterada com sucesso')
+      setModalAlterarCategoriaItem(null)
+      setNovaCategoriaItem('')
+      loadExtrato()
+    } catch (error) {
+      console.error('Erro ao alterar categoria:', error)
+      toast.error('Erro ao alterar categoria')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Alterar tipo de um item (receita <-> despesa <-> transferência)
+  const handleAlterarTipoItem = async () => {
+    if (!itemParaAlterarTipo || !novoTipo) {
+      toast.error('Selecione um tipo')
+      return
+    }
+
+    // Validar contas para transferência
+    if (novoTipo === 'transferencia') {
+      if (!contaOrigemTransf || !contaDestinoTransf) {
+        toast.error('Selecione as contas de origem e destino')
+        return
+      }
+      if (contaOrigemTransf === contaDestinoTransf) {
+        toast.error('As contas de origem e destino devem ser diferentes')
+        return
+      }
+    }
+
+    try {
+      setSubmitting(true)
+      const item = itemParaAlterarTipo
+      const tipoAtual = item.tipo_movimento
+
+      // Se já é do tipo selecionado (e não é transferência), não faz nada
+      if ((tipoAtual === novoTipo) ||
+          (novoTipo === 'transferencia' && (tipoAtual === 'transferencia_saida' || tipoAtual === 'transferencia_entrada'))) {
+        toast.info('O lançamento já é deste tipo')
+        setModalAlterarTipo(false)
+        return
+      }
+
+      // Determinar tabela de origem
+      const tabelaOrigem = tipoAtual === 'receita' ? 'financeiro_receitas' : 'financeiro_despesas'
+
+      // Buscar dados completos do item original
+      const { data: dadosOriginais, error: erroBusca } = await supabase
+        .from(tabelaOrigem)
+        .select('*')
+        .eq('id', item.origem_id)
+        .single()
+
+      if (erroBusca || !dadosOriginais) throw new Error('Lançamento não encontrado')
+
+      if (novoTipo === 'transferencia') {
+        // Converter para transferência
+        const novaTransferencia = {
+          escritorio_id: dadosOriginais.escritorio_id,
+          conta_origem_id: contaOrigemTransf,
+          conta_destino_id: contaDestinoTransf,
+          valor: dadosOriginais.valor,
+          data_transferencia: dadosOriginais.data_vencimento || new Date().toISOString().split('T')[0],
+          descricao: dadosOriginais.descricao || 'Transferência entre contas',
+          observacoes: dadosOriginais.observacoes,
+        }
+
+        const { error: erroInsert } = await supabase
+          .from('financeiro_transferencias')
+          .insert(novaTransferencia)
+
+        if (erroInsert) throw erroInsert
+
+        // Excluir da origem
+        const { error: erroDelete } = await supabase
+          .from(tabelaOrigem)
+          .delete()
+          .eq('id', item.origem_id)
+
+        if (erroDelete) throw erroDelete
+
+        toast.success('Lançamento convertido para Transferência')
+      } else {
+        // Converter entre receita e despesa
+        const tabelaDestino = novoTipo === 'receita' ? 'financeiro_receitas' : 'financeiro_despesas'
+
+        const novoRegistro: any = {
+          escritorio_id: dadosOriginais.escritorio_id,
+          descricao: dadosOriginais.descricao,
+          valor: dadosOriginais.valor,
+          data_vencimento: dadosOriginais.data_vencimento,
+          status: dadosOriginais.status,
+          conta_bancaria_id: dadosOriginais.conta_bancaria_id,
+          observacoes: dadosOriginais.observacoes,
+          processo_id: dadosOriginais.processo_id,
+          cliente_id: dadosOriginais.cliente_id,
+          created_at: dadosOriginais.created_at,
+        }
+
+        if (novoTipo === 'receita') {
+          novoRegistro.categoria = dadosOriginais.categoria || 'outras'
+          novoRegistro.data_recebimento = dadosOriginais.data_pagamento || null
+          novoRegistro.valor_recebido = dadosOriginais.valor_pago || null
+        } else {
+          novoRegistro.categoria = dadosOriginais.categoria || 'outras'
+          novoRegistro.data_pagamento = dadosOriginais.data_recebimento || null
+          novoRegistro.valor_pago = dadosOriginais.valor_recebido || null
+          novoRegistro.fornecedor = dadosOriginais.entidade || null
+        }
+
+        const { error: erroInsert } = await supabase
+          .from(tabelaDestino)
+          .insert(novoRegistro)
+
+        if (erroInsert) throw erroInsert
+
+        const { error: erroDelete } = await supabase
+          .from(tabelaOrigem)
+          .delete()
+          .eq('id', item.origem_id)
+
+        if (erroDelete) throw erroDelete
+
+        toast.success(`Lançamento convertido para ${novoTipo === 'receita' ? 'Receita' : 'Despesa'}`)
+      }
+
+      setModalAlterarTipo(false)
+      setItemParaAlterarTipo(null)
+      setContaOrigemTransf('')
+      setContaDestinoTransf('')
+      loadExtrato()
+    } catch (error) {
+      console.error('Erro ao alterar tipo:', error)
+      toast.error('Erro ao alterar tipo do lançamento')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Alterar tipo em massa
+  const handleAlterarTipoEmMassa = async () => {
+    if (!novoTipo || itensSelecionados.length === 0) {
+      toast.error('Selecione um tipo')
+      return
+    }
+
+    // Validar contas para transferência
+    if (novoTipo === 'transferencia') {
+      if (!contaOrigemTransf || !contaDestinoTransf) {
+        toast.error('Selecione as contas de origem e destino')
+        return
+      }
+      if (contaOrigemTransf === contaDestinoTransf) {
+        toast.error('As contas de origem e destino devem ser diferentes')
+        return
+      }
+    }
+
+    try {
+      setSubmitting(true)
+      const itensSelecionadosData = extrato.filter(item =>
+        itensSelecionados.includes(item.id) &&
+        (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa') &&
+        item.origem !== 'fatura' // Não permite alterar faturas
+      )
+
+      if (itensSelecionadosData.length === 0) {
+        toast.info('Nenhum lançamento pode ser convertido')
+        setModalAlterarTipo(false)
+        return
+      }
+
+      let convertidos = 0
+      for (const item of itensSelecionadosData) {
+        const tabelaOrigem = item.tipo_movimento === 'receita' ? 'financeiro_receitas' : 'financeiro_despesas'
+
+        // Buscar dados originais
+        const { data: dadosOriginais, error: erroBusca } = await supabase
+          .from(tabelaOrigem)
+          .select('*')
+          .eq('id', item.origem_id)
+          .single()
+
+        if (erroBusca || !dadosOriginais) continue
+
+        if (novoTipo === 'transferencia') {
+          // Converter para transferência
+          const novaTransferencia = {
+            escritorio_id: dadosOriginais.escritorio_id,
+            conta_origem_id: contaOrigemTransf,
+            conta_destino_id: contaDestinoTransf,
+            valor: dadosOriginais.valor,
+            data_transferencia: dadosOriginais.data_vencimento || new Date().toISOString().split('T')[0],
+            descricao: dadosOriginais.descricao || 'Transferência entre contas',
+            observacoes: dadosOriginais.observacoes,
+          }
+
+          const { error: erroInsert } = await supabase
+            .from('financeiro_transferencias')
+            .insert(novaTransferencia)
+
+          if (!erroInsert) {
+            await supabase.from(tabelaOrigem).delete().eq('id', item.origem_id)
+            convertidos++
+          }
+        } else {
+          // Converter entre receita e despesa
+          if (item.tipo_movimento === novoTipo) continue // Já é do mesmo tipo
+
+          const tabelaDestino = novoTipo === 'receita' ? 'financeiro_receitas' : 'financeiro_despesas'
+
+          const novoRegistro: any = {
+            escritorio_id: dadosOriginais.escritorio_id,
+            descricao: dadosOriginais.descricao,
+            valor: dadosOriginais.valor,
+            data_vencimento: dadosOriginais.data_vencimento,
+            status: dadosOriginais.status,
+            conta_bancaria_id: dadosOriginais.conta_bancaria_id,
+            observacoes: dadosOriginais.observacoes,
+            processo_id: dadosOriginais.processo_id,
+            cliente_id: dadosOriginais.cliente_id,
+            created_at: dadosOriginais.created_at,
+          }
+
+          if (novoTipo === 'receita') {
+            novoRegistro.categoria = dadosOriginais.categoria || 'outras'
+            novoRegistro.data_recebimento = dadosOriginais.data_pagamento || null
+            novoRegistro.valor_recebido = dadosOriginais.valor_pago || null
+          } else {
+            novoRegistro.categoria = dadosOriginais.categoria || 'outras'
+            novoRegistro.data_pagamento = dadosOriginais.data_recebimento || null
+            novoRegistro.valor_pago = dadosOriginais.valor_recebido || null
+            novoRegistro.fornecedor = dadosOriginais.entidade || null
+          }
+
+          const { error: erroInsert } = await supabase.from(tabelaDestino).insert(novoRegistro)
+          if (!erroInsert) {
+            await supabase.from(tabelaOrigem).delete().eq('id', item.origem_id)
+            convertidos++
+          }
+        }
+      }
+
+      const tipoLabel = novoTipo === 'receita' ? 'Receita' : novoTipo === 'despesa' ? 'Despesa' : 'Transferência'
+      toast.success(`${convertidos} lançamento(s) convertido(s) para ${tipoLabel}`)
+      setModalAlterarTipo(false)
+      setItemParaAlterarTipo(null)
+      setContaOrigemTransf('')
+      setContaDestinoTransf('')
+      setItensSelecionados([])
+      loadExtrato()
+    } catch (error) {
+      console.error('Erro ao alterar tipo em massa:', error)
+      toast.error('Erro ao alterar tipo dos lançamentos')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleVincularContaEmMassa = async () => {
@@ -1421,11 +1963,33 @@ export default function ExtratoFinanceiroPage() {
             <Button
               size="sm"
               variant="secondary"
+              onClick={() => {
+                setItemParaAlterarTipo(null) // Indica ação em massa
+                setNovoTipo('despesa')
+                setModalAlterarTipo(true)
+              }}
+              className="h-7 text-xs"
+            >
+              <ArrowLeftRight className="w-3 h-3 mr-1" />
+              Alterar Tipo
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={() => setModalVincularConta(true)}
               className="h-7 text-xs"
             >
               <Building2 className="w-3 h-3 mr-1" />
               Vincular Conta
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setModalEfetivarMassa(true)}
+              className="h-7 text-xs bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              <CheckCircle className="w-3 h-3 mr-1" />
+              Efetivar
             </Button>
           </div>
         </div>
@@ -1457,14 +2021,15 @@ export default function ExtratoFinanceiroPage() {
                 <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide whitespace-nowrap">Beneficiário</th>
                 <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide whitespace-nowrap">Categoria</th>
                 <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide whitespace-nowrap">Conta</th>
+                <th className="text-center py-2.5 px-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide whitespace-nowrap">Status</th>
                 <th className="text-right py-2.5 px-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide whitespace-nowrap">Valor</th>
-                <th className="text-center py-2.5 px-2 w-10"></th>
+                <th className="text-center py-2.5 px-2 w-20"></th>
               </tr>
             </thead>
             <tbody className={loading ? 'opacity-50' : ''}>
               {loading && extrato.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="p-8 text-center">
+                  <td colSpan={11} className="p-8 text-center">
                     <div className="flex items-center justify-center gap-3">
                       <Loader2 className="w-5 h-5 text-[#34495e] animate-spin" />
                       <span className="text-sm text-slate-600">Carregando...</span>
@@ -1475,7 +2040,7 @@ export default function ExtratoFinanceiroPage() {
 
               {!loading && extrato.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="p-8 text-center">
+                  <td colSpan={11} className="p-8 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <FileText className="w-10 h-10 text-slate-300" />
                       <p className="text-sm text-slate-600">Nenhum lançamento encontrado</p>
@@ -1597,6 +2162,26 @@ export default function ExtratoFinanceiroPage() {
                       )}
                     </td>
 
+                    {/* Status */}
+                    <td className="py-2.5 px-3 text-center">
+                      {item.status === 'efetivado' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                          <CheckCircle className="w-3 h-3" />
+                          Pago
+                        </span>
+                      ) : item.status === 'vencido' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-50 text-red-600 border border-red-200 whitespace-nowrap">
+                          <AlertTriangle className="w-3 h-3" />
+                          Vencido
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">
+                          <Clock className="w-3 h-3" />
+                          Pendente
+                        </span>
+                      )}
+                    </td>
+
                     {/* Valor */}
                     <td className="py-2.5 px-3 text-right">
                       <span className={`text-xs font-semibold whitespace-nowrap ${
@@ -1616,6 +2201,26 @@ export default function ExtratoFinanceiroPage() {
 
                     {/* Ações */}
                     <td className="py-2.5 px-2 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                      {/* Botão Efetivar Rápido - apenas para pendentes/vencidos */}
+                      {isPendente && contasBancarias.length > 0 && (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 hover:bg-emerald-50"
+                          title={item.tipo_movimento === 'receita' ? 'Receber' : 'Pagar'}
+                          onClick={() => {
+                            const contaId = contasBancarias[0].id
+                            if (item.tipo_movimento === 'receita') {
+                              handleReceberTotal(item, contaId)
+                            } else {
+                              handlePagarDespesa(item, contaId)
+                            }
+                          }}
+                        >
+                          <CheckCircle className="w-4 h-4 text-emerald-600" />
+                        </Button>
+                      )}
                       {/* Transferências têm menu simplificado */}
                       {(item.tipo_movimento === 'transferencia_saida' || item.tipo_movimento === 'transferencia_entrada') ? (
                         <DropdownMenu>
@@ -1647,23 +2252,15 @@ export default function ExtratoFinanceiroPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
-                            {/* Receber/Pagar */}
+                            {/* Receber/Pagar com opção de participação */}
                             {contasBancarias.length > 0 && (
                               <DropdownMenuItem
                                 onClick={() => {
-                                  if (contasBancarias.length === 1) {
-                                    item.tipo_movimento === 'receita'
-                                      ? handleReceberTotal(item, contasBancarias[0].id)
-                                      : handlePagarDespesa(item, contasBancarias[0].id)
-                                  } else {
-                                    setContaSelecionada(contasBancarias[0].id)
-                                    // Para múltiplas contas, abrir modal de seleção
-                                    if (item.tipo_movimento === 'receita') {
-                                      handleReceberTotal(item, contasBancarias[0].id)
-                                    } else {
-                                      handlePagarDespesa(item, contasBancarias[0].id)
-                                    }
-                                  }
+                                  setModalEfetivarItem(item)
+                                  setContaSelecionada(contasBancarias[0]?.id || '')
+                                  setTemParticipacao(false)
+                                  setAdvogadoSelecionado('')
+                                  setPercentualParticipacao(0)
                                 }}
                               >
                                 <Check className="w-4 h-4 mr-2" />
@@ -1712,6 +2309,44 @@ export default function ExtratoFinanceiroPage() {
                               </DropdownMenuItem>
                             )}
 
+                            {/* Alterar Categoria - apenas receitas e despesas (não faturas) */}
+                            {item.origem !== 'fatura' && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setModalAlterarCategoriaItem(item)
+                                  setNovaCategoriaItem(item.categoria || '')
+                                }}
+                              >
+                                <FileText className="w-4 h-4 mr-2" />
+                                Alterar Categoria
+                              </DropdownMenuItem>
+                            )}
+
+                            {/* Alterar Tipo - converter entre receita e despesa */}
+                            {item.origem !== 'fatura' && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setItemParaAlterarTipo(item)
+                                  setNovoTipo(item.tipo_movimento === 'receita' ? 'despesa' : 'receita')
+                                  setModalAlterarTipo(true)
+                                }}
+                              >
+                                <ArrowLeftRight className="w-4 h-4 mr-2" />
+                                Alterar Tipo
+                              </DropdownMenuItem>
+                            )}
+
+                            {/* Alterar Status */}
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setModalAlterarStatus(item)
+                                setNovoStatus(item.status === 'pendente' ? 'vencido' : 'pendente')
+                              }}
+                            >
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                              Alterar Status
+                            </DropdownMenuItem>
+
                             <DropdownMenuSeparator />
 
                             {/* Excluir */}
@@ -1746,6 +2381,44 @@ export default function ExtratoFinanceiroPage() {
                               </DropdownMenuItem>
                             )}
 
+                            {/* Alterar Categoria - apenas receitas e despesas (não faturas) */}
+                            {item.origem !== 'fatura' && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setModalAlterarCategoriaItem(item)
+                                  setNovaCategoriaItem(item.categoria || '')
+                                }}
+                              >
+                                <FileText className="w-4 h-4 mr-2" />
+                                Alterar Categoria
+                              </DropdownMenuItem>
+                            )}
+
+                            {/* Alterar Tipo - converter entre receita e despesa */}
+                            {item.origem !== 'fatura' && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setItemParaAlterarTipo(item)
+                                  setNovoTipo(item.tipo_movimento === 'receita' ? 'despesa' : 'receita')
+                                  setModalAlterarTipo(true)
+                                }}
+                              >
+                                <ArrowLeftRight className="w-4 h-4 mr-2" />
+                                Alterar Tipo
+                              </DropdownMenuItem>
+                            )}
+
+                            {/* Alterar Status - voltar para pendente ou vencido */}
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setModalAlterarStatus(item)
+                                setNovoStatus('pendente')
+                              }}
+                            >
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                              Alterar Status
+                            </DropdownMenuItem>
+
                             <DropdownMenuSeparator />
 
                             {/* Excluir */}
@@ -1759,6 +2432,7 @@ export default function ExtratoFinanceiroPage() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
+                      </div>
                     </td>
                   </tr>
                 )
@@ -1956,6 +2630,66 @@ export default function ExtratoFinanceiroPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Modal Alterar Status */}
+      <Dialog open={!!modalAlterarStatus} onOpenChange={() => setModalAlterarStatus(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-[#34495e]">Alterar Status</DialogTitle>
+          </DialogHeader>
+          {modalAlterarStatus && (
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-sm font-medium text-slate-700">{modalAlterarStatus.descricao}</p>
+                <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                  <span>Status atual:</span>
+                  <Badge variant="outline" className="text-[10px]">
+                    {modalAlterarStatus.status === 'efetivado' ? 'Pago' : modalAlterarStatus.status === 'vencido' ? 'Vencido' : 'Pendente'}
+                  </Badge>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">Novo Status</Label>
+                <Select value={novoStatus} onValueChange={(v) => setNovoStatus(v as 'pendente' | 'vencido' | 'pago')}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pendente">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 text-amber-500" />
+                        Pendente
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="vencido">
+                      <div className="flex items-center gap-2">
+                        <XCircle className="w-3.5 h-3.5 text-red-500" />
+                        Vencido
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="pago">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                        Pago
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setModalAlterarStatus(null)}>
+                  Cancelar
+                </Button>
+                <Button size="sm" onClick={handleAlterarStatus} disabled={submitting}>
+                  {submitting ? 'Salvando...' : 'Confirmar'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Modal Detalhes */}
       <Dialog open={!!modalDetalhes} onOpenChange={() => setModalDetalhes(null)}>
         <DialogContent className="max-w-md">
@@ -2032,7 +2766,7 @@ export default function ExtratoFinanceiroPage() {
 
               <div>
                 <p className="text-[10px] text-slate-400 uppercase">Categoria</p>
-                <p className="text-sm text-slate-700">{CATEGORIA_LABELS[modalDetalhes.categoria] || modalDetalhes.categoria}</p>
+                <p className="text-sm text-slate-700">{getCategoriaConfig(modalDetalhes.categoria).label}</p>
               </div>
             </div>
           )}
@@ -2443,6 +3177,210 @@ export default function ExtratoFinanceiroPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Modal Alterar Categoria Individual */}
+      <Dialog open={!!modalAlterarCategoriaItem} onOpenChange={() => setModalAlterarCategoriaItem(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-[#34495e]">Alterar Categoria</DialogTitle>
+          </DialogHeader>
+          {modalAlterarCategoriaItem && (
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-sm font-medium text-slate-700">{modalAlterarCategoriaItem.descricao}</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Categoria atual: {getCategoriaConfig(modalAlterarCategoriaItem.categoria).label}
+                </p>
+              </div>
+
+              <div>
+                <Label className="text-xs">Nova Categoria</Label>
+                <select
+                  value={novaCategoriaItem}
+                  onChange={(e) => setNovaCategoriaItem(e.target.value)}
+                  className="w-full h-9 rounded-md border border-slate-200 px-3 text-sm mt-1"
+                >
+                  <option value="">Selecione...</option>
+                  {modalAlterarCategoriaItem.tipo_movimento === 'receita' ? (
+                    <optgroup label="Receitas">
+                      <option value="honorario">Honorário</option>
+                      <option value="honorario_avulso">Avulso</option>
+                      <option value="exito">Êxito</option>
+                      <option value="outras">Outras</option>
+                    </optgroup>
+                  ) : (
+                    <optgroup label="Despesas">
+                      <option value="custas">Custas</option>
+                      <option value="fornecedor">Fornecedor</option>
+                      <option value="folha">Folha</option>
+                      <option value="impostos">Impostos</option>
+                      <option value="aluguel">Aluguel</option>
+                      <option value="marketing">Marketing</option>
+                      <option value="tecnologia">Tecnologia</option>
+                      <option value="assinatura">Assinatura</option>
+                      <option value="cartao_credito">Cartão de Crédito</option>
+                      <option value="infraestrutura">Infraestrutura</option>
+                      <option value="pessoal">Pessoal</option>
+                      <option value="beneficios">Benefícios</option>
+                      <option value="telefonia">Telefonia</option>
+                      <option value="taxas_bancarias">Taxas Bancárias</option>
+                      <option value="emprestimos">Empréstimos</option>
+                      <option value="retirada_socios">Retirada Sócios</option>
+                      <option value="associacoes">Associações</option>
+                      <option value="outras">Outras</option>
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setModalAlterarCategoriaItem(null)
+                    setNovaCategoriaItem('')
+                  }}
+                  disabled={submitting}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleAlterarCategoriaItem}
+                  disabled={submitting || !novaCategoriaItem}
+                  className="bg-[#34495e] hover:bg-[#46627f]"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      Alterando...
+                    </>
+                  ) : (
+                    'Alterar Categoria'
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Alterar Tipo */}
+      <Dialog open={modalAlterarTipo} onOpenChange={(open) => {
+        setModalAlterarTipo(open)
+        if (!open) {
+          setContaOrigemTransf('')
+          setContaDestinoTransf('')
+        }
+      }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-[#34495e]">Alterar Tipo do Lançamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {itemParaAlterarTipo ? (
+              // Alteração individual
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-sm font-medium text-slate-700">{itemParaAlterarTipo.descricao}</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Tipo atual: {itemParaAlterarTipo.tipo_movimento === 'receita' ? 'Receita' :
+                    itemParaAlterarTipo.tipo_movimento === 'despesa' ? 'Despesa' : 'Transferência'}
+                </p>
+              </div>
+            ) : (
+              // Alteração em massa
+              <p className="text-sm text-slate-600">
+                Alterar tipo de <span className="font-semibold">{itensSelecionados.length}</span>{' '}
+                {itensSelecionados.length === 1 ? 'lançamento' : 'lançamentos'}
+              </p>
+            )}
+
+            <div>
+              <Label className="text-xs">Novo Tipo</Label>
+              <select
+                value={novoTipo}
+                onChange={(e) => setNovoTipo(e.target.value as 'receita' | 'despesa' | 'transferencia')}
+                className="w-full h-9 rounded-md border border-slate-200 px-3 text-sm mt-1"
+              >
+                <option value="receita">Receita</option>
+                <option value="despesa">Despesa</option>
+                <option value="transferencia">Transferência</option>
+              </select>
+            </div>
+
+            {/* Campos de conta para transferência */}
+            {novoTipo === 'transferencia' && (
+              <>
+                <div>
+                  <Label className="text-xs">Conta de Origem</Label>
+                  <select
+                    value={contaOrigemTransf}
+                    onChange={(e) => setContaOrigemTransf(e.target.value)}
+                    className="w-full h-9 rounded-md border border-slate-200 px-3 text-sm mt-1"
+                  >
+                    <option value="">Selecione...</option>
+                    {contasBancarias.map((conta) => (
+                      <option key={conta.id} value={conta.id}>
+                        {conta.banco} - {conta.numero_conta}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <Label className="text-xs">Conta de Destino</Label>
+                  <select
+                    value={contaDestinoTransf}
+                    onChange={(e) => setContaDestinoTransf(e.target.value)}
+                    className="w-full h-9 rounded-md border border-slate-200 px-3 text-sm mt-1"
+                  >
+                    <option value="">Selecione...</option>
+                    {contasBancarias
+                      .filter((conta) => conta.id !== contaOrigemTransf)
+                      .map((conta) => (
+                        <option key={conta.id} value={conta.id}>
+                          {conta.banco} - {conta.numero_conta}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setModalAlterarTipo(false)
+                  setItemParaAlterarTipo(null)
+                  setContaOrigemTransf('')
+                  setContaDestinoTransf('')
+                }}
+                disabled={submitting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                onClick={itemParaAlterarTipo ? handleAlterarTipoItem : handleAlterarTipoEmMassa}
+                disabled={submitting || (novoTipo === 'transferencia' && (!contaOrigemTransf || !contaDestinoTransf))}
+                className="bg-[#34495e] hover:bg-[#46627f]"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    Alterando...
+                  </>
+                ) : (
+                  'Alterar Tipo'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Modal Vincular Conta em Massa */}
       <Dialog open={modalVincularConta} onOpenChange={setModalVincularConta}>
         <DialogContent className="max-w-sm">
@@ -2495,6 +3433,236 @@ export default function ExtratoFinanceiroPage() {
                   </>
                 ) : (
                   'Vincular Conta'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Efetivar Individual (com participação) */}
+      <Dialog open={!!modalEfetivarItem} onOpenChange={() => setModalEfetivarItem(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#34495e]">
+              {modalEfetivarItem?.tipo_movimento === 'receita' ? 'Receber Receita' : 'Pagar Despesa'}
+            </DialogTitle>
+          </DialogHeader>
+          {modalEfetivarItem && (
+            <div className="space-y-4">
+              {/* Info do lançamento */}
+              <div className="p-3 bg-slate-50 rounded-lg space-y-1">
+                <p className="text-sm font-medium text-slate-700">{modalEfetivarItem.descricao}</p>
+                <p className="text-xs text-slate-500">
+                  {modalEfetivarItem.entidade && `${modalEfetivarItem.entidade} • `}
+                  Vencimento: {modalEfetivarItem.data_vencimento
+                    ? new Date(modalEfetivarItem.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')
+                    : '-'}
+                </p>
+                <p className={`text-lg font-semibold ${
+                  modalEfetivarItem.tipo_movimento === 'receita' ? 'text-emerald-600' : 'text-red-600'
+                }`}>
+                  {modalEfetivarItem.tipo_movimento === 'receita' ? '+ ' : '- '}
+                  R$ {modalEfetivarItem.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+
+              {/* Conta Bancária */}
+              <div>
+                <Label className="text-xs">Conta Bancária</Label>
+                <select
+                  value={contaSelecionada}
+                  onChange={(e) => setContaSelecionada(e.target.value)}
+                  className="w-full h-9 rounded-md border border-slate-200 px-3 text-sm mt-1"
+                >
+                  <option value="">Selecione...</option>
+                  {contasBancarias.map((conta) => (
+                    <option key={conta.id} value={conta.id}>
+                      {conta.banco} - {conta.numero_conta}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Participação de Advogado (apenas para receitas) */}
+              {modalEfetivarItem.tipo_movimento === 'receita' && (
+                <div className="border-t border-slate-200 pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="tem-participacao"
+                        checked={temParticipacao}
+                        onCheckedChange={(checked) => {
+                          setTemParticipacao(checked === true)
+                          if (!checked) {
+                            setAdvogadoSelecionado('')
+                            setPercentualParticipacao(0)
+                          }
+                        }}
+                      />
+                      <Label htmlFor="tem-participacao" className="text-sm font-medium cursor-pointer">
+                        Tem participação de advogado?
+                      </Label>
+                    </div>
+                  </div>
+
+                  {temParticipacao && (
+                    <div className="space-y-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div>
+                        <Label className="text-xs">Advogado</Label>
+                        <select
+                          value={advogadoSelecionado}
+                          onChange={(e) => {
+                            setAdvogadoSelecionado(e.target.value)
+                            const adv = advogadosEscritorio.find(a => a.id === e.target.value)
+                            if (adv?.percentual_comissao) {
+                              setPercentualParticipacao(adv.percentual_comissao)
+                            }
+                          }}
+                          className="w-full h-9 rounded-md border border-slate-200 px-3 text-sm mt-1"
+                        >
+                          <option value="">Selecione o advogado...</option>
+                          {advogadosEscritorio.map((adv) => (
+                            <option key={adv.id} value={adv.id}>
+                              {adv.nome} {adv.percentual_comissao ? `(${adv.percentual_comissao}%)` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs">Percentual (%)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.5"
+                            value={percentualParticipacao || ''}
+                            onChange={(e) => setPercentualParticipacao(parseFloat(e.target.value) || 0)}
+                            placeholder="0"
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Valor da Participação</Label>
+                          <div className="mt-1 h-9 flex items-center px-3 bg-white border border-slate-200 rounded-md">
+                            <span className="text-sm font-medium text-amber-700">
+                              R$ {((modalEfetivarItem.valor * (percentualParticipacao || 0)) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-[10px] text-amber-600">
+                        Uma despesa será criada automaticamente para registrar esta participação.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setModalEfetivarItem(null)
+                    setTemParticipacao(false)
+                    setAdvogadoSelecionado('')
+                    setPercentualParticipacao(0)
+                    setContaSelecionada('')
+                  }}
+                  disabled={submitting}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleEfetivarComParticipacao}
+                  disabled={submitting || !contaSelecionada || (temParticipacao && (!advogadoSelecionado || !percentualParticipacao))}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      {modalEfetivarItem.tipo_movimento === 'receita' ? 'Receber' : 'Pagar'}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Efetivar em Massa */}
+      <Dialog open={modalEfetivarMassa} onOpenChange={setModalEfetivarMassa}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-[#34495e]">Efetivar Lançamentos</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              Efetivar <span className="font-semibold">{itensSelecionados.length}</span> {itensSelecionados.length === 1 ? 'lançamento' : 'lançamentos'} selecionado(s).
+            </p>
+
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-xs text-amber-700">
+                Apenas lançamentos <strong>pendentes</strong> ou <strong>vencidos</strong> serão efetivados.
+                Transferências já são efetivadas automaticamente.
+              </p>
+            </div>
+
+            <div>
+              <Label className="text-xs">Conta Bancária</Label>
+              <select
+                value={contaEfetivarMassa}
+                onChange={(e) => setContaEfetivarMassa(e.target.value)}
+                className="w-full h-9 rounded-md border border-slate-200 px-3 text-sm mt-1"
+              >
+                <option value="">Selecione...</option>
+                {contasBancarias.map((conta) => (
+                  <option key={conta.id} value={conta.id}>
+                    {conta.banco} - {conta.numero_conta}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setModalEfetivarMassa(false)
+                  setContaEfetivarMassa('')
+                }}
+                disabled={submitting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleEfetivarEmMassa}
+                disabled={submitting || !contaEfetivarMassa}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    Efetivando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    Efetivar
+                  </>
                 )}
               </Button>
             </div>

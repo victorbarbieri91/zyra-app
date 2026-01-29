@@ -69,7 +69,7 @@ export default function TimesheetPage() {
     return { from: startOfMonth(hoje), to: endOfMonth(hoje) }
   })
   const [statusFiltro, setStatusFiltro] = useState<'pendente' | 'aprovado'>('pendente')
-  const [filtroFaturavel, setFiltroFaturavel] = useState<'todos' | 'cobravel' | 'interno'>('todos')
+  const [filtroFaturavel, setFiltroFaturavel] = useState<'todos' | 'cobravel' | 'nao_cobravel'>('todos')
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([])
   const [colaboradoresSelecionados, setColaboradoresSelecionados] = useState<string[]>([])
   const [seletorColaboradorAberto, setSeletorColaboradorAberto] = useState(false)
@@ -78,6 +78,10 @@ export default function TimesheetPage() {
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<EditForm>({ horas: 0, atividade: '', faturavel: true })
   const [salvandoEdicao, setSalvandoEdicao] = useState(false)
+
+  // Estado para aprovação/desaprovação individual
+  const [aprovandoId, setAprovandoId] = useState<string | null>(null)
+  const [desaprovandoId, setDesaprovandoId] = useState<string | null>(null)
 
   // Multi-escritório states
   const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
@@ -233,10 +237,10 @@ export default function TimesheetPage() {
         .gte('data_trabalho', dataInicio)
         .lte('data_trabalho', dataFim)
 
-      // Aplicar filtro de faturável/interno
+      // Aplicar filtro de faturável/não cobrável
       if (filtroFaturavel === 'cobravel') {
         query = query.eq('faturavel', true)
-      } else if (filtroFaturavel === 'interno') {
+      } else if (filtroFaturavel === 'nao_cobravel') {
         query = query.eq('faturavel', false)
       }
 
@@ -288,6 +292,54 @@ export default function TimesheetPage() {
     } catch (error: any) {
       toast.error(error?.message || 'Erro ao aprovar timesheets')
       console.error('Erro ao aprovar:', error)
+    }
+  }
+
+  // Aprovar um único timesheet
+  const handleAproveSingle = async (timesheetId: string) => {
+    setAprovandoId(timesheetId)
+    try {
+      const { error } = await supabase.rpc('aprovar_timesheet', {
+        p_timesheet_ids: [timesheetId],
+        p_aprovado_por: (await supabase.auth.getUser()).data.user?.id,
+      })
+
+      if (error) throw error
+
+      toast.success('Registro aprovado com sucesso!')
+      // Remove da seleção se estava selecionado
+      setSelectedIds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(timesheetId)
+        return newSet
+      })
+      loadTimesheets()
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao aprovar timesheet')
+      console.error('Erro ao aprovar:', error)
+    } finally {
+      setAprovandoId(null)
+    }
+  }
+
+  // Desaprovar um único timesheet (reverter aprovação)
+  const handleDesaprovarSingle = async (timesheetId: string) => {
+    setDesaprovandoId(timesheetId)
+    try {
+      const { error } = await supabase.rpc('desaprovar_timesheet', {
+        p_timesheet_ids: [timesheetId],
+        p_desaprovado_por: (await supabase.auth.getUser()).data.user?.id,
+      })
+
+      if (error) throw error
+
+      toast.success('Aprovação revertida com sucesso!')
+      loadTimesheets()
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao desaprovar timesheet')
+      console.error('Erro ao desaprovar:', error)
+    } finally {
+      setDesaprovandoId(null)
     }
   }
 
@@ -583,15 +635,15 @@ export default function TimesheetPage() {
             Cobráveis
           </button>
           <button
-            onClick={() => setFiltroFaturavel('interno')}
+            onClick={() => setFiltroFaturavel('nao_cobravel')}
             className={cn(
               'px-3 py-2 text-sm font-medium transition-colors border-l border-slate-200',
-              filtroFaturavel === 'interno'
+              filtroFaturavel === 'nao_cobravel'
                 ? 'bg-slate-100 text-slate-700'
                 : 'bg-white text-slate-600 hover:bg-slate-50'
             )}
           >
-            Internos
+            Não Cobráveis
           </button>
         </div>
       </div>
@@ -647,21 +699,21 @@ export default function TimesheetPage() {
               <CardTitle className="text-sm font-medium text-slate-700">
                 Registros de Horas
               </CardTitle>
-              <Badge variant="secondary" className="bg-slate-100 text-slate-600">
-                {timesheets.length} {timesheets.length === 1 ? 'registro' : 'registros'} - {getTotalHorasLista().toFixed(1)}h
-              </Badge>
+              {statusFiltro === 'pendente' && timesheets.length > 0 && (
+                <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === pendentesCount && pendentesCount > 0}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    className="rounded border-slate-300"
+                  />
+                  Selecionar todos
+                </label>
+              )}
             </div>
-            {statusFiltro === 'pendente' && timesheets.length > 0 && (
-              <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.size === pendentesCount && pendentesCount > 0}
-                  onChange={(e) => handleSelectAll(e.target.checked)}
-                  className="rounded border-slate-300"
-                />
-                Selecionar todos
-              </label>
-            )}
+            <Badge variant="secondary" className="bg-slate-100 text-slate-600">
+              {timesheets.length} {timesheets.length === 1 ? 'registro' : 'registros'} - {getTotalHorasLista().toFixed(1)}h
+            </Badge>
           </div>
         </CardHeader>
         <CardContent className="pt-0 pb-2 px-0">
@@ -691,13 +743,13 @@ export default function TimesheetPage() {
               {/* Header da tabela */}
               <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-slate-50 text-[10px] font-medium text-slate-500 uppercase tracking-wider">
                 {statusFiltro === 'pendente' && <div className="col-span-1"></div>}
-                <div className={statusFiltro === 'pendente' ? 'col-span-1' : 'col-span-1'}>Data</div>
+                <div className="col-span-1">Data</div>
                 <div className="col-span-2">Colaborador</div>
                 <div className="col-span-2">Cliente</div>
-                <div className={statusFiltro === 'pendente' ? 'col-span-3' : 'col-span-4'}>Atividade</div>
+                <div className="col-span-3">Atividade</div>
                 <div className="col-span-1 text-right">Horas</div>
                 <div className="col-span-1 text-center">Tipo</div>
-                {statusFiltro === 'pendente' && <div className="col-span-1"></div>}
+                <div className="col-span-1"></div>
               </div>
 
               {/* Linhas */}
@@ -756,7 +808,7 @@ export default function TimesheetPage() {
                   </div>
 
                   {/* Atividade */}
-                  <div className={statusFiltro === 'pendente' ? 'col-span-3' : 'col-span-4'}>
+                  <div className="col-span-3">
                     {editandoId === ts.id ? (
                       <Input
                         value={editForm.atividade}
@@ -804,7 +856,7 @@ export default function TimesheetPage() {
                             : 'bg-slate-100 text-slate-600'
                         )}
                       >
-                        {editForm.faturavel ? 'Fat.' : 'Int.'}
+                        {editForm.faturavel ? 'Cobrável' : 'N/Cob.'}
                       </button>
                     ) : (
                       <Badge
@@ -816,47 +868,88 @@ export default function TimesheetPage() {
                             : 'bg-slate-100 text-slate-600'
                         )}
                       >
-                        {ts.faturavel ? 'Fat.' : 'Int.'}
+                        {ts.faturavel ? 'Cobrável' : 'N/Cob.'}
                       </Badge>
                     )}
                   </div>
 
                   {/* Ações */}
-                  {statusFiltro === 'pendente' && (
-                    <div className="col-span-1 flex justify-end gap-1">
-                      {editandoId === ts.id ? (
-                        <>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7"
-                            onClick={salvarEdicao}
-                            disabled={salvandoEdicao}
-                          >
-                            <Save className="h-3.5 w-3.5 text-emerald-600" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7"
-                            onClick={cancelarEdicao}
-                            disabled={salvandoEdicao}
-                          >
-                            <X className="h-3.5 w-3.5 text-slate-400" />
-                          </Button>
-                        </>
-                      ) : (
+                  <div className="col-span-1 flex justify-end gap-0.5">
+                    {statusFiltro === 'pendente' ? (
+                      <>
+                        {editandoId === ts.id ? (
+                          <>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={salvarEdicao}
+                              disabled={salvandoEdicao}
+                            >
+                              <Save className="h-3.5 w-3.5 text-emerald-600" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={cancelarEdicao}
+                              disabled={salvandoEdicao}
+                            >
+                              <X className="h-3.5 w-3.5 text-slate-400" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            {/* Botão de aprovação rápida */}
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 hover:bg-emerald-50"
+                              onClick={() => handleAproveSingle(ts.id)}
+                              disabled={aprovandoId === ts.id}
+                              title="Aprovar"
+                            >
+                              <CheckCircle className={cn(
+                                "h-3.5 w-3.5",
+                                aprovandoId === ts.id
+                                  ? "text-emerald-400 animate-pulse"
+                                  : "text-emerald-500 hover:text-emerald-600"
+                              )} />
+                            </Button>
+                            {/* Botão de edição */}
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => iniciarEdicao(ts)}
+                              title="Editar"
+                            >
+                              <Pencil className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" />
+                            </Button>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      /* Aba Aprovados - botão de desaprovar */
+                      !ts.faturado && (
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-7 w-7"
-                          onClick={() => iniciarEdicao(ts)}
+                          className="h-7 w-7 hover:bg-red-50"
+                          onClick={() => handleDesaprovarSingle(ts.id)}
+                          disabled={desaprovandoId === ts.id}
+                          title="Reverter aprovação"
                         >
-                          <Pencil className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" />
+                          <XCircle className={cn(
+                            "h-3.5 w-3.5",
+                            desaprovandoId === ts.id
+                              ? "text-red-400 animate-pulse"
+                              : "text-red-500 hover:text-red-600"
+                          )} />
                         </Button>
-                      )}
-                    </div>
-                  )}
+                      )
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

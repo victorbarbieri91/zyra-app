@@ -362,6 +362,8 @@ export default function FaturaImprimirPage() {
                       <td className="py-3 px-4 text-center text-slate-600">
                         {item.tipo_item === 'timesheet'
                           ? `${Number(item.quantidade || 0).toFixed(1)}h`
+                          : item.tipo_item === 'pasta'
+                          ? `${item.quantidade || 0} proc.`
                           : item.quantidade || 1}
                       </td>
                       <td className="py-3 px-4 text-right text-slate-600">
@@ -550,6 +552,43 @@ export default function FaturaImprimirPage() {
                 </p>
               </div>
             )}
+
+            {/* Anexo: Relacao de Processos (para itens tipo 'pasta') */}
+            {itens
+              .filter((item) => item.tipo_item === 'pasta' && item.processos_lista && item.processos_lista.length > 0)
+              .map((item, idx) => (
+                <div key={`anexo-${idx}`} className="mt-8 pt-8 border-t-2 border-[#34495e] print-break-inside-avoid">
+                  <h3 className="text-sm font-bold text-[#34495e] uppercase tracking-wide mb-4 pb-2 border-b-2 border-[#89bcbe]">
+                    Anexo: Relacao de Processos - Competencia {item.competencia || 'N/A'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Total de {item.processos_lista?.length || 0} processo(s) ativo(s) no periodo
+                  </p>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-slate-100 text-xs font-bold text-slate-600 uppercase">
+                        <th className="py-2 px-3 text-left w-[15%]">Pasta</th>
+                        <th className="py-2 px-3 text-left w-[30%]">Numero CNJ</th>
+                        <th className="py-2 px-3 text-left w-[35%]">Titulo/Partes</th>
+                        <th className="py-2 px-3 text-left w-[20%]">Cliente</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {item.processos_lista?.map((proc, pIdx) => (
+                        <tr
+                          key={proc.id || pIdx}
+                          className={`border-b border-slate-100 ${pIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
+                        >
+                          <td className="py-2 px-3 text-slate-600">{proc.numero_pasta || '-'}</td>
+                          <td className="py-2 px-3 text-slate-700 font-mono text-xs">{proc.numero_cnj || '-'}</td>
+                          <td className="py-2 px-3 text-slate-600">{proc.titulo || '-'}</td>
+                          <td className="py-2 px-3 text-slate-600">{proc.cliente_nome || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
 
             {/* Rodape */}
             <footer className="mt-12 pt-4 border-t border-slate-200 text-center">

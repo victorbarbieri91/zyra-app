@@ -48,6 +48,7 @@ interface FormData {
   instancia: string
   rito: string
   valor_causa: string
+  indice_correcao: string  // Índice de correção monetária (INPC, IPCA, SELIC, etc)
   data_distribuicao: string
   objeto_acao: string
 
@@ -107,6 +108,7 @@ const initialFormData: FormData = {
   instancia: '1ª',
   rito: 'ordinário',
   valor_causa: '',
+  indice_correcao: '',  // Será definido automaticamente pelo trigger baseado na área
   data_distribuicao: new Date().toISOString().split('T')[0],
   objeto_acao: '',
   cliente_id: '',
@@ -470,6 +472,7 @@ export default function ProcessoWizard({
         instancia: formData.instancia,
         rito: formData.rito || null,
         valor_causa: formData.valor_causa ? parseFloat(formData.valor_causa) : null,
+        indice_correcao: formData.indice_correcao || null,  // Se vazio, trigger define pelo padrão da área
         data_distribuicao: formData.data_distribuicao,
         objeto_acao: formData.objeto_acao || null,
         cliente_id: formData.cliente_id,
@@ -763,6 +766,32 @@ export default function ProcessoWizard({
                     value={formData.valor_causa}
                     onChange={(e) => updateField('valor_causa', e.target.value)}
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="indice_correcao">
+                    Índice de Correção Monetária
+                    <span className="text-slate-400 font-normal ml-1">(opcional)</span>
+                  </Label>
+                  <Select
+                    value={formData.indice_correcao}
+                    onValueChange={(v) => updateField('indice_correcao', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Automático pela área" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Automático (INPC/SELIC)</SelectItem>
+                      <SelectItem value="INPC">INPC - Trabalhista, Previdenciário, Cível</SelectItem>
+                      <SelectItem value="IPCA">IPCA - Índice oficial de inflação</SelectItem>
+                      <SelectItem value="IPCA-E">IPCA-E - Tabelas judiciais</SelectItem>
+                      <SelectItem value="IGP-M">IGP-M - Contratos e aluguéis</SelectItem>
+                      <SelectItem value="SELIC">SELIC - Tributário</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Se vazio, será definido automaticamente: SELIC para Tributária, INPC para demais áreas
+                  </p>
                 </div>
 
                 <div>

@@ -98,8 +98,13 @@ O módulo Financeiro é o maior e mais complexo do sistema, gerenciando:
 | `clausulas` | text | YES | - | Cláusulas especiais |
 | `ativo` | boolean | YES | true | Se o contrato está ativo |
 | `horas_faturaveis` | boolean | YES | true | Para contratos `misto`: define se horas são cobráveis. Usado pelo trigger de timesheet para calcular `faturavel` automaticamente |
+| `valor_atualizado` | numeric(15,2) | YES | - | Valor após reajuste monetário (sob demanda) |
+| `indice_reajuste` | text | YES | 'INPC' | Índice usado no reajuste: INPC (padrão), IPCA, IGP-M |
+| `data_ultimo_reajuste` | date | YES | - | Data do último reajuste aplicado |
 | `created_at` | timestamptz | YES | now() | Data de criação |
 | `updated_at` | timestamptz | YES | now() | Data de atualização |
+
+**Ver também**: [Módulo de Correção Monetária](12-correcao-monetaria.md) para função `aplicar_reajuste_contrato()`.
 
 **Tipos de Contrato** (CHECK constraint):
 - `processo` - Contrato para processo judicial
@@ -110,6 +115,7 @@ O módulo Financeiro é o maior e mais complexo do sistema, gerenciando:
 - `hora` - Por hora trabalhada
 - `exito` - Baseado em êxito
 - `recorrente` - Contrato recorrente/mensal
+- `pro_bono` - Atendimento gratuito (sem cobrança)
 
 **Formas de Cobrança** (CHECK constraint):
 - `fixo` - Valor fixo
@@ -119,6 +125,7 @@ O módulo Financeiro é o maior e mais complexo do sistema, gerenciando:
 - `por_pasta` - Por pasta/processo
 - `por_ato` - Por ato processual
 - `por_cargo` - Valor por cargo/hora do profissional
+- `pro_bono` - Sem cobrança (horas registradas apenas para controle interno)
 
 ---
 
@@ -1154,6 +1161,7 @@ O sistema calcula automaticamente se um registro de timesheet é cobrável (`fat
 | `por_ato` | ❌ Não | Cobra via atos processuais |
 | `por_etapa` | ❌ Não | Cobra por etapa do processo |
 | `misto` | ⚙️ Configurável | Usa campo `horas_faturaveis` do contrato |
+| `pro_bono` | ❌ Não | Sem cobrança - apenas controle interno |
 
 ### Funções
 
@@ -1309,8 +1317,8 @@ Usado em: `financeiro_despesas` (quando vinculado a processo)
 | Campo | Tabela | Valores |
 |-------|--------|---------|
 | `tipo_honorario` | `financeiro_honorarios` | `fixo`, `hora`, `exito`, `misto` |
-| `tipo_contrato` | `financeiro_contratos_honorarios` | `processo`, `consultoria`, `avulso`, `misto`, `fixo`, `hora`, `exito`, `recorrente` |
-| `forma_cobranca` | `financeiro_contratos_*` | `fixo`, `por_hora`, `por_etapa`, `misto`, `por_pasta`, `por_ato`, `por_cargo` |
+| `tipo_contrato` | `financeiro_contratos_honorarios` | `processo`, `consultoria`, `avulso`, `misto`, `fixo`, `hora`, `exito`, `recorrente`, `pro_bono` |
+| `forma_cobranca` | `financeiro_contratos_*` | `fixo`, `por_hora`, `por_etapa`, `misto`, `por_pasta`, `por_ato`, `por_cargo`, `pro_bono` |
 | `tipo_conta` | `financeiro_contas_bancarias` | `corrente`, `poupanca`, `digital` |
 | `tipo` | `financeiro_contas_lancamentos` | `entrada`, `saida`, `transferencia_entrada`, `transferencia_saida` |
 | `origem_tipo` | `financeiro_contas_lancamentos` | `pagamento`, `despesa`, `transferencia`, `manual` |

@@ -30,11 +30,21 @@ import {
   Info,
   Scale,
   ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  RefreshCw,
 } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
-import { ContratoHonorario } from '@/hooks/useContratosHonorarios'
+import { ContratoHonorario, GrupoClientes } from '@/hooks/useContratosHonorarios'
 import { cn } from '@/lib/utils'
 
 interface ContratoDetailModalProps {
@@ -119,18 +129,35 @@ export default function ContratoDetailModal({
   const [valoresCargo, setValoresCargo] = useState<ValorCargo[]>([])
   const [atos, setAtos] = useState<AtoConfigured[]>([])
   const [processosVinculados, setProcessosVinculados] = useState<ProcessoVinculado[]>([])
+  const [processosExpandidos, setProcessosExpandidos] = useState(false)
+  const [grupoClientes, setGrupoClientes] = useState<GrupoClientes | null>(null)
+
+  // Estado para reajuste monetário
+  const [selectedIndice, setSelectedIndice] = useState<string>('INPC')
+  const [loadingReajuste, setLoadingReajuste] = useState(false)
+  const [reajusteData, setReajusteData] = useState<{
+    valor_atualizado: number | null
+    data_ultimo_reajuste: string | null
+    indice_reajuste: string | null
+    reajuste_ativo: boolean
+  } | null>(null)
+
+  // Constante para limite inicial de processos visíveis
+  const PROCESSOS_LIMITE_INICIAL = 3
 
   // Carregar dados complementares do contrato (agora dos campos JSONB)
   useEffect(() => {
     const loadContratoDetails = async () => {
       if (!contrato || !open) return
 
+      // Reset estado de expansão ao abrir novo contrato
+      setProcessosExpandidos(false)
       setLoading(true)
       try {
-        // Buscar contrato com campos JSONB
+        // Buscar contrato com campos JSONB e dados de reajuste
         const { data: contratoData } = await supabase
           .from('financeiro_contratos_honorarios')
-          .select('formas_pagamento, config')
+          .select('formas_pagamento, config, grupo_clientes, reajuste_ativo, valor_atualizado, data_ultimo_reajuste, indice_reajuste')
           .eq('id', contrato.id)
           .single()
 
@@ -176,6 +203,21 @@ export default function ContratoDetailModal({
               valor_fixo: a.valor_fixo,
             }))
           )
+
+          // Extrair grupo de clientes do JSONB
+          const grupoData = contratoData.grupo_clientes as GrupoClientes | null
+          setGrupoClientes(grupoData?.habilitado ? grupoData : null)
+
+          // Dados de reajuste monetário
+          setReajusteData({
+            valor_atualizado: contratoData.valor_atualizado,
+            data_ultimo_reajuste: contratoData.data_ultimo_reajuste,
+            indice_reajuste: contratoData.indice_reajuste,
+            reajuste_ativo: contratoData.reajuste_ativo || false
+          })
+          if (contratoData.indice_reajuste) {
+            setSelectedIndice(contratoData.indice_reajuste)
+          }
         }
 
         // Buscar processos vinculados a este contrato
@@ -215,6 +257,45 @@ export default function ContratoDetailModal({
 
     loadContratoDetails()
   }, [contrato, open, supabase])
+
+  // Função para aplicar reajuste monetário
+  const aplicarReajuste = async () => {
+    if (!contrato) return
+
+    setLoadingReajuste(true)
+    try {
+      const { data, error } = await supabase
+        .rpc('aplicar_reajuste_contrato', {
+          p_contrato_id: contrato.id,
+          p_indice: selectedIndice
+        })
+
+      if (error) {
+        console.error('Erro ao aplicar reajuste:', error)
+        return
+      }
+
+      // Recarregar dados do contrato
+      const { data: contratoAtualizado } = await supabase
+        .from('financeiro_contratos_honorarios')
+        .select('valor_atualizado, data_ultimo_reajuste, indice_reajuste')
+        .eq('id', contrato.id)
+        .single()
+
+      if (contratoAtualizado) {
+        setReajusteData(prev => ({
+          ...prev!,
+          valor_atualizado: contratoAtualizado.valor_atualizado,
+          data_ultimo_reajuste: contratoAtualizado.data_ultimo_reajuste,
+          indice_reajuste: contratoAtualizado.indice_reajuste
+        }))
+      }
+    } catch (error) {
+      console.error('Erro ao aplicar reajuste:', error)
+    } finally {
+      setLoadingReajuste(false)
+    }
+  }
 
   if (!contrato) return null
 
@@ -409,7 +490,7 @@ export default function ContratoDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader className="pb-4 border-b border-slate-100 pr-8">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
@@ -481,6 +562,40 @@ export default function ContratoDetailModal({
               </div>
             </div>
 
+            {/* Grupo de Clientes */}
+            {grupoClientes && grupoClientes.clientes && grupoClientes.clientes.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-[#46627f] uppercase tracking-wide mb-3">
+                  Grupo de Clientes
+                </p>
+                <div className="bg-slate-50 rounded-lg border border-slate-100 p-3">
+                  <div className="space-y-2">
+                    {grupoClientes.clientes.map((cliente) => (
+                      <div
+                        key={cliente.cliente_id}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <User className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="text-sm text-[#34495e]">{cliente.nome}</span>
+                        </div>
+                        {grupoClientes.cliente_pagador_id === cliente.cliente_id && (
+                          <Badge className="text-[9px] bg-[#89bcbe]/10 text-[#46627f] border border-[#89bcbe]/30">
+                            CNPJ Pagador
+                          </Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-slate-200">
+                    <p className="text-[10px] text-slate-400">
+                      Faturamento consolidado para o CNPJ pagador
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Formas de Cobrança */}
             <div>
               <p className="text-xs font-semibold text-[#46627f] uppercase tracking-wide mb-3">
@@ -517,36 +632,130 @@ export default function ContratoDetailModal({
               )}
             </div>
 
+            {/* Reajuste Monetário - Apenas para contratos fixos com reajuste ativo */}
+            {reajusteData?.reajuste_ativo &&
+             (contrato.forma_cobranca === 'fixo' || contrato.forma_cobranca === 'por_pasta' ||
+              formas.some(f => f.forma_cobranca === 'fixo' || f.forma_cobranca === 'por_pasta')) && (
+              <div>
+                <p className="text-xs font-semibold text-[#46627f] uppercase tracking-wide mb-3">
+                  Reajuste Monetário
+                </p>
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg border border-emerald-100 p-4">
+                  {/* Valor atualizado e data */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wide">Valor Atualizado</p>
+                      {reajusteData.valor_atualizado ? (
+                        <>
+                          <p className="text-lg font-bold text-emerald-700">
+                            {formatCurrency(reajusteData.valor_atualizado)}
+                          </p>
+                          {reajusteData.data_ultimo_reajuste && (
+                            <p className="text-[10px] text-slate-500">
+                              Atualizado em {formatBrazilDate(parseDateInBrazil(reajusteData.data_ultimo_reajuste))}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm text-slate-400 italic">Nenhum reajuste aplicado</p>
+                      )}
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-emerald-600" />
+                    </div>
+                  </div>
+
+                  {/* Seletor de índice e botão de aplicar */}
+                  <div className="flex items-center gap-3 pt-3 border-t border-emerald-200/50">
+                    <div className="flex-1">
+                      <Select value={selectedIndice} onValueChange={setSelectedIndice}>
+                        <SelectTrigger className="h-9 text-xs bg-white border-slate-200">
+                          <SelectValue placeholder="Selecione o índice" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="INPC">INPC - Índice Nacional de Preços</SelectItem>
+                          <SelectItem value="IPCA">IPCA - Índice Oficial de Inflação</SelectItem>
+                          <SelectItem value="IGP-M">IGP-M - Contratos e Aluguéis</SelectItem>
+                          <SelectItem value="SELIC">SELIC - Taxa Básica de Juros</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={aplicarReajuste}
+                      disabled={loadingReajuste}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white h-9"
+                    >
+                      {loadingReajuste ? (
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                      )}
+                      Aplicar Reajuste
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Processos Vinculados */}
             <div>
-              <p className="text-xs font-semibold text-[#46627f] uppercase tracking-wide mb-3">
-                Processos Vinculados ({processosVinculados.length})
-              </p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-[#46627f] uppercase tracking-wide">
+                  Processos Vinculados ({processosVinculados.length})
+                </p>
+                {processosVinculados.length > PROCESSOS_LIMITE_INICIAL && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[10px] text-slate-500 hover:text-[#34495e]"
+                    onClick={() => setProcessosExpandidos(!processosExpandidos)}
+                  >
+                    {processosExpandidos ? (
+                      <>
+                        <ChevronUp className="w-3 h-3 mr-1" />
+                        Recolher
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-3 h-3 mr-1" />
+                        Ver todos
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
               {processosVinculados.length === 0 ? (
                 <div className="text-center py-4 bg-slate-50 rounded-lg">
                   <Scale className="w-5 h-5 mx-auto text-slate-300 mb-1" />
                   <p className="text-xs text-slate-400">Nenhum processo vinculado</p>
                 </div>
               ) : (
-                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
-                  {processosVinculados.map(processo => (
+                <div className={cn(
+                  "space-y-2 overflow-x-hidden pr-1",
+                  processosExpandidos && "max-h-[280px] overflow-y-auto"
+                )}>
+                  {(processosExpandidos
+                    ? processosVinculados
+                    : processosVinculados.slice(0, PROCESSOS_LIMITE_INICIAL)
+                  ).map(processo => (
                     <Link
                       key={processo.id}
                       href={`/dashboard/processos/${processo.id}`}
-                      className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 hover:border-[#89bcbe]/30 transition-colors group"
+                      className="flex items-center p-3 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 hover:border-[#89bcbe]/30 transition-colors group overflow-hidden"
                     >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="flex items-center gap-3 w-0 flex-1 overflow-hidden">
                         <div className="w-7 h-7 rounded-md bg-white border border-slate-200 flex items-center justify-center flex-shrink-0">
                           <Scale className="w-3.5 h-3.5 text-[#89bcbe]" />
                         </div>
-                        <div className="min-w-0 flex-1">
+                        <div className="w-0 flex-1 overflow-hidden">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#34495e]">
                               {processo.numero_pasta}
                             </span>
                             <Badge
                               className={cn(
-                                'text-[9px] px-1.5 py-0',
+                                'text-[9px] px-1.5 py-0 flex-shrink-0',
                                 processo.status === 'ativo'
                                   ? 'bg-emerald-100 text-emerald-700'
                                   : 'bg-slate-100 text-slate-600'
@@ -566,9 +775,19 @@ export default function ContratoDetailModal({
                           </p>
                         </div>
                       </div>
-                      <ExternalLink className="w-3.5 h-3.5 text-slate-300 group-hover:text-[#89bcbe] transition-colors flex-shrink-0" />
+                      <ExternalLink className="w-3.5 h-3.5 text-slate-300 group-hover:text-[#89bcbe] transition-colors flex-shrink-0 ml-2" />
                     </Link>
                   ))}
+
+                  {/* Indicador de mais processos quando colapsado */}
+                  {!processosExpandidos && processosVinculados.length > PROCESSOS_LIMITE_INICIAL && (
+                    <button
+                      onClick={() => setProcessosExpandidos(true)}
+                      className="w-full py-2 text-center text-[11px] text-slate-400 hover:text-[#89bcbe] hover:bg-slate-50 rounded-lg transition-colors"
+                    >
+                      + {processosVinculados.length - PROCESSOS_LIMITE_INICIAL} processos
+                    </button>
+                  )}
                 </div>
               )}
             </div>

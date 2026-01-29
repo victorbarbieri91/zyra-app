@@ -49,6 +49,9 @@ interface Processo {
   colaboradores_nomes: string[]
   status: string
   valor_causa?: number
+  valor_atualizado?: number
+  data_ultima_atualizacao_monetaria?: string
+  indice_correcao?: string
   valor_acordo?: number
   valor_condenacao?: number
   provisao_sugerida?: number
@@ -134,6 +137,9 @@ export default function ProcessoDetalhe() {
         colaboradores_nomes: [], // TODO: buscar nomes dos colaboradores
         status: data.status,
         valor_causa: data.valor_causa || undefined,
+        valor_atualizado: data.valor_atualizado || undefined,
+        data_ultima_atualizacao_monetaria: data.data_ultima_atualizacao_monetaria || undefined,
+        indice_correcao: data.indice_correcao || undefined,
         valor_acordo: data.valor_acordo || undefined,
         valor_condenacao: data.valor_condenacao || undefined,
         provisao_sugerida: data.provisao_sugerida || undefined,

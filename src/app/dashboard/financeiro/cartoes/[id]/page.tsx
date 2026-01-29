@@ -57,6 +57,7 @@ import {
 } from '@/hooks/useCartoesCredito'
 import CartaoModal from '@/components/financeiro/cartoes/CartaoModal'
 import DespesaCartaoModal from '@/components/financeiro/cartoes/DespesaCartaoModal'
+import EditarLancamentoCartaoModal from '@/components/financeiro/cartoes/EditarLancamentoCartaoModal'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { formatBrazilDate } from '@/lib/timezone'
@@ -86,6 +87,7 @@ export default function CartaoDetalhePage() {
   // Modais
   const [modalCartaoOpen, setModalCartaoOpen] = useState(false)
   const [modalDespesaOpen, setModalDespesaOpen] = useState(false)
+  const [lancamentoParaEditar, setLancamentoParaEditar] = useState<LancamentoCartao | null>(null)
   const [lancamentoParaExcluir, setLancamentoParaExcluir] = useState<string | null>(null)
   const [recorrenteParaCancelar, setRecorrenteParaCancelar] = useState<string | null>(null)
   const [recorrenteParaReativar, setRecorrenteParaReativar] = useState<string | null>(null)
@@ -499,6 +501,12 @@ export default function CartaoDetalhePage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => setLancamentoParaEditar(lancamento)}
+                              >
+                                <Edit2 className="h-4 w-4 mr-2" />
+                                Editar
+                              </DropdownMenuItem>
                               {lancamento.tipo === 'recorrente' && (
                                 <>
                                   {lancamento.recorrente_ativo ? (
@@ -638,6 +646,13 @@ export default function CartaoDetalhePage() {
               loadLancamentosData()
               loadFaturasData()
             }}
+          />
+          <EditarLancamentoCartaoModal
+            open={!!lancamentoParaEditar}
+            onOpenChange={(open) => !open && setLancamentoParaEditar(null)}
+            escritorioId={escritorioAtivo}
+            lancamento={lancamentoParaEditar}
+            onSuccess={loadLancamentosData}
           />
         </>
       )}

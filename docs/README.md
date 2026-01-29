@@ -54,6 +54,7 @@ Documentar todas as tabelas, colunas, relacionamentos e RLS policies.
 | Processos | 6 | ✅ Completo | [03-processos.md](database/03-processos.md) |
 | Agenda | 8 | ⬜ Pendente | |
 | Financeiro + Cartões | 30 | ✅ Completo | [05-financeiro.md](database/05-financeiro.md) |
+| Correção Monetária | 2 | ✅ Completo | [12-correcao-monetaria.md](database/12-correcao-monetaria.md) |
 | Consultivo | 12 | ⬜ Pendente | |
 | Publicações | 8 | ⬜ Pendente | |
 | Documentos | 1 | ⬜ Pendente | |
@@ -62,7 +63,7 @@ Documentar todas as tabelas, colunas, relacionamentos e RLS policies.
 | Portfolio | 11 | ⬜ Pendente | |
 | Integrações | 3 | ⬜ Pendente | |
 | Sistema | 7 | ⬜ Pendente | |
-| **Total** | **~114** | **3/13** | |
+| **Total** | **~116** | **4/14** | |
 
 ### Fase 2: Módulos Frontend
 Documentar a estrutura de cada módulo, componentes e hooks.

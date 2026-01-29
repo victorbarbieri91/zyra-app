@@ -1,9 +1,17 @@
 import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
+export interface ProcessoFechamento {
+  id: string
+  numero_cnj: string | null
+  numero_pasta: string | null
+  titulo: string | null
+  cliente_nome: string | null
+}
+
 export interface LancamentoProntoFaturar {
   lancamento_id: string
-  tipo_lancamento: 'honorario' | 'timesheet'
+  tipo_lancamento: 'honorario' | 'timesheet' | 'despesa' | 'pasta'
   escritorio_id: string
   cliente_id: string
   cliente_nome: string
@@ -18,6 +26,12 @@ export interface LancamentoProntoFaturar {
   processo_numero: string | null // numero_cnj
   processo_pasta: string | null // PROC-0001
   partes_resumo: string | null // "João Silva vs Empresa ABC"
+  // Campos específicos para pasta
+  fechamento_id: string | null
+  qtd_processos: number | null
+  valor_unitario: number | null
+  processos_lista: ProcessoFechamento[] | null
+  competencia: string | null
 }
 
 export interface ClienteParaFaturar {
@@ -29,6 +43,19 @@ export interface ClienteParaFaturar {
   qtd_horas: number
   soma_horas: number
   total_faturar: number
+  // Campos para pasta
+  total_pastas: number
+  qtd_pastas: number
+  qtd_processos_pasta: number
+  // Dados detalhados das pastas para o modal
+  pastas: Array<{
+    fechamento_id: string
+    competencia: string
+    qtd_processos: number
+    valor_unitario: number
+    valor_total: number
+    processos_lista: ProcessoFechamento[]
+  }>
 }
 
 export interface FaturaGerada {
@@ -63,7 +90,7 @@ export interface FaturaGerada {
 export interface ItemFatura {
   id: string
   fatura_id: string
-  tipo_item: 'honorario' | 'timesheet' | 'despesa'
+  tipo_item: 'honorario' | 'timesheet' | 'despesa' | 'pasta'
   descricao: string
   processo_id: string | null
   consulta_id: string | null
@@ -77,6 +104,10 @@ export interface ItemFatura {
   processo_numero?: string | null // numero_cnj
   processo_pasta?: string | null // PROC-0001
   partes_resumo?: string | null // "João Silva vs Empresa ABC"
+  // Campos específicos para pasta (fechamento mensal)
+  competencia?: string | null
+  qtd_processos?: number | null
+  processos_lista?: ProcessoFechamento[] | null
 }
 
 export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
@@ -155,23 +186,41 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
             qtd_horas: 0,
             soma_horas: 0,
             total_faturar: 0,
+            total_pastas: 0,
+            qtd_pastas: 0,
+            qtd_processos_pasta: 0,
+            pastas: [],
           })
         }
 
         const cliente = clientesMap.get(lanc.cliente_id)!
 
-        if (lanc.tipo_lancamento === 'honorario') {
+        if (lanc.tipo_lancamento === 'honorario' || lanc.tipo_lancamento === 'despesa') {
           cliente.qtd_honorarios += 1
           cliente.total_honorarios += lanc.valor || 0
         } else if (lanc.tipo_lancamento === 'timesheet') {
           cliente.qtd_horas += 1
           cliente.soma_horas += lanc.horas || 0
-          // Valor hora: buscar do contrato ou usar padrão
-          const valorHora = 400 // TODO: buscar do contrato
-          cliente.total_horas += (lanc.horas || 0) * valorHora
+          // Usar valor já calculado pela view (inclui valor_hora do contrato)
+          cliente.total_horas += lanc.valor || 0
+        } else if (lanc.tipo_lancamento === 'pasta') {
+          cliente.qtd_pastas += 1
+          cliente.total_pastas += lanc.valor || 0
+          cliente.qtd_processos_pasta += lanc.qtd_processos || 0
+          // Adicionar dados detalhados da pasta
+          if (lanc.fechamento_id) {
+            cliente.pastas.push({
+              fechamento_id: lanc.fechamento_id,
+              competencia: lanc.competencia || '',
+              qtd_processos: lanc.qtd_processos || 0,
+              valor_unitario: lanc.valor_unitario || 0,
+              valor_total: lanc.valor || 0,
+              processos_lista: lanc.processos_lista || [],
+            })
+          }
         }
 
-        cliente.total_faturar = cliente.total_honorarios + cliente.total_horas
+        cliente.total_faturar = cliente.total_honorarios + cliente.total_horas + cliente.total_pastas
       })
 
       return Array.from(clientesMap.values()).sort((a, b) =>
@@ -294,15 +343,21 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
         const itens: ItemFatura[] = itensJsonb.map((item: any, index: number) => {
           const processo = item.processo_id ? processosMap[item.processo_id] : null
 
+          // Determinar tipo do item
+          let tipoItem: ItemFatura['tipo_item'] = 'despesa'
+          if (item.tipo === 'timesheet') tipoItem = 'timesheet'
+          else if (item.tipo === 'honorario') tipoItem = 'honorario'
+          else if (item.tipo === 'pasta') tipoItem = 'pasta'
+
           return {
             id: `${faturaId}-item-${index}`,
             fatura_id: faturaId,
-            tipo_item: item.tipo === 'timesheet' ? 'timesheet' : item.tipo === 'honorario' ? 'honorario' : 'despesa',
+            tipo_item: tipoItem,
             descricao: item.descricao || '',
             processo_id: item.processo_id || null,
             consulta_id: item.consulta_id || null,
-            quantidade: item.horas || null,
-            valor_unitario: item.valor_hora || null,
+            quantidade: tipoItem === 'pasta' ? (item.qtd_processos || null) : (item.horas || null),
+            valor_unitario: tipoItem === 'pasta' ? (item.valor_unitario || null) : (item.valor_hora || null),
             valor_total: Number(item.valor) || 0,
             timesheet_ids: item.timesheet_ids || null,
             referencia_id: item.referencia_id || null,
@@ -313,6 +368,10 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
               processo?.autor && processo?.reu
                 ? `${processo.autor} vs ${processo.reu}`
                 : null,
+            // Campos específicos para pasta
+            competencia: item.competencia || null,
+            qtd_processos: item.qtd_processos || null,
+            processos_lista: item.processos || null,
           }
         })
 
@@ -339,7 +398,8 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
       timesheetIds: string[],
       observacoes?: string,
       dataVencimento?: string,
-      escritorioIdOverride?: string
+      escritorioIdOverride?: string,
+      fechamentosIds?: string[]
     ): Promise<string | null> => {
       const targetEscritorioId = escritorioIdOverride || escritorioIdPrincipal
       if (!targetEscritorioId) {
@@ -356,11 +416,12 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
           data: { user },
         } = await supabase.auth.getUser()
 
-        const { data, error: rpcError } = await supabase.rpc('gerar_fatura_v2', {
+        const { data, error: rpcError } = await supabase.rpc('gerar_fatura_v3', {
           p_escritorio_id: targetEscritorioId,
           p_cliente_id: clienteId,
           p_honorarios_ids: honorariosIds.length > 0 ? honorariosIds : null,
           p_timesheet_ids: timesheetIds.length > 0 ? timesheetIds : null,
+          p_fechamentos_ids: fechamentosIds && fechamentosIds.length > 0 ? fechamentosIds : null,
           p_data_emissao: new Date().toISOString().split('T')[0],
           p_data_vencimento: dataVencimento || null,
           p_observacoes: observacoes || null,

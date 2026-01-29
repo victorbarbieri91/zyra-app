@@ -8,7 +8,7 @@ import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 export interface Honorario {
   id: string
   cliente_id: string
-  processo_id: string | null
+  consultivo_id: string | null
   tipo_honorario: string
   valor_total: number
   descricao: string
@@ -31,7 +31,7 @@ export interface Despesa {
   status: 'pendente' | 'pago' | 'cancelado'
   forma_pagamento: string | null
   fornecedor: string | null
-  processo_id: string | null
+  consultivo_id: string | null
   reembolsavel: boolean
   reembolso_status: 'pendente' | 'faturado' | 'pago' | null
   created_at: string
@@ -40,7 +40,7 @@ export interface Despesa {
 export interface TimesheetEntry {
   id: string
   user_id: string
-  processo_id: string | null
+  consultivo_id: string | null
   data_trabalho: string
   horas: number
   atividade: string
@@ -88,11 +88,10 @@ export interface ContratoInfo {
     valor_hora?: number
     valor_fixo?: number
     percentual_exito?: number
-    valor_por_processo?: number
   }
 }
 
-export interface ProcessoInfo {
+export interface ConsultivoInfo {
   id: string
   cliente_id: string | null
   cliente_nome?: string
@@ -123,7 +122,7 @@ interface HonorarioData {
   numero_parcelas?: number
 }
 
-export function useProcessoFinanceiro(processoId: string | null) {
+export function useConsultivoFinanceiro(consultivoId: string | null) {
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
 
@@ -131,7 +130,7 @@ export function useProcessoFinanceiro(processoId: string | null) {
   const [despesas, setDespesas] = useState<Despesa[]>([])
   const [timesheet, setTimesheet] = useState<TimesheetEntry[]>([])
   const [contratoInfo, setContratoInfo] = useState<ContratoInfo | null>(null)
-  const [processoInfo, setProcessoInfo] = useState<ProcessoInfo | null>(null)
+  const [consultivoInfo, setConsultivoInfo] = useState<ConsultivoInfo | null>(null)
   const [resumo, setResumo] = useState<ResumoFinanceiro>({
     // Honorários
     totalHonorarios: 0,
@@ -157,67 +156,63 @@ export function useProcessoFinanceiro(processoId: string | null) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Carregar todos os dados financeiros do processo
+  // Carregar todos os dados financeiros do consultivo
   const loadDados = useCallback(async () => {
-    if (!processoId || !escritorioAtivo) return
+    if (!consultivoId || !escritorioAtivo) return
 
     setLoading(true)
     setError(null)
 
     try {
-      // Buscar informações básicas do processo (sem joins complexos)
-      const { data: processoData, error: processoError } = await supabase
-        .from('processos_processos')
-        .select('id, contrato_id, modalidade_cobranca, cliente_id')
-        .eq('id', processoId)
+      // Buscar informações básicas do consultivo
+      const { data: consultivoData, error: consultivoError } = await supabase
+        .from('consultivo_consultas')
+        .select('id, contrato_id, cliente_id')
+        .eq('id', consultivoId)
         .single()
 
-      if (processoError) {
-        console.error('Erro ao buscar processo:', processoError)
-        throw processoError
+      if (consultivoError) {
+        console.error('Erro ao buscar consultivo:', consultivoError)
+        throw consultivoError
       }
 
       // Buscar nome do cliente separadamente
       let clienteNome: string | undefined
-      if (processoData?.cliente_id) {
+      if (consultivoData?.cliente_id) {
         const { data: clienteData } = await supabase
           .from('crm_pessoas')
           .select('nome_completo')
-          .eq('id', processoData.cliente_id)
+          .eq('id', consultivoData.cliente_id)
           .single()
 
         clienteNome = clienteData?.nome_completo || undefined
       }
 
-      // Atualizar info do processo
-      if (processoData) {
-        setProcessoInfo({
-          id: processoData.id,
-          cliente_id: processoData.cliente_id,
+      // Atualizar info do consultivo
+      if (consultivoData) {
+        setConsultivoInfo({
+          id: consultivoData.id,
+          cliente_id: consultivoData.cliente_id,
           cliente_nome: clienteNome,
-          contrato_id: processoData.contrato_id,
+          contrato_id: consultivoData.contrato_id,
         })
       }
 
       // Buscar contrato separadamente se existir
-      if (processoData?.contrato_id) {
-        // Buscar contrato com todos os campos JSONB
+      if (consultivoData?.contrato_id) {
         const { data: contrato } = await supabase
           .from('financeiro_contratos_honorarios')
           .select('id, numero_contrato, forma_cobranca, config, formas_pagamento')
-          .eq('id', processoData.contrato_id)
+          .eq('id', consultivoData.contrato_id)
           .single()
 
         if (contrato) {
-          // Config vem do campo JSONB
           const config = (contrato.config || {}) as {
             valor_hora?: number
             valor_fixo?: number
             percentual_exito?: number
-            valor_por_processo?: number
           }
 
-          // Formas disponíveis vem do campo JSONB formas_pagamento
           const formasPagamento = (contrato.formas_pagamento || []) as Array<{ forma_cobranca: string; ativo?: boolean }>
           const formasDisponiveis = formasPagamento
             .filter((f: any) => f.ativo !== false)
@@ -227,13 +222,12 @@ export function useProcessoFinanceiro(processoId: string | null) {
             id: contrato.id,
             numero_contrato: contrato.numero_contrato,
             forma_cobranca: contrato.forma_cobranca,
-            modalidade_cobranca: processoData.modalidade_cobranca,
+            modalidade_cobranca: null,
             formas_disponiveis: formasDisponiveis,
             config: {
               valor_hora: config.valor_hora,
               valor_fixo: config.valor_fixo,
               percentual_exito: config.percentual_exito,
-              valor_por_processo: config.valor_por_processo,
             },
           })
         } else {
@@ -243,43 +237,43 @@ export function useProcessoFinanceiro(processoId: string | null) {
         setContratoInfo(null)
       }
 
-      // Buscar receitas (honorários unificados)
+      // Buscar receitas (honorários) vinculados ao consultivo
       const { data: receitasData } = await supabase
         .from('financeiro_receitas')
         .select(`
           *,
           profiles:created_by (nome_completo)
         `)
-        .eq('processo_id', processoId)
+        .eq('consultivo_id', consultivoId)
         .in('tipo', ['honorario', 'parcela', 'avulso'])
         .order('created_at', { ascending: false })
 
       setHonorarios(
         (receitasData || []).map((r: any) => ({
           ...r,
-          valor_total: r.valor, // Map valor to valor_total for compatibility
+          valor_total: r.valor,
           tipo_honorario: r.categoria,
           responsavel_nome: r.profiles?.nome_completo,
         }))
       )
 
-      // Buscar despesas
+      // Buscar despesas vinculadas ao consultivo
       const { data: despesasData } = await supabase
         .from('financeiro_despesas')
         .select('*')
-        .eq('processo_id', processoId)
+        .eq('consultivo_id', consultivoId)
         .order('data_vencimento', { ascending: false })
 
       setDespesas(despesasData || [])
 
-      // Buscar timesheet
+      // Buscar timesheet vinculado ao consultivo
       const { data: timesheetData } = await supabase
         .from('financeiro_timesheet')
         .select(`
           *,
           profiles:user_id (nome_completo)
         `)
-        .eq('processo_id', processoId)
+        .eq('consultivo_id', consultivoId)
         .order('data_trabalho', { ascending: false })
 
       setTimesheet(
@@ -333,11 +327,6 @@ export function useProcessoFinanceiro(processoId: string | null) {
         .filter((t: any) => !t.aprovado && !t.reprovado)
         .reduce((sum: number, t: any) => sum + Number(t.horas), 0)
 
-      // Calcular valor do timesheet baseado no config do contrato
-      let totalTimesheet = 0
-      // contratoInfo é atualizado antes, podemos usar o valor_hora se disponível
-      // Nota: contratoInfo já foi populado acima com o config do contrato
-
       setResumo({
         // Honorários
         totalHonorarios,
@@ -354,7 +343,7 @@ export function useProcessoFinanceiro(processoId: string | null) {
         countDespesasPendentes: despesasPendentes.length,
         countDespesasReembolsaveis: despesasReembolsaveis.length,
         // Timesheet
-        totalTimesheet,
+        totalTimesheet: 0,
         horasTrabalhadas,
         horasAprovadas,
         horasFaturadas,
@@ -366,25 +355,19 @@ export function useProcessoFinanceiro(processoId: string | null) {
     } finally {
       setLoading(false)
     }
-  }, [processoId, escritorioAtivo, supabase])
+  }, [consultivoId, escritorioAtivo, supabase])
 
   // Lançar timesheet
   const lancarTimesheet = useCallback(
     async (data: TimesheetData): Promise<boolean> => {
-      if (!processoId || !escritorioAtivo) {
-        setError('Processo ou escritório não selecionado')
+      if (!consultivoId || !escritorioAtivo) {
+        setError('Consultivo ou escritório não selecionado')
         return false
       }
 
-      // Validar se processo tem contrato (obrigatório para timesheet)
-      if (!processoInfo?.contrato_id) {
-        setError('Este processo não tem contrato vinculado. Vincule um contrato antes de lançar horas.')
-        return false
-      }
-
-      // Validar se modalidade permite timesheet
-      if (contratoInfo && !podelancarHoras) {
-        setError('Este processo não permite lançamento de horas. Modalidade de cobrança incompatível.')
+      // Validar se consultivo tem contrato (obrigatório para timesheet)
+      if (!consultivoInfo?.contrato_id) {
+        setError('Este consultivo não tem contrato vinculado. Vincule um contrato antes de lançar horas.')
         return false
       }
 
@@ -397,7 +380,7 @@ export function useProcessoFinanceiro(processoId: string | null) {
           .insert({
             escritorio_id: escritorioAtivo,
             user_id: user.id,
-            processo_id: processoId,
+            consultivo_id: consultivoId,
             data_trabalho: data.data_trabalho,
             horas: data.horas,
             atividade: data.atividade,
@@ -416,14 +399,14 @@ export function useProcessoFinanceiro(processoId: string | null) {
         return false
       }
     },
-    [processoId, escritorioAtivo, supabase, loadDados, contratoInfo, processoInfo]
+    [consultivoId, escritorioAtivo, supabase, loadDados, consultivoInfo]
   )
 
   // Lançar despesa
   const lancarDespesa = useCallback(
     async (data: DespesaData): Promise<boolean> => {
-      if (!processoId || !escritorioAtivo) {
-        setError('Processo ou escritório não selecionado')
+      if (!consultivoId || !escritorioAtivo) {
+        setError('Consultivo ou escritório não selecionado')
         return false
       }
 
@@ -432,7 +415,7 @@ export function useProcessoFinanceiro(processoId: string | null) {
           .from('financeiro_despesas')
           .insert({
             escritorio_id: escritorioAtivo,
-            processo_id: processoId,
+            consultivo_id: consultivoId,
             categoria: data.categoria,
             descricao: data.descricao,
             valor: data.valor,
@@ -452,14 +435,14 @@ export function useProcessoFinanceiro(processoId: string | null) {
         return false
       }
     },
-    [processoId, escritorioAtivo, supabase, loadDados]
+    [consultivoId, escritorioAtivo, supabase, loadDados]
   )
 
   // Lançar honorário
   const lancarHonorario = useCallback(
     async (data: HonorarioData): Promise<boolean> => {
-      if (!processoId || !escritorioAtivo) {
-        setError('Processo ou escritório não selecionado')
+      if (!consultivoId || !escritorioAtivo) {
+        setError('Consultivo ou escritório não selecionado')
         return false
       }
 
@@ -467,22 +450,22 @@ export function useProcessoFinanceiro(processoId: string | null) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('Usuário não autenticado')
 
-        // Buscar cliente_id e contrato_id do processo
-        const { data: processoData } = await supabase
-          .from('processos_processos')
-          .select('cliente_id, contrato_id, numero_cnj')
-          .eq('id', processoId)
+        // Buscar cliente_id e contrato_id do consultivo
+        const { data: consultivoData } = await supabase
+          .from('consultivo_consultas')
+          .select('cliente_id, contrato_id, numero')
+          .eq('id', consultivoId)
           .single()
 
-        if (!processoData?.cliente_id) {
-          throw new Error('Processo não tem cliente vinculado')
+        if (!consultivoData?.cliente_id) {
+          throw new Error('Consultivo não tem cliente vinculado')
         }
 
-        // Validar que processo tem contrato (obrigatório para honorários)
-        if (!processoData?.contrato_id) {
+        // Validar que consultivo tem contrato (obrigatório para honorários)
+        if (!consultivoData?.contrato_id) {
           throw new Error(
-            `O processo ${processoData?.numero_cnj || ''} não tem contrato vinculado. ` +
-            'Vincule um contrato ao processo antes de lançar honorários para garantir rastreabilidade.'
+            `O consultivo ${consultivoData?.numero || ''} não tem contrato vinculado. ` +
+            'Vincule um contrato ao consultivo antes de lançar honorários para garantir rastreabilidade.'
           )
         }
 
@@ -497,9 +480,9 @@ export function useProcessoFinanceiro(processoId: string | null) {
           .insert({
             escritorio_id: escritorioAtivo,
             tipo: 'honorario',
-            cliente_id: processoData.cliente_id,
-            processo_id: processoId,
-            contrato_id: processoData.contrato_id,
+            cliente_id: consultivoData.cliente_id,
+            consultivo_id: consultivoId,
+            contrato_id: consultivoData.contrato_id,
             categoria: data.tipo_honorario,
             valor: data.valor_total,
             descricao: data.descricao,
@@ -521,23 +504,14 @@ export function useProcessoFinanceiro(processoId: string | null) {
         return false
       }
     },
-    [processoId, escritorioAtivo, supabase, loadDados]
+    [consultivoId, escritorioAtivo, supabase, loadDados]
   )
 
   // Validações baseadas na forma de cobrança do contrato
-  // Usa forma_cobranca do contrato (prioritário) ou modalidade_cobranca do processo (fallback)
-  const formaCobranca = contratoInfo?.forma_cobranca || contratoInfo?.modalidade_cobranca || ''
+  const formaCobranca = contratoInfo?.forma_cobranca || ''
 
   // Horas podem ser lançadas em TODOS os tipos de contrato para monitoramento interno
-  // A diferença é se são cobráveis ou não (definido automaticamente pelo trigger trg_timesheet_set_faturavel):
-  // - por_hora, por_cargo = cobrável (faturavel = true)
-  // - fixo, por_pasta, por_ato = não cobrável (faturavel = false)
-  // - misto = configurável via campo horas_faturaveis do contrato
-  const podelancarHoras = !!contratoInfo // Permite lançar horas se tiver contrato vinculado
-
-  const podeLancarAto = contratoInfo
-    ? ['por_ato', 'misto'].includes(formaCobranca)
-    : false
+  const podeLancarHoras = !!contratoInfo
 
   // Despesas reembolsáveis pendentes
   const despesasReembolsaveisPendentes = despesas.filter(
@@ -550,7 +524,7 @@ export function useProcessoFinanceiro(processoId: string | null) {
     despesas,
     timesheet,
     contratoInfo,
-    processoInfo,
+    consultivoInfo,
     resumo,
     despesasReembolsaveisPendentes,
     loading,
@@ -563,7 +537,6 @@ export function useProcessoFinanceiro(processoId: string | null) {
     lancarHonorario,
 
     // Validações
-    podelancarHoras,
-    podeLancarAto,
+    podeLancarHoras,
   }
 }

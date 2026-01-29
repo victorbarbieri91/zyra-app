@@ -25,9 +25,12 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
+import { useAtosHora, AtoHoraConfig, HorasAcumuladasInfo } from '@/hooks/useAtosHora'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { formatDateForDB, formatBrazilDate } from '@/lib/timezone'
+import { AtoHoraProgress } from './AtoHoraProgress'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface TimesheetModalProps {
   open: boolean
@@ -119,6 +122,15 @@ export default function TimesheetModal({
   // Submit state
   const [loading, setLoading] = useState(false)
 
+  // Ato Hora state (para contratos por_ato com modo hora)
+  const [atosHora, setAtosHora] = useState<AtoHoraConfig[]>([])
+  const [atoSelecionado, setAtoSelecionado] = useState<string | null>(null)
+  const [horasAcumuladasAto, setHorasAcumuladasAto] = useState<HorasAcumuladasInfo | null>(null)
+  const [atosLoading, setAtosLoading] = useState(false)
+
+  // Hook para atos hora
+  const { getAtosConfiguradosHora, getHorasAcumuladas } = useAtosHora()
+
   // Calcular horas - retorna formato legível (1h54min)
   const calcularHorasDisplay = useCallback(() => {
     const [hi, mi] = horaInicio.split(':').map(Number)
@@ -133,6 +145,14 @@ export default function TimesheetModal({
     if (horas === 0) return `${minutos}min`
     if (minutos === 0) return `${horas}h`
     return `${horas}h${minutos}min`
+  }, [horaInicio, horaFim])
+
+  // Calcular horas em decimal (para cálculos)
+  const calcularHorasDecimal = useCallback(() => {
+    const [hi, mi] = horaInicio.split(':').map(Number)
+    const [hf, mf] = horaFim.split(':').map(Number)
+    const totalMinutos = (hf * 60 + mf) - (hi * 60 + mi)
+    return Math.max(0, totalMinutos / 60)
   }, [horaInicio, horaFim])
 
   // Calcular faturável padrão baseado no contrato
@@ -162,6 +182,9 @@ export default function TimesheetModal({
       setProcessoSelecionado(null)
       setConsultaSelecionada(null)
       setContratoInfo(null)
+      setAtosHora([])
+      setAtoSelecionado(null)
+      setHorasAcumuladasAto(null)
 
       // Se tem processoId ou consultaId, carregar
       if (processoId) {
@@ -173,6 +196,56 @@ export default function TimesheetModal({
       }
     }
   }, [open, processoId, consultaId])
+
+  // Carregar atos hora quando contrato é por_ato
+  useEffect(() => {
+    const carregarAtosHora = async () => {
+      if (!contratoInfo || contratoInfo.forma_cobranca !== 'por_ato') {
+        setAtosHora([])
+        setAtoSelecionado(null)
+        setHorasAcumuladasAto(null)
+        return
+      }
+
+      setAtosLoading(true)
+      try {
+        const atos = await getAtosConfiguradosHora(contratoInfo.id)
+        setAtosHora(atos)
+
+        // Se só tem um ato, selecionar automaticamente
+        if (atos.length === 1) {
+          setAtoSelecionado(atos[0].ato_tipo_id)
+        }
+      } catch (err) {
+        console.error('Erro ao carregar atos hora:', err)
+        setAtosHora([])
+      } finally {
+        setAtosLoading(false)
+      }
+    }
+
+    carregarAtosHora()
+  }, [contratoInfo, getAtosConfiguradosHora])
+
+  // Carregar horas acumuladas quando ato é selecionado
+  useEffect(() => {
+    const carregarHorasAcumuladas = async () => {
+      if (!atoSelecionado || !processoSelecionado?.id) {
+        setHorasAcumuladasAto(null)
+        return
+      }
+
+      try {
+        const horasInfo = await getHorasAcumuladas(processoSelecionado.id, atoSelecionado)
+        setHorasAcumuladasAto(horasInfo)
+      } catch (err) {
+        console.error('Erro ao carregar horas acumuladas:', err)
+        setHorasAcumuladasAto(null)
+      }
+    }
+
+    carregarHorasAcumuladas()
+  }, [atoSelecionado, processoSelecionado?.id, getHorasAcumuladas])
 
   // Função auxiliar para carregar contrato por ID
   const loadContratoById = async (contratoId: string): Promise<ContratoInfo | null> => {
@@ -479,6 +552,8 @@ export default function TimesheetModal({
     setSearchTerm('')
     setFaturavel(null)
     setFaturavelManual(false)
+    setAtoSelecionado(null)
+    setHorasAcumuladasAto(null)
 
     // Carregar contrato se existir
     if (processo.contrato_id) {
@@ -496,6 +571,8 @@ export default function TimesheetModal({
     setSearchTerm('')
     setFaturavel(null)
     setFaturavelManual(false)
+    setAtoSelecionado(null)
+    setHorasAcumuladasAto(null)
 
     // Carregar contrato se existir
     if (consulta.contrato_id) {
@@ -513,6 +590,9 @@ export default function TimesheetModal({
     setContratoInfo(null)
     setFaturavel(null)
     setFaturavelManual(false)
+    setAtosHora([])
+    setAtoSelecionado(null)
+    setHorasAcumuladasAto(null)
   }
 
   // Definir faturável manualmente
@@ -545,6 +625,12 @@ export default function TimesheetModal({
       return
     }
 
+    // Validar seleção de ato para contratos por_ato com atos modo hora
+    if (atosHora.length > 0 && !atoSelecionado) {
+      toast.error('Selecione o ato processual para este lançamento')
+      return
+    }
+
     setLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -562,11 +648,18 @@ export default function TimesheetModal({
         p_tarefa_id: tarefaId || null,
         p_faturavel: faturavelEfetivo,
         p_faturavel_manual: faturavelManual,
+        p_ato_tipo_id: atoSelecionado || null,
       })
 
       if (error) throw error
 
-      toast.success('Horas registradas com sucesso!')
+      // Mostrar mensagem específica se houver horas excedentes
+      if (horasAcumuladasAto?.atingiu_maximo) {
+        toast.success('Horas registradas! Atenção: parte das horas ficará como não cobrável (máximo atingido).')
+      } else {
+        toast.success('Horas registradas com sucesso!')
+      }
+
       onOpenChange(false)
       onSuccess?.()
     } catch (err: any) {
@@ -824,6 +917,45 @@ export default function TimesheetModal({
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Seleção de Ato - aparece apenas para contratos por_ato com atos em modo hora */}
+          {hasSelection && atosHora.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-xs text-slate-600">Qual ato você está trabalhando? *</Label>
+              <Select
+                value={atoSelecionado || ''}
+                onValueChange={(value) => setAtoSelecionado(value)}
+                disabled={atosLoading}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder={atosLoading ? 'Carregando...' : 'Selecione o ato...'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {atosHora.map((ato) => (
+                    <SelectItem key={ato.ato_tipo_id} value={ato.ato_tipo_id}>
+                      <div className="flex items-center gap-2">
+                        <span>{ato.ato_nome}</span>
+                        <span className="text-[10px] text-slate-400">
+                          (R${ato.valor_hora?.toFixed(2)}/h)
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Indicador de progresso do ato selecionado */}
+              {atoSelecionado && horasAcumuladasAto && (
+                <AtoHoraProgress
+                  horasUsadas={horasAcumuladasAto.horas_totais}
+                  horasMinimas={atosHora.find(a => a.ato_tipo_id === atoSelecionado)?.horas_minimas}
+                  horasMaximas={atosHora.find(a => a.ato_tipo_id === atoSelecionado)?.horas_maximas}
+                  valorHora={atosHora.find(a => a.ato_tipo_id === atoSelecionado)?.valor_hora}
+                  horasNovas={calcularHorasDecimal()}
+                />
+              )}
             </div>
           )}
 

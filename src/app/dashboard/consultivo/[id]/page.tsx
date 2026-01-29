@@ -24,29 +24,26 @@ import {
   Download,
   Save,
   ListTodo,
-  User,
-  DollarSign,
-  Link as LinkIcon,
   Loader2,
   Copy,
   Check,
   Archive,
   RotateCcw,
-  ArrowRight,
-  Clock
+  ArrowRight
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { cn, formatCurrency } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { formatBrazilDateTime } from '@/lib/timezone'
 import TarefaWizard from '@/components/agenda/TarefaWizard'
 import EventoWizard from '@/components/agenda/EventoWizard'
 import TarefaDetailModal from '@/components/agenda/TarefaDetailModal'
 import EventoDetailModal from '@/components/agenda/EventoDetailModal'
-import VincularContratoConsultivoModal from '@/components/consultivo/VincularContratoConsultivoModal'
 import TransformarConsultivoWizard from '@/components/consultivo/TransformarConsultivoWizard'
+import EditarConsultivoModal from '@/components/consultivo/EditarConsultivoModal'
+import ConsultivoFinanceiroCard from '@/components/consultivo/ConsultivoFinanceiroCard'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import type { TarefaFormData } from '@/hooks/useTarefas'
 import type { EventoFormData } from '@/hooks/useEventos'
@@ -107,12 +104,13 @@ export default function ConsultaDetalhePage() {
   const [eventoDetailOpen, setEventoDetailOpen] = useState(false)
 
   // Estados para Financeiro
-  const [contratoInfo, setContratoInfo] = useState<any | null>(null)
-  const [vincularModalOpen, setVincularModalOpen] = useState(false)
   const [timesheetModalOpen, setTimesheetModalOpen] = useState(false)
 
   // Estado para Transformar em Processo
   const [transformarModalOpen, setTransformarModalOpen] = useState(false)
+
+  // Estado para Editar Consultivo
+  const [editarModalOpen, setEditarModalOpen] = useState(false)
 
   // Carregar dados do usuário
   useEffect(() => {
@@ -166,29 +164,11 @@ export default function ConsultaDetalhePage() {
       }
 
       setConsulta(consultaFormatada)
-
-      // Carregar contrato se existir
-      if (data.contrato_id) {
-        loadContrato(data.contrato_id)
-      }
-
       setLoading(false)
     } catch (error) {
       console.error('Erro ao carregar consulta:', error)
       toast.error('Erro ao carregar consulta')
       setLoading(false)
-    }
-  }
-
-  const loadContrato = async (contratoId: string) => {
-    const { data } = await supabase
-      .from('financeiro_contratos_honorarios')
-      .select('id, numero_contrato, forma_cobranca, valor_total')
-      .eq('id', contratoId)
-      .single()
-
-    if (data) {
-      setContratoInfo(data)
     }
   }
 
@@ -284,10 +264,14 @@ export default function ConsultaDetalhePage() {
 
   const formatArea = (area: string) => {
     const map: Record<string, string> = {
-      'civel': 'Cível', 'trabalhista': 'Trabalhista', 'tributario': 'Tributário',
-      'societario': 'Societário', 'contratual': 'Contratual', 'familia': 'Família',
+      'civel': 'Cível', 'trabalhista': 'Trabalhista',
+      'tributaria': 'Tributária', 'tributario': 'Tributário', // suporte legado
+      'societaria': 'Societária', 'societario': 'Societário', // suporte legado
+      'empresarial': 'Empresarial', 'contratual': 'Contratual', 'familia': 'Família',
+      'criminal': 'Criminal', 'previdenciaria': 'Previdenciária',
       'consumidor': 'Consumidor', 'ambiental': 'Ambiental', 'imobiliario': 'Imobiliário',
-      'propriedade_intelectual': 'Prop. Intelectual', 'outros': 'Outros'
+      'propriedade_intelectual': 'Prop. Intelectual', 'compliance': 'Compliance',
+      'outra': 'Outra', 'outros': 'Outros' // suporte legado
     }
     return map[area] || area
   }
@@ -403,7 +387,12 @@ export default function ConsultaDetalhePage() {
                   </>
                 )}
               </Button>
-              <Button variant="ghost" size="sm" className="text-white/80 hover:text-white hover:bg-white/10 h-8">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white/80 hover:text-white hover:bg-white/10 h-8"
+                onClick={() => setEditarModalOpen(true)}
+              >
                 <Edit className="w-4 h-4 mr-2" />
                 Editar
               </Button>
@@ -663,52 +652,22 @@ export default function ConsultaDetalhePage() {
               </CardContent>
             </Card>
 
-            {/* Financeiro */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-[#89bcbe]" />
-                  Financeiro
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!contratoInfo ? (
-                  <div className="text-center py-4">
-                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                      <FileText className="w-4 h-4 text-slate-400" />
-                    </div>
-                    <p className="text-sm font-medium text-slate-700 mb-1">Nenhum contrato vinculado</p>
-                    <p className="text-xs text-slate-500 mb-3">Vincule um contrato para gerenciar o financeiro</p>
-                    <Button size="sm" variant="outline" className="text-xs h-8" onClick={() => setVincularModalOpen(true)}>
-                      <LinkIcon className="w-3.5 h-3.5 mr-1.5" />
-                      Vincular Contrato
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
-                      <FileText className="w-3.5 h-3.5 text-slate-400" />
-                      <span className="text-xs text-slate-600">{contratoInfo.numero_contrato}</span>
-                    </div>
-                    {contratoInfo.valor_total && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-slate-500">Valor do Contrato</span>
-                        <span className="text-sm font-semibold text-[#34495e]">{formatCurrency(contratoInfo.valor_total)}</span>
-                      </div>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full text-xs h-8 mt-2"
-                      onClick={() => setTimesheetModalOpen(true)}
-                    >
-                      <Clock className="w-3.5 h-3.5 mr-1.5" />
-                      Lançar Horas
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* Financeiro - Card Completo */}
+            <ConsultivoFinanceiroCard
+              consultivoId={consulta.id}
+              clienteId={consulta.cliente_id}
+              clienteNome={consulta.cliente_nome}
+              onLancarHoras={() => setTimesheetModalOpen(true)}
+              onLancarDespesa={() => {
+                // TODO: Implementar modal de despesa
+                toast.info('Lancamento de despesas em desenvolvimento')
+              }}
+              onLancarHonorario={() => {
+                // TODO: Implementar modal de honorario
+                toast.info('Lancamento de honorarios em desenvolvimento')
+              }}
+              onContratoVinculado={loadConsulta}
+            />
           </div>
         </div>
       </div>
@@ -756,15 +715,26 @@ export default function ConsultaDetalhePage() {
         />
       )}
 
-      {/* Modal Vincular Contrato */}
-      <VincularContratoConsultivoModal
-        open={vincularModalOpen}
-        onOpenChange={setVincularModalOpen}
-        consultaId={consulta.id}
-        clienteId={consulta.cliente_id}
-        clienteNome={consulta.cliente_nome}
-        onSuccess={loadConsulta}
-      />
+      {/* Modal Editar Consultivo */}
+      {consulta && (
+        <EditarConsultivoModal
+          open={editarModalOpen}
+          onOpenChange={setEditarModalOpen}
+          consulta={{
+            id: consulta.id,
+            titulo: consulta.titulo,
+            descricao: consulta.descricao,
+            cliente_id: consulta.cliente_id,
+            cliente_nome: consulta.cliente_nome,
+            area: consulta.area,
+            prioridade: consulta.prioridade,
+            prazo: consulta.prazo,
+            responsavel_id: consulta.responsavel_id,
+            responsavel_nome: consulta.responsavel_nome,
+          }}
+          onSuccess={loadConsulta}
+        />
+      )}
 
       {/* Modal Transformar em Processo */}
       <TransformarConsultivoWizard

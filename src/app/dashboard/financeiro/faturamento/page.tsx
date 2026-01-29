@@ -65,6 +65,7 @@ export default function FaturamentoPage() {
   } = useFaturamento(escritoriosSelecionados)
 
   const [activeTab, setActiveTab] = useState<'prontos' | 'faturados'>('prontos')
+
   const [clientes, setClientes] = useState<ClienteParaFaturar[]>([])
   const [faturas, setFaturas] = useState<FaturaGerada[]>([])
   const [selectedCliente, setSelectedCliente] = useState<ClienteParaFaturar | null>(null)
@@ -182,11 +183,23 @@ export default function FaturamentoPage() {
     const timesheetIds = selectedLancamentosIds.filter((id) =>
       lancamentos.find((l) => l.lancamento_id === id && l.tipo_lancamento === 'timesheet')
     )
+    const fechamentosIds = lancamentos
+      .filter(
+        (l) =>
+          l.tipo_lancamento === 'pasta' &&
+          selectedLancamentosIds.includes(l.lancamento_id) &&
+          l.fechamento_id
+      )
+      .map((l) => l.fechamento_id as string)
 
     const faturaId = await gerarFatura(
       selectedCliente.cliente_id,
       honorariosIds,
-      timesheetIds
+      timesheetIds,
+      undefined, // observacoes
+      undefined, // dataVencimento
+      undefined, // escritorioIdOverride
+      fechamentosIds
     )
 
     if (faturaId) {
@@ -323,8 +336,8 @@ export default function FaturamentoPage() {
       </div>
 
       {/* Tabs: Prontos para Faturar | Faturados */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'prontos' | 'faturados')}>
+        <TabsList className="grid w-full max-w-xl grid-cols-2">
           <TabsTrigger value="prontos">
             Prontos para Faturar
             {clientes.length > 0 && (
@@ -371,6 +384,7 @@ export default function FaturamentoPage() {
                     setSelectedLancamentosIds([])
                     setLancamentos([])
                   }}
+                  pastas={selectedCliente.pastas}
                 />
               </div>
             )}
@@ -476,6 +490,7 @@ export default function FaturamentoPage() {
             )}
           </div>
         </TabsContent>
+
       </Tabs>
 
       {/* Dialog de Confirmação - Desmontar Fatura */}

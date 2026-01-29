@@ -570,7 +570,6 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                 <SelectItem value="por_cargo">Por Cargo</SelectItem>
                 <SelectItem value="por_pasta">Por Pasta</SelectItem>
                 <SelectItem value="por_ato">Por Ato</SelectItem>
-                <SelectItem value="por_etapa">Por Etapa</SelectItem>
                 <SelectItem value="misto">Misto</SelectItem>
               </SelectContent>
             </Select>

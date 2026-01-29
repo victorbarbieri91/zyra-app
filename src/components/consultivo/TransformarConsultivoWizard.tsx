@@ -241,10 +241,14 @@ export default function TransformarConsultivoWizard({
 
   const formatArea = (area: string) => {
     const map: Record<string, string> = {
-      'civel': 'Cível', 'trabalhista': 'Trabalhista', 'tributario': 'Tributário',
-      'societario': 'Societário', 'contratual': 'Contratual', 'familia': 'Família',
+      'civel': 'Cível', 'trabalhista': 'Trabalhista',
+      'tributaria': 'Tributária', 'tributario': 'Tributário',
+      'societaria': 'Societária', 'societario': 'Societário',
+      'empresarial': 'Empresarial', 'contratual': 'Contratual', 'familia': 'Família',
+      'criminal': 'Criminal', 'previdenciaria': 'Previdenciária',
       'consumidor': 'Consumidor', 'ambiental': 'Ambiental', 'imobiliario': 'Imobiliário',
-      'propriedade_intelectual': 'Prop. Intelectual', 'outros': 'Outros', 'outra': 'Outra'
+      'propriedade_intelectual': 'Prop. Intelectual', 'compliance': 'Compliance',
+      'outra': 'Outra', 'outros': 'Outros'
     }
     return map[area] || area
   }

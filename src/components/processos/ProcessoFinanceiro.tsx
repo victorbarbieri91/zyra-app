@@ -436,7 +436,7 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
       {/* Formulário Inline de Timesheet - disponível para TODOS os tipos de contrato
           A diferença é se as horas são cobráveis ou não (definido automaticamente pelo trigger):
           - por_hora, por_cargo = cobrável
-          - fixo, por_pasta, por_ato, por_etapa = não cobrável (uso interno)
+          - fixo, por_pasta, por_ato = não cobrável (uso interno)
           - misto = configurável */}
       {contrato && (
         <Card className="border-slate-200 shadow-sm">

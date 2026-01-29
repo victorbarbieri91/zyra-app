@@ -57,9 +57,18 @@ export interface FaturaImpressao {
   soma_horas: number
 }
 
+// Processo para anexo do fechamento por pasta
+export interface ProcessoAnexo {
+  id: string
+  numero_cnj: string | null
+  numero_pasta: string | null
+  titulo: string | null
+  cliente_nome: string | null
+}
+
 export interface ItemFaturaImpressao {
   id: string
-  tipo_item: 'honorario' | 'timesheet' | 'despesa'
+  tipo_item: 'honorario' | 'timesheet' | 'despesa' | 'pasta'
   descricao: string
   quantidade: number | null
   valor_unitario: number | null
@@ -68,6 +77,9 @@ export interface ItemFaturaImpressao {
   processo_numero: string | null
   processo_pasta: string | null
   partes_resumo: string | null
+  // Campos para itens do tipo 'pasta' (fechamento mensal)
+  competencia: string | null
+  processos_lista: ProcessoAnexo[] | null
 }
 
 export interface FaturaImpressaoData {
@@ -153,12 +165,18 @@ export function useFaturaImpressao() {
         const itens: ItemFaturaImpressao[] = itensJsonb.map((item: any, index: number) => {
           const processo = item.processo_id ? processosMap[item.processo_id] : null
 
+          // Determinar tipo do item
+          let tipoItem: ItemFaturaImpressao['tipo_item'] = 'despesa'
+          if (item.tipo === 'timesheet') tipoItem = 'timesheet'
+          else if (item.tipo === 'honorario') tipoItem = 'honorario'
+          else if (item.tipo === 'pasta') tipoItem = 'pasta'
+
           return {
             id: `${faturaId}-item-${index}`,
-            tipo_item: item.tipo === 'timesheet' ? 'timesheet' : item.tipo === 'honorario' ? 'honorario' : 'despesa',
+            tipo_item: tipoItem,
             descricao: item.descricao || '',
-            quantidade: item.horas || null,
-            valor_unitario: item.valor_hora || null,
+            quantidade: tipoItem === 'pasta' ? (item.qtd_processos || null) : (item.horas || null),
+            valor_unitario: tipoItem === 'pasta' ? (item.valor_unitario || null) : (item.valor_hora || null),
             valor_total: Number(item.valor) || 0,
             processo_id: item.processo_id || null,
             processo_numero: processo?.numero_cnj || null,
@@ -167,6 +185,9 @@ export function useFaturaImpressao() {
               processo?.autor && processo?.reu
                 ? `${processo.autor} vs ${processo.reu}`
                 : null,
+            // Campos específicos para 'pasta'
+            competencia: item.competencia || null,
+            processos_lista: item.processos || null,
           }
         })
 

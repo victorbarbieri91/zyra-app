@@ -26,16 +26,28 @@ import {
   Loader2,
   Search,
   AlertTriangle,
+  Save,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
-interface ConsultaWizardModalProps {
+interface EditarConsultivoModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  consulta: {
+    id: string
+    titulo: string
+    descricao: string | null
+    cliente_id: string
+    cliente_nome?: string
+    area: string
+    prioridade: string
+    prazo: string | null
+    responsavel_id: string
+    responsavel_nome?: string
+  }
   onSuccess?: () => void
-  escritorioId?: string
 }
 
 interface Cliente {
@@ -73,23 +85,23 @@ const PRIORIDADES = [
   { value: 'urgente', label: 'Urgente', color: 'bg-red-100 text-red-700' },
 ]
 
-export function ConsultaWizardModal({
+export default function EditarConsultivoModal({
   open,
   onOpenChange,
+  consulta,
   onSuccess,
-  escritorioId,
-}: ConsultaWizardModalProps) {
+}: EditarConsultivoModalProps) {
   const supabase = createClient()
 
-  // Form data
+  // Form data - inicializado com os dados da consulta
   const [formData, setFormData] = useState({
-    titulo: '',
-    descricao: '',
-    cliente_id: '',
-    area: '',
-    prioridade: 'media',
-    prazo: '',
-    responsavel_id: '',
+    titulo: consulta.titulo,
+    descricao: consulta.descricao || '',
+    cliente_id: consulta.cliente_id,
+    area: consulta.area,
+    prioridade: consulta.prioridade,
+    prazo: consulta.prazo || '',
+    responsavel_id: consulta.responsavel_id,
   })
 
   // States
@@ -98,48 +110,87 @@ export function ConsultaWizardModal({
 
   // Data loading
   const [clientes, setClientes] = useState<Cliente[]>([])
+  const [clienteAtual, setClienteAtual] = useState<Cliente | null>(null)
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>([])
   const [loadingClientes, setLoadingClientes] = useState(false)
   const [loadingResponsaveis, setLoadingResponsaveis] = useState(false)
   const [clienteSearch, setClienteSearch] = useState('')
-  const [currentEscritorioId, setCurrentEscritorioId] = useState<string | null>(escritorioId || null)
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [escritorioId, setEscritorioId] = useState<string | null>(null)
 
-  // Load current user data
+  // Atualizar formData e carregar cliente atual quando consulta mudar
   useEffect(() => {
-    const loadUserData = async () => {
+    if (open && consulta) {
+      setFormData({
+        titulo: consulta.titulo,
+        descricao: consulta.descricao || '',
+        cliente_id: consulta.cliente_id,
+        area: consulta.area,
+        prioridade: consulta.prioridade,
+        prazo: consulta.prazo || '',
+        responsavel_id: consulta.responsavel_id,
+      })
+
+      // Se temos cliente_nome, usar diretamente
+      if (consulta.cliente_nome) {
+        setClienteAtual({
+          id: consulta.cliente_id,
+          nome_completo: consulta.cliente_nome,
+        })
+      } else if (consulta.cliente_id) {
+        // Carregar cliente do banco se não temos o nome
+        const loadClienteAtual = async () => {
+          try {
+            const { data, error } = await supabase
+              .from('crm_pessoas')
+              .select('id, nome_completo')
+              .eq('id', consulta.cliente_id)
+              .single()
+
+            if (error) throw error
+            if (data) {
+              setClienteAtual(data)
+            }
+          } catch (err) {
+            console.error('Erro ao carregar cliente atual:', err)
+          }
+        }
+        loadClienteAtual()
+      }
+    }
+  }, [open, consulta, supabase])
+
+  // Load escritorioId
+  useEffect(() => {
+    const loadEscritorioId = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        setCurrentUserId(user.id)
-        if (!currentEscritorioId) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('escritorio_id')
-            .eq('id', user.id)
-            .single()
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('escritorio_id')
+          .eq('id', user.id)
+          .single()
 
-          if (profile) {
-            setCurrentEscritorioId(profile.escritorio_id)
-          }
+        if (profile) {
+          setEscritorioId(profile.escritorio_id)
         }
       }
     }
     if (open) {
-      loadUserData()
+      loadEscritorioId()
     }
-  }, [open, currentEscritorioId])
+  }, [open, supabase])
 
   // Load clientes
   useEffect(() => {
     const loadClientes = async () => {
-      if (!currentEscritorioId || !open) return
+      if (!escritorioId || !open) return
 
       setLoadingClientes(true)
       try {
         let query = supabase
           .from('crm_pessoas')
           .select('id, nome_completo')
-          .eq('escritorio_id', currentEscritorioId)
+          .eq('escritorio_id', escritorioId)
           .eq('status', 'ativo')
           .in('tipo_cadastro', ['cliente', 'prospecto'])
           .order('nome_completo')
@@ -162,28 +213,23 @@ export function ConsultaWizardModal({
 
     const debounce = setTimeout(loadClientes, 300)
     return () => clearTimeout(debounce)
-  }, [currentEscritorioId, open, clienteSearch])
+  }, [escritorioId, open, clienteSearch, supabase])
 
   // Load responsaveis
   useEffect(() => {
     const loadResponsaveis = async () => {
-      if (!currentEscritorioId || !open) return
+      if (!escritorioId || !open) return
 
       setLoadingResponsaveis(true)
       try {
         const { data, error } = await supabase
           .from('profiles')
           .select('id, nome_completo')
-          .eq('escritorio_id', currentEscritorioId)
+          .eq('escritorio_id', escritorioId)
           .order('nome_completo')
 
         if (error) throw error
         setResponsaveis(data || [])
-
-        // Set current user as default responsavel
-        if (currentUserId && !formData.responsavel_id) {
-          setFormData(prev => ({ ...prev, responsavel_id: currentUserId }))
-        }
       } catch (err) {
         console.error('Erro ao carregar responsáveis:', err)
       } finally {
@@ -192,7 +238,7 @@ export function ConsultaWizardModal({
     }
 
     loadResponsaveis()
-  }, [currentEscritorioId, open, currentUserId])
+  }, [escritorioId, open, supabase])
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -224,17 +270,12 @@ export function ConsultaWizardModal({
 
   const handleSave = async () => {
     if (!validate()) return
-    if (!currentEscritorioId) {
-      toast.error('Escritório não identificado')
-      return
-    }
 
     setSaving(true)
     try {
       const { error } = await supabase
         .from('consultivo_consultas')
-        .insert({
-          escritorio_id: currentEscritorioId,
+        .update({
           titulo: formData.titulo.trim(),
           descricao: formData.descricao.trim() || null,
           cliente_id: formData.cliente_id,
@@ -242,37 +283,27 @@ export function ConsultaWizardModal({
           prioridade: formData.prioridade,
           prazo: formData.prazo || null,
           responsavel_id: formData.responsavel_id,
-          created_by: currentUserId,
-          status: 'ativo',
-          anexos: [],
-          andamentos: [],
+          updated_at: new Date().toISOString(),
         })
+        .eq('id', consulta.id)
 
       if (error) throw error
 
-      toast.success('Consulta criada com sucesso')
+      toast.success('Consulta atualizada com sucesso')
       onSuccess?.()
-      handleClose()
+      onOpenChange(false)
     } catch (err: any) {
-      console.error('Erro ao criar consulta:', err)
-      toast.error(err?.message || 'Erro ao criar consulta')
+      console.error('Erro ao atualizar consulta:', err)
+      toast.error(err?.message || 'Erro ao atualizar consulta')
     } finally {
       setSaving(false)
     }
   }
 
   const handleClose = () => {
-    setFormData({
-      titulo: '',
-      descricao: '',
-      cliente_id: '',
-      area: '',
-      prioridade: 'media',
-      prazo: '',
-      responsavel_id: currentUserId || '',
-    })
     setErrors({})
     setClienteSearch('')
+    setClienteAtual(null)
     onOpenChange(false)
   }
 
@@ -282,7 +313,7 @@ export function ConsultaWizardModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-[#34495e]">
             <Scale className="w-5 h-5 text-[#89bcbe]" />
-            Nova Consulta
+            Editar Consulta
           </DialogTitle>
         </DialogHeader>
 
@@ -335,19 +366,33 @@ export function ConsultaWizardModal({
                   <div className="flex items-center justify-center py-4">
                     <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
                   </div>
-                ) : clientes.length === 0 ? (
-                  <div className="text-center py-4 text-xs text-slate-500">
-                    Nenhum cliente encontrado
-                  </div>
                 ) : (
-                  clientes.map((cliente) => (
-                    <SelectItem key={cliente.id} value={cliente.id} className="text-xs">
-                      <div className="flex items-center gap-2">
-                        <User className="w-3.5 h-3.5 text-slate-400" />
-                        {cliente.nome_completo}
+                  <>
+                    {/* Cliente atual sempre aparece primeiro se não estiver na lista */}
+                    {clienteAtual && !clientes.some(c => c.id === clienteAtual.id) && (
+                      <SelectItem key={clienteAtual.id} value={clienteAtual.id} className="text-xs">
+                        <div className="flex items-center gap-2">
+                          <User className="w-3.5 h-3.5 text-[#89bcbe]" />
+                          {clienteAtual.nome_completo}
+                          <span className="text-[10px] text-slate-400">(atual)</span>
+                        </div>
+                      </SelectItem>
+                    )}
+                    {clientes.length === 0 && !clienteAtual ? (
+                      <div className="text-center py-4 text-xs text-slate-500">
+                        Nenhum cliente encontrado
                       </div>
-                    </SelectItem>
-                  ))
+                    ) : (
+                      clientes.map((cliente) => (
+                        <SelectItem key={cliente.id} value={cliente.id} className="text-xs">
+                          <div className="flex items-center gap-2">
+                            <User className="w-3.5 h-3.5 text-slate-400" />
+                            {cliente.nome_completo}
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
+                  </>
                 )}
               </SelectContent>
             </Select>
@@ -497,7 +542,10 @@ export function ConsultaWizardModal({
                 Salvando...
               </>
             ) : (
-              'Criar Consulta'
+              <>
+                <Save className="w-3.5 h-3.5 mr-1.5" />
+                Salvar Alterações
+              </>
             )}
           </Button>
         </DialogFooter>

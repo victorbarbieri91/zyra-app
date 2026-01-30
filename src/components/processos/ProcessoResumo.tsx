@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -27,11 +27,18 @@ import {
   Gavel,
   User,
   CalendarClock,
-  Tag
+  Tag,
+  Pencil,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Save,
+  Loader2
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { formatCurrency } from '@/lib/utils'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { formatBrazilDateTime, formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
 import TarefaWizard from '@/components/agenda/TarefaWizard'
@@ -183,28 +190,41 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
   const [loadingMovimentacoes, setLoadingMovimentacoes] = useState(true)
   const [selectedMovimentacao, setSelectedMovimentacao] = useState<Movimentacao | null>(null)
 
+  // Paginação de movimentações
+  const [movimentacaoPage, setMovimentacaoPage] = useState(1)
+  const movimentacoesPerPage = 5
+
+  // Edição de movimentação
+  const [editandoMovimentacao, setEditandoMovimentacao] = useState<Movimentacao | null>(null)
+  const [editMovimentacaoOpen, setEditMovimentacaoOpen] = useState(false)
+  const [editMovimentacaoForm, setEditMovimentacaoForm] = useState({ tipo_descricao: '', descricao: '' })
+  const [salvandoMovimentacao, setSalvandoMovimentacao] = useState(false)
+
+  // Exclusão de movimentação
+  const [excluindoMovimentacaoId, setExcluindoMovimentacaoId] = useState<string | null>(null)
+  const [deleteMovimentacaoOpen, setDeleteMovimentacaoOpen] = useState(false)
+
   // Carregar movimentações reais do banco
-  useEffect(() => {
-    const loadMovimentacoes = async () => {
-      try {
-        setLoadingMovimentacoes(true)
-        const { data, error } = await supabase
-          .from('processos_movimentacoes')
-          .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem')
-          .eq('processo_id', processo.id)
-          .order('data_movimento', { ascending: false })
-          .limit(5)
+  const loadMovimentacoes = async () => {
+    try {
+      setLoadingMovimentacoes(true)
+      const { data, error } = await supabase
+        .from('processos_movimentacoes')
+        .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem')
+        .eq('processo_id', processo.id)
+        .order('data_movimento', { ascending: false })
 
-        if (!error && data) {
-          setMovimentacoes(data)
-        }
-      } catch (error) {
-        console.error('Erro ao carregar movimentações:', error)
-      } finally {
-        setLoadingMovimentacoes(false)
+      if (!error && data) {
+        setMovimentacoes(data)
       }
+    } catch (error) {
+      console.error('Erro ao carregar movimentações:', error)
+    } finally {
+      setLoadingMovimentacoes(false)
     }
+  }
 
+  useEffect(() => {
     if (processo.id) {
       loadMovimentacoes()
     }
@@ -234,6 +254,86 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
       descricao: ''
     })
     setOpenNovoAndamento(false)
+  }
+
+  // Paginação de movimentações
+  const totalMovPages = Math.ceil(movimentacoes.length / movimentacoesPerPage)
+  const movStartIndex = (movimentacaoPage - 1) * movimentacoesPerPage
+  const paginatedMovimentacoes = movimentacoes.slice(movStartIndex, movStartIndex + movimentacoesPerPage)
+
+  // Editar movimentação
+  const handleEditMovimentacao = (mov: Movimentacao, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditandoMovimentacao(mov)
+    setEditMovimentacaoForm({
+      tipo_descricao: mov.tipo_descricao || '',
+      descricao: mov.descricao
+    })
+    setEditMovimentacaoOpen(true)
+  }
+
+  const handleSaveEditMovimentacao = async () => {
+    if (!editandoMovimentacao || !editMovimentacaoForm.descricao.trim()) {
+      toast.error('Preencha a descrição')
+      return
+    }
+
+    setSalvandoMovimentacao(true)
+    try {
+      const { error } = await supabase
+        .from('processos_movimentacoes')
+        .update({
+          tipo_descricao: editMovimentacaoForm.tipo_descricao || null,
+          descricao: editMovimentacaoForm.descricao
+        })
+        .eq('id', editandoMovimentacao.id)
+
+      if (error) throw error
+
+      toast.success('Movimentação atualizada')
+      setEditMovimentacaoOpen(false)
+      setEditandoMovimentacao(null)
+      loadMovimentacoes()
+    } catch (error) {
+      console.error('Erro ao editar movimentação:', error)
+      toast.error('Erro ao editar movimentação')
+    } finally {
+      setSalvandoMovimentacao(false)
+    }
+  }
+
+  // Excluir movimentação
+  const handleDeleteMovimentacaoClick = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setExcluindoMovimentacaoId(id)
+    setDeleteMovimentacaoOpen(true)
+  }
+
+  const handleConfirmDeleteMovimentacao = async () => {
+    if (!excluindoMovimentacaoId) return
+
+    try {
+      const { error } = await supabase
+        .from('processos_movimentacoes')
+        .delete()
+        .eq('id', excluindoMovimentacaoId)
+
+      if (error) throw error
+
+      toast.success('Movimentação excluída')
+      setDeleteMovimentacaoOpen(false)
+      setExcluindoMovimentacaoId(null)
+      loadMovimentacoes()
+
+      // Ajustar página se necessário
+      const newTotal = Math.ceil((movimentacoes.length - 1) / movimentacoesPerPage)
+      if (movimentacaoPage > newTotal && newTotal > 0) {
+        setMovimentacaoPage(newTotal)
+      }
+    } catch (error) {
+      console.error('Erro ao excluir movimentação:', error)
+      toast.error('Erro ao excluir movimentação')
+    }
   }
 
   return (
@@ -507,11 +607,11 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           </CardHeader>
 
           <CardContent className="space-y-3">
-            {movimentacoes.map((mov, index) => (
+            {paginatedMovimentacoes.map((mov, index) => (
               <div
                 key={mov.id}
                 id={`andamento-${mov.id}`}
-                className={`transition-colors duration-300 cursor-pointer hover:bg-slate-50 rounded-md p-2 -mx-2 ${index !== movimentacoes.length - 1 ? 'pb-3 border-b border-slate-100' : ''}`}
+                className={`transition-colors duration-300 cursor-pointer hover:bg-slate-50 rounded-md p-2 -mx-2 group ${index !== paginatedMovimentacoes.length - 1 ? 'pb-3 border-b border-slate-100' : ''}`}
                 onClick={() => setSelectedMovimentacao(mov)}
               >
                 <div className="flex gap-3">
@@ -531,6 +631,26 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
                       {mov.descricao}
                     </p>
                   </div>
+
+                  {/* Botões Editar/Excluir */}
+                  <div className="flex items-start gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => handleEditMovimentacao(mov, e)}
+                      className="h-7 w-7 p-0 text-slate-400 hover:text-[#34495e]"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => handleDeleteMovimentacaoClick(mov.id, e)}
+                      className="h-7 w-7 p-0 text-slate-400 hover:text-red-600"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -539,6 +659,46 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
               <div className="text-center py-8">
                 <FileText className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                 <p className="text-sm text-slate-600">Nenhum andamento registrado</p>
+              </div>
+            )}
+
+            {/* Paginação de Movimentações */}
+            {movimentacoes.length > movimentacoesPerPage && (
+              <div className="flex items-center justify-between pt-4 mt-2 border-t border-slate-100">
+                <p className="text-xs text-slate-500">
+                  {movStartIndex + 1}-{Math.min(movStartIndex + movimentacoesPerPage, movimentacoes.length)} de {movimentacoes.length}
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMovimentacaoPage(p => Math.max(1, p - 1))}
+                    disabled={movimentacaoPage === 1}
+                    className="h-7 w-7 p-0"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </Button>
+                  {Array.from({ length: totalMovPages }, (_, i) => i + 1).map(page => (
+                    <Button
+                      key={page}
+                      variant={movimentacaoPage === page ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setMovimentacaoPage(page)}
+                      className={`h-7 w-7 p-0 text-xs ${movimentacaoPage === page ? 'bg-[#34495e] hover:bg-[#46627f]' : ''}`}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMovimentacaoPage(p => Math.min(totalMovPages, p + 1))}
+                    disabled={movimentacaoPage === totalMovPages}
+                    className="h-7 w-7 p-0"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
@@ -939,6 +1099,69 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           setFinanceiroRefreshTrigger(prev => prev + 1)
         }}
       />
+
+      {/* Modal Editar Movimentação */}
+      <Dialog open={editMovimentacaoOpen} onOpenChange={setEditMovimentacaoOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold text-[#34495e]">Editar Andamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">Tipo</label>
+              <Input
+                placeholder="Ex: Sentença, Despacho, Juntada..."
+                value={editMovimentacaoForm.tipo_descricao}
+                onChange={(e) => setEditMovimentacaoForm(prev => ({ ...prev, tipo_descricao: e.target.value }))}
+                className="text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">Descrição *</label>
+              <Textarea
+                placeholder="Descreva o andamento..."
+                value={editMovimentacaoForm.descricao}
+                onChange={(e) => setEditMovimentacaoForm(prev => ({ ...prev, descricao: e.target.value }))}
+                className="text-sm min-h-[120px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditMovimentacaoOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={handleSaveEditMovimentacao}
+              disabled={salvandoMovimentacao || !editMovimentacaoForm.descricao.trim()}
+              className="bg-gradient-to-r from-[#34495e] to-[#46627f]"
+            >
+              {salvandoMovimentacao ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Confirmar Exclusão de Movimentação */}
+      <Dialog open={deleteMovimentacaoOpen} onOpenChange={setDeleteMovimentacaoOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold text-[#34495e]">Excluir Andamento</DialogTitle>
+            <DialogDescription className="text-sm text-slate-600">
+              Tem certeza que deseja excluir este andamento? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteMovimentacaoOpen(false)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDeleteMovimentacao}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

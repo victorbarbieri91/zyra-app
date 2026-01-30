@@ -27,20 +27,32 @@ const DEFAULT_TIMEOUT = 30000 // 30 segundos
  * Obtem o token da API do Escavador
  * Em producao, deve vir do Supabase Vault ou variavel de ambiente
  */
-function getApiToken(): string {
+function getApiToken(): string | null {
   const token = process.env.ESCAVADOR_API_TOKEN
   if (!token) {
-    throw new Error('ESCAVADOR_API_TOKEN nao configurado')
+    console.warn('[Escavador] ESCAVADOR_API_TOKEN nao configurado')
+    return null
   }
   return token
 }
 
 /**
+ * Verifica se a API do Escavador esta configurada
+ */
+export function isEscavadorConfigured(): boolean {
+  return !!process.env.ESCAVADOR_API_TOKEN
+}
+
+/**
  * Headers padrao para requisicoes
  */
-function getHeaders(): HeadersInit {
+function getHeaders(): HeadersInit | null {
+  const token = getApiToken()
+  if (!token) {
+    return null
+  }
   return {
-    'Authorization': `Bearer ${getApiToken()}`,
+    'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   }
@@ -68,13 +80,19 @@ async function buscarEnvolvidos(
   numeroLimpo: string
 ): Promise<EscavadorEnvolvido[]> {
   try {
+    const headers = getHeaders()
+    if (!headers) {
+      console.log('[Escavador] Token nao configurado, pulando busca de envolvidos')
+      return []
+    }
+
     console.log('[Escavador] Buscando envolvidos do processo')
 
     const response = await fetch(
       `${ESCAVADOR_BASE_URL}/processos/numero_cnj/${numeroLimpo}/envolvidos`,
       {
         method: 'GET',
-        headers: getHeaders()
+        headers
       }
     )
 
@@ -102,6 +120,14 @@ export async function buscarProcessoPorCNJ(
   numeroCNJ: string
 ): Promise<ResultadoConsultaEscavador> {
   try {
+    const headers = getHeaders()
+    if (!headers) {
+      return {
+        sucesso: false,
+        erro: 'Integracao com Escavador nao configurada (ESCAVADOR_API_TOKEN)'
+      }
+    }
+
     // Remove formatacao do numero CNJ para a URL
     const numeroLimpo = numeroCNJ.replace(/[.-]/g, '')
 
@@ -114,7 +140,7 @@ export async function buscarProcessoPorCNJ(
       `${ESCAVADOR_BASE_URL}/processos/numero_cnj/${numeroLimpo}`,
       {
         method: 'GET',
-        headers: getHeaders(),
+        headers,
         signal: controller.signal
       }
     )

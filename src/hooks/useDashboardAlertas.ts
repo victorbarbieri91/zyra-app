@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from './useEscritorioAtivo'
-import { startOfDayInBrazil, endOfDayInBrazil } from '@/lib/timezone'
 
 export interface DashboardAlertas {
   prazosHoje: number
@@ -88,21 +87,19 @@ export function useDashboardAlertas() {
           .is('reprovado', null),
 
         // 5. Horas prontas para faturar (aprovadas mas não faturadas)
+        // Busca também o valor_hora do usuário via escritorios_usuarios
         supabase
           .from('financeiro_timesheet')
           .select(`
             horas,
             user_id,
-            processo:processos_processos(
-              contrato:financeiro_contratos_honorarios(
-                valor_hora
-              )
-            )
+            usuario:escritorios_usuarios!inner(valor_hora)
           `)
           .eq('escritorio_id', escritorioAtivo)
           .eq('faturavel', true)
           .eq('faturado', false)
-          .eq('aprovado', true),
+          .eq('aprovado', true)
+          .eq('usuario.escritorio_id', escritorioAtivo),
       ])
 
       // Processar atos cobráveis
@@ -126,8 +123,8 @@ export function useDashboardAlertas() {
         const horas = Number(ts.horas) || 0
         horasProntas += horas
 
-        // Tentar pegar valor_hora do contrato
-        const valorHora = ts.processo?.contrato?.valor_hora || 150 // fallback R$150/h
+        // Pegar valor_hora do usuário em escritorios_usuarios
+        const valorHora = ts.usuario?.valor_hora || 150 // fallback R$150/h
         valorProntas += horas * Number(valorHora)
       })
 

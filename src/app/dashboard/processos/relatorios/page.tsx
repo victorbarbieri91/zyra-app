@@ -9,6 +9,12 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -75,6 +81,15 @@ export default function RelatoriosPage() {
   const [gerandoExcel, setGerandoExcel] = useState(false)
   const [resumosEmGeracao, setResumosEmGeracao] = useState<Set<string>>(new Set())
   const [atualizandoTodosEscavador, setAtualizandoTodosEscavador] = useState(false)
+
+  // Estado do resultado da atualizacao Escavador
+  const [showResultadoAtualizacao, setShowResultadoAtualizacao] = useState(false)
+  const [resultadoAtualizacao, setResultadoAtualizacao] = useState<{
+    processosAtualizados: number
+    totalMovimentacoesNovas: number
+    processosFalharam: { pasta: string; erro: string }[]
+    detalhes: { pasta: string; novas: number }[]
+  } | null>(null)
 
   // Estados de templates
   const [templates, setTemplates] = useState<RelatorioTemplate[]>([])
@@ -289,8 +304,12 @@ export default function RelatoriosPage() {
     setGerandoResumos(false)
   }
 
-  // Atualizar processo via Escavador
-  const atualizarEscavador = async (numeroCnj: string) => {
+  // Atualizar processo via Escavador (retorna resultado)
+  const atualizarEscavador = async (numeroCnj: string, numeroPasta: string): Promise<{
+    sucesso: boolean
+    movimentacoes_novas?: number
+    erro?: string
+  }> => {
     try {
       const response = await fetch('/api/escavador/atualizar', {
         method: 'POST',
@@ -298,18 +317,37 @@ export default function RelatoriosPage() {
         body: JSON.stringify({ numero_cnj: numeroCnj })
       })
 
-      if (response.ok) {
-        // Recarregar processos apos atualizacao
-        await carregarProcessos()
+      const result = await response.json()
+      return {
+        sucesso: result.sucesso || false,
+        movimentacoes_novas: result.movimentacoes_novas || 0,
+        erro: result.error || result.erro
       }
     } catch (err) {
       console.error('Erro ao atualizar Escavador:', err)
+      return {
+        sucesso: false,
+        erro: err instanceof Error ? err.message : 'Erro desconhecido'
+      }
     }
   }
 
   // Atualizar todos os processos via Escavador
   const atualizarTodosEscavador = async () => {
     setAtualizandoTodosEscavador(true)
+
+    const resultados: {
+      processosAtualizados: number
+      totalMovimentacoesNovas: number
+      processosFalharam: { pasta: string; erro: string }[]
+      detalhes: { pasta: string; novas: number }[]
+    } = {
+      processosAtualizados: 0,
+      totalMovimentacoesNovas: 0,
+      processosFalharam: [],
+      detalhes: []
+    }
+
     try {
       // Filtrar apenas processos com CNJ
       const processosComCnj = processos.filter(p => p.numero_cnj)
@@ -318,13 +356,39 @@ export default function RelatoriosPage() {
       const batchSize = 3
       for (let i = 0; i < processosComCnj.length; i += batchSize) {
         const batch = processosComCnj.slice(i, i + batchSize)
-        await Promise.all(
-          batch.map(p => atualizarEscavador(p.numero_cnj!))
+        const batchResults = await Promise.all(
+          batch.map(async p => {
+            const resultado = await atualizarEscavador(p.numero_cnj!, p.numero_pasta)
+            return { processo: p, resultado }
+          })
         )
+
+        // Processar resultados do batch
+        for (const { processo, resultado } of batchResults) {
+          if (resultado.sucesso) {
+            if (resultado.movimentacoes_novas && resultado.movimentacoes_novas > 0) {
+              resultados.processosAtualizados++
+              resultados.totalMovimentacoesNovas += resultado.movimentacoes_novas
+              resultados.detalhes.push({
+                pasta: processo.numero_pasta,
+                novas: resultado.movimentacoes_novas
+              })
+            }
+          } else {
+            resultados.processosFalharam.push({
+              pasta: processo.numero_pasta,
+              erro: resultado.erro || 'Erro desconhecido'
+            })
+          }
+        }
       }
 
       // Recarregar processos apos todas atualizacoes
       await carregarProcessos()
+
+      // Mostrar resultado
+      setResultadoAtualizacao(resultados)
+      setShowResultadoAtualizacao(true)
     } catch (err) {
       console.error('Erro ao atualizar todos via Escavador:', err)
     } finally {
@@ -695,7 +759,7 @@ export default function RelatoriosPage() {
                   resumo={resumos[processo.id] || ''}
                   onResumoChange={(id, texto) => setResumos(prev => ({ ...prev, [id]: texto }))}
                   onRegenerarResumo={gerarResumoIA}
-                  onAtualizarEscavador={atualizarEscavador}
+                  onAtualizarEscavador={(cnj) => atualizarEscavador(cnj, processo.numero_pasta)}
                   carregando={resumosEmGeracao.has(processo.id)}
                 />
               ))}
@@ -822,6 +886,104 @@ export default function RelatoriosPage() {
           </Button>
         </div>
       )}
+
+      {/* Dialog de resultado da atualizacao Escavador */}
+      <Dialog open={showResultadoAtualizacao} onOpenChange={setShowResultadoAtualizacao}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#34495e]">
+              <RefreshCw className="w-5 h-5" />
+              Resultado da Atualização
+            </DialogTitle>
+          </DialogHeader>
+
+          {resultadoAtualizacao && (
+            <div className="space-y-4">
+              {/* Resumo */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+                  <p className="text-2xl font-bold text-emerald-600">
+                    {resultadoAtualizacao.processosAtualizados}
+                  </p>
+                  <p className="text-xs text-emerald-700">
+                    processo{resultadoAtualizacao.processosAtualizados !== 1 ? 's' : ''} com novidades
+                  </p>
+                </div>
+                <div className="p-3 bg-[#f0f9f9] rounded-lg border border-[#aacfd0]">
+                  <p className="text-2xl font-bold text-[#34495e]">
+                    {resultadoAtualizacao.totalMovimentacoesNovas}
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    movimentaç{resultadoAtualizacao.totalMovimentacoesNovas !== 1 ? 'ões novas' : 'ão nova'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Detalhes dos processos atualizados */}
+              {resultadoAtualizacao.detalhes.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-slate-500 mb-2">
+                    Processos com novas movimentações:
+                  </p>
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {resultadoAtualizacao.detalhes.map((d, i) => (
+                      <div key={i} className="flex justify-between items-center text-sm p-2 bg-slate-50 rounded">
+                        <span className="font-medium text-slate-700">{d.pasta}</span>
+                        <Badge className="bg-emerald-100 text-emerald-700 text-xs">
+                          +{d.novas} nova{d.novas !== 1 ? 's' : ''}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Processos sem novidades */}
+              {resultadoAtualizacao.processosAtualizados === 0 && resultadoAtualizacao.processosFalharam.length === 0 && (
+                <div className="p-4 bg-slate-50 rounded-lg text-center">
+                  <CheckCircle2 className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                  <p className="text-sm text-slate-600">
+                    Todos os processos já estão atualizados!
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Nenhuma movimentação nova foi encontrada.
+                  </p>
+                </div>
+              )}
+
+              {/* Erros */}
+              {resultadoAtualizacao.processosFalharam.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-red-500 mb-2">
+                    Processos com erro ({resultadoAtualizacao.processosFalharam.length}):
+                  </p>
+                  <div className="max-h-24 overflow-y-auto space-y-1">
+                    {resultadoAtualizacao.processosFalharam.slice(0, 5).map((f, i) => (
+                      <div key={i} className="text-xs p-2 bg-red-50 rounded border border-red-100">
+                        <span className="font-medium text-red-700">{f.pasta}</span>
+                        <span className="text-red-500 ml-2">- {f.erro}</span>
+                      </div>
+                    ))}
+                    {resultadoAtualizacao.processosFalharam.length > 5 && (
+                      <p className="text-xs text-slate-400 text-center">
+                        e mais {resultadoAtualizacao.processosFalharam.length - 5}...
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Botao fechar */}
+              <Button
+                onClick={() => setShowResultadoAtualizacao(false)}
+                className="w-full bg-[#34495e] hover:bg-[#46627f] text-white"
+              >
+                Continuar para gerar resumos
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

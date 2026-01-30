@@ -3,6 +3,7 @@
 // ============================================
 // Gera um resumo do processo para enviar ao cliente
 // usando linguagem simples e acessível
+// Utiliza GPT-5 mini da OpenAI
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
@@ -78,13 +79,16 @@ serve(async (req) => {
 
     console.log(`[Relatorios Resumo IA] Gerando resumo para: ${numero_cnj}`)
 
-    // Verificar se a chave API está configurada
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
+    // Verificar se a chave API está configurada (OpenAI)
+    const apiKey = Deno.env.get('OPENAI_API_KEY')
+    console.log(`[Relatorios Resumo IA] OPENAI_API_KEY configurada: ${apiKey ? 'SIM (length: ' + apiKey.length + ')' : 'NAO'}`)
+
     if (!apiKey) {
-      console.error('[Relatorios Resumo IA] ANTHROPIC_API_KEY não configurada')
+      console.error('[Relatorios Resumo IA] OPENAI_API_KEY não configurada')
       // Gerar mensagem básica sem IA
       return successResponse({
-        resumo: gerarResumoPadrao(area, fase, status, objeto_acao, polo_cliente)
+        resumo: gerarResumoPadrao(area, fase, status, objeto_acao, polo_cliente),
+        aviso: 'OPENAI_API_KEY não configurada - usando resumo padrão'
       })
     }
 
@@ -117,19 +121,23 @@ ${movimentacoesTexto}` : 'Nenhuma movimentação recente registrada.'}
 
 Escreva um resumo de 2-3 frases para o cliente, explicando a situação atual do processo de forma clara e específica. ${movimentacoesTexto ? 'Foque nas movimentações mais importantes.' : 'Descreva a situação baseada na fase e área do processo.'}`
 
-    // Chamar Claude API
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // Chamar OpenAI API (GPT-5 mini)
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 300,
-        system: SYSTEM_PROMPT,
+        model: 'gpt-5-mini',
+        // GPT-5 mini usa reasoning tokens internamente, precisa de mais tokens
+        // para ter espaço para raciocínio + resposta final
+        max_completion_tokens: 2000,
         messages: [
+          {
+            role: 'system',
+            content: SYSTEM_PROMPT
+          },
           {
             role: 'user',
             content: userPrompt
@@ -140,18 +148,36 @@ Escreva um resumo de 2-3 frases para o cliente, explicando a situação atual do
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error(`[Relatorios Resumo IA] Erro API: ${response.status} - ${errorText}`)
-      throw new Error(`Claude API error: ${response.status}`)
+      console.error(`[Relatorios Resumo IA] Erro API OpenAI: ${response.status}`)
+      console.error(`[Relatorios Resumo IA] Resposta completa: ${errorText}`)
+
+      // Se for erro de modelo não encontrado ou API key, retorna resumo padrão em vez de erro 500
+      return successResponse({
+        resumo: gerarResumoPadrao(area, fase, status, objeto_acao, polo_cliente),
+        aviso: `Erro na API OpenAI (${response.status}): usando resumo padrão`
+      })
     }
 
     const result = await response.json()
 
-    // Extrair texto da resposta
-    const responseText = result.content?.[0]?.type === 'text'
-      ? result.content[0].text.trim()
-      : gerarResumoPadrao(area, fase, status, objeto_acao, polo_cliente)
+    // Log da resposta completa para debug
+    console.log(`[Relatorios Resumo IA] Resposta OpenAI:`, JSON.stringify(result, null, 2))
 
-    console.log(`[Relatorios Resumo IA] ✓ Resumo gerado com sucesso`)
+    // Extrair texto da resposta (formato OpenAI)
+    // GPT-5 mini pode usar output_text em vez de message.content
+    const messageContent = result.choices?.[0]?.message?.content
+    const outputText = result.output_text || result.output?.text
+    const responseText = (messageContent || outputText || '').trim()
+
+    if (!responseText) {
+      console.log(`[Relatorios Resumo IA] ⚠ Resposta vazia, usando fallback`)
+      return successResponse({
+        resumo: gerarResumoPadrao(area, fase, status, objeto_acao, polo_cliente),
+        aviso: 'Resposta vazia da IA'
+      })
+    }
+
+    console.log(`[Relatorios Resumo IA] ✓ Resumo gerado com sucesso (GPT-5 mini): ${responseText.substring(0, 50)}...`)
 
     return successResponse({
       resumo: responseText

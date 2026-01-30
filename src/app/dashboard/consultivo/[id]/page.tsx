@@ -29,7 +29,11 @@ import {
   Check,
   Archive,
   RotateCcw,
-  ArrowRight
+  ArrowRight,
+  Pencil,
+  Trash2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
@@ -88,6 +92,19 @@ export default function ConsultaDetalhePage() {
   const [novoAndamentoOpen, setNovoAndamentoOpen] = useState(false)
   const [novoAndamento, setNovoAndamento] = useState({ descricao: '' })
   const [salvandoAndamento, setSalvandoAndamento] = useState(false)
+
+  // Estados para editar andamento
+  const [editandoAndamento, setEditandoAndamento] = useState<{ index: number; descricao: string } | null>(null)
+  const [editAndamentoOpen, setEditAndamentoOpen] = useState(false)
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false)
+
+  // Estados para excluir andamento
+  const [excluindoAndamentoIndex, setExcluindoAndamentoIndex] = useState<number | null>(null)
+  const [deleteAndamentoOpen, setDeleteAndamentoOpen] = useState(false)
+
+  // Paginação de andamentos
+  const [andamentoPage, setAndamentoPage] = useState(1)
+  const andamentosPerPage = 5
 
   // Estados para Agenda
   const [agendaItems, setAgendaItems] = useState<any[]>([])
@@ -251,6 +268,88 @@ export default function ConsultaDetalhePage() {
       toast.error('Erro ao adicionar andamento')
     } finally {
       setSalvandoAndamento(false)
+    }
+  }
+
+  // Editar andamento
+  const handleEditAndamento = (index: number) => {
+    const andamentos = consulta?.andamentos || []
+    const reversedIndex = andamentos.length - 1 - index // Ajustar para array reverso
+    const andamento = andamentos[reversedIndex]
+    if (andamento) {
+      setEditandoAndamento({ index: reversedIndex, descricao: andamento.descricao })
+      setEditAndamentoOpen(true)
+    }
+  }
+
+  const handleSaveEditAndamento = async () => {
+    if (!editandoAndamento || !editandoAndamento.descricao.trim()) {
+      toast.error('Preencha a descrição')
+      return
+    }
+
+    setSalvandoEdicao(true)
+
+    try {
+      const andamentosAtualizados = [...(consulta?.andamentos || [])]
+      andamentosAtualizados[editandoAndamento.index] = {
+        ...andamentosAtualizados[editandoAndamento.index],
+        descricao: editandoAndamento.descricao
+      }
+
+      const { error } = await supabase
+        .from('consultivo_consultas')
+        .update({ andamentos: andamentosAtualizados })
+        .eq('id', params.id)
+
+      if (error) throw error
+
+      setConsulta(prev => prev ? { ...prev, andamentos: andamentosAtualizados } : null)
+      setEditAndamentoOpen(false)
+      setEditandoAndamento(null)
+      toast.success('Andamento atualizado')
+    } catch (error) {
+      console.error('Erro ao editar andamento:', error)
+      toast.error('Erro ao editar andamento')
+    } finally {
+      setSalvandoEdicao(false)
+    }
+  }
+
+  // Excluir andamento
+  const handleDeleteAndamentoClick = (index: number) => {
+    const andamentos = consulta?.andamentos || []
+    const reversedIndex = andamentos.length - 1 - index // Ajustar para array reverso
+    setExcluindoAndamentoIndex(reversedIndex)
+    setDeleteAndamentoOpen(true)
+  }
+
+  const handleConfirmDeleteAndamento = async () => {
+    if (excluindoAndamentoIndex === null) return
+
+    try {
+      const andamentosAtualizados = (consulta?.andamentos || []).filter((_, i) => i !== excluindoAndamentoIndex)
+
+      const { error } = await supabase
+        .from('consultivo_consultas')
+        .update({ andamentos: andamentosAtualizados })
+        .eq('id', params.id)
+
+      if (error) throw error
+
+      setConsulta(prev => prev ? { ...prev, andamentos: andamentosAtualizados } : null)
+      setDeleteAndamentoOpen(false)
+      setExcluindoAndamentoIndex(null)
+      toast.success('Andamento excluído')
+
+      // Ajustar página se necessário
+      const newTotal = Math.ceil(andamentosAtualizados.length / andamentosPerPage)
+      if (andamentoPage > newTotal && newTotal > 0) {
+        setAndamentoPage(newTotal)
+      }
+    } catch (error) {
+      console.error('Erro ao excluir andamento:', error)
+      toast.error('Erro ao excluir andamento')
     }
   }
 
@@ -515,21 +614,88 @@ export default function ConsultaDetalhePage() {
                     <p className="text-sm text-slate-600">Nenhum andamento registrado</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {[...consulta.andamentos].reverse().map((andamento: Andamento, index) => (
-                      <div key={index} className="border-b border-slate-100 pb-3 last:border-0 last:pb-0">
-                        <div className="flex gap-3">
-                          <div className="flex-shrink-0 w-20">
-                            <p className="text-xs font-medium text-slate-700">{format(new Date(andamento.data), "dd/MM/yyyy", { locale: ptBR })}</p>
-                            <p className="text-[10px] text-slate-500">{format(new Date(andamento.data), "HH:mm", { locale: ptBR })}</p>
+                  <>
+                    <div className="space-y-3">
+                      {(() => {
+                        const reversed = [...consulta.andamentos].reverse()
+                        const totalPages = Math.ceil(reversed.length / andamentosPerPage)
+                        const startIndex = (andamentoPage - 1) * andamentosPerPage
+                        const paginated = reversed.slice(startIndex, startIndex + andamentosPerPage)
+
+                        return paginated.map((andamento: Andamento, index) => (
+                          <div key={index} className="border-b border-slate-100 pb-3 last:border-0 last:pb-0 group">
+                            <div className="flex gap-3">
+                              <div className="flex-shrink-0 w-20">
+                                <p className="text-xs font-medium text-slate-700">{format(new Date(andamento.data), "dd/MM/yyyy", { locale: ptBR })}</p>
+                                <p className="text-[10px] text-slate-500">{format(new Date(andamento.data), "HH:mm", { locale: ptBR })}</p>
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm text-slate-700 leading-relaxed">{andamento.descricao}</p>
+                              </div>
+                              <div className="flex items-start gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditAndamento(startIndex + index)}
+                                  className="h-7 w-7 p-0 text-slate-400 hover:text-[#34495e]"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteAndamentoClick(startIndex + index)}
+                                  className="h-7 w-7 p-0 text-slate-400 hover:text-red-600"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex-1">
-                            <p className="text-sm text-slate-700 leading-relaxed">{andamento.descricao}</p>
-                          </div>
+                        ))
+                      })()}
+                    </div>
+
+                    {/* Paginação de Andamentos */}
+                    {consulta.andamentos.length > andamentosPerPage && (
+                      <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100">
+                        <p className="text-xs text-slate-500">
+                          {Math.min((andamentoPage - 1) * andamentosPerPage + 1, consulta.andamentos.length)}-{Math.min(andamentoPage * andamentosPerPage, consulta.andamentos.length)} de {consulta.andamentos.length}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setAndamentoPage(p => Math.max(1, p - 1))}
+                            disabled={andamentoPage === 1}
+                            className="h-7 w-7 p-0"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </Button>
+                          {Array.from({ length: Math.ceil(consulta.andamentos.length / andamentosPerPage) }, (_, i) => i + 1).map(page => (
+                            <Button
+                              key={page}
+                              variant={andamentoPage === page ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setAndamentoPage(page)}
+                              className={`h-7 w-7 p-0 text-xs ${andamentoPage === page ? 'bg-[#34495e] hover:bg-[#46627f]' : ''}`}
+                            >
+                              {page}
+                            </Button>
+                          ))}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setAndamentoPage(p => Math.min(Math.ceil(consulta.andamentos.length / andamentosPerPage), p + 1))}
+                            disabled={andamentoPage === Math.ceil(consulta.andamentos.length / andamentosPerPage)}
+                            className="h-7 w-7 p-0"
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </Button>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -752,6 +918,57 @@ export default function ConsultaDetalhePage() {
         onOpenChange={setTimesheetModalOpen}
         consultaId={consulta.id}
       />
+
+      {/* Modal Editar Andamento */}
+      <Dialog open={editAndamentoOpen} onOpenChange={setEditAndamentoOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold text-[#34495e]">Editar Andamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <Textarea
+              placeholder="Descreva o andamento..."
+              value={editandoAndamento?.descricao || ''}
+              onChange={(e) => setEditandoAndamento(prev => prev ? { ...prev, descricao: e.target.value } : null)}
+              className="text-sm min-h-[120px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditAndamentoOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={handleSaveEditAndamento}
+              disabled={salvandoEdicao || !editandoAndamento?.descricao.trim()}
+              className="bg-gradient-to-r from-[#34495e] to-[#46627f]"
+            >
+              {salvandoEdicao ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Confirmar Exclusão de Andamento */}
+      <Dialog open={deleteAndamentoOpen} onOpenChange={setDeleteAndamentoOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold text-[#34495e]">Excluir Andamento</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-slate-600">
+            Tem certeza que deseja excluir este andamento? Esta ação não pode ser desfeita.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteAndamentoOpen(false)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDeleteAndamento}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

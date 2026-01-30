@@ -17,6 +17,8 @@ import {
   RefreshCcw,
   XCircle,
   Repeat,
+  Tag,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -46,15 +48,35 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import {
   useCartoesCredito,
   CartaoCredito,
   LancamentoCartao,
   FaturaCartao,
+  CategoriaCartaoPersonalizada,
   CATEGORIAS_DESPESA_CARTAO,
   BANDEIRAS_CARTAO,
+  sanearNomeCategoria,
 } from '@/hooks/useCartoesCredito'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import CartaoModal from '@/components/financeiro/cartoes/CartaoModal'
 import DespesaCartaoModal from '@/components/financeiro/cartoes/DespesaCartaoModal'
 import EditarLancamentoCartaoModal from '@/components/financeiro/cartoes/EditarLancamentoCartaoModal'
@@ -69,7 +91,7 @@ export default function CartaoDetalhePage() {
   const cartaoId = params.id as string
   const tabInicial = searchParams.get('tab') || 'lancamentos'
 
-  const { escritorioAtivo } = useEscritorioAtivo()
+  const { escritorioAtivo, isOwner } = useEscritorioAtivo()
 
   // States
   const [cartao, setCartao] = useState<CartaoCredito | null>(null)
@@ -93,6 +115,18 @@ export default function CartaoDetalhePage() {
   const [recorrenteParaReativar, setRecorrenteParaReativar] = useState<string | null>(null)
   const [faturaParaFechar, setFaturaParaFechar] = useState<string | null>(null)
 
+  // Seleção múltipla / Ações em massa
+  const [lancamentosSelecionados, setLancamentosSelecionados] = useState<Set<string>>(new Set())
+  const [mostrarDialogExcluirEmMassa, setMostrarDialogExcluirEmMassa] = useState(false)
+  const [mostrarDialogAlterarCategoria, setMostrarDialogAlterarCategoria] = useState(false)
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>('')
+
+  // Categorias personalizadas
+  const [categoriasPersonalizadas, setCategoriasPersonalizadas] = useState<CategoriaCartaoPersonalizada[]>([])
+  const [mostrarDialogNovaCategoria, setMostrarDialogNovaCategoria] = useState(false)
+  const [novaCategoriaLabel, setNovaCategoriaLabel] = useState('')
+  const [criandoCategoria, setCriandoCategoria] = useState(false)
+
   const {
     getCartao,
     loadLancamentosMes,
@@ -102,6 +136,10 @@ export default function CartaoDetalhePage() {
     reativarRecorrente,
     fecharFatura,
     pagarFatura,
+    deleteLancamentosEmMassa,
+    atualizarCategoriaEmMassa,
+    loadCategoriasPersonalizadas,
+    criarCategoriaPersonalizada,
   } = useCartoesCredito(escritorioAtivo)
 
   // Formatação do mês de referência
@@ -153,11 +191,37 @@ export default function CartaoDetalhePage() {
     }
   }, [escritorioAtivo, cartaoId, loadFaturas])
 
+  const loadCategoriasData = useCallback(async () => {
+    if (!escritorioAtivo) return
+
+    try {
+      const categorias = await loadCategoriasPersonalizadas()
+      setCategoriasPersonalizadas(categorias)
+    } catch (error) {
+      console.error('Erro ao carregar categorias personalizadas:', error)
+    }
+  }, [escritorioAtivo, loadCategoriasPersonalizadas])
+
   const loadData = useCallback(async () => {
     setLoading(true)
-    await Promise.all([loadCartaoData(), loadLancamentosData(), loadFaturasData()])
+    await Promise.all([loadCartaoData(), loadLancamentosData(), loadFaturasData(), loadCategoriasData()])
     setLoading(false)
-  }, [loadCartaoData, loadLancamentosData, loadFaturasData])
+  }, [loadCartaoData, loadLancamentosData, loadFaturasData, loadCategoriasData])
+
+  // Combina categorias fixas com personalizadas
+  const todasCategorias = useMemo(() => {
+    const fixas = CATEGORIAS_DESPESA_CARTAO
+    const personalizadas = categoriasPersonalizadas.map(c => ({
+      value: c.value,
+      label: c.label,
+    }))
+
+    // Mantém "outros" no final
+    const semOutros = fixas.filter(c => c.value !== 'outros')
+    const outros = fixas.find(c => c.value === 'outros')
+
+    return [...semOutros, ...personalizadas, ...(outros ? [outros] : [])]
+  }, [categoriasPersonalizadas])
 
   useEffect(() => {
     loadData()
@@ -167,6 +231,7 @@ export default function CartaoDetalhePage() {
   useEffect(() => {
     if (cartao) {
       loadLancamentosData()
+      setLancamentosSelecionados(new Set()) // Limpa seleção ao mudar de mês
     }
   }, [mesReferenciaStr, cartao, loadLancamentosData])
 
@@ -248,6 +313,90 @@ export default function CartaoDetalhePage() {
     }
   }
 
+  // Handlers de seleção múltipla
+  const toggleSelecionarTodos = () => {
+    if (lancamentosSelecionados.size === lancamentos.length) {
+      setLancamentosSelecionados(new Set())
+    } else {
+      setLancamentosSelecionados(new Set(lancamentos.map(l => l.id)))
+    }
+  }
+
+  const toggleSelecionarLancamento = (id: string) => {
+    const novaSeleção = new Set(lancamentosSelecionados)
+    if (novaSeleção.has(id)) {
+      novaSeleção.delete(id)
+    } else {
+      novaSeleção.add(id)
+    }
+    setLancamentosSelecionados(novaSeleção)
+  }
+
+  const limparSelecao = () => {
+    setLancamentosSelecionados(new Set())
+  }
+
+  // Handlers de ações em massa
+  const handleExcluirEmMassa = async () => {
+    const ids = Array.from(lancamentosSelecionados)
+    const excluidos = await deleteLancamentosEmMassa(ids)
+
+    if (excluidos > 0) {
+      toast.success(`${excluidos} lançamento${excluidos > 1 ? 's' : ''} excluído${excluidos > 1 ? 's' : ''}`)
+      limparSelecao()
+      loadLancamentosData()
+    } else {
+      toast.error('Erro ao excluir lançamentos')
+    }
+    setMostrarDialogExcluirEmMassa(false)
+  }
+
+  const handleAlterarCategoriaEmMassa = async () => {
+    if (!categoriaSelecionada) {
+      toast.error('Selecione uma categoria')
+      return
+    }
+
+    const ids = Array.from(lancamentosSelecionados)
+    const atualizados = await atualizarCategoriaEmMassa(ids, categoriaSelecionada)
+
+    if (atualizados > 0) {
+      toast.success(`Categoria alterada em ${atualizados} lançamento${atualizados > 1 ? 's' : ''}`)
+      limparSelecao()
+      loadLancamentosData()
+    } else {
+      toast.error('Erro ao alterar categorias')
+    }
+    setMostrarDialogAlterarCategoria(false)
+    setCategoriaSelecionada('')
+  }
+
+  // Handler para criar nova categoria
+  const handleCriarCategoria = async () => {
+    if (!novaCategoriaLabel.trim()) {
+      toast.error('Digite o nome da categoria')
+      return
+    }
+
+    setCriandoCategoria(true)
+    try {
+      const novaCategoria = await criarCategoriaPersonalizada(novaCategoriaLabel)
+
+      if (novaCategoria) {
+        toast.success(`Categoria "${novaCategoria.label}" criada com sucesso`)
+        setNovaCategoriaLabel('')
+        setMostrarDialogNovaCategoria(false)
+        loadCategoriasData()
+      } else {
+        toast.error('Erro ao criar categoria')
+      }
+    } catch {
+      toast.error('Erro ao criar categoria')
+    } finally {
+      setCriandoCategoria(false)
+    }
+  }
+
   // Formatações
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -257,7 +406,7 @@ export default function CartaoDetalhePage() {
   }
 
   const getCategoriaLabel = (categoria: string) => {
-    return CATEGORIAS_DESPESA_CARTAO.find((c) => c.value === categoria)?.label || categoria
+    return todasCategorias.find((c) => c.value === categoria)?.label || categoria
   }
 
   const getStatusBadge = (status: string) => {
@@ -433,6 +582,46 @@ export default function CartaoDetalhePage() {
             </div>
           </div>
 
+          {/* Barra de ações em massa */}
+          {lancamentosSelecionados.size > 0 && (
+            <div className="flex items-center justify-between bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-slate-700">
+                  {lancamentosSelecionados.size} selecionado{lancamentosSelecionados.size > 1 ? 's' : ''}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-slate-500"
+                  onClick={limparSelecao}
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Limpar
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => setMostrarDialogAlterarCategoria(true)}
+                >
+                  <Tag className="h-3.5 w-3.5 mr-1.5" />
+                  Alterar Categoria
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={() => setMostrarDialogExcluirEmMassa(true)}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                  Excluir
+                </Button>
+              </div>
+            </div>
+          )}
+
           <Card className="border-slate-200">
             <CardContent className="pt-4 pb-3">
               {lancamentos.length === 0 ? (
@@ -446,6 +635,12 @@ export default function CartaoDetalhePage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={lancamentos.length > 0 && lancamentosSelecionados.size === lancamentos.length}
+                          onCheckedChange={toggleSelecionarTodos}
+                        />
+                      </TableHead>
                       <TableHead>Data Compra</TableHead>
                       <TableHead>Descrição</TableHead>
                       <TableHead>Categoria</TableHead>
@@ -457,7 +652,16 @@ export default function CartaoDetalhePage() {
                   </TableHeader>
                   <TableBody>
                     {lancamentos.map((lancamento) => (
-                      <TableRow key={lancamento.id}>
+                      <TableRow
+                        key={lancamento.id}
+                        className={cn(lancamentosSelecionados.has(lancamento.id) && 'bg-slate-50')}
+                      >
+                        <TableCell>
+                          <Checkbox
+                            checked={lancamentosSelecionados.has(lancamento.id)}
+                            onCheckedChange={() => toggleSelecionarLancamento(lancamento.id)}
+                          />
+                        </TableCell>
                         <TableCell className="text-sm">
                           {formatBrazilDate(lancamento.data_compra)}
                         </TableCell>
@@ -743,6 +947,128 @@ export default function CartaoDetalhePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog Excluir em Massa */}
+      <AlertDialog open={mostrarDialogExcluirEmMassa} onOpenChange={setMostrarDialogExcluirEmMassa}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir {lancamentosSelecionados.size} lançamentos</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir os {lancamentosSelecionados.size} lançamentos selecionados?
+              Esta ação não pode ser desfeita.
+              <span className="block mt-2 text-amber-600 font-medium">
+                Atenção: Se algum lançamento for parcelado, todas as parcelas serão removidas.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleExcluirEmMassa}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Excluir {lancamentosSelecionados.size}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog Alterar Categoria em Massa */}
+      <AlertDialog open={mostrarDialogAlterarCategoria} onOpenChange={setMostrarDialogAlterarCategoria}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Alterar categoria de {lancamentosSelecionados.size} lançamentos</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>Selecione a nova categoria para os {lancamentosSelecionados.size} lançamentos selecionados:</p>
+                <Select value={categoriaSelecionada} onValueChange={setCategoriaSelecionada}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a categoria..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {todasCategorias.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                    {isOwner && (
+                      <>
+                        <div className="border-t my-1" />
+                        <button
+                          type="button"
+                          className="w-full px-2 py-1.5 text-left text-sm text-[#1E3A8A] hover:bg-slate-100 rounded flex items-center gap-2"
+                          onClick={() => {
+                            setMostrarDialogAlterarCategoria(false)
+                            setMostrarDialogNovaCategoria(true)
+                          }}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Nova categoria
+                        </button>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCategoriaSelecionada('')}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleAlterarCategoriaEmMassa}
+              disabled={!categoriaSelecionada}
+            >
+              Alterar Categoria
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog Nova Categoria (apenas owner) */}
+      <Dialog open={mostrarDialogNovaCategoria} onOpenChange={setMostrarDialogNovaCategoria}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Nova Categoria</DialogTitle>
+            <DialogDescription>
+              Crie uma categoria personalizada para o escritório.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="nova-categoria">Nome da categoria</Label>
+              <Input
+                id="nova-categoria"
+                placeholder="Ex: Telefonia"
+                value={novaCategoriaLabel}
+                onChange={(e) => setNovaCategoriaLabel(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleCriarCategoria()}
+              />
+              {novaCategoriaLabel && (
+                <p className="text-xs text-slate-500">
+                  Será salvo como: <span className="font-medium">{sanearNomeCategoria(novaCategoriaLabel)}</span>
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setNovaCategoriaLabel('')
+                setMostrarDialogNovaCategoria(false)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleCriarCategoria}
+              disabled={!novaCategoriaLabel.trim() || criandoCategoria}
+            >
+              {criandoCategoria ? 'Criando...' : 'Criar Categoria'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

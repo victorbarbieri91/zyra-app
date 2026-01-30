@@ -75,6 +75,15 @@ export async function POST(request: NextRequest) {
 
     console.log('[Escavador Atualizar] Atualizando processo:', numeroCNJNormalizado)
 
+    // Verificar se o token do Escavador esta configurado
+    if (!process.env.ESCAVADOR_API_TOKEN) {
+      console.error('[Escavador Atualizar] ESCAVADOR_API_TOKEN nao configurado')
+      return NextResponse.json({
+        sucesso: false,
+        error: 'Integracao com Escavador nao configurada'
+      }, { status: 503 })
+    }
+
     // Buscar processo no banco
     const { data: processo } = await supabase
       .from('processos_processos')
@@ -84,6 +93,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (!processo) {
+      console.log('[Escavador Atualizar] Processo nao encontrado:', numeroCNJNormalizado)
       return NextResponse.json(
         { sucesso: false, error: 'Processo nao encontrado no sistema' },
         { status: 404 }
@@ -92,8 +102,12 @@ export async function POST(request: NextRequest) {
 
     // 1. Solicitar atualizacao no Escavador (opcional - pode falhar se ja foi solicitado recentemente)
     try {
-      await solicitarAtualizacao(numeroCNJNormalizado)
-      console.log('[Escavador Atualizar] Atualizacao solicitada')
+      const resultadoAtualizacao = await solicitarAtualizacao(numeroCNJNormalizado)
+      if (resultadoAtualizacao.sucesso) {
+        console.log('[Escavador Atualizar] Atualizacao solicitada')
+      } else {
+        console.log('[Escavador Atualizar] Nao foi possivel solicitar atualizacao:', resultadoAtualizacao.erro)
+      }
     } catch (err) {
       console.log('[Escavador Atualizar] Erro ao solicitar atualizacao (ignorando):', err)
       // Continua mesmo se falhar - vamos buscar as movimentacoes existentes
@@ -102,11 +116,23 @@ export async function POST(request: NextRequest) {
     // 2. Buscar movimentacoes do Escavador
     const resultadoMovs = await buscarMovimentacoes(numeroCNJNormalizado, 1, 50)
 
-    if (!resultadoMovs.sucesso || !resultadoMovs.movimentacoes) {
+    if (!resultadoMovs.sucesso) {
+      console.error('[Escavador Atualizar] Erro ao buscar movimentacoes:', resultadoMovs.erro)
       return NextResponse.json({
         sucesso: false,
-        error: resultadoMovs.erro || 'Erro ao buscar movimentacoes'
+        error: resultadoMovs.erro || 'Erro ao buscar movimentacoes no Escavador'
       }, { status: 400 })
+    }
+
+    // Se nao encontrou movimentacoes, retorna sucesso mas avisa
+    if (!resultadoMovs.movimentacoes || resultadoMovs.movimentacoes.length === 0) {
+      console.log('[Escavador Atualizar] Nenhuma movimentacao encontrada no Escavador')
+      return NextResponse.json({
+        sucesso: true,
+        movimentacoes_novas: 0,
+        total_encontradas: 0,
+        mensagem: 'Nenhuma movimentacao encontrada no Escavador para este processo'
+      })
     }
 
     console.log('[Escavador Atualizar] Movimentacoes encontradas:', resultadoMovs.movimentacoes.length)
@@ -117,15 +143,50 @@ export async function POST(request: NextRequest) {
       .select('data_movimento, descricao')
       .eq('processo_id', processo.id)
 
+    // Funcao para normalizar data para YYYY-MM-DD (ignorando hora)
+    const normalizarData = (data: string | null | undefined): string => {
+      if (!data) return ''
+      // Se for timestamp ISO, pega só a parte da data
+      return data.substring(0, 10)
+    }
+
+    // Funcao para normalizar texto (trim, lowercase, primeiros 100 chars)
+    const normalizarTexto = (texto: string | null | undefined): string => {
+      if (!texto) return ''
+      return texto.trim().toLowerCase().substring(0, 100)
+    }
+
     const existentesSet = new Set(
-      (movsExistentes || []).map(m => `${m.data_movimento}|${m.descricao?.substring(0, 100)}`)
+      (movsExistentes || []).map(m =>
+        `${normalizarData(m.data_movimento)}|${normalizarTexto(m.descricao)}`
+      )
     )
 
-    // 4. Filtrar apenas movimentacoes novas
-    const movsParaInserir = resultadoMovs.movimentacoes.filter(mov => {
-      const chave = `${mov.data}|${mov.conteudo?.substring(0, 100)}`
-      return !existentesSet.has(chave)
-    })
+    console.log('[Escavador Atualizar] Movimentacoes existentes no banco:', movsExistentes?.length || 0)
+
+    // 4. Filtrar apenas movimentacoes novas (verificando banco E duplicatas no mesmo lote)
+    const movsParaInserir: typeof resultadoMovs.movimentacoes = []
+    const chavesNoLote = new Set<string>()
+
+    for (const mov of resultadoMovs.movimentacoes) {
+      const chave = `${normalizarData(mov.data)}|${normalizarTexto(mov.conteudo)}`
+
+      // Verificar se já existe no banco
+      if (existentesSet.has(chave)) {
+        console.log('[Escavador Atualizar] Duplicata (banco) ignorada:', mov.data, mov.conteudo?.substring(0, 50))
+        continue
+      }
+
+      // Verificar se já existe no lote atual (evita duplicatas intra-lote)
+      if (chavesNoLote.has(chave)) {
+        console.log('[Escavador Atualizar] Duplicata (lote) ignorada:', mov.data, mov.conteudo?.substring(0, 50))
+        continue
+      }
+
+      // Adicionar ao conjunto de chaves do lote e à lista de inserção
+      chavesNoLote.add(chave)
+      movsParaInserir.push(mov)
+    }
 
     console.log('[Escavador Atualizar] Movimentacoes novas para inserir:', movsParaInserir.length)
 

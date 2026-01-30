@@ -145,6 +145,16 @@ export interface LancamentoFormData {
 // CATEGORIAS DE DESPESA DO CARTÃO
 // =====================================================
 
+export interface CategoriaCartaoPersonalizada {
+  id: string
+  escritorio_id: string
+  value: string
+  label: string
+  ativo: boolean
+  criado_por: string | null
+  created_at: string
+}
+
 export const CATEGORIAS_DESPESA_CARTAO = [
   { value: 'custas', label: 'Custas Processuais' },
   { value: 'fornecedor', label: 'Fornecedor' },
@@ -159,8 +169,34 @@ export const CATEGORIAS_DESPESA_CARTAO = [
   { value: 'alimentacao', label: 'Alimentação' },
   { value: 'combustivel', label: 'Combustível' },
   { value: 'assinatura', label: 'Assinaturas' },
+  { value: 'telefonia', label: 'Telefonia' },
+  { value: 'estacionamento', label: 'Estacionamento' },
+  { value: 'eventos', label: 'Eventos' },
   { value: 'outros', label: 'Outros' },
 ]
+
+// Função para sanear nome de categoria (capitalizar corretamente)
+export function sanearNomeCategoria(nome: string): string {
+  if (!nome) return ''
+  const nomeLimpo = nome.trim().toLowerCase()
+  // Capitaliza a primeira letra de cada palavra
+  return nomeLimpo
+    .split(' ')
+    .map(palavra => palavra.charAt(0).toUpperCase() + palavra.slice(1))
+    .join(' ')
+}
+
+// Função para gerar value a partir do label (para categorias personalizadas)
+export function gerarValueCategoria(label: string): string {
+  if (!label) return ''
+  return label
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[^a-z0-9\s]/g, '') // Remove caracteres especiais
+    .replace(/\s+/g, '_') // Substitui espaços por underscore
+}
 
 export const BANDEIRAS_CARTAO = [
   { value: 'visa', label: 'Visa', cor: '#1A1F71' },
@@ -937,6 +973,172 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
     return resultados
   }, [verificarDuplicata])
 
+  // ============================================
+  // AÇÕES EM MASSA
+  // ============================================
+
+  // Excluir múltiplos lançamentos de uma vez
+  const deleteLancamentosEmMassa = useCallback(async (lancamentoIds: string[]): Promise<number> => {
+    if (lancamentoIds.length === 0) return 0
+
+    try {
+      setLoading(true)
+      setError(null)
+
+      let excluidos = 0
+      for (const id of lancamentoIds) {
+        const { data: success, error: rpcError } = await supabase
+          .rpc('excluir_lancamento_cartao', {
+            p_lancamento_id: id,
+          })
+
+        if (!rpcError && success) {
+          excluidos++
+        }
+      }
+
+      return excluidos
+    } catch (err: any) {
+      console.error('Erro ao excluir lançamentos em massa:', err)
+      setError(err.message)
+      return 0
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase])
+
+  // Atualizar categoria de múltiplos lançamentos de uma vez
+  const atualizarCategoriaEmMassa = useCallback(async (
+    lancamentoIds: string[],
+    novaCategoria: string
+  ): Promise<number> => {
+    if (lancamentoIds.length === 0) return 0
+
+    try {
+      setLoading(true)
+      setError(null)
+
+      const { error: updateError, count } = await supabase
+        .from('cartoes_credito_lancamentos')
+        .update({ categoria: novaCategoria, updated_at: new Date().toISOString() })
+        .in('id', lancamentoIds)
+
+      if (updateError) throw updateError
+
+      return count || lancamentoIds.length
+    } catch (err: any) {
+      console.error('Erro ao atualizar categorias em massa:', err)
+      setError(err.message)
+      return 0
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase])
+
+  // ============================================
+  // CATEGORIAS PERSONALIZADAS
+  // ============================================
+
+  // Carregar categorias personalizadas do escritório
+  const loadCategoriasPersonalizadas = useCallback(async (): Promise<CategoriaCartaoPersonalizada[]> => {
+    if (escritorioIds.length === 0) return []
+
+    try {
+      const { data, error: queryError } = await supabase
+        .from('cartoes_credito_categorias')
+        .select('*')
+        .in('escritorio_id', escritorioIds)
+        .eq('ativo', true)
+        .order('label')
+
+      if (queryError) throw queryError
+
+      return data || []
+    } catch (err: any) {
+      console.error('Erro ao carregar categorias personalizadas:', err)
+      return []
+    }
+  }, [escritorioIds, supabase])
+
+  // Criar nova categoria personalizada (apenas owner)
+  const criarCategoriaPersonalizada = useCallback(async (
+    label: string,
+    escritorioIdOverride?: string
+  ): Promise<CategoriaCartaoPersonalizada | null> => {
+    const targetEscritorioId = escritorioIdOverride || escritorioIdPrincipal
+    if (!targetEscritorioId) return null
+
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Sanear o nome
+      const labelSaneado = sanearNomeCategoria(label)
+      const value = gerarValueCategoria(label)
+
+      if (!labelSaneado || !value) {
+        throw new Error('Nome de categoria inválido')
+      }
+
+      // Verificar se já existe
+      const { data: existente } = await supabase
+        .from('cartoes_credito_categorias')
+        .select('id')
+        .eq('escritorio_id', targetEscritorioId)
+        .eq('value', value)
+        .maybeSingle()
+
+      if (existente) {
+        throw new Error('Esta categoria já existe')
+      }
+
+      // Criar a categoria
+      const { data, error: insertError } = await supabase
+        .from('cartoes_credito_categorias')
+        .insert({
+          escritorio_id: targetEscritorioId,
+          value,
+          label: labelSaneado,
+          ativo: true,
+        })
+        .select()
+        .single()
+
+      if (insertError) throw insertError
+
+      return data
+    } catch (err: any) {
+      console.error('Erro ao criar categoria:', err)
+      setError(err.message)
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }, [escritorioIdPrincipal, supabase])
+
+  // Excluir categoria personalizada (desativar)
+  const excluirCategoriaPersonalizada = useCallback(async (categoriaId: string): Promise<boolean> => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const { error: updateError } = await supabase
+        .from('cartoes_credito_categorias')
+        .update({ ativo: false })
+        .eq('id', categoriaId)
+
+      if (updateError) throw updateError
+
+      return true
+    } catch (err: any) {
+      console.error('Erro ao excluir categoria:', err)
+      setError(err.message)
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase])
+
   return {
     loading,
     error,
@@ -969,5 +1171,12 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
     verificarDuplicatasEmLote,
     verificarFaturaExistente,
     vincularLancamentosAFatura,
+    // Ações em massa
+    deleteLancamentosEmMassa,
+    atualizarCategoriaEmMassa,
+    // Categorias personalizadas
+    loadCategoriasPersonalizadas,
+    criarCategoriaPersonalizada,
+    excluirCategoriaPersonalizada,
   }
 }

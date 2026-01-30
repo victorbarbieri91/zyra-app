@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { Clock, DollarSign, ExternalLink, Users } from 'lucide-react'
+import { Clock, DollarSign, ExternalLink, Users, FileText } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
-import { cn } from '@/lib/utils'
+import { cn, formatHoras, formatDescricaoFatura } from '@/lib/utils'
 import type { LancamentoProntoFaturar } from '@/hooks/useFaturamento'
 
 interface LancamentoSelectableItemProps {
@@ -28,14 +28,8 @@ export function LancamentoSelectableItem({
   }
 
   const getValorCalculado = () => {
-    if (isHonorario) {
-      return lancamento.valor || 0
-    }
-    if (isTimesheet) {
-      const valorHora = 400 // TODO: buscar do contrato
-      return (lancamento.horas || 0) * valorHora
-    }
-    return 0
+    // A view já calcula o valor correto baseado no contrato
+    return lancamento.valor || 0
   }
 
   return (
@@ -72,14 +66,24 @@ export function LancamentoSelectableItem({
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
             <p className="text-sm font-medium text-[#34495e] line-clamp-2">
-              {lancamento.descricao}
+              {formatDescricaoFatura(lancamento.descricao)}
             </p>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-xs text-slate-600">{lancamento.categoria}</span>
+              {/* Link para Consultivo */}
               {lancamento.consulta_id && !lancamento.processo_id && (
                 <>
                   <span className="text-xs text-slate-400">•</span>
-                  <span className="text-xs text-slate-600">Consulta</span>
+                  <Link
+                    href={`/dashboard/consultivo/${lancamento.consulta_id}`}
+                    className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                    target="_blank"
+                  >
+                    <FileText className="h-3 w-3" />
+                    Consulta
+                    <ExternalLink className="h-2.5 w-2.5 text-slate-400" />
+                  </Link>
                 </>
               )}
             </div>
@@ -113,7 +117,7 @@ export function LancamentoSelectableItem({
           <div className="text-right shrink-0">
             {isTimesheet && (
               <p className="text-xs font-semibold text-slate-700">
-                {lancamento.horas?.toFixed(1)}h
+                {formatHoras(lancamento.horas || 0, 'curto')}
               </p>
             )}
             <p className="text-sm font-bold text-emerald-600">

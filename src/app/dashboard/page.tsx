@@ -31,7 +31,7 @@ import {
   CheckSquare,
   Scale,
 } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatHoras } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import Link from 'next/link'
@@ -786,10 +786,10 @@ export default function DashboardPage() {
               />
               <MetricCard
                 title="Horas Faturáveis"
-                value={`${metrics?.horas_prontas_faturar || 0}h`}
+                value={formatHoras(metrics?.horas_prontas_faturar || 0, 'curto')}
                 icon={Clock}
                 trend={metrics?.horas_faturaveis_trend !== 0 ? {
-                  value: `${metrics?.horas_faturaveis_trend > 0 ? '+' : ''}${metrics?.horas_faturaveis_trend}h`,
+                  value: `${metrics?.horas_faturaveis_trend > 0 ? '+' : ''}${formatHoras(Math.abs(metrics?.horas_faturaveis_trend || 0), 'curto')}`,
                   label: 'vs mês',
                   positive: metrics?.horas_faturaveis_trend >= 0
                 } : undefined}

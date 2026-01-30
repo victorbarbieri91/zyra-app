@@ -18,7 +18,7 @@ import {
   User,
   FileText,
 } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatHoras } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import type { Honorario, Despesa, TimesheetEntry, ResumoFinanceiro, ContratoInfo } from '@/hooks/useProcessoFinanceiro'
@@ -97,7 +97,7 @@ export default function FinanceiroDetalhesModal({
       case 'honorarios':
         return formatCurrency(resumo.totalHonorarios)
       case 'timesheet':
-        return `${resumo.horasTrabalhadas}h${resumo.totalTimesheet > 0 ? ` • ${formatCurrency(resumo.totalTimesheet)}` : ''}`
+        return `${formatHoras(resumo.horasTrabalhadas)}${resumo.totalTimesheet > 0 ? ` • ${formatCurrency(resumo.totalTimesheet)}` : ''}`
       case 'despesas':
         return formatCurrency(resumo.totalDespesas)
     }
@@ -226,7 +226,7 @@ export default function FinanceiroDetalhesModal({
                 </div>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-bold text-[#34495e]">
-                    {entry.horas}h
+                    {formatHoras(entry.horas)}
                   </p>
                   {contratoInfo?.config?.valor_hora && (
                     <span className="text-xs text-slate-500">

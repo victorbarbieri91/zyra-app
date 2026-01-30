@@ -56,6 +56,7 @@ export default function CalendarKanbanView({
     timersAtivos,
     iniciarTimer,
     pausarTimer,
+    retomarTimer,
     finalizarTimer,
     descartarTimer,
   } = useTimer()
@@ -215,9 +216,10 @@ export default function CalendarKanbanView({
     // LÓGICA DE TIMER BASEADA NA TRANSIÇÃO
     // ========================================
 
-    // CASO 1: Movendo para EM_ANDAMENTO - Iniciar timer automaticamente
+    // CASO 1: Movendo para EM_ANDAMENTO - Iniciar ou retomar timer automaticamente
     if (novoStatus === 'em_andamento') {
       if (!timerExistente) {
+        // Não tem timer - criar novo se tiver vínculo
         if (tarefaTemVinculo(tarefa)) {
           try {
             await iniciarTimer({
@@ -237,13 +239,40 @@ export default function CalendarKanbanView({
           // Tarefa sem vínculo - mostrar aviso informativo
           toast.info('Tarefa movida (sem timer - vincule a um processo/consulta para habilitar)')
         }
+      } else if (timerExistente.status === 'pausado') {
+        // Timer existe mas está pausado - retomar automaticamente
+        try {
+          await retomarTimer(timerExistente.id)
+          toast.success('Timer retomado automaticamente')
+        } catch (error) {
+          console.error('Erro ao retomar timer:', error)
+          toast.error('Erro ao retomar timer')
+        }
       }
+      // Se timer existe e está rodando, não faz nada (já está ok)
     }
 
     // CASO 2: Movendo para CONCLUÍDA
     if (novoStatus === 'concluida') {
-      if (timerExistente) {
-        // Tem timer ativo - finalizar e criar timesheet automaticamente
+      // Se tem vínculo com processo/consultivo, sempre abrir modal para confirmar horas
+      if (tarefaTemVinculo(tarefa) && onTaskComplete) {
+        // Finalizar timer se existir (as horas serão mostradas no modal)
+        if (timerExistente) {
+          try {
+            await finalizarTimer(timerExistente.id, {
+              descricao: `Tarefa concluída: ${tarefa.titulo}`,
+            })
+            toast.success('Timer finalizado e horas registradas')
+          } catch (error) {
+            console.error('Erro ao finalizar timer:', error)
+            toast.error('Erro ao finalizar timer')
+          }
+        }
+        // Chamar callback externo para abrir modal de horas (permite ajustar/adicionar mais horas)
+        onTaskComplete(tarefa.id)
+        return // Não atualiza status aqui, o callback externo vai fazer isso
+      } else if (timerExistente) {
+        // Tarefa sem vínculo mas com timer (raro) - apenas finalizar
         try {
           await finalizarTimer(timerExistente.id, {
             descricao: `Tarefa concluída: ${tarefa.titulo}`,
@@ -253,10 +282,6 @@ export default function CalendarKanbanView({
           console.error('Erro ao finalizar timer:', error)
           toast.error('Erro ao finalizar timer')
         }
-      } else if (tarefaTemVinculo(tarefa) && onTaskComplete) {
-        // Não tem timer mas tem vínculo - usar callback externo (abre modal de horas)
-        onTaskComplete(tarefa.id)
-        return // Não atualiza status aqui, o callback externo vai fazer isso
       }
     }
 

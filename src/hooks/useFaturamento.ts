@@ -179,7 +179,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
         if (!clientesMap.has(lanc.cliente_id)) {
           clientesMap.set(lanc.cliente_id, {
             cliente_id: lanc.cliente_id,
-            cliente_nome: lanc.cliente_nome,
+            cliente_nome: lanc.cliente_nome || 'Cliente não identificado',
             total_honorarios: 0,
             total_horas: 0,
             qtd_honorarios: 0,
@@ -224,7 +224,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
       })
 
       return Array.from(clientesMap.values()).sort((a, b) =>
-        a.cliente_nome.localeCompare(b.cliente_nome)
+        (a.cliente_nome || '').localeCompare(b.cliente_nome || '')
       )
     } catch (err: any) {
       setError(err.message)

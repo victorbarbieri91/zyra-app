@@ -21,7 +21,7 @@ import {
   Clock,
   Receipt,
 } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatHoras } from '@/lib/utils'
 import { useConsultivoFinanceiro } from '@/hooks/useConsultivoFinanceiro'
 import VincularContratoConsultivoModal from './VincularContratoConsultivoModal'
 import ConsultivoFinanceiroDetalhesModal from './ConsultivoFinanceiroDetalhesModal'
@@ -249,7 +249,7 @@ export default function ConsultivoFinanceiroCard({
                 )}
               </div>
               <p className="text-sm font-semibold text-[#34495e] mt-1">
-                {resumo.horasTrabalhadas}h
+                {formatHoras(resumo.horasTrabalhadas)}
               </p>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#89bcbe] transition-colors" />

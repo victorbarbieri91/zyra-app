@@ -441,7 +441,17 @@ export default function ProcessosPage() {
               {loading ? 'Carregando...' : `${totalCount} ${totalCount === 1 ? 'processo' : 'processos'} encontrados`}
             </p>
           </div>
-          <NovoProcessoDropdown onProcessoCriado={loadProcessos} />
+          <div className="flex items-center gap-2.5">
+            <Button
+              variant="outline"
+              onClick={() => router.push('/dashboard/processos/relatorios')}
+              className="h-10"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Relatorios
+            </Button>
+            <NovoProcessoDropdown onProcessoCriado={loadProcessos} />
+          </div>
         </div>
 
         {/* Busca e Filtros */}

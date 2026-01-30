@@ -273,7 +273,7 @@ export function useConsultivoFinanceiro(consultivoId: string | null) {
           *,
           profiles:user_id (nome_completo)
         `)
-        .eq('consultivo_id', consultivoId)
+        .eq('consulta_id', consultivoId)
         .order('data_trabalho', { ascending: false })
 
       setTimesheet(
@@ -380,7 +380,7 @@ export function useConsultivoFinanceiro(consultivoId: string | null) {
           .insert({
             escritorio_id: escritorioAtivo,
             user_id: user.id,
-            consultivo_id: consultivoId,
+            consulta_id: consultivoId,
             data_trabalho: data.data_trabalho,
             horas: data.horas,
             atividade: data.atividade,

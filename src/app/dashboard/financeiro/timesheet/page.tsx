@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Clock, CheckCircle, XCircle, User, Building2, ChevronDown, Check, Pencil, X, Save, Users, Plus } from 'lucide-react'
+import Link from 'next/link'
+import { Clock, CheckCircle, XCircle, User, Building2, ChevronDown, Check, Pencil, X, Save, Users, Plus, Briefcase, FileText, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { DateRange } from 'react-day-picker'
@@ -15,7 +16,7 @@ import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
-import { cn } from '@/lib/utils'
+import { cn, formatHoras } from '@/lib/utils'
 import { formatBrazilDate } from '@/lib/timezone'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
 
@@ -79,9 +80,10 @@ export default function TimesheetPage() {
   const [editForm, setEditForm] = useState<EditForm>({ horas: 0, atividade: '', faturavel: true })
   const [salvandoEdicao, setSalvandoEdicao] = useState(false)
 
-  // Estado para aprovação/desaprovação individual
+  // Estado para aprovação/desaprovação/exclusão individual
   const [aprovandoId, setAprovandoId] = useState<string | null>(null)
   const [desaprovandoId, setDesaprovandoId] = useState<string | null>(null)
+  const [excluindoId, setExcluindoId] = useState<string | null>(null)
 
   // Multi-escritório states
   const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
@@ -343,30 +345,57 @@ export default function TimesheetPage() {
     }
   }
 
-  const handleReject = async () => {
+  // Excluir timesheet em massa
+  const handleDeleteBatch = async () => {
     if (selectedIds.size === 0) return
 
-    const justificativa = prompt('Justificativa da reprovação (obrigatória):')
-    if (!justificativa || justificativa.length < 10) {
-      toast.error('Justificativa deve ter pelo menos 10 caracteres')
-      return
-    }
+    const confirmacao = confirm(`Tem certeza que deseja excluir ${selectedIds.size} registro(s)? Esta ação não pode ser desfeita.`)
+    if (!confirmacao) return
 
     try {
-      const { error } = await supabase.rpc('reprovar_timesheet', {
-        p_timesheet_ids: Array.from(selectedIds),
-        p_reprovado_por: (await supabase.auth.getUser()).data.user?.id,
-        p_justificativa: justificativa,
-      })
+      const { error } = await supabase
+        .from('financeiro_timesheet')
+        .delete()
+        .in('id', Array.from(selectedIds))
 
       if (error) throw error
 
-      toast.success(`${selectedIds.size} registro(s) reprovado(s)`)
+      toast.success(`${selectedIds.size} registro(s) excluído(s)`)
       setSelectedIds(new Set())
       loadTimesheets()
     } catch (error: any) {
-      toast.error(error?.message || 'Erro ao reprovar timesheets')
-      console.error('Erro ao reprovar:', error)
+      toast.error(error?.message || 'Erro ao excluir timesheets')
+      console.error('Erro ao excluir:', error)
+    }
+  }
+
+  // Excluir timesheet individual
+  const handleDeleteSingle = async (timesheetId: string) => {
+    const confirmacao = confirm('Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.')
+    if (!confirmacao) return
+
+    setExcluindoId(timesheetId)
+    try {
+      const { error } = await supabase
+        .from('financeiro_timesheet')
+        .delete()
+        .eq('id', timesheetId)
+
+      if (error) throw error
+
+      toast.success('Registro excluído com sucesso!')
+      // Remove da seleção se estava selecionado
+      setSelectedIds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(timesheetId)
+        return newSet
+      })
+      loadTimesheets()
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao excluir timesheet')
+      console.error('Erro ao excluir:', error)
+    } finally {
+      setExcluindoId(null)
     }
   }
 
@@ -662,7 +691,7 @@ export default function TimesheetPage() {
                     {selectedIds.size} {selectedIds.size === 1 ? 'registro selecionado' : 'registros selecionados'}
                   </p>
                   <p className="text-xs text-emerald-700">
-                    Total: {getTotalHoras().toFixed(1)}h
+                    Total: {formatHoras(getTotalHoras())}
                   </p>
                 </div>
               </div>
@@ -677,13 +706,13 @@ export default function TimesheetPage() {
                   Aprovar
                 </Button>
                 <Button
-                  onClick={handleReject}
+                  onClick={handleDeleteBatch}
                   size="sm"
                   variant="outline"
                   className="border-red-200 text-red-700 hover:bg-red-50"
                 >
-                  <XCircle className="h-3.5 w-3.5 mr-1.5" />
-                  Reprovar
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                  Excluir
                 </Button>
               </div>
             </div>
@@ -712,7 +741,7 @@ export default function TimesheetPage() {
               )}
             </div>
             <Badge variant="secondary" className="bg-slate-100 text-slate-600">
-              {timesheets.length} {timesheets.length === 1 ? 'registro' : 'registros'} - {getTotalHorasLista().toFixed(1)}h
+              {timesheets.length} {timesheets.length === 1 ? 'registro' : 'registros'} - {formatHoras(getTotalHorasLista())}
             </Badge>
           </div>
         </CardHeader>
@@ -745,11 +774,11 @@ export default function TimesheetPage() {
                 {statusFiltro === 'pendente' && <div className="col-span-1"></div>}
                 <div className="col-span-1">Data</div>
                 <div className="col-span-2">Colaborador</div>
-                <div className="col-span-2">Cliente</div>
+                <div className="col-span-2">Pasta</div>
                 <div className="col-span-3">Atividade</div>
                 <div className="col-span-1 text-right">Horas</div>
                 <div className="col-span-1 text-center">Tipo</div>
-                <div className="col-span-1"></div>
+                <div className="col-span-1">Ações</div>
               </div>
 
               {/* Linhas */}
@@ -795,15 +824,31 @@ export default function TimesheetPage() {
                     </div>
                   </div>
 
-                  {/* Cliente/Processo */}
+                  {/* Cliente/Processo - Link clicável para a pasta */}
                   <div className="col-span-2">
                     <p className="text-xs text-slate-700 truncate">
                       {ts.cliente_nome || '-'}
                     </p>
-                    {ts.numero_processo && (
-                      <p className="text-[10px] text-slate-400 truncate">
-                        {ts.numero_processo}
-                      </p>
+                    {ts.processo_id ? (
+                      <Link
+                        href={`/dashboard/processos/${ts.processo_id}`}
+                        className="flex items-center gap-1 text-[10px] text-[#1E3A8A] hover:text-[#1E3A8A]/80 hover:underline truncate"
+                        title={`Abrir pasta ${ts.processo_pasta || ts.numero_processo}`}
+                      >
+                        <Briefcase className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{ts.processo_pasta || ts.numero_processo}</span>
+                      </Link>
+                    ) : ts.consulta_id ? (
+                      <Link
+                        href={`/dashboard/consultivo/${ts.consulta_id}`}
+                        className="flex items-center gap-1 text-[10px] text-[#1E3A8A] hover:text-[#1E3A8A]/80 hover:underline truncate"
+                        title={`Abrir consulta ${ts.consulta_titulo}`}
+                      >
+                        <FileText className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{ts.consulta_titulo}</span>
+                      </Link>
+                    ) : (
+                      <p className="text-[10px] text-slate-400">Sem vínculo</p>
                     )}
                   </div>
 
@@ -839,7 +884,7 @@ export default function TimesheetPage() {
                       />
                     ) : (
                       <span className="text-xs font-semibold text-[#34495e]">
-                        {Number(ts.horas).toFixed(1)}h
+                        {formatHoras(Number(ts.horas))}
                       </span>
                     )}
                   </div>
@@ -926,27 +971,62 @@ export default function TimesheetPage() {
                             >
                               <Pencil className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" />
                             </Button>
+                            {/* Botão de excluir */}
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 hover:bg-red-50"
+                              onClick={() => handleDeleteSingle(ts.id)}
+                              disabled={excluindoId === ts.id}
+                              title="Excluir"
+                            >
+                              <Trash2 className={cn(
+                                "h-3.5 w-3.5",
+                                excluindoId === ts.id
+                                  ? "text-red-400 animate-pulse"
+                                  : "text-red-500 hover:text-red-600"
+                              )} />
+                            </Button>
                           </>
                         )}
                       </>
                     ) : (
-                      /* Aba Aprovados - botão de desaprovar */
+                      /* Aba Aprovados - botões de ação */
                       !ts.faturado && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 hover:bg-red-50"
-                          onClick={() => handleDesaprovarSingle(ts.id)}
-                          disabled={desaprovandoId === ts.id}
-                          title="Reverter aprovação"
-                        >
-                          <XCircle className={cn(
-                            "h-3.5 w-3.5",
-                            desaprovandoId === ts.id
-                              ? "text-red-400 animate-pulse"
-                              : "text-red-500 hover:text-red-600"
-                          )} />
-                        </Button>
+                        <>
+                          {/* Botão de desaprovar (voltar para pendente) */}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 hover:bg-amber-50"
+                            onClick={() => handleDesaprovarSingle(ts.id)}
+                            disabled={desaprovandoId === ts.id}
+                            title="Voltar para pendente"
+                          >
+                            <XCircle className={cn(
+                              "h-3.5 w-3.5",
+                              desaprovandoId === ts.id
+                                ? "text-amber-400 animate-pulse"
+                                : "text-amber-500 hover:text-amber-600"
+                            )} />
+                          </Button>
+                          {/* Botão de excluir */}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 hover:bg-red-50"
+                            onClick={() => handleDeleteSingle(ts.id)}
+                            disabled={excluindoId === ts.id}
+                            title="Excluir"
+                          >
+                            <Trash2 className={cn(
+                              "h-3.5 w-3.5",
+                              excluindoId === ts.id
+                                ? "text-red-400 animate-pulse"
+                                : "text-red-500 hover:text-red-600"
+                            )} />
+                          </Button>
+                        </>
                       )
                     )}
                   </div>

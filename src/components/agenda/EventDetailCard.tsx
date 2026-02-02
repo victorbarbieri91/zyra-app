@@ -19,6 +19,7 @@ import {
   Repeat,
   Timer,
   CalendarClock,
+  Copy,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -32,7 +33,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
+import { toast } from 'sonner'
 import { addDays, nextMonday } from 'date-fns'
 
 export interface EventDetailCardProps {
@@ -280,6 +282,17 @@ export default function EventDetailCard({
               >
                 <span className="truncate">{processo_numero}</span>
                 <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  navigator.clipboard.writeText(processo_numero)
+                  toast.success('Número copiado!')
+                }}
+                className="p-0.5 rounded hover:bg-slate-100 text-slate-400 hover:text-[#89bcbe] transition-colors"
+                title="Copiar número do processo"
+              >
+                <Copy className="w-3 h-3" />
               </button>
             </div>
           )}

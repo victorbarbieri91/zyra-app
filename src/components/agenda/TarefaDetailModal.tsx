@@ -12,6 +12,7 @@ import {
   Clock,
   CalendarDays,
   Timer,
+  Copy,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatBrazilDate, formatDateTimeForDB, parseDBDate } from '@/lib/timezone'
@@ -413,46 +414,52 @@ export default function TarefaDetailModal({
             {/* PROCESSO VINCULADO */}
             {tarefa.processo_id && (
               <div>
-                <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-2">
+                <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1.5">
                   Processo Vinculado
                 </div>
                 {processoInfo ? (
-                  <button
-                    onClick={() => onProcessoClick?.(processoInfo.id)}
-                    className="w-full text-left p-3 bg-slate-50 rounded-md hover:bg-slate-100 transition-colors group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
-                          <span>Processo {processoInfo.numero_pasta || 'S/N'}</span>
-                          {processoInfo.status && (
-                            <span className="text-[10px] text-slate-500">{processoInfo.status}</span>
-                          )}
-                        </div>
-                        {processoInfo.numero_cnj && (
-                          <div className="text-[10px] text-slate-500 mt-1 font-mono">
-                            CNJ: {processoInfo.numero_cnj}
-                          </div>
+                  <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-md">
+                    <button
+                      onClick={() => onProcessoClick?.(processoInfo.id)}
+                      className="flex-1 text-left hover:bg-slate-100 rounded transition-colors p-1 -m-1 group"
+                    >
+                      <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
+                        <span>Pasta {processoInfo.numero_pasta || 'S/N'}</span>
+                        {processoInfo.status && (
+                          <span className="text-[10px] text-slate-500">• {processoInfo.status}</span>
                         )}
-                        {formatProcessoPartes(processoInfo) && (
-                          <div className="text-xs text-slate-600 mt-2">
-                            {formatProcessoPartes(processoInfo)}
-                          </div>
-                        )}
-                        {processoInfo.valor_causa && (
-                          <div className="text-[10px] text-slate-500 mt-1">
-                            Valor da Causa: R$ {processoInfo.valor_causa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </div>
-                        )}
+                        <svg className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-400 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
+                        </svg>
                       </div>
-                      <svg className="w-4 h-4 text-slate-300 group-hover:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </button>
+                      {processoInfo.numero_cnj && (
+                        <div className="text-[10px] text-slate-500 mt-0.5 font-mono">
+                          {processoInfo.numero_cnj}
+                        </div>
+                      )}
+                      {formatProcessoPartes(processoInfo) && (
+                        <div className="text-[10px] text-slate-600 mt-1">
+                          {formatProcessoPartes(processoInfo)}
+                        </div>
+                      )}
+                    </button>
+                    {processoInfo.numero_cnj && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigator.clipboard.writeText(processoInfo.numero_cnj!)
+                          toast.success('Número copiado!')
+                        }}
+                        className="p-1.5 rounded hover:bg-slate-200 text-slate-400 hover:text-[#89bcbe] transition-colors flex-shrink-0"
+                        title="Copiar número do processo"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 ) : (
-                  <div className="p-3 bg-slate-50 rounded-md text-xs text-slate-400 italic">
-                    {loadingProcesso ? 'Carregando informações do processo...' : 'Erro ao carregar processo'}
+                  <div className="p-2 bg-slate-50 rounded-md text-xs text-slate-400 italic">
+                    {loadingProcesso ? 'Carregando...' : 'Erro ao carregar processo'}
                   </div>
                 )}
               </div>

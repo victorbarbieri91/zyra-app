@@ -90,7 +90,7 @@ export default function TarefaDetailModal({
   const [loadingProcesso, setLoadingProcesso] = useState(false)
   const [updatingDate, setUpdatingDate] = useState(false)
   const [dateDropdownOpen, setDateDropdownOpen] = useState<string | null>(null)
-  const [calendarOpen, setCalendarOpen] = useState(false)
+  const [calendarField, setCalendarField] = useState<'data_inicio' | 'prazo_data_limite' | null>(null)
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>([])
   const [loadingResponsaveis, setLoadingResponsaveis] = useState(false)
 
@@ -273,6 +273,13 @@ export default function TarefaDetailModal({
     return differenceInHours(targetDate, now)
   }
 
+  // Handle custom date selection
+  const handleCustomDateSelect = async (date: Date | undefined) => {
+    if (!date || !calendarField) return
+    await handleUpdateDate(calendarField, date)
+    setCalendarField(null)
+  }
+
   // Date reschedule component
   const DateReschedule = ({
     field,
@@ -300,10 +307,11 @@ export default function TarefaDetailModal({
       await handleUpdateDate(field, newDate)
     }
 
-    const handleCustomDate = async (date: Date | undefined) => {
-      if (!date) return
-      await handleUpdateDate(field, date)
-      setCalendarOpen(false)
+    const handleOpenCustomDate = () => {
+      setDateDropdownOpen(null) // Fecha o dropdown primeiro
+      setTimeout(() => {
+        setCalendarField(field) // Abre o calendário após o dropdown fechar
+      }, 100)
     }
 
     const hoursRemaining = getUrgency(currentDate)
@@ -347,22 +355,8 @@ export default function TarefaDetailModal({
             Daqui a 7 dias
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-xs p-0">
-            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-              <PopoverTrigger asChild>
-                <button className="w-full text-left px-2 py-1.5 hover:bg-slate-100 rounded-sm">
-                  Data personalizada...
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start" side="left">
-                <CalendarComponent
-                  mode="single"
-                  selected={parseDBDate(currentDate)}
-                  onSelect={handleCustomDate}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+          <DropdownMenuItem onClick={handleOpenCustomDate} className="text-xs">
+            Data personalizada...
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -370,6 +364,7 @@ export default function TarefaDetailModal({
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl p-0 overflow-hidden border-0">
         <DialogTitle className="sr-only">Detalhes da Tarefa</DialogTitle>
@@ -703,5 +698,27 @@ export default function TarefaDetailModal({
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Calendar Dialog separado para Data Personalizada */}
+    <Dialog open={calendarField !== null} onOpenChange={(open) => !open && setCalendarField(null)}>
+      <DialogContent className="max-w-fit p-4">
+        <DialogTitle className="text-sm font-medium text-slate-700 mb-2">
+          Selecione a nova data
+        </DialogTitle>
+        <CalendarComponent
+          mode="single"
+          selected={
+            calendarField === 'data_inicio' && tarefa.data_inicio
+              ? parseDBDate(tarefa.data_inicio)
+              : calendarField === 'prazo_data_limite' && tarefa.prazo_data_limite
+              ? parseDBDate(tarefa.prazo_data_limite)
+              : undefined
+          }
+          onSelect={handleCustomDateSelect}
+          disabled={updatingDate}
+        />
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

@@ -18,10 +18,22 @@ import {
   RotateCcw,
   Repeat,
   Timer,
+  CalendarClock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { Calendar as CalendarComponent } from '@/components/ui/calendar'
+import { useState } from 'react'
+import { addDays, nextMonday } from 'date-fns'
 
 export interface EventDetailCardProps {
   id: string
@@ -55,6 +67,7 @@ export interface EventDetailCardProps {
   onComplete?: () => void
   onReopen?: () => void
   onLancarHoras?: () => void
+  onReschedule?: (newDate: Date) => void
   onProcessoClick?: (processoId: string) => void
   onConsultivoClick?: (consultivoId: string) => void
 }
@@ -146,9 +159,11 @@ export default function EventDetailCard({
   onComplete,
   onReopen,
   onLancarHoras,
+  onReschedule,
   onProcessoClick,
   onConsultivoClick,
 }: EventDetailCardProps) {
+  const [calendarOpen, setCalendarOpen] = useState(false)
   const config = tipoConfig[tipo]
 
   const podeSerConcluido = tipo === 'tarefa' && status !== 'concluida'
@@ -346,6 +361,64 @@ export default function EventDetailCard({
             )}
 
             <div className="flex items-center gap-1.5 ml-auto">
+              {/* Botão Reagendar - só para tarefas */}
+              {tipo === 'tarefa' && onReschedule && status !== 'concluida' && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 px-2 text-[10px] border-slate-200 text-slate-600 hover:bg-slate-50"
+                    >
+                      <CalendarClock className="w-3 h-3 mr-1" />
+                      Reagendar
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44" onClick={(e) => e.stopPropagation()}>
+                    <div className="px-2 py-1.5 text-[10px] font-medium text-slate-500">
+                      Reagendar para:
+                    </div>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onReschedule(addDays(new Date(), 1))
+                      }}
+                      className="text-xs"
+                    >
+                      Amanhã
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onReschedule(nextMonday(new Date()))
+                      }}
+                      className="text-xs"
+                    >
+                      Próxima segunda
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onReschedule(addDays(new Date(), 7))
+                      }}
+                      className="text-xs"
+                    >
+                      Daqui a 7 dias
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setCalendarOpen(true)
+                      }}
+                      className="text-xs"
+                    >
+                      Data personalizada...
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
               {/* Botão Lançar Horas - só aparece se tem vínculo */}
               {onLancarHoras && (processo_id || consultivo_id) && (
                 <Button
@@ -395,6 +468,27 @@ export default function EventDetailCard({
           </div>
         )}
       </CardContent>
+
+      {/* Calendar Dialog para Data Personalizada */}
+      {onReschedule && (
+        <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
+          <DialogContent className="max-w-fit p-4" onClick={(e) => e.stopPropagation()}>
+            <DialogTitle className="text-sm font-medium text-slate-700 mb-2">
+              Selecione a nova data
+            </DialogTitle>
+            <CalendarComponent
+              mode="single"
+              selected={data_inicio}
+              onSelect={(date) => {
+                if (date) {
+                  onReschedule(date)
+                  setCalendarOpen(false)
+                }
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </Card>
   )
 }

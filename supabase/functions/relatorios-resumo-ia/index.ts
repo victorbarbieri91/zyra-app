@@ -12,32 +12,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const SYSTEM_PROMPT = `Você é um assistente jurídico que cria resumos de processos para clientes leigos.
+// Prompt otimizado: curto e direto ao ponto
+const SYSTEM_PROMPT = `Você resume o STATUS ATUAL de processos judiciais para clientes leigos.
 
-O CLIENTE que vai ler NÃO É ADVOGADO. Use linguagem simples e direta.
+FORMATO OBRIGATÓRIO (1-2 frases apenas):
+"[Status atual em linguagem simples]. Desde [data da movimentação relevante]."
 
-REGRAS IMPORTANTES:
-1. Escreva 2-3 frases curtas e objetivas
-2. SEMPRE mencione algo específico sobre o processo - nunca use frases genéricas
-3. Se houver movimentações, foque nas mais importantes (decisões, audiências, prazos, sentenças)
-4. Se não houver movimentações recentes, descreva a situação atual baseada nos dados do processo (área, fase, objeto)
-5. Traduza termos jurídicos para linguagem comum
-6. Mencione datas quando relevante
+REGRAS:
+- Vá DIRETO ao ponto - o cliente já sabe qual é o processo
+- SEMPRE inclua "Desde [data]" para o cliente saber há quanto tempo está nesse status
+- Use linguagem do dia a dia, sem termos jurídicos
+- Foque apenas na movimentação mais recente e relevante
 
-EXEMPLOS DE TRADUÇÃO:
-- "Sentença de procedência parcial" -> "O juiz decidiu parcialmente a favor"
-- "Audiência de conciliação designada" -> "Audiência de tentativa de acordo marcada"
-- "Recurso de apelação interposto" -> "Foi apresentado recurso contra a decisão"
-- "Conclusos para despacho" -> "Aguardando análise do juiz"
-- "Citação realizada" -> "A outra parte foi oficialmente comunicada"
-- "Trânsito em julgado" -> "Decisão final sem mais recursos"
-- "Despacho de mero expediente" -> (ignorar se não for relevante)
-- "Juntada de petição" -> (mencionar apenas se for relevante o conteúdo)
-- "Conclusos para sentença" -> "Aguardando decisão final do juiz"
-- "Certidão" -> (geralmente ignorar, exceto se for certidão de trânsito)
-
-NUNCA responda com frases vagas como "processo em andamento" ou "aguardando próximos trâmites".
-Sempre seja ESPECÍFICO sobre a situação do processo baseado nas movimentações ou dados fornecidos.`
+Exemplos de saída:
+- "Aguardando o juiz analisar o pedido. Desde 15/01/2026."
+- "Audiência marcada para 20/02/2026."
+- "Aguardando localizar a outra parte para notificação. Desde 10/12/2025."
+- "O juiz decidiu a favor, aguardando cumprimento. Desde 05/01/2026."`
 
 interface MovimentacaoInput {
   id?: string
@@ -92,34 +83,19 @@ serve(async (req) => {
       })
     }
 
-    // Formatar movimentações para o prompt (últimas 5)
+    // Formatar apenas as 3 últimas movimentações (mais enxuto)
     let movimentacoesTexto = ''
     if (movimentacoes && movimentacoes.length > 0) {
       movimentacoesTexto = movimentacoes
-        .slice(0, 5)
-        .map((m, i) => {
-          const data = formatarData(m.data_movimento)
-          const tipo = m.tipo_descricao ? `[${m.tipo_descricao}]` : ''
-          return `${i + 1}. ${data} ${tipo}: ${m.descricao}`
-        })
+        .slice(0, 3)
+        .map(m => `${formatarData(m.data_movimento)}: ${m.descricao}`)
         .join('\n')
     }
 
-    // Construir prompt com contexto completo
-    const userPrompt = `Crie um resumo do status atual deste processo para enviar ao cliente:
-
-DADOS DO PROCESSO:
-- Número: ${numero_cnj}
-- Área: ${area}
-${fase ? `- Fase atual: ${fase}` : ''}
-${status ? `- Status: ${status}` : ''}
-- Cliente: ${cliente_nome} (${polo_cliente === 'ativo' ? 'Autor/Requerente' : 'Réu/Requerido'})
-${objeto_acao ? `- Objeto da ação: ${objeto_acao}` : ''}
-
-${movimentacoesTexto ? `ÚLTIMAS MOVIMENTAÇÕES (mais recentes primeiro):
-${movimentacoesTexto}` : 'Nenhuma movimentação recente registrada.'}
-
-Escreva um resumo de 2-3 frases para o cliente, explicando a situação atual do processo de forma clara e específica. ${movimentacoesTexto ? 'Foque nas movimentações mais importantes.' : 'Descreva a situação baseada na fase e área do processo.'}`
+    // Prompt simplificado - só o essencial
+    const userPrompt = movimentacoesTexto
+      ? `Movimentações recentes:\n${movimentacoesTexto}\n\nResuma o status atual em 1-2 frases com a data.`
+      : `Processo ${area?.toLowerCase() || 'judicial'} na fase ${fase || 'inicial'}. Resuma o status em 1-2 frases.`
 
     // Chamar OpenAI API (GPT-5 mini)
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -130,9 +106,8 @@ Escreva um resumo de 2-3 frases para o cliente, explicando a situação atual do
       },
       body: JSON.stringify({
         model: 'gpt-5-mini',
-        // GPT-5 mini usa reasoning tokens internamente, precisa de mais tokens
-        // para ter espaço para raciocínio + resposta final
-        max_completion_tokens: 2000,
+        // Prompt simplificado = menos raciocínio necessário
+        max_completion_tokens: 1000,
         messages: [
           {
             role: 'system',

@@ -23,7 +23,7 @@ import {
 import { format, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
-import { parseDBDate } from '@/lib/timezone'
+import { parseDBDate, formatDateTimeForDB } from '@/lib/timezone'
 import { getEscritorioAtivo } from '@/lib/supabase/escritorio-helpers'
 
 // Components
@@ -513,6 +513,26 @@ export default function AgendaPage() {
     }
   }
 
+  // Handler para reagendar tarefa
+  const handleRescheduleTask = async (taskId: string, newDate: Date) => {
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('agenda_tarefas')
+        .update({ data_inicio: formatDateTimeForDB(newDate) })
+        .eq('id', taskId)
+
+      if (error) throw error
+
+      await refreshItems()
+      toast.success('Tarefa reagendada com sucesso!')
+    } catch (error) {
+      console.error('Erro ao reagendar tarefa:', error)
+      toast.error('Erro ao reagendar tarefa')
+    }
+  }
+
   // Handler para navegar para processo
   const handleProcessoClick = (processoId: string) => {
     // Navegar para página do processo
@@ -893,6 +913,7 @@ export default function AgendaPage() {
         onCompleteTask={handleCompleteTask}
         onReopenTask={handleReopenTask}
         onLancarHoras={handleLancarHoras}
+        onRescheduleTask={handleRescheduleTask}
         onProcessoClick={handleProcessoClick}
         onConsultivoClick={handleConsultivoClick}
       />

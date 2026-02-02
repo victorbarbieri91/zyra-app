@@ -18,6 +18,7 @@ interface SidebarDinamicaProps {
   onCompleteTask?: (taskId: string) => void
   onReopenTask?: (taskId: string) => void
   onLancarHoras?: (taskId: string) => void
+  onRescheduleTask?: (taskId: string, newDate: Date) => void
   onProcessoClick?: (processoId: string) => void
   onConsultivoClick?: (consultivoId: string) => void
   className?: string
@@ -32,6 +33,7 @@ export default function SidebarDinamica({
   onCompleteTask,
   onReopenTask,
   onLancarHoras,
+  onRescheduleTask,
   onProcessoClick,
   onConsultivoClick,
   className,
@@ -152,6 +154,7 @@ export default function SidebarDinamica({
                     onComplete={() => onCompleteTask?.(evento.id)}
                     onReopen={() => onReopenTask?.(evento.id)}
                     onLancarHoras={() => onLancarHoras?.(evento.id)}
+                    onReschedule={(newDate) => onRescheduleTask?.(evento.id, newDate)}
                     onProcessoClick={onProcessoClick}
                     onConsultivoClick={onConsultivoClick}
                   />

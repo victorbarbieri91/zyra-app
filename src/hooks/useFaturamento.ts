@@ -416,17 +416,31 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
           data: { user },
         } = await supabase.auth.getUser()
 
-        const { data, error: rpcError } = await supabase.rpc('gerar_fatura_v3', {
-          p_escritorio_id: targetEscritorioId,
-          p_cliente_id: clienteId,
-          p_honorarios_ids: honorariosIds.length > 0 ? honorariosIds : null,
-          p_timesheet_ids: timesheetIds.length > 0 ? timesheetIds : null,
-          p_fechamentos_ids: fechamentosIds && fechamentosIds.length > 0 ? fechamentosIds : null,
-          p_data_emissao: new Date().toISOString().split('T')[0],
-          p_data_vencimento: dataVencimento || null,
-          p_observacoes: observacoes || null,
-          p_user_id: user?.id || null,
-        })
+        // Usar v2 quando não tem fechamentos de pasta, v3 quando tem
+        const hasFechamentos = fechamentosIds && fechamentosIds.length > 0
+
+        const { data, error: rpcError } = hasFechamentos
+          ? await supabase.rpc('gerar_fatura_v3', {
+              p_escritorio_id: targetEscritorioId,
+              p_cliente_id: clienteId,
+              p_honorarios_ids: honorariosIds.length > 0 ? honorariosIds : null,
+              p_timesheet_ids: timesheetIds.length > 0 ? timesheetIds : null,
+              p_fechamentos_ids: fechamentosIds,
+              p_data_emissao: new Date().toISOString().split('T')[0],
+              p_data_vencimento: dataVencimento || null,
+              p_observacoes: observacoes || null,
+              p_user_id: user?.id || null,
+            })
+          : await supabase.rpc('gerar_fatura_v2', {
+              p_escritorio_id: targetEscritorioId,
+              p_cliente_id: clienteId,
+              p_honorarios_ids: honorariosIds.length > 0 ? honorariosIds : null,
+              p_timesheet_ids: timesheetIds.length > 0 ? timesheetIds : null,
+              p_data_emissao: new Date().toISOString().split('T')[0],
+              p_data_vencimento: dataVencimento || null,
+              p_observacoes: observacoes || null,
+              p_user_id: user?.id || null,
+            })
 
         if (rpcError) throw rpcError
 

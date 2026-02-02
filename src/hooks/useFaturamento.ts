@@ -399,7 +399,8 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
       observacoes?: string,
       dataVencimento?: string,
       escritorioIdOverride?: string,
-      fechamentosIds?: string[]
+      fechamentosIds?: string[],
+      despesasIds?: string[]
     ): Promise<string | null> => {
       const targetEscritorioId = escritorioIdOverride || escritorioIdPrincipal
       if (!targetEscritorioId) {
@@ -416,13 +417,14 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
           data: { user },
         } = await supabase.auth.getUser()
 
-        // Usar Edge Function para gerar fatura (suporta honorários, timesheet e fechamentos)
+        // Usar Edge Function para gerar fatura (suporta honorários, timesheet, despesas e fechamentos)
         const { data: response, error: fnError } = await supabase.functions.invoke('gerar-fatura', {
           body: {
             p_escritorio_id: targetEscritorioId,
             p_cliente_id: clienteId,
             p_honorarios_ids: honorariosIds.length > 0 ? honorariosIds : null,
             p_timesheet_ids: timesheetIds.length > 0 ? timesheetIds : null,
+            p_despesas_ids: despesasIds && despesasIds.length > 0 ? despesasIds : null,
             p_fechamentos_ids: fechamentosIds && fechamentosIds.length > 0 ? fechamentosIds : null,
             p_data_emissao: new Date().toISOString().split('T')[0],
             p_data_vencimento: dataVencimento || null,

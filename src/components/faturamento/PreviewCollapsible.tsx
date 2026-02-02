@@ -155,35 +155,35 @@ export function PreviewCollapsible({
 
       {/* Content */}
       {!collapsed && (
-        <CardContent className="pt-4 pb-3">
+        <CardContent className="pt-3 pb-2 px-3">
           {/* Cabeçalho */}
-          <div className="mb-4">
-            <h3 className="text-base font-bold text-[#34495e]">{clienteNome}</h3>
-            <p className="text-xs text-slate-600 mt-1">
+          <div className="mb-2.5">
+            <h3 className="text-xs font-semibold text-[#34495e] leading-tight">{clienteNome}</h3>
+            <p className="text-[10px] text-slate-500 mt-0.5">
               Fatura: FAT-2025-XXX • Emissão: {new Date().toLocaleDateString('pt-BR')}
             </p>
-            <p className="text-xs text-emerald-600 mt-1 font-medium">
+            <p className="text-[10px] text-emerald-600 mt-0.5 font-medium">
               {totalSelecionados} {totalSelecionados === 1 ? 'item selecionado' : 'itens selecionados'}
             </p>
           </div>
 
           {/* Tabs */}
-          <Tabs defaultValue={getDefaultTab()} className="mb-4">
+          <Tabs defaultValue={getDefaultTab()} className="mb-2.5">
             {/* Mostrar TabsList apenas se houver mais de um tipo */}
             {qtdTabs > 1 && (
-              <TabsList className={`grid w-full grid-cols-${qtdTabs}`}>
+              <TabsList className={`grid w-full grid-cols-${qtdTabs} h-7`}>
                 {honorarios.length > 0 && (
-                  <TabsTrigger value="honorarios" className="text-xs">
+                  <TabsTrigger value="honorarios" className="text-[10px] py-1">
                     Honorários ({selectedHonorarios.length}/{honorarios.length})
                   </TabsTrigger>
                 )}
                 {timesheet.length > 0 && (
-                  <TabsTrigger value="horas" className="text-xs">
+                  <TabsTrigger value="horas" className="text-[10px] py-1">
                     Horas ({selectedTimesheet.length}/{timesheet.length})
                   </TabsTrigger>
                 )}
                 {pastaLancamentos.length > 0 && (
-                  <TabsTrigger value="pastas" className="text-xs">
+                  <TabsTrigger value="pastas" className="text-[10px] py-1">
                     Pastas ({selectedPastas.length}/{pastaLancamentos.length})
                   </TabsTrigger>
                 )}
@@ -191,16 +191,16 @@ export function PreviewCollapsible({
             )}
 
             {/* Tab Honorários */}
-            <TabsContent value="honorarios" className="mt-3">
+            <TabsContent value="honorarios" className="mt-2">
               {honorarios.length === 0 ? (
-                <div className="py-8 text-center">
-                  <p className="text-xs text-slate-500">
+                <div className="py-6 text-center">
+                  <p className="text-[10px] text-slate-500">
                     Nenhum honorário disponível
                   </p>
                 </div>
               ) : (
-                <ScrollArea className="h-[300px] pr-3">
-                  <div className="space-y-2">
+                <ScrollArea className="h-[260px] pr-2">
+                  <div className="space-y-1.5">
                     {honorarios.map((honorario) => (
                       <LancamentoSelectableItem
                         key={honorario.lancamento_id}
@@ -215,16 +215,16 @@ export function PreviewCollapsible({
             </TabsContent>
 
             {/* Tab Horas */}
-            <TabsContent value="horas" className="mt-3">
+            <TabsContent value="horas" className="mt-2">
               {timesheet.length === 0 ? (
-                <div className="py-8 text-center">
-                  <p className="text-xs text-slate-500">
+                <div className="py-6 text-center">
+                  <p className="text-[10px] text-slate-500">
                     Nenhuma hora disponível
                   </p>
                 </div>
               ) : (
-                <ScrollArea className="h-[300px] pr-3">
-                  <div className="space-y-2">
+                <ScrollArea className="h-[260px] pr-2">
+                  <div className="space-y-1.5">
                     {timesheet.map((hora) => (
                       <LancamentoSelectableItem
                         key={hora.lancamento_id}
@@ -239,63 +239,63 @@ export function PreviewCollapsible({
             </TabsContent>
 
             {/* Tab Pastas (Fechamento Mensal) */}
-            <TabsContent value="pastas" className="mt-3">
+            <TabsContent value="pastas" className="mt-2">
               {pastaLancamentos.length === 0 ? (
-                <div className="py-8 text-center">
-                  <p className="text-xs text-slate-500">
+                <div className="py-6 text-center">
+                  <p className="text-[10px] text-slate-500">
                     Nenhum fechamento de pasta disponível
                   </p>
                 </div>
               ) : (
-                <ScrollArea className="h-[300px] pr-3">
-                  <div className="space-y-2">
+                <ScrollArea className="h-[260px] pr-2">
+                  <div className="space-y-1.5">
                     {pastaLancamentos.map((pasta) => (
                       <div
                         key={pasta.lancamento_id}
-                        className={`p-3 rounded-lg border transition-colors cursor-pointer ${
+                        className={`p-2 rounded-md border transition-colors cursor-pointer ${
                           selectedIds.includes(pasta.lancamento_id)
                             ? 'border-[#1E3A8A] bg-[#1E3A8A]/5'
                             : 'border-slate-200 hover:border-slate-300 bg-white'
                         }`}
                         onClick={() => onToggleLancamento(pasta.lancamento_id)}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2">
+                        <div className="flex items-start justify-between gap-1.5">
+                          <div className="flex items-center gap-1.5">
                             <input
                               type="checkbox"
                               checked={selectedIds.includes(pasta.lancamento_id)}
                               onChange={() => onToggleLancamento(pasta.lancamento_id)}
                               onClick={(e) => e.stopPropagation()}
-                              className="rounded border-slate-300 text-[#1E3A8A] focus:ring-[#1E3A8A]"
+                              className="rounded border-slate-300 text-[#1E3A8A] focus:ring-[#1E3A8A] h-3.5 w-3.5"
                             />
-                            <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center">
-                              <FolderOpen className="w-3.5 h-3.5 text-amber-600" />
+                            <div className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center">
+                              <FolderOpen className="w-2.5 h-2.5 text-amber-600" />
                             </div>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-800">
+                            <p className="text-[11px] font-medium text-slate-800">
                               Fechamento Mensal
                             </p>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-[10px] text-slate-500">
                               {pasta.competencia ? formatCompetencia(pasta.competencia) : 'Competência não definida'}
                             </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-[10px] bg-slate-50">
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <Badge variant="outline" className="text-[9px] bg-slate-50 px-1 py-0 h-4">
                                 {pasta.qtd_processos || 0} processos
                               </Badge>
-                              <Badge variant="outline" className="text-[10px] bg-slate-50">
+                              <Badge variant="outline" className="text-[9px] bg-slate-50 px-1 py-0 h-4">
                                 {formatCurrency(pasta.valor_unitario || 0)}/pasta
                               </Badge>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-semibold text-emerald-600">
+                            <p className="text-[11px] font-semibold text-emerald-600">
                               {formatCurrency(pasta.valor || 0)}
                             </p>
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-[10px] text-[#1E3A8A] h-6 px-2 mt-1"
+                              className="text-[9px] text-[#1E3A8A] h-5 px-1.5 mt-0.5"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleVerProcessos(pasta)
@@ -315,10 +315,10 @@ export function PreviewCollapsible({
 
           {/* Total */}
           {totalSelecionados > 0 && (
-            <div className="pt-3 border-t border-slate-200 mb-4">
+            <div className="pt-2 border-t border-slate-200 mb-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-700">Valor Total:</span>
-                <span className="text-xl font-bold text-emerald-600">
+                <span className="text-xs font-medium text-slate-600">Valor Total:</span>
+                <span className="text-base font-bold text-emerald-600">
                   {formatCurrency(calcularTotal())}
                 </span>
               </div>
@@ -326,19 +326,19 @@ export function PreviewCollapsible({
           )}
 
           {/* Ações */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Button
               onClick={onGerarFatura}
               disabled={totalSelecionados === 0}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed h-8 text-xs"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
               Gerar Fatura ({totalSelecionados}{' '}
               {totalSelecionados === 1 ? 'item' : 'itens'})
             </Button>
             <Button
               variant="outline"
-              className="w-full border-slate-200"
+              className="w-full border-slate-200 h-7 text-xs"
               onClick={onCancelar}
             >
               Cancelar

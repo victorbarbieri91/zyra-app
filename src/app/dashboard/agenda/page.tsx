@@ -924,7 +924,9 @@ export default function AgendaPage() {
           open={tarefaDetailOpen}
           onOpenChange={(open) => {
             setTarefaDetailOpen(open)
-            if (!open) {
+            // Só limpa a tarefa selecionada se o modal de edição NÃO estiver aberto
+            // (evita limpar quando estamos transitando para edição)
+            if (!open && !tarefaModalOpen) {
               setTarefaSelecionada(null)
             }
           }}

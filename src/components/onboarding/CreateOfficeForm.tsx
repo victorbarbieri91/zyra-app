@@ -1,26 +1,43 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Building2, ChevronDown, ChevronUp, Phone, Mail, FileText, Loader2 } from 'lucide-react'
 import { colors } from '@/lib/design-system'
-import { CreateEscritorioData } from '@/hooks/useOnboarding'
+import { CreateEscritorioData, EscritorioData } from '@/hooks/useOnboarding'
 
 interface CreateOfficeFormProps {
   onSubmit: (data: CreateEscritorioData) => Promise<{ success: boolean; error?: string }>
   isSubmitting?: boolean
+  initialData?: EscritorioData | null
 }
 
-export function CreateOfficeForm({ onSubmit, isSubmitting = false }: CreateOfficeFormProps) {
+export function CreateOfficeForm({ onSubmit, isSubmitting = false, initialData }: CreateOfficeFormProps) {
   const [nome, setNome] = useState('')
   const [showOptional, setShowOptional] = useState(false)
   const [cnpj, setCnpj] = useState('')
   const [telefone, setTelefone] = useState('')
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
+
+  const isEditing = !!initialData?.id
+
+  // Preencher com dados existentes
+  useEffect(() => {
+    if (initialData) {
+      setNome(initialData.nome || '')
+      setCnpj(initialData.cnpj || '')
+      setTelefone(initialData.telefone || '')
+      setEmail(initialData.email || '')
+      // Se tem dados opcionais, mostrar a seção
+      if (initialData.cnpj || initialData.telefone || initialData.email) {
+        setShowOptional(true)
+      }
+    }
+  }, [initialData])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -77,10 +94,12 @@ export function CreateOfficeForm({ onSubmit, isSubmitting = false }: CreateOffic
       {/* Header */}
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-semibold" style={{ color: colors.primary.darkest }}>
-          Crie seu Escritório
+          {isEditing ? 'Edite seu Escritório' : 'Crie seu Escritório'}
         </h2>
         <p className="text-sm text-slate-600">
-          Vamos começar criando seu escritório no Zyra Legal
+          {isEditing
+            ? 'Revise os dados do seu escritório antes de continuar'
+            : 'Vamos começar criando seu escritório no Zyra Legal'}
         </p>
       </div>
 
@@ -221,10 +240,10 @@ export function CreateOfficeForm({ onSubmit, isSubmitting = false }: CreateOffic
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Criando escritório...
+                {isEditing ? 'Salvando...' : 'Criando escritório...'}
               </>
             ) : (
-              'Criar e Continuar'
+              isEditing ? 'Salvar e Continuar' : 'Criar e Continuar'
             )}
           </Button>
         </Card>

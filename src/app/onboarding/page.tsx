@@ -14,6 +14,7 @@ export default function OnboardingPage() {
   const router = useRouter()
   const {
     progress,
+    escritorioData,
     loading,
     error,
     createEscritorio,
@@ -209,6 +210,7 @@ export default function OnboardingPage() {
           <CreateOfficeForm
             onSubmit={handleCreateEscritorio}
             isSubmitting={isSubmitting}
+            initialData={escritorioData}
           />
         )}
 

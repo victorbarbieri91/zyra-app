@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import {
@@ -76,6 +76,8 @@ export default function AgendaPage() {
   const [tarefaParaConcluir, setTarefaParaConcluir] = useState<Tarefa | null>(null)
   const [confirmConcluirSemHoras, setConfirmConcluirSemHoras] = useState(false)
   const [horasRegistradasComSucesso, setHorasRegistradasComSucesso] = useState(false)
+  // Ref para leitura síncrona do sucesso (evita race condition com state)
+  const horasRegistradasRef = useRef(false)
   // Flag para diferenciar: lançamento de horas avulso vs conclusão de tarefa
   const [modoLancamentoAvulso, setModoLancamentoAvulso] = useState(false)
 
@@ -380,6 +382,7 @@ export default function AgendaPage() {
     setModoLancamentoAvulso(true)
     setTarefaParaConcluir(tarefa)
     setHorasRegistradasComSucesso(false)
+    horasRegistradasRef.current = false
     setTimesheetModalOpen(true)
   }
 
@@ -423,6 +426,7 @@ export default function AgendaPage() {
         setModoLancamentoAvulso(false) // Modo conclusão - vai concluir após registrar horas
         setTarefaParaConcluir(tarefa)
         setHorasRegistradasComSucesso(false)
+        horasRegistradasRef.current = false
         setTimesheetModalOpen(true)
       } else {
         // Se não tem vínculo, concluir diretamente
@@ -438,38 +442,54 @@ export default function AgendaPage() {
 
   // Handler quando o modal de horas é fechado (com sucesso)
   const handleTimesheetSuccess = async () => {
+    // Atualiza ref imediatamente (leitura síncrona) e state (para re-renders)
+    horasRegistradasRef.current = true
     setHorasRegistradasComSucesso(true)
 
     if (modoLancamentoAvulso) {
       // Modo avulso: apenas registrar horas, não concluir
-      toast.success('Horas registradas com sucesso!')
+      // Reabrir o modal de detalhe da tarefa para continuar trabalhando
+      if (tarefaParaConcluir) {
+        // Garantir que tarefaSelecionada está setada antes de reabrir
+        setTarefaSelecionada(tarefaParaConcluir as Tarefa)
+        setTarefaDetailOpen(true)
+      }
       setTarefaParaConcluir(null)
       setModoLancamentoAvulso(false)
-      setTimesheetModalOpen(false)
     } else if (tarefaParaConcluir) {
       // Modo conclusão: registrar horas E concluir
       try {
         await concluirTarefa(tarefaParaConcluir.id)
         await refreshItems()
-        toast.success('Horas registradas e tarefa concluída!')
+        toast.success('Tarefa concluída!')
       } catch (error) {
         console.error('Erro ao concluir tarefa após timesheet:', error)
         toast.error('Horas registradas, mas erro ao concluir tarefa')
       }
       setTarefaParaConcluir(null)
-      setTimesheetModalOpen(false)
     }
+    // Nota: O TimesheetModal fecha o modal via onOpenChange(false) após onSuccess
   }
 
   // Handler quando o modal de horas é fechado sem registrar
   const handleTimesheetClose = (open: boolean) => {
     if (!open) {
-      if (modoLancamentoAvulso) {
-        // Modo avulso: apenas fechar, sem perguntar
+      if (modoLancamentoAvulso && !horasRegistradasRef.current) {
+        // Modo avulso: usuário cancelou, reabrir modal de detalhe
+        if (tarefaParaConcluir) {
+          setTarefaSelecionada(tarefaParaConcluir as Tarefa)
+          setTarefaDetailOpen(true)
+        }
         setTarefaParaConcluir(null)
         setModoLancamentoAvulso(false)
-      } else if (tarefaParaConcluir && !horasRegistradasComSucesso) {
+      } else if (modoLancamentoAvulso && horasRegistradasRef.current) {
+        // Modo avulso com sucesso: handleTimesheetSuccess já reabriu o modal
+        // Apenas limpar estado residual
+        setTarefaParaConcluir(null)
+        setModoLancamentoAvulso(false)
+      } else if (tarefaParaConcluir && !horasRegistradasRef.current) {
         // Modo conclusão: modal foi fechado sem registrar horas - perguntar se quer concluir mesmo assim
+        // Usa ref para leitura síncrona (evita race condition com state)
         setConfirmConcluirSemHoras(true)
       } else {
         // Já registrou com sucesso, apenas limpar estado

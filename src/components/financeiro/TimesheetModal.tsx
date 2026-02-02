@@ -660,8 +660,11 @@ export default function TimesheetModal({
         toast.success('Horas registradas com sucesso!')
       }
 
-      onOpenChange(false)
+      // IMPORTANTE: Chamar onSuccess ANTES de fechar o modal
+      // para que o handler possa atualizar o ref de sucesso
+      // antes do onOpenChange disparar a verificação
       onSuccess?.()
+      onOpenChange(false)
     } catch (err: any) {
       console.error('Erro ao registrar horas:', err)
       toast.error(err?.message || 'Erro ao registrar horas')

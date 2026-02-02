@@ -13,6 +13,23 @@ export interface OnboardingProgress {
   has_escritorio: boolean
 }
 
+export interface EscritorioData {
+  id?: string
+  nome: string
+  cnpj?: string
+  telefone?: string
+  email?: string
+  endereco?: {
+    logradouro?: string
+    numero?: string
+    complemento?: string
+    bairro?: string
+    cidade?: string
+    estado?: string
+    cep?: string
+  }
+}
+
 export interface CreateEscritorioData {
   nome: string
   cnpj?: string
@@ -38,6 +55,7 @@ export interface UpdateProfileData {
 
 export function useOnboarding() {
   const [progress, setProgress] = useState<OnboardingProgress | null>(null)
+  const [escritorioData, setEscritorioData] = useState<EscritorioData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
@@ -62,6 +80,25 @@ export function useOnboarding() {
 
       if (profileError) throw profileError
 
+      // Se tem escritório, buscar os dados dele
+      if (profile.escritorio_id) {
+        const { data: escritorio, error: escritorioError } = await supabase
+          .from('escritorios')
+          .select('id, nome, cnpj, telefone, email')
+          .eq('id', profile.escritorio_id)
+          .single()
+
+        if (!escritorioError && escritorio) {
+          setEscritorioData({
+            id: escritorio.id,
+            nome: escritorio.nome,
+            cnpj: escritorio.cnpj || undefined,
+            telefone: escritorio.telefone || undefined,
+            email: escritorio.email || undefined,
+          })
+        }
+      }
+
       setProgress({
         primeiro_acesso: profile.primeiro_acesso ?? true,
         onboarding_completo: profile.onboarding_completo ?? false,
@@ -77,31 +114,71 @@ export function useOnboarding() {
     }
   }, [supabase])
 
-  // Criar escritório (Step 1)
+  // Criar ou atualizar escritório (Step 1)
   const createEscritorio = async (data: CreateEscritorioData): Promise<{ success: boolean; escritorio_id?: string; error?: string }> => {
     try {
       setError(null)
 
-      const { data: result, error: rpcError } = await supabase.rpc('create_escritorio_onboarding', {
-        p_nome: data.nome,
-        p_cnpj: data.cnpj || null,
-        p_telefone: data.telefone || null,
-        p_email: data.email || null,
-        p_endereco: data.endereco ? JSON.stringify(data.endereco) : null,
-      })
-
-      if (rpcError) throw rpcError
-
-      if (result && result.success) {
-        // Recarregar progresso
-        await loadProgress()
-        return { success: true, escritorio_id: result.escritorio_id }
-      } else {
-        throw new Error(result?.error || 'Erro ao criar escritório')
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('Usuário não autenticado')
       }
+
+      // Se já tem escritório, faz UPDATE
+      if (progress?.escritorio_id) {
+        const { error: updateError } = await supabase
+          .from('escritorios')
+          .update({
+            nome: data.nome,
+            cnpj: data.cnpj || null,
+            telefone: data.telefone || null,
+            email: data.email || null,
+          })
+          .eq('id', progress.escritorio_id)
+
+        if (updateError) throw updateError
+
+        // Atualizar etapa do onboarding
+        await supabase
+          .from('profiles')
+          .update({ onboarding_etapa_atual: 'perfil' })
+          .eq('id', user.id)
+
+        await loadProgress()
+        return { success: true, escritorio_id: progress.escritorio_id }
+      }
+
+      // Se não tem escritório, cria novo
+      const { data: escritorio, error: insertError } = await supabase
+        .from('escritorios')
+        .insert({
+          nome: data.nome,
+          cnpj: data.cnpj || null,
+          telefone: data.telefone || null,
+          email: data.email || null,
+        })
+        .select('id')
+        .single()
+
+      if (insertError) throw insertError
+
+      // Vincular usuário ao escritório e atualizar etapa
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          escritorio_id: escritorio.id,
+          onboarding_etapa_atual: 'perfil',
+        })
+        .eq('id', user.id)
+
+      if (profileError) throw profileError
+
+      // Recarregar progresso
+      await loadProgress()
+      return { success: true, escritorio_id: escritorio.id }
     } catch (err: any) {
       setError(err.message)
-      console.error('Erro ao criar escritório:', err)
+      console.error('Erro ao criar/atualizar escritório:', err)
       return { success: false, error: err.message }
     }
   }
@@ -111,21 +188,25 @@ export function useOnboarding() {
     try {
       setError(null)
 
-      const { data: result, error: rpcError } = await supabase.rpc('complete_profile_onboarding', {
-        p_telefone: data.telefone || null,
-        p_oab_numero: data.oab_numero || null,
-        p_oab_uf: data.oab_uf || null,
-        p_avatar_url: data.avatar_url || null,
-      })
-
-      if (rpcError) throw rpcError
-
-      if (result && result.success) {
-        await loadProgress()
-        return { success: true }
-      } else {
-        throw new Error(result?.error || 'Erro ao atualizar perfil')
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('Usuário não autenticado')
       }
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          telefone: data.telefone || null,
+          oab_numero: data.oab_numero || null,
+          oab_uf: data.oab_uf || null,
+          avatar_url: data.avatar_url || null,
+        })
+        .eq('id', user.id)
+
+      if (updateError) throw updateError
+
+      await loadProgress()
+      return { success: true }
     } catch (err: any) {
       setError(err.message)
       console.error('Erro ao completar perfil:', err)
@@ -138,16 +219,24 @@ export function useOnboarding() {
     try {
       setError(null)
 
-      const { data: result, error: rpcError } = await supabase.rpc('finish_onboarding')
-
-      if (rpcError) throw rpcError
-
-      if (result && result.success) {
-        await loadProgress()
-        return { success: true }
-      } else {
-        throw new Error(result?.error || 'Erro ao finalizar onboarding')
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('Usuário não autenticado')
       }
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          onboarding_completo: true,
+          primeiro_acesso: false,
+          onboarding_etapa_atual: 'concluido',
+        })
+        .eq('id', user.id)
+
+      if (updateError) throw updateError
+
+      await loadProgress()
+      return { success: true }
     } catch (err: any) {
       setError(err.message)
       console.error('Erro ao finalizar onboarding:', err)
@@ -174,6 +263,7 @@ export function useOnboarding() {
 
   return {
     progress,
+    escritorioData,
     loading,
     error,
     loadProgress,

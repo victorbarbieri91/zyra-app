@@ -11,8 +11,7 @@ import type {
   EscavadorErro,
   ResultadoConsultaEscavador,
   ResultadoMonitoramento,
-  ResultadoSolicitarAtualizacao,
-  FrequenciaMonitoramento
+  ResultadoSolicitarAtualizacao
 } from './types'
 import { normalizarProcessoEscavador } from './normalizer'
 
@@ -292,6 +291,14 @@ export async function buscarMovimentacoes(
   erro?: string
 }> {
   try {
+    const headers = getHeaders()
+    if (!headers) {
+      return {
+        sucesso: false,
+        erro: 'Integracao com Escavador nao configurada (ESCAVADOR_API_TOKEN)'
+      }
+    }
+
     const numeroLimpo = numeroCNJ.replace(/[.-]/g, '')
 
     console.log(`[Escavador] Buscando movimentacoes para: ${numeroCNJ}`)
@@ -300,7 +307,7 @@ export async function buscarMovimentacoes(
       `${ESCAVADOR_BASE_URL}/processos/numero_cnj/${numeroLimpo}/movimentacoes?page=${pagina}&per_page=${limite}`,
       {
         method: 'GET',
-        headers: getHeaders()
+        headers
       }
     )
 
@@ -364,6 +371,14 @@ export async function solicitarAtualizacao(
   numeroCNJ: string
 ): Promise<ResultadoSolicitarAtualizacao> {
   try {
+    const headers = getHeaders()
+    if (!headers) {
+      return {
+        sucesso: false,
+        erro: 'Integracao com Escavador nao configurada (ESCAVADOR_API_TOKEN)'
+      }
+    }
+
     const numeroLimpo = numeroCNJ.replace(/[.-]/g, '')
 
     console.log('[Escavador] Solicitando atualizacao para:', numeroCNJ)
@@ -372,7 +387,7 @@ export async function solicitarAtualizacao(
       `${ESCAVADOR_BASE_URL}/processos/numero_cnj/${numeroLimpo}/solicitar-atualizacao`,
       {
         method: 'POST',
-        headers: getHeaders()
+        headers
       }
     )
 
@@ -439,13 +454,21 @@ export async function verificarStatusAtualizacao(
   erro?: string
 }> {
   try {
+    const headers = getHeaders()
+    if (!headers) {
+      return {
+        sucesso: false,
+        erro: 'Integracao com Escavador nao configurada (ESCAVADOR_API_TOKEN)'
+      }
+    }
+
     const numeroLimpo = numeroCNJ.replace(/[.-]/g, '')
 
     const response = await fetch(
       `${ESCAVADOR_BASE_URL}/processos/numero_cnj/${numeroLimpo}/status-atualizacao`,
       {
         method: 'GET',
-        headers: getHeaders()
+        headers
       }
     )
 
@@ -486,6 +509,14 @@ export async function criarMonitoramento(
   request: EscavadorCriarMonitoramentoRequest
 ): Promise<ResultadoMonitoramento> {
   try {
+    const headers = getHeaders()
+    if (!headers) {
+      return {
+        sucesso: false,
+        erro: 'Integracao com Escavador nao configurada (ESCAVADOR_API_TOKEN)'
+      }
+    }
+
     // Define frequencia padrao como SEMANAL se nao especificada
     const requestComFrequencia = {
       ...request,
@@ -498,7 +529,7 @@ export async function criarMonitoramento(
       `${ESCAVADOR_BASE_URL}/monitoramentos/processos`,
       {
         method: 'POST',
-        headers: getHeaders(),
+        headers,
         body: JSON.stringify(requestComFrequencia)
       }
     )
@@ -551,11 +582,19 @@ export async function listarMonitoramentos(
   erro?: string
 }> {
   try {
+    const headers = getHeaders()
+    if (!headers) {
+      return {
+        sucesso: false,
+        erro: 'Integracao com Escavador nao configurada (ESCAVADOR_API_TOKEN)'
+      }
+    }
+
     const response = await fetch(
       `${ESCAVADOR_BASE_URL}/monitoramentos/processos?page=${pagina}&per_page=${limite}`,
       {
         method: 'GET',
-        headers: getHeaders()
+        headers
       }
     )
 
@@ -591,13 +630,21 @@ export async function removerMonitoramento(
   monitoramentoId: number
 ): Promise<ResultadoMonitoramento> {
   try {
+    const headers = getHeaders()
+    if (!headers) {
+      return {
+        sucesso: false,
+        erro: 'Integracao com Escavador nao configurada (ESCAVADOR_API_TOKEN)'
+      }
+    }
+
     console.log('[Escavador] Removendo monitoramento:', monitoramentoId)
 
     const response = await fetch(
       `${ESCAVADOR_BASE_URL}/monitoramentos/processos/${monitoramentoId}`,
       {
         method: 'DELETE',
-        headers: getHeaders()
+        headers
       }
     )
 
@@ -634,11 +681,19 @@ export async function verificarStatusMonitoramento(
   erro?: string
 }> {
   try {
+    const headers = getHeaders()
+    if (!headers) {
+      return {
+        sucesso: false,
+        erro: 'Integracao com Escavador nao configurada (ESCAVADOR_API_TOKEN)'
+      }
+    }
+
     const response = await fetch(
       `${ESCAVADOR_BASE_URL}/monitoramentos/processos/${monitoramentoId}`,
       {
         method: 'GET',
-        headers: getHeaders()
+        headers
       }
     )
 

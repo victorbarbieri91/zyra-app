@@ -16,6 +16,7 @@ export interface AgendaItem {
   subtipo: string // Tipo específico (prazo_processual, inicial, compromisso, etc)
   responsavel_id?: string
   responsavel_nome?: string
+  todos_responsaveis?: string  // Todos os responsáveis agregados (separados por vírgula)
   prazo_data_limite?: string
 
   // Planejamento de Horário (usado apenas para tarefas na visualização dia)

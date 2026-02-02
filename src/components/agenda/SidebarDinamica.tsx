@@ -138,6 +138,7 @@ export default function SidebarDinamica({
                     dia_inteiro={evento.dia_inteiro}
                     local={evento.local}
                     responsavel_nome={evento.responsavel_nome}
+                    todos_responsaveis={evento.todos_responsaveis}
                     status={evento.status}
                     prioridade={evento.prioridade}
                     processo_numero={evento.processo_numero}

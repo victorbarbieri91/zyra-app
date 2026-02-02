@@ -46,6 +46,7 @@ export interface EventDetailCardProps {
   dia_inteiro?: boolean
   local?: string
   responsavel_nome?: string
+  todos_responsaveis?: string  // Todos os responsáveis (separados por vírgula)
   status: string
   prioridade?: 'alta' | 'media' | 'baixa'
   recorrencia_id?: string | null
@@ -144,6 +145,7 @@ export default function EventDetailCard({
   dia_inteiro,
   local,
   responsavel_nome,
+  todos_responsaveis,
   status,
   prioridade,
   recorrencia_id,
@@ -299,11 +301,13 @@ export default function EventDetailCard({
             </div>
           )}
 
-          {/* Responsável */}
-          {responsavel_nome && (
+          {/* Responsável(is) */}
+          {(todos_responsaveis || responsavel_nome) && (
             <div className="flex items-center gap-1.5">
               <User className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
-              <span className="text-[11px] text-slate-600 truncate">{responsavel_nome}</span>
+              <span className="text-[11px] text-slate-600 truncate">
+                {todos_responsaveis || responsavel_nome}
+              </span>
             </div>
           )}
 

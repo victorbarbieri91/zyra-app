@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { InteracaoTimeline } from '@/components/crm/InteracaoTimeline'
 import { InteracaoModal } from '@/components/crm/InteracaoModal'
 import { KanbanBoard } from '@/components/crm/KanbanBoard'
+import { OportunidadeModal } from '@/components/crm/OportunidadeModal'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { InteracaoJSONB } from '@/types/crm'
@@ -48,6 +49,7 @@ export default function FunilPage() {
   const [todasInteracoes, setTodasInteracoes] = useState<InteracaoJSONB[]>([])
   const [loading, setLoading] = useState(true)
   const [interacaoModalOpen, setInteracaoModalOpen] = useState(false)
+  const [oportunidadeModalOpen, setOportunidadeModalOpen] = useState(false)
   const [interacaoContext, setInteracaoContext] = useState<{
     oportunidadeId?: string
     pessoaId?: string
@@ -217,6 +219,7 @@ export default function FunilPage() {
                   <Button
                     size="sm"
                     className="bg-gradient-to-r from-[#34495e] to-[#46627f]"
+                    onClick={() => setOportunidadeModalOpen(true)}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Nova Oportunidade
@@ -251,6 +254,7 @@ export default function FunilPage() {
                 <Button
                   size="sm"
                   className="bg-gradient-to-r from-[#34495e] to-[#46627f]"
+                  onClick={() => setOportunidadeModalOpen(true)}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Criar Primeira Oportunidade
@@ -330,6 +334,13 @@ export default function FunilPage() {
         pessoaId={interacaoContext.pessoaId}
         pessoaNome={interacaoContext.pessoaNome}
         oportunidadeId={interacaoContext.oportunidadeId}
+        onSuccess={loadOportunidades}
+      />
+
+      {/* Modal de Nova Oportunidade */}
+      <OportunidadeModal
+        open={oportunidadeModalOpen}
+        onOpenChange={setOportunidadeModalOpen}
         onSuccess={loadOportunidades}
       />
     </div>

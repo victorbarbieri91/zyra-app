@@ -26,10 +26,12 @@ import {
   Loader2,
   Search,
   AlertTriangle,
+  Plus,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { PessoaWizardModal } from '@/components/crm/PessoaWizardModal'
 
 interface ConsultaWizardModalProps {
   open: boolean
@@ -105,6 +107,9 @@ export function ConsultaWizardModal({
   const [currentEscritorioId, setCurrentEscritorioId] = useState<string | null>(escritorioId || null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
+  // Modal de criar cliente
+  const [pessoaModalOpen, setPessoaModalOpen] = useState(false)
+
   // Load current user data
   useEffect(() => {
     const loadUserData = async () => {
@@ -129,37 +134,38 @@ export function ConsultaWizardModal({
     }
   }, [open, currentEscritorioId])
 
+  // Funcao para carregar clientes (reutilizavel)
+  const loadClientes = async () => {
+    if (!currentEscritorioId || !open) return
+
+    setLoadingClientes(true)
+    try {
+      let query = supabase
+        .from('crm_pessoas')
+        .select('id, nome_completo')
+        .eq('escritorio_id', currentEscritorioId)
+        .eq('status', 'ativo')
+        .in('tipo_cadastro', ['cliente', 'prospecto'])
+        .order('nome_completo')
+        .limit(50)
+
+      if (clienteSearch) {
+        query = query.ilike('nome_completo', `%${clienteSearch}%`)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+      setClientes(data || [])
+    } catch (err) {
+      console.error('Erro ao carregar clientes:', err)
+    } finally {
+      setLoadingClientes(false)
+    }
+  }
+
   // Load clientes
   useEffect(() => {
-    const loadClientes = async () => {
-      if (!currentEscritorioId || !open) return
-
-      setLoadingClientes(true)
-      try {
-        let query = supabase
-          .from('crm_pessoas')
-          .select('id, nome_completo')
-          .eq('escritorio_id', currentEscritorioId)
-          .eq('status', 'ativo')
-          .in('tipo_cadastro', ['cliente', 'prospecto'])
-          .order('nome_completo')
-          .limit(50)
-
-        if (clienteSearch) {
-          query = query.ilike('nome_completo', `%${clienteSearch}%`)
-        }
-
-        const { data, error } = await query
-
-        if (error) throw error
-        setClientes(data || [])
-      } catch (err) {
-        console.error('Erro ao carregar clientes:', err)
-      } finally {
-        setLoadingClientes(false)
-      }
-    }
-
     const debounce = setTimeout(loadClientes, 300)
     return () => clearTimeout(debounce)
   }, [currentEscritorioId, open, clienteSearch])
@@ -331,13 +337,37 @@ export function ConsultaWizardModal({
                     />
                   </div>
                 </div>
+                {/* Botao para criar novo cliente */}
+                <div className="px-2 py-1.5 border-b">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-xs h-8 text-[#34495e] hover:bg-slate-100"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setPessoaModalOpen(true)
+                    }}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-2" />
+                    Criar novo cliente
+                  </Button>
+                </div>
                 {loadingClientes ? (
                   <div className="flex items-center justify-center py-4">
                     <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
                   </div>
                 ) : clientes.length === 0 ? (
                   <div className="text-center py-4 text-xs text-slate-500">
-                    Nenhum cliente encontrado
+                    Nenhum cliente encontrado.
+                    <br />
+                    <button
+                      type="button"
+                      onClick={() => setPessoaModalOpen(true)}
+                      className="text-[#89bcbe] hover:underline mt-1"
+                    >
+                      Clique aqui para criar
+                    </button>
                   </div>
                 ) : (
                   clientes.map((cliente) => (
@@ -502,6 +532,59 @@ export function ConsultaWizardModal({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Modal para criar novo cliente */}
+      <PessoaWizardModal
+        open={pessoaModalOpen}
+        onOpenChange={setPessoaModalOpen}
+        onSave={async (data) => {
+          try {
+            if (!currentEscritorioId) throw new Error('Escritorio nao encontrado')
+
+            const insertData = {
+              escritorio_id: currentEscritorioId,
+              tipo_pessoa: data.tipo_pessoa,
+              tipo_cadastro: data.tipo_cadastro || 'cliente',
+              status: data.status || 'ativo',
+              nome_completo: data.nome_completo,
+              nome_fantasia: data.nome_fantasia || null,
+              cpf_cnpj: data.cpf_cnpj || null,
+              telefone: data.telefone || null,
+              email: data.email || null,
+              cep: data.cep || null,
+              logradouro: data.logradouro || null,
+              numero: data.numero || null,
+              complemento: data.complemento || null,
+              bairro: data.bairro || null,
+              cidade: data.cidade || null,
+              uf: data.uf || null,
+              origem: data.origem || null,
+              observacoes: data.observacoes || null,
+            }
+
+            const { data: novoCliente, error } = await supabase
+              .from('crm_pessoas')
+              .insert(insertData)
+              .select('id, nome_completo')
+              .single()
+
+            if (error) throw error
+
+            toast.success('Cliente criado com sucesso!')
+
+            // Recarregar lista de clientes
+            await loadClientes()
+
+            // Selecionar automaticamente o novo cliente
+            if (novoCliente) {
+              handleChange('cliente_id', novoCliente.id)
+            }
+          } catch (error: any) {
+            console.error('Erro ao criar cliente:', error)
+            toast.error(error.message || 'Erro ao criar cliente')
+          }
+        }}
+      />
     </Dialog>
   )
 }

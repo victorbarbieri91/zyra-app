@@ -136,6 +136,11 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
   const [eventoDetailOpen, setEventoDetailOpen] = useState(false)
   const [audienciaDetailOpen, setAudienciaDetailOpen] = useState(false)
 
+  // Estados para edição de tarefa/evento/audiência
+  const [editingTarefa, setEditingTarefa] = useState(false)
+  const [editingEvento, setEditingEvento] = useState(false)
+  const [editingAudiencia, setEditingAudiencia] = useState(false)
+
   const supabase = createClient()
   const router = useRouter()
 
@@ -230,6 +235,164 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
     }
   }, [processo.id, supabase])
 
+  // Helper para recarregar agenda
+  const reloadAgenda = async () => {
+    const { data } = await supabase
+      .rpc('get_agenda_processo', { p_processo_id: processo.id })
+    if (data) setAgendaItems(data.slice(0, 5))
+  }
+
+  // Handlers para Tarefas
+  const handleEditTarefa = () => {
+    setTarefaDetailOpen(false)
+    setEditingTarefa(true)
+    setShowTarefaWizard(true)
+  }
+
+  const handleDeleteTarefa = async (tarefaId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta tarefa?')) return
+
+    try {
+      const { error } = await supabase
+        .from('agenda_tarefas')
+        .delete()
+        .eq('id', tarefaId)
+
+      if (error) throw error
+
+      toast.success('Tarefa excluída com sucesso!')
+      setTarefaDetailOpen(false)
+      setSelectedTarefa(null)
+      await reloadAgenda()
+    } catch (error) {
+      console.error('Erro ao excluir tarefa:', error)
+      toast.error('Erro ao excluir tarefa')
+    }
+  }
+
+  const handleConcluirTarefa = async (tarefaId: string) => {
+    try {
+      const { error } = await supabase
+        .from('agenda_tarefas')
+        .update({
+          status: 'concluida',
+          data_conclusao: new Date().toISOString()
+        })
+        .eq('id', tarefaId)
+
+      if (error) throw error
+
+      toast.success('Tarefa concluída!')
+      setTarefaDetailOpen(false)
+      setSelectedTarefa(null)
+      await reloadAgenda()
+    } catch (error) {
+      console.error('Erro ao concluir tarefa:', error)
+      toast.error('Erro ao concluir tarefa')
+    }
+  }
+
+  const handleReabrirTarefa = async (tarefaId: string) => {
+    try {
+      const { error } = await supabase
+        .from('agenda_tarefas')
+        .update({
+          status: 'pendente',
+          data_conclusao: null
+        })
+        .eq('id', tarefaId)
+
+      if (error) throw error
+
+      toast.success('Tarefa reaberta!')
+      setTarefaDetailOpen(false)
+      setSelectedTarefa(null)
+      await reloadAgenda()
+    } catch (error) {
+      console.error('Erro ao reabrir tarefa:', error)
+      toast.error('Erro ao reabrir tarefa')
+    }
+  }
+
+  const handleLancarHorasTarefa = () => {
+    setTarefaDetailOpen(false)
+    setShowTimesheetModal(true)
+  }
+
+  // Handlers para Eventos
+  const handleEditEvento = () => {
+    setEventoDetailOpen(false)
+    setEditingEvento(true)
+    setShowEventoWizard(true)
+  }
+
+  const handleDeleteEvento = async (eventoId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este evento?')) return
+
+    try {
+      const { error } = await supabase
+        .from('agenda_eventos')
+        .delete()
+        .eq('id', eventoId)
+
+      if (error) throw error
+
+      toast.success('Evento excluído com sucesso!')
+      setEventoDetailOpen(false)
+      setSelectedEvento(null)
+      await reloadAgenda()
+    } catch (error) {
+      console.error('Erro ao excluir evento:', error)
+      toast.error('Erro ao excluir evento')
+    }
+  }
+
+  // Handlers para Audiências
+  const handleEditAudiencia = () => {
+    setAudienciaDetailOpen(false)
+    setEditingAudiencia(true)
+    setShowAudienciaWizard(true)
+  }
+
+  const handleDeleteAudiencia = async (audienciaId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta audiência?')) return
+
+    try {
+      const { error } = await supabase
+        .from('agenda_audiencias')
+        .delete()
+        .eq('id', audienciaId)
+
+      if (error) throw error
+
+      toast.success('Audiência excluída com sucesso!')
+      setAudienciaDetailOpen(false)
+      setSelectedAudiencia(null)
+      await reloadAgenda()
+    } catch (error) {
+      console.error('Erro ao excluir audiência:', error)
+      toast.error('Erro ao excluir audiência')
+    }
+  }
+
+  const handleConcluirAudiencia = async (audienciaId: string) => {
+    try {
+      const { error } = await supabase
+        .from('agenda_audiencias')
+        .update({ status: 'realizada' })
+        .eq('id', audienciaId)
+
+      if (error) throw error
+
+      toast.success('Audiência marcada como realizada!')
+      setAudienciaDetailOpen(false)
+      setSelectedAudiencia(null)
+      await reloadAgenda()
+    } catch (error) {
+      console.error('Erro ao concluir audiência:', error)
+      toast.error('Erro ao atualizar audiência')
+    }
+  }
 
   const copyCNJ = () => {
     navigator.clipboard.writeText(processo.numero_cnj)
@@ -919,70 +1082,92 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
       {showTarefaWizard && escritorioId && (
       <TarefaWizard
         escritorioId={escritorioId}
-        onClose={() => setShowTarefaWizard(false)}
+        onClose={() => {
+          setShowTarefaWizard(false)
+          setEditingTarefa(false)
+          setSelectedTarefa(null)
+        }}
+        onSubmit={editingTarefa && selectedTarefa ? async (data: TarefaFormData) => {
+          // Modo edição - atualiza a tarefa
+          const { error } = await supabase
+            .from('agenda_tarefas')
+            .update(data)
+            .eq('id', selectedTarefa.id)
+          if (error) throw error
+          toast.success('Tarefa atualizada com sucesso!')
+        } : undefined}
         onCreated={async () => {
           // Recarregar agendamentos usando função RPC
-          const { data: agendaData } = await supabase
-            .rpc('get_agenda_processo', { p_processo_id: processo.id })
-          if (agendaData) setAgendaItems(agendaData.slice(0, 5))
+          await reloadAgenda()
+          if (!editingTarefa) {
+            toast.success('Tarefa criada com sucesso!')
+          }
         }}
-        initialData={{
-          processo_id: processo.id
-        }}
+        initialData={editingTarefa && selectedTarefa ? selectedTarefa : { processo_id: processo.id }}
       />
     )}
 
     {showEventoWizard && escritorioId && (
       <EventoWizard
         escritorioId={escritorioId}
-        onClose={() => setShowEventoWizard(false)}
-        onSubmit={async (data: EventoFormData) => {
-          // Insert direto na tabela
-          const { error } = await supabase
-            .from('agenda_eventos')
-            .insert(data)
-
-          if (error) {
-            console.error('Erro ao criar evento:', error)
-            throw error
-          }
-
+        onClose={() => {
           setShowEventoWizard(false)
-          // Recarregar agendamentos usando função RPC
-          const { data: agendaData } = await supabase
-            .rpc('get_agenda_processo', { p_processo_id: processo.id })
-          if (agendaData) setAgendaItems(agendaData.slice(0, 5))
+          setEditingEvento(false)
+          setSelectedEvento(null)
         }}
-        initialData={{
-          processo_id: processo.id
+        onSubmit={async (data: EventoFormData) => {
+          if (editingEvento && selectedEvento) {
+            // Modo edição - atualiza o evento
+            const { error } = await supabase
+              .from('agenda_eventos')
+              .update(data)
+              .eq('id', selectedEvento.id)
+            if (error) throw error
+            toast.success('Evento atualizado com sucesso!')
+          } else {
+            // Modo criação - insere novo evento
+            const { error } = await supabase
+              .from('agenda_eventos')
+              .insert(data)
+            if (error) throw error
+            toast.success('Evento criado com sucesso!')
+          }
+          setShowEventoWizard(false)
+          await reloadAgenda()
         }}
+        initialData={editingEvento && selectedEvento ? selectedEvento : { processo_id: processo.id }}
       />
     )}
 
     {showAudienciaWizard && escritorioId && (
       <AudienciaWizard
         escritorioId={escritorioId}
-        onClose={() => setShowAudienciaWizard(false)}
-        onSubmit={async (data: AudienciaFormData) => {
-          // Insert direto na tabela
-          const { error } = await supabase
-            .from('agenda_audiencias')
-            .insert(data)
-
-          if (error) {
-            console.error('Erro ao criar audiência:', error)
-            throw error
-          }
-
+        onClose={() => {
           setShowAudienciaWizard(false)
-          // Recarregar agendamentos usando função RPC
-          const { data: agendaData } = await supabase
-            .rpc('get_agenda_processo', { p_processo_id: processo.id })
-          if (agendaData) setAgendaItems(agendaData.slice(0, 5))
+          setEditingAudiencia(false)
+          setSelectedAudiencia(null)
         }}
-        initialData={{
-          processo_id: processo.id
+        onSubmit={async (data: AudienciaFormData) => {
+          if (editingAudiencia && selectedAudiencia) {
+            // Modo edição - atualiza a audiência
+            const { error } = await supabase
+              .from('agenda_audiencias')
+              .update(data)
+              .eq('id', selectedAudiencia.id)
+            if (error) throw error
+            toast.success('Audiência atualizada com sucesso!')
+          } else {
+            // Modo criação - insere nova audiência
+            const { error } = await supabase
+              .from('agenda_audiencias')
+              .insert(data)
+            if (error) throw error
+            toast.success('Audiência criada com sucesso!')
+          }
+          setShowAudienciaWizard(false)
+          await reloadAgenda()
         }}
+        initialData={editingAudiencia && selectedAudiencia ? selectedAudiencia : { processo_id: processo.id }}
       />
       )}
 
@@ -992,15 +1177,15 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           open={tarefaDetailOpen}
           onOpenChange={(open) => {
             setTarefaDetailOpen(open)
-            if (!open) setSelectedTarefa(null)
+            if (!open && !showTarefaWizard) setSelectedTarefa(null)
           }}
           tarefa={selectedTarefa}
-          onUpdate={async () => {
-            // Recarregar agendamentos após atualização usando função RPC
-            const { data } = await supabase
-              .rpc('get_agenda_processo', { p_processo_id: processo.id })
-            if (data) setAgendaItems(data.slice(0, 5))
-          }}
+          onEdit={handleEditTarefa}
+          onDelete={() => handleDeleteTarefa(selectedTarefa.id)}
+          onConcluir={() => handleConcluirTarefa(selectedTarefa.id)}
+          onReabrir={() => handleReabrirTarefa(selectedTarefa.id)}
+          onLancarHoras={handleLancarHorasTarefa}
+          onUpdate={reloadAgenda}
         />
       )}
 
@@ -1009,15 +1194,11 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           open={eventoDetailOpen}
           onOpenChange={(open) => {
             setEventoDetailOpen(open)
-            if (!open) setSelectedEvento(null)
+            if (!open && !showEventoWizard) setSelectedEvento(null)
           }}
           evento={selectedEvento}
-          onUpdate={async () => {
-            // Recarregar agendamentos após atualização usando função RPC
-            const { data } = await supabase
-              .rpc('get_agenda_processo', { p_processo_id: processo.id })
-            if (data) setAgendaItems(data.slice(0, 5))
-          }}
+          onEdit={handleEditEvento}
+          onCancelar={() => handleDeleteEvento(selectedEvento.id)}
         />
       )}
 
@@ -1026,15 +1207,11 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           open={audienciaDetailOpen}
           onOpenChange={(open) => {
             setAudienciaDetailOpen(open)
-            if (!open) setSelectedAudiencia(null)
+            if (!open && !showAudienciaWizard) setSelectedAudiencia(null)
           }}
           audiencia={selectedAudiencia}
-          onUpdate={async () => {
-            // Recarregar agendamentos após atualização usando função RPC
-            const { data } = await supabase
-              .rpc('get_agenda_processo', { p_processo_id: processo.id })
-            if (data) setAgendaItems(data.slice(0, 5))
-          }}
+          onEdit={handleEditAudiencia}
+          onCancelar={() => handleDeleteAudiencia(selectedAudiencia.id)}
         />
       )}
 

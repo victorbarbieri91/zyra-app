@@ -19,6 +19,7 @@ import type { EventoFormData } from '@/hooks/useEventos'
 import type { WizardStep as WizardStepType } from '@/components/wizards'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useTags } from '@/hooks/useTags'
 import { useRecorrencias } from '@/hooks/useRecorrencias'
@@ -300,6 +301,7 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
           numeroOcorrencias: recorrencia.numeroOcorrencias,
           apenasUteis: recorrencia.apenasUteis,
         })
+        toast.success('Compromisso recorrente criado com sucesso!')
       } else {
         // Evento único
         const resultado = await onSubmit(formData)
@@ -309,11 +311,14 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
         if (responsaveisIds.length > 0 && (resultado as any)?.id) {
           await setResponsaveis('evento', (resultado as any).id, responsaveisIds)
         }
+        toast.success('Compromisso criado com sucesso!')
       }
 
       onClose()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao criar evento:', error)
+      toast.error(error?.message || 'Erro ao criar compromisso. Verifique os dados e tente novamente.')
+      // NAO chamar onClose() em caso de erro - usuario pode corrigir e tentar de novo
     } finally {
       setIsSubmitting(false)
     }

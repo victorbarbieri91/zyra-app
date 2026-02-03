@@ -23,7 +23,10 @@ import {
   FileText,
   Users,
   Briefcase,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react'
+import { validarCPF, validarCNPJ, mascaraCPF, mascaraCNPJ, mascaraTelefone, mascaraCEP } from '@/lib/validators'
 
 // Tipos baseados nos ENUMs do banco
 type TipoPessoa = 'pf' | 'pj'
@@ -39,6 +42,7 @@ interface PessoaWizardModalProps {
 
 export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardModalProps) {
   const [currentStep, setCurrentStep] = useState(0)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState({
     tipo_pessoa: 'pf' as TipoPessoa,
     tipo_cadastro: 'cliente' as TipoCadastro,
@@ -61,6 +65,84 @@ export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardMo
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+    // Limpar erro do campo quando usuario começa a digitar
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }))
+    }
+  }
+
+  // Handler especifico para CPF/CNPJ com mascara e validacao
+  const handleCpfCnpjChange = (value: string) => {
+    const mascara = formData.tipo_pessoa === 'pf' ? mascaraCPF(value) : mascaraCNPJ(value)
+    handleChange('cpf_cnpj', mascara)
+  }
+
+  // Handler para telefone com mascara
+  const handleTelefoneChange = (value: string) => {
+    handleChange('telefone', mascaraTelefone(value))
+  }
+
+  // Handler para CEP com mascara
+  const handleCepChange = (value: string) => {
+    handleChange('cep', mascaraCEP(value))
+  }
+
+  // Estado para loading do CEP
+  const [buscandoCep, setBuscandoCep] = useState(false)
+
+  // Buscar endereco pelo CEP usando ViaCEP
+  const buscarCEP = async () => {
+    const cepLimpo = formData.cep.replace(/\D/g, '')
+    if (cepLimpo.length !== 8) return
+
+    setBuscandoCep(true)
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
+      const data = await response.json()
+
+      if (!data.erro) {
+        handleChange('logradouro', data.logradouro || '')
+        handleChange('bairro', data.bairro || '')
+        handleChange('cidade', data.localidade || '')
+        handleChange('uf', data.uf || '')
+      } else {
+        setErrors(prev => ({ ...prev, cep: 'CEP nao encontrado' }))
+      }
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error)
+      setErrors(prev => ({ ...prev, cep: 'Erro ao buscar CEP' }))
+    } finally {
+      setBuscandoCep(false)
+    }
+  }
+
+  // Validar CPF/CNPJ ao sair do campo
+  const validateCpfCnpj = () => {
+    const doc = formData.cpf_cnpj
+    if (!doc || doc.replace(/\D/g, '').length === 0) {
+      // Campo vazio e permitido (nao obrigatorio)
+      setErrors(prev => ({ ...prev, cpf_cnpj: '' }))
+      return
+    }
+
+    const numbers = doc.replace(/\D/g, '')
+    if (formData.tipo_pessoa === 'pf') {
+      if (numbers.length > 0 && numbers.length < 11) {
+        setErrors(prev => ({ ...prev, cpf_cnpj: 'CPF incompleto' }))
+      } else if (numbers.length === 11 && !validarCPF(doc)) {
+        setErrors(prev => ({ ...prev, cpf_cnpj: 'CPF invalido' }))
+      } else {
+        setErrors(prev => ({ ...prev, cpf_cnpj: '' }))
+      }
+    } else {
+      if (numbers.length > 0 && numbers.length < 14) {
+        setErrors(prev => ({ ...prev, cpf_cnpj: 'CNPJ incompleto' }))
+      } else if (numbers.length === 14 && !validarCNPJ(doc)) {
+        setErrors(prev => ({ ...prev, cpf_cnpj: 'CNPJ invalido' }))
+      } else {
+        setErrors(prev => ({ ...prev, cpf_cnpj: '' }))
+      }
+    }
   }
 
   const handleComplete = async () => {
@@ -143,10 +225,16 @@ export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardMo
                 id="nome_completo"
                 value={formData.nome_completo}
                 onChange={(e) => handleChange('nome_completo', e.target.value)}
-                className="pl-8 h-8 text-xs"
+                className={`pl-8 h-8 text-xs ${errors.nome_completo ? 'border-red-500 focus:ring-red-500' : ''}`}
                 required
               />
             </div>
+            {errors.nome_completo && (
+              <p className="text-[10px] text-red-500 flex items-center gap-1 mt-0.5">
+                <AlertCircle className="w-3 h-3" />
+                {errors.nome_completo}
+              </p>
+            )}
           </div>
 
           {formData.tipo_pessoa === 'pj' && (
@@ -168,10 +256,17 @@ export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardMo
             <Input
               id="cpf_cnpj"
               value={formData.cpf_cnpj}
-              onChange={(e) => handleChange('cpf_cnpj', e.target.value)}
+              onChange={(e) => handleCpfCnpjChange(e.target.value)}
+              onBlur={validateCpfCnpj}
               placeholder={formData.tipo_pessoa === 'pf' ? '000.000.000-00' : '00.000.000/0000-00'}
-              className="h-8 text-xs"
+              className={`h-8 text-xs ${errors.cpf_cnpj ? 'border-red-500 focus:ring-red-500' : ''}`}
             />
+            {errors.cpf_cnpj && (
+              <p className="text-[10px] text-red-500 flex items-center gap-1 mt-0.5">
+                <AlertCircle className="w-3 h-3" />
+                {errors.cpf_cnpj}
+              </p>
+            )}
           </div>
         </div>
       </Card>
@@ -193,7 +288,7 @@ export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardMo
             <Input
               id="telefone"
               value={formData.telefone}
-              onChange={(e) => handleChange('telefone', e.target.value)}
+              onChange={(e) => handleTelefoneChange(e.target.value)}
               placeholder="(11) 99999-9999"
               className="pl-8 h-8 text-xs"
             />
@@ -234,13 +329,30 @@ export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardMo
       <div className="space-y-2.5">
         <div className="space-y-1">
           <Label htmlFor="cep" className="text-xs">CEP</Label>
-          <Input
-            id="cep"
-            value={formData.cep}
-            onChange={(e) => handleChange('cep', e.target.value)}
-            placeholder="00000-000"
-            className="h-8 text-xs w-32"
-          />
+          <div className="flex gap-2 items-center">
+            <div className="relative">
+              <Input
+                id="cep"
+                value={formData.cep}
+                onChange={(e) => handleCepChange(e.target.value)}
+                onBlur={buscarCEP}
+                placeholder="00000-000"
+                className={`h-8 text-xs w-32 ${errors.cep ? 'border-red-500' : ''}`}
+              />
+              {buscandoCep && (
+                <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-slate-400" />
+              )}
+            </div>
+            <span className="text-[10px] text-slate-500">
+              {buscandoCep ? 'Buscando...' : 'Preenche automaticamente'}
+            </span>
+          </div>
+          {errors.cep && (
+            <p className="text-[10px] text-red-500 flex items-center gap-1 mt-0.5">
+              <AlertCircle className="w-3 h-3" />
+              {errors.cep}
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-4 gap-2">
@@ -362,11 +474,24 @@ export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardMo
       description: 'Tipo e informacoes principais',
       component: dadosBasicosStep,
       validate: () => {
-        if (!formData.nome_completo) {
-          alert('Nome/Razao Social e obrigatorio')
-          return false
+        const newErrors: Record<string, string> = {}
+
+        if (!formData.nome_completo.trim()) {
+          newErrors.nome_completo = 'Nome/Razao Social e obrigatorio'
         }
-        return true
+
+        // Validar CPF/CNPJ se preenchido
+        if (formData.cpf_cnpj) {
+          const numbers = formData.cpf_cnpj.replace(/\D/g, '')
+          if (formData.tipo_pessoa === 'pf' && numbers.length === 11 && !validarCPF(formData.cpf_cnpj)) {
+            newErrors.cpf_cnpj = 'CPF invalido'
+          } else if (formData.tipo_pessoa === 'pj' && numbers.length === 14 && !validarCNPJ(formData.cpf_cnpj)) {
+            newErrors.cpf_cnpj = 'CNPJ invalido'
+          }
+        }
+
+        setErrors(newErrors)
+        return Object.keys(newErrors).length === 0
       },
     },
     {

@@ -7,14 +7,7 @@ import {
   Loader2,
   Scale,
   Users,
-  CheckSquare,
-  Calendar,
-  Gavel,
-  FileText,
-  Newspaper,
-  BookOpen,
-  Package,
-  Briefcase
+  BookOpen
 } from 'lucide-react'
 import { useGlobalSearch } from '@/hooks/useGlobalSearch'
 import type { ResultadoBusca, TipoResultadoBusca } from '@/types/search'
@@ -22,27 +15,13 @@ import type { ResultadoBusca, TipoResultadoBusca } from '@/types/search'
 const ICONES: Record<TipoResultadoBusca, React.ElementType> = {
   processo: Scale,
   pessoa: Users,
-  tarefa: CheckSquare,
-  evento: Calendar,
-  audiencia: Gavel,
-  contrato: FileText,
-  publicacao: Newspaper,
-  consultivo: BookOpen,
-  produto: Package,
-  projeto: Briefcase
+  consultivo: BookOpen
 }
 
 const CORES: Record<TipoResultadoBusca, string> = {
   processo: '#34495e',
   pessoa: '#1E3A8A',
-  tarefa: '#f97316',
-  evento: '#8b5cf6',
-  audiencia: '#dc2626',
-  contrato: '#059669',
-  publicacao: '#0891b2',
-  consultivo: '#7c3aed',
-  produto: '#84cc16',
-  projeto: '#ea580c'
+  consultivo: '#7c3aed'
 }
 
 export default function SearchDropdown() {
@@ -121,7 +100,7 @@ export default function SearchDropdown() {
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Buscar processos, clientes, documentos..."
+          placeholder="Buscar processos, consultivo ou CRM..."
           className="w-full pl-12 pr-4 py-2.5 bg-white border-2 border-[#89bcbe]/30 rounded-lg text-sm text-[#34495e] placeholder:text-slate-400 focus:outline-none focus:border-[#89bcbe] focus:shadow-sm focus:shadow-[#89bcbe]/10 transition-all"
         />
       </div>

@@ -472,7 +472,7 @@ export default function ProcessoWizard({
         instancia: formData.instancia,
         rito: formData.rito || null,
         valor_causa: formData.valor_causa ? parseFloat(formData.valor_causa) : null,
-        indice_correcao: formData.indice_correcao || null,  // Se vazio, trigger define pelo padrão da área
+        indice_correcao: formData.indice_correcao === 'auto' ? null : (formData.indice_correcao || null),  // Se 'auto' ou vazio, trigger define pelo padrão da área
         data_distribuicao: formData.data_distribuicao,
         objeto_acao: formData.objeto_acao || null,
         cliente_id: formData.cliente_id,
@@ -781,7 +781,7 @@ export default function ProcessoWizard({
                       <SelectValue placeholder="Automático pela área" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Automático (INPC/SELIC)</SelectItem>
+                      <SelectItem value="auto">Automático (INPC/SELIC)</SelectItem>
                       <SelectItem value="INPC">INPC - Trabalhista, Previdenciário, Cível</SelectItem>
                       <SelectItem value="IPCA">IPCA - Índice oficial de inflação</SelectItem>
                       <SelectItem value="IPCA-E">IPCA-E - Tabelas judiciais</SelectItem>

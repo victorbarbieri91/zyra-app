@@ -557,7 +557,24 @@ export default function PessoasPage() {
           try {
             const supabase = createClient();
 
+            // Buscar escritorio_id do usuario logado
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+              throw new Error('Usuario nao autenticado');
+            }
+
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('escritorio_id')
+              .eq('id', user.id)
+              .single();
+
+            if (profileError || !profile?.escritorio_id) {
+              throw new Error('Escritorio nao encontrado. Verifique seu cadastro.');
+            }
+
             const insertData = {
+              escritorio_id: profile.escritorio_id,
               tipo_pessoa: data.tipo_pessoa,
               tipo_cadastro: data.tipo_cadastro,
               status: data.status || 'ativo',
@@ -584,9 +601,9 @@ export default function PessoasPage() {
             if (error) throw error;
 
             fetchPessoas();
-          } catch (error) {
+          } catch (error: any) {
             console.error('Erro ao salvar pessoa:', error);
-            alert('Erro ao salvar pessoa. Tente novamente.');
+            alert(error.message || 'Erro ao salvar pessoa. Tente novamente.');
           }
         }}
       />

@@ -403,14 +403,14 @@ export default function DespesaCartaoModal({
           <div>
             <Label htmlFor="processo">Vincular a Processo (opcional)</Label>
             <Select
-              value={formData.processo_id || ''}
-              onValueChange={(v) => updateField('processo_id', v || null)}
+              value={formData.processo_id || 'none'}
+              onValueChange={(v) => updateField('processo_id', v === 'none' ? null : v)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Nenhum" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="none">Nenhum</SelectItem>
                 {processos.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.pasta || p.numero_cnj}

@@ -97,6 +97,7 @@ export default function ConfiguracoesPublicacoesPage() {
     sincronizando: sincronizandoEscavador,
     historicoSync: historicoEscavador,
     adicionarTermo,
+    editarTermo,
     removerTermo,
     ativarTermo,
     sincronizar: sincronizarEscavador,
@@ -126,8 +127,9 @@ export default function ConfiguracoesPublicacoesPage() {
   const [associadoExcluir, setAssociadoExcluir] = useState<AaspAssociado | null>(null)
   const [excluindo, setExcluindo] = useState(false)
 
-  // Modal de adicionar termo Escavador
+  // Modal de adicionar/editar termo Escavador
   const [modalTermoAberto, setModalTermoAberto] = useState(false)
+  const [termoEditando, setTermoEditando] = useState<TermoEscavador | null>(null)
   const [formTermo, setFormTermo] = useState<CriarTermoData>({
     termo: '',
     descricao: '',
@@ -247,14 +249,27 @@ export default function ConfiguracoesPublicacoesPage() {
   }
 
   // ===== HANDLERS ESCAVADOR =====
-  const handleAbrirModalTermo = () => {
-    setFormTermo({ termo: '', descricao: '', variacoes: [] })
+  const handleAbrirModalTermo = (termo?: TermoEscavador) => {
+    if (termo) {
+      // Modo edição
+      setTermoEditando(termo)
+      setFormTermo({
+        termo: termo.termo,
+        descricao: termo.descricao || '',
+        variacoes: termo.variacoes || []
+      })
+    } else {
+      // Modo criação
+      setTermoEditando(null)
+      setFormTermo({ termo: '', descricao: '', variacoes: [] })
+    }
     setVariacaoInput('')
     setModalTermoAberto(true)
   }
 
   const handleFecharModalTermo = () => {
     setModalTermoAberto(false)
+    setTermoEditando(null)
     setFormTermo({ termo: '', descricao: '', variacoes: [] })
     setVariacaoInput('')
   }
@@ -278,7 +293,7 @@ export default function ConfiguracoesPublicacoesPage() {
   }
 
   const handleSalvarTermo = async () => {
-    if (!formTermo.termo || formTermo.termo.trim().length < 3) {
+    if (!termoEditando && (!formTermo.termo || formTermo.termo.trim().length < 3)) {
       toast.error('O termo deve ter pelo menos 3 caracteres')
       return
     }
@@ -286,13 +301,29 @@ export default function ConfiguracoesPublicacoesPage() {
     setSalvandoTermo(true)
 
     try {
-      const resultado = await adicionarTermo(formTermo)
+      if (termoEditando) {
+        // Modo edição - apenas atualiza variações e descrição
+        const resultado = await editarTermo(termoEditando.id, {
+          variacoes: formTermo.variacoes,
+          descricao: formTermo.descricao
+        })
 
-      if (resultado.sucesso) {
-        toast.success('Termo adicionado com sucesso')
-        handleFecharModalTermo()
+        if (resultado.sucesso) {
+          toast.success('Termo atualizado com sucesso')
+          handleFecharModalTermo()
+        } else {
+          toast.error(resultado.erro || 'Erro ao atualizar termo')
+        }
       } else {
-        toast.error(resultado.erro || 'Erro ao adicionar termo')
+        // Modo criação
+        const resultado = await adicionarTermo(formTermo)
+
+        if (resultado.sucesso) {
+          toast.success('Termo adicionado com sucesso')
+          handleFecharModalTermo()
+        } else {
+          toast.error(resultado.erro || 'Erro ao adicionar termo')
+        }
       }
     } finally {
       setSalvandoTermo(false)
@@ -800,6 +831,15 @@ export default function ConfiguracoesPublicacoesPage() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            onClick={() => handleAbrirModalTermo(termo)}
+                            className="text-slate-500 hover:text-blue-600"
+                            title="Editar variações"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => setTermoExcluir(termo)}
                             className="text-slate-500 hover:text-red-600"
                           >
@@ -1179,28 +1219,39 @@ export default function ConfiguracoesPublicacoesPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Modal Adicionar Termo Escavador */}
+      {/* Modal Adicionar/Editar Termo Escavador */}
       <Dialog open={modalTermoAberto} onOpenChange={setModalTermoAberto}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Adicionar Termo de Monitoramento</DialogTitle>
+            <DialogTitle>
+              {termoEditando ? 'Editar Termo de Monitoramento' : 'Adicionar Termo de Monitoramento'}
+            </DialogTitle>
             <DialogDescription>
-              O termo será monitorado em todos os Diários Oficiais disponíveis
+              {termoEditando
+                ? 'Edite as variações e descrição do termo'
+                : 'O termo será monitorado em todos os Diários Oficiais disponíveis'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div>
-              <Label className="text-xs">Termo Principal *</Label>
+              <Label className="text-xs">Termo Principal {!termoEditando && '*'}</Label>
               <Input
                 value={formTermo.termo}
                 onChange={(e) => setFormTermo({ ...formTermo, termo: e.target.value })}
                 placeholder="Ex: João da Silva, Empresa XYZ LTDA"
                 className="text-sm"
+                disabled={!!termoEditando}
               />
-              <p className="text-xs text-slate-500 mt-1">
-                Nome ou termo exato a ser monitorado (mínimo 3 caracteres)
-              </p>
+              {termoEditando ? (
+                <p className="text-xs text-amber-600 mt-1">
+                  O termo principal não pode ser alterado após o cadastro
+                </p>
+              ) : (
+                <p className="text-xs text-slate-500 mt-1">
+                  Nome ou termo exato a ser monitorado (mínimo 3 caracteres)
+                </p>
+              )}
             </div>
 
             <div>
@@ -1268,11 +1319,11 @@ export default function ConfiguracoesPublicacoesPage() {
             </Button>
             <Button
               onClick={handleSalvarTermo}
-              disabled={salvandoTermo || !formTermo.termo || formTermo.termo.trim().length < 3}
+              disabled={salvandoTermo || (!termoEditando && (!formTermo.termo || formTermo.termo.trim().length < 3))}
               className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f]"
             >
               {salvandoTermo && <Loader2 className="w-4 h-4 animate-spin" />}
-              Adicionar Termo
+              {termoEditando ? 'Salvar Alterações' : 'Adicionar Termo'}
             </Button>
           </DialogFooter>
         </DialogContent>

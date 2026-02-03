@@ -1,22 +1,21 @@
 // ============================================
 // API ROUTE: Busca Global do Sistema
-// Busca simplificada: Processos, Consultivo e CRM
+// Busca simplificada: Processos e Consultivo
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { ResultadoBusca, RespostaBuscaGlobal } from '@/types/search'
 
-const MAX_RESULTADOS_POR_TIPO = 8
+const MAX_RESULTADOS_POR_TIPO = 10
 const MAX_RESULTADOS_TOTAL = 20
 
 /**
  * GET /api/search?q=termo
  *
- * Busca global em: Processos, Consultivo e CRM
+ * Busca global em: Processos e Consultivo
  * - Processos: nome do cliente, nº da pasta, nº CNJ
  * - Consultivo: nome do cliente, nº da pasta
- * - CRM: nome da pessoa
  */
 export async function GET(request: NextRequest) {
   const inicio = Date.now()
@@ -67,7 +66,6 @@ export async function GET(request: NextRequest) {
     const [
       processosResult,
       processosPorClienteResult,
-      pessoasResult,
       consultivosResult,
       consultivosPorClienteResult
     ] = await Promise.all([
@@ -105,16 +103,6 @@ export async function GET(request: NextRequest) {
         `)
         .eq('escritorio_id', escritorioId)
         .ilike('cliente.nome_completo', termoBusca)
-        .limit(MAX_RESULTADOS_POR_TIPO),
-
-      // ========================================
-      // BUSCA EM CRM/PESSOAS (por nome)
-      // ========================================
-      supabase
-        .from('crm_pessoas')
-        .select('*')
-        .eq('escritorio_id', escritorioId)
-        .ilike('nome_completo', termoBusca)
         .limit(MAX_RESULTADOS_POR_TIPO),
 
       // ========================================
@@ -159,10 +147,10 @@ export async function GET(request: NextRequest) {
         resultados.push({
           id: p.id,
           tipo: 'processo',
-          titulo: p.numero_cnj || p.numero_pasta || 'Processo sem número',
+          titulo: p.numero_pasta || p.numero_cnj || 'Processo sem número',
           subtitulo: p.cliente?.nome_completo || p.parte_contraria || 'Sem cliente',
-          navegacao: `/dashboard/processos?id=${p.id}`,
-          destaque: p.area ? `${p.area} - ${p.tribunal || 'N/A'}` : undefined,
+          navegacao: `/dashboard/processos/${p.id}`,
+          destaque: p.numero_cnj || undefined,
           icone: 'Scale',
           modulo: 'Processos',
           status: p.status,
@@ -183,10 +171,10 @@ export async function GET(request: NextRequest) {
           resultados.push({
             id: p.id,
             tipo: 'processo',
-            titulo: p.numero_cnj || p.numero_pasta || 'Processo sem número',
+            titulo: p.numero_pasta || p.numero_cnj || 'Processo sem número',
             subtitulo: p.cliente?.nome_completo || p.parte_contraria || 'Sem cliente',
-            navegacao: `/dashboard/processos?id=${p.id}`,
-            destaque: p.area ? `${p.area} - ${p.tribunal || 'N/A'}` : undefined,
+            navegacao: `/dashboard/processos/${p.id}`,
+            destaque: p.numero_cnj || undefined,
             icone: 'Scale',
             modulo: 'Processos',
             status: p.status,
@@ -201,40 +189,6 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Processar resultados de CRM/PESSOAS
-    if (pessoasResult.data) {
-      pessoasResult.data.forEach((p: any) => {
-        const tipoCadastroMap: Record<string, string> = {
-          cliente: 'Cliente',
-          prospecto: 'Prospecto',
-          parte_contraria: 'Parte Contrária',
-          correspondente: 'Correspondente',
-          testemunha: 'Testemunha',
-          perito: 'Perito',
-          juiz: 'Juiz',
-          promotor: 'Promotor',
-          outros: 'Outros'
-        }
-        const tipoCadastroLabel = tipoCadastroMap[p.tipo_cadastro] || p.tipo_cadastro
-
-        resultados.push({
-          id: p.id,
-          tipo: 'pessoa',
-          titulo: p.nome_completo,
-          subtitulo: p.nome_fantasia || p.email || p.telefone,
-          navegacao: `/dashboard/crm/pessoas?id=${p.id}`,
-          destaque: tipoCadastroLabel,
-          icone: 'Users',
-          modulo: 'CRM',
-          status: p.status,
-          tipo_cadastro: tipoCadastroLabel,
-          cpf_cnpj: p.cpf_cnpj,
-          email: p.email,
-          telefone: p.telefone
-        })
-      })
-    }
-
     // Processar resultados de CONSULTIVO
     const consultivosIds = new Set<string>()
 
@@ -244,10 +198,10 @@ export async function GET(request: NextRequest) {
         resultados.push({
           id: c.id,
           tipo: 'consultivo',
-          titulo: c.titulo || `Consulta ${c.numero}`,
+          titulo: c.numero || c.titulo || 'Consulta sem número',
           subtitulo: c.cliente?.nome_completo || c.descricao?.substring(0, 100),
-          navegacao: `/dashboard/consultivo?id=${c.id}`,
-          destaque: c.numero,
+          navegacao: `/dashboard/consultivo/${c.id}`,
+          destaque: c.titulo || undefined,
           icone: 'BookOpen',
           modulo: 'Consultivo',
           status: c.status,
@@ -264,10 +218,10 @@ export async function GET(request: NextRequest) {
           resultados.push({
             id: c.id,
             tipo: 'consultivo',
-            titulo: c.titulo || `Consulta ${c.numero}`,
+            titulo: c.numero || c.titulo || 'Consulta sem número',
             subtitulo: c.cliente?.nome_completo || c.descricao?.substring(0, 100),
-            navegacao: `/dashboard/consultivo?id=${c.id}`,
-            destaque: c.numero,
+            navegacao: `/dashboard/consultivo/${c.id}`,
+            destaque: c.titulo || undefined,
             icone: 'BookOpen',
             modulo: 'Consultivo',
             status: c.status,

@@ -1,11 +1,10 @@
 // =====================================================
 // TIPOS DO MÓDULO DE BUSCA GLOBAL
-// Busca simplificada: Processos, Consultivo e CRM
+// Busca simplificada: Processos e Consultivo
 // =====================================================
 
 export type TipoResultadoBusca =
   | 'processo'
-  | 'pessoa'
   | 'consultivo'
 
 export interface ResultadoBuscaBase {
@@ -31,14 +30,6 @@ export interface ResultadoProcesso extends ResultadoBuscaBase {
   parte_contraria?: string
 }
 
-export interface ResultadoPessoa extends ResultadoBuscaBase {
-  tipo: 'pessoa'
-  tipo_cadastro?: string
-  cpf_cnpj?: string
-  email?: string
-  telefone?: string
-}
-
 export interface ResultadoConsultivo extends ResultadoBuscaBase {
   tipo: 'consultivo'
   numero?: string
@@ -47,12 +38,10 @@ export interface ResultadoConsultivo extends ResultadoBuscaBase {
 
 export type ResultadoBusca =
   | ResultadoProcesso
-  | ResultadoPessoa
   | ResultadoConsultivo
 
 export interface ResultadosBuscaAgrupados {
   processos: ResultadoProcesso[]
-  pessoas: ResultadoPessoa[]
   consultivo: ResultadoConsultivo[]
 }
 
@@ -75,12 +64,6 @@ export const MODULOS_BUSCA = {
     cor: '#34495e',
     rota: '/dashboard/processos'
   },
-  pessoa: {
-    label: 'CRM',
-    icone: 'Users',
-    cor: '#1E3A8A',
-    rota: '/dashboard/crm/pessoas'
-  },
   consultivo: {
     label: 'Consultivo',
     icone: 'BookOpen',
@@ -91,6 +74,5 @@ export const MODULOS_BUSCA = {
 
 export const TIPO_LABELS: Record<TipoResultadoBusca, string> = {
   processo: 'Processo',
-  pessoa: 'CRM',
   consultivo: 'Consultivo'
 }

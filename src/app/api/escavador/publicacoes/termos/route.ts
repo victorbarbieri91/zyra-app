@@ -7,7 +7,8 @@ import { createClient } from '@/lib/supabase/server'
 import {
   criarMonitoramentoTermo,
   removerMonitoramentoDiario,
-  listarMonitoramentosDiario
+  listarMonitoramentosDiario,
+  editarMonitoramentoDiario
 } from '@/lib/escavador/publicacoes'
 
 /**
@@ -543,6 +544,141 @@ export async function PATCH(request: NextRequest) {
     console.error('[API Termos PATCH] Erro interno:', error)
     return NextResponse.json(
       { sucesso: false, error: 'Erro interno ao ativar termo' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * PUT /api/escavador/publicacoes/termos
+ *
+ * Edita um termo de monitoramento existente (variações e descrição)
+ *
+ * Body: {
+ *   termo_id: string,
+ *   variacoes?: string[],
+ *   descricao?: string
+ * }
+ */
+export async function PUT(request: NextRequest) {
+  try {
+    // Autenticacao
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { sucesso: false, error: 'Nao autorizado' },
+        { status: 401 }
+      )
+    }
+
+    // Buscar escritorio do usuario
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('escritorio_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.escritorio_id) {
+      return NextResponse.json(
+        { sucesso: false, error: 'Escritorio nao encontrado' },
+        { status: 400 }
+      )
+    }
+
+    // Parsear body
+    let body: {
+      termo_id?: string
+      variacoes?: string[]
+      descricao?: string
+    }
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json(
+        { sucesso: false, error: 'Body invalido' },
+        { status: 400 }
+      )
+    }
+
+    const { termo_id, variacoes, descricao } = body
+
+    if (!termo_id) {
+      return NextResponse.json(
+        { sucesso: false, error: 'termo_id e obrigatorio' },
+        { status: 400 }
+      )
+    }
+
+    // Buscar termo existente
+    const { data: termo, error: selectError } = await supabase
+      .from('publicacoes_termos_escavador')
+      .select('*')
+      .eq('id', termo_id)
+      .eq('escritorio_id', profile.escritorio_id)
+      .single()
+
+    if (selectError || !termo) {
+      return NextResponse.json(
+        { sucesso: false, error: 'Termo nao encontrado' },
+        { status: 404 }
+      )
+    }
+
+    console.log('[API Termos PUT] Editando termo:', termo.termo)
+    console.log('[API Termos PUT] Novas variações:', variacoes)
+
+    // Se tem monitoramento_id no Escavador, atualizar lá também
+    if (termo.escavador_monitoramento_id && variacoes !== undefined) {
+      console.log('[API Termos PUT] Atualizando no Escavador, ID:', termo.escavador_monitoramento_id)
+
+      const resultadoEscavador = await editarMonitoramentoDiario(
+        parseInt(termo.escavador_monitoramento_id, 10),
+        { variacoes: variacoes || [] }
+      )
+
+      if (!resultadoEscavador.sucesso) {
+        console.error('[API Termos PUT] Erro ao atualizar no Escavador:', resultadoEscavador.erro)
+        // Continua para salvar no banco local mesmo se falhar no Escavador
+        // Isso permite pelo menos ter o registro local atualizado
+      } else {
+        console.log('[API Termos PUT] Atualizado no Escavador com sucesso')
+      }
+    }
+
+    // Atualizar no banco local
+    const updateData: any = {}
+    if (variacoes !== undefined) updateData.variacoes = variacoes
+    if (descricao !== undefined) updateData.descricao = descricao
+    updateData.updated_at = new Date().toISOString()
+
+    const { data: termoAtualizado, error: updateError } = await supabase
+      .from('publicacoes_termos_escavador')
+      .update(updateData)
+      .eq('id', termo_id)
+      .select()
+      .single()
+
+    if (updateError) {
+      console.error('[API Termos PUT] Erro ao atualizar termo:', updateError)
+      return NextResponse.json(
+        { sucesso: false, error: 'Erro ao atualizar termo no banco' },
+        { status: 500 }
+      )
+    }
+
+    console.log('[API Termos PUT] Termo atualizado com sucesso:', termo_id)
+
+    return NextResponse.json({
+      sucesso: true,
+      termo: termoAtualizado
+    })
+
+  } catch (error) {
+    console.error('[API Termos PUT] Erro interno:', error)
+    return NextResponse.json(
+      { sucesso: false, error: 'Erro interno ao editar termo' },
       { status: 500 }
     )
   }

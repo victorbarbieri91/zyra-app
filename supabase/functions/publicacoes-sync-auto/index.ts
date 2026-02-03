@@ -341,7 +341,7 @@ async function salvarPublicacaoAASP(
     dataPublicacao = pub.jornal.dataDisponibilizacao_Publicacao.split('T')[0]
   }
 
-  await supabase.from('publicacoes_publicacoes').insert({
+  const { error: insertError } = await supabase.from('publicacoes_publicacoes').insert({
     escritorio_id: escritorioId,
     associado_id: associadoId,
     aasp_id: String(aaspId),
@@ -358,6 +358,17 @@ async function salvarPublicacaoAASP(
     source_type: 'aasp',
   })
 
+  if (insertError) {
+    console.error(`[AASP] Erro ao inserir publicação ${aaspId}:`, insertError.message, insertError.code)
+    // Se for erro de duplicata (23505), retorna existente
+    if (insertError.code === '23505') {
+      return 'existente'
+    }
+    // Para outros erros, loga mas não conta como nova
+    return 'existente'
+  }
+
+  console.log(`[AASP] Publicação ${aaspId} inserida com sucesso`)
   return 'nova'
 }
 
@@ -468,7 +479,7 @@ async function salvarPublicacaoEscavador(
     }
   }
 
-  await supabase.from('publicacoes_publicacoes').insert({
+  const { error: insertError } = await supabase.from('publicacoes_publicacoes').insert({
     escritorio_id: escritorioId,
     escavador_aparicao_id: escavadorId,
     escavador_monitoramento_id: termoId,
@@ -487,6 +498,17 @@ async function salvarPublicacaoEscavador(
     confianca_vinculacao: vinculado ? 1.00 : null,  // numeric(3,2): 1.00 = 100%
   })
 
+  if (insertError) {
+    console.error(`[Escavador] Erro ao inserir aparição ${escavadorId}:`, insertError.message, insertError.code)
+    // Se for erro de duplicata (23505), retorna existente
+    if (insertError.code === '23505') {
+      return 'existente'
+    }
+    // Para outros erros, loga mas não conta como nova
+    return 'existente'
+  }
+
+  console.log(`[Escavador] Aparição ${escavadorId} inserida com sucesso${vinculado ? ' (vinculada a processo)' : ''}`)
   return vinculado ? 'vinculada' : 'nova'
 }
 

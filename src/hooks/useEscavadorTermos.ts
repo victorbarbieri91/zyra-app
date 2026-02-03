@@ -32,6 +32,11 @@ export interface CriarTermoData {
   origens_ids?: number[]
 }
 
+export interface EditarTermoData {
+  variacoes?: string[]
+  descricao?: string
+}
+
 export interface SyncResult {
   sucesso: boolean
   mensagem: string
@@ -156,6 +161,38 @@ export function useEscavadorTermos(escritorioId?: string) {
   }, [carregarTermos])
 
   /**
+   * Edita um termo existente (variações e descrição)
+   */
+  const editarTermo = useCallback(async (termoId: string, dados: { variacoes?: string[], descricao?: string }): Promise<{
+    sucesso: boolean
+    termo?: TermoEscavador
+    erro?: string
+  }> => {
+    try {
+      const response = await fetch('/api/escavador/publicacoes/termos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ termo_id: termoId, ...dados })
+      })
+
+      const data = await response.json()
+
+      if (!data.sucesso) {
+        return { sucesso: false, erro: data.error }
+      }
+
+      // Recarrega lista
+      await carregarTermos()
+
+      return { sucesso: true, termo: data.termo }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido'
+      console.error('[useEscavadorTermos] Erro ao editar:', message)
+      return { sucesso: false, erro: message }
+    }
+  }, [carregarTermos])
+
+  /**
    * Ativa/Registra um termo no Escavador (para termos sem monitoramento_id)
    */
   const ativarTermo = useCallback(async (termoId: string): Promise<{
@@ -275,6 +312,7 @@ export function useEscavadorTermos(escritorioId?: string) {
     // Ações
     carregarTermos,
     adicionarTermo,
+    editarTermo,
     removerTermo,
     ativarTermo,
     sincronizar,

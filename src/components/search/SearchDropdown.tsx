@@ -6,7 +6,6 @@ import {
   Search,
   Loader2,
   Scale,
-  Users,
   BookOpen
 } from 'lucide-react'
 import { useGlobalSearch } from '@/hooks/useGlobalSearch'
@@ -14,13 +13,11 @@ import type { ResultadoBusca, TipoResultadoBusca } from '@/types/search'
 
 const ICONES: Record<TipoResultadoBusca, React.ElementType> = {
   processo: Scale,
-  pessoa: Users,
   consultivo: BookOpen
 }
 
 const CORES: Record<TipoResultadoBusca, string> = {
   processo: '#34495e',
-  pessoa: '#1E3A8A',
   consultivo: '#7c3aed'
 }
 
@@ -100,7 +97,7 @@ export default function SearchDropdown() {
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Buscar processos, consultivo ou CRM..."
+          placeholder="Buscar processos ou consultivo..."
           className="w-full pl-12 pr-4 py-2.5 bg-white border-2 border-[#89bcbe]/30 rounded-lg text-sm text-[#34495e] placeholder:text-slate-400 focus:outline-none focus:border-[#89bcbe] focus:shadow-sm focus:shadow-[#89bcbe]/10 transition-all"
         />
       </div>

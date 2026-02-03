@@ -156,6 +156,7 @@ export function useOnboarding() {
           cnpj: data.cnpj || null,
           telefone: data.telefone || null,
           email: data.email || null,
+          owner_id: user.id, // Necessário para RLS
         })
         .select('id')
         .single()

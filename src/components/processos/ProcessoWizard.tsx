@@ -143,7 +143,7 @@ const initialFormData: FormData = {
   area: '',
   fase: 'conhecimento',
   instancia: '1ª',
-  rito: 'ordinário',
+  rito: 'ordinario',
   valor_causa: '',
   indice_correcao: '',  // Será definido automaticamente pelo trigger baseado na área
   data_distribuicao: new Date().toISOString().split('T')[0],
@@ -233,7 +233,7 @@ export default function ProcessoWizard({
         area: initialData.area || '',
         fase: initialData.fase || 'conhecimento',
         instancia: initialData.instancia || '1ª',
-        rito: initialData.rito || 'ordinário',
+        rito: initialData.rito || 'ordinario',
         valor_causa: initialData.valor_causa?.toString() || '',
         indice_correcao: initialData.indice_correcao || '',
         data_distribuicao: initialData.data_distribuicao?.split('T')[0] || new Date().toISOString().split('T')[0],
@@ -913,10 +913,10 @@ export default function ProcessoWizard({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ordinário">Ordinário</SelectItem>
-                      <SelectItem value="sumário">Sumário</SelectItem>
+                      <SelectItem value="ordinario">Ordinário</SelectItem>
+                      <SelectItem value="sumario">Sumário</SelectItem>
                       <SelectItem value="especial">Especial</SelectItem>
-                      <SelectItem value="sumaríssimo">Sumaríssimo</SelectItem>
+                      <SelectItem value="sumarissimo">Sumaríssimo</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

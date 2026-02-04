@@ -379,7 +379,7 @@ export default function DashboardPage() {
                       const temHorario = event.tipo !== 'tarefa' && event.time && event.time !== 'Dia todo'
 
                       return (
-                        <div key={event.id} className="flex items-center gap-2">
+                        <div key={`${event.id}-${index}`} className="flex items-center gap-2">
                           <span className={`text-[9px] font-semibold w-[34px] flex-shrink-0 ${config.color}`}>
                             {config.label}
                           </span>

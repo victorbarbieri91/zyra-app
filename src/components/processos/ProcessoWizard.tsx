@@ -142,7 +142,7 @@ const initialFormData: FormData = {
   tipo: 'judicial',
   area: '',
   fase: 'conhecimento',
-  instancia: '1ª',
+  instancia: '1a',
   rito: 'ordinario',
   valor_causa: '',
   indice_correcao: '',  // Será definido automaticamente pelo trigger baseado na área
@@ -895,13 +895,13 @@ export default function ProcessoWizard({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1ª">1ª Instância</SelectItem>
-                      <SelectItem value="2ª">2ª Instância</SelectItem>
-                      <SelectItem value="3ª">3ª Instância</SelectItem>
-                      <SelectItem value="STJ">STJ</SelectItem>
-                      <SelectItem value="STF">STF</SelectItem>
-                      <SelectItem value="TST">TST</SelectItem>
-                      <SelectItem value="Administrativa">Administrativa</SelectItem>
+                      <SelectItem value="1a">1ª Instância</SelectItem>
+                      <SelectItem value="2a">2ª Instância</SelectItem>
+                      <SelectItem value="3a">3ª Instância</SelectItem>
+                      <SelectItem value="stj">STJ</SelectItem>
+                      <SelectItem value="stf">STF</SelectItem>
+                      <SelectItem value="tst">TST</SelectItem>
+                      <SelectItem value="administrativa">Administrativa</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

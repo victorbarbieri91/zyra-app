@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import TagSelector from '@/components/tags/TagSelector'
 import VinculacaoSelector, { Vinculacao } from '@/components/agenda/VinculacaoSelector'
 import ResponsaveisSelector from '@/components/agenda/ResponsaveisSelector'
-import type { AudienciaFormData } from '@/hooks/useAudiencias'
+import { useAudiencias, type AudienciaFormData } from '@/hooks/useAudiencias'
 import type { WizardStep as WizardStepType } from '@/components/wizards'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -21,13 +21,14 @@ import { useAgendaResponsaveis } from '@/hooks/useAgendaResponsaveis'
 import { useEscritorioMembros } from '@/hooks/useEscritorioMembros'
 import { createClient } from '@/lib/supabase/client'
 import { formatBrazilDateTime } from '@/lib/timezone'
+import { toast } from 'sonner'
 
 interface AudienciaWizardProps {
   escritorioId: string
   processoId?: string | null
   consultivoId?: string | null
   onClose: () => void
-  onSubmit: (data: AudienciaFormData) => Promise<void>
+  onSubmit: (data: AudienciaFormData) => Promise<any> // Retorna a audiência criada para salvar responsáveis N:N
   initialData?: Partial<AudienciaFormData>
 }
 
@@ -92,6 +93,9 @@ export default function AudienciaWizard({
 
   // Hook para salvar responsáveis
   const { setResponsaveis } = useAgendaResponsaveis()
+
+  // Hook para criar/atualizar audiências diretamente (garante retorno do ID)
+  const { createAudiencia, updateAudiencia } = useAudiencias(escritorioId)
 
   // Form State
   const [tipoAudiencia, setTipoAudiencia] = useState<TipoAudiencia>(initialData?.tipo_audiencia || 'inicial')
@@ -312,17 +316,43 @@ export default function AudienciaWizard({
         cor,
       }
 
-      console.log('FormData sendo enviado:', formData)
-      const novaAudiencia = await onSubmit(formData)
+      console.log('[AudienciaWizard] FormData sendo enviado:', formData)
 
-      // Salvar responsáveis na tabela N:N
-      if (novaAudiencia && (novaAudiencia as any).id && responsaveisIds.length > 0) {
-        await setResponsaveis('audiencia', (novaAudiencia as any).id, responsaveisIds)
+      if (initialData?.id) {
+        // Modo edição - atualizar audiência existente
+        await updateAudiencia(initialData.id, formData)
+
+        // Atualizar responsáveis na tabela N:N
+        if (responsaveisIds.length > 0) {
+          console.log('[AudienciaWizard] Atualizando responsáveis:', responsaveisIds, 'para audiência:', initialData.id)
+          await setResponsaveis('audiencia', initialData.id, responsaveisIds)
+        }
+
+        toast.success('Audiência atualizada com sucesso!')
+      } else {
+        // Criar nova audiência usando o hook diretamente (garante retorno do ID)
+        const novaAudiencia = await createAudiencia(formData)
+
+        // Salvar responsáveis na tabela N:N
+        if (novaAudiencia?.id && responsaveisIds.length > 0) {
+          console.log('[AudienciaWizard] Salvando responsáveis:', responsaveisIds, 'para audiência:', novaAudiencia.id)
+          await setResponsaveis('audiencia', novaAudiencia.id, responsaveisIds)
+        }
+
+        toast.success('Audiência criada com sucesso!')
+      }
+
+      // Notificar o pai (para refresh de listas se necessário)
+      try {
+        await onSubmit(formData)
+      } catch {
+        // Ignora erro do callback - a audiência já foi criada
       }
 
       onClose()
     } catch (error) {
-      console.error('Erro ao criar audiência:', error)
+      console.error('[AudienciaWizard] Erro ao salvar audiência:', error)
+      toast.error('Erro ao salvar audiência')
     } finally {
       setIsSubmitting(false)
     }

@@ -15,7 +15,7 @@ import TagSelector from '@/components/tags/TagSelector'
 import VinculacaoSelector, { Vinculacao } from '@/components/agenda/VinculacaoSelector'
 import RecorrenciaConfig, { RecorrenciaData } from '@/components/agenda/RecorrenciaConfig'
 import ResponsaveisSelector from '@/components/agenda/ResponsaveisSelector'
-import type { EventoFormData } from '@/hooks/useEventos'
+import { useEventos, type EventoFormData } from '@/hooks/useEventos'
 import type { WizardStep as WizardStepType } from '@/components/wizards'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -30,7 +30,7 @@ import { toBrazilTime, formatBrazilDateLong, formatBrazilDateTime } from '@/lib/
 interface EventoWizardProps {
   escritorioId: string
   onClose: () => void
-  onSubmit: (data: EventoFormData) => Promise<void>
+  onSubmit: (data: EventoFormData) => Promise<any> // Retorna o evento criado para salvar responsáveis N:N
   initialData?: Partial<EventoFormData>
 }
 
@@ -87,6 +87,9 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
 
   // Hook para gerenciar responsáveis múltiplos
   const { setResponsaveis } = useAgendaResponsaveis()
+
+  // Hook para criar/atualizar eventos diretamente (garante retorno do ID)
+  const { createEvento, updateEvento } = useEventos(escritorioId)
 
   // Form State
   const [tipoEvento, setTipoEvento] = useState<TipoEvento>('reuniao_cliente')
@@ -303,15 +306,34 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
         })
         toast.success('Compromisso recorrente criado com sucesso!')
       } else {
-        // Evento único
-        const resultado = await onSubmit(formData)
+        // Evento único - criar/atualizar usando hook diretamente
+        if (initialData?.id) {
+          // Modo edição
+          await updateEvento(initialData.id, formData)
 
-        // Salvar múltiplos responsáveis na tabela N:N
-        // O ID do evento virá do resultado se a função retornar
-        if (responsaveisIds.length > 0 && (resultado as any)?.id) {
-          await setResponsaveis('evento', (resultado as any).id, responsaveisIds)
+          if (responsaveisIds.length > 0) {
+            console.log('[EventoWizard] Atualizando responsáveis:', responsaveisIds, 'para evento:', initialData.id)
+            await setResponsaveis('evento', initialData.id, responsaveisIds)
+          }
+          toast.success('Compromisso atualizado com sucesso!')
+        } else {
+          // Criar novo evento
+          const novoEvento = await createEvento(formData)
+
+          // Salvar múltiplos responsáveis na tabela N:N
+          if (novoEvento?.id && responsaveisIds.length > 0) {
+            console.log('[EventoWizard] Salvando responsáveis:', responsaveisIds, 'para evento:', novoEvento.id)
+            await setResponsaveis('evento', novoEvento.id, responsaveisIds)
+          }
+          toast.success('Compromisso criado com sucesso!')
         }
-        toast.success('Compromisso criado com sucesso!')
+
+        // Notificar o pai (para refresh de listas se necessário)
+        try {
+          await onSubmit(formData)
+        } catch {
+          // Ignora erro do callback - o evento já foi criado
+        }
       }
 
       onClose()

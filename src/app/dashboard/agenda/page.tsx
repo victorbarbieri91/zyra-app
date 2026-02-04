@@ -1036,22 +1036,10 @@ export default function AgendaPage() {
             setAudienciaModalOpen(false)
             setAudienciaSelecionada(null)
           }}
-          onSubmit={async (data: AudienciaFormData) => {
-            try {
-              if (audienciaSelecionada) {
-                await updateAudiencia(audienciaSelecionada.id, data)
-                toast.success('Audiência atualizada com sucesso!')
-                return audienciaSelecionada // Retorna para o wizard poder salvar responsáveis
-              } else {
-                const novaAudiencia = await createAudiencia(data)
-                toast.success('Audiência criada com sucesso!')
-                await refreshItems()
-                return novaAudiencia // Retorna para o wizard poder salvar responsáveis
-              }
-            } catch (error) {
-              toast.error('Erro ao salvar audiência')
-              throw error
-            }
+          onSubmit={async () => {
+            // O wizard agora cria/atualiza a audiência diretamente usando useAudiencias
+            // Este callback é apenas para refresh da lista
+            await refreshItems()
           }}
           initialData={audienciaSelecionada || undefined}
         />
@@ -1064,22 +1052,10 @@ export default function AgendaPage() {
             setEventoModalOpen(false)
             setEventoSelecionado(null)
           }}
-          onSubmit={async (data: EventoFormData) => {
-            try {
-              if (eventoSelecionado) {
-                await updateEvento(eventoSelecionado.id, data)
-                toast.success('Compromisso atualizado com sucesso!')
-                return eventoSelecionado // Retorna para o wizard poder salvar responsáveis
-              } else {
-                const novoEvento = await createEvento(data)
-                toast.success('Compromisso criado com sucesso!')
-                await refreshItems()
-                return novoEvento // Retorna para o wizard poder salvar responsáveis
-              }
-            } catch (error) {
-              toast.error('Erro ao salvar compromisso')
-              throw error
-            }
+          onSubmit={async () => {
+            // O wizard agora cria/atualiza o evento diretamente usando useEventos
+            // Este callback é apenas para refresh da lista
+            await refreshItems()
           }}
           initialData={eventoSelecionado || undefined}
         />

@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils'
 
 interface ProcessoCobrancaFixaCardProps {
   processoId: string
+  formasDisponiveis?: string[]  // Array de formas do contrato
 }
 
 interface ValorComEstado extends ValorFixoDisponivel {
@@ -44,6 +45,7 @@ interface ValorComEstado extends ValorFixoDisponivel {
 
 export default function ProcessoCobrancaFixaCard({
   processoId,
+  formasDisponiveis,
 }: ProcessoCobrancaFixaCardProps) {
   const { escritorioAtivo } = useEscritorioAtivo()
   const {
@@ -51,6 +53,7 @@ export default function ProcessoCobrancaFixaCard({
     valoresDisponiveis,
     contratoTitulo,
     formaCobranca,
+    formasDisponiveis: formasDoContrato,
     loadValoresFixos,
     lancarValorFixo,
   } = useCobrancaFixa(escritorioAtivo)
@@ -147,7 +150,9 @@ export default function ProcessoCobrancaFixaCard({
     return null
   }
 
-  if (formaCobranca !== 'fixo' || valoresComEstado.length === 0) {
+  // Exibir se: fixo está nas formasDisponiveis (prop ou carregado do contrato)
+  const deveExibir = formasDisponiveis?.includes('fixo') || formasDoContrato.includes('fixo') || formaCobranca === 'fixo'
+  if (!deveExibir || valoresComEstado.length === 0) {
     return null
   }
 

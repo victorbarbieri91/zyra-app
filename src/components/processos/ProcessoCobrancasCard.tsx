@@ -40,6 +40,7 @@ import { cn } from '@/lib/utils'
 interface ProcessoCobrancasCardProps {
   processoId: string
   valorCausa?: number
+  formasDisponiveis?: string[]  // Array de formas do contrato
 }
 
 interface AtoComEstado extends AtoDisponivel {
@@ -56,6 +57,7 @@ interface AtoComEstado extends AtoDisponivel {
 export default function ProcessoCobrancasCard({
   processoId,
   valorCausa,
+  formasDisponiveis,
 }: ProcessoCobrancasCardProps) {
   const { escritorioAtivo } = useEscritorioAtivo()
   const { loadAtosDisponiveis, cobrarAto } = useCobrancaAtos(escritorioAtivo)
@@ -64,6 +66,7 @@ export default function ProcessoCobrancasCard({
   const [loading, setLoading] = useState(true)
   const [atosComEstado, setAtosComEstado] = useState<AtoComEstado[]>([])
   const [contratoForma, setContratoForma] = useState<string | null>(null)
+  const [formasDoContrato, setFormasDisponiveis] = useState<string[]>([])
   const [atoExpandido, setAtoExpandido] = useState<string | null>(null)
 
   // Modal de confirmação
@@ -89,7 +92,7 @@ export default function ProcessoCobrancasCard({
 
       const { data: contrato } = await supabase
         .from('financeiro_contratos_honorarios')
-        .select('forma_cobranca')
+        .select('forma_cobranca, formas_pagamento')
         .eq('id', processo.contrato_id)
         .single()
 
@@ -100,7 +103,18 @@ export default function ProcessoCobrancasCard({
 
       setContratoForma(contrato.forma_cobranca)
 
-      if (contrato.forma_cobranca === 'por_ato') {
+      // Extrair formas disponíveis do contrato
+      const formasDoContrato = contrato.formas_pagamento
+        ? (contrato.formas_pagamento as Array<{ forma?: string; forma_cobranca?: string }>)
+            .map(f => f.forma || f.forma_cobranca)
+            .filter(Boolean)
+        : [contrato.forma_cobranca]
+
+      setFormasDisponiveis(formasDoContrato as string[])
+
+      // Carregar atos se por_ato está nas formas disponíveis
+      const temPorAto = formasDoContrato.includes('por_ato') || contrato.forma_cobranca === 'por_ato'
+      if (temPorAto) {
         const atos = await loadAtosDisponiveis(processoId)
 
         // Inicializar estado de cada ato
@@ -212,7 +226,9 @@ export default function ProcessoCobrancasCard({
     return null
   }
 
-  if (contratoForma !== 'por_ato' || atosComEstado.length === 0) {
+  // Exibir se: por_ato está nas formasDisponiveis (prop ou carregado do contrato)
+  const deveExibir = formasDisponiveis?.includes('por_ato') || formasDoContrato.includes('por_ato') || contratoForma === 'por_ato'
+  if (!deveExibir || atosComEstado.length === 0) {
     return null
   }
 

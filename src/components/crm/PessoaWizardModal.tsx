@@ -38,9 +38,10 @@ interface PessoaWizardModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSave?: (data: any) => Promise<void>
+  className?: string
 }
 
-export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardModalProps) {
+export function PessoaWizardModal({ open, onOpenChange, onSave, className }: PessoaWizardModalProps) {
   const [currentStep, setCurrentStep] = useState(0)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState({
@@ -541,10 +542,10 @@ export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardMo
     onOpenChange(false)
   }
 
-  if (!open) return null
-
   return (
     <WizardWrapper
+      open={open}
+      onOpenChange={onOpenChange}
       steps={steps}
       currentStep={currentStep}
       onStepChange={setCurrentStep}
@@ -552,6 +553,7 @@ export function PessoaWizardModal({ open, onOpenChange, onSave }: PessoaWizardMo
       onCancel={handleCancel}
       title="Nova Pessoa"
       description="Preencha as informacoes"
+      className={className}
     />
   )
 }

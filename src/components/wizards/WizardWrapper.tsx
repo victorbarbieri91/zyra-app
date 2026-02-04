@@ -1,9 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface WizardStep {
@@ -16,6 +22,8 @@ export interface WizardStep {
 }
 
 interface WizardWrapperProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   steps: WizardStep[];
   currentStep: number;
   onStepChange: (step: number) => void;
@@ -27,6 +35,8 @@ interface WizardWrapperProps {
 }
 
 export function WizardWrapper({
+  open,
+  onOpenChange,
   steps,
   currentStep,
   onStepChange,
@@ -85,28 +95,23 @@ export function WizardWrapper({
     }
   };
 
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && onCancel) {
+      onCancel();
+    }
+    onOpenChange(newOpen);
+  };
+
   return (
-    <div className={cn('fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4', className)}>
-      <Card className="w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className={cn("max-w-lg max-h-[85vh] flex flex-col overflow-hidden p-0", className)}>
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-          <div className="flex-1">
-            <h2 className="text-sm font-semibold text-[#34495e]">{title}</h2>
-            {description && (
-              <p className="text-xs text-slate-500 mt-0.5">{description}</p>
-            )}
-          </div>
-          {onCancel && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onCancel}
-              className="ml-2 h-7 w-7 hover:bg-slate-100"
-            >
-              <X className="w-3.5 h-3.5" />
-            </Button>
+        <DialogHeader className="px-4 py-3 border-b border-slate-200">
+          <DialogTitle className="text-sm font-semibold text-[#34495e]">{title}</DialogTitle>
+          {description && (
+            <DialogDescription className="text-xs text-slate-500 mt-0.5">{description}</DialogDescription>
           )}
-        </div>
+        </DialogHeader>
 
         {/* Progress Indicator */}
         <div className="px-4 pt-3 pb-2">
@@ -192,14 +197,14 @@ export function WizardWrapper({
                 'Concluir'
               ) : (
                 <>
-                  Avancar
+                  Avançar
                   <ChevronRight className="w-3.5 h-3.5 ml-1" />
                 </>
               )}
             </Button>
           </div>
         </div>
-      </Card>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

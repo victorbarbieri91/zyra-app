@@ -1012,12 +1012,14 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
                           </span>
                         </div>
 
-                        {/* Responsável */}
-                        {item.responsavel_nome && (
+                        {/* Responsáveis */}
+                        {(item.responsaveis_nomes?.length > 0 || item.responsavel_nome) && (
                           <div className="flex items-center gap-1.5">
-                            <User className="w-3 h-3 text-[#89bcbe]" />
+                            <User className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
                             <span className="text-[10px] text-slate-600 truncate">
-                              {item.responsavel_nome}
+                              {item.responsaveis_nomes?.length > 0
+                                ? item.responsaveis_nomes.join(', ')
+                                : item.responsavel_nome}
                             </span>
                           </div>
                         )}

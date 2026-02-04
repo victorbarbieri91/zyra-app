@@ -23,6 +23,7 @@ export interface UseCobrancaFixaReturn {
   contratoTitulo: string | null;
   contratoNumero: string | null;
   formaCobranca: string | null;
+  formasDisponiveis: string[];  // Todas as formas do contrato
   loadValoresFixos: (processoId: string) => Promise<void>;
   lancarValorFixo: (
     processoId: string,
@@ -44,6 +45,7 @@ export function useCobrancaFixa(escritorioId: string | null): UseCobrancaFixaRet
   const [contratoTitulo, setContratoTitulo] = useState<string | null>(null);
   const [contratoNumero, setContratoNumero] = useState<string | null>(null);
   const [formaCobranca, setFormaCobranca] = useState<string | null>(null);
+  const [formasDisponiveis, setFormasDisponiveis] = useState<string[]>([]);
 
   /**
    * Carrega valores fixos disponíveis para um processo
@@ -57,6 +59,7 @@ export function useCobrancaFixa(escritorioId: string | null): UseCobrancaFixaRet
     setContratoTitulo(null);
     setContratoNumero(null);
     setFormaCobranca(null);
+    setFormasDisponiveis([]);
 
     try {
       // Buscar processo com contrato
@@ -71,10 +74,10 @@ export function useCobrancaFixa(escritorioId: string | null): UseCobrancaFixaRet
         return; // Sem contrato, sem valores
       }
 
-      // Buscar contrato
+      // Buscar contrato com formas_pagamento
       const { data: contrato, error: contratoError } = await supabase
         .from('financeiro_contratos_honorarios')
-        .select('id, titulo, numero_contrato, forma_cobranca, config')
+        .select('id, titulo, numero_contrato, forma_cobranca, config, formas_pagamento')
         .eq('id', processo.contrato_id)
         .single();
 
@@ -85,8 +88,17 @@ export function useCobrancaFixa(escritorioId: string | null): UseCobrancaFixaRet
       setContratoNumero(contrato.numero_contrato);
       setFormaCobranca(contrato.forma_cobranca);
 
-      // Apenas processar se for contrato fixo
-      if (contrato.forma_cobranca !== 'fixo') {
+      // Extrair formas disponíveis do contrato
+      const formas = contrato.formas_pagamento
+        ? (contrato.formas_pagamento as Array<{ forma?: string; forma_cobranca?: string }>)
+            .map(f => f.forma || f.forma_cobranca)
+            .filter(Boolean) as string[]
+        : [contrato.forma_cobranca];
+      setFormasDisponiveis(formas);
+
+      // Processar se fixo está nas formas disponíveis
+      const temFixo = formas.includes('fixo') || contrato.forma_cobranca === 'fixo';
+      if (!temFixo) {
         return;
       }
 
@@ -214,6 +226,7 @@ export function useCobrancaFixa(escritorioId: string | null): UseCobrancaFixaRet
     contratoTitulo,
     contratoNumero,
     formaCobranca,
+    formasDisponiveis,
     loadValoresFixos,
     lancarValorFixo,
   };

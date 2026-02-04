@@ -236,20 +236,6 @@ export default function ProcessosPage() {
 
       setTotalCount(count || 0)
 
-      // Buscar prazos críticos (próximos 7 dias) via view
-      const processoIds = (data || []).map((p: { id: string }) => p.id)
-      const { data: prazosCriticos } = await supabase
-        .from('v_prazos_criticos')
-        .select('id')
-        .in('id', processoIds)
-        .gte('dias_restantes', 0)
-        .lte('dias_restantes', 7)
-        .eq('prazo_cumprido', false)
-
-      const processoComPrazoCritico = new Set(
-        (prazosCriticos || []).map(p => p.id)
-      )
-
       // Transformar dados do banco para o formato da interface
       // cliente_nome e responsavel_nome já vêm diretamente da view
       const processosFormatados: Processo[] = (data || []).map((p: any) => ({
@@ -265,7 +251,7 @@ export default function ProcessosPage() {
         status: p.status,
         ultima_movimentacao: p.ultima_movimentacao,
         movimentacoes_nao_lidas: p.movimentacoes_nao_lidas || 0,
-        tem_prazo_critico: processoComPrazoCritico.has(p.id),
+        tem_prazo_critico: false, // TODO: Implementar lógica de prazos críticos
         tem_documento_pendente: false,
         escavador_monitoramento_id: p.escavador_monitoramento_id
       }))

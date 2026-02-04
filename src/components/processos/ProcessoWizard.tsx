@@ -19,12 +19,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { X, ChevronLeft, ChevronRight, Check, Search, Loader2, FileText, DollarSign, Clock, AlertTriangle, Plus, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Check, Search, Loader2, FileText, DollarSign, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import type { ProcessoDataJud } from '@/types/datajud'
-import ModalidadeSelector from '@/components/financeiro/ModalidadeSelector'
 import { PessoaWizardModal } from '@/components/crm/PessoaWizardModal'
+import { ContratoModal } from '@/components/financeiro/ContratoModal'
+import { useContratosHonorarios } from '@/hooks/useContratosHonorarios'
+import { AREA_JURIDICA_LABELS } from '@/lib/constants/areas-juridicas'
 
 interface ProcessoWizardProps {
   open: boolean
@@ -70,9 +71,10 @@ interface FormData {
   colaboradores_ids: string[]
   tags: string[]
   status: string
+  provisao_perda: string // Remota, Possível, Provável
   observacoes: string
 
-  // Step 5: Valores
+  // Step 5: Valores (mantidos para edição posterior)
   valor_acordo: string
   valor_condenacao: string
   provisao_sugerida: string
@@ -124,6 +126,7 @@ const initialFormData: FormData = {
   colaboradores_ids: [],
   tags: [],
   status: 'ativo',
+  provisao_perda: '',
   observacoes: '',
   valor_acordo: '',
   valor_condenacao: '',
@@ -140,6 +143,26 @@ const FORMA_COBRANCA_LABELS: Record<string, string> = {
   por_cargo: 'Por Cargo/Timesheet',
 }
 
+// Funções para máscara de moeda brasileira
+const formatCurrencyInput = (value: string): string => {
+  const digits = value.replace(/\D/g, '')
+  if (!digits) return ''
+  const numValue = parseInt(digits, 10) / 100
+  return numValue.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  })
+}
+
+const parseCurrencyToNumber = (value: string): number => {
+  const cleaned = value
+    .replace(/R\$\s?/g, '')
+    .replace(/\./g, '')
+    .replace(',', '.')
+    .trim()
+  return parseFloat(cleaned) || 0
+}
+
 export default function ProcessoWizard({
   open,
   onOpenChange,
@@ -150,15 +173,18 @@ export default function ProcessoWizard({
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState<FormData>(initialFormData)
   const [loading, setLoading] = useState(false)
-  const [newTag, setNewTag] = useState('')
-  const [consultandoCNJ, setConsultandoCNJ] = useState(false)
   const [contratos, setContratos] = useState<ContratoOption[]>([])
   const [loadingContratos, setLoadingContratos] = useState(false)
   const [pessoaModalOpen, setPessoaModalOpen] = useState(false)
+  const [contratoModalOpen, setContratoModalOpen] = useState(false)
   const [clientes, setClientes] = useState<{ id: string; nome_completo: string; tipo_pessoa: string }[]>([])
   const [loadingClientes, setLoadingClientes] = useState(false)
   const [clienteSearch, setClienteSearch] = useState('')
+  const [valorCausaFormatado, setValorCausaFormatado] = useState('')
+  const [membros, setMembros] = useState<{ id: string; nome_completo: string; role: string }[]>([])
+  const [loadingMembros, setLoadingMembros] = useState(false)
   const supabase = createClient()
+  const { createContrato } = useContratosHonorarios()
 
   // Carregar clientes do escritorio
   const loadClientes = async (search?: string) => {
@@ -199,10 +225,57 @@ export default function ProcessoWizard({
     }
   }
 
-  // Carregar clientes quando modal abre
+  // Carregar membros do escritório
+  const loadMembros = async () => {
+    setLoadingMembros(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('escritorio_id')
+        .eq('id', user.id)
+        .single()
+
+      if (!profile?.escritorio_id) return
+
+      const { data, error } = await supabase
+        .from('escritorios_usuarios')
+        .select(`
+          user_id,
+          role,
+          profiles:user_id (
+            id,
+            nome_completo
+          )
+        `)
+        .eq('escritorio_id', profile.escritorio_id)
+        .eq('ativo', true)
+
+      if (error) throw error
+
+      const membrosFormatados = (data || [])
+        .filter((m: any) => m.profiles)
+        .map((m: any) => ({
+          id: m.profiles.id,
+          nome_completo: m.profiles.nome_completo,
+          role: m.role
+        }))
+
+      setMembros(membrosFormatados)
+    } catch (error) {
+      console.error('Erro ao carregar membros:', error)
+    } finally {
+      setLoadingMembros(false)
+    }
+  }
+
+  // Carregar clientes e membros quando modal abre
   useEffect(() => {
     if (open) {
       loadClientes()
+      loadMembros()
     }
   }, [open])
 
@@ -231,25 +304,15 @@ export default function ProcessoWizard({
 
     setLoadingContratos(true)
     try {
-      // Buscar contratos com config e formas disponíveis
+      // Buscar contratos - config e formas_pagamento são colunas JSONB
       const { data, error } = await supabase
         .from('financeiro_contratos_honorarios')
         .select(`
           id,
           titulo,
           forma_cobranca,
-          config:financeiro_contratos_honorarios_config(
-            tipo_config,
-            valor_fixo,
-            percentual_exito,
-            valor_hora,
-            valor_por_processo,
-            dia_cobranca
-          ),
-          formas:financeiro_contratos_formas(
-            forma_cobranca,
-            ativo
-          )
+          config,
+          formas_pagamento
         `)
         .eq('cliente_id', clienteId)
         .eq('ativo', true)
@@ -261,24 +324,26 @@ export default function ProcessoWizard({
         return
       }
 
-      const contratosFormatados: ContratoOption[] = (data || []).map(c => {
-        const config = c.config?.[0] || {}
+      const contratosFormatados: ContratoOption[] = (data || []).map((c: any) => {
+        // config é um JSONB com os valores do contrato
+        const config = c.config || {}
 
-        // Carregar formas disponíveis da tabela financeiro_contratos_formas
-        // Se não houver formas na nova tabela, usar forma_cobranca do contrato
-        const formasDisponiveis: FormaContrato[] = (c.formas || [])
-          .filter((f: any) => f.ativo !== false)
-          .map((f: any) => ({
-            forma_cobranca: f.forma_cobranca,
-            config: {
-              valor_fixo: config.valor_fixo,
-              valor_hora: config.valor_hora,
-              percentual_exito: config.percentual_exito,
-              valor_por_processo: config.valor_por_processo,
-            }
-          }))
+        // formas_pagamento é um JSONB array com formas disponíveis
+        const formasDisponiveis: FormaContrato[] = Array.isArray(c.formas_pagamento)
+          ? c.formas_pagamento
+              .filter((f: any) => f.ativo !== false)
+              .map((f: any) => ({
+                forma_cobranca: f.forma_cobranca || f.tipo,
+                config: {
+                  valor_fixo: f.valor_fixo || config.valor_fixo,
+                  valor_hora: f.valor_hora || config.valor_hora,
+                  percentual_exito: f.percentual_exito || config.percentual_exito,
+                  valor_por_processo: f.valor_por_processo || config.valor_por_processo,
+                }
+              }))
+          : []
 
-        // Fallback: se não tiver formas na nova tabela, usar forma_cobranca do contrato
+        // Fallback: se não tiver formas_pagamento, usar forma_cobranca do contrato
         if (formasDisponiveis.length === 0 && c.forma_cobranca) {
           formasDisponiveis.push({
             forma_cobranca: c.forma_cobranca,
@@ -333,6 +398,27 @@ export default function ProcessoWizard({
     }
   }
 
+  // Handler para salvar novo contrato via modal
+  const handleSaveContrato = async (data: any): Promise<string | null | boolean> => {
+    try {
+      const contratoId = await createContrato(data)
+      if (contratoId) {
+        // Recarregar lista de contratos
+        await loadContratosCliente(formData.cliente_id)
+        // Selecionar o novo contrato automaticamente
+        updateField('contrato_id', contratoId)
+        toast.success('Contrato criado e vinculado!')
+        setContratoModalOpen(false)
+        return contratoId
+      }
+      return null
+    } catch (error) {
+      console.error('Erro ao criar contrato:', error)
+      toast.error('Erro ao criar contrato')
+      return null
+    }
+  }
+
   // Obter contrato selecionado
   const contratoSelecionado = contratos.find(c => c.id === formData.contrato_id)
 
@@ -342,110 +428,18 @@ export default function ProcessoWizard({
     return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
   }
 
-  // Funcao para inferir area juridica pela classe processual
-  const inferirArea = (classe: string, assuntos?: string[]): string | null => {
-    const textoBusca = [classe, ...(assuntos || [])].join(' ').toLowerCase()
-    if (textoBusca.includes('trabalhista') || textoBusca.includes('reclamacao') || textoBusca.includes('clt')) return 'Trabalhista'
-    if (textoBusca.includes('familia') || textoBusca.includes('divorcio') || textoBusca.includes('alimentos')) return 'Família'
-    if (textoBusca.includes('criminal') || textoBusca.includes('penal') || textoBusca.includes('crime')) return 'Criminal'
-    if (textoBusca.includes('tributar') || textoBusca.includes('fiscal')) return 'Tributária'
-    if (textoBusca.includes('consumidor') || textoBusca.includes('cdc')) return 'Consumidor'
-    if (textoBusca.includes('empresar') || textoBusca.includes('falencia')) return 'Empresarial'
-    return 'Cível'
-  }
-
-  // Funcao para mapear instancia do DataJud para o formato do sistema
-  const mapearInstancia = (instancia: string): string => {
-    const mapa: Record<string, string> = {
-      '1a': '1ª',
-      '2a': '2ª',
-      'stj': 'STJ',
-      'stf': 'STF',
-      'tst': 'TST'
-    }
-    return mapa[instancia] || '1ª'
-  }
-
-  // Funcao para buscar dados no DataJud
-  const handleBuscarDataJud = async () => {
-    if (!formData.numero_cnj.trim()) {
-      toast.error('Digite o número CNJ primeiro')
-      return
-    }
-
-    setConsultandoCNJ(true)
-    try {
-      const response = await fetch('/api/datajud/consultar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ numero_cnj: formData.numero_cnj })
-      })
-
-      const result = await response.json()
-      console.log('[DataJud] Resposta:', response.status, result)
-
-      if (!response.ok) {
-        // Mostrar erro específico da validação
-        toast.error(result.error || `Erro ${response.status}: Falha na consulta`)
-        return
-      }
-
-      if (result.sucesso && result.dados) {
-        const dados: ProcessoDataJud = result.dados
-
-        // Preencher campos automaticamente
-        updateField('tribunal', dados.tribunal)
-        updateField('vara', dados.orgao_julgador)
-        if (dados.data_ajuizamento) {
-          updateField('data_distribuicao', dados.data_ajuizamento.split('T')[0])
-        }
-        updateField('instancia', mapearInstancia(dados.instancia))
-        updateField('objeto_acao', dados.objeto_acao)
-
-        // Inferir area pela classe
-        const area = inferirArea(dados.classe, dados.assuntos)
-        if (area) updateField('area', area)
-
-        const fonte = result.fonte === 'cache' ? ' (cache)' : ''
-        toast.success(`Dados encontrados e preenchidos!${fonte}`)
-      } else {
-        toast.error(result.error || 'Processo não encontrado no DataJud')
-      }
-    } catch (error) {
-      console.error('Erro ao consultar DataJud:', error)
-      if (error instanceof SyntaxError) {
-        toast.error('Erro ao processar resposta do servidor')
-      } else {
-        toast.error('Erro de conexão ao consultar DataJud')
-      }
-    } finally {
-      setConsultandoCNJ(false)
-    }
-  }
-
   const steps = [
     { number: 1, title: 'Dados Básicos' },
     { number: 2, title: 'Partes' },
     { number: 3, title: 'Localização' },
     { number: 4, title: 'Gestão' },
-    { number: 5, title: 'Valores' },
+    { number: 5, title: 'Revisão' },
   ]
 
   const totalSteps = 5
 
   const updateField = (field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-  }
-
-  const addTag = () => {
-    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      updateField('tags', [...formData.tags, newTag.trim()])
-      setNewTag('')
-    }
-  }
-
-  const removeTag = (tag: string) => {
-    updateField('tags', formData.tags.filter(t => t !== tag))
   }
 
   const validateStep = (step: number): boolean => {
@@ -478,14 +472,6 @@ export default function ProcessoWizard({
         if (!formData.cliente_id) {
           toast.error('Cliente é obrigatório')
           return false
-        }
-        // Se tem contrato com múltiplas formas, exigir modalidade
-        if (formData.contrato_id) {
-          const contrato = contratos.find(c => c.id === formData.contrato_id)
-          if (contrato && contrato.formas_disponiveis.length > 1 && !formData.modalidade_cobranca) {
-            toast.error('Selecione a modalidade de cobrança para este processo')
-            return false
-          }
         }
         return true
       case 3:
@@ -521,10 +507,30 @@ export default function ProcessoWizard({
     try {
       setLoading(true)
 
+      // Buscar escritorio_id do usuário logado
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error('Usuário não autenticado')
+        return
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('escritorio_id')
+        .eq('id', user.id)
+        .single()
+
+      if (!profile?.escritorio_id) {
+        toast.error('Escritório não encontrado')
+        return
+      }
+
       // Converter valores para números e filtrar outros_numeros vazios
       const outrosNumerosValidos = formData.outros_numeros.filter(n => n.numero.trim().length > 0)
 
       const processData = {
+        escritorio_id: profile.escritorio_id,
+        created_by: user.id,
         numero_cnj: formData.numero_cnj.trim() || null,
         outros_numeros: outrosNumerosValidos.length > 0 ? outrosNumerosValidos : [],
         tipo: formData.tipo,
@@ -533,7 +539,7 @@ export default function ProcessoWizard({
         instancia: formData.instancia,
         rito: formData.rito || null,
         valor_causa: formData.valor_causa ? parseFloat(formData.valor_causa) : null,
-        indice_correcao: formData.indice_correcao === 'auto' ? null : (formData.indice_correcao || null),  // Se 'auto' ou vazio, trigger define pelo padrão da área
+        indice_correcao: formData.indice_correcao === 'auto' ? null : (formData.indice_correcao || null),
         data_distribuicao: formData.data_distribuicao,
         objeto_acao: formData.objeto_acao || null,
         cliente_id: formData.cliente_id,
@@ -545,25 +551,37 @@ export default function ProcessoWizard({
         comarca: formData.comarca || null,
         vara: formData.vara || null,
         responsavel_id: formData.responsavel_id,
-        colaboradores_ids: formData.colaboradores_ids,
-        tags: formData.tags,
-        status: formData.status,
+        colaboradores_ids: formData.colaboradores_ids.length > 0 ? formData.colaboradores_ids : null,
+        tags: formData.tags.length > 0 ? formData.tags : null,
+        status: 'ativo',
+        provisao_perda: formData.provisao_perda || null,
         observacoes: formData.observacoes || null,
         valor_acordo: formData.valor_acordo ? parseFloat(formData.valor_acordo) : null,
         valor_condenacao: formData.valor_condenacao ? parseFloat(formData.valor_condenacao) : null,
         provisao_sugerida: formData.provisao_sugerida ? parseFloat(formData.provisao_sugerida) : null,
       }
 
-      // TODO: Aqui chamaria a function create_processo() do Supabase
-      console.log('Dados do processo:', processData)
+      // Inserir processo no banco
+      const { data: processo, error } = await supabase
+        .from('processos_processos')
+        .insert(processData)
+        .select('id')
+        .single()
+
+      if (error) {
+        console.error('Erro ao criar processo:', error)
+        toast.error(error.message || 'Erro ao criar processo')
+        return
+      }
 
       toast.success('Processo criado com sucesso!')
       setFormData(initialFormData)
+      setValorCausaFormatado('')
       setCurrentStep(1)
       handleClose()
 
-      if (onSuccess) {
-        onSuccess('mock-id-123')
+      if (onSuccess && processo?.id) {
+        onSuccess(processo.id)
       }
       onProcessoCriado?.()
     } catch (error) {
@@ -575,21 +593,22 @@ export default function ProcessoWizard({
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-[#34495e]">
             Novo Processo
           </DialogTitle>
         </DialogHeader>
 
-        {/* Progress Indicator */}
-        <div className="flex items-center justify-between mb-6">
+        {/* Progress Indicator - Compacto */}
+        <div className="flex items-center justify-center gap-1 mb-4">
           {steps.map((step, index) => (
-            <div key={step.number} className="flex items-center flex-1">
-              <div className="flex flex-col items-center flex-1">
+            <div key={step.number} className="flex items-center">
+              <div className="flex items-center gap-1.5">
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center font-medium text-xs transition-all ${
                     currentStep > step.number
                       ? 'bg-emerald-500 text-white'
                       : currentStep === step.number
@@ -598,13 +617,13 @@ export default function ProcessoWizard({
                   }`}
                 >
                   {currentStep > step.number ? (
-                    <Check className="w-5 h-5" />
+                    <Check className="w-3.5 h-3.5" />
                   ) : (
                     step.number
                   )}
                 </div>
                 <span
-                  className={`text-xs mt-2 font-medium ${
+                  className={`text-[11px] font-medium ${
                     currentStep >= step.number ? 'text-[#34495e]' : 'text-slate-400'
                   }`}
                 >
@@ -613,7 +632,7 @@ export default function ProcessoWizard({
               </div>
               {index < steps.length - 1 && (
                 <div
-                  className={`h-0.5 flex-1 mx-2 ${
+                  className={`w-8 h-px mx-2 ${
                     currentStep > step.number ? 'bg-emerald-500' : 'bg-slate-200'
                   }`}
                 />
@@ -627,116 +646,8 @@ export default function ProcessoWizard({
           {/* Step 1: Dados Básicos */}
           {currentStep === 1 && (
             <>
-              <div className="grid grid-cols-2 gap-4">
-                {/* Número CNJ - opcional para processos administrativos */}
-                <div className="col-span-2">
-                  <Label htmlFor="numero_cnj">
-                    Número CNJ
-                    <span className="text-slate-400 font-normal ml-1">(opcional para processos administrativos)</span>
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="numero_cnj"
-                      placeholder="1234567-12.2024.8.26.0100"
-                      value={formData.numero_cnj}
-                      onChange={(e) => updateField('numero_cnj', e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleBuscarDataJud}
-                      disabled={!formData.numero_cnj.trim() || consultandoCNJ}
-                      className="shrink-0 gap-2"
-                    >
-                      {consultandoCNJ ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Search className="w-4 h-4" />
-                      )}
-                      {consultandoCNJ ? 'Buscando...' : 'Buscar DataJud'}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Formato: NNNNNNN-DD.AAAA.J.TT.OOOO - Clique em "Buscar DataJud" para preencher automaticamente
-                  </p>
-                </div>
-
-                {/* Outros Números - para processos sem CNJ */}
-                <div className="col-span-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <Label>
-                      Outros Números
-                      <span className="text-slate-400 font-normal ml-1">(para processos administrativos, internos, etc.)</span>
-                    </Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateField('outros_numeros', [...formData.outros_numeros, { tipo: '', numero: '' }])}
-                      className="gap-1.5 h-7"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Adicionar
-                    </Button>
-                  </div>
-
-                  {formData.outros_numeros.length === 0 ? (
-                    <p className="text-xs text-slate-500 py-2">
-                      Nenhum número adicional. Clique em "Adicionar" para incluir números de processos administrativos, protocolos, etc.
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {formData.outros_numeros.map((item, index) => (
-                        <div key={index} className="flex gap-2 items-start">
-                          <Select
-                            value={item.tipo}
-                            onValueChange={(v) => {
-                              const updated = [...formData.outros_numeros]
-                              updated[index] = { ...updated[index], tipo: v }
-                              updateField('outros_numeros', updated)
-                            }}
-                          >
-                            <SelectTrigger className="w-48">
-                              <SelectValue placeholder="Tipo..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="processo_administrativo">Processo Administrativo</SelectItem>
-                              <SelectItem value="protocolo">Protocolo</SelectItem>
-                              <SelectItem value="numero_interno">Número Interno</SelectItem>
-                              <SelectItem value="inquerito">Inquérito</SelectItem>
-                              <SelectItem value="auto_infracao">Auto de Infração</SelectItem>
-                              <SelectItem value="outro">Outro</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Input
-                            placeholder="Número..."
-                            value={item.numero}
-                            onChange={(e) => {
-                              const updated = [...formData.outros_numeros]
-                              updated[index] = { ...updated[index], numero: e.target.value }
-                              updateField('outros_numeros', updated)
-                            }}
-                            className="flex-1"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              const updated = formData.outros_numeros.filter((_, i) => i !== index)
-                              updateField('outros_numeros', updated)
-                            }}
-                            className="text-slate-400 hover:text-red-500"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
+              <div className="grid grid-cols-3 gap-x-4 gap-y-3">
+                {/* Linha 1: Tipo + Número (CNJ ou Outro) */}
                 <div>
                   <Label htmlFor="tipo">Tipo *</Label>
                   <Select value={formData.tipo} onValueChange={(v) => updateField('tipo', v)}>
@@ -751,6 +662,69 @@ export default function ProcessoWizard({
                   </Select>
                 </div>
 
+                {/* Campo de número condicional */}
+                {formData.tipo === 'judicial' ? (
+                  <div className="col-span-2">
+                    <Label htmlFor="numero_cnj">Número CNJ *</Label>
+                    <Input
+                      id="numero_cnj"
+                      placeholder="1234567-12.2024.8.26.0100"
+                      value={formData.numero_cnj}
+                      onChange={(e) => updateField('numero_cnj', e.target.value)}
+                    />
+                  </div>
+                ) : (
+                  <div className="col-span-2">
+                    <Label>Número do Processo *</Label>
+                    <div className="flex gap-2">
+                      <Select
+                        value={formData.outros_numeros[0]?.tipo || ''}
+                        onValueChange={(v) => {
+                          const updated = formData.outros_numeros.length > 0
+                            ? [{ ...formData.outros_numeros[0], tipo: v }]
+                            : [{ tipo: v, numero: '' }]
+                          updateField('outros_numeros', updated)
+                        }}
+                      >
+                        <SelectTrigger className="w-44">
+                          <SelectValue placeholder="Tipo..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="processo_administrativo">Proc. Administrativo</SelectItem>
+                          <SelectItem value="protocolo">Protocolo</SelectItem>
+                          <SelectItem value="numero_interno">Número Interno</SelectItem>
+                          <SelectItem value="inquerito">Inquérito</SelectItem>
+                          <SelectItem value="auto_infracao">Auto de Infração</SelectItem>
+                          <SelectItem value="arbitragem">Arbitragem</SelectItem>
+                          <SelectItem value="outro">Outro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        placeholder="Número do processo..."
+                        value={formData.outros_numeros[0]?.numero || ''}
+                        onChange={(e) => {
+                          const updated = formData.outros_numeros.length > 0
+                            ? [{ ...formData.outros_numeros[0], numero: e.target.value }]
+                            : [{ tipo: '', numero: e.target.value }]
+                          updateField('outros_numeros', updated)
+                        }}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Linha 2: Data + Área + Fase */}
+                <div>
+                  <Label htmlFor="data_distribuicao">Data Distribuição *</Label>
+                  <Input
+                    id="data_distribuicao"
+                    type="date"
+                    value={formData.data_distribuicao}
+                    onChange={(e) => updateField('data_distribuicao', e.target.value)}
+                  />
+                </div>
+
                 <div>
                   <Label htmlFor="area">Área Jurídica *</Label>
                   <Select value={formData.area} onValueChange={(v) => updateField('area', v)}>
@@ -758,13 +732,9 @@ export default function ProcessoWizard({
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Cível">Cível</SelectItem>
-                      <SelectItem value="Trabalhista">Trabalhista</SelectItem>
-                      <SelectItem value="Tributária">Tributária</SelectItem>
-                      <SelectItem value="Família">Família</SelectItem>
-                      <SelectItem value="Criminal">Criminal</SelectItem>
-                      <SelectItem value="Consumidor">Consumidor</SelectItem>
-                      <SelectItem value="Empresarial">Empresarial</SelectItem>
+                      {Object.entries(AREA_JURIDICA_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -784,6 +754,7 @@ export default function ProcessoWizard({
                   </Select>
                 </div>
 
+                {/* Linha 3: Instância + Rito + Valor */}
                 <div>
                   <Label htmlFor="instancia">Instância *</Label>
                   <Select value={formData.instancia} onValueChange={(v) => updateField('instancia', v)}>
@@ -818,51 +789,39 @@ export default function ProcessoWizard({
                 </div>
 
                 <div>
-                  <Label htmlFor="valor_causa">Valor da Causa (R$)</Label>
+                  <Label htmlFor="valor_causa">Valor da Causa</Label>
                   <Input
                     id="valor_causa"
-                    type="number"
-                    step="0.01"
-                    placeholder="0,00"
-                    value={formData.valor_causa}
-                    onChange={(e) => updateField('valor_causa', e.target.value)}
+                    placeholder="R$ 0,00"
+                    value={valorCausaFormatado}
+                    onChange={(e) => {
+                      const formatted = formatCurrencyInput(e.target.value)
+                      setValorCausaFormatado(formatted)
+                      const numValue = parseCurrencyToNumber(formatted)
+                      updateField('valor_causa', numValue > 0 ? numValue.toString() : '')
+                    }}
                   />
                 </div>
 
+                {/* Linha 4: Índice Correção + Objeto da Ação */}
                 <div>
-                  <Label htmlFor="indice_correcao">
-                    Índice de Correção Monetária
-                    <span className="text-slate-400 font-normal ml-1">(opcional)</span>
-                  </Label>
+                  <Label htmlFor="indice_correcao">Índice Correção</Label>
                   <Select
                     value={formData.indice_correcao}
                     onValueChange={(v) => updateField('indice_correcao', v)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Automático pela área" />
+                      <SelectValue placeholder="Automático" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="auto">Automático (INPC/SELIC)</SelectItem>
-                      <SelectItem value="INPC">INPC - Trabalhista, Previdenciário, Cível</SelectItem>
-                      <SelectItem value="IPCA">IPCA - Índice oficial de inflação</SelectItem>
-                      <SelectItem value="IPCA-E">IPCA-E - Tabelas judiciais</SelectItem>
-                      <SelectItem value="IGP-M">IGP-M - Contratos e aluguéis</SelectItem>
-                      <SelectItem value="SELIC">SELIC - Tributário</SelectItem>
+                      <SelectItem value="auto">Automático</SelectItem>
+                      <SelectItem value="INPC">INPC</SelectItem>
+                      <SelectItem value="IPCA">IPCA</SelectItem>
+                      <SelectItem value="IPCA-E">IPCA-E</SelectItem>
+                      <SelectItem value="IGP-M">IGP-M</SelectItem>
+                      <SelectItem value="SELIC">SELIC</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Se vazio, será definido automaticamente: SELIC para Tributária, INPC para demais áreas
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="data_distribuicao">Data de Distribuição *</Label>
-                  <Input
-                    id="data_distribuicao"
-                    type="date"
-                    value={formData.data_distribuicao}
-                    onChange={(e) => updateField('data_distribuicao', e.target.value)}
-                  />
                 </div>
 
                 <div className="col-span-2">
@@ -872,7 +831,8 @@ export default function ProcessoWizard({
                     placeholder="Resumo do pedido..."
                     value={formData.objeto_acao}
                     onChange={(e) => updateField('objeto_acao', e.target.value)}
-                    rows={3}
+                    rows={1}
+                    className="min-h-[38px] resize-none"
                   />
                 </div>
               </div>
@@ -936,154 +896,7 @@ export default function ProcessoWizard({
                       )}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Não encontrou?{' '}
-                    <button
-                      type="button"
-                      onClick={() => setPessoaModalOpen(true)}
-                      className="text-[#89bcbe] hover:underline"
-                    >
-                      Cadastrar novo cliente
-                    </button>
-                  </p>
                 </div>
-
-                {/* Seletor de Contrato - aparece após selecionar cliente */}
-                {formData.cliente_id && (
-                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-4">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-[#34495e]" />
-                      <span className="text-sm font-medium text-[#34495e]">Contrato de Honorários</span>
-                    </div>
-
-                    {loadingContratos ? (
-                      <div className="flex items-center gap-2 text-slate-500">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="text-sm">Carregando contratos...</span>
-                      </div>
-                    ) : contratos.length === 0 ? (
-                      <div className="text-sm text-slate-500">
-                        <p>Nenhum contrato ativo encontrado para este cliente.</p>
-                        <p className="text-xs mt-1">
-                          O processo será criado sem vínculo com contrato. Você pode vincular posteriormente.
-                        </p>
-                      </div>
-                    ) : (
-                      <>
-                        <div>
-                          <Label htmlFor="contrato_id">Qual contrato aplicar a este processo?</Label>
-                          <Select
-                            value={formData.contrato_id}
-                            onValueChange={handleContratoChange}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione um contrato (opcional)..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {contratos.map(c => (
-                                <SelectItem key={c.id} value={c.id}>
-                                  {c.titulo} - {c.formas_disponiveis.length > 1
-                                    ? `${c.formas_disponiveis.length} formas`
-                                    : FORMA_COBRANCA_LABELS[c.forma_cobranca] || c.forma_cobranca}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Preview das regras do contrato selecionado */}
-                        {contratoSelecionado && (
-                          <div className="p-3 bg-white rounded-lg border border-[#89bcbe]/30 space-y-2">
-                            <div className="flex items-center gap-2">
-                              <DollarSign className="w-4 h-4 text-emerald-600" />
-                              <span className="text-sm font-medium text-[#34495e]">
-                                Regras de Cobrança
-                              </span>
-                              <Badge variant="outline" className="text-xs">
-                                {FORMA_COBRANCA_LABELS[contratoSelecionado.forma_cobranca]}
-                              </Badge>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              {contratoSelecionado.valor_fixo && (
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-slate-500">Valor fixo:</span>
-                                  <span className="font-medium text-emerald-600">
-                                    {formatarValor(contratoSelecionado.valor_fixo)}
-                                  </span>
-                                </div>
-                              )}
-                              {contratoSelecionado.valor_hora && (
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-slate-500">Valor/hora:</span>
-                                  <span className="font-medium text-emerald-600">
-                                    {formatarValor(contratoSelecionado.valor_hora)}
-                                  </span>
-                                </div>
-                              )}
-                              {contratoSelecionado.percentual_exito && (
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-slate-500">Êxito:</span>
-                                  <span className="font-medium text-emerald-600">
-                                    {contratoSelecionado.percentual_exito}%
-                                  </span>
-                                </div>
-                              )}
-                              {contratoSelecionado.valor_por_processo && (
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-slate-500">Valor/processo:</span>
-                                  <span className="font-medium text-emerald-600">
-                                    {formatarValor(contratoSelecionado.valor_por_processo)}
-                                  </span>
-                                </div>
-                              )}
-                              {contratoSelecionado.dia_cobranca && (
-                                <div className="flex items-center gap-1.5">
-                                  <Clock className="w-3 h-3 text-slate-400" />
-                                  <span className="text-slate-500">Cobrança dia:</span>
-                                  <span className="font-medium">{contratoSelecionado.dia_cobranca}</span>
-                                </div>
-                              )}
-                            </div>
-
-                            {contratoSelecionado.forma_cobranca === 'por_cargo' && (
-                              <p className="text-xs text-slate-500 mt-1">
-                                Os valores por cargo serão aplicados conforme configuração do contrato.
-                              </p>
-                            )}
-                            {contratoSelecionado.forma_cobranca === 'por_ato' && (
-                              <p className="text-xs text-slate-500 mt-1">
-                                Atos processuais serão cobrados automaticamente quando detectados.
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Seletor de Modalidade - aparece quando contrato tem múltiplas formas */}
-                        {contratoSelecionado && contratoSelecionado.formas_disponiveis.length > 1 && (
-                          <div className="mt-4">
-                            <ModalidadeSelector
-                              formas={contratoSelecionado.formas_disponiveis}
-                              selectedModalidade={formData.modalidade_cobranca}
-                              onSelect={(modalidade) => updateField('modalidade_cobranca', modalidade)}
-                              error={!formData.modalidade_cobranca ? undefined : undefined}
-                            />
-                          </div>
-                        )}
-
-                        {/* Aviso de seleção obrigatória */}
-                        {contratoSelecionado && contratoSelecionado.formas_disponiveis.length > 1 && !formData.modalidade_cobranca && (
-                          <div className="flex items-center gap-2 p-2.5 mt-3 rounded-lg bg-amber-50 border border-amber-200">
-                            <AlertTriangle className="w-4 h-4 text-amber-600" />
-                            <span className="text-xs text-amber-700">
-                              Selecione a modalidade de cobrança para este processo
-                            </span>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
 
                 <div>
                   <Label htmlFor="polo_cliente">Polo do Cliente *</Label>
@@ -1160,65 +973,133 @@ export default function ProcessoWizard({
                   <Label htmlFor="responsavel_id">Advogado Responsável *</Label>
                   <Select value={formData.responsavel_id} onValueChange={(v) => updateField('responsavel_id', v)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione..." />
+                      <SelectValue placeholder={loadingMembros ? "Carregando..." : "Selecione..."} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">Dr. Carlos Souza</SelectItem>
-                      <SelectItem value="2">Dra. Ana Santos</SelectItem>
-                      <SelectItem value="3">Dr. Pedro Oliveira</SelectItem>
+                      {membros.length === 0 && !loadingMembros && (
+                        <div className="px-2 py-1.5 text-sm text-slate-500">Nenhum membro encontrado</div>
+                      )}
+                      {membros.map((membro) => (
+                        <SelectItem key={membro.id} value={membro.id}>
+                          {membro.nome_completo}
+                          <span className="ml-2 text-xs text-slate-400">
+                            ({membro.role === 'owner' ? 'Proprietário' :
+                              membro.role === 'admin' ? 'Admin' :
+                              membro.role === 'advogado' ? 'Advogado' :
+                              membro.role === 'assistente' ? 'Assistente' : 'Membro'})
+                          </span>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div>
-                  <Label htmlFor="status">Status Inicial</Label>
-                  <Select value={formData.status} onValueChange={(v) => updateField('status', v)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ativo">Ativo</SelectItem>
-                      <SelectItem value="suspenso">Suspenso</SelectItem>
-                      <SelectItem value="arquivado">Arquivado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="tags">Tags (Organização)</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="tags"
-                      placeholder="Digite uma tag e pressione Enter..."
-                      value={newTag}
-                      onChange={(e) => setNewTag(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          addTag()
-                        }
-                      }}
-                    />
-                    <Button type="button" variant="outline" onClick={addTag}>
-                      Adicionar
+                {/* Contrato de Honorários */}
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-[#34495e]" />
+                      <span className="text-sm font-medium text-[#34495e]">Contrato de Honorários</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-[#34495e] hover:bg-slate-200"
+                      onClick={() => setContratoModalOpen(true)}
+                      disabled={!formData.cliente_id}
+                    >
+                      <Plus className="w-3.5 h-3.5 mr-1" />
+                      Novo Contrato
                     </Button>
                   </div>
-                  {formData.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {formData.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                          <button
-                            type="button"
-                            onClick={() => removeTag(tag)}
-                            className="ml-1.5 hover:text-red-600"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </Badge>
-                      ))}
+
+                  {!formData.cliente_id ? (
+                    <p className="text-xs text-slate-500">Selecione um cliente primeiro (Etapa 2)</p>
+                  ) : loadingContratos ? (
+                    <div className="flex items-center gap-2 text-slate-500">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Carregando contratos...</span>
                     </div>
+                  ) : contratos.length === 0 ? (
+                    <div className="text-xs text-slate-500">
+                      <p>Nenhum contrato encontrado para este cliente.</p>
+                      <p className="mt-1">Crie um novo contrato ou prossiga sem vínculo.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <Select value={formData.contrato_id} onValueChange={handleContratoChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um contrato (opcional)..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {contratos.map(c => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.titulo} - {c.formas_disponiveis.length > 1
+                                ? `${c.formas_disponiveis.length} formas`
+                                : FORMA_COBRANCA_LABELS[c.forma_cobranca] || c.forma_cobranca}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {/* Preview do contrato e seletor de modalidade */}
+                      {contratoSelecionado && (
+                        <div className="p-2.5 bg-white rounded border border-[#89bcbe]/30 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                            <span className="text-xs font-medium text-[#34495e]">Regras</span>
+                            <Badge variant="outline" className="text-[10px] h-5">
+                              {FORMA_COBRANCA_LABELS[contratoSelecionado.forma_cobranca]}
+                            </Badge>
+                          </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                            {contratoSelecionado.valor_fixo && (
+                              <span><span className="text-slate-500">Fixo:</span> <span className="font-medium text-emerald-600">{formatarValor(contratoSelecionado.valor_fixo)}</span></span>
+                            )}
+                            {contratoSelecionado.valor_hora && (
+                              <span><span className="text-slate-500">Hora:</span> <span className="font-medium text-emerald-600">{formatarValor(contratoSelecionado.valor_hora)}</span></span>
+                            )}
+                            {contratoSelecionado.percentual_exito && (
+                              <span><span className="text-slate-500">Êxito:</span> <span className="font-medium text-emerald-600">{contratoSelecionado.percentual_exito}%</span></span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                    </>
                   )}
+                </div>
+
+                <div>
+                  <Label htmlFor="provisao_perda">Provisão de Perda</Label>
+                  <Select value={formData.provisao_perda} onValueChange={(v) => updateField('provisao_perda', v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a probabilidade..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="remota">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          Remota
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="possivel">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-amber-500" />
+                          Possível
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="provavel">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-red-500" />
+                          Provável
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Classificação do risco de perda para fins de provisão contábil
+                  </p>
                 </div>
 
                 <div>
@@ -1235,57 +1116,86 @@ export default function ProcessoWizard({
             </>
           )}
 
-          {/* Step 5: Valores */}
+          {/* Step 5: Revisão Final */}
           {currentStep === 5 && (
             <>
-              <div className="space-y-4">
-                <div className="p-4 bg-[#f0f9f9] rounded-lg border border-[#89bcbe]/30">
-                  <p className="text-sm text-[#46627f] mb-2">
-                    <strong>Valor da Causa:</strong> {formData.valor_causa ? `R$ ${parseFloat(formData.valor_causa).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Não informado'}
-                  </p>
-                  <p className="text-xs text-slate-600">
-                    Os campos abaixo são opcionais e podem ser preenchidos posteriormente
-                  </p>
+              <div className="space-y-2">
+                <p className="text-xs text-[#46627f] font-medium mb-3">
+                  Confira os dados antes de criar o processo
+                </p>
+
+                {/* Grid 2x2 com todas as seções */}
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Dados Básicos */}
+                  <div className="border rounded p-2 space-y-1">
+                    <h4 className="text-[10px] font-semibold text-slate-400 uppercase">Dados Básicos</h4>
+                    <div className="text-xs space-y-0.5">
+                      {formData.numero_cnj && (
+                        <p><span className="text-slate-500">CNJ:</span> <span className="font-medium">{formData.numero_cnj}</span></p>
+                      )}
+                      <p><span className="text-slate-500">Área:</span> <span className="font-medium">{AREA_JURIDICA_LABELS[formData.area] || formData.area || '-'}</span></p>
+                      <p><span className="text-slate-500">Fase:</span> <span className="font-medium capitalize">{formData.fase}</span></p>
+                      {valorCausaFormatado && (
+                        <p><span className="text-slate-500">Valor:</span> <span className="font-medium">{valorCausaFormatado}</span></p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Partes */}
+                  <div className="border rounded p-2 space-y-1">
+                    <h4 className="text-[10px] font-semibold text-slate-400 uppercase">Partes</h4>
+                    <div className="text-xs space-y-0.5">
+                      <p><span className="text-slate-500">Cliente:</span> <span className="font-medium">{clientes.find(c => c.id === formData.cliente_id)?.nome_completo || '-'}</span></p>
+                      <p><span className="text-slate-500">Polo:</span> <span className="font-medium">{formData.polo_cliente === 'ativo' ? 'Autor' : formData.polo_cliente === 'passivo' ? 'Réu' : 'Terceiro'}</span></p>
+                      {formData.parte_contraria && (
+                        <p><span className="text-slate-500">Contrária:</span> <span className="font-medium">{formData.parte_contraria}</span></p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Localização */}
+                  <div className="border rounded p-2 space-y-1">
+                    <h4 className="text-[10px] font-semibold text-slate-400 uppercase">Localização</h4>
+                    <div className="text-xs space-y-0.5">
+                      <p><span className="text-slate-500">Tribunal:</span> <span className="font-medium">{formData.tribunal || '-'}</span></p>
+                      {formData.comarca && (
+                        <p><span className="text-slate-500">Comarca:</span> <span className="font-medium">{formData.comarca}</span></p>
+                      )}
+                      {formData.vara && (
+                        <p><span className="text-slate-500">Vara:</span> <span className="font-medium">{formData.vara}</span></p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Gestão */}
+                  <div className="border rounded p-2 space-y-1">
+                    <h4 className="text-[10px] font-semibold text-slate-400 uppercase">Gestão</h4>
+                    <div className="text-xs space-y-0.5">
+                      <p><span className="text-slate-500">Responsável:</span> <span className="font-medium">{membros.find(m => m.id === formData.responsavel_id)?.nome_completo || '-'}</span></p>
+                      {contratoSelecionado && (
+                        <p><span className="text-slate-500">Contrato:</span> <span className="font-medium">{contratoSelecionado.titulo}</span></p>
+                      )}
+                      {formData.provisao_perda && (
+                        <p className="flex items-center gap-1">
+                          <span className="text-slate-500">Risco:</span>
+                          <span className={`w-1.5 h-1.5 rounded-full ${
+                            formData.provisao_perda === 'remota' ? 'bg-emerald-500' :
+                            formData.provisao_perda === 'possivel' ? 'bg-amber-500' : 'bg-red-500'
+                          }`} />
+                          <span className="font-medium">{formData.provisao_perda === 'remota' ? 'Remota' : formData.provisao_perda === 'possivel' ? 'Possível' : 'Provável'}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="valor_acordo">Valor do Acordo (R$)</Label>
-                  <Input
-                    id="valor_acordo"
-                    type="number"
-                    step="0.01"
-                    placeholder="0,00"
-                    value={formData.valor_acordo}
-                    onChange={(e) => updateField('valor_acordo', e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="valor_condenacao">Valor da Condenação (R$)</Label>
-                  <Input
-                    id="valor_condenacao"
-                    type="number"
-                    step="0.01"
-                    placeholder="0,00"
-                    value={formData.valor_condenacao}
-                    onChange={(e) => updateField('valor_condenacao', e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="provisao_sugerida">Provisão Contábil Sugerida (R$)</Label>
-                  <Input
-                    id="provisao_sugerida"
-                    type="number"
-                    step="0.01"
-                    placeholder="0,00"
-                    value={formData.provisao_sugerida}
-                    onChange={(e) => updateField('provisao_sugerida', e.target.value)}
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Valor estimado para provisão contábil da empresa
-                  </p>
-                </div>
+                {/* Observações - só se tiver */}
+                {formData.observacoes && (
+                  <div className="border rounded p-2 mt-1">
+                    <h4 className="text-[10px] font-semibold text-slate-400 uppercase mb-1">Observações</h4>
+                    <p className="text-xs text-slate-600">{formData.observacoes.substring(0, 150)}{formData.observacoes.length > 150 ? '...' : ''}</p>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -1330,86 +1240,95 @@ export default function ProcessoWizard({
           )}
         </div>
       </DialogContent>
+    </Dialog>
 
-      {/* Modal para criar novo cliente */}
-      <PessoaWizardModal
-        open={pessoaModalOpen}
-        onOpenChange={setPessoaModalOpen}
-        onSave={async (data) => {
-          try {
-            // Buscar escritorio_id do usuario logado
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) throw new Error('Usuario nao autenticado')
+    {/* Modal para criar novo cliente */}
+    <PessoaWizardModal
+      open={pessoaModalOpen}
+      onOpenChange={setPessoaModalOpen}
+      onSave={async (data) => {
+        try {
+          // Buscar escritorio_id do usuario logado
+          const { data: { user } } = await supabase.auth.getUser()
+          if (!user) throw new Error('Usuario nao autenticado')
 
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('escritorio_id')
-              .eq('id', user.id)
-              .single()
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('escritorio_id')
+            .eq('id', user.id)
+            .single()
 
-            if (!profile?.escritorio_id) throw new Error('Escritorio nao encontrado')
+          if (!profile?.escritorio_id) throw new Error('Escritorio nao encontrado')
 
-            // Verificar se CPF/CNPJ ja existe no mesmo escritorio
-            if (data.cpf_cnpj) {
-              const cpfCnpjLimpo = data.cpf_cnpj.replace(/\D/g, '')
-              if (cpfCnpjLimpo.length >= 11) {
-                const { data: existente } = await supabase
-                  .from('crm_pessoas')
-                  .select('id, nome_completo')
-                  .eq('escritorio_id', profile.escritorio_id)
-                  .eq('cpf_cnpj', data.cpf_cnpj)
-                  .maybeSingle()
+          // Verificar se CPF/CNPJ ja existe no mesmo escritorio
+          if (data.cpf_cnpj) {
+            const cpfCnpjLimpo = data.cpf_cnpj.replace(/\D/g, '')
+            if (cpfCnpjLimpo.length >= 11) {
+              const { data: existente } = await supabase
+                .from('crm_pessoas')
+                .select('id, nome_completo')
+                .eq('escritorio_id', profile.escritorio_id)
+                .eq('cpf_cnpj', data.cpf_cnpj)
+                .maybeSingle()
 
-                if (existente) {
-                  throw new Error(`Ja existe uma pessoa com este CPF/CNPJ: ${existente.nome_completo}`)
-                }
+              if (existente) {
+                throw new Error(`Ja existe uma pessoa com este CPF/CNPJ: ${existente.nome_completo}`)
               }
             }
-
-            const insertData = {
-              escritorio_id: profile.escritorio_id,
-              tipo_pessoa: data.tipo_pessoa,
-              tipo_cadastro: data.tipo_cadastro || 'cliente',
-              status: data.status || 'ativo',
-              nome_completo: data.nome_completo,
-              nome_fantasia: data.nome_fantasia || null,
-              cpf_cnpj: data.cpf_cnpj || null,
-              telefone: data.telefone || null,
-              email: data.email || null,
-              cep: data.cep || null,
-              logradouro: data.logradouro || null,
-              numero: data.numero || null,
-              complemento: data.complemento || null,
-              bairro: data.bairro || null,
-              cidade: data.cidade || null,
-              uf: data.uf || null,
-              origem: data.origem || null,
-              observacoes: data.observacoes || null,
-            }
-
-            const { data: novoCliente, error } = await supabase
-              .from('crm_pessoas')
-              .insert(insertData)
-              .select('id, nome_completo')
-              .single()
-
-            if (error) throw error
-
-            toast.success('Cliente criado com sucesso!')
-
-            // Recarregar lista de clientes
-            await loadClientes()
-
-            // Selecionar automaticamente o novo cliente
-            if (novoCliente) {
-              handleClienteChange(novoCliente.id)
-            }
-          } catch (error: any) {
-            console.error('Erro ao criar cliente:', error)
-            toast.error(error.message || 'Erro ao criar cliente')
           }
-        }}
-      />
-    </Dialog>
+
+          const insertData = {
+            escritorio_id: profile.escritorio_id,
+            tipo_pessoa: data.tipo_pessoa,
+            tipo_cadastro: data.tipo_cadastro || 'cliente',
+            status: data.status || 'ativo',
+            nome_completo: data.nome_completo,
+            nome_fantasia: data.nome_fantasia || null,
+            cpf_cnpj: data.cpf_cnpj || null,
+            telefone: data.telefone || null,
+            email: data.email || null,
+            cep: data.cep || null,
+            logradouro: data.logradouro || null,
+            numero: data.numero || null,
+            complemento: data.complemento || null,
+            bairro: data.bairro || null,
+            cidade: data.cidade || null,
+            uf: data.uf || null,
+            origem: data.origem || null,
+            observacoes: data.observacoes || null,
+          }
+
+          const { data: novoCliente, error } = await supabase
+            .from('crm_pessoas')
+            .insert(insertData)
+            .select('id, nome_completo')
+            .single()
+
+          if (error) throw error
+
+          toast.success('Cliente criado com sucesso!')
+
+          // Recarregar lista de clientes
+          await loadClientes()
+
+          // Selecionar automaticamente o novo cliente
+          if (novoCliente) {
+            handleClienteChange(novoCliente.id)
+          }
+        } catch (error: any) {
+          console.error('Erro ao criar cliente:', error)
+          toast.error(error.message || 'Erro ao criar cliente')
+        }
+      }}
+    />
+
+    {/* Modal para criar novo contrato */}
+    <ContratoModal
+      open={contratoModalOpen}
+      onOpenChange={setContratoModalOpen}
+      defaultClienteId={formData.cliente_id}
+      onSave={handleSaveContrato}
+    />
+    </>
   )
 }

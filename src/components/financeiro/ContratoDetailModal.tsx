@@ -45,7 +45,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
 import { ContratoHonorario, GrupoClientes } from '@/hooks/useContratosHonorarios'
-import { cn } from '@/lib/utils'
+import { cn, formatHoras } from '@/lib/utils'
 
 interface ContratoDetailModalProps {
   open: boolean
@@ -369,7 +369,7 @@ export default function ContratoDetailModal({
                 {formatCurrency(configHora.valor_hora)}/h
               </span>
               {horasEstimadas && (
-                <p className="text-[10px] text-slate-500">{horasEstimadas}h estimadas</p>
+                <p className="text-[10px] text-slate-500">{formatHoras(horasEstimadas, 'curto')} estimadas</p>
               )}
             </div>
           )

@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { cn } from '@/lib/utils'
+import { cn, formatHoras } from '@/lib/utils'
 import type { ClienteParaFaturar } from '@/hooks/useFaturamento'
 
 type SortField = 'nome' | 'total' | 'horas' | 'honorarios'
@@ -238,7 +238,7 @@ export function ClientesTable({
                       </div>
                       <div className="text-left">
                         <p className="text-xs font-semibold text-slate-700">
-                          {cliente.soma_horas.toFixed(1)}h
+                          {formatHoras(cliente.soma_horas, 'curto')}
                         </p>
                         <p className="text-[10px] text-slate-500">
                           {formatCurrency(cliente.total_horas)}

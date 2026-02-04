@@ -1,6 +1,6 @@
 'use client'
 
-import { cn } from '@/lib/utils'
+import { cn, formatHoras } from '@/lib/utils'
 import { AlertTriangle, CheckCircle, Clock } from 'lucide-react'
 
 interface AtoHoraProgressProps {
@@ -86,7 +86,7 @@ export function AtoHoraProgress({
             <div
               className="absolute top-0 h-2 w-0.5 bg-slate-400"
               style={{ left: `${(horasMinimas / horasMaximas) * 100}%` }}
-              title={`Mínimo: ${horasMinimas}h`}
+              title={`Mínimo: ${formatHoras(horasMinimas, 'curto')}`}
             />
           )}
         </div>
@@ -104,21 +104,21 @@ export function AtoHoraProgress({
             <>
               <AlertTriangle className="h-3 w-3 text-amber-500" />
               <span className="text-amber-600 font-medium">
-                Este lançamento excederá o máximo em {horasExcedentesPreview.toFixed(1)}h
+                Este lançamento excederá o máximo em {formatHoras(horasExcedentesPreview, 'curto')}
               </span>
             </>
           ) : proximoDoMaximo ? (
             <>
               <Clock className="h-3 w-3 text-amber-500" />
               <span className="text-amber-600 font-medium">
-                {horasDisponiveis?.toFixed(1)}h restantes
+                {formatHoras(horasDisponiveis || 0, 'curto')} restantes
               </span>
             </>
           ) : (
             <>
               <CheckCircle className="h-3 w-3 text-emerald-500" />
               <span className="text-slate-500">
-                {horasUsadas.toFixed(1)}h{horasNovas > 0 ? ` + ${horasNovas.toFixed(1)}h` : ''}{horasMaximas ? ` de ${horasMaximas}h` : ''}
+                {formatHoras(horasUsadas, 'curto')}{horasNovas > 0 ? ` + ${formatHoras(horasNovas, 'curto')}` : ''}{horasMaximas ? ` de ${formatHoras(horasMaximas, 'curto')}` : ''}
               </span>
             </>
           )}
@@ -146,7 +146,7 @@ export function AtoHoraProgress({
         <div className="text-[10px] text-amber-600 bg-amber-50 rounded px-2 py-1 flex items-center gap-1">
           <AlertTriangle className="h-3 w-3" />
           <span>
-            Abaixo do mínimo ({horasMinimas}h). Ao finalizar, será cobrado R$
+            Abaixo do mínimo ({formatHoras(horasMinimas || 0, 'curto')}). Ao finalizar, será cobrado R$
             {valorMinimo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </span>
         </div>
@@ -183,7 +183,7 @@ export function AtoHoraProgressCompact({
         />
       </div>
       <span className="text-[10px] text-slate-400 whitespace-nowrap">
-        {horasUsadas.toFixed(1)}h{horasMaximas ? `/${horasMaximas}h` : ''}
+        {formatHoras(horasUsadas, 'curto')}{horasMaximas ? `/${formatHoras(horasMaximas, 'curto')}` : ''}
       </span>
     </div>
   )

@@ -3,7 +3,7 @@
 import { FileText, Calendar, Trash2, Eye, ArrowUpDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { cn, formatHoras } from '@/lib/utils'
 import type { FaturaGerada } from '@/hooks/useFaturamento'
 
 interface FaturasTableProps {
@@ -152,7 +152,7 @@ export function FaturasTable({
                 )}
                 {fatura.qtd_horas > 0 && (
                   <span className="text-[10px] text-slate-500">
-                    {fatura.soma_horas.toFixed(1)}h
+                    {formatHoras(fatura.soma_horas, 'curto')}
                   </span>
                 )}
               </div>

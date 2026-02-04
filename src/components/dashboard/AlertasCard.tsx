@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlertTriangle, Clock, DollarSign, FileCheck, Loader2 } from 'lucide-react'
 import Link from 'next/link'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatHoras } from '@/lib/utils'
 import { useDashboardAlertas, DashboardAlertas } from '@/hooks/useDashboardAlertas'
 
 interface AlertaItemProps {
@@ -123,7 +123,7 @@ export default function AlertasCard({ className }: AlertasCardProps) {
               <AlertaItem
                 icon={FileCheck}
                 label="Horas pendentes aprovação"
-                value={`${alertas.horasPendentesAprovacao}h`}
+                value={formatHoras(alertas.horasPendentesAprovacao, 'curto')}
                 color="yellow"
                 href="/dashboard/financeiro/timesheet?status=pendente"
               />
@@ -134,7 +134,7 @@ export default function AlertasCard({ className }: AlertasCardProps) {
               <AlertaItem
                 icon={DollarSign}
                 label="Horas prontas para faturar"
-                value={`${alertas.horasProntasFaturar}h`}
+                value={formatHoras(alertas.horasProntasFaturar, 'curto')}
                 sublabel={formatCurrency(alertas.valorHorasProntasFaturar)}
                 color="emerald"
                 href="/dashboard/financeiro/faturamento"

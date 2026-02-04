@@ -541,6 +541,23 @@ export function ConsultaWizardModal({
           try {
             if (!currentEscritorioId) throw new Error('Escritorio nao encontrado')
 
+            // Verificar se CPF/CNPJ ja existe no mesmo escritorio
+            if (data.cpf_cnpj) {
+              const cpfCnpjLimpo = data.cpf_cnpj.replace(/\D/g, '')
+              if (cpfCnpjLimpo.length >= 11) {
+                const { data: existente } = await supabase
+                  .from('crm_pessoas')
+                  .select('id, nome_completo')
+                  .eq('escritorio_id', currentEscritorioId)
+                  .eq('cpf_cnpj', data.cpf_cnpj)
+                  .maybeSingle()
+
+                if (existente) {
+                  throw new Error(`Ja existe uma pessoa com este CPF/CNPJ: ${existente.nome_completo}`)
+                }
+              }
+            }
+
             const insertData = {
               escritorio_id: currentEscritorioId,
               tipo_pessoa: data.tipo_pessoa,

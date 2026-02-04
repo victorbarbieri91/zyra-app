@@ -24,6 +24,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { ProcessoDataJud } from '@/types/datajud'
 import ModalidadeSelector from '@/components/financeiro/ModalidadeSelector'
+import { PessoaWizardModal } from '@/components/crm/PessoaWizardModal'
 
 interface ProcessoWizardProps {
   open: boolean
@@ -153,7 +154,67 @@ export default function ProcessoWizard({
   const [consultandoCNJ, setConsultandoCNJ] = useState(false)
   const [contratos, setContratos] = useState<ContratoOption[]>([])
   const [loadingContratos, setLoadingContratos] = useState(false)
+  const [pessoaModalOpen, setPessoaModalOpen] = useState(false)
+  const [clientes, setClientes] = useState<{ id: string; nome_completo: string; tipo_pessoa: string }[]>([])
+  const [loadingClientes, setLoadingClientes] = useState(false)
+  const [clienteSearch, setClienteSearch] = useState('')
   const supabase = createClient()
+
+  // Carregar clientes do escritorio
+  const loadClientes = async (search?: string) => {
+    setLoadingClientes(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('escritorio_id')
+        .eq('id', user.id)
+        .single()
+
+      if (!profile?.escritorio_id) return
+
+      let query = supabase
+        .from('crm_pessoas')
+        .select('id, nome_completo, tipo_pessoa')
+        .eq('escritorio_id', profile.escritorio_id)
+        .eq('status', 'ativo')
+        .in('tipo_cadastro', ['cliente', 'prospecto'])
+        .order('nome_completo')
+        .limit(50)
+
+      if (search) {
+        query = query.ilike('nome_completo', `%${search}%`)
+      }
+
+      const { data, error } = await query
+      if (error) throw error
+
+      setClientes(data || [])
+    } catch (error) {
+      console.error('Erro ao carregar clientes:', error)
+    } finally {
+      setLoadingClientes(false)
+    }
+  }
+
+  // Carregar clientes quando modal abre
+  useEffect(() => {
+    if (open) {
+      loadClientes()
+    }
+  }, [open])
+
+  // Buscar clientes com debounce
+  useEffect(() => {
+    const debounce = setTimeout(() => {
+      if (open) {
+        loadClientes(clienteSearch)
+      }
+    }, 300)
+    return () => clearTimeout(debounce)
+  }, [clienteSearch])
 
   // Handler unificado para fechar
   const handleClose = () => {
@@ -829,13 +890,61 @@ export default function ProcessoWizard({
                       <SelectValue placeholder="Selecione o cliente..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">João Silva</SelectItem>
-                      <SelectItem value="2">Maria Santos</SelectItem>
-                      <SelectItem value="3">Empresa XYZ Ltda</SelectItem>
+                      {/* Campo de busca */}
+                      <div className="px-2 py-1.5 sticky top-0 bg-white border-b">
+                        <div className="relative">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                          <Input
+                            value={clienteSearch}
+                            onChange={(e) => setClienteSearch(e.target.value)}
+                            placeholder="Buscar cliente..."
+                            className="h-8 text-xs pl-7"
+                          />
+                        </div>
+                      </div>
+                      {/* Botao criar novo */}
+                      <div className="px-2 py-1.5 border-b">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start text-xs h-8 text-[#34495e] hover:bg-slate-100"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setPessoaModalOpen(true)
+                          }}
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-2" />
+                          Criar novo cliente
+                        </Button>
+                      </div>
+                      {/* Lista de clientes */}
+                      {loadingClientes ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                        </div>
+                      ) : clientes.length === 0 ? (
+                        <div className="text-center py-4 text-xs text-slate-500">
+                          Nenhum cliente encontrado
+                        </div>
+                      ) : (
+                        clientes.map((cliente) => (
+                          <SelectItem key={cliente.id} value={cliente.id} className="text-xs">
+                            {cliente.nome_completo}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-slate-500 mt-1">
-                    Não encontrou? <button className="text-[#89bcbe] hover:underline">Cadastrar novo cliente</button>
+                    Não encontrou?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setPessoaModalOpen(true)}
+                      className="text-[#89bcbe] hover:underline"
+                    >
+                      Cadastrar novo cliente
+                    </button>
                   </p>
                 </div>
 
@@ -1221,6 +1330,86 @@ export default function ProcessoWizard({
           )}
         </div>
       </DialogContent>
+
+      {/* Modal para criar novo cliente */}
+      <PessoaWizardModal
+        open={pessoaModalOpen}
+        onOpenChange={setPessoaModalOpen}
+        onSave={async (data) => {
+          try {
+            // Buscar escritorio_id do usuario logado
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) throw new Error('Usuario nao autenticado')
+
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('escritorio_id')
+              .eq('id', user.id)
+              .single()
+
+            if (!profile?.escritorio_id) throw new Error('Escritorio nao encontrado')
+
+            // Verificar se CPF/CNPJ ja existe no mesmo escritorio
+            if (data.cpf_cnpj) {
+              const cpfCnpjLimpo = data.cpf_cnpj.replace(/\D/g, '')
+              if (cpfCnpjLimpo.length >= 11) {
+                const { data: existente } = await supabase
+                  .from('crm_pessoas')
+                  .select('id, nome_completo')
+                  .eq('escritorio_id', profile.escritorio_id)
+                  .eq('cpf_cnpj', data.cpf_cnpj)
+                  .maybeSingle()
+
+                if (existente) {
+                  throw new Error(`Ja existe uma pessoa com este CPF/CNPJ: ${existente.nome_completo}`)
+                }
+              }
+            }
+
+            const insertData = {
+              escritorio_id: profile.escritorio_id,
+              tipo_pessoa: data.tipo_pessoa,
+              tipo_cadastro: data.tipo_cadastro || 'cliente',
+              status: data.status || 'ativo',
+              nome_completo: data.nome_completo,
+              nome_fantasia: data.nome_fantasia || null,
+              cpf_cnpj: data.cpf_cnpj || null,
+              telefone: data.telefone || null,
+              email: data.email || null,
+              cep: data.cep || null,
+              logradouro: data.logradouro || null,
+              numero: data.numero || null,
+              complemento: data.complemento || null,
+              bairro: data.bairro || null,
+              cidade: data.cidade || null,
+              uf: data.uf || null,
+              origem: data.origem || null,
+              observacoes: data.observacoes || null,
+            }
+
+            const { data: novoCliente, error } = await supabase
+              .from('crm_pessoas')
+              .insert(insertData)
+              .select('id, nome_completo')
+              .single()
+
+            if (error) throw error
+
+            toast.success('Cliente criado com sucesso!')
+
+            // Recarregar lista de clientes
+            await loadClientes()
+
+            // Selecionar automaticamente o novo cliente
+            if (novoCliente) {
+              handleClienteChange(novoCliente.id)
+            }
+          } catch (error: any) {
+            console.error('Erro ao criar cliente:', error)
+            toast.error(error.message || 'Erro ao criar cliente')
+          }
+        }}
+      />
     </Dialog>
   )
 }

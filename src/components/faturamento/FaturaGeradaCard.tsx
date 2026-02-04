@@ -4,7 +4,7 @@ import { FileText, Clock, DollarSign, AlertCircle, CheckCircle, Trash2, Eye } fr
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { cn, formatHoras } from '@/lib/utils'
 import type { FaturaGerada } from '@/hooks/useFaturamento'
 
 interface FaturaGeradaCardProps {
@@ -133,7 +133,7 @@ export function FaturaGeradaCard({
                   <div className="flex items-center gap-2">
                     <Clock className="h-3 w-3 text-slate-400" />
                     <span className="text-slate-700">
-                      Horas trabalhadas ({fatura.soma_horas.toFixed(1)}h)
+                      Horas trabalhadas ({formatHoras(fatura.soma_horas, 'curto')})
                     </span>
                   </div>
                   <span className="font-semibold text-slate-700">

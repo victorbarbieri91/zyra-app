@@ -138,25 +138,28 @@ export function useDashboardMetrics() {
           .gte('created_at', inicioMesAnterior.toISOString())
           .lte('created_at', fimMesAnterior.toISOString()),
 
-        // Clientes ativos
+        // Clientes ativos (apenas tipo_cadastro = 'cliente')
         supabase
           .from('crm_pessoas')
           .select('id', { count: 'exact', head: true })
           .eq('escritorio_id', escritorioAtivo)
+          .eq('tipo_cadastro', 'cliente')
           .eq('status', 'ativo'),
 
-        // Clientes novos no mês
+        // Clientes novos no mês (apenas tipo_cadastro = 'cliente')
         supabase
           .from('crm_pessoas')
           .select('id', { count: 'exact', head: true })
           .eq('escritorio_id', escritorioAtivo)
+          .eq('tipo_cadastro', 'cliente')
           .gte('created_at', inicioMes.toISOString()),
 
-        // Clientes criados no mês anterior (para tendência)
+        // Clientes criados no mês anterior (para tendência, apenas tipo_cadastro = 'cliente')
         supabase
           .from('crm_pessoas')
           .select('id', { count: 'exact', head: true })
           .eq('escritorio_id', escritorioAtivo)
+          .eq('tipo_cadastro', 'cliente')
           .gte('created_at', inicioMesAnterior.toISOString())
           .lte('created_at', fimMesAnterior.toISOString()),
 

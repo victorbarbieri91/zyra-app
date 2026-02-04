@@ -479,7 +479,7 @@ export default function DashboardPage() {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[11px] font-medium text-[#46627f]">Horas Faturadas</span>
-                    <span className="text-[11px] font-semibold text-[#34495e]">{metrics?.horas_faturadas_mes || 0}h / {metrics?.horas_meta || 160}h</span>
+                    <span className="text-[11px] font-semibold text-[#34495e]">{formatHoras(metrics?.horas_faturadas_mes || 0, 'curto')} / {formatHoras(metrics?.horas_meta || 160, 'curto')}</span>
                   </div>
                   <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div
@@ -492,7 +492,7 @@ export default function DashboardPage() {
                       "text-[9px] font-medium mt-0.5",
                       metrics?.horas_trend_valor > 0 ? "text-emerald-600" : "text-red-500"
                     )}>
-                      {metrics?.horas_trend_valor > 0 ? '↑' : '↓'} {Math.abs(metrics?.horas_trend_valor || 0)}h vs mês passado
+                      {metrics?.horas_trend_valor > 0 ? '↑' : '↓'} {formatHoras(Math.abs(metrics?.horas_trend_valor || 0), 'curto')} vs mês passado
                     </p>
                   )}
                 </div>
@@ -514,7 +514,7 @@ export default function DashboardPage() {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[11px] font-medium text-[#46627f]">Horas Não Faturadas</span>
-                    <span className="text-[11px] font-semibold text-emerald-600">{metrics?.horas_nao_faturadas || 0}h</span>
+                    <span className="text-[11px] font-semibold text-emerald-600">{formatHoras(metrics?.horas_nao_faturadas || 0, 'curto')}</span>
                   </div>
                   <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div
@@ -693,7 +693,7 @@ export default function DashboardPage() {
                                         "text-xs font-semibold",
                                         isCurrentUser ? "text-[#89bcbe]" : "text-[#34495e]"
                                       )}>
-                                        {membro.horas}h
+                                        {formatHoras(membro.horas, 'curto')}
                                       </span>
                                     </div>
                                     <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden ml-5">
@@ -713,7 +713,7 @@ export default function DashboardPage() {
                           <Separator className="my-2" />
                           <div className="flex items-center justify-between text-xs">
                             <span className="font-medium text-[#46627f]">Total da Equipe</span>
-                            <span className="font-semibold text-[#34495e]">{totalHorasEquipe}h</span>
+                            <span className="font-semibold text-[#34495e]">{formatHoras(totalHorasEquipe, 'curto')}</span>
                           </div>
                         </>
                       )}

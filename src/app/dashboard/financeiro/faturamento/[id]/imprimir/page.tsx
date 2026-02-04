@@ -6,6 +6,7 @@ import { ArrowLeft, Printer, FileText, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useFaturaImpressao, FaturaImpressaoData } from '@/hooks/useFaturaImpressao'
 import { formatBrazilDateLong, formatBrazilDateTime } from '@/lib/timezone'
+import { formatHoras } from '@/lib/utils'
 
 export default function FaturaImprimirPage() {
   const params = useParams()
@@ -361,7 +362,7 @@ export default function FaturaImprimirPage() {
                       </td>
                       <td className="py-3 px-4 text-center text-slate-600">
                         {item.tipo_item === 'timesheet'
-                          ? `${Number(item.quantidade || 0).toFixed(1)}h`
+                          ? formatHoras(Number(item.quantidade || 0), 'curto')
                           : item.tipo_item === 'pasta'
                           ? `${item.quantidade || 0} proc.`
                           : item.quantidade || 1}
@@ -394,7 +395,7 @@ export default function FaturaImprimirPage() {
                 {totais.subtotal_horas > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600">
-                      Subtotal Horas ({totais.soma_horas.toFixed(1)}h):
+                      Subtotal Horas ({formatHoras(totais.soma_horas, 'curto')}):
                     </span>
                     <span className="font-medium">
                       {formatCurrency(totais.subtotal_horas)}

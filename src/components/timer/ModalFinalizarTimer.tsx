@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, Clock, DollarSign, FileText, Trash2, Loader2, Plus, Minus } from 'lucide-react';
 import { TimerAtivoComDetalhes, formatarTempo, segundosParaHorasDecimais } from '@/types/timer';
+import { formatHoras } from '@/lib/utils';
 import { TimerDisplay } from './TimerDisplay';
 
 interface ModalFinalizarTimerProps {
@@ -87,7 +88,7 @@ export function ModalFinalizarTimer({
             <p className="text-xs text-slate-500 mb-1">Tempo total</p>
             <TimerDisplay segundos={tempoFinal} size="lg" />
             <p className="text-sm text-slate-500 mt-1">
-              {horasDecimais.toFixed(2)} horas
+              {formatHoras(horasDecimais)}
             </p>
           </div>
 

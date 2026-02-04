@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Plus,
   Search,
@@ -13,6 +12,10 @@ import {
   MapPin,
   User,
   Loader2,
+  Scale,
+  FileText,
+  FileSignature,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,13 +41,15 @@ import {
 import { PessoaWizardModal } from '@/components/crm/PessoaWizardModal';
 import { BulkActionsToolbarCRM, BulkActionCRM } from '@/components/crm/BulkActionsToolbarCRM';
 import { BulkEditModalCRM } from '@/components/crm/BulkEditModalCRM';
+import { ProcessosPessoaModal } from '@/components/crm/ProcessosPessoaModal';
+import { ConsultivosPessoaModal } from '@/components/crm/ConsultivosPessoaModal';
+import { ContratosPessoaModal } from '@/components/crm/ContratosPessoaModal';
 import { createClient } from '@/lib/supabase/client';
 import type { PessoaResumo } from '@/types/crm';
 
 type EditFieldCRM = 'status' | 'categoria';
 
 export default function PessoasPage() {
-  const router = useRouter();
   const [pessoas, setPessoas] = useState<PessoaResumo[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
@@ -60,6 +65,17 @@ export default function PessoasPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkEditField, setBulkEditField] = useState<EditFieldCRM | null>(null);
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
+
+  // Estados para contagem de relacionamentos
+  const [processosCount, setProcessosCount] = useState(0);
+  const [consultivosCount, setConsultivosCount] = useState(0);
+  const [contratosCount, setContratosCount] = useState(0);
+  const [loadingCounts, setLoadingCounts] = useState(false);
+
+  // Estados para modais de relacionamentos
+  const [processosModalOpen, setProcessosModalOpen] = useState(false);
+  const [consultivosModalOpen, setConsultivosModalOpen] = useState(false);
+  const [contratosModalOpen, setContratosModalOpen] = useState(false);
 
   // Buscar pessoas do banco de dados
   const fetchPessoas = useCallback(async () => {
@@ -133,6 +149,49 @@ export default function PessoasPage() {
   useEffect(() => {
     setSelectedIds(new Set());
   }, [currentPage, busca, tipoCadastro, status]);
+
+  // Buscar contagens de relacionamentos quando pessoa for selecionada
+  useEffect(() => {
+    if (!pessoaSelecionada) {
+      setProcessosCount(0);
+      setConsultivosCount(0);
+      setContratosCount(0);
+      return;
+    }
+
+    const fetchCounts = async () => {
+      setLoadingCounts(true);
+      try {
+        const supabase = createClient();
+
+        // Buscar contagens em paralelo
+        const [processosResult, consultivosResult, contratosResult] = await Promise.all([
+          supabase
+            .from('processos_processos')
+            .select('id', { count: 'exact', head: true })
+            .eq('cliente_id', pessoaSelecionada.id),
+          supabase
+            .from('consultivo_consultas')
+            .select('id', { count: 'exact', head: true })
+            .eq('cliente_id', pessoaSelecionada.id),
+          supabase
+            .from('contratos_honorarios')
+            .select('id', { count: 'exact', head: true })
+            .eq('cliente_id', pessoaSelecionada.id),
+        ]);
+
+        setProcessosCount(processosResult.count || 0);
+        setConsultivosCount(consultivosResult.count || 0);
+        setContratosCount(contratosResult.count || 0);
+      } catch (error) {
+        console.error('Erro ao buscar contagens:', error);
+      } finally {
+        setLoadingCounts(false);
+      }
+    };
+
+    fetchCounts();
+  }, [pessoaSelecionada]);
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
   const paginatedPessoas = pessoas;
@@ -534,18 +593,145 @@ export default function PessoasPage() {
                   </div>
                 </>
               )}
+
+              <Separator />
+
+              {/* Relacionamentos */}
+              <div>
+                <h4 className="text-xs font-semibold text-slate-900 mb-3">Relacionamentos</h4>
+                <div className="space-y-1">
+                  {/* Link Processos */}
+                  <button
+                    onClick={() => processosCount > 0 && setProcessosModalOpen(true)}
+                    disabled={processosCount === 0 || loadingCounts}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-colors ${
+                      processosCount > 0
+                        ? 'border-slate-200 hover:bg-slate-50 cursor-pointer'
+                        : 'border-slate-100 bg-slate-50/50 cursor-default'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                        processosCount > 0 ? 'bg-blue-100' : 'bg-slate-100'
+                      }`}>
+                        <Scale className={`w-3.5 h-3.5 ${
+                          processosCount > 0 ? 'text-blue-600' : 'text-slate-400'
+                        }`} />
+                      </div>
+                      <span className={`text-sm ${
+                        processosCount > 0 ? 'text-slate-700' : 'text-slate-400'
+                      }`}>
+                        Processos
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {loadingCounts ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-slate-400" />
+                      ) : (
+                        <Badge
+                          variant="secondary"
+                          className={`text-[10px] ${
+                            processosCount > 0 ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'
+                          }`}
+                        >
+                          {processosCount}
+                        </Badge>
+                      )}
+                      {processosCount > 0 && (
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Link Consultivos */}
+                  <button
+                    onClick={() => consultivosCount > 0 && setConsultivosModalOpen(true)}
+                    disabled={consultivosCount === 0 || loadingCounts}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-colors ${
+                      consultivosCount > 0
+                        ? 'border-slate-200 hover:bg-slate-50 cursor-pointer'
+                        : 'border-slate-100 bg-slate-50/50 cursor-default'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                        consultivosCount > 0 ? 'bg-teal-100' : 'bg-slate-100'
+                      }`}>
+                        <FileText className={`w-3.5 h-3.5 ${
+                          consultivosCount > 0 ? 'text-teal-600' : 'text-slate-400'
+                        }`} />
+                      </div>
+                      <span className={`text-sm ${
+                        consultivosCount > 0 ? 'text-slate-700' : 'text-slate-400'
+                      }`}>
+                        Consultivos
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {loadingCounts ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-slate-400" />
+                      ) : (
+                        <Badge
+                          variant="secondary"
+                          className={`text-[10px] ${
+                            consultivosCount > 0 ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-400'
+                          }`}
+                        >
+                          {consultivosCount}
+                        </Badge>
+                      )}
+                      {consultivosCount > 0 && (
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Link Contratos */}
+                  <button
+                    onClick={() => contratosCount > 0 && setContratosModalOpen(true)}
+                    disabled={contratosCount === 0 || loadingCounts}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-colors ${
+                      contratosCount > 0
+                        ? 'border-slate-200 hover:bg-slate-50 cursor-pointer'
+                        : 'border-slate-100 bg-slate-50/50 cursor-default'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                        contratosCount > 0 ? 'bg-amber-100' : 'bg-slate-100'
+                      }`}>
+                        <FileSignature className={`w-3.5 h-3.5 ${
+                          contratosCount > 0 ? 'text-amber-600' : 'text-slate-400'
+                        }`} />
+                      </div>
+                      <span className={`text-sm ${
+                        contratosCount > 0 ? 'text-slate-700' : 'text-slate-400'
+                      }`}>
+                        Contratos de Honorarios
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {loadingCounts ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-slate-400" />
+                      ) : (
+                        <Badge
+                          variant="secondary"
+                          className={`text-[10px] ${
+                            contratosCount > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-400'
+                          }`}
+                        >
+                          {contratosCount}
+                        </Badge>
+                      )}
+                      {contratosCount > 0 && (
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      )}
+                    </div>
+                  </button>
+                </div>
+              </div>
             </div>
           </ScrollArea>
-
-          {/* Footer com Acoes */}
-          <div className="p-4 border-t border-slate-200">
-            <Button
-              className="w-full bg-gradient-to-r from-[#34495e] to-[#46627f]"
-              onClick={() => router.push(`/dashboard/crm/pessoas/${pessoaSelecionada.id}`)}
-            >
-              Ver Perfil Completo
-            </Button>
-          </div>
         </div>
       )}
 
@@ -571,6 +757,23 @@ export default function PessoasPage() {
 
             if (profileError || !profile?.escritorio_id) {
               throw new Error('Escritorio nao encontrado. Verifique seu cadastro.');
+            }
+
+            // Verificar se CPF/CNPJ ja existe no mesmo escritorio
+            if (data.cpf_cnpj) {
+              const cpfCnpjLimpo = data.cpf_cnpj.replace(/\D/g, '');
+              if (cpfCnpjLimpo.length >= 11) {
+                const { data: existente } = await supabase
+                  .from('crm_pessoas')
+                  .select('id, nome_completo')
+                  .eq('escritorio_id', profile.escritorio_id)
+                  .eq('cpf_cnpj', data.cpf_cnpj)
+                  .maybeSingle();
+
+                if (existente) {
+                  throw new Error(`Ja existe uma pessoa com este CPF/CNPJ no seu escritorio: ${existente.nome_completo}`);
+                }
+              }
             }
 
             const insertData = {
@@ -630,6 +833,30 @@ export default function PessoasPage() {
             clearSelection();
           }}
         />
+      )}
+
+      {/* Modais de Relacionamentos */}
+      {pessoaSelecionada && (
+        <>
+          <ProcessosPessoaModal
+            open={processosModalOpen}
+            onOpenChange={setProcessosModalOpen}
+            pessoaId={pessoaSelecionada.id}
+            pessoaNome={pessoaSelecionada.nome_completo}
+          />
+          <ConsultivosPessoaModal
+            open={consultivosModalOpen}
+            onOpenChange={setConsultivosModalOpen}
+            pessoaId={pessoaSelecionada.id}
+            pessoaNome={pessoaSelecionada.nome_completo}
+          />
+          <ContratosPessoaModal
+            open={contratosModalOpen}
+            onOpenChange={setContratosModalOpen}
+            pessoaId={pessoaSelecionada.id}
+            pessoaNome={pessoaSelecionada.nome_completo}
+          />
+        </>
       )}
     </div>
   );

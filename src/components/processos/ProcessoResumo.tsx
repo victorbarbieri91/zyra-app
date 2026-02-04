@@ -184,8 +184,19 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
         }
 
         if (data) {
-          // Limitar a 5 itens no frontend
-          setAgendaItems(data.slice(0, 5))
+          // Separar por tipo para garantir que audiências apareçam (são mais críticas)
+          const audiencias = data.filter((item: any) => item.tipo_entidade === 'audiencia')
+          const outros = data.filter((item: any) => item.tipo_entidade !== 'audiencia')
+
+          // Priorizar audiências, depois outros itens, limitando a 6 itens total
+          const itemsPriorizados = [...audiencias, ...outros].slice(0, 6)
+
+          // Re-ordenar por data para exibição
+          itemsPriorizados.sort((a: any, b: any) =>
+            new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime()
+          )
+
+          setAgendaItems(itemsPriorizados)
         }
         setLoadingAgenda(false)
       } catch (error) {

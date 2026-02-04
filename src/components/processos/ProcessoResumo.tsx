@@ -121,6 +121,8 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
   // Estados para Agenda
   const [agendaItems, setAgendaItems] = useState<any[]>([])
   const [loadingAgenda, setLoadingAgenda] = useState(true)
+  const [agendaPage, setAgendaPage] = useState(1)
+  const agendaPerPage = 5
   const [showTarefaWizard, setShowTarefaWizard] = useState(false)
   const [showEventoWizard, setShowEventoWizard] = useState(false)
   const [showAudienciaWizard, setShowAudienciaWizard] = useState(false)
@@ -184,19 +186,9 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
         }
 
         if (data) {
-          // Separar por tipo para garantir que audiências apareçam (são mais críticas)
-          const audiencias = data.filter((item: any) => item.tipo_entidade === 'audiencia')
-          const outros = data.filter((item: any) => item.tipo_entidade !== 'audiencia')
-
-          // Priorizar audiências, depois outros itens, limitando a 6 itens total
-          const itemsPriorizados = [...audiencias, ...outros].slice(0, 6)
-
-          // Re-ordenar por data para exibição
-          itemsPriorizados.sort((a: any, b: any) =>
-            new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime()
-          )
-
-          setAgendaItems(itemsPriorizados)
+          // Ordenar por data (audiências e outros já vêm ordenados da função)
+          // Guardar todos os itens - paginação é feita no render
+          setAgendaItems(data)
         }
         setLoadingAgenda(false)
       } catch (error) {
@@ -956,7 +948,13 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
               </div>
             ) : (
               <div className="space-y-3.5">
-                {agendaItems.map((item) => {
+                {(() => {
+                  // Paginação da agenda
+                  const totalAgendaPages = Math.ceil(agendaItems.length / agendaPerPage)
+                  const agendaStartIndex = (agendaPage - 1) * agendaPerPage
+                  const paginatedAgenda = agendaItems.slice(agendaStartIndex, agendaStartIndex + agendaPerPage)
+                  return paginatedAgenda
+                })().map((item) => {
                   const statusConfig: Record<string, { bg: string; text: string }> = {
                     pendente: { bg: 'bg-amber-100', text: 'text-amber-700' },
                     em_andamento: { bg: 'bg-blue-100', text: 'text-blue-700' },
@@ -1057,6 +1055,46 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
                     </div>
                   )
                 })}
+
+                {/* Paginação da Agenda */}
+                {agendaItems.length > agendaPerPage && (
+                  <div className="flex items-center justify-between pt-3 mt-2 border-t border-slate-100">
+                    <p className="text-xs text-slate-500">
+                      {((agendaPage - 1) * agendaPerPage) + 1}-{Math.min(agendaPage * agendaPerPage, agendaItems.length)} de {agendaItems.length}
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAgendaPage(p => Math.max(1, p - 1))}
+                        disabled={agendaPage === 1}
+                        className="h-6 w-6 p-0"
+                      >
+                        <ChevronLeft className="w-3 h-3" />
+                      </Button>
+                      {Array.from({ length: Math.ceil(agendaItems.length / agendaPerPage) }, (_, i) => i + 1).slice(0, 5).map(page => (
+                        <Button
+                          key={page}
+                          variant={agendaPage === page ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setAgendaPage(page)}
+                          className={`h-6 w-6 p-0 text-[10px] ${agendaPage === page ? 'bg-[#34495e] hover:bg-[#46627f]' : ''}`}
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAgendaPage(p => Math.min(Math.ceil(agendaItems.length / agendaPerPage), p + 1))}
+                        disabled={agendaPage === Math.ceil(agendaItems.length / agendaPerPage)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <ChevronRight className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

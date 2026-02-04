@@ -372,7 +372,7 @@ export function ConsultaWizardModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-[#34495e]">
             <Scale className="w-5 h-5 text-[#89bcbe]" />
@@ -381,115 +381,96 @@ export function ConsultaWizardModal({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Título */}
-          <div className="space-y-1.5">
-            <Label htmlFor="titulo" className="text-xs font-medium">
-              Título da Consulta <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="titulo"
-              value={formData.titulo}
-              onChange={(e) => handleChange('titulo', e.target.value)}
-              placeholder="Ex: Análise de contrato de prestação de serviços"
-              className={cn('h-9 text-sm', errors.titulo && 'border-red-300')}
-            />
-            {errors.titulo && (
-              <p className="text-[10px] text-red-600 flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" />
-                {errors.titulo}
-              </p>
-            )}
-          </div>
-
-          {/* Cliente */}
-          <div className="space-y-1.5">
-            <Label htmlFor="cliente" className="text-xs font-medium">
-              Cliente <span className="text-red-500">*</span>
-            </Label>
-            <Select
-              value={formData.cliente_id}
-              onValueChange={(value) => handleChange('cliente_id', value)}
-            >
-              <SelectTrigger className={cn('h-9 text-sm', errors.cliente_id && 'border-red-300')}>
-                <SelectValue placeholder="Selecione o cliente" />
-              </SelectTrigger>
-              <SelectContent>
-                <div className="px-2 py-1.5 sticky top-0 bg-white">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                    <Input
-                      value={clienteSearch}
-                      onChange={(e) => setClienteSearch(e.target.value)}
-                      placeholder="Buscar cliente..."
-                      className="h-8 text-xs pl-7"
-                    />
-                  </div>
-                </div>
-                {/* Botao para criar novo cliente */}
-                <div className="px-2 py-1.5 border-b">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start text-xs h-8 text-[#34495e] hover:bg-slate-100"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      setPessoaModalOpen(true)
-                    }}
-                  >
-                    <Plus className="w-3.5 h-3.5 mr-2" />
-                    Criar novo cliente
-                  </Button>
-                </div>
-                {loadingClientes ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
-                  </div>
-                ) : clientes.length === 0 ? (
-                  <div className="text-center py-4 text-xs text-slate-500">
-                    Nenhum cliente encontrado.
-                    <br />
-                    <button
-                      type="button"
-                      onClick={() => setPessoaModalOpen(true)}
-                      className="text-[#89bcbe] hover:underline mt-1"
-                    >
-                      Clique aqui para criar
-                    </button>
-                  </div>
-                ) : (
-                  clientes.map((cliente) => (
-                    <SelectItem key={cliente.id} value={cliente.id} className="text-xs">
-                      <div className="flex items-center gap-2">
-                        <User className="w-3.5 h-3.5 text-slate-400" />
-                        {cliente.nome_completo}
-                      </div>
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-            {errors.cliente_id && (
-              <p className="text-[10px] text-red-600 flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" />
-                {errors.cliente_id}
-              </p>
-            )}
-          </div>
-
-          {/* Contrato de Honorários */}
-          {formData.cliente_id && (
+          {/* Linha 1: Cliente e Contrato */}
+          <div className="grid grid-cols-2 gap-4 items-start">
+            {/* Cliente */}
             <div className="space-y-1.5">
-              <Label htmlFor="contrato" className="text-xs font-medium flex items-center gap-1">
-                <FileText className="w-3.5 h-3.5 text-slate-400" />
-                Contrato de Honorários <span className="text-red-500">*</span>
+              <Label htmlFor="cliente" className="text-xs font-medium h-4 flex items-center">
+                Cliente <span className="text-red-500 ml-0.5">*</span>
+              </Label>
+              <Select
+                value={formData.cliente_id}
+                onValueChange={(value) => handleChange('cliente_id', value)}
+              >
+                <SelectTrigger className={cn('h-9 text-sm', errors.cliente_id && 'border-red-300')}>
+                  <SelectValue placeholder="Selecione o cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  <div className="px-2 py-1.5 sticky top-0 bg-white">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                      <Input
+                        value={clienteSearch}
+                        onChange={(e) => setClienteSearch(e.target.value)}
+                        placeholder="Buscar cliente..."
+                        className="h-8 text-xs pl-7"
+                      />
+                    </div>
+                  </div>
+                  {/* Botao para criar novo cliente */}
+                  <div className="px-2 py-1.5 border-b">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start text-xs h-8 text-[#34495e] hover:bg-slate-100"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setPessoaModalOpen(true)
+                      }}
+                    >
+                      <Plus className="w-3.5 h-3.5 mr-2" />
+                      Criar novo cliente
+                    </Button>
+                  </div>
+                  {loadingClientes ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                    </div>
+                  ) : clientes.length === 0 ? (
+                    <div className="text-center py-4 text-xs text-slate-500">
+                      Nenhum cliente encontrado.
+                      <br />
+                      <button
+                        type="button"
+                        onClick={() => setPessoaModalOpen(true)}
+                        className="text-[#89bcbe] hover:underline mt-1"
+                      >
+                        Clique aqui para criar
+                      </button>
+                    </div>
+                  ) : (
+                    clientes.map((cliente) => (
+                      <SelectItem key={cliente.id} value={cliente.id} className="text-xs">
+                        <div className="flex items-center gap-2">
+                          <User className="w-3.5 h-3.5 text-slate-400" />
+                          {cliente.nome_completo}
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {errors.cliente_id && (
+                <p className="text-[10px] text-red-600 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  {errors.cliente_id}
+                </p>
+              )}
+            </div>
+
+            {/* Contrato de Honorários */}
+            <div className="space-y-1.5">
+              <Label htmlFor="contrato" className="text-xs font-medium h-4 flex items-center">
+                Contrato de Honorários <span className="text-red-500 ml-0.5">*</span>
               </Label>
               <Select
                 value={formData.contrato_id}
                 onValueChange={(value) => handleChange('contrato_id', value)}
+                disabled={!formData.cliente_id}
               >
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Selecione o contrato..." />
+                <SelectTrigger className={cn('h-9 text-sm', !formData.cliente_id && 'opacity-50')}>
+                  <SelectValue placeholder={formData.cliente_id ? "Selecione o contrato..." : "Selecione o cliente primeiro"} />
                 </SelectTrigger>
                 <SelectContent>
                   {/* Botão para criar novo contrato */}
@@ -546,16 +527,36 @@ export function ConsultaWizardModal({
                 </SelectContent>
               </Select>
               <p className="text-[10px] text-slate-500">
-                Vincule um contrato para gerenciar a cobrança desta consulta
+                Vincule um contrato para gerenciar a cobrança
               </p>
             </div>
-          )}
+          </div>
 
-          {/* Área e Prioridade */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Linha 2: Título (full width) */}
+          <div className="space-y-1.5">
+            <Label htmlFor="titulo" className="text-xs font-medium">
+              Título da Consulta <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="titulo"
+              value={formData.titulo}
+              onChange={(e) => handleChange('titulo', e.target.value)}
+              placeholder="Ex: Análise de contrato de prestação de serviços"
+              className={cn('h-9 text-sm', errors.titulo && 'border-red-300')}
+            />
+            {errors.titulo && (
+              <p className="text-[10px] text-red-600 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                {errors.titulo}
+              </p>
+            )}
+          </div>
+
+          {/* Linha 3: Área, Prioridade, Prazo, Responsável (4 colunas) */}
+          <div className="grid grid-cols-4 gap-3 items-start">
             <div className="space-y-1.5">
-              <Label htmlFor="area" className="text-xs font-medium">
-                Área Jurídica <span className="text-red-500">*</span>
+              <Label htmlFor="area" className="text-xs font-medium h-4 flex items-center">
+                Área <span className="text-red-500 ml-0.5">*</span>
               </Label>
               <Select
                 value={formData.area}
@@ -581,7 +582,7 @@ export function ConsultaWizardModal({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="prioridade" className="text-xs font-medium">
+              <Label htmlFor="prioridade" className="text-xs font-medium h-4 flex items-center">
                 Prioridade
               </Label>
               <Select
@@ -602,13 +603,9 @@ export function ConsultaWizardModal({
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          {/* Prazo e Responsável */}
-          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="prazo" className="text-xs font-medium flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+              <Label htmlFor="prazo" className="text-xs font-medium h-4 flex items-center">
                 Prazo
               </Label>
               <Input
@@ -621,8 +618,8 @@ export function ConsultaWizardModal({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="responsavel" className="text-xs font-medium">
-                Responsável <span className="text-red-500">*</span>
+              <Label htmlFor="responsavel" className="text-xs font-medium h-4 flex items-center">
+                Responsável <span className="text-red-500 ml-0.5">*</span>
               </Label>
               <Select
                 value={formData.responsavel_id}
@@ -654,7 +651,7 @@ export function ConsultaWizardModal({
             </div>
           </div>
 
-          {/* Descrição */}
+          {/* Linha 4: Descrição (full width, mais curto) */}
           <div className="space-y-1.5">
             <Label htmlFor="descricao" className="text-xs font-medium">
               Descrição
@@ -664,7 +661,7 @@ export function ConsultaWizardModal({
               value={formData.descricao}
               onChange={(e) => handleChange('descricao', e.target.value)}
               placeholder="Descreva os detalhes da consulta, questões específicas, documentos relevantes..."
-              className="text-sm min-h-[100px] resize-none"
+              className="text-sm min-h-[80px] resize-none"
             />
           </div>
         </div>

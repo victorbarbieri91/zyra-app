@@ -207,7 +207,7 @@ export default function LoginPage() {
             <img
               src="/zyra.logo.png"
               alt="Zyra Legal"
-              className="h-14 w-auto object-contain brightness-0 invert"
+              className="h-16 w-auto object-contain brightness-0 invert"
             />
           </div>
           {/* Mobile Feature Badges */}
@@ -235,12 +235,12 @@ export default function LoginPage() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4, delay: 0.1 }}
-              className="hidden lg:block mb-10"
+              className="hidden lg:block mb-8"
             >
               <img
                 src="/zyra.logo.png"
                 alt="Zyra Legal"
-                className="h-14 w-auto object-contain"
+                className="h-16 w-auto object-contain block -ml-2"
               />
             </motion.div>
 
@@ -253,13 +253,13 @@ export default function LoginPage() {
             >
               <motion.h1
                 variants={itemVariants}
-                className="text-3xl font-bold text-[#34495e] mb-2"
+                className="text-2xl font-semibold text-[#34495e] mb-1"
               >
                 {mode === 'login' ? 'Bem-vindo de volta' : 'Crie sua conta'}
               </motion.h1>
               <motion.p
                 variants={itemVariants}
-                className="text-[#46627f] text-base"
+                className="text-[#46627f] text-sm"
               >
                 {mode === 'login'
                   ? 'Entre para acessar o sistema'

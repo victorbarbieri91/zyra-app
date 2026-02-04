@@ -11,8 +11,12 @@ This is a comprehensive legal system integrated with AI, designed for law firms.
 - **Backend**: Supabase (PostgreSQL + Edge Functions + Real-time)
 - **AI Integration**: Claude AI via MCP servers (Supabase, Context7, Playwright, Magic)
 - **Automation**: n8n for workflows and agents
-- **Frontend**: React/Next.js (to be implemented)
-- **Database**: PostgreSQL with comprehensive schema across 11 modules
+- **Frontend**: Next.js 16.1.1 + React 19.2.0 + TypeScript 5.9.3
+  - Tailwind CSS 3.4.17 com design system customizado
+  - Radix UI para componentes base
+  - Zustand para state management
+  - React Hook Form + Zod para validação
+- **Database**: PostgreSQL com ~116 tabelas organizadas em 14 módulos
 
 ## Key Architecture Principles
 
@@ -21,21 +25,80 @@ This is a comprehensive legal system integrated with AI, designed for law firms.
 3. **Modular Architecture**: Each module is independent but integrated through shared data structures
 4. **Automation Priority**: Use Supabase triggers and functions for background tasks
 
+---
+
+## ⚠️ REGRAS CRÍTICAS DE DESENVOLVIMENTO
+
+### MCP Supabase é OBRIGATÓRIO
+
+**SEMPRE usar MCP Supabase para TODAS operações de banco de dados:**
+- Consultar estrutura de tabelas (NUNCA assumir, sempre verificar)
+- Criar e aplicar migrações
+- Deployar Edge Functions
+- Consultar dados para debug
+- Verificar RLS policies
+
+**Se MCP Supabase não estiver funcionando:**
+1. **PARAR** imediatamente
+2. **COMUNICAR** ao usuário o problema
+3. **AGUARDAR** instruções antes de tentar alternativas
+4. **NUNCA** usar psql, SQL direto, ou Supabase CLI sem autorização explícita
+
+### Abordagem de Resolução de Problemas
+
+**NUNCA fazer "remendos" ou workarounds:**
+- Não contornar erros apenas para "funcionar"
+- Não ignorar mensagens de erro ou warnings
+- Não criar soluções que mascaram problemas reais
+
+**SEMPRE considerar antes de qualquer mudança:**
+1. **Segurança**: A mudança pode causar vazamento de dados?
+2. **Multitenancy**: O filtro por `escritorio_id` está correto?
+3. **Estrutura global**: A mudança afeta outras funcionalidades?
+4. **RLS Policies**: As permissões estão corretas?
+
+**Quando encontrar problema complexo:**
+1. **PARAR** e analisar a situação completa
+2. **COMUNICAR** ao usuário o que foi encontrado
+3. **DISCUTIR** opções de solução
+4. **IMPLEMENTAR** apenas após alinhamento
+
+---
+
 ## Database Structure
 
-The system uses PostgreSQL with ~115 tables organized across modules:
-- Core (profiles, escritorios, permissões) - 8 tabelas
-- CRM (pessoas, interações, oportunidades) - 10 tabelas
-- Processos (processos, partes, movimentações) - 7 tabelas
-- Agenda (eventos, tarefas, audiências) - 8 tabelas
-- Financeiro (contratos, honorários, faturamento) - 25 tabelas
-- Consultivo (consultas, pareceres, minutas) - 12 tabelas
-- Publicações (publicações, análises, config) - 8 tabelas
-- Peças (templates, teses, jurisprudências) - 7 tabelas
-- Centro de Comando (histórico, sessões) - 4 tabelas
-- Portfolio (produtos, projetos) - 11 tabelas
-- Integrações (DataJud, Escavador) - 3 tabelas
-- Sistema (tags, numeração, migração) - 7 tabelas
+O sistema usa PostgreSQL com ~116 tabelas organizadas em 14 módulos:
+
+| Módulo | Tabelas | Doc | Descrição |
+|--------|---------|-----|-----------|
+| Core | 8 | ✅ | profiles, escritorios, permissões, convites |
+| CRM | 10 | 🔄 | pessoas, interações, oportunidades, funil |
+| Processos | 7 | ✅ | processos, partes, movimentações, histórico |
+| Agenda | 8 | 🔄 | eventos, tarefas, audiências, recorrências |
+| Financeiro | 30+ | ✅ | contratos, faturamento, timesheet, cartões |
+| Consultivo | 12 | 🔄 | consultas, pareceres, templates |
+| Publicações | 8 | 🔄 | publicações AASP, análises, sincronização |
+| Peças | 7 | 🔄 | templates, teses, jurisprudências |
+| Centro de Comando | 4 | 🔄 | histórico, sessões, cache |
+| Portfolio | 11 | 🔄 | produtos, projetos, métricas |
+| Integrações | 3 | 🔄 | DataJud, Escavador |
+| Sistema | 7 | 🔄 | tags, numeração, migração |
+| Correção Monetária | 2 | ✅ | índices econômicos |
+
+**Migrações**: 92 arquivos em `supabase/migrations/`
+
+**Edge Functions** (12 funções em `supabase/functions/`):
+- `aasp-sync` - Sincronização publicações AASP
+- `centro-comando-ia` - Interface AI conversacional
+- `dashboard-insights-ia` - Geração de insights
+- `dashboard-resumo-ia` - Resumo diário AI
+- `migracao-processar` - Processamento de migrações
+- `processar-fatura-cartao` - Faturas de cartão
+- `process-recorrencias` - Eventos recorrentes
+- `publicacoes-analisar` - Análise de publicações
+- `publicacoes-sync-auto` - Sync automático
+- `relatorios-resumo-ia` - Resumo de relatórios
+- `sync-indices-bcb` - Índices econômicos BCB
 
 ## Documentação do Sistema
 
@@ -78,85 +141,209 @@ docs/
 
 ### Regras para o Claude Code
 
-1. **SEMPRE** consultar a documentação antes de fazer alterações em tabelas ou queries
-2. **SEMPRE** verificar relacionamentos entre tabelas antes de modificar schemas
-3. **SEMPRE** atualizar a documentação após fazer alterações estruturais
-4. **NUNCA** assumir estrutura de tabela sem verificar a documentação ou o banco
+1. **SEMPRE** usar MCP Supabase para verificar estrutura de tabelas antes de qualquer operação
+2. **SEMPRE** consultar a documentação antes de fazer alterações em tabelas ou queries
+3. **SEMPRE** verificar relacionamentos entre tabelas antes de modificar schemas
+4. **SEMPRE** atualizar a documentação após fazer alterações estruturais
+5. **NUNCA** assumir estrutura de tabela - verificar via MCP Supabase
+6. **NUNCA** fazer migrações ou alterações de schema sem usar MCP Supabase
+
+## Estrutura de Código Atual
+
+```
+src/
+├── app/                           # 18+ rotas implementadas
+│   ├── layout.tsx                 # Root layout
+│   ├── page.tsx                   # Redirect para /login
+│   ├── dashboard/                 # Área principal
+│   │   ├── layout.tsx            # Layout com Sidebar, Header, Contexts
+│   │   ├── page.tsx              # Dashboard principal
+│   │   ├── agenda/               # Calendário e eventos
+│   │   ├── centro-comando/       # Interface AI conversacional
+│   │   ├── consultivo/           # Consultas jurídicas
+│   │   ├── crm/                  # CRM (funil, pessoas)
+│   │   ├── escritorio/           # Configurações do escritório
+│   │   ├── financeiro/           # 8 submódulos financeiros
+│   │   ├── migracao/             # Wizard de importação
+│   │   ├── pecas-teses/          # Templates e jurisprudências
+│   │   ├── portfolio/            # Produtos e projetos
+│   │   ├── processos/            # Gestão de processos
+│   │   └── publicacoes/          # Publicações AASP
+│   └── api/                       # API routes (server)
+│
+├── components/                    # 60+ componentes
+│   ├── ui/                        # Design system (Radix UI)
+│   ├── agenda/                    # Componentes de agenda
+│   ├── centro-comando/            # Chat AI
+│   ├── dashboard/                 # KPIs, insights, timeline
+│   ├── financeiro/                # Modais financeiros
+│   ├── layout/                    # Sidebar, Header
+│   ├── processos/                 # Timeline, wizard
+│   └── shared/                    # StatusBadge, EmptyState
+│
+├── hooks/                         # 49 hooks customizados
+│   ├── useDashboard*.ts          # 5 hooks para dashboard
+│   ├── useProcesso*.ts           # Hooks de processos
+│   ├── useAgenda.ts, useTarefas.ts, useAudiencias.ts
+│   ├── useFaturamento.ts, useContratosHonorarios.ts
+│   ├── useCentroComando.ts
+│   └── useEscritorioAtivo.ts
+│
+├── contexts/                      # React Contexts
+│   ├── AuthContext.tsx           # Autenticação
+│   ├── EscritorioContext.tsx     # Escritório ativo
+│   └── TimerContext.tsx          # Timer de trabalho
+│
+├── lib/                           # Utilitários
+│   ├── supabase/                 # Client e helpers
+│   ├── timezone.ts               # OBRIGATÓRIO para datas
+│   ├── datajud/                  # Integração DataJud
+│   ├── escavador/                # Integração Escavador
+│   └── constants/                # Enums e constantes
+│
+└── types/                         # TypeScript types
+
+supabase/
+├── migrations/                    # 92 migrações
+└── functions/                     # 12 Edge Functions
+```
+
+## Padrões de Código Obrigatórios
+
+### Uso do Supabase Client
+
+```typescript
+// ✅ CORRETO - Usar hooks existentes quando disponíveis
+const { data, loading } = useDashboardMetrics()
+const { processos } = useProcessos()
+
+// ✅ CORRETO - Quando precisar de query customizada
+import { createSupabaseClient } from '@/lib/supabase/client'
+const supabase = createSupabaseClient()
+const { data } = await supabase.from('tabela').select('*')
+
+// ❌ ERRADO - Nunca criar cliente manualmente
+import { createClient } from '@supabase/supabase-js'
+```
+
+### Multitenancy (CRÍTICO)
+
+```typescript
+// Todas as queries DEVEM filtrar por escritorio_id
+// RLS policies aplicam automaticamente, mas VERIFICAR em queries manuais
+
+// ✅ CORRETO
+const { data } = await supabase
+  .from('processos_processos')
+  .select('*')
+  .eq('escritorio_id', escritorioId)
+
+// ❌ ERRADO - Nunca ignorar escritorio_id
+const { data } = await supabase
+  .from('processos_processos')
+  .select('*') // PERIGO: pode vazar dados de outros escritórios
+```
+
+### Reutilização de Hooks
+
+**Antes de criar novo código, verificar hooks existentes:**
+
+| Categoria | Hooks Disponíveis |
+|-----------|-------------------|
+| Dashboard | `useDashboardMetrics`, `useDashboardAgenda`, `useDashboardPerformance`, `useDashboardPublicacoes`, `useDashboardResumoIA` |
+| Processos | `useProcessos`, `useProcessoDetalhes`, `useProcessoMovimentacoes` |
+| Agenda | `useAgenda`, `useTarefas`, `useAudiencias`, `useEventos` |
+| Financeiro | `useFaturamento`, `useContratosHonorarios`, `useReceitas`, `useTimesheetEntry` |
+| CRM | `useCrmPessoas`, `useCrmOportunidades` |
+| Sistema | `useTags`, `useTimers`, `useGlobalSearch`, `useEscritorioAtivo` |
 
 ## Common Development Commands
 
-### Supabase Setup
+### Frontend Development
 ```bash
-# Initialize Supabase project
-npx supabase init
-
-# Start local Supabase
-npx supabase start
-
-# Generate TypeScript types from database
-npx supabase gen types typescript --local > types/database.types.ts
-
-# Run migrations
-npx supabase migration up
-
-# Deploy Edge Functions
-npx supabase functions deploy [function-name]
+npm run dev          # Servidor de desenvolvimento (porta 4000)
+npm run build        # Build de produção
+npm run lint         # Verificar código
 ```
 
-### Frontend Development (React/Next.js)
-```bash
-# Install dependencies
-npm install
+### Operações de Banco de Dados (via MCP Supabase)
 
-# Run development server
-npm run dev
+**IMPORTANTE**: Todas as operações de banco devem usar MCP Supabase, não CLI.
 
-# Build for production
-npm run build
+```
+# Usar MCP Supabase para:
+✅ Verificar estrutura de tabelas → mcp__supabase__list_tables
+✅ Executar queries              → mcp__supabase__execute_sql
+✅ Criar migrações               → mcp__supabase__apply_migration
+✅ Listar migrações              → mcp__supabase__list_migrations
+✅ Deploy Edge Functions         → mcp__supabase__deploy_edge_function
+✅ Gerar TypeScript types        → mcp__supabase__generate_typescript_types
+✅ Ver logs                      → mcp__supabase__get_logs
+✅ Verificar segurança          → mcp__supabase__get_advisors
 
-# Run tests
-npm test
-
-# Run specific test file
-npm test -- [test-file-path]
+# NUNCA usar diretamente sem autorização:
+❌ psql ou conexão SQL direta
+❌ npx supabase ... (CLI)
+❌ Queries via curl/fetch para banco
 ```
 
-## Module Implementation Order
+### Quando MCP Supabase não funcionar
 
-When implementing features, follow this priority order:
-1. **Login + Cadastro**: Authentication foundation
-2. **Dashboard**: Core metrics and navigation hub
-3. **CRM**: Client management base
-4. **Processos**: Core legal process management
-5. **Agenda**: Calendar and deadlines
-6. **Centro de Comando**: AI conversational interface
-7. **Publicações**: AASP integration for official publications
-8. **Financeiro**: Financial management
-9. **Consultivo**: Legal consultations
-10. **Documentos**: Document management
-11. **Relatórios**: Analytics and reports
+1. **NÃO** tentar alternativas automaticamente
+2. **COMUNICAR** ao usuário: "MCP Supabase não está respondendo"
+3. **AGUARDAR** instruções do usuário
+4. O usuário vai verificar configuração ou autorizar alternativa
+
+## Status de Implementação dos Módulos
+
+| Módulo | Status | Observações |
+|--------|--------|-------------|
+| Login + Cadastro | ✅ | Auth completo com Supabase |
+| Dashboard | ✅ | KPIs, insights AI, resumo diário, métricas |
+| CRM | ✅ | Kanban, funil de vendas, gestão de pessoas |
+| Processos | ✅ | CRUD completo, timeline, análise, pasta digital |
+| Agenda | ✅ | Calendário, drag-drop, recorrência, audiências |
+| Centro de Comando | ✅ | Interface AI conversacional (Ctrl+K) |
+| Publicações | ✅ | AASP sync, análise automática de publicações |
+| Financeiro | ✅ | 8 submódulos: contratos, faturamento, timesheet, cartões, contas bancárias |
+| Consultivo | ✅ | Consultas, pareceres, templates |
+| Peças e Teses | ✅ | Templates, jurisprudências, banco de teses |
+| Portfolio | ✅ | Produtos, projetos, métricas |
+| Escritório | ✅ | Configurações, equipe, convites, permissões |
+| Migração | ✅ | Wizard de importação de dados |
+| Documentos | 🔄 | Parcialmente implementado |
+| Relatórios | 🔄 | Em desenvolvimento |
 
 ## AI Integration Points
 
 ### MCP Servers Configuration
-The system uses multiple MCP servers for different capabilities:
-- **Supabase MCP**: Database operations and queries
-- **Context7 MCP**: Context management
-- **Playwright MCP**: Web scraping for publications
-- **Magic MCP**: UI component generation
+
+| MCP Server | Uso | Prioridade |
+|------------|-----|------------|
+| **Supabase MCP** | TODAS operações de banco de dados | ⚠️ OBRIGATÓRIO |
+| **Magic MCP** | Geração de UI components (21st.dev) | Opcional |
+| **Playwright MCP** | Web scraping para publicações | Quando necessário |
+| **Context7 MCP** | Context management | Quando necessário |
+
+**Regra do Supabase MCP:**
+- Configurado via `.mcp.json` no projeto
+- Se não funcionar → **PARAR e comunicar ao usuário**
+- Nunca usar alternativas sem autorização explícita
 
 ### Centro de Comando (Command Center)
-The conversational AI interface that processes natural language commands:
-- Accessible via Ctrl/Cmd + K from any screen
-- Processes commands like: "Show processes with deadlines this week"
-- Maintains context across sessions
-- Caches frequent queries for performance
+Interface AI conversacional para comandos em linguagem natural:
+- Acessível via **Ctrl/Cmd + K** de qualquer tela
+- Edge Function: `centro-comando-ia`
+- Processa comandos como: "Mostrar processos com prazo essa semana"
+- Mantém contexto entre sessões
+- Cache de queries frequentes
 
-### AI Analysis Features
-- **Publication Analysis**: Automatic analysis of official publications to extract deadlines and required actions
-- **Process Analysis**: Risk assessment and strategy suggestions
-- **Document OCR**: Text extraction and metadata parsing
-- **Smart Templates**: AI-powered document generation
+### Edge Functions AI
+- `centro-comando-ia` - Processamento de comandos
+- `dashboard-insights-ia` - Geração de insights do dashboard
+- `dashboard-resumo-ia` - Resumo diário automático
+- `publicacoes-analisar` - Análise de publicações oficiais
+- `relatorios-resumo-ia` - Resumo de relatórios
 
 ## Design System - Padrões Implementados
 
@@ -222,56 +409,58 @@ pt-2 pb-3/pb-4 - Card content
 
 **Ver DESIGN_SYSTEM.md e 02-dashboard.md para detalhes completos**
 
-## Real-time Subscriptions
-
-Enable real-time for these critical tables:
-```javascript
-// Example subscription setup
-const subscription = supabase
-  .from('notifications')
-  .on('INSERT', payload => {
-    // Handle new notification
-  })
-  .subscribe()
-```
-
 ## Security Considerations
 
-- All tables must have Row Level Security (RLS) policies
-- Users only access data from their own `escritorio_id`
-- Sensitive data (API tokens, passwords) stored encrypted
-- Document access controlled through `documentos_permissoes` table
+### Regras de Segurança Obrigatórias
 
-## Performance Optimizations
+1. **RLS (Row Level Security) é OBRIGATÓRIO** em TODAS as tabelas
+2. **Multitenancy via `escritorio_id`** - TODOS os dados filtrados por escritório
+3. **NUNCA** expor `service_role` key no frontend
+4. **NUNCA** bypassar RLS para "resolver" problemas rapidamente
+5. **NUNCA** fazer queries sem filtro de `escritorio_id` (mesmo com RLS)
 
-1. **Caching Strategy**:
-   - Use `metricas_cache` for dashboard metrics
-   - Cache command results in `centro_comando_cache`
-   - 15-minute TTL for most cached data
+### Ao Encontrar Erro de Permissão
 
-2. **Database Indexes**:
-   - Primary indexes on foreign keys and commonly queried fields
-   - Full-text search indexes for document and process search
-   - Partial indexes for status-based queries
+```
+1. Verificar se RLS policy existe para a tabela
+2. Verificar se o usuário tem escritorio_id correto
+3. Verificar se a policy cobre a operação (SELECT/INSERT/UPDATE/DELETE)
+4. NUNCA desabilitar RLS como "solução"
+5. Se não conseguir resolver → comunicar ao usuário
+```
 
-3. **Lazy Loading**:
-   - Paginate large lists (processes, documents)
-   - Virtual scrolling for timelines and activity feeds
-   - Load module data on-demand
+### Checklist de Segurança para Novas Features
 
-## Testing Approach
+- [ ] RLS policy criada para novas tabelas?
+- [ ] Filtro por `escritorio_id` em todas as queries?
+- [ ] Dados sensíveis (tokens, senhas) criptografados?
+- [ ] Permissões verificadas no frontend E backend?
+- [ ] Nenhuma chave de API exposta no código cliente?
 
-- Unit tests for utility functions and business logic
-- Integration tests for Supabase Edge Functions
-- E2E tests for critical user flows (login, process creation, payment)
-- Mock AI responses for consistent testing
+### Políticas RLS Existentes (verificar via MCP)
 
-## Error Handling
+Use `mcp__supabase__get_advisors` com `type: "security"` para verificar:
+- Tabelas sem RLS
+- Políticas mal configuradas
+- Potenciais vazamentos de dados
 
-- Graceful fallbacks when AI services are unavailable
-- Queue failed AASP synchronizations for retry
-- Log all Centro de Comando errors with context
-- User-friendly error messages with suggested actions
+## Performance e Boas Práticas
+
+### Caching
+- `metricas_cache` para dashboard metrics
+- `centro_comando_cache` para queries frequentes
+- TTL de 15 minutos para maioria dos caches
+
+### Paginação
+- Listas grandes (processos, documentos) devem ser paginadas
+- Usar `limit` e `offset` nas queries
+
+### Error Handling
+- Sempre tratar erros de forma explícita
+- Fallbacks quando serviços AI estão indisponíveis
+- Mensagens de erro amigáveis ao usuário
+
+---
 
 ## Sistema de Timezone
 

@@ -174,7 +174,16 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
         const { data, error } = await supabase
           .rpc('get_agenda_processo', { p_processo_id: processo.id })
 
-        if (!error && data) {
+        if (error) {
+          console.error('Erro ao carregar agenda do processo via RPC:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+          })
+        }
+
+        if (data) {
           // Limitar a 5 itens no frontend
           setAgendaItems(data.slice(0, 5))
         }

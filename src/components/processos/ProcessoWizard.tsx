@@ -232,7 +232,7 @@ export default function ProcessoWizard({
         tipo: initialData.tipo || 'judicial',
         area: initialData.area || '',
         fase: initialData.fase || 'conhecimento',
-        instancia: initialData.instancia || '1ª',
+        instancia: initialData.instancia || '1a',
         rito: initialData.rito || 'ordinario',
         valor_causa: initialData.valor_causa?.toString() || '',
         indice_correcao: initialData.indice_correcao || '',

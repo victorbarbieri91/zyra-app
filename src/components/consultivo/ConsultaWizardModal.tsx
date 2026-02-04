@@ -191,7 +191,7 @@ export function ConsultaWizardModal({
 
   // Carregar contratos do cliente
   const loadContratosCliente = async (clienteId: string) => {
-    if (!clienteId || !currentEscritorioId) {
+    if (!clienteId) {
       setContratos([])
       return
     }
@@ -201,10 +201,9 @@ export function ConsultaWizardModal({
       const { data, error } = await supabase
         .from('financeiro_contratos_honorarios')
         .select('id, titulo, forma_cobranca, config')
-        .eq('escritorio_id', currentEscritorioId)
-        .contains('grupo_clientes', { cliente_pagador_id: clienteId })
-        .eq('status', 'ativo')
-        .order('created_at', { ascending: false })
+        .eq('cliente_id', clienteId)
+        .eq('ativo', true)
+        .order('titulo')
 
       if (error) throw error
 

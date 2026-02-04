@@ -27,12 +27,46 @@ import { ContratoModal } from '@/components/financeiro/ContratoModal'
 import { useContratosHonorarios } from '@/hooks/useContratosHonorarios'
 import { AREA_JURIDICA_LABELS } from '@/lib/constants/areas-juridicas'
 
+interface ProcessoData {
+  id?: string
+  numero_cnj?: string
+  outros_numeros?: { tipo: string; numero: string }[]
+  tipo?: string
+  area?: string
+  fase?: string
+  instancia?: string
+  rito?: string
+  valor_causa?: number
+  indice_correcao?: string
+  data_distribuicao?: string
+  objeto_acao?: string
+  cliente_id?: string
+  polo_cliente?: string
+  parte_contraria?: string
+  contrato_id?: string
+  modalidade_cobranca?: string
+  tribunal?: string
+  comarca?: string
+  vara?: string
+  responsavel_id?: string
+  colaboradores_ids?: string[]
+  tags?: string[]
+  status?: string
+  provisao_perda?: string
+  observacoes?: string
+  valor_acordo?: number
+  valor_condenacao?: number
+  provisao_sugerida?: number
+}
+
 interface ProcessoWizardProps {
   open: boolean
   onOpenChange?: (open: boolean) => void
   onClose?: () => void
   onSuccess?: (processoId: string) => void
   onProcessoCriado?: () => void
+  initialData?: ProcessoData
+  mode?: 'create' | 'edit'
 }
 
 interface OutroNumero {
@@ -168,8 +202,11 @@ export default function ProcessoWizard({
   onOpenChange,
   onClose,
   onSuccess,
-  onProcessoCriado
+  onProcessoCriado,
+  initialData,
+  mode = 'create'
 }: ProcessoWizardProps) {
+  const isEditMode = mode === 'edit'
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState<FormData>(initialFormData)
   const [loading, setLoading] = useState(false)
@@ -185,6 +222,61 @@ export default function ProcessoWizard({
   const [loadingMembros, setLoadingMembros] = useState(false)
   const supabase = createClient()
   const { createContrato } = useContratosHonorarios()
+
+  // Preencher dados iniciais quando em modo de edição
+  useEffect(() => {
+    if (open && isEditMode && initialData) {
+      const editFormData: FormData = {
+        numero_cnj: initialData.numero_cnj || '',
+        outros_numeros: initialData.outros_numeros || [],
+        tipo: initialData.tipo || 'judicial',
+        area: initialData.area || '',
+        fase: initialData.fase || 'conhecimento',
+        instancia: initialData.instancia || '1ª',
+        rito: initialData.rito || 'ordinário',
+        valor_causa: initialData.valor_causa?.toString() || '',
+        indice_correcao: initialData.indice_correcao || '',
+        data_distribuicao: initialData.data_distribuicao?.split('T')[0] || new Date().toISOString().split('T')[0],
+        objeto_acao: initialData.objeto_acao || '',
+        cliente_id: initialData.cliente_id || '',
+        polo_cliente: initialData.polo_cliente || 'ativo',
+        parte_contraria: initialData.parte_contraria || '',
+        contrato_id: initialData.contrato_id || '',
+        modalidade_cobranca: initialData.modalidade_cobranca || '',
+        tribunal: initialData.tribunal || '',
+        comarca: initialData.comarca || '',
+        vara: initialData.vara || '',
+        responsavel_id: initialData.responsavel_id || '',
+        colaboradores_ids: initialData.colaboradores_ids || [],
+        tags: initialData.tags || [],
+        status: initialData.status || 'ativo',
+        provisao_perda: initialData.provisao_perda || '',
+        observacoes: initialData.observacoes || '',
+        valor_acordo: initialData.valor_acordo?.toString() || '',
+        valor_condenacao: initialData.valor_condenacao?.toString() || '',
+        provisao_sugerida: initialData.provisao_sugerida?.toString() || '',
+      }
+      setFormData(editFormData)
+
+      // Formatar valor da causa para exibição
+      if (initialData.valor_causa) {
+        setValorCausaFormatado(initialData.valor_causa.toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        }))
+      }
+
+      // Carregar contratos do cliente se existir cliente_id
+      if (initialData.cliente_id) {
+        loadContratosCliente(initialData.cliente_id)
+      }
+    } else if (open && !isEditMode) {
+      // Reset para modo criação
+      setFormData(initialFormData)
+      setValorCausaFormatado('')
+      setCurrentStep(1)
+    }
+  }, [open, isEditMode, initialData])
 
   // Carregar clientes do escritorio
   const loadClientes = async (search?: string) => {
@@ -529,8 +621,6 @@ export default function ProcessoWizard({
       const outrosNumerosValidos = formData.outros_numeros.filter(n => n.numero.trim().length > 0)
 
       const processData = {
-        escritorio_id: profile.escritorio_id,
-        created_by: user.id,
         numero_cnj: formData.numero_cnj.trim() || null,
         outros_numeros: outrosNumerosValidos.length > 0 ? outrosNumerosValidos : [],
         tipo: formData.tipo,
@@ -553,7 +643,7 @@ export default function ProcessoWizard({
         responsavel_id: formData.responsavel_id,
         colaboradores_ids: formData.colaboradores_ids.length > 0 ? formData.colaboradores_ids : null,
         tags: formData.tags.length > 0 ? formData.tags : null,
-        status: 'ativo',
+        status: formData.status || 'ativo',
         provisao_perda: formData.provisao_perda || null,
         observacoes: formData.observacoes || null,
         valor_acordo: formData.valor_acordo ? parseFloat(formData.valor_acordo) : null,
@@ -561,32 +651,60 @@ export default function ProcessoWizard({
         provisao_sugerida: formData.provisao_sugerida ? parseFloat(formData.provisao_sugerida) : null,
       }
 
-      // Inserir processo no banco
-      const { data: processo, error } = await supabase
-        .from('processos_processos')
-        .insert(processData)
-        .select('id')
-        .single()
+      if (isEditMode && initialData?.id) {
+        // Modo edição - UPDATE
+        const { error } = await supabase
+          .from('processos_processos')
+          .update(processData)
+          .eq('id', initialData.id)
 
-      if (error) {
-        console.error('Erro ao criar processo:', error)
-        toast.error(error.message || 'Erro ao criar processo')
-        return
+        if (error) {
+          console.error('Erro ao atualizar processo:', error)
+          toast.error(error.message || 'Erro ao atualizar processo')
+          return
+        }
+
+        toast.success('Processo atualizado com sucesso!')
+        handleClose()
+
+        if (onSuccess) {
+          onSuccess(initialData.id)
+        }
+        onProcessoCriado?.()
+      } else {
+        // Modo criação - INSERT
+        const insertData = {
+          ...processData,
+          escritorio_id: profile.escritorio_id,
+          created_by: user.id,
+        }
+
+        const { data: processo, error } = await supabase
+          .from('processos_processos')
+          .insert(insertData)
+          .select('id')
+          .single()
+
+        if (error) {
+          console.error('Erro ao criar processo:', error)
+          toast.error(error.message || 'Erro ao criar processo')
+          return
+        }
+
+        toast.success('Processo criado com sucesso!')
+        setFormData(initialFormData)
+        setValorCausaFormatado('')
+        setCurrentStep(1)
+        handleClose()
+
+        if (onSuccess && processo?.id) {
+          onSuccess(processo.id)
+        }
+        onProcessoCriado?.()
       }
-
-      toast.success('Processo criado com sucesso!')
-      setFormData(initialFormData)
-      setValorCausaFormatado('')
-      setCurrentStep(1)
-      handleClose()
-
-      if (onSuccess && processo?.id) {
-        onSuccess(processo.id)
-      }
-      onProcessoCriado?.()
     } catch (error) {
-      console.error('Erro ao criar processo:', error)
-      toast.error('Erro ao criar processo. Tente novamente.')
+      console.error('Erro ao salvar processo:', error)
+      toast.error('Erro ao salvar processo. Tente novamente.')
     } finally {
       setLoading(false)
     }
@@ -598,7 +716,7 @@ export default function ProcessoWizard({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-[#34495e]">
-            Novo Processo
+            {isEditMode ? 'Editar Processo' : 'Novo Processo'}
           </DialogTitle>
         </DialogHeader>
 
@@ -1121,7 +1239,7 @@ export default function ProcessoWizard({
             <>
               <div className="space-y-2">
                 <p className="text-xs text-[#46627f] font-medium mb-3">
-                  Confira os dados antes de criar o processo
+                  {isEditMode ? 'Confira os dados antes de salvar as alterações' : 'Confira os dados antes de criar o processo'}
                 </p>
 
                 {/* Grid 2x2 com todas as seções */}
@@ -1133,7 +1251,7 @@ export default function ProcessoWizard({
                       {formData.numero_cnj && (
                         <p><span className="text-slate-500">CNJ:</span> <span className="font-medium">{formData.numero_cnj}</span></p>
                       )}
-                      <p><span className="text-slate-500">Área:</span> <span className="font-medium">{AREA_JURIDICA_LABELS[formData.area] || formData.area || '-'}</span></p>
+                      <p><span className="text-slate-500">Área:</span> <span className="font-medium">{AREA_JURIDICA_LABELS[formData.area as keyof typeof AREA_JURIDICA_LABELS] || formData.area || '-'}</span></p>
                       <p><span className="text-slate-500">Fase:</span> <span className="font-medium capitalize">{formData.fase}</span></p>
                       {valorCausaFormatado && (
                         <p><span className="text-slate-500">Valor:</span> <span className="font-medium">{valorCausaFormatado}</span></p>
@@ -1234,7 +1352,7 @@ export default function ProcessoWizard({
               disabled={loading}
               className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white"
             >
-              {loading ? 'Salvando...' : 'Criar Processo'}
+              {loading ? 'Salvando...' : isEditMode ? 'Salvar Alterações' : 'Criar Processo'}
               <Check className="w-4 h-4 ml-2" />
             </Button>
           )}

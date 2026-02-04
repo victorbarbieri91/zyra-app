@@ -23,6 +23,7 @@ import ProcessoEstrategia from '@/components/processos/ProcessoEstrategia'
 import ProcessoJurisprudencias from '@/components/processos/ProcessoJurisprudencias'
 import ProcessoDepositos from '@/components/processos/ProcessoDepositos'
 import ProcessoHistorico from '@/components/processos/ProcessoHistorico'
+import ProcessoWizard from '@/components/processos/ProcessoWizard'
 
 interface Processo {
   id: string
@@ -65,13 +66,48 @@ interface Processo {
   updated_at: string
 }
 
+// Dados brutos do processo para edição (sem formatação)
+interface ProcessoRaw {
+  id: string
+  numero_cnj: string
+  outros_numeros?: { tipo: string; numero: string }[]
+  tipo: string
+  area: string
+  fase: string
+  instancia: string
+  rito?: string
+  valor_causa?: number
+  indice_correcao?: string
+  data_distribuicao: string
+  objeto_acao?: string
+  cliente_id: string
+  polo_cliente: string
+  parte_contraria?: string
+  contrato_id?: string
+  modalidade_cobranca?: string
+  tribunal: string
+  comarca?: string
+  vara?: string
+  responsavel_id: string
+  colaboradores_ids?: string[]
+  tags?: string[]
+  status: string
+  provisao_perda?: string
+  observacoes?: string
+  valor_acordo?: number
+  valor_condenacao?: number
+  provisao_sugerida?: number
+}
+
 export default function ProcessoDetalhe() {
   const params = useParams()
   const router = useRouter()
   const [processo, setProcesso] = useState<Processo | null>(null)
+  const [processoRaw, setProcessoRaw] = useState<ProcessoRaw | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('ficha')
   const [copiedCNJ, setCopiedCNJ] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const supabase = createClient()
 
   // Contadores para badges das abas
@@ -154,6 +190,40 @@ export default function ProcessoDetalhe() {
       }
 
       setProcesso(processoFormatado)
+
+      // Guardar dados brutos para edição
+      setProcessoRaw({
+        id: data.id,
+        numero_cnj: data.numero_cnj,
+        outros_numeros: data.outros_numeros || [],
+        tipo: data.tipo,
+        area: data.area,
+        fase: data.fase,
+        instancia: data.instancia,
+        rito: data.rito || undefined,
+        valor_causa: data.valor_causa || undefined,
+        indice_correcao: data.indice_correcao || undefined,
+        data_distribuicao: data.data_distribuicao,
+        objeto_acao: data.objeto_acao || undefined,
+        cliente_id: data.cliente_id,
+        polo_cliente: data.polo_cliente,
+        parte_contraria: data.parte_contraria || undefined,
+        contrato_id: data.contrato_id || undefined,
+        modalidade_cobranca: data.modalidade_cobranca || undefined,
+        tribunal: data.tribunal,
+        comarca: data.comarca || undefined,
+        vara: data.vara || undefined,
+        responsavel_id: data.responsavel_id,
+        colaboradores_ids: data.colaboradores_ids || [],
+        tags: data.tags || [],
+        status: data.status,
+        provisao_perda: data.provisao_perda || undefined,
+        observacoes: data.observacoes || undefined,
+        valor_acordo: data.valor_acordo || undefined,
+        valor_condenacao: data.valor_condenacao || undefined,
+        provisao_sugerida: data.provisao_sugerida || undefined,
+      })
+
       setTotalDocumentos(0) // TODO: buscar da tabela de documentos
       setVersoesEstrategia(0) // TODO: buscar da tabela de estratégias
       setTotalJurisprudencias(0) // TODO: buscar da tabela de jurisprudências
@@ -264,6 +334,7 @@ export default function ProcessoDetalhe() {
               variant="ghost"
               size="sm"
               className="text-white/80 hover:text-white hover:bg-white/10 h-8"
+              onClick={() => setShowEditModal(true)}
             >
               <Edit className="w-4 h-4 mr-2" />
               Editar
@@ -388,6 +459,21 @@ export default function ProcessoDetalhe() {
         </Tabs>
 
       </div>
+
+      {/* Modal de Edição de Processo */}
+      {showEditModal && processoRaw && (
+        <ProcessoWizard
+          open={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={() => {
+            setShowEditModal(false)
+            // Recarregar dados do processo
+            loadProcesso(params.id as string)
+          }}
+          initialData={processoRaw}
+          mode="edit"
+        />
+      )}
     </div>
   )
 }

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Loader2, Eye, EyeOff, Brain, Shield, Zap } from 'lucide-react'
+import { Loader2, Eye, EyeOff, Brain, Shield, Zap, X, Mail, ArrowLeft } from 'lucide-react'
 import { motion, AnimatePresence, Variants } from 'framer-motion'
 import { AuthVisualSide } from '@/components/auth'
 
@@ -23,6 +23,12 @@ export default function LoginPage() {
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  // Forgot password states
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotSuccess, setForgotSuccess] = useState(false)
+  const [forgotError, setForgotError] = useState('')
   const router = useRouter()
   const supabase = createClient()
 
@@ -103,6 +109,33 @@ export default function LoginPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setForgotLoading(true)
+    setForgotError('')
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
+
+      if (error) throw error
+
+      setForgotSuccess(true)
+    } catch (err: any) {
+      setForgotError(err.message || 'Erro ao enviar email de recuperacao')
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
+  const closeForgotPassword = () => {
+    setShowForgotPassword(false)
+    setForgotEmail('')
+    setForgotError('')
+    setForgotSuccess(false)
   }
 
   const getPasswordStrength = (pwd: string) => {
@@ -267,9 +300,13 @@ export default function LoginPage() {
                       <Label htmlFor="login-password" className="text-sm font-medium text-[#34495e]">
                         Senha
                       </Label>
-                      <a href="#" className="text-xs font-medium text-[#89bcbe] hover:text-[#6ba9ab] transition-colors">
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotPassword(true)}
+                        className="text-xs font-medium text-[#89bcbe] hover:text-[#6ba9ab] transition-colors"
+                      >
                         Esqueceu?
-                      </a>
+                      </button>
                     </div>
                     <div className="relative">
                       <Input
@@ -508,6 +545,125 @@ export default function LoginPage() {
 
       {/* Right Side - Visual */}
       <AuthVisualSide />
+
+      {/* Forgot Password Modal */}
+      <AnimatePresence>
+        {showForgotPassword && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={closeForgotPassword}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="relative px-6 pt-6 pb-4">
+                <button
+                  onClick={closeForgotPassword}
+                  className="absolute right-4 top-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+                >
+                  <X size={20} />
+                </button>
+
+                <div className="w-12 h-12 bg-[#89bcbe]/10 rounded-xl flex items-center justify-center mb-4">
+                  <Mail className="w-6 h-6 text-[#89bcbe]" />
+                </div>
+
+                <h2 className="text-xl font-bold text-[#34495e]">
+                  {forgotSuccess ? 'Email enviado!' : 'Recuperar senha'}
+                </h2>
+                <p className="text-sm text-[#46627f] mt-1">
+                  {forgotSuccess
+                    ? 'Verifique sua caixa de entrada'
+                    : 'Digite seu email para receber o link de recuperacao'}
+                </p>
+              </div>
+
+              {/* Modal Content */}
+              <div className="px-6 pb-6">
+                {forgotSuccess ? (
+                  <div className="space-y-4">
+                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl text-sm">
+                      Enviamos um link de recuperacao para <strong>{forgotEmail}</strong>.
+                      Verifique tambem sua pasta de spam.
+                    </div>
+                    <Button
+                      onClick={closeForgotPassword}
+                      className="w-full h-11 bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#2c3e50] hover:to-[#3a5068] text-white font-semibold rounded-xl"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Voltar ao login
+                    </Button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="forgot-email" className="text-sm font-medium text-[#34495e]">
+                        E-mail
+                      </Label>
+                      <Input
+                        id="forgot-email"
+                        type="email"
+                        placeholder="seu@email.com"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        required
+                        disabled={forgotLoading}
+                        autoFocus
+                        className="h-12 bg-slate-50/50 border-slate-200 focus:border-[#89bcbe] focus:ring-[#89bcbe]/20 rounded-xl transition-all"
+                      />
+                    </div>
+
+                    {forgotError && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm"
+                      >
+                        {forgotError}
+                      </motion.div>
+                    )}
+
+                    <div className="flex gap-3 pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={closeForgotPassword}
+                        disabled={forgotLoading}
+                        className="flex-1 h-11 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl"
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={forgotLoading}
+                        className="flex-1 h-11 bg-gradient-to-r from-[#89bcbe] to-[#6ba9ab] hover:from-[#6ba9ab] hover:to-[#89bcbe] text-white font-semibold rounded-xl"
+                      >
+                        {forgotLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Enviando...
+                          </>
+                        ) : (
+                          'Enviar link'
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

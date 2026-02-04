@@ -1041,11 +1041,13 @@ export default function AgendaPage() {
               if (audienciaSelecionada) {
                 await updateAudiencia(audienciaSelecionada.id, data)
                 toast.success('Audiência atualizada com sucesso!')
+                return audienciaSelecionada // Retorna para o wizard poder salvar responsáveis
               } else {
-                await createAudiencia(data)
+                const novaAudiencia = await createAudiencia(data)
                 toast.success('Audiência criada com sucesso!')
+                await refreshItems()
+                return novaAudiencia // Retorna para o wizard poder salvar responsáveis
               }
-              await refreshItems()
             } catch (error) {
               toast.error('Erro ao salvar audiência')
               throw error
@@ -1067,11 +1069,13 @@ export default function AgendaPage() {
               if (eventoSelecionado) {
                 await updateEvento(eventoSelecionado.id, data)
                 toast.success('Compromisso atualizado com sucesso!')
+                return eventoSelecionado // Retorna para o wizard poder salvar responsáveis
               } else {
-                await createEvento(data)
+                const novoEvento = await createEvento(data)
                 toast.success('Compromisso criado com sucesso!')
+                await refreshItems()
+                return novoEvento // Retorna para o wizard poder salvar responsáveis
               }
-              await refreshItems()
             } catch (error) {
               toast.error('Erro ao salvar compromisso')
               throw error

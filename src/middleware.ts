@@ -88,11 +88,12 @@ export async function middleware(request: NextRequest) {
     user = null
   }
 
-  // Protect routes (allow public access to login, cadastro, and convite pages)
+  // Protect routes (allow public access to login, cadastro, convite, and reset-password pages)
   const isPublicRoute =
     request.nextUrl.pathname.startsWith('/login') ||
     request.nextUrl.pathname.startsWith('/cadastro') ||
-    request.nextUrl.pathname.startsWith('/convite')
+    request.nextUrl.pathname.startsWith('/convite') ||
+    request.nextUrl.pathname.startsWith('/reset-password')
 
   if (!user && !isPublicRoute) {
     return NextResponse.redirect(new URL('/login', request.url))

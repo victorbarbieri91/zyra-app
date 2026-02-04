@@ -257,6 +257,7 @@ export default function ProcessoWizard({
         provisao_sugerida: initialData.provisao_sugerida?.toString() || '',
       }
       setFormData(editFormData)
+      setCurrentStep(1) // Sempre começar no step 1 ao abrir
 
       // Formatar valor da causa para exibição
       if (initialData.valor_causa) {
@@ -264,6 +265,8 @@ export default function ProcessoWizard({
           style: 'currency',
           currency: 'BRL',
         }))
+      } else {
+        setValorCausaFormatado('')
       }
 
       // Carregar contratos do cliente se existir cliente_id
@@ -276,7 +279,8 @@ export default function ProcessoWizard({
       setValorCausaFormatado('')
       setCurrentStep(1)
     }
-  }, [open, isEditMode, initialData])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]) // Apenas 'open' como dependência para garantir que roda toda vez que abre
 
   // Carregar clientes do escritorio
   const loadClientes = async (search?: string) => {
@@ -653,14 +657,25 @@ export default function ProcessoWizard({
 
       if (isEditMode && initialData?.id) {
         // Modo edição - UPDATE
-        const { error } = await supabase
+        console.log('Atualizando processo:', initialData.id, processData)
+
+        const { data: updateResult, error } = await supabase
           .from('processos_processos')
           .update(processData)
           .eq('id', initialData.id)
+          .select()
+
+        console.log('Resultado do update:', updateResult, error)
 
         if (error) {
           console.error('Erro ao atualizar processo:', error)
           toast.error(error.message || 'Erro ao atualizar processo')
+          return
+        }
+
+        if (!updateResult || updateResult.length === 0) {
+          console.warn('Update não retornou dados - possível problema de RLS')
+          toast.error('Erro ao atualizar: sem permissão ou processo não encontrado')
           return
         }
 

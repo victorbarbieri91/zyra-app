@@ -27,11 +27,14 @@ import {
   Search,
   AlertTriangle,
   Plus,
+  FileText,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { PessoaWizardModal } from '@/components/crm/PessoaWizardModal'
+import { ContratoModal } from '@/components/financeiro/ContratoModal'
+import { useContratosHonorarios } from '@/hooks/useContratosHonorarios'
 
 interface ConsultaWizardModalProps {
   open: boolean
@@ -48,6 +51,14 @@ interface Cliente {
 interface Responsavel {
   id: string
   nome_completo: string
+}
+
+interface Contrato {
+  id: string
+  titulo: string
+  forma_cobranca: string
+  valor_fixo: number | null
+  percentual_exito: number | null
 }
 
 const AREAS = [
@@ -88,11 +99,14 @@ export function ConsultaWizardModal({
     titulo: '',
     descricao: '',
     cliente_id: '',
+    contrato_id: '',
     area: '',
     prioridade: 'media',
     prazo: '',
     responsavel_id: '',
   })
+
+  const { createContrato } = useContratosHonorarios()
 
   // States
   const [saving, setSaving] = useState(false)
@@ -109,6 +123,11 @@ export function ConsultaWizardModal({
 
   // Modal de criar cliente
   const [pessoaModalOpen, setPessoaModalOpen] = useState(false)
+
+  // Contratos
+  const [contratos, setContratos] = useState<Contrato[]>([])
+  const [loadingContratos, setLoadingContratos] = useState(false)
+  const [contratoModalOpen, setContratoModalOpen] = useState(false)
 
   // Load current user data
   useEffect(() => {
@@ -169,6 +188,52 @@ export function ConsultaWizardModal({
     const debounce = setTimeout(loadClientes, 300)
     return () => clearTimeout(debounce)
   }, [currentEscritorioId, open, clienteSearch])
+
+  // Carregar contratos do cliente
+  const loadContratosCliente = async (clienteId: string) => {
+    if (!clienteId || !currentEscritorioId) {
+      setContratos([])
+      return
+    }
+
+    setLoadingContratos(true)
+    try {
+      const { data, error } = await supabase
+        .from('financeiro_contratos_honorarios')
+        .select('id, titulo, forma_cobranca, config')
+        .eq('escritorio_id', currentEscritorioId)
+        .contains('grupo_clientes', { cliente_pagador_id: clienteId })
+        .eq('status', 'ativo')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      const contratosFormatados = (data || []).map(c => ({
+        id: c.id,
+        titulo: c.titulo || `Contrato ${c.forma_cobranca}`,
+        forma_cobranca: c.forma_cobranca,
+        valor_fixo: c.config?.valor_fixo || null,
+        percentual_exito: c.config?.percentual_exito || null,
+      }))
+
+      setContratos(contratosFormatados)
+    } catch (err) {
+      console.error('Erro ao carregar contratos:', err)
+      setContratos([])
+    } finally {
+      setLoadingContratos(false)
+    }
+  }
+
+  // Carregar contratos quando cliente muda
+  useEffect(() => {
+    if (formData.cliente_id) {
+      loadContratosCliente(formData.cliente_id)
+    } else {
+      setContratos([])
+      setFormData(prev => ({ ...prev, contrato_id: '' }))
+    }
+  }, [formData.cliente_id])
 
   // Load responsaveis
   useEffect(() => {
@@ -244,6 +309,7 @@ export function ConsultaWizardModal({
           titulo: formData.titulo.trim(),
           descricao: formData.descricao.trim() || null,
           cliente_id: formData.cliente_id,
+          contrato_id: formData.contrato_id || null,
           area: formData.area,
           prioridade: formData.prioridade,
           prazo: formData.prazo || null,
@@ -267,11 +333,33 @@ export function ConsultaWizardModal({
     }
   }
 
+  // Handler para salvar novo contrato via modal
+  const handleSaveContrato = async (data: any): Promise<string | null | boolean> => {
+    try {
+      const contratoId = await createContrato(data)
+      if (contratoId) {
+        // Recarregar lista de contratos
+        await loadContratosCliente(formData.cliente_id)
+        // Selecionar o novo contrato automaticamente
+        handleChange('contrato_id', contratoId)
+        toast.success('Contrato criado e vinculado!')
+        setContratoModalOpen(false)
+        return contratoId
+      }
+      return null
+    } catch (error) {
+      console.error('Erro ao criar contrato:', error)
+      toast.error('Erro ao criar contrato')
+      return null
+    }
+  }
+
   const handleClose = () => {
     setFormData({
       titulo: '',
       descricao: '',
       cliente_id: '',
+      contrato_id: '',
       area: '',
       prioridade: 'media',
       prazo: '',
@@ -279,6 +367,7 @@ export function ConsultaWizardModal({
     })
     setErrors({})
     setClienteSearch('')
+    setContratos([])
     onOpenChange(false)
   }
 
@@ -388,6 +477,80 @@ export function ConsultaWizardModal({
               </p>
             )}
           </div>
+
+          {/* Contrato de Honorários */}
+          {formData.cliente_id && (
+            <div className="space-y-1.5">
+              <Label htmlFor="contrato" className="text-xs font-medium flex items-center gap-1">
+                <FileText className="w-3.5 h-3.5 text-slate-400" />
+                Contrato de Honorários <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.contrato_id}
+                onValueChange={(value) => handleChange('contrato_id', value)}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Selecione o contrato..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* Botão para criar novo contrato */}
+                  <div className="px-2 py-1.5 border-b">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start text-xs h-8 text-[#34495e] hover:bg-slate-100"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setContratoModalOpen(true)
+                      }}
+                    >
+                      <Plus className="w-3.5 h-3.5 mr-2" />
+                      Criar novo contrato
+                    </Button>
+                  </div>
+                  {loadingContratos ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                    </div>
+                  ) : contratos.length === 0 ? (
+                    <div className="text-center py-4 text-xs text-slate-500">
+                      Nenhum contrato encontrado.
+                      <br />
+                      <button
+                        type="button"
+                        onClick={() => setContratoModalOpen(true)}
+                        className="text-[#89bcbe] hover:underline mt-1"
+                      >
+                        Clique aqui para criar
+                      </button>
+                    </div>
+                  ) : (
+                    contratos.map((contrato) => (
+                      <SelectItem key={contrato.id} value={contrato.id} className="text-xs">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{contrato.titulo}</span>
+                          <span className="text-[10px] text-slate-500">
+                            {contrato.forma_cobranca === 'fixo' && contrato.valor_fixo && (
+                              <>Fixo: R$ {contrato.valor_fixo.toLocaleString('pt-BR')}</>
+                            )}
+                            {contrato.forma_cobranca === 'exito' && contrato.percentual_exito && (
+                              <>Êxito: {contrato.percentual_exito}%</>
+                            )}
+                            {contrato.forma_cobranca === 'por_hora' && <>Por Hora</>}
+                            {contrato.forma_cobranca === 'por_ato' && <>Por Ato</>}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-slate-500">
+                Vincule um contrato para gerenciar a cobrança desta consulta
+              </p>
+            </div>
+          )}
 
           {/* Área e Prioridade */}
           <div className="grid grid-cols-2 gap-3">
@@ -601,6 +764,14 @@ export function ConsultaWizardModal({
             toast.error(error.message || 'Erro ao criar cliente')
           }
         }}
+      />
+
+      {/* Modal para criar novo contrato */}
+      <ContratoModal
+        open={contratoModalOpen}
+        onOpenChange={setContratoModalOpen}
+        defaultClienteId={formData.cliente_id}
+        onSave={handleSaveContrato}
       />
     </Dialog>
   )

@@ -368,7 +368,7 @@ export default function DashboardPage() {
                   <p className="text-[11px] text-[#9ca3af] text-center py-2">Nenhum compromisso</p>
                 ) : (
                   <div className="space-y-1">
-                    {agendaItems.slice(0, 3).map((event) => {
+                    {agendaItems.slice(0, 3).map((event, index) => {
                       const tipoConfig: Record<string, { label: string; color: string }> = {
                         audiencia: { label: 'Aud', color: 'text-red-600' },
                         prazo: { label: 'Prazo', color: 'text-amber-600' },

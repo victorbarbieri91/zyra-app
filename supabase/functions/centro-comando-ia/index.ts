@@ -19,6 +19,13 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import {
+  buildRAGContext,
+  formatRAGContextForPrompt,
+  extractFactsFromConversation,
+  saveExtractedFacts,
+  type RAGContext,
+} from './rag-helpers.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -570,11 +577,15 @@ serve(async (req) => {
       content: mensagem,
     })
 
-    // Buscar chave DeepSeek
+    // Buscar chaves de API
     const deepseekKey = Deno.env.get('DEEPSEEK_API_KEY')
     if (!deepseekKey) {
       return errorResponse('Chave DeepSeek não configurada no servidor', 500)
     }
+
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
+    // OpenAI é opcional - se não tiver, desabilita RAG
+    const ragEnabled = !!openaiApiKey
 
     // Buscar informações do usuário
     const { data: userProfile } = await supabase
@@ -587,10 +598,33 @@ serve(async (req) => {
     const hoje = new Date().toISOString().split('T')[0] // YYYY-MM-DD
     const amanha = new Date(Date.now() + 86400000).toISOString().split('T')[0]
 
-    // Construir contexto da sessão baseado no histórico
+    // Construir contexto da sessão baseado no histórico (modo antigo, mantido para fallback)
     const sessionContext = construirContextoSessao(historico_mensagens || [])
 
-    // Construir bloco de memória da sessão
+    // ========================================
+    // RAG: Buscar contexto relevante
+    // ========================================
+    let ragContext: RAGContext | null = null
+    let ragSection = ''
+
+    if (ragEnabled && openaiApiKey) {
+      try {
+        console.log('[Centro Comando] Buscando contexto RAG...')
+        ragContext = await buildRAGContext(supabase, mensagem, {
+          escritorioId: escritorio_id,
+          userId: user_id,
+          sessaoId: sessao_id,
+          openaiApiKey,
+        })
+        ragSection = formatRAGContextForPrompt(ragContext)
+        console.log(`[Centro Comando] RAG: ${ragContext.knowledge.length} chunks, ${ragContext.memories.length} memórias (~${ragContext.tokenEstimate} tokens)`)
+      } catch (ragError) {
+        console.error('[Centro Comando] Erro ao buscar RAG:', ragError)
+        // Continua sem RAG
+      }
+    }
+
+    // Construir bloco de memória da sessão (fallback/complemento)
     let memoriaSection = ''
     if (sessionContext.tabelasConhecidas.length > 0 || Object.keys(sessionContext.schemasConsultados).length > 0) {
       memoriaSection = `
@@ -686,8 +720,7 @@ Exemplo preparar_alteracao_em_massa:
 }
 \`\`\`
 
-${SCHEMA_PRINCIPAIS}
-${EXEMPLOS_QUERIES}
+${ragSection ? ragSection : SCHEMA_PRINCIPAIS + '\n' + EXEMPLOS_QUERIES}
 ${memoriaSection}
 
 ## SQL
@@ -703,8 +736,10 @@ ${memoriaSection}
     ]
 
     // Adicionar histórico se fornecido - COM tool_results resumidos
+    // OTIMIZAÇÃO RAG: Reduzido de 10 para 3 mensagens quando RAG está ativo
+    const maxHistorico = ragContext ? 3 : 10
     if (historico_mensagens && Array.isArray(historico_mensagens)) {
-      for (const msg of historico_mensagens.slice(-10)) { // Últimas 10 mensagens
+      for (const msg of historico_mensagens.slice(-maxHistorico)) {
         if (msg.role && msg.content) {
           let content = msg.content
 
@@ -741,7 +776,8 @@ ${memoriaSection}
         mensagensParaIA,
         escritorio_id,
         user_id,
-        sessao_id
+        sessao_id,
+        openaiApiKey || null
       )
     }
 
@@ -754,7 +790,8 @@ ${memoriaSection}
       mensagensParaIA,
       escritorio_id,
       user_id,
-      sessao_id
+      sessao_id,
+      openaiApiKey || null
     )
 
   } catch (error) {
@@ -772,7 +809,8 @@ async function handleStreamingRequest(
   mensagensParaIA: Array<{role: string, content: string}>,
   escritorioId: string,
   userId: string,
-  sessaoId: string | null
+  sessaoId: string | null,
+  openaiApiKey: string | null
 ) {
   const encoder = new TextEncoder()
 
@@ -996,6 +1034,39 @@ async function handleStreamingRequest(
           tempo_execucao_ms: tempoExecucao,
         })
 
+        // ========================================
+        // RAG: Extrair e salvar memórias (async, não bloqueia)
+        // ========================================
+        if (openaiApiKey && sessaoId && respostaTexto) {
+          // Executar de forma assíncrona para não atrasar a resposta
+          (async () => {
+            try {
+              // Preparar conversa para extração
+              const conversaParaExtracao = mensagensAtual
+                .filter(m => m.role === 'user' || m.role === 'assistant')
+                .map(m => ({ role: m.role, content: m.content || '' }))
+
+              // Adicionar resposta atual
+              conversaParaExtracao.push({ role: 'assistant', content: respostaTexto })
+
+              // Extrair fatos
+              const facts = await extractFactsFromConversation(conversaParaExtracao, deepseekKey)
+
+              if (facts.length > 0) {
+                console.log(`[Centro Comando] Extraídos ${facts.length} fatos da conversa`)
+                await saveExtractedFacts(supabase, facts, {
+                  escritorioId,
+                  userId,
+                  sessaoId,
+                  openaiApiKey,
+                })
+              }
+            } catch (memError) {
+              console.error('[Centro Comando] Erro ao extrair memórias:', memError)
+            }
+          })()
+        }
+
       } catch (error: any) {
         console.error('[Centro Comando SSE] Erro:', error)
         sendEvent('error', { erro: error.message || 'Erro interno' })
@@ -1024,7 +1095,8 @@ async function handleNonStreamingRequest(
   mensagensParaIA: Array<{role: string, content: string}>,
   escritorioId: string,
   userId: string,
-  sessaoId: string | null
+  sessaoId: string | null,
+  openaiApiKey: string | null
 ) {
   const startTime = Date.now()
   const MAX_ITERACOES = 10
@@ -1207,6 +1279,36 @@ async function handleNonStreamingRequest(
     tokens_input: tokensInput,
     tokens_output: tokensOutput,
   })
+
+  // ========================================
+  // RAG: Extrair e salvar memórias (async, não bloqueia)
+  // ========================================
+  if (openaiApiKey && sessaoId && respostaTexto) {
+    // Executar de forma assíncrona para não atrasar a resposta
+    (async () => {
+      try {
+        const conversaParaExtracao = mensagensAtual
+          .filter(m => m.role === 'user' || m.role === 'assistant')
+          .map(m => ({ role: m.role, content: m.content || '' }))
+
+        conversaParaExtracao.push({ role: 'assistant', content: respostaTexto })
+
+        const facts = await extractFactsFromConversation(conversaParaExtracao, deepseekKey)
+
+        if (facts.length > 0) {
+          console.log(`[Centro Comando] Extraídos ${facts.length} fatos da conversa`)
+          await saveExtractedFacts(supabase, facts, {
+            escritorioId,
+            userId,
+            sessaoId,
+            openaiApiKey,
+          })
+        }
+      } catch (memError) {
+        console.error('[Centro Comando] Erro ao extrair memórias:', memError)
+      }
+    })()
+  }
 
   // Retornar resposta
   return successResponse({

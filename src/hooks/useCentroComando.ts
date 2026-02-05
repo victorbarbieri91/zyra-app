@@ -47,6 +47,10 @@ export function useCentroComando() {
   // Estado para campos pendentes (modal de coleta de informacoes)
   const [camposPendentes, setCamposPendentes] = useState<ToolResult | null>(null)
 
+  // Estado para feedback por mensagem
+  const [feedbackPorMensagem, setFeedbackPorMensagem] = useState<Record<string, 'positivo' | 'negativo' | 'correcao'>>({})
+  const [enviandoFeedback, setEnviandoFeedback] = useState(false)
+
   // Ref para scroll automático
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -649,6 +653,67 @@ export function useCentroComando() {
     await enviarMensagem(`Aqui estao as informacoes:\n${textoResposta}`)
   }, [camposPendentes, enviarMensagem])
 
+  // ========================================
+  // ENVIAR FEEDBACK SOBRE UMA MENSAGEM
+  // ========================================
+  const enviarFeedback = useCallback(async (
+    mensagemId: string,
+    tipo: 'positivo' | 'negativo' | 'correcao',
+    dados?: { comentario?: string; respostaEsperada?: string }
+  ) => {
+    if (!escritorioAtivo || !state.sessaoId) return false
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return false
+
+    setEnviandoFeedback(true)
+
+    try {
+      // Buscar a mensagem original e a mensagem do usuario anterior
+      const mensagemIndex = state.mensagens.findIndex(m => m.id === mensagemId)
+      const mensagemAssistente = state.mensagens[mensagemIndex]
+      const mensagemUsuario = mensagemIndex > 0 ? state.mensagens[mensagemIndex - 1] : null
+
+      // Inserir feedback no banco
+      const { error } = await supabase
+        .from('centro_comando_feedback')
+        .insert({
+          escritorio_id: escritorioAtivo,
+          user_id: user.id,
+          sessao_id: state.sessaoId,
+          mensagem_id: mensagemId,
+          tipo_feedback: tipo,
+          comentario: dados?.comentario || null,
+          user_message: mensagemUsuario?.role === 'user' ? mensagemUsuario.content : null,
+          assistant_response: mensagemAssistente?.content || null,
+          tool_calls: mensagemAssistente?.tool_results ? JSON.stringify(mensagemAssistente.tool_results) : null,
+          resposta_esperada: dados?.respostaEsperada || null,
+        })
+
+      if (error) throw error
+
+      // Atualizar estado local
+      setFeedbackPorMensagem(prev => ({
+        ...prev,
+        [mensagemId]: tipo,
+      }))
+
+      return true
+    } catch (err) {
+      console.error('[useCentroComando] Erro ao enviar feedback:', err)
+      return false
+    } finally {
+      setEnviandoFeedback(false)
+    }
+  }, [escritorioAtivo, state.sessaoId, state.mensagens, supabase])
+
+  // ========================================
+  // OBTER FEEDBACK DE UMA MENSAGEM
+  // ========================================
+  const getFeedbackMensagem = useCallback((mensagemId: string) => {
+    return feedbackPorMensagem[mensagemId] || null
+  }, [feedbackPorMensagem])
+
   return {
     // Estado
     mensagens: state.mensagens,
@@ -678,6 +743,11 @@ export function useCentroComando() {
     abrirFormularioInput,
     fecharFormularioInput,
     responderCamposNecessarios,
+
+    // Feedback
+    enviarFeedback,
+    getFeedbackMensagem,
+    enviandoFeedback,
 
     // Refs
     messagesEndRef,

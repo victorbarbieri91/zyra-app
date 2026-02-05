@@ -7,11 +7,16 @@ import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ResultsTable } from './ResultsTable'
 import { FormularioPendente } from './FormularioPendente'
+import { FeedbackButtons, TipoFeedback } from './FeedbackButtons'
 
 interface ChatMessageProps {
   mensagem: CentroComandoMensagem
   onNavigate?: (path: string) => void
   onOpenInputDialog?: (result: ToolResult) => void
+  onFeedback?: (mensagemId: string, tipo: TipoFeedback) => void
+  onCorrecao?: (mensagemId: string) => void
+  feedbackEnviado?: TipoFeedback | null
+  mostrarFeedback?: boolean
 }
 
 // Filtrar resultados de ferramentas:
@@ -35,7 +40,15 @@ function filterToolResults(results: ToolResult[]): ToolResult[] {
   return results
 }
 
-export function ChatMessage({ mensagem, onNavigate, onOpenInputDialog }: ChatMessageProps) {
+export function ChatMessage({
+  mensagem,
+  onNavigate,
+  onOpenInputDialog,
+  onFeedback,
+  onCorrecao,
+  feedbackEnviado,
+  mostrarFeedback = false,
+}: ChatMessageProps) {
   const isUser = mensagem.role === 'user'
   const isSystem = mensagem.role === 'system'
   const isLoading = mensagem.loading
@@ -108,6 +121,16 @@ export function ChatMessage({ mensagem, onNavigate, onOpenInputDialog }: ChatMes
               <div className="mt-2 px-3 py-2 bg-red-50 border border-red-100 rounded-lg text-xs text-red-600">
                 {mensagem.erro}
               </div>
+            )}
+
+            {/* Feedback Buttons - apenas para mensagens do assistente que nao estao carregando */}
+            {!isUser && !isSystem && mostrarFeedback && onFeedback && onCorrecao && mensagem.id && (
+              <FeedbackButtons
+                mensagemId={mensagem.id}
+                onFeedback={(tipo) => onFeedback(mensagem.id!, tipo)}
+                onCorrecao={() => onCorrecao(mensagem.id!)}
+                feedbackEnviado={feedbackEnviado}
+              />
             )}
           </>
         )}

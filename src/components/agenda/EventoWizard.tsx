@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { DateInput } from '@/components/ui/date-picker'
 import { DateTimeInput } from '@/components/ui/datetime-picker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import TagSelector from '@/components/tags/TagSelector'
+// TagSelector removido - tabelas de tags não são mais utilizadas
 import VinculacaoSelector, { Vinculacao } from '@/components/agenda/VinculacaoSelector'
 import RecorrenciaConfig, { RecorrenciaData } from '@/components/agenda/RecorrenciaConfig'
 import ResponsaveisSelector from '@/components/agenda/ResponsaveisSelector'
@@ -21,9 +21,9 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { useTags } from '@/hooks/useTags'
+// useTags removido - tabelas de tags não são mais utilizadas
 import { useRecorrencias } from '@/hooks/useRecorrencias'
-import { useAgendaResponsaveis } from '@/hooks/useAgendaResponsaveis'
+// useAgendaResponsaveis não mais necessário - responsaveis_ids é passado diretamente no formData
 import { useEscritorioMembros } from '@/hooks/useEscritorioMembros'
 import { toBrazilTime, formatBrazilDateLong, formatBrazilDateTime } from '@/lib/timezone'
 
@@ -79,14 +79,12 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Carregar tags para mostrar na revisão
-  const { tags } = useTags('agenda', escritorioId)
+  // Tags removidas - sistema simplificado
 
   // Carregar membros do escritório para o seletor de responsáveis
   const { membros } = useEscritorioMembros(escritorioId)
 
-  // Hook para gerenciar responsáveis múltiplos
-  const { setResponsaveis } = useAgendaResponsaveis()
+  // Hook useAgendaResponsaveis não mais necessário - responsaveis_ids é passado diretamente no formData
 
   // Hook para criar/atualizar eventos diretamente (garante retorno do ID)
   const { createEvento, updateEvento } = useEventos(escritorioId)
@@ -103,7 +101,6 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
 
   const [processoId, setProcessoId] = useState<string | null>(initialData?.processo_id || null)
   const [consultivoId, setConsultivoId] = useState<string | null>(initialData?.consultivo_id || null)
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
 
   const [responsaveisIds, setResponsaveisIds] = useState<string[]>(
     initialData?.responsavel_id ? [initialData.responsavel_id] : []
@@ -247,9 +244,9 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
       validate: () => true,
     },
     {
-      id: 'vinculos-tags',
-      title: 'Vínculos e Organização',
-      subtitle: 'Vincule e organize o compromisso',
+      id: 'vinculos',
+      title: 'Vínculos',
+      subtitle: 'Vincule a processos ou consultivos',
       isOptional: true,
       validate: () => true,
     },
@@ -280,7 +277,9 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
         dia_inteiro: diaInteiro,
         local: local || undefined,
         cor,
-        responsavel_id: responsaveisIds[0] || undefined, // Primeiro para compatibilidade
+        // Responsáveis: array direto + responsavel_id para retrocompatibilidade
+        responsaveis_ids: responsaveisIds,
+        responsavel_id: responsaveisIds[0] || undefined,
         processo_id: processoId,
         consultivo_id: consultivoId,
       }
@@ -308,23 +307,12 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
       } else {
         // Evento único - criar/atualizar usando hook diretamente
         if (initialData?.id) {
-          // Modo edição
+          // Modo edição - responsaveis_ids já está no formData
           await updateEvento(initialData.id, formData)
-
-          if (responsaveisIds.length > 0) {
-            console.log('[EventoWizard] Atualizando responsáveis:', responsaveisIds, 'para evento:', initialData.id)
-            await setResponsaveis('evento', initialData.id, responsaveisIds)
-          }
           toast.success('Compromisso atualizado com sucesso!')
         } else {
-          // Criar novo evento
-          const novoEvento = await createEvento(formData)
-
-          // Salvar múltiplos responsáveis na tabela N:N
-          if (novoEvento?.id && responsaveisIds.length > 0) {
-            console.log('[EventoWizard] Salvando responsáveis:', responsaveisIds, 'para evento:', novoEvento.id)
-            await setResponsaveis('evento', novoEvento.id, responsaveisIds)
-          }
+          // Criar novo evento - responsaveis_ids já está no formData
+          await createEvento(formData)
           toast.success('Compromisso criado com sucesso!')
         }
 
@@ -525,7 +513,7 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
         </WizardStep>
       )}
 
-      {/* ETAPA 4: Vínculos e Organização */}
+      {/* ETAPA 4: Vínculos */}
       {currentStep === 3 && (
         <WizardStep title={steps[3].title} subtitle={steps[3].subtitle} isOptional>
           <div className="space-y-4">
@@ -537,17 +525,6 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
               <VinculacaoSelector
                 vinculacao={vinculacao}
                 onChange={setVinculacao}
-              />
-            </div>
-
-            {/* Tags */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#34495e]">Etiquetas</Label>
-              <TagSelector
-                contexto="agenda"
-                escritorioId={escritorioId}
-                selectedTagIds={selectedTagIds}
-                onChange={setSelectedTagIds}
               />
             </div>
           </div>
@@ -630,59 +607,22 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
                 )}
               </div>
 
-              {/* Vínculos e Tags */}
-              {(vinculacao || selectedTagIds.length > 0) && (
+              {/* Vínculos */}
+              {vinculacao && (
                 <>
                   <div className="border-t border-slate-100" />
 
                   <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
-                    {vinculacao && (
-                      <>
-                        <span className="text-slate-500">Vinculado a</span>
-                        <div className="text-[#34495e]">
-                          <div className="font-medium">
-                            {vinculacao.metadados?.partes || vinculacao.metadados?.titulo || `Pasta ${vinculacao.metadados?.numero_pasta}`}
-                          </div>
-                          <div className="text-[11px] text-slate-500 mt-0.5">
-                            {vinculacao.metadados?.numero_pasta && `Pasta ${vinculacao.metadados.numero_pasta}`}
-                            {vinculacao.metadados?.numero_cnj && ` • CNJ: ${vinculacao.metadados.numero_cnj}`}
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {selectedTagIds.length > 0 && (
-                      <>
-                        <span className="text-slate-500">Etiquetas</span>
-                        <div className="flex flex-wrap gap-1">
-                          {selectedTagIds.map(tagId => {
-                            const tag = tags.find(t => t.id === tagId)
-                            if (!tag) return null
-
-                            // Calcular contraste
-                            const hex = tag.cor.replace('#', '')
-                            const r = parseInt(hex.substr(0, 2), 16)
-                            const g = parseInt(hex.substr(2, 2), 16)
-                            const b = parseInt(hex.substr(4, 2), 16)
-                            const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-                            const textColor = luminance > 0.5 ? '#000000' : '#FFFFFF'
-
-                            return (
-                              <div
-                                key={tagId}
-                                className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium shadow-sm"
-                                style={{
-                                  backgroundColor: tag.cor,
-                                  color: textColor
-                                }}
-                              >
-                                {tag.nome}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </>
-                    )}
+                    <span className="text-slate-500">Vinculado a</span>
+                    <div className="text-[#34495e]">
+                      <div className="font-medium">
+                        {vinculacao.metadados?.partes || vinculacao.metadados?.titulo || `Pasta ${vinculacao.metadados?.numero_pasta}`}
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        {vinculacao.metadados?.numero_pasta && `Pasta ${vinculacao.metadados.numero_pasta}`}
+                        {vinculacao.metadados?.numero_cnj && ` • CNJ: ${vinculacao.metadados.numero_cnj}`}
+                      </div>
+                    </div>
                   </div>
                 </>
               )}

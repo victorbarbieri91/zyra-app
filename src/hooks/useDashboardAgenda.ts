@@ -56,13 +56,13 @@ export function useDashboardAgenda() {
       const inicioHoje = startOfDayInBrazil(new Date())
       const fimHoje = endOfDayInBrazil(new Date())
 
-      // Buscar apenas itens onde o usuário é responsável OU criador
+      // Buscar apenas itens onde o usuário está no array de responsáveis
       // Isso garante que cada pessoa veja apenas sua própria agenda no dashboard
       const { data, error: queryError } = await supabase
         .from('v_agenda_consolidada')
         .select('*')
         .eq('escritorio_id', escritorioAtivo)
-        .or(`responsavel_id.eq.${user.id},criado_por.eq.${user.id}`)
+        .contains('responsaveis_ids', [user.id])
         .gte('data_inicio', inicioHoje.toISOString())
         .lte('data_inicio', fimHoje.toISOString())
         .neq('status', 'concluida') // Mostrar apenas itens pendentes

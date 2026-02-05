@@ -43,27 +43,14 @@ export interface Tarefa {
   responsavel_nome?: string
   criado_por_nome?: string
 
-  // Múltiplos responsáveis (carregado separadamente via useAgendaResponsaveis)
-  responsaveis_ids?: string[]
+  // Múltiplos responsáveis (array direto na coluna)
+  responsaveis_ids: string[]
 
   created_at: string
   updated_at: string
 }
 
-export interface TarefaChecklistItem {
-  id: string
-  tarefa_id: string
-  item: string
-  concluido: boolean
-  ordem: number
-  concluido_em?: string
-  concluido_por?: string
-  created_at: string
-}
-
-export interface TarefaFormData extends Partial<Tarefa> {
-  checklist?: Array<{ item: string; ordem: number }>
-}
+export interface TarefaFormData extends Partial<Tarefa> {}
 
 export function useTarefas(escritorioId?: string) {
   const [tarefas, setTarefas] = useState<Tarefa[]>([])
@@ -124,7 +111,9 @@ export function useTarefas(escritorioId?: string) {
           status: data.status || 'pendente',
           data_inicio: data.data_inicio ? formatDateForDB(data.data_inicio) : undefined,
           data_fim: data.data_fim ? formatDateForDB(data.data_fim) : undefined,
-          responsavel_id: data.responsavel_id,
+          // Responsáveis: usa array direto, mantém responsavel_id para compatibilidade
+          responsaveis_ids: data.responsaveis_ids || [],
+          responsavel_id: data.responsaveis_ids?.[0] || data.responsavel_id,
           cor: data.cor,
           observacoes: data.observacoes,
           tags: data.tags,
@@ -146,22 +135,7 @@ export function useTarefas(escritorioId?: string) {
         throw tarefaError
       }
 
-      // 2. Se tem checklist, criar itens
-      if (data.checklist && data.checklist.length > 0 && novaTarefa) {
-        const checklistData = data.checklist.map(item => ({
-          tarefa_id: novaTarefa.id,
-          item: item.item,
-          ordem: item.ordem,
-        }))
-
-        const { error: checklistError } = await supabase
-          .from('agenda_tarefas_checklist')
-          .insert(checklistData)
-
-        if (checklistError) throw checklistError
-      }
-
-      // 3. Se é prazo processual, calcular data limite
+      // 2. Se é prazo processual, calcular data limite
       if (data.tipo === 'prazo_processual' && data.prazo_data_intimacao && data.prazo_quantidade_dias) {
         const { data: dataLimite, error: calcError } = await supabase
           .rpc('calcular_data_limite_prazo', {
@@ -208,7 +182,9 @@ export function useTarefas(escritorioId?: string) {
           data_inicio: data.data_inicio ? formatDateForDB(data.data_inicio) : undefined,
           data_fim: data.data_fim ? formatDateForDB(data.data_fim) : undefined,
           data_conclusao: data.data_conclusao ? formatDateTimeForDB(new Date(data.data_conclusao)) : undefined,
-          responsavel_id: data.responsavel_id,
+          // Responsáveis: usa array direto, mantém responsavel_id para compatibilidade
+          responsaveis_ids: data.responsaveis_ids,
+          responsavel_id: data.responsaveis_ids?.[0] || data.responsavel_id,
           cor: data.cor,
           observacoes: data.observacoes,
           tags: data.tags,
@@ -263,79 +239,6 @@ export function useTarefas(escritorioId?: string) {
       await loadTarefas()
     } catch (err) {
       console.error('Erro ao deletar tarefa:', err)
-      throw err
-    }
-  }
-
-  // Checklist methods
-  const loadChecklist = async (tarefaId: string): Promise<TarefaChecklistItem[]> => {
-    try {
-      const { data, error } = await supabase
-        .from('agenda_tarefas_checklist')
-        .select('*')
-        .eq('tarefa_id', tarefaId)
-        .order('ordem')
-
-      if (error) throw error
-
-      return data || []
-    } catch (err) {
-      console.error('Erro ao carregar checklist:', err)
-      throw err
-    }
-  }
-
-  const addChecklistItem = async (tarefaId: string, item: string, ordem: number): Promise<void> => {
-    try {
-      const { error } = await supabase
-        .from('agenda_tarefas_checklist')
-        .insert({
-          tarefa_id: tarefaId,
-          item,
-          ordem,
-        })
-
-      if (error) throw error
-
-      await loadTarefas()
-    } catch (err) {
-      console.error('Erro ao adicionar item checklist:', err)
-      throw err
-    }
-  }
-
-  const toggleChecklistItem = async (itemId: string, concluido: boolean): Promise<void> => {
-    try {
-      const { error } = await supabase
-        .from('agenda_tarefas_checklist')
-        .update({
-          concluido,
-          concluido_em: concluido ? formatDateTimeForDB(getNowInBrazil()) : null,
-        })
-        .eq('id', itemId)
-
-      if (error) throw error
-
-      // O trigger vai atualizar o progresso automaticamente
-      await loadTarefas()
-    } catch (err) {
-      console.error('Erro ao atualizar item checklist:', err)
-      throw err
-    }
-  }
-
-  const deleteChecklistItem = async (itemId: string): Promise<void> => {
-    try {
-      const { error } = await supabase
-        .from('agenda_tarefas_checklist')
-        .delete()
-        .eq('id', itemId)
-
-      if (error) throw error
-
-      await loadTarefas()
-    } catch (err) {
-      console.error('Erro ao deletar item checklist:', err)
       throw err
     }
   }
@@ -399,12 +302,6 @@ export function useTarefas(escritorioId?: string) {
     deleteTarefa,
     concluirTarefa,
     reabrirTarefa,
-    // Checklist
-    loadChecklist,
-    addChecklistItem,
-    toggleChecklistItem,
-    deleteChecklistItem,
-    // Utils
     refreshTarefas: loadTarefas,
   }
 }

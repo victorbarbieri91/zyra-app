@@ -24,20 +24,11 @@ interface UseAgendaResponsaveisReturn {
   setResponsaveis: (tipo: TipoAgenda, itemId: string, userIds: string[]) => Promise<boolean>
 }
 
-// Mapeia tipo para nome da tabela e coluna FK
-const TABLE_CONFIG = {
-  tarefa: {
-    table: 'agenda_tarefas_responsaveis',
-    fkColumn: 'tarefa_id',
-  },
-  audiencia: {
-    table: 'agenda_audiencias_responsaveis',
-    fkColumn: 'audiencia_id',
-  },
-  evento: {
-    table: 'agenda_eventos_responsaveis',
-    fkColumn: 'evento_id',
-  },
+// Mapeia tipo para tabela principal (todos usam array direto agora)
+const TABLE_CONFIG: Record<TipoAgenda, string> = {
+  tarefa: 'agenda_tarefas',
+  audiencia: 'agenda_audiencias',
+  evento: 'agenda_eventos',
 }
 
 export function useAgendaResponsaveis(): UseAgendaResponsaveisReturn {
@@ -47,40 +38,45 @@ export function useAgendaResponsaveis(): UseAgendaResponsaveisReturn {
 
   /**
    * Carrega os responsáveis de um item da agenda
+   * Todos os tipos usam array direto responsaveis_ids
    */
   const getResponsaveis = useCallback(async (tipo: TipoAgenda, itemId: string): Promise<Responsavel[]> => {
     setLoading(true)
     setError(null)
 
     try {
-      const config = TABLE_CONFIG[tipo]
+      const tableName = TABLE_CONFIG[tipo]
 
-      const { data, error: queryError } = await supabase
-        .from(config.table)
-        .select(`
-          id,
-          user_id,
-          atribuido_em,
-          atribuido_por,
-          profile:profiles!user_id(
-            nome_completo,
-            email,
-            avatar_url
-          )
-        `)
-        .eq(config.fkColumn, itemId)
-        .order('atribuido_em', { ascending: true })
+      const { data: item, error: queryError } = await supabase
+        .from(tableName)
+        .select('responsaveis_ids, created_at')
+        .eq('id', itemId)
+        .single()
 
       if (queryError) throw queryError
 
-      return (data || []).map((item: any) => ({
-        id: item.id,
-        user_id: item.user_id,
-        nome_completo: item.profile?.nome_completo || 'Usuário',
-        email: item.profile?.email,
-        avatar_url: item.profile?.avatar_url,
-        atribuido_em: item.atribuido_em,
-        atribuido_por: item.atribuido_por,
+      const responsaveisIds = item?.responsaveis_ids || []
+
+      if (responsaveisIds.length === 0) {
+        return []
+      }
+
+      // Buscar dados dos perfis
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, nome_completo, email, avatar_url')
+        .in('id', responsaveisIds)
+
+      if (profilesError) throw profilesError
+
+      return (profiles || []).map((profile: any) => ({
+        id: profile.id,
+        user_id: profile.id,
+        nome_completo: profile.nome_completo || 'Usuário',
+        email: profile.email,
+        avatar_url: profile.avatar_url,
+        atribuido_em: item.created_at,
+        atribuido_por: undefined,
       }))
     } catch (err: any) {
       console.error('Erro ao carregar responsáveis:', err)
@@ -93,6 +89,7 @@ export function useAgendaResponsaveis(): UseAgendaResponsaveisReturn {
 
   /**
    * Adiciona um responsável a um item da agenda
+   * Todos os tipos usam array direto responsaveis_ids
    */
   const addResponsavel = useCallback(async (
     tipo: TipoAgenda,
@@ -103,26 +100,36 @@ export function useAgendaResponsaveis(): UseAgendaResponsaveisReturn {
     setError(null)
 
     try {
-      const config = TABLE_CONFIG[tipo]
+      const tableName = TABLE_CONFIG[tipo]
 
-      // Obtém o usuário atual para registrar quem fez a atribuição
-      const { data: { user } } = await supabase.auth.getUser()
+      // Buscar array atual
+      const { data: item, error: fetchError } = await supabase
+        .from(tableName)
+        .select('responsaveis_ids')
+        .eq('id', itemId)
+        .single()
 
-      const { error: insertError } = await supabase
-        .from(config.table)
-        .insert({
-          [config.fkColumn]: itemId,
-          user_id: userId,
-          atribuido_por: user?.id,
-        })
+      if (fetchError) throw fetchError
 
-      if (insertError) {
-        // Ignora erro de duplicata (já é responsável)
-        if (insertError.code === '23505') {
-          return true
-        }
-        throw insertError
+      const currentIds = item?.responsaveis_ids || []
+
+      // Se já existe, não faz nada
+      if (currentIds.includes(userId)) {
+        return true
       }
+
+      // Adicionar ao array
+      const newIds = [...currentIds, userId]
+
+      const { error: updateError } = await supabase
+        .from(tableName)
+        .update({
+          responsaveis_ids: newIds,
+          responsavel_id: newIds[0] // Manter compatibilidade
+        })
+        .eq('id', itemId)
+
+      if (updateError) throw updateError
 
       return true
     } catch (err: any) {
@@ -136,6 +143,7 @@ export function useAgendaResponsaveis(): UseAgendaResponsaveisReturn {
 
   /**
    * Remove um responsável de um item da agenda
+   * Todos os tipos usam array direto responsaveis_ids
    */
   const removeResponsavel = useCallback(async (
     tipo: TipoAgenda,
@@ -146,15 +154,29 @@ export function useAgendaResponsaveis(): UseAgendaResponsaveisReturn {
     setError(null)
 
     try {
-      const config = TABLE_CONFIG[tipo]
+      const tableName = TABLE_CONFIG[tipo]
 
-      const { error: deleteError } = await supabase
-        .from(config.table)
-        .delete()
-        .eq(config.fkColumn, itemId)
-        .eq('user_id', userId)
+      // Buscar array atual
+      const { data: item, error: fetchError } = await supabase
+        .from(tableName)
+        .select('responsaveis_ids')
+        .eq('id', itemId)
+        .single()
 
-      if (deleteError) throw deleteError
+      if (fetchError) throw fetchError
+
+      const currentIds = item?.responsaveis_ids || []
+      const newIds = currentIds.filter((id: string) => id !== userId)
+
+      const { error: updateError } = await supabase
+        .from(tableName)
+        .update({
+          responsaveis_ids: newIds,
+          responsavel_id: newIds[0] || null // Manter compatibilidade
+        })
+        .eq('id', itemId)
+
+      if (updateError) throw updateError
 
       return true
     } catch (err: any) {
@@ -168,6 +190,7 @@ export function useAgendaResponsaveis(): UseAgendaResponsaveisReturn {
 
   /**
    * Define a lista completa de responsáveis (substitui todos)
+   * Todos os tipos usam array direto responsaveis_ids
    */
   const setResponsaveis = useCallback(async (
     tipo: TipoAgenda,
@@ -178,36 +201,17 @@ export function useAgendaResponsaveis(): UseAgendaResponsaveisReturn {
     setError(null)
 
     try {
-      const config = TABLE_CONFIG[tipo]
+      const tableName = TABLE_CONFIG[tipo]
 
-      // Obtém o usuário atual para registrar quem fez a atribuição
-      const { data: { user } } = await supabase.auth.getUser()
+      const { error: updateError } = await supabase
+        .from(tableName)
+        .update({
+          responsaveis_ids: userIds,
+          responsavel_id: userIds[0] || null // Manter compatibilidade
+        })
+        .eq('id', itemId)
 
-      // 1. Remove todos os responsáveis atuais
-      const { error: deleteError } = await supabase
-        .from(config.table)
-        .delete()
-        .eq(config.fkColumn, itemId)
-
-      if (deleteError) throw deleteError
-
-      // 2. Se não há novos responsáveis, apenas retorna
-      if (userIds.length === 0) {
-        return true
-      }
-
-      // 3. Insere os novos responsáveis
-      const insertData = userIds.map(userId => ({
-        [config.fkColumn]: itemId,
-        user_id: userId,
-        atribuido_por: user?.id,
-      }))
-
-      const { error: insertError } = await supabase
-        .from(config.table)
-        .insert(insertData)
-
-      if (insertError) throw insertError
+      if (updateError) throw updateError
 
       return true
     } catch (err: any) {

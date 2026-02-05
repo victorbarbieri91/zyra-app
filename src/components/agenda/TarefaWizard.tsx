@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { DateInput } from '@/components/ui/date-picker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import TagSelector from '@/components/tags/TagSelector'
+// TagSelector removido - tabelas de tags não são mais utilizadas
 import VinculacaoSelector from '@/components/agenda/VinculacaoSelector'
 import RecorrenciaConfig, { RecorrenciaData } from '@/components/agenda/RecorrenciaConfig'
 import ResponsaveisSelector from '@/components/agenda/ResponsaveisSelector'
@@ -17,7 +17,7 @@ import type { TarefaFormData } from '@/hooks/useTarefas'
 import type { WizardStep as WizardStepType } from '@/components/wizards'
 import { format, parse } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { useTags } from '@/hooks/useTags'
+// useTags removido - tabelas de tags não são mais utilizadas
 import { useRecorrencias } from '@/hooks/useRecorrencias'
 import { useTarefas } from '@/hooks/useTarefas'
 import { useAgendaResponsaveis } from '@/hooks/useAgendaResponsaveis'
@@ -74,8 +74,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Carregar tags para mostrar na revisão
-  const { tags } = useTags('agenda', escritorioId)
+  // Tags removidas - sistema simplificado
 
   // Carregar membros do escritório para exibição na revisão
   const { membros } = useEscritorioMembros(escritorioId)
@@ -83,8 +82,8 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   // Hook para criar tarefas diretamente
   const { createTarefa } = useTarefas(escritorioId)
 
-  // Hook para salvar/carregar responsáveis
-  const { setResponsaveis, getResponsaveis } = useAgendaResponsaveis()
+  // Hook para carregar responsáveis existentes (apenas para edição)
+  const { getResponsaveis } = useAgendaResponsaveis()
 
   // Form State
   const [tipo, setTipo] = useState<TipoTarefa>(initialData?.tipo || 'outro')
@@ -98,7 +97,6 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
 
   const [processoId, setProcessoId] = useState<string | null>(initialData?.processo_id || null)
   const [consultivoId, setConsultivoId] = useState<string | null>(initialData?.consultivo_id || null)
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
 
   const [cor, setCor] = useState(initialData?.cor || '#3B82F6')
 
@@ -247,9 +245,9 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       validate: () => dataExecucao !== '',
     },
     {
-      id: 'vinculos-tags',
-      title: 'Vínculos e Etiquetas',
-      subtitle: 'Vincule a processos e adicione organizadores',
+      id: 'vinculos',
+      title: 'Vínculos',
+      subtitle: 'Vincule a processos ou consultivos',
       isOptional: true,
       validate: () => true,
     },
@@ -288,7 +286,8 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
         data_inicio: formatDateToISO(dataExecucao),
         data_fim: prazoFatal ? formatDateToISO(prazoFatal) : undefined,
         prioridade,
-        // responsavel_id mantido para retrocompatibilidade (primeiro da lista)
+        // Responsáveis: array direto + responsavel_id para retrocompatibilidade
+        responsaveis_ids: responsaveisIds,
         responsavel_id: responsaveisIds.length > 0 ? responsaveisIds[0] : undefined,
         cor,
         processo_id: processoId,
@@ -321,13 +320,9 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
         })
       } else if (isEditing) {
         // Modo edição - usar onSubmit do pai (se fornecido) para atualizar
+        // responsaveis_ids já está incluído no formData e será salvo diretamente
         if (onSubmit) {
           await onSubmit(formData)
-        }
-        // Salvar responsáveis na tabela N:N
-        if (responsaveisIds.length > 0) {
-          console.log('[TarefaWizard] Atualizando responsáveis:', responsaveisIds, 'para tarefa:', initialData.id)
-          await setResponsaveis('tarefa', initialData.id as string, responsaveisIds)
         }
         // Callback opcional
         if (onCreated) {
@@ -335,13 +330,8 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
         }
       } else {
         // Tarefa única nova - criar usando useTarefas diretamente
-        const novaTarefa = await createTarefa(formData)
-
-        // Salvar responsáveis na tabela N:N se a tarefa foi criada
-        if (novaTarefa?.id && responsaveisIds.length > 0) {
-          console.log('[TarefaWizard] Salvando responsáveis:', responsaveisIds, 'para tarefa:', novaTarefa.id)
-          await setResponsaveis('tarefa', novaTarefa.id, responsaveisIds)
-        }
+        // responsaveis_ids já está incluído no formData e será salvo diretamente
+        await createTarefa(formData)
 
         // Callback opcional para o pai saber que foi criado (para atualizar listas)
         if (onCreated) {
@@ -542,7 +532,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
         </WizardStep>
       )}
 
-      {/* ETAPA 3: Vínculos e Tags */}
+      {/* ETAPA 3: Vínculos */}
       {currentStep === 2 && (
         <WizardStep
           title={filteredSteps[2].title}
@@ -555,17 +545,6 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
               <VinculacaoSelector
                 vinculacao={vinculacao}
                 onChange={setVinculacao}
-              />
-            </div>
-
-            {/* Tags */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#34495e]">Etiquetas</Label>
-              <TagSelector
-                contexto="agenda"
-                escritorioId={escritorioId}
-                selectedTagIds={selectedTagIds}
-                onChange={setSelectedTagIds}
               />
             </div>
           </div>
@@ -647,59 +626,22 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
                 )}
               </div>
 
-              {/* Vínculos e Tags (se houver) */}
-              {(vinculacao || selectedTagIds.length > 0) && (
+              {/* Vínculos (se houver) */}
+              {vinculacao && (
                 <>
                   <div className="border-t border-slate-100" />
 
                   <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
-                    {vinculacao && (
-                      <>
-                        <span className="text-slate-500">Vinculado a</span>
-                        <div className="text-[#34495e]">
-                          <div className="font-medium">
-                            {vinculacao.metadados?.partes || vinculacao.metadados?.titulo || `Pasta ${vinculacao.metadados?.numero_pasta}`}
-                          </div>
-                          <div className="text-[11px] text-slate-500 mt-0.5">
-                            {vinculacao.metadados?.numero_pasta && `Pasta ${vinculacao.metadados.numero_pasta}`}
-                            {vinculacao.metadados?.numero_cnj && ` • CNJ: ${vinculacao.metadados.numero_cnj}`}
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {selectedTagIds.length > 0 && (
-                      <>
-                        <span className="text-slate-500">Etiquetas</span>
-                        <div className="flex flex-wrap gap-1">
-                          {selectedTagIds.map(tagId => {
-                            const tag = tags.find(t => t.id === tagId)
-                            if (!tag) return null
-
-                            // Calcular contraste
-                            const hex = tag.cor.replace('#', '')
-                            const r = parseInt(hex.substr(0, 2), 16)
-                            const g = parseInt(hex.substr(2, 2), 16)
-                            const b = parseInt(hex.substr(4, 2), 16)
-                            const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-                            const textColor = luminance > 0.5 ? '#000000' : '#FFFFFF'
-
-                            return (
-                              <div
-                                key={tagId}
-                                className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium shadow-sm"
-                                style={{
-                                  backgroundColor: tag.cor,
-                                  color: textColor
-                                }}
-                              >
-                                {tag.nome}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </>
-                    )}
+                    <span className="text-slate-500">Vinculado a</span>
+                    <div className="text-[#34495e]">
+                      <div className="font-medium">
+                        {vinculacao.metadados?.partes || vinculacao.metadados?.titulo || `Pasta ${vinculacao.metadados?.numero_pasta}`}
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        {vinculacao.metadados?.numero_pasta && `Pasta ${vinculacao.metadados.numero_pasta}`}
+                        {vinculacao.metadados?.numero_cnj && ` • CNJ: ${vinculacao.metadados.numero_cnj}`}
+                      </div>
+                    </div>
                   </div>
                 </>
               )}

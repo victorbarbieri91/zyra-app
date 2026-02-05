@@ -53,8 +53,8 @@ export interface Audiencia {
   responsavel_nome?: string
   criado_por_nome?: string
 
-  // Múltiplos responsáveis (carregado separadamente via useAgendaResponsaveis)
-  responsaveis_ids?: string[]
+  // Múltiplos responsáveis (array direto na coluna)
+  responsaveis_ids: string[]
 
   created_at: string
   updated_at: string
@@ -162,8 +162,9 @@ export function useAudiencias(escritorioId?: string) {
           // Virtual
           link_virtual: data.link_virtual,
           plataforma: data.plataforma,
-          // Pessoas
-          responsavel_id: data.responsavel_id,
+          // Pessoas/Responsáveis: usa array direto, mantém responsavel_id para compatibilidade
+          responsaveis_ids: data.responsaveis_ids || [],
+          responsavel_id: data.responsaveis_ids?.[0] || data.responsavel_id,
           // Metadados
           preparativos_checklist: data.preparativos_checklist,
           observacoes: data.observacoes,
@@ -214,8 +215,9 @@ export function useAudiencias(escritorioId?: string) {
           // Virtual
           link_virtual: data.link_virtual,
           plataforma: data.plataforma,
-          // Pessoas
-          responsavel_id: data.responsavel_id,
+          // Pessoas/Responsáveis: usa array direto, mantém responsavel_id para compatibilidade
+          responsaveis_ids: data.responsaveis_ids,
+          responsavel_id: data.responsaveis_ids?.[0] || data.responsavel_id,
           // Status e resultado
           status: data.status,
           resultado_tipo: data.resultado_tipo,

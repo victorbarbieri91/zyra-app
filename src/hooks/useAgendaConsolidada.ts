@@ -17,6 +17,7 @@ export interface AgendaItem {
   responsavel_id?: string
   responsavel_nome?: string
   todos_responsaveis?: string  // Todos os responsáveis agregados (separados por vírgula)
+  responsaveis_ids?: string[]  // Array de IDs dos responsáveis
   prazo_data_limite?: string
 
   // Planejamento de Horário (usado apenas para tarefas na visualização dia)

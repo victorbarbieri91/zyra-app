@@ -19,8 +19,8 @@ export interface Evento {
   // Vinculações (FK diretas)
   processo_id?: string | null
   consultivo_id?: string | null
-  // Múltiplos responsáveis (carregado separadamente via useAgendaResponsaveis)
-  responsaveis_ids?: string[]
+  // Múltiplos responsáveis (array direto na coluna)
+  responsaveis_ids: string[]
   created_at?: string
   updated_at?: string
 }
@@ -68,6 +68,9 @@ export function useEventos(escritorioId?: string) {
         ...data,
         data_inicio: data.data_inicio ? formatDateTimeForDB(new Date(data.data_inicio)) : undefined,
         data_fim: data.data_fim ? formatDateTimeForDB(new Date(data.data_fim)) : undefined,
+        // Responsáveis: usa array direto, mantém responsavel_id para compatibilidade
+        responsaveis_ids: data.responsaveis_ids || [],
+        responsavel_id: data.responsaveis_ids?.[0] || data.responsavel_id,
       }
 
       const { data: novoEvento, error: eventoError } = await supabase
@@ -94,6 +97,9 @@ export function useEventos(escritorioId?: string) {
         ...data,
         data_inicio: data.data_inicio ? formatDateTimeForDB(new Date(data.data_inicio)) : undefined,
         data_fim: data.data_fim ? formatDateTimeForDB(new Date(data.data_fim)) : undefined,
+        // Responsáveis: usa array direto, mantém responsavel_id para compatibilidade
+        responsaveis_ids: data.responsaveis_ids,
+        responsavel_id: data.responsaveis_ids?.[0] || data.responsavel_id,
       }
 
       const { error } = await supabase

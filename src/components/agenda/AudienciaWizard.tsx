@@ -9,15 +9,15 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { DateTimeInput } from '@/components/ui/datetime-picker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import TagSelector from '@/components/tags/TagSelector'
+// TagSelector removido - tabelas de tags não são mais utilizadas
 import VinculacaoSelector, { Vinculacao } from '@/components/agenda/VinculacaoSelector'
 import ResponsaveisSelector from '@/components/agenda/ResponsaveisSelector'
 import { useAudiencias, type AudienciaFormData } from '@/hooks/useAudiencias'
 import type { WizardStep as WizardStepType } from '@/components/wizards'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { useTags } from '@/hooks/useTags'
-import { useAgendaResponsaveis } from '@/hooks/useAgendaResponsaveis'
+// useTags removido - tabelas de tags não são mais utilizadas
+// useAgendaResponsaveis não mais necessário - responsaveis_ids é passado diretamente no formData
 import { useEscritorioMembros } from '@/hooks/useEscritorioMembros'
 import { createClient } from '@/lib/supabase/client'
 import { formatBrazilDateTime } from '@/lib/timezone'
@@ -85,14 +85,12 @@ export default function AudienciaWizard({
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Carregar tags para mostrar na revisão
-  const { tags } = useTags('agenda', escritorioId)
+  // Tags removidas - sistema simplificado
 
   // Carregar membros do escritório para exibição na revisão
   const { membros } = useEscritorioMembros(escritorioId)
 
-  // Hook para salvar responsáveis
-  const { setResponsaveis } = useAgendaResponsaveis()
+  // Hook useAgendaResponsaveis não mais necessário - responsaveis_ids é passado diretamente no formData
 
   // Hook para criar/atualizar audiências diretamente (garante retorno do ID)
   const { createAudiencia, updateAudiencia } = useAudiencias(escritorioId)
@@ -127,7 +125,6 @@ export default function AudienciaWizard({
 
   const [processoId, setProcessoId] = useState<string | null>(initialProcessoId || initialData?.processo_id || null)
   const [consultivoId, setConsultivoId] = useState<string | null>(initialConsultivoId || initialData?.consultivo_id || null)
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
 
   const [observacoes, setObservacoes] = useState(initialData?.observacoes || '')
   const [cor, setCor] = useState(initialData?.cor || '#10B981')
@@ -269,9 +266,9 @@ export default function AudienciaWizard({
       },
     },
     {
-      id: 'vinculos-organizacao',
-      title: 'Vínculos e Organização',
-      subtitle: 'Vincule a processo e organize com tags',
+      id: 'vinculos',
+      title: 'Vínculos',
+      subtitle: 'Vincule a processo ou consultivo',
       validate: () => processoId !== null || consultivoId !== null,
     },
     {
@@ -310,7 +307,8 @@ export default function AudienciaWizard({
         juiz: juiz || undefined,
         promotor: promotor || undefined,
         advogado_contrario: advogadoContrario || undefined,
-        // responsavel_id mantido para retrocompatibilidade
+        // Responsáveis: array direto + responsavel_id para retrocompatibilidade
+        responsaveis_ids: responsaveisIds,
         responsavel_id: responsaveisIds.length > 0 ? responsaveisIds[0] : undefined,
         observacoes: observacoes || undefined,
         cor,
@@ -320,25 +318,13 @@ export default function AudienciaWizard({
 
       if (initialData?.id) {
         // Modo edição - atualizar audiência existente
+        // responsaveis_ids já está incluído no formData e será salvo diretamente
         await updateAudiencia(initialData.id, formData)
-
-        // Atualizar responsáveis na tabela N:N
-        if (responsaveisIds.length > 0) {
-          console.log('[AudienciaWizard] Atualizando responsáveis:', responsaveisIds, 'para audiência:', initialData.id)
-          await setResponsaveis('audiencia', initialData.id, responsaveisIds)
-        }
-
         toast.success('Audiência atualizada com sucesso!')
       } else {
-        // Criar nova audiência usando o hook diretamente (garante retorno do ID)
-        const novaAudiencia = await createAudiencia(formData)
-
-        // Salvar responsáveis na tabela N:N
-        if (novaAudiencia?.id && responsaveisIds.length > 0) {
-          console.log('[AudienciaWizard] Salvando responsáveis:', responsaveisIds, 'para audiência:', novaAudiencia.id)
-          await setResponsaveis('audiencia', novaAudiencia.id, responsaveisIds)
-        }
-
+        // Criar nova audiência usando o hook diretamente
+        // responsaveis_ids já está incluído no formData e será salvo diretamente
+        await createAudiencia(formData)
         toast.success('Audiência criada com sucesso!')
       }
 
@@ -654,7 +640,7 @@ export default function AudienciaWizard({
         </WizardStep>
       )}
 
-      {/* ETAPA 4: Vínculos e Organização */}
+      {/* ETAPA 4: Vínculos */}
       {currentStep === 3 && (
         <WizardStep title={steps[3].title} subtitle={steps[3].subtitle}>
           <div className="space-y-4">
@@ -666,17 +652,6 @@ export default function AudienciaWizard({
               <VinculacaoSelector
                 vinculacao={vinculacao}
                 onChange={setVinculacao}
-              />
-            </div>
-
-            {/* Tags */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#34495e]">Etiquetas</Label>
-              <TagSelector
-                contexto="agenda"
-                escritorioId={escritorioId}
-                selectedTagIds={selectedTagIds}
-                onChange={setSelectedTagIds}
               />
             </div>
 
@@ -798,7 +773,7 @@ export default function AudienciaWizard({
               </div>
 
               {/* Pessoas e Vínculos */}
-              {(vinculacao || juiz || promotor || advogadoContrario || selectedTagIds.length > 0) && (
+              {(vinculacao || juiz || promotor || advogadoContrario) && (
                 <>
                   <div className="border-t border-slate-100" />
 
@@ -836,39 +811,6 @@ export default function AudienciaWizard({
                       <>
                         <span className="text-slate-500">Adv. Contrário</span>
                         <span className="text-[#34495e] font-medium">{advogadoContrario}</span>
-                      </>
-                    )}
-
-                    {selectedTagIds.length > 0 && (
-                      <>
-                        <span className="text-slate-500">Etiquetas</span>
-                        <div className="flex flex-wrap gap-1">
-                          {selectedTagIds.map(tagId => {
-                            const tag = tags.find(t => t.id === tagId)
-                            if (!tag) return null
-
-                            // Calcular contraste
-                            const hex = tag.cor.replace('#', '')
-                            const r = parseInt(hex.substr(0, 2), 16)
-                            const g = parseInt(hex.substr(2, 2), 16)
-                            const b = parseInt(hex.substr(4, 2), 16)
-                            const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-                            const textColor = luminance > 0.5 ? '#000000' : '#FFFFFF'
-
-                            return (
-                              <div
-                                key={tagId}
-                                className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium shadow-sm"
-                                style={{
-                                  backgroundColor: tag.cor,
-                                  color: textColor
-                                }}
-                              >
-                                {tag.nome}
-                              </div>
-                            )
-                          })}
-                        </div>
                       </>
                     )}
                   </div>

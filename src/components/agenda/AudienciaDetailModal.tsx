@@ -63,6 +63,7 @@ interface AudienciaDetailModalProps {
   onEdit?: () => void
   onReagendar?: () => void
   onCancelar?: () => void
+  onRealizar?: () => void
   onProcessoClick?: (processoId: string) => void
 }
 
@@ -73,6 +74,7 @@ export default function AudienciaDetailModal({
   onEdit,
   onReagendar,
   onCancelar,
+  onRealizar,
   onProcessoClick,
 }: AudienciaDetailModalProps) {
   const supabase = createClient()
@@ -442,17 +444,16 @@ export default function AudienciaDetailModal({
             <div className="flex items-center gap-2">
               {isAgendada && (
                 <>
-                  <Button
-                    onClick={() => {
-                      // Marcar como realizada
-                      onOpenChange(false)
-                    }}
-                    size="sm"
-                    className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                  >
-                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                    Marcar como Realizada
-                  </Button>
+                  {onRealizar && (
+                    <Button
+                      onClick={onRealizar}
+                      size="sm"
+                      className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      Marcar como Realizada
+                    </Button>
+                  )}
 
                   {onReagendar && (
                     <Button

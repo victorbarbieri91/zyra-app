@@ -87,7 +87,7 @@ export default function CalendarListView({
 
     // Filtro por usuário
     if (userId) {
-      filtered = filtered.filter((item) => item.responsavel_id === userId)
+      filtered = filtered.filter((item) => item.responsaveis_ids?.includes(userId))
     }
 
     return filtered

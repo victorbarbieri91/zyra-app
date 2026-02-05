@@ -630,6 +630,30 @@ export default function AgendaPage() {
     }
   }
 
+  const handleRealizarAudiencia = async (audienciaId: string) => {
+    if (!confirm('Deseja marcar esta audiência como realizada?')) return
+
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+
+      const { error } = await supabase
+        .from('agenda_audiencias')
+        .update({ status: 'realizada' })
+        .eq('id', audienciaId)
+
+      if (error) throw error
+
+      setAudienciaDetailOpen(false)
+      setAudienciaSelecionada(null)
+      await refreshItems()
+      toast.success('Audiência marcada como realizada!')
+    } catch (error) {
+      console.error('Erro ao marcar audiência como realizada:', error)
+      toast.error('Erro ao marcar audiência como realizada')
+    }
+  }
+
   const handleCancelarEvento = async (eventoId: string) => {
     if (!confirm('Tem certeza que deseja cancelar este evento?')) return
 
@@ -984,6 +1008,7 @@ export default function AgendaPage() {
           } as any}
           onEdit={handleEditAudiencia}
           onCancelar={() => handleCancelarAudiencia(audienciaSelecionada.id)}
+          onRealizar={() => handleRealizarAudiencia(audienciaSelecionada.id)}
           onProcessoClick={handleProcessoClick}
         />
       )}

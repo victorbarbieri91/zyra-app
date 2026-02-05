@@ -714,8 +714,8 @@ export default function PublicacaoDetalhePage() {
             escritorioId={publicacao.escritorio_id}
             processoId={publicacao.processo_id}
             onClose={() => setAudienciaWizardOpen(false)}
-            onSubmit={async (data) => {
-              await createAudiencia(data)
+            onSubmit={async () => {
+              // O wizard já cria a audiência internamente via useAudiencias
               await handleWizardCreated()
               setAudienciaWizardOpen(false)
             }}

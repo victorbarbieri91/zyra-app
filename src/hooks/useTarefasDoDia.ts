@@ -52,7 +52,7 @@ export function useTarefasDoDia(escritorioId: string | null): UseTarefasDoDiaRet
         .select('*')
         .eq('escritorio_id', escritorioId)
         .eq('tipo_entidade', 'tarefa')
-        .eq('responsavel_id', user.id) // Filtrar apenas tarefas do usuário logado
+        .contains('responsaveis_ids', [user.id]) // Filtrar tarefas onde o usuário é responsável
         .in('status', ['pendente', 'em_andamento'])
         .or(`data_inicio.gte.${hojeStr}T00:00:00,data_inicio.lte.${hojeStr}T23:59:59,prazo_data_limite.gte.${hojeStr}T00:00:00,prazo_data_limite.lte.${hojeStr}T23:59:59`)
         .order('prioridade', { ascending: true }) // alta primeiro

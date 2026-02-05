@@ -59,7 +59,7 @@ export default function CalendarDayView({
     const tarefasDoDia = todasTarefas.filter((tarefa) => {
       const tarefaDate = parseDBDate(tarefa.data_inicio)
       if (!isSameDay(tarefaDate, selectedDate)) return false
-      if (userId && tarefa.responsavel_id !== userId) return false
+      if (userId && !tarefa.responsaveis_ids?.includes(userId)) return false
       if (tarefa.status === 'cancelada') return false
       return true
     })

@@ -166,7 +166,7 @@ export default function CalendarKanbanView({
       // Filtro 1: dia selecionado
       if (!isSameDay(tarefaDate, selectedDate)) return false
       // Filtro 2: apenas tarefas do usuário logado
-      if (userId && tarefa.responsavel_id !== userId) return false
+      if (userId && !tarefa.responsaveis_ids?.includes(userId)) return false
       return true
     })
 

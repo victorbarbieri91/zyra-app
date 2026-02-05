@@ -1238,13 +1238,9 @@ export default function PublicacoesPage() {
           escritorioId={escritorioAtivo}
           onClose={() => setWizardAudiencia({ open: false, pub: null })}
           initialData={getInitialDataAudiencia(wizardAudiencia.pub)}
-          onSubmit={async (data) => {
-            // Criar a audiência
-            await createAudiencia({
-              ...data,
-              escritorio_id: escritorioAtivo,
-            })
-            // Marcar publicação como tratada após criar audiência
+          onSubmit={async () => {
+            // O wizard já cria a audiência internamente via useAudiencias
+            // Aqui apenas marcamos a publicação como tratada
             if (wizardAudiencia.pub) {
               await supabase
                 .from('publicacoes_publicacoes')

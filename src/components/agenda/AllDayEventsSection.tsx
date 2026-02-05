@@ -4,7 +4,7 @@ import { ChevronDown, GripVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { parseDBDate } from '@/lib/timezone'
 import { EventCardProps } from './EventCard'
-import { format, isSameDay } from 'date-fns'
+import { format, isSameDay, isBefore, startOfDay, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 interface AllDayEventsSectionProps {
@@ -43,8 +43,45 @@ export default function AllDayEventsSection({
     return Math.min(altura, 160) // Max 160px
   }
 
+  // Prioridade de exibição por tipo: audiência > prazo > tarefa > compromisso
+  const tipoPrioridade: Record<string, number> = {
+    audiencia: 0,
+    prazo: 1,
+    tarefa: 2,
+    compromisso: 3,
+  }
+
+  // Helper para verificar urgência do prazo fatal
+  // Apenas tarefas e prazos têm prazo_data_limite (audiências e compromissos não)
+  const getUrgenciaPrazoFatal = (evento: EventCardProps): number => {
+    // Só considerar prazo fatal para tarefas e prazos
+    if (evento.tipo !== 'tarefa' && evento.tipo !== 'prazo') return 99
+    if (!evento.prazo_data_limite) return 99
+
+    const prazoDate = evento.prazo_data_limite instanceof Date
+      ? evento.prazo_data_limite
+      : new Date(evento.prazo_data_limite.toString().split('T')[0].replace(/-/g, '/'))
+    const hoje = startOfDay(new Date())
+
+    if (isBefore(prazoDate, hoje)) return 0 // Vencido - máxima prioridade
+    if (isToday(prazoDate)) return 1 // Hoje - alta prioridade
+    return 99 // Futuro - prioridade normal
+  }
+
   const getEventosForDay = (dia: Date) => {
-    return eventos.filter(e => isSameDay(parseDBDate(e.data_inicio), dia))
+    return eventos
+      .filter(e => isSameDay(parseDBDate(e.data_inicio), dia))
+      .sort((a, b) => {
+        // Primeiro: ordenar por urgência do prazo fatal (vencido/hoje primeiro)
+        const urgenciaA = getUrgenciaPrazoFatal(a)
+        const urgenciaB = getUrgenciaPrazoFatal(b)
+        if (urgenciaA !== urgenciaB) return urgenciaA - urgenciaB
+
+        // Segundo: ordenar por tipo
+        const prioA = tipoPrioridade[a.tipo] ?? 99
+        const prioB = tipoPrioridade[b.tipo] ?? 99
+        return prioA - prioB
+      })
   }
 
   const altura = calcularAltura()

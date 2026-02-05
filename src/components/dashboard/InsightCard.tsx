@@ -1,7 +1,3 @@
-import { Lightbulb, TrendingUp, AlertTriangle, Sparkles } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
 interface InsightCardProps {
@@ -16,70 +12,43 @@ interface InsightCardProps {
 
 const insightConfig = {
   oportunidade: {
-    icon: TrendingUp,
-    iconBg: 'bg-emerald-100',
-    iconColor: 'text-emerald-600',
-    badge: 'Oportunidade',
-    badgeColor: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    dot: 'bg-emerald-500',
+    text: 'text-emerald-700',
   },
   alerta: {
-    icon: AlertTriangle,
-    iconBg: 'bg-amber-100',
-    iconColor: 'text-amber-600',
-    badge: 'Atenção',
-    badgeColor: 'bg-amber-100 text-amber-700 border-amber-200',
+    dot: 'bg-amber-500',
+    text: 'text-amber-700',
   },
   destaque: {
-    icon: Sparkles,
-    iconBg: 'bg-teal-100',
-    iconColor: 'text-teal-600',
-    badge: 'Destaque',
-    badgeColor: 'bg-teal-100 text-teal-700 border-teal-200',
+    dot: 'bg-teal-500',
+    text: 'text-teal-700',
   },
   sugestao: {
-    icon: Lightbulb,
-    iconBg: 'bg-blue-100',
-    iconColor: 'text-blue-600',
-    badge: 'Sugestão',
-    badgeColor: 'bg-blue-100 text-blue-700 border-blue-200',
+    dot: 'bg-blue-500',
+    text: 'text-blue-700',
   },
 }
 
 export default function InsightCard({ type, title, description, action }: InsightCardProps) {
   const config = insightConfig[type]
-  const Icon = config.icon
 
   return (
-    <Card className="border-slate-200 hover:shadow-md transition-all">
-      <CardContent className="p-3">
-        <div className="flex items-start gap-2.5">
-          <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0', config.iconBg)}>
-            <Icon className={cn('w-3.5 h-3.5', config.iconColor)} />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 h-4 border', config.badgeColor)}>
-                {config.badge}
-              </Badge>
-            </div>
-
-            <h4 className="font-semibold text-slate-900 text-xs mb-0.5 leading-tight">{title}</h4>
-            <p className="text-[11px] text-slate-600 leading-snug">{description}</p>
-
-            {action && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={action.onClick}
-                className="mt-2 text-[10px] text-teal-600 hover:text-teal-700 hover:bg-teal-50 p-0 h-auto font-medium"
-              >
-                {action.label} →
-              </Button>
-            )}
-          </div>
+    <div className="py-2 border-b border-slate-100 last:border-0">
+      <div className="flex items-start gap-2">
+        <div className={cn('w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0', config.dot)} />
+        <div className="flex-1 min-w-0">
+          <h4 className={cn('font-medium text-xs leading-tight', config.text)}>{title}</h4>
+          <p className="text-[11px] text-slate-500 leading-snug mt-0.5">{description}</p>
+          {action && (
+            <button
+              onClick={action.onClick}
+              className="text-[10px] text-[#89bcbe] hover:text-[#6ba9ab] font-medium mt-1"
+            >
+              {action.label} →
+            </button>
+          )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

@@ -23,7 +23,7 @@ import { Tarefa, useTarefas } from '@/hooks/useTarefas'
 import { Audiencia } from '@/hooks/useAudiencias'
 import { Evento } from '@/hooks/useEventos'
 import AgendaListCard from './AgendaListCard'
-import { startOfDay, endOfDay, addDays, subDays, format, isSameDay } from 'date-fns'
+import { startOfDay, endOfDay, addDays, subDays, format, isSameDay, isBefore, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 interface CalendarListViewProps {
@@ -105,13 +105,33 @@ export default function CalendarListView({
       grupos[dataKey].push(item)
     })
 
+    // Helper para verificar urgência do prazo fatal
+    // Apenas tarefas têm prazo_data_limite (audiências e eventos não)
+    const getUrgenciaPrazoFatal = (item: AgendaItem): number => {
+      // Só considerar prazo fatal para tarefas
+      if (item.tipo_entidade !== 'tarefa') return 99
+      if (!item.prazo_data_limite) return 99
+
+      const prazoDate = parseDBDate(item.prazo_data_limite)
+      const hoje = startOfDay(new Date())
+
+      if (isBefore(prazoDate, hoje)) return 0 // Vencido - máxima prioridade
+      if (isToday(prazoDate)) return 1 // Hoje - alta prioridade
+      return 99 // Futuro - prioridade normal
+    }
+
     // Ordenar cada grupo
     Object.keys(grupos).forEach((dataKey) => {
       grupos[dataKey].sort((a, b) => {
-        // 1. Tarefas primeiro, depois audiências, depois compromissos
-        const tipoOrdem = { tarefa: 1, audiencia: 2, evento: 3 }
-        const ordemA = tipoOrdem[a.tipo_entidade]
-        const ordemB = tipoOrdem[b.tipo_entidade]
+        // 0. Prioridade máxima: prazo fatal urgente (hoje/vencido)
+        const urgenciaA = getUrgenciaPrazoFatal(a)
+        const urgenciaB = getUrgenciaPrazoFatal(b)
+        if (urgenciaA !== urgenciaB) return urgenciaA - urgenciaB
+
+        // 1. Audiências primeiro (mais importante), depois tarefas, depois compromissos
+        const tipoOrdem = { audiencia: 1, tarefa: 2, evento: 3 }
+        const ordemA = tipoOrdem[a.tipo_entidade] ?? 99
+        const ordemB = tipoOrdem[b.tipo_entidade] ?? 99
 
         if (ordemA !== ordemB) {
           return ordemA - ordemB

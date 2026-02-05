@@ -19,6 +19,8 @@ import {
   startOfWeek,
   endOfWeek,
   isWeekend,
+  isBefore,
+  startOfDay,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { EventCardProps } from './EventCard'
@@ -57,8 +59,50 @@ export default function CalendarGrid({
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
   const goToToday = () => setCurrentMonth(new Date())
 
+  // Prioridade de exibição por tipo: audiência > prazo > tarefa > compromisso
+  const tipoPrioridade: Record<string, number> = {
+    audiencia: 0,
+    prazo: 1,
+    tarefa: 2,
+    compromisso: 3,
+  }
+
+  // Helper para verificar urgência do prazo fatal
+  // Apenas tarefas e prazos têm prazo_data_limite (audiências e compromissos não)
+  const getUrgenciaPrazoFatal = (evento: EventCardProps): number => {
+    // Só considerar prazo fatal para tarefas e prazos
+    if (evento.tipo !== 'tarefa' && evento.tipo !== 'prazo') return 99
+    if (!evento.prazo_data_limite) return 99 // Sem prazo fatal = sem urgência
+
+    const prazoDate = evento.prazo_data_limite instanceof Date
+      ? evento.prazo_data_limite
+      : new Date(evento.prazo_data_limite.toString().split('T')[0].replace(/-/g, '/'))
+    const hoje = startOfDay(new Date())
+
+    if (isBefore(prazoDate, hoje)) return 0 // Vencido - máxima prioridade
+    if (isToday(prazoDate)) return 1 // Hoje - alta prioridade
+    return 99 // Futuro - prioridade normal
+  }
+
   const getEventosForDay = (day: Date) => {
-    return eventos.filter((evento) => isSameDay(parseDBDate(evento.data_inicio), day))
+    return eventos
+      .filter((evento) => isSameDay(parseDBDate(evento.data_inicio), day))
+      .sort((a, b) => {
+        // Primeiro: ordenar por urgência do prazo fatal (vencido/hoje primeiro)
+        const urgenciaA = getUrgenciaPrazoFatal(a)
+        const urgenciaB = getUrgenciaPrazoFatal(b)
+        if (urgenciaA !== urgenciaB) return urgenciaA - urgenciaB
+
+        // Segundo: ordenar por tipo (audiência primeiro)
+        const prioridadeA = tipoPrioridade[a.tipo] ?? 99
+        const prioridadeB = tipoPrioridade[b.tipo] ?? 99
+        if (prioridadeA !== prioridadeB) return prioridadeA - prioridadeB
+
+        // Terceiro: ordenar por horário
+        const dataA = parseDBDate(a.data_inicio)
+        const dataB = parseDBDate(b.data_inicio)
+        return dataA.getTime() - dataB.getTime()
+      })
   }
 
   const isFeriado = (day: Date) => {
@@ -196,6 +240,7 @@ export default function CalendarGrid({
                         data_inicio={parseDBDate(evento.data_inicio)}
                         dia_inteiro={evento.dia_inteiro}
                         status={evento.status}
+                        prazo_data_limite={evento.prazo_data_limite}
                         onClick={(e) => {
                           e?.stopPropagation()
                           if (evento.onClick) evento.onClick()

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, Move } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Move, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -19,11 +19,22 @@ import {
   startOfWeek,
   endOfWeek,
   isWeekend,
+  isBefore,
+  startOfDay,
+  isAfter,
+  differenceInDays,
+  addDays,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { EventCardProps } from './EventCard'
 import AgendaFiltersCompact, { EventFiltersState } from './AgendaFiltersCompact'
 import CalendarEventMiniCard from './CalendarEventMiniCard'
+import { Calendar as CalendarComponent } from '@/components/ui/calendar'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import {
   DndContext,
   DragOverlay,
@@ -40,12 +51,19 @@ import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { toast } from 'sonner'
 import ConfirmDateChangeModal from './ConfirmDateChangeModal'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 interface CalendarGridDnDProps {
   eventos?: EventCardProps[]
   selectedDate?: Date
   onDateSelect?: (date: Date) => void
   onEventMove?: (eventId: string, newDate: Date) => Promise<void>
+  onEventMoveWithPrazoFatal?: (eventId: string, newDate: Date, newPrazoFatal: Date) => Promise<void>
   onEventClick?: (event: EventCardProps) => void
   feriados?: Date[]
   filters?: EventFiltersState
@@ -99,6 +117,7 @@ function DraggableEvent({
         dia_inteiro={evento.dia_inteiro}
         status={evento.status}
         recorrencia_id={evento.recorrencia_id}
+        prazo_data_limite={evento.prazo_data_limite}
       />
     </div>
   )
@@ -155,6 +174,7 @@ export default function CalendarGridDnD({
   selectedDate,
   onDateSelect,
   onEventMove,
+  onEventMoveWithPrazoFatal,
   onEventClick,
   feriados = [],
   filters,
@@ -168,6 +188,18 @@ export default function CalendarGridDnD({
     eventData: EventCardProps
     newDate: Date
   } | null>(null)
+
+  // Estado para o modal de aviso de prazo fatal
+  const [prazoFatalWarningOpen, setPrazoFatalWarningOpen] = useState(false)
+  const [pendingMoveWithPrazo, setPendingMoveWithPrazo] = useState<{
+    eventId: string
+    eventData: EventCardProps
+    newDate: Date
+    prazoFatal: Date
+    distanciaOriginal: number
+  } | null>(null)
+  const [novoPrazoFatalSelecionado, setNovoPrazoFatalSelecionado] = useState<Date | null>(null)
+  const [prazoFatalCalendarOpen, setPrazoFatalCalendarOpen] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -189,8 +221,50 @@ export default function CalendarGridDnD({
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
   const goToToday = () => setCurrentMonth(new Date())
 
+  // Prioridade de exibição por tipo: audiência > prazo > tarefa > compromisso
+  const tipoPrioridade: Record<string, number> = {
+    audiencia: 0,
+    prazo: 1,
+    tarefa: 2,
+    compromisso: 3,
+  }
+
+  // Helper para verificar urgência do prazo fatal
+  // Apenas tarefas e prazos têm prazo_data_limite (audiências e compromissos não)
+  const getUrgenciaPrazoFatal = (evento: EventCardProps): number => {
+    // Só considerar prazo fatal para tarefas e prazos
+    if (evento.tipo !== 'tarefa' && evento.tipo !== 'prazo') return 99
+    if (!evento.prazo_data_limite) return 99 // Sem prazo fatal = sem urgência
+
+    const prazoDate = evento.prazo_data_limite instanceof Date
+      ? evento.prazo_data_limite
+      : new Date(evento.prazo_data_limite.toString().split('T')[0].replace(/-/g, '/'))
+    const hoje = startOfDay(new Date())
+
+    if (isBefore(prazoDate, hoje)) return 0 // Vencido - máxima prioridade
+    if (isToday(prazoDate)) return 1 // Hoje - alta prioridade
+    return 99 // Futuro - prioridade normal
+  }
+
   const getEventosForDay = (day: Date) => {
-    return eventos.filter((evento) => isSameDay(parseDBDate(evento.data_inicio), day))
+    return eventos
+      .filter((evento) => isSameDay(parseDBDate(evento.data_inicio), day))
+      .sort((a, b) => {
+        // Primeiro: ordenar por urgência do prazo fatal (vencido/hoje primeiro)
+        const urgenciaA = getUrgenciaPrazoFatal(a)
+        const urgenciaB = getUrgenciaPrazoFatal(b)
+        if (urgenciaA !== urgenciaB) return urgenciaA - urgenciaB
+
+        // Segundo: ordenar por tipo (audiência primeiro)
+        const prioridadeA = tipoPrioridade[a.tipo] ?? 99
+        const prioridadeB = tipoPrioridade[b.tipo] ?? 99
+        if (prioridadeA !== prioridadeB) return prioridadeA - prioridadeB
+
+        // Terceiro: ordenar por horário
+        const dataA = parseDBDate(a.data_inicio)
+        const dataB = parseDBDate(b.data_inicio)
+        return dataA.getTime() - dataB.getTime()
+      })
   }
 
   const isFeriado = (day: Date) => {
@@ -210,7 +284,39 @@ export default function CalendarGridDnD({
       const dropData = over.data.current as { date: Date }
 
       if (dropData?.date) {
-        // Armazenar dados do movimento pendente e abrir modal de confirmação
+        // Verificar se é tarefa com prazo fatal e se ultrapassa
+        const isTarefaComPrazoFatal = eventData.tipo === 'tarefa' && eventData.prazo_data_limite
+
+        if (isTarefaComPrazoFatal) {
+          const prazoFatal = eventData.prazo_data_limite instanceof Date
+            ? eventData.prazo_data_limite
+            : new Date(eventData.prazo_data_limite!.toString().split('T')[0].replace(/-/g, '/'))
+
+          const novaDataSemHora = startOfDay(dropData.date)
+          const prazoFatalSemHora = startOfDay(prazoFatal)
+
+          // Se nova data ultrapassa prazo fatal, mostrar aviso
+          if (isAfter(novaDataSemHora, prazoFatalSemHora)) {
+            const dataInicioAtual = eventData.data_inicio instanceof Date
+              ? eventData.data_inicio
+              : new Date(eventData.data_inicio)
+            const distancia = differenceInDays(prazoFatalSemHora, startOfDay(dataInicioAtual))
+
+            const novoPrazoSugerido = addDays(dropData.date, Math.max(distancia, 0))
+            setPendingMoveWithPrazo({
+              eventId: active.id as string,
+              eventData: eventData,
+              newDate: dropData.date,
+              prazoFatal: prazoFatal,
+              distanciaOriginal: Math.max(distancia, 0)
+            })
+            setNovoPrazoFatalSelecionado(novoPrazoSugerido)
+            setPrazoFatalWarningOpen(true)
+            return
+          }
+        }
+
+        // Armazenar dados do movimento pendente e abrir modal de confirmação normal
         setPendingMove({
           eventId: active.id as string,
           eventData: eventData,
@@ -240,6 +346,37 @@ export default function CalendarGridDnD({
       toast.error('Erro ao mover evento')
       console.error('Erro ao mover evento:', error)
       setPendingMove(null)
+    }
+  }
+
+  // Handler para confirmar movimento com prazo fatal
+  const handleConfirmMoveWithPrazo = async () => {
+    if (!pendingMoveWithPrazo || !onEventMoveWithPrazoFatal || !novoPrazoFatalSelecionado) return
+
+    try {
+      // Pegar o horário original
+      const originalDate = pendingMoveWithPrazo.eventData.data_inicio instanceof Date
+        ? pendingMoveWithPrazo.eventData.data_inicio
+        : new Date(pendingMoveWithPrazo.eventData.data_inicio)
+
+      let finalDate = new Date(pendingMoveWithPrazo.newDate)
+      finalDate.setHours(originalDate.getHours())
+      finalDate.setMinutes(originalDate.getMinutes())
+      finalDate.setSeconds(originalDate.getSeconds())
+
+      // Mover ambos: data de execução e prazo fatal selecionado
+      await onEventMoveWithPrazoFatal(pendingMoveWithPrazo.eventId, finalDate, novoPrazoFatalSelecionado)
+      toast.success('Tarefa e prazo fatal reagendados!')
+
+      setPendingMoveWithPrazo(null)
+      setNovoPrazoFatalSelecionado(null)
+      setPrazoFatalWarningOpen(false)
+    } catch (error) {
+      toast.error('Erro ao mover tarefa')
+      console.error('Erro ao mover tarefa:', error)
+      setPendingMoveWithPrazo(null)
+      setNovoPrazoFatalSelecionado(null)
+      setPrazoFatalWarningOpen(false)
     }
   }
 
@@ -427,12 +564,13 @@ export default function CalendarGridDnD({
               data_inicio={activeEvento.data_inicio}
               dia_inteiro={activeEvento.dia_inteiro}
               status={activeEvento.status}
+              prazo_data_limite={activeEvento.prazo_data_limite}
             />
           </div>
         ) : null}
       </DragOverlay>
 
-      {/* Modal de Confirmação */}
+      {/* Modal de Confirmação Normal */}
       {pendingMove && (
         <ConfirmDateChangeModal
           open={!!pendingMove}
@@ -446,6 +584,119 @@ export default function CalendarGridDnD({
           newDate={pendingMove.newDate}
         />
       )}
+
+      {/* Modal de Aviso - Arrasto Ultrapassa Prazo Fatal */}
+      <AlertDialog open={prazoFatalWarningOpen} onOpenChange={(open) => {
+        setPrazoFatalWarningOpen(open)
+        if (!open) {
+          setPendingMoveWithPrazo(null)
+          setNovoPrazoFatalSelecionado(null)
+        }
+      }}>
+        <AlertDialogContent className="max-w-md p-0 overflow-hidden border-0">
+          <div className="bg-white rounded-lg">
+            {/* Header */}
+            <div className="px-6 pt-5 pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#f0f9f9] flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-[#46627f]" />
+                </div>
+                <div>
+                  <AlertDialogTitle className="text-base font-semibold text-[#34495e]">
+                    Reagendar Prazo Fatal
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-xs text-[#46627f] mt-0.5">
+                    A nova data de execução ultrapassa o prazo fatal atual
+                  </AlertDialogDescription>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Info das datas */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-[#f0f9f9] rounded-lg border border-[#89bcbe]/30">
+                  <p className="text-[10px] text-[#46627f] mb-1">Nova Data Execução</p>
+                  <p className="text-sm font-semibold text-[#34495e]">
+                    {pendingMoveWithPrazo?.newDate && format(pendingMoveWithPrazo.newDate, 'dd/MM/yyyy', { locale: ptBR })}
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-[10px] text-slate-500 mb-1">Prazo Fatal Atual</p>
+                  <p className="text-sm font-semibold text-[#34495e]">
+                    {pendingMoveWithPrazo?.prazoFatal && format(pendingMoveWithPrazo.prazoFatal, 'dd/MM/yyyy', { locale: ptBR })}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-xs text-[#46627f]">
+                Escolha a nova data para o prazo fatal:
+              </p>
+
+              {/* Seletor de novo prazo fatal */}
+              <Popover open={prazoFatalCalendarOpen} onOpenChange={setPrazoFatalCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal h-10 border-[#89bcbe]/50 hover:border-[#89bcbe] hover:bg-[#f0f9f9]"
+                  >
+                    <Calendar className="mr-2 h-4 w-4 text-[#89bcbe]" />
+                    {novoPrazoFatalSelecionado ? (
+                      <span className="text-[#34495e] font-medium">
+                        {format(novoPrazoFatalSelecionado, 'dd/MM/yyyy', { locale: ptBR })}
+                      </span>
+                    ) : (
+                      <span className="text-slate-500">Selecionar data...</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={novoPrazoFatalSelecionado || undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        setNovoPrazoFatalSelecionado(date)
+                        setPrazoFatalCalendarOpen(false)
+                      }
+                    }}
+                    disabled={(date) => date < (pendingMoveWithPrazo?.newDate || new Date())}
+                    initialFocus
+                    locale={ptBR}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Footer com opções */}
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+              <div className="flex items-center gap-2">
+                {/* Confirmar */}
+                <Button
+                  onClick={handleConfirmMoveWithPrazo}
+                  className="flex-1 h-9 text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white"
+                  disabled={!onEventMoveWithPrazoFatal || !novoPrazoFatalSelecionado}
+                >
+                  Confirmar e Reagendar
+                </Button>
+
+                {/* Cancelar */}
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setPrazoFatalWarningOpen(false)
+                    setPendingMoveWithPrazo(null)
+                    setNovoPrazoFatalSelecionado(null)
+                  }}
+                  className="flex-1 h-9 text-xs font-medium border-slate-200 hover:bg-white text-[#46627f]"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </DndContext>
   )
 }

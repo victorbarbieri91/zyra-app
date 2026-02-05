@@ -27,6 +27,7 @@ export interface EventCardProps {
   prazo_cumprido?: boolean
   prazo_perdido?: boolean
   prazo_criticidade?: 'vencido' | 'hoje' | 'critico' | 'urgente' | 'atencao' | 'normal'
+  prazo_data_limite?: Date | string  // Para tarefas com prazo fatal
   // Recorrência
   recorrencia_id?: string | null
   onClick?: () => void

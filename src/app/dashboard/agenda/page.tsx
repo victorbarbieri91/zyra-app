@@ -14,16 +14,19 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {
-  Calendar,
+  Calendar as CalendarIcon,
   CalendarDays,
   List,
   Clock,
   Plus,
 } from 'lucide-react'
-import { format, isSameDay } from 'date-fns'
+import { Calendar as CalendarComponent } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { format, isSameDay, isBefore, startOfDay, isToday, isAfter, differenceInDays, addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { parseDBDate, formatDateTimeForDB } from '@/lib/timezone'
+import { cn } from '@/lib/utils'
 import { getEscritorioAtivo } from '@/lib/supabase/escritorio-helpers'
 
 // Components
@@ -85,6 +88,18 @@ export default function AgendaPage() {
   const [audienciaSelecionada, setAudienciaSelecionada] = useState<Audiencia | null>(null)
   const [eventoSelecionado, setEventoSelecionado] = useState<Evento | null>(null)
 
+  // Modal de aviso quando reagendar ultrapassa prazo fatal (sidebar)
+  const [rescheduleWarningOpen, setRescheduleWarningOpen] = useState(false)
+  const [pendingReschedule, setPendingReschedule] = useState<{
+    taskId: string
+    newDate: Date
+    prazoFatal: Date
+    distanciaOriginal: number
+  } | null>(null)
+  // Seletor de novo prazo fatal (sidebar)
+  const [novoPrazoFatalSidebar, setNovoPrazoFatalSidebar] = useState<Date | null>(null)
+  const [prazoFatalCalendarOpenSidebar, setPrazoFatalCalendarOpenSidebar] = useState(false)
+
   const [filters, setFilters] = useState({
     tipos: {
       compromisso: true,
@@ -142,7 +157,7 @@ export default function AgendaPage() {
 
   // Hooks - usar agenda consolidada e hooks específicos
   const { items: agendaItems, loading, refreshItems } = useAgendaConsolidada(escritorioId || undefined, agendaFilters)
-  const { tarefas, createTarefa, updateTarefa, concluirTarefa, reabrirTarefa } = useTarefas(escritorioId || undefined)
+  const { tarefas, createTarefa, updateTarefa, concluirTarefa, reabrirTarefa, refreshTarefas } = useTarefas(escritorioId || undefined)
   const { audiencias, createAudiencia, updateAudiencia } = useAudiencias(escritorioId || undefined)
   const { eventos, createEvento, updateEvento } = useEventos(escritorioId || undefined)
 
@@ -172,15 +187,54 @@ export default function AgendaPage() {
         processo_numero: item.processo_numero,
         status: (item.status || 'agendado') as EventCardProps['status'],
         prazo_criticidade: item.prioridade === 'alta' ? 'critico' : item.prioridade === 'media' ? 'atencao' : 'normal',
+        prazo_data_limite: item.prazo_data_limite ? parseDBDate(item.prazo_data_limite) : undefined,
         recorrencia_id: item.recorrencia_id,
       }))
   }, [agendaItems, filters])
 
-  // Eventos do dia selecionado (para sidebar) - usar agendaItems diretamente
+  // Prioridade de exibição por tipo
+  const tipoPrioridade: Record<string, number> = {
+    audiencia: 0,
+    prazo: 1,
+    tarefa: 2,
+    compromisso: 3,
+  }
+
+  // Helper para verificar urgência do prazo fatal
+  // Apenas tarefas e prazos têm prazo_data_limite (audiências e compromissos não)
+  const getUrgenciaPrazoFatal = (item: typeof agendaItems[0]): number => {
+    // Só considerar prazo fatal para tarefas e prazos
+    if (item.tipo !== 'tarefa' && item.tipo !== 'prazo') return 99
+    if (!item.prazo_data_limite) return 99
+
+    const prazoDate = parseDBDate(item.prazo_data_limite)
+    const hoje = startOfDay(new Date())
+
+    if (isBefore(prazoDate, hoje)) return 0 // Vencido - máxima prioridade
+    if (isToday(prazoDate)) return 1 // Hoje - alta prioridade
+    return 99 // Futuro - prioridade normal
+  }
+
+  // Eventos do dia selecionado (para sidebar) - com ordenação por urgência
   const eventosDoDia = useMemo(() => {
-    return agendaItems.filter(item =>
-      isSameDay(parseDBDate(item.data_inicio), selectedDate)
-    )
+    return agendaItems
+      .filter(item => isSameDay(parseDBDate(item.data_inicio), selectedDate))
+      .sort((a, b) => {
+        // Primeiro: ordenar por urgência do prazo fatal (vencido/hoje primeiro)
+        const urgenciaA = getUrgenciaPrazoFatal(a)
+        const urgenciaB = getUrgenciaPrazoFatal(b)
+        if (urgenciaA !== urgenciaB) return urgenciaA - urgenciaB
+
+        // Segundo: ordenar por tipo (audiência primeiro)
+        const prioridadeA = tipoPrioridade[a.tipo] ?? 99
+        const prioridadeB = tipoPrioridade[b.tipo] ?? 99
+        if (prioridadeA !== prioridadeB) return prioridadeA - prioridadeB
+
+        // Terceiro: ordenar por horário
+        const dataA = parseDBDate(a.data_inicio)
+        const dataB = parseDBDate(b.data_inicio)
+        return dataA.getTime() - dataB.getTime()
+      })
   }, [agendaItems, selectedDate])
 
   // Estatísticas para ResumoIA
@@ -221,7 +275,7 @@ export default function AgendaPage() {
 
   const handleEventClick = (evento: EventCardProps) => {
     console.log('🔵 handleEventClick chamado', evento.tipo, evento.titulo)
-    // Buscar dados completos do item na agenda consolidada (tem mais informações)
+    // Buscar dados completos do item na agenda consolidada (tem mais informações e é mais atualizado)
     const itemCompleto = agendaItems.find(item => item.id === evento.id)
 
     if (evento.tipo === 'tarefa') {
@@ -252,6 +306,17 @@ export default function AgendaPage() {
           created_at: item.created_at,
           updated_at: item.updated_at,
         } as Tarefa
+      } else if (tarefaCompleta && itemCompleto) {
+        // Se encontrou em ambos, usar agendaItems para campos de data (é mais atualizado após refreshItems)
+        const item = itemCompleto as any
+        tarefaCompleta = {
+          ...tarefaCompleta,
+          data_inicio: item.data_inicio,
+          data_fim: item.data_fim,
+          prazo_data_limite: item.prazo_data_limite,
+          status: item.status || tarefaCompleta.status,
+        }
+        console.log('🔵 Mesclando dados da tarefa com dados atualizados da view consolidada')
       }
 
       if (tarefaCompleta) {
@@ -533,20 +598,63 @@ export default function AgendaPage() {
     }
   }
 
-  // Handler para reagendar tarefa
+  // Handler para reagendar tarefa (com verificação de prazo fatal)
   const handleRescheduleTask = async (taskId: string, newDate: Date) => {
+    // Encontrar a tarefa para verificar prazo fatal
+    // Nota: agendaItems usa tipo_entidade da view v_agenda_consolidada
+    const tarefa = agendaItems.find(item => item.id === taskId && item.tipo_entidade === 'tarefa')
+
+    if (tarefa?.prazo_data_limite) {
+      const prazoFatal = parseDBDate(tarefa.prazo_data_limite)
+      const novaDataSemHora = startOfDay(newDate)
+      const prazoFatalSemHora = startOfDay(prazoFatal)
+
+      // Se nova data ultrapassa prazo fatal, mostrar aviso
+      if (isAfter(novaDataSemHora, prazoFatalSemHora)) {
+        const dataInicioAtual = parseDBDate(tarefa.data_inicio)
+        const distancia = differenceInDays(prazoFatalSemHora, startOfDay(dataInicioAtual))
+        setPendingReschedule({
+          taskId,
+          newDate,
+          prazoFatal,
+          distanciaOriginal: Math.max(distancia, 0)
+        })
+        // Inicializar sugestão de novo prazo fatal
+        setNovoPrazoFatalSidebar(addDays(newDate, Math.max(distancia, 0)))
+        setRescheduleWarningOpen(true)
+        return
+      }
+    }
+
+    // Se não tem prazo fatal ou não ultrapassa, reagendar normalmente
+    await executeRescheduleTask(taskId, newDate)
+  }
+
+  // Executa o reagendamento de fato
+  const executeRescheduleTask = async (taskId: string, newDate: Date, newPrazoFatal?: Date) => {
     try {
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
+
+      const updateData: Record<string, string> = {
+        data_inicio: formatDateTimeForDB(newDate)
+      }
+
+      // Se também estamos atualizando o prazo fatal
+      if (newPrazoFatal) {
+        updateData.prazo_data_limite = formatDateTimeForDB(newPrazoFatal)
+      }
+
       const { error } = await supabase
         .from('agenda_tarefas')
-        .update({ data_inicio: formatDateTimeForDB(newDate) })
+        .update(updateData)
         .eq('id', taskId)
 
       if (error) throw error
 
-      await refreshItems()
-      toast.success('Tarefa reagendada com sucesso!')
+      // Atualizar ambas as fontes de dados para manter consistência
+      await Promise.all([refreshItems(), refreshTarefas()])
+      toast.success(newPrazoFatal ? 'Tarefa e prazo fatal reagendados!' : 'Tarefa reagendada com sucesso!')
     } catch (error) {
       console.error('Erro ao reagendar tarefa:', error)
       toast.error('Erro ao reagendar tarefa')
@@ -748,10 +856,38 @@ export default function AgendaPage() {
       await new Promise(resolve => setTimeout(resolve, 300))
 
       // Atualizar os dados localmente para feedback imediato
-      await refreshItems()
+      await Promise.all([refreshItems(), refreshTarefas()])
 
     } catch (error) {
       console.error('Erro ao mover evento:', error)
+      throw error
+    }
+  }
+
+  // Handler para mover evento junto com prazo fatal (usado no drag and drop)
+  const handleEventMoveWithPrazoFatal = async (eventId: string, newDate: Date, newPrazoFatal: Date) => {
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+
+      const { error } = await supabase
+        .from('agenda_tarefas')
+        .update({
+          data_inicio: newDate.toISOString(),
+          prazo_data_limite: newPrazoFatal.toISOString(),
+        })
+        .eq('id', eventId)
+
+      if (error) throw error
+
+      // Pequeno delay para garantir que o banco foi atualizado
+      await new Promise(resolve => setTimeout(resolve, 300))
+
+      // Atualizar os dados localmente para feedback imediato
+      await Promise.all([refreshItems(), refreshTarefas()])
+
+    } catch (error) {
+      console.error('Erro ao mover tarefa com prazo fatal:', error)
       throw error
     }
   }
@@ -777,7 +913,7 @@ export default function AgendaPage() {
                 onClick={() => handleCreateEvent(undefined, 'compromisso')}
                 className="h-8 w-[130px] text-xs bg-gradient-to-br from-[#aacfd0] to-[#89bcbe] hover:from-[#89bcbe] hover:to-[#6ba9ab] text-[#34495e] border-0 shadow-sm"
               >
-                <Calendar className="w-3.5 h-3.5 mr-1.5" />
+                <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
                 Compromisso
               </Button>
               <Button
@@ -805,7 +941,7 @@ export default function AgendaPage() {
                   value="month"
                   className="text-sm data-[state=active]:bg-gradient-to-br data-[state=active]:from-[#89bcbe] data-[state=active]:to-[#6ba9ab] data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
-                  <Calendar className="w-4 h-4 mr-2" />
+                  <CalendarIcon className="w-4 h-4 mr-2" />
                   Mês
                 </TabsTrigger>
                 <TabsTrigger
@@ -847,6 +983,7 @@ export default function AgendaPage() {
                 selectedDate={selectedDate}
                 onDateSelect={handleDateSelect}
                 onEventMove={handleEventMove}
+                onEventMoveWithPrazoFatal={handleEventMoveWithPrazoFatal}
                 onEventClick={handleEventClick}
                 feriados={[]}
                 filters={filters}
@@ -985,7 +1122,31 @@ export default function AgendaPage() {
           }}
           onProcessoClick={handleProcessoClick}
           onConsultivoClick={handleConsultivoClick}
-          onUpdate={refreshItems}
+          onUpdate={async () => {
+            // Atualizar ambas as fontes de dados
+            await Promise.all([refreshItems(), refreshTarefas()])
+
+            // Buscar dados atualizados da tarefa diretamente do banco
+            if (tarefaSelecionada) {
+              const { createClient } = await import('@/lib/supabase/client')
+              const supabase = createClient()
+              const { data } = await supabase
+                .from('agenda_tarefas')
+                .select(`
+                  *,
+                  responsavel:profiles!responsavel_id(nome_completo)
+                `)
+                .eq('id', tarefaSelecionada.id)
+                .single()
+
+              if (data) {
+                setTarefaSelecionada({
+                  ...data,
+                  responsavel_nome: data.responsavel?.nome_completo,
+                } as Tarefa)
+              }
+            }
+          }}
         />
       )}
 
@@ -1117,6 +1278,125 @@ export default function AgendaPage() {
               Concluir sem horas
             </AlertDialogAction>
           </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Modal de Aviso - Reagendamento Ultrapassa Prazo Fatal (Sidebar) */}
+      <AlertDialog open={rescheduleWarningOpen} onOpenChange={(open) => {
+        setRescheduleWarningOpen(open)
+        if (!open) {
+          setPendingReschedule(null)
+          setNovoPrazoFatalSidebar(null)
+          setPrazoFatalCalendarOpenSidebar(false)
+        }
+      }}>
+        <AlertDialogContent className="max-w-md p-0 overflow-hidden border-0">
+          <div className="bg-white rounded-lg">
+            {/* Header */}
+            <div className="px-6 pt-5 pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#f0f9f9] flex items-center justify-center">
+                  <CalendarIcon className="w-5 h-5 text-[#89bcbe]" />
+                </div>
+                <div>
+                  <AlertDialogTitle className="text-base font-semibold text-[#34495e]">
+                    Reagendar Prazo Fatal
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-xs text-[#46627f] mt-0.5">
+                    A nova data de execução é posterior ao prazo fatal atual
+                  </AlertDialogDescription>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Info das datas */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-[#f0f9f9] rounded-lg border border-[#89bcbe]/30">
+                  <p className="text-[10px] text-[#46627f] mb-1">Nova Data Execução</p>
+                  <p className="text-sm font-semibold text-[#34495e]">
+                    {pendingReschedule?.newDate && format(pendingReschedule.newDate, 'dd/MM/yyyy', { locale: ptBR })}
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-[10px] text-slate-500 mb-1">Prazo Fatal Atual</p>
+                  <p className="text-sm font-semibold text-[#34495e]">
+                    {pendingReschedule?.prazoFatal && format(pendingReschedule.prazoFatal, 'dd/MM/yyyy', { locale: ptBR })}
+                  </p>
+                </div>
+              </div>
+
+              {/* Seletor de novo prazo fatal */}
+              <div>
+                <p className="text-xs text-[#46627f] mb-2">
+                  Selecione o novo prazo fatal:
+                </p>
+                <Popover open={prazoFatalCalendarOpenSidebar} onOpenChange={setPrazoFatalCalendarOpenSidebar}>
+                  <PopoverTrigger asChild>
+                    <button
+                      className={cn(
+                        "w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all",
+                        "bg-[#e8f5f5] border-[#89bcbe]/40 hover:border-[#89bcbe]"
+                      )}
+                    >
+                      <div className="text-left">
+                        <p className="text-[10px] text-[#46627f] mb-0.5">Novo Prazo Fatal</p>
+                        <p className="text-sm font-semibold text-[#34495e]">
+                          {novoPrazoFatalSidebar ? format(novoPrazoFatalSidebar, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar data'}
+                        </p>
+                      </div>
+                      <CalendarIcon className="w-4 h-4 text-[#89bcbe]" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="center">
+                    <CalendarComponent
+                      mode="single"
+                      selected={novoPrazoFatalSidebar || undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          setNovoPrazoFatalSidebar(date)
+                          setPrazoFatalCalendarOpenSidebar(false)
+                        }
+                      }}
+                      disabled={(date) => pendingReschedule?.newDate ? date < pendingReschedule.newDate : false}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setRescheduleWarningOpen(false)
+                    setPendingReschedule(null)
+                    setNovoPrazoFatalSidebar(null)
+                  }}
+                  className="flex-1 h-9 text-xs font-medium border-slate-200 hover:bg-white"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (pendingReschedule && novoPrazoFatalSidebar) {
+                      setRescheduleWarningOpen(false)
+                      await executeRescheduleTask(pendingReschedule.taskId, pendingReschedule.newDate, novoPrazoFatalSidebar)
+                      setPendingReschedule(null)
+                      setNovoPrazoFatalSidebar(null)
+                    }
+                  }}
+                  className="flex-1 h-9 text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white"
+                  disabled={!novoPrazoFatalSidebar}
+                >
+                  Confirmar e Reagendar
+                </Button>
+              </div>
+            </div>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
     </div>

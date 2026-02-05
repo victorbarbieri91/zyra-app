@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { format } from 'date-fns'
+import { format, isToday, isBefore, startOfDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 interface CalendarEventMiniCardProps {
@@ -12,7 +12,17 @@ interface CalendarEventMiniCardProps {
   dia_inteiro?: boolean
   status?: string
   recorrencia_id?: string | null
+  prazo_data_limite?: Date | string  // Para indicar urgência quando prazo é hoje ou vencido
   onClick?: () => void
+}
+
+// Helper para converter prazo_data_limite para Date
+function parsePrazoDate(prazo: Date | string | undefined): Date | null {
+  if (!prazo) return null
+  if (prazo instanceof Date) return prazo
+  // Tratar string como data local para evitar problemas de timezone
+  const [year, month, day] = prazo.split('T')[0].split('-').map(Number)
+  return new Date(year, month - 1, day)
 }
 
 const tipoStyles = {
@@ -36,6 +46,18 @@ const tipoStyles = {
     text: 'text-[#34495e]',
     border: 'border-l-4 border-[#89bcbe]',
   },
+  // PRAZO FATAL HOJE - laranja vibrante (qualquer tipo)
+  prazoFatalHoje: {
+    bg: 'bg-gradient-to-r from-amber-500 to-orange-500',
+    text: 'text-white',
+    border: 'border-l-4 border-amber-500',
+  },
+  // PRAZO FATAL VENCIDO - vermelho (qualquer tipo)
+  prazoFatalVencido: {
+    bg: 'bg-gradient-to-r from-red-500 to-red-600',
+    text: 'text-white',
+    border: 'border-l-4 border-red-500',
+  },
 }
 
 export default function CalendarEventMiniCard({
@@ -46,10 +68,26 @@ export default function CalendarEventMiniCard({
   dia_inteiro,
   status,
   recorrencia_id,
+  prazo_data_limite,
   onClick,
 }: CalendarEventMiniCardProps) {
-  const styles = tipoStyles[tipo]
   const temIndicadorEspecial = !!recorrencia_id
+
+  // Verificar prazo fatal urgente (hoje) ou vencido - APENAS para tarefas e prazos
+  // Audiências e compromissos NÃO têm prazo fatal
+  const tiposComPrazoFatal = tipo === 'tarefa' || tipo === 'prazo'
+  const prazoDate = parsePrazoDate(prazo_data_limite)
+  const isPrazoFatalHoje = tiposComPrazoFatal && prazoDate && isToday(prazoDate)
+  const isPrazoFatalVencido = tiposComPrazoFatal && prazoDate && isBefore(prazoDate, startOfDay(new Date()))
+  const isConcluido = status === 'concluida' || status === 'concluido'
+
+  // Determinar estilo baseado no tipo e urgência do prazo fatal
+  let styles = tipoStyles[tipo]
+  if (isPrazoFatalVencido && !isConcluido) {
+    styles = tipoStyles.prazoFatalVencido
+  } else if (isPrazoFatalHoje && !isConcluido) {
+    styles = tipoStyles.prazoFatalHoje
+  }
 
   return (
     <div

@@ -20,7 +20,7 @@ import { Tarefa } from '@/hooks/useTarefas'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAgendaResponsaveis, Responsavel } from '@/hooks/useAgendaResponsaveis'
-import { addDays, nextMonday, differenceInDays, differenceInHours } from 'date-fns'
+import { addDays, nextMonday, differenceInDays, differenceInHours, startOfDay, isAfter } from 'date-fns'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -94,6 +94,16 @@ export default function TarefaDetailModal({
   const [calendarField, setCalendarField] = useState<'data_inicio' | 'prazo_data_limite' | null>(null)
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>([])
   const [loadingResponsaveis, setLoadingResponsaveis] = useState(false)
+  // Modal de confirmação para editar prazo fatal
+  const [confirmPrazoFatalOpen, setConfirmPrazoFatalOpen] = useState(false)
+  const [pendingPrazoFatalDate, setPendingPrazoFatalDate] = useState<Date | null>(null)
+  // Modal de aviso quando ultrapassa prazo fatal
+  const [prazoFatalWarningOpen, setPrazoFatalWarningOpen] = useState(false)
+  const [pendingDataInicio, setPendingDataInicio] = useState<Date | null>(null)
+  const [distanciaOriginalDias, setDistanciaOriginalDias] = useState<number>(0)
+  // Seletor de novo prazo fatal
+  const [novoPrazoFatalSelecionado, setNovoPrazoFatalSelecionado] = useState<Date | null>(null)
+  const [prazoFatalCalendarOpen, setPrazoFatalCalendarOpen] = useState(false)
 
   const { getResponsaveis } = useAgendaResponsaveis()
 
@@ -229,7 +239,42 @@ export default function TarefaDetailModal({
   }
 
   // Update date function
-  const handleUpdateDate = async (field: 'data_inicio' | 'prazo_data_limite', newDate: Date) => {
+  const handleUpdateDate = async (field: 'data_inicio' | 'prazo_data_limite', newDate: Date, skipWarning = false) => {
+    // Se estamos atualizando data_inicio e existe prazo_data_limite
+    if (field === 'data_inicio' && tarefa.prazo_data_limite && !skipWarning) {
+      const prazoFatal = parseDBDate(tarefa.prazo_data_limite)
+      const dataInicioAtual = parseDBDate(tarefa.data_inicio)
+
+      // Comparar apenas as datas (sem horário) para evitar problemas de timezone
+      const novaDataSemHora = startOfDay(newDate)
+      const prazoFatalSemHora = startOfDay(prazoFatal)
+
+      // Se nova data ultrapassa o prazo fatal, mostrar aviso
+      if (isAfter(novaDataSemHora, prazoFatalSemHora)) {
+        const distancia = differenceInDays(startOfDay(prazoFatal), startOfDay(dataInicioAtual))
+        setDistanciaOriginalDias(Math.max(distancia, 0))
+        setPendingDataInicio(newDate)
+        // Inicializar a sugestão de novo prazo fatal (mantendo a proporção)
+        setNovoPrazoFatalSelecionado(addDays(newDate, Math.max(distancia, 0)))
+        setPrazoFatalWarningOpen(true)
+        setDateDropdownOpen(null)
+        return
+      }
+    }
+
+    // Se estamos atualizando prazo_data_limite, confirmar primeiro
+    if (field === 'prazo_data_limite' && !skipWarning) {
+      setPendingPrazoFatalDate(newDate)
+      setConfirmPrazoFatalOpen(true)
+      setDateDropdownOpen(null)
+      return
+    }
+
+    await executeUpdateDate(field, newDate)
+  }
+
+  // Função que realmente executa a atualização
+  const executeUpdateDate = async (field: 'data_inicio' | 'prazo_data_limite', newDate: Date) => {
     setUpdatingDate(true)
 
     try {
@@ -245,7 +290,7 @@ export default function TarefaDetailModal({
 
       if (error) throw error
 
-      toast.success('Data atualizada com sucesso')
+      toast.success(field === 'prazo_data_limite' ? 'Prazo fatal atualizado' : 'Data atualizada com sucesso')
 
       // Atualizar localmente
       tarefa[field] = updateData[field]
@@ -264,6 +309,48 @@ export default function TarefaDetailModal({
     } finally {
       setUpdatingDate(false)
       setDateDropdownOpen(null)
+    }
+  }
+
+  // Atualizar data_inicio E prazo_data_limite juntos
+  const handleUpdateBothDates = async (newDataInicio: Date, newPrazoFatal: Date) => {
+    setUpdatingDate(true)
+
+    try {
+      const supabase = createClient()
+      const updateData = {
+        data_inicio: formatDateTimeForDB(newDataInicio),
+        prazo_data_limite: formatDateTimeForDB(newPrazoFatal)
+      }
+
+      const { error } = await supabase
+        .from('agenda_tarefas')
+        .update(updateData)
+        .eq('id', tarefa.id)
+
+      if (error) throw error
+
+      toast.success('Data e prazo fatal atualizados')
+
+      // Atualizar localmente
+      tarefa.data_inicio = updateData.data_inicio
+      tarefa.prazo_data_limite = updateData.prazo_data_limite
+
+      // Atualizar a agenda
+      if (onUpdate) {
+        await onUpdate()
+      }
+
+      // Forçar re-render do modal
+      onOpenChange(false)
+      setTimeout(() => onOpenChange(true), 50)
+    } catch (error) {
+      console.error('Erro ao atualizar datas:', error)
+      toast.error('Erro ao atualizar datas')
+    } finally {
+      setUpdatingDate(false)
+      setPrazoFatalWarningOpen(false)
+      setPendingDataInicio(null)
     }
   }
 
@@ -510,24 +597,27 @@ export default function TarefaDetailModal({
                 </div>
               </div>
 
-              {/* Prazo Fatal - Apenas para prazo_processual */}
-              {isPrazoProcessual && tarefa.prazo_data_limite && (
-                <div className="min-w-[200px]">
+              {/* Prazo Fatal - Para todas as tarefas com prazo_data_limite */}
+              {tarefa.prazo_data_limite && (
+                <div className="min-w-[140px]">
                   <div className="text-[10px] text-red-600 font-medium mb-1 h-4">
                     <AlertCircle className="w-3 h-3 text-red-500 inline mr-1.5 align-text-bottom" />
                     Prazo Fatal
-                  </div>
-                  <div className="h-5 leading-5">
-                    <span className="text-xs font-medium text-slate-700">{formatBrazilDate(parseDBDate(tarefa.prazo_data_limite))}</span>
-                    <span className="text-[10px] text-slate-400 ml-1.5">
+                    <span className="text-[10px] text-slate-400 font-normal ml-1">
                       {(() => {
                         const diasEntreDatas = differenceInDays(
                           parseDBDate(tarefa.prazo_data_limite),
                           parseDBDate(tarefa.data_inicio)
                         )
-                        return diasEntreDatas > 0 ? `${diasEntreDatas}d` : ''
+                        return diasEntreDatas > 0 ? `(${diasEntreDatas}d)` : diasEntreDatas === 0 ? '(hoje)' : `(${Math.abs(diasEntreDatas)}d atrás)`
                       })()}
                     </span>
+                  </div>
+                  <div className="h-5">
+                    <DateReschedule
+                      field="prazo_data_limite"
+                      currentDate={tarefa.prazo_data_limite}
+                    />
                   </div>
                 </div>
               )}
@@ -724,6 +814,192 @@ export default function TarefaDetailModal({
           onSelect={handleCustomDateSelect}
           disabled={updatingDate}
         />
+      </DialogContent>
+    </Dialog>
+
+    {/* Modal de Confirmação para Editar Prazo Fatal */}
+    <Dialog open={confirmPrazoFatalOpen} onOpenChange={setConfirmPrazoFatalOpen}>
+      <DialogContent className="max-w-md p-0 overflow-hidden border-0">
+        <DialogTitle className="sr-only">Confirmar Alteração do Prazo Fatal</DialogTitle>
+        <div className="bg-white rounded-lg">
+          {/* Header */}
+          <div className="px-6 pt-5 pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#f0f9f9] flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-[#89bcbe]" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-[#34495e]">
+                  Alterar Prazo Fatal?
+                </h2>
+                <p className="text-xs text-[#46627f] mt-0.5">
+                  Confirme a alteração da data limite
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6">
+            <p className="text-sm text-[#46627f] mb-4">
+              Você está prestes a alterar o <strong className="text-[#34495e]">prazo fatal</strong> desta tarefa para:
+            </p>
+            <div className="p-3 bg-[#f0f9f9] rounded-lg border border-[#89bcbe]/30 mb-4">
+              <p className="text-sm font-semibold text-[#34495e]">
+                {pendingPrazoFatalDate && formatBrazilDate(pendingPrazoFatalDate)}
+              </p>
+            </div>
+            <p className="text-xs text-slate-500">
+              O prazo fatal representa a data limite absoluta para conclusão. Tem certeza?
+            </p>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setConfirmPrazoFatalOpen(false)
+                  setPendingPrazoFatalDate(null)
+                }}
+                className="flex-1 h-9 text-xs font-medium border-slate-200 hover:bg-white"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (pendingPrazoFatalDate) {
+                    setConfirmPrazoFatalOpen(false)
+                    await executeUpdateDate('prazo_data_limite', pendingPrazoFatalDate)
+                    setPendingPrazoFatalDate(null)
+                  }
+                }}
+                className="flex-1 h-9 text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white"
+                disabled={updatingDate}
+              >
+                Confirmar Alteração
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Modal de Aviso - Reagendamento Ultrapassa Prazo Fatal */}
+    <Dialog open={prazoFatalWarningOpen} onOpenChange={(open) => {
+      setPrazoFatalWarningOpen(open)
+      if (!open) {
+        setPendingDataInicio(null)
+        setNovoPrazoFatalSelecionado(null)
+        setPrazoFatalCalendarOpen(false)
+      }
+    }}>
+      <DialogContent className="max-w-md p-0 overflow-hidden border-0">
+        <DialogTitle className="sr-only">Reagendar Prazo Fatal</DialogTitle>
+        <div className="bg-white rounded-lg">
+          {/* Header */}
+          <div className="px-6 pt-5 pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#f0f9f9] flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-[#89bcbe]" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-[#34495e]">
+                  Reagendar Prazo Fatal
+                </h2>
+                <p className="text-xs text-[#46627f] mt-0.5">
+                  A nova data de execução é posterior ao prazo fatal atual
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-4">
+            {/* Info das datas */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-[#f0f9f9] rounded-lg border border-[#89bcbe]/30">
+                <p className="text-[10px] text-[#46627f] mb-1">Nova Data Execução</p>
+                <p className="text-sm font-semibold text-[#34495e]">
+                  {pendingDataInicio && formatBrazilDate(pendingDataInicio)}
+                </p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <p className="text-[10px] text-slate-500 mb-1">Prazo Fatal Atual</p>
+                <p className="text-sm font-semibold text-[#34495e]">
+                  {tarefa.prazo_data_limite && formatBrazilDate(parseDBDate(tarefa.prazo_data_limite))}
+                </p>
+              </div>
+            </div>
+
+            {/* Seletor de novo prazo fatal */}
+            <div>
+              <p className="text-xs text-[#46627f] mb-2">
+                Selecione o novo prazo fatal:
+              </p>
+              <Popover open={prazoFatalCalendarOpen} onOpenChange={setPrazoFatalCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    className={cn(
+                      "w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all",
+                      "bg-[#e8f5f5] border-[#89bcbe]/40 hover:border-[#89bcbe]"
+                    )}
+                  >
+                    <div className="text-left">
+                      <p className="text-[10px] text-[#46627f] mb-0.5">Novo Prazo Fatal</p>
+                      <p className="text-sm font-semibold text-[#34495e]">
+                        {novoPrazoFatalSelecionado ? formatBrazilDate(novoPrazoFatalSelecionado) : 'Selecionar data'}
+                      </p>
+                    </div>
+                    <Calendar className="w-4 h-4 text-[#89bcbe]" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="center">
+                  <CalendarComponent
+                    mode="single"
+                    selected={novoPrazoFatalSelecionado || undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        setNovoPrazoFatalSelecionado(date)
+                        setPrazoFatalCalendarOpen(false)
+                      }
+                    }}
+                    disabled={(date) => pendingDataInicio ? date < pendingDataInicio : false}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setPrazoFatalWarningOpen(false)
+                  setPendingDataInicio(null)
+                  setNovoPrazoFatalSelecionado(null)
+                }}
+                className="flex-1 h-9 text-xs font-medium border-slate-200 hover:bg-white"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (pendingDataInicio && novoPrazoFatalSelecionado) {
+                    await handleUpdateBothDates(pendingDataInicio, novoPrazoFatalSelecionado)
+                    setNovoPrazoFatalSelecionado(null)
+                  }
+                }}
+                className="flex-1 h-9 text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white"
+                disabled={updatingDate || !novoPrazoFatalSelecionado}
+              >
+                Confirmar e Reagendar
+              </Button>
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
     </>

@@ -7,20 +7,20 @@ import { useEscritorioAtivo } from './useEscritorioAtivo'
 export interface DashboardAlertas {
   prazosHoje: number
   prazosVencidos: number
-  atosCobraveisCount: number
-  atosCobraveisValor: number
-  horasPendentesAprovacao: number
-  horasProntasFaturar: number
+  processosSemContrato: number
+  audienciasProximas: number
+  parcelasVencidas: number
+  valorParcelasVencidas: number
   valorHorasProntasFaturar: number
 }
 
 const defaultAlertas: DashboardAlertas = {
   prazosHoje: 0,
   prazosVencidos: 0,
-  atosCobraveisCount: 0,
-  atosCobraveisValor: 0,
-  horasPendentesAprovacao: 0,
-  horasProntasFaturar: 0,
+  processosSemContrato: 0,
+  audienciasProximas: 0,
+  parcelasVencidas: 0,
+  valorParcelasVencidas: 0,
   valorHorasProntasFaturar: 0,
 }
 
@@ -28,9 +28,12 @@ export function useDashboardAlertas() {
   const [alertas, setAlertas] = useState<DashboardAlertas>(defaultAlertas)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const { escritorioAtivo } = useEscritorioAtivo()
+  const { escritorioAtivo, isOwner, roleAtual } = useEscritorioAtivo()
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
+
+  // Verificar se é sócio (owner ou admin)
+  const isSocio = isOwner || roleAtual === 'admin' || roleAtual === 'owner'
 
   const loadAlertas = useCallback(async () => {
     if (!escritorioAtivo) {
@@ -43,14 +46,20 @@ export function useDashboardAlertas() {
       setLoading(true)
       setError(null)
 
+      // Obter usuário atual para filtrar audiências
+      const { data: { user } } = await supabase.auth.getUser()
+      const userId = user?.id
+
       const hoje = new Date()
       const hojeStr = hoje.toISOString().split('T')[0]
+      const em7dias = new Date(hoje.getTime() + 7 * 24 * 60 * 60 * 1000)
 
       const [
         prazosHojeResult,
         prazosVencidosResult,
-        atosCobraveisResult,
-        horasPendentesResult,
+        processosSemContratoResult,
+        audienciasResult,
+        parcelasVencidasResult,
         horasProntasResult,
       ] = await Promise.all([
         // 1. Prazos vencendo HOJE
@@ -71,61 +80,89 @@ export function useDashboardAlertas() {
           .lt('prazo_data_limite', hojeStr)
           .neq('status', 'concluida'),
 
-        // 3. Atos cobráveis pendentes
+        // 3. Processos ativos SEM contrato de honorários
         supabase
-          .from('financeiro_alertas_cobranca')
-          .select('id, valor_sugerido')
+          .from('processos_processos')
+          .select('id', { count: 'exact', head: true })
           .eq('escritorio_id', escritorioAtivo)
-          .eq('status', 'pendente'),
+          .in('status', ['ativo', 'em_andamento', 'aguardando'])
+          .is('contrato_id', null),
 
-        // 4. Horas pendentes de aprovação
-        supabase
-          .from('financeiro_timesheet')
-          .select('horas')
+        // 4. Audiências nos próximos 7 dias - APENAS onde o usuário é responsável
+        userId ? supabase
+          .from('agenda_audiencias')
+          .select('id', { count: 'exact', head: true })
           .eq('escritorio_id', escritorioAtivo)
-          .is('aprovado', null)
-          .is('reprovado', null),
+          .gte('data_hora', hojeStr)
+          .lte('data_hora', em7dias.toISOString().split('T')[0])
+          .not('status', 'in', '("realizada","cancelada")')
+          .or(`responsavel_id.eq.${userId},responsaveis_ids.cs.{${userId}}`)
+        : Promise.resolve({ count: 0 }),
 
-        // 5. Horas prontas para faturar (aprovadas mas não faturadas)
-        // Busca horas e user_id, valor_hora será buscado separadamente
-        supabase
+        // 5. Parcelas vencidas (inadimplência) - apenas para sócios
+        isSocio ? supabase
+          .from('financeiro_receitas')
+          .select('valor, valor_pago')
+          .eq('escritorio_id', escritorioAtivo)
+          .eq('status', 'atrasado')
+        : Promise.resolve({ data: [] }),
+
+        // 6. Horas prontas para faturar com valor correto - apenas para sócios
+        // Usa RPC para calcular valor com valor_hora do cargo
+        isSocio ? supabase.rpc('calcular_valor_horas_faturar', {
+          p_escritorio_id: escritorioAtivo
+        }) : Promise.resolve({ data: null }),
+      ])
+
+      // Processar parcelas vencidas
+      const parcelasVencidas = parcelasVencidasResult.data?.length || 0
+      const valorParcelasVencidas = parcelasVencidasResult.data?.reduce(
+        (acc: number, item: { valor: number | null; valor_pago: number | null }) =>
+          acc + (Number(item.valor) || 0) - (Number(item.valor_pago) || 0),
+        0
+      ) || 0
+
+      // Valor das horas prontas para faturar
+      // Se RPC não existe, calcula manualmente
+      let valorHorasProntas = 0
+      if (horasProntasResult.data && typeof horasProntasResult.data === 'number') {
+        valorHorasProntas = horasProntasResult.data
+      } else if (isSocio) {
+        // Fallback: buscar manualmente
+        const { data: horasData } = await supabase
           .from('financeiro_timesheet')
-          .select('horas, user_id')
+          .select(`
+            horas,
+            user:user_id(
+              escritorios_usuarios!inner(
+                valor_hora,
+                cargo:cargo_id(valor_hora_padrao)
+              )
+            )
+          `)
           .eq('escritorio_id', escritorioAtivo)
           .eq('faturavel', true)
           .eq('faturado', false)
-          .eq('aprovado', true),
-      ])
+          .eq('aprovado', true)
 
-      // Processar atos cobráveis
-      const atosCount = atosCobraveisResult.data?.length || 0
-      const atosValor = atosCobraveisResult.data?.reduce(
-        (acc: number, item: { valor_sugerido: number | null }) => acc + (Number(item.valor_sugerido) || 0),
-        0
-      ) || 0
-
-      // Processar horas pendentes de aprovação
-      const horasPendentes = horasPendentesResult.data?.reduce(
-        (acc: number, item: { horas: number | null }) => acc + (Number(item.horas) || 0),
-        0
-      ) || 0
-
-      // Processar horas prontas para faturar
-      // Usa valor médio estimado de R$150/h para cálculo rápido do alerta
-      const horasProntas = horasProntasResult.data?.reduce(
-        (acc: number, item: { horas: number | null }) => acc + (Number(item.horas) || 0),
-        0
-      ) || 0
-      const valorProntas = horasProntas * 150 // valor médio estimado
+        if (horasData) {
+          valorHorasProntas = horasData.reduce((acc: number, item: any) => {
+            const horas = Number(item.horas) || 0
+            const eu = item.user?.escritorios_usuarios?.[0]
+            const valorHora = Number(eu?.valor_hora) || Number(eu?.cargo?.valor_hora_padrao) || 150
+            return acc + (horas * valorHora)
+          }, 0)
+        }
+      }
 
       setAlertas({
         prazosHoje: prazosHojeResult.count || 0,
         prazosVencidos: prazosVencidosResult.count || 0,
-        atosCobraveisCount: atosCount,
-        atosCobraveisValor: atosValor,
-        horasPendentesAprovacao: Math.round(horasPendentes * 10) / 10,
-        horasProntasFaturar: Math.round(horasProntas * 10) / 10,
-        valorHorasProntasFaturar: valorProntas,
+        processosSemContrato: processosSemContratoResult.count || 0,
+        audienciasProximas: audienciasResult.count || 0,
+        parcelasVencidas,
+        valorParcelasVencidas,
+        valorHorasProntasFaturar: Math.round(valorHorasProntas * 100) / 100,
       })
     } catch (err) {
       console.error('Erro ao carregar alertas do dashboard:', err)
@@ -133,7 +170,7 @@ export function useDashboardAlertas() {
     } finally {
       setLoading(false)
     }
-  }, [escritorioAtivo, supabase])
+  }, [escritorioAtivo, isSocio, supabase])
 
   useEffect(() => {
     loadAlertas()
@@ -141,7 +178,9 @@ export function useDashboardAlertas() {
 
   // Calcular total de alertas para badge
   const totalAlertas = alertas.prazosHoje + alertas.prazosVencidos +
-    alertas.atosCobraveisCount + (alertas.horasPendentesAprovacao > 0 ? 1 : 0)
+    (alertas.processosSemContrato > 0 ? 1 : 0) +
+    (alertas.audienciasProximas > 0 ? 1 : 0) +
+    (alertas.parcelasVencidas > 0 ? 1 : 0)
 
   return {
     alertas,
@@ -149,6 +188,7 @@ export function useDashboardAlertas() {
     error,
     refresh: loadAlertas,
     totalAlertas,
-    temAlertasCriticos: alertas.prazosVencidos > 0 || alertas.prazosHoje > 0,
+    temAlertasCriticos: alertas.prazosVencidos > 0 || alertas.parcelasVencidas > 0,
+    isSocio,
   }
 }

@@ -412,23 +412,54 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
     setTimeout(() => setCopiedCNJ(false), 2000)
   }
 
-  const handleAddAndamento = () => {
-    if (!novoAndamento.tipo || !novoAndamento.descricao) return
+  // Estado para loading ao adicionar andamento
+  const [salvandoAndamento, setSalvandoAndamento] = useState(false)
 
-    const newMov: Movimentacao = {
-      id: String(Date.now()),
-      data_movimento: new Date(novoAndamento.data).toISOString(),
-      tipo_descricao: novoAndamento.tipo,
-      descricao: novoAndamento.descricao
+  const handleAddAndamento = async () => {
+    if (!novoAndamento.tipo || !novoAndamento.descricao || !escritorioId) {
+      if (!escritorioId) {
+        toast.error('Erro: escritório não identificado')
+      }
+      return
     }
 
-    setMovimentacoes([newMov, ...movimentacoes])
-    setNovoAndamento({
-      data: format(new Date(), 'yyyy-MM-dd'),
-      tipo: '',
-      descricao: ''
-    })
-    setOpenNovoAndamento(false)
+    setSalvandoAndamento(true)
+    try {
+      // Usar parseDateInBrazil para evitar problema de timezone
+      const dataMovimento = parseDateInBrazil(novoAndamento.data, 'yyyy-MM-dd')
+
+      const { data: inserted, error } = await supabase
+        .from('processos_movimentacoes')
+        .insert({
+          processo_id: processo.id,
+          escritorio_id: escritorioId,
+          data_movimento: dataMovimento.toISOString(),
+          tipo_descricao: novoAndamento.tipo,
+          descricao: novoAndamento.descricao,
+          origem: 'manual'
+        })
+        .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem')
+        .single()
+
+      if (error) throw error
+
+      toast.success('Andamento adicionado com sucesso!')
+
+      // Recarregar movimentações do banco para garantir consistência
+      await loadMovimentacoes()
+
+      setNovoAndamento({
+        data: format(new Date(), 'yyyy-MM-dd'),
+        tipo: '',
+        descricao: ''
+      })
+      setOpenNovoAndamento(false)
+    } catch (error) {
+      console.error('Erro ao adicionar andamento:', error)
+      toast.error('Erro ao adicionar andamento')
+    } finally {
+      setSalvandoAndamento(false)
+    }
   }
 
   // Paginação de movimentações
@@ -764,15 +795,23 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
                       <Button
                         variant="outline"
                         onClick={() => setOpenNovoAndamento(false)}
+                        disabled={salvandoAndamento}
                       >
                         Cancelar
                       </Button>
                       <Button
                         onClick={handleAddAndamento}
-                        disabled={!novoAndamento.tipo || !novoAndamento.descricao}
+                        disabled={!novoAndamento.tipo || !novoAndamento.descricao || salvandoAndamento}
                         className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e]"
                       >
-                        Adicionar Andamento
+                        {salvandoAndamento ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Salvando...
+                          </>
+                        ) : (
+                          'Adicionar Andamento'
+                        )}
                       </Button>
                     </div>
                   </div>

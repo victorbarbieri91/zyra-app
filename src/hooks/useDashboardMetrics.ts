@@ -188,12 +188,12 @@ export function useDashboardMetrics() {
           .eq('escritorio_id', escritorioAtivo)
           .gte('created_at', inicioMes.toISOString()),
 
-        // Consultas finalizadas ESTE MÊS
+        // Consultas finalizadas ESTE MÊS (status existentes: ativo, arquivado)
         supabase
           .from('consultivo_consultas')
           .select('id', { count: 'exact', head: true })
           .eq('escritorio_id', escritorioAtivo)
-          .in('status', ['concluido', 'cancelado', 'arquivado'])
+          .eq('status', 'arquivado')
           .gte('updated_at', inicioMes.toISOString()),
 
         // Publicações - usar a view

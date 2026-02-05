@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -30,6 +29,8 @@ import {
   Plus,
   CheckSquare,
   Scale,
+  List,
+  BarChart3,
 } from 'lucide-react'
 import { formatCurrency, formatHoras } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -78,6 +79,9 @@ export default function DashboardPage() {
   const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
   const [escritoriosSelecionados, setEscritoriosSelecionados] = useState<string[]>([])
   const [seletorAberto, setSeletorAberto] = useState(false)
+
+  // Estado para visualização de horas (lista ou barras)
+  const [horasViewMode, setHorasViewMode] = useState<'list' | 'bars'>('list')
 
   // Carregar escritórios do grupo
   useEffect(() => {
@@ -446,14 +450,14 @@ export default function DashboardPage() {
               title="Processos Ativos"
               value={metrics?.processos_ativos || 0}
               icon={Briefcase}
-              trend={metrics?.processos_trend_percent !== 0 ? { value: `${metrics?.processos_trend_percent > 0 ? '+' : ''}${metrics?.processos_trend_percent}%`, label: 'vs mês', positive: metrics?.processos_trend_percent >= 0 } : undefined}
+              trend={metrics?.processos_trend_qtd !== 0 ? { value: `${metrics?.processos_trend_qtd > 0 ? '+' : ''}${metrics?.processos_trend_qtd}`, label: 'este mês', positive: (metrics?.processos_trend_qtd ?? 0) >= 0 } : undefined}
               gradient="kpi1"
             />
             <MetricCard
               title="Clientes Ativos"
               value={metrics?.clientes_ativos || 0}
               icon={Users}
-              trend={metrics?.clientes_novos_mes ? { value: `+${metrics.clientes_novos_mes}`, label: 'este mês', positive: true } : undefined}
+              trend={(metrics?.clientes_trend_qtd ?? 0) > 0 ? { value: `+${metrics?.clientes_trend_qtd}`, label: 'este mês', positive: true } : undefined}
               gradient="kpi2"
             />
           </div>
@@ -513,17 +517,17 @@ export default function DashboardPage() {
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[11px] font-medium text-[#46627f]">Horas Não Faturadas</span>
-                    <span className="text-[11px] font-semibold text-emerald-600">{formatHoras(metrics?.horas_nao_faturadas || 0, 'curto')}</span>
+                    <span className="text-[11px] font-medium text-[#46627f]">Horas Não Cobráveis</span>
+                    <span className="text-[11px] font-semibold text-slate-500">{formatHoras(metrics?.horas_nao_cobraveis || 0, 'curto')}</span>
                   </div>
                   <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-emerald-300 to-emerald-400 rounded-full"
-                      style={{ width: `${Math.min((metrics?.horas_nao_faturadas || 0) / 50 * 100, 100)}%` }}
+                      className="h-full bg-gradient-to-r from-slate-300 to-slate-400 rounded-full"
+                      style={{ width: `${Math.min((metrics?.horas_nao_cobraveis || 0) / 50 * 100, 100)}%` }}
                     />
                   </div>
-                  <p className="text-[9px] text-emerald-600 mt-0.5 font-normal">
-                    Oportunidade: {formatCurrency(metrics?.valor_horas_nao_faturadas || 0)}
+                  <p className="text-[9px] text-slate-500 mt-0.5 font-normal">
+                    Oportunidade: {formatCurrency(metrics?.valor_horas_nao_cobraveis || 0)}
                   </p>
                 </div>
               </CardContent>
@@ -628,145 +632,159 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Performance Geral */}
+            {/* Performance de Horas */}
             <Card className="border-slate-200 shadow-sm">
               <CardHeader className="pb-3 pt-6 px-6">
-                <CardTitle className="text-sm font-medium text-[#34495e]">Performance Geral</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium text-[#34495e]">Performance de Horas</CardTitle>
+                  <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-md">
+                    <button
+                      onClick={() => setHorasViewMode('list')}
+                      className={`p-1.5 rounded transition-colors ${horasViewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-slate-200'}`}
+                      title="Visualização em lista"
+                    >
+                      <List className={`w-3.5 h-3.5 ${horasViewMode === 'list' ? 'text-[#1E3A8A]' : 'text-slate-400'}`} />
+                    </button>
+                    <button
+                      onClick={() => setHorasViewMode('bars')}
+                      className={`p-1.5 rounded transition-colors ${horasViewMode === 'bars' ? 'bg-white shadow-sm' : 'hover:bg-slate-200'}`}
+                      title="Visualização em barras"
+                    >
+                      <BarChart3 className={`w-3.5 h-3.5 ${horasViewMode === 'bars' ? 'text-[#1E3A8A]' : 'text-slate-400'}`} />
+                    </button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="pt-2 px-6 pb-6">
                 {loadingPerformance ? (
                   <div className="flex justify-center py-8">
                     <Loader2 className="w-6 h-6 text-[#89bcbe] animate-spin" />
                   </div>
-                ) : isPerformanceEmpty ? (
+                ) : equipe.length === 0 ? (
                   <EmptyState
-                    icon={Target}
-                    title="Sem dados de performance"
-                    description="Registre horas e cadastre processos para ver métricas"
+                    icon={Clock}
+                    title="Sem registro de horas"
+                    description="Registre horas no timesheet para ver métricas"
                     variant="default"
                   />
-                ) : (
-                  <Tabs defaultValue="equipe" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 bg-slate-100">
-                      <TabsTrigger value="equipe">Equipe</TabsTrigger>
-                      <TabsTrigger value="area">Por Área</TabsTrigger>
-                      <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
-                    </TabsList>
+                ) : horasViewMode === 'list' ? (
+                  /* Visualização em Lista */
+                  <div className="space-y-3">
+                    <ScrollArea className={equipe.length > 5 ? "h-[200px] pr-2" : ""}>
+                      <div className="space-y-1.5">
+                        {equipe.map((membro, index) => {
+                          const isCurrentUser = membro.id === currentUserId
+                          const position = index + 1
 
-                    <TabsContent value="equipe" className="space-y-3 mt-4">
-                      {equipe.length === 0 ? (
-                        <p className="text-xs text-[#6c757d] text-center py-3">Nenhum registro de horas este mês</p>
-                      ) : (
-                        <>
-                          <ScrollArea className={equipe.length > 5 ? "h-[200px] pr-2" : ""}>
-                            <div className="space-y-1.5">
-                              {equipe.map((membro, index) => {
-                                const isCurrentUser = membro.id === currentUserId
-                                const position = index + 1
-
-                                return (
-                                  <div
-                                    key={membro.id}
-                                    className={cn(
-                                      "space-y-1 p-1.5 rounded-md -mx-1.5 transition-colors",
-                                      isCurrentUser && "bg-[#f0f9f9] border border-[#89bcbe]/30"
-                                    )}
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="text-[10px] font-medium text-slate-400 w-4">
-                                          {position}.
-                                        </span>
-                                        <span className={cn(
-                                          "text-xs font-medium",
-                                          isCurrentUser ? "text-[#34495e]" : "text-[#46627f]"
-                                        )}>
-                                          {membro.nome}
-                                          {isCurrentUser && (
-                                            <span className="ml-1 text-[8px] font-medium text-[#89bcbe] bg-[#89bcbe]/10 px-1 py-0.5 rounded">
-                                              Você
-                                            </span>
-                                          )}
-                                        </span>
-                                      </div>
-                                      <span className={cn(
-                                        "text-xs font-semibold",
-                                        isCurrentUser ? "text-[#89bcbe]" : "text-[#34495e]"
-                                      )}>
-                                        {formatHoras(membro.horas, 'curto')}
+                          return (
+                            <div
+                              key={membro.id}
+                              className="space-y-1 p-1.5 rounded-md -mx-1.5"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] font-medium text-slate-400 w-4">
+                                    {position}.
+                                  </span>
+                                  <span className="text-xs font-medium text-[#46627f]">
+                                    {membro.nome}
+                                    {isCurrentUser && (
+                                      <span className="ml-1 text-[8px] font-medium text-[#89bcbe] bg-[#89bcbe]/10 px-1 py-0.5 rounded">
+                                        Você
                                       </span>
-                                    </div>
-                                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden ml-5">
-                                      <div
-                                        className={cn(
-                                          "h-full rounded-full",
-                                          isCurrentUser ? "bg-gradient-to-r from-[#89bcbe] to-[#6ba9ab]" : membro.cor
-                                        )}
-                                        style={{ width: `${Math.min((membro.horas / (equipe[0]?.horas || 1)) * 100, 100)}%` }}
-                                      />
-                                    </div>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          </ScrollArea>
-                          <Separator className="my-2" />
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-medium text-[#46627f]">Total da Equipe</span>
-                            <span className="font-semibold text-[#34495e]">{formatHoras(totalHorasEquipe, 'curto')}</span>
-                          </div>
-                        </>
-                      )}
-                    </TabsContent>
-
-                    <TabsContent value="area" className="space-y-3 mt-4">
-                      {areas.length === 0 ? (
-                        <p className="text-xs text-[#6c757d] text-center py-3">Nenhum processo cadastrado</p>
-                      ) : (
-                        areas.map((area) => (
-                          <div key={area.area} className="p-2 bg-slate-50 rounded-md border border-slate-100">
-                            <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-xs font-semibold text-[#34495e]">{area.area}</span>
-                              <span className="text-[10px] font-medium text-[#6c757d]">{area.qtd} processos</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden mr-2">
-                                <div className={`h-full ${area.cor} rounded-full`} style={{ width: `${(area.receita / (areas[0]?.receita || 1)) * 100}%` }} />
+                                    )}
+                                  </span>
+                                </div>
+                                <span className="text-xs font-semibold text-[#34495e]">
+                                  {formatHoras(membro.horas, 'curto')}
+                                </span>
                               </div>
-                              <span className="text-[10px] font-semibold text-[#34495e] whitespace-nowrap">{formatCurrency(area.receita)}</span>
+                              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden ml-5 flex">
+                                <div
+                                  className="h-full bg-[#1E3A8A]"
+                                  style={{ width: `${Math.min((membro.horasCobraveis / (equipe[0]?.horas || 1)) * 100, 100)}%` }}
+                                />
+                                <div
+                                  className="h-full bg-[#89bcbe]"
+                                  style={{ width: `${Math.min((membro.horasNaoCobraveis / (equipe[0]?.horas || 1)) * 100, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </ScrollArea>
+                    {/* Legenda das cores */}
+                    <div className="flex items-center gap-4 mt-2 ml-5">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-sm bg-[#1E3A8A]" />
+                        <span className="text-[10px] text-[#46627f]">Cobráveis</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-sm bg-[#89bcbe]" />
+                        <span className="text-[10px] text-[#46627f]">Não cobráveis</span>
+                      </div>
+                    </div>
+                    <Separator className="my-2" />
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-[#46627f]">Total da Equipe</span>
+                      <span className="font-semibold text-[#34495e]">{formatHoras(totalHorasEquipe, 'curto')}</span>
+                    </div>
+                  </div>
+                ) : (
+                  /* Visualização em Barras */
+                  <div className="space-y-3">
+                    <div className="flex items-end justify-center gap-2 h-[160px]">
+                      {equipe.slice(0, 6).map((membro) => {
+                        const isCurrentUser = membro.id === currentUserId
+                        const maxHoras = equipe[0]?.horas || 1
+                        const cobraveisHeight = (membro.horasCobraveis / maxHoras) * 100
+                        const naoCobraveisHeight = (membro.horasNaoCobraveis / maxHoras) * 100
+
+                        return (
+                          <div key={membro.id} className="flex flex-col items-center w-14">
+                            <div className="w-9 flex flex-col justify-end h-[120px]">
+                              <div
+                                className="w-full bg-[#89bcbe]"
+                                style={{ height: `${naoCobraveisHeight}%` }}
+                              />
+                              <div
+                                className="w-full bg-[#1E3A8A]"
+                                style={{ height: `${cobraveisHeight}%` }}
+                              />
+                            </div>
+                            <div className="flex flex-col items-center mt-1.5">
+                              <span
+                                className={`text-[9px] font-medium truncate max-w-[50px] text-center ${isCurrentUser ? 'text-[#89bcbe]' : 'text-[#46627f]'}`}
+                                title={isCurrentUser ? `${membro.nome} (Você)` : membro.nome}
+                              >
+                                {isCurrentUser ? 'Você' : membro.nome.split(' ')[0]}
+                              </span>
+                              <span className="text-[9px] font-semibold text-[#34495e]">
+                                {formatHoras(membro.horas, 'curto')}
+                              </span>
                             </div>
                           </div>
-                        ))
-                      )}
-                    </TabsContent>
-
-                    <TabsContent value="financeiro" className="space-y-3 mt-4">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="p-2.5 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] border border-[#89bcbe]/30 rounded-md">
-                          <p className="text-[10px] font-medium text-[#46627f] mb-0.5">Total a Receber</p>
-                          <p className="text-base font-bold text-[#34495e]">{formatCurrency(totalAReceber)}</p>
-                        </div>
-                        <div className="p-2.5 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] border border-[#89bcbe]/30 rounded-md">
-                          <p className="text-[10px] font-medium text-[#46627f] mb-0.5">Taxa Inadimplência</p>
-                          <p className="text-base font-bold text-[#34495e]">{taxaInadimplencia}%</p>
-                        </div>
+                        )
+                      })}
+                    </div>
+                    {/* Legenda das cores */}
+                    <div className="flex items-center justify-center gap-4 mt-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-sm bg-[#1E3A8A]" />
+                        <span className="text-[10px] text-[#46627f]">Cobráveis</span>
                       </div>
-                      <Separator />
-                      <div>
-                        <h4 className="text-xs font-semibold text-[#34495e] mb-2">Top 5 Clientes</h4>
-                        {topClientes.length === 0 ? (
-                          <p className="text-xs text-[#6c757d] text-center py-2">Nenhum pagamento registrado</p>
-                        ) : (
-                          topClientes.map((cliente) => (
-                            <div key={cliente.id} className="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0">
-                              <span className="text-xs text-[#6c757d]">{cliente.nome}</span>
-                              <span className="text-xs font-semibold text-[#34495e]">{formatCurrency(cliente.valor)}</span>
-                            </div>
-                          ))
-                        )}
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-sm bg-[#89bcbe]" />
+                        <span className="text-[10px] text-[#46627f]">Não cobráveis</span>
                       </div>
-                    </TabsContent>
-                  </Tabs>
+                    </div>
+                    <Separator className="my-2" />
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-[#46627f]">Total da Equipe</span>
+                      <span className="font-semibold text-[#34495e]">{formatHoras(totalHorasEquipe, 'curto')}</span>
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -775,25 +793,26 @@ export default function DashboardPage() {
 
           {/* COLUNA DIREITA (4 cols): KPIs secundários + Publicações Recentes */}
           <div className="lg:col-span-4 space-y-4">
-            {/* KPIs secundários (Casos Consultivos + Horas Prontas) */}
+            {/* KPIs secundários (Casos Consultivos + Horas Cobráveis) */}
             <div className="grid grid-cols-2 gap-2">
               <MetricCard
                 title="Casos Consultivos"
                 value={metrics?.consultas_abertas || 0}
-                subtitle="em andamento"
                 icon={FileText}
+                trend={metrics?.consultas_trend_qtd !== 0 ? { value: `${metrics?.consultas_trend_qtd > 0 ? '+' : ''}${metrics?.consultas_trend_qtd}`, label: 'este mês', positive: metrics?.consultas_trend_qtd >= 0 } : undefined}
+                subtitle={metrics?.consultas_trend_qtd === 0 ? 'em andamento' : undefined}
                 gradient="kpi3"
               />
               <MetricCard
-                title="Horas Faturáveis"
-                value={formatHoras(metrics?.horas_prontas_faturar || 0, 'curto')}
+                title="Horas Cobráveis"
+                value={formatHoras(metrics?.horas_cobraveis || 0, 'curto')}
                 icon={Clock}
-                trend={metrics?.horas_faturaveis_trend !== 0 ? {
-                  value: `${metrics?.horas_faturaveis_trend > 0 ? '+' : ''}${formatHoras(Math.abs(metrics?.horas_faturaveis_trend || 0), 'curto')}`,
+                trend={metrics?.horas_cobraveis_trend_percent !== 0 ? {
+                  value: `${metrics?.horas_cobraveis_trend_percent > 0 ? '+' : ''}${metrics?.horas_cobraveis_trend_percent}%`,
                   label: 'vs mês',
-                  positive: metrics?.horas_faturaveis_trend >= 0
+                  positive: metrics?.horas_cobraveis_trend_percent >= 0
                 } : undefined}
-                subtitle={metrics?.horas_faturaveis_trend === 0 ? 'prontas p/ faturar' : undefined}
+                subtitle={metrics?.horas_cobraveis_trend_percent === 0 ? 'este mês' : undefined}
                 gradient="kpi4"
               />
             </div>

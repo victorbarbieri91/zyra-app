@@ -78,7 +78,7 @@ export default function MetricCard({
           <div className={cn('text-xl font-bold', scheme.textColor)}>{value}</div>
           {trend && (
             <div className={cn('text-[9px] mt-0.5', scheme.trendColor)}>
-              {trend.positive !== false && '+'}{trend.value} {trend.label}
+              {trend.value} {trend.label}
             </div>
           )}
           {subtitle && !trend && (
@@ -106,7 +106,6 @@ export default function MetricCard({
         {trend && (
           <div className="flex items-center mt-1.5 text-xs">
             <div className={cn('flex items-center font-medium', scheme.trendColor)}>
-              {trend.positive !== false && '+'}
               {trend.value}
             </div>
             <span className={cn('ml-1.5', scheme.trendColor)}>{trend.label}</span>

@@ -8,6 +8,8 @@ export interface EquipeMember {
   id: string
   nome: string
   horas: number
+  horasCobraveis: number
+  horasNaoCobraveis: number
   cor: string
 }
 
@@ -94,10 +96,10 @@ export function useDashboardPerformance() {
         parcelasResult,
         parcelasPendentesResult,
       ] = await Promise.all([
-        // Timesheet do mês agrupado por usuário
+        // Timesheet do mês agrupado por usuário (com campo faturavel)
         supabase
           .from('financeiro_timesheet')
-          .select('user_id, horas')
+          .select('user_id, horas, faturavel')
           .eq('escritorio_id', escritorioAtivo)
           .gte('data_trabalho', inicioMes.toISOString().split('T')[0]),
 
@@ -135,11 +137,20 @@ export function useDashboardPerformance() {
           .in('status', ['pendente', 'atrasado', 'pago', 'parcial']),
       ])
 
-      // Processar horas por membro da equipe
-      const horasPorUsuario: Record<string, number> = {}
-      timesheetResult.data?.forEach((ts: { user_id: string | null; horas: number | null }) => {
+      // Processar horas por membro da equipe (separando cobráveis e não cobráveis)
+      const horasPorUsuario: Record<string, { total: number; cobraveis: number; naoCobraveis: number }> = {}
+      timesheetResult.data?.forEach((ts: { user_id: string | null; horas: number | null; faturavel: boolean | null }) => {
         if (ts.user_id) {
-          horasPorUsuario[ts.user_id] = (horasPorUsuario[ts.user_id] || 0) + Number(ts.horas || 0)
+          if (!horasPorUsuario[ts.user_id]) {
+            horasPorUsuario[ts.user_id] = { total: 0, cobraveis: 0, naoCobraveis: 0 }
+          }
+          const horas = Number(ts.horas || 0)
+          horasPorUsuario[ts.user_id].total += horas
+          if (ts.faturavel !== false) {
+            horasPorUsuario[ts.user_id].cobraveis += horas
+          } else {
+            horasPorUsuario[ts.user_id].naoCobraveis += horas
+          }
         }
       })
 
@@ -157,12 +168,17 @@ export function useDashboardPerformance() {
 
       // Criar lista de equipe com TODOS os membros (incluindo os sem horas)
       const equipe: EquipeMember[] = todosUsuariosIds
-        .map((odUserId, index) => ({
-          id: odUserId,
-          nome: profilesMap[odUserId] || 'Membro',
-          horas: Math.round((horasPorUsuario[odUserId] || 0) * 10) / 10,
-          cor: cores[index % cores.length],
-        }))
+        .map((odUserId, index) => {
+          const userHoras = horasPorUsuario[odUserId] || { total: 0, cobraveis: 0, naoCobraveis: 0 }
+          return {
+            id: odUserId,
+            nome: profilesMap[odUserId] || 'Membro',
+            horas: Math.round(userHoras.total * 10) / 10,
+            horasCobraveis: Math.round(userHoras.cobraveis * 10) / 10,
+            horasNaoCobraveis: Math.round(userHoras.naoCobraveis * 10) / 10,
+            cor: cores[index % cores.length],
+          }
+        })
         .sort((a, b) => b.horas - a.horas)
 
       const totalHorasEquipe = equipe.reduce((acc, m) => acc + m.horas, 0)

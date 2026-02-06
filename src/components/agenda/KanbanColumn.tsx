@@ -5,14 +5,17 @@ import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tarefa } from '@/hooks/useTarefas'
 import KanbanTaskCard from './KanbanTaskCard'
+import KanbanAgendaCard, { AgendaCardItem } from './KanbanAgendaCard'
 
 interface KanbanColumnProps {
   titulo: string
   icone: React.ReactNode
   status: 'pendente' | 'em_andamento' | 'concluida'
   tarefas: Tarefa[]
+  agendaItems?: AgendaCardItem[]
   corHeader: string
   onClickTarefa: (tarefa: Tarefa) => void
+  onClickAgendaItem?: (item: AgendaCardItem) => void
   onCreateTarefa?: () => void
 }
 
@@ -21,8 +24,10 @@ export default function KanbanColumn({
   icone,
   status,
   tarefas,
+  agendaItems = [],
   corHeader,
   onClickTarefa,
+  onClickAgendaItem,
   onCreateTarefa,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
@@ -33,6 +38,8 @@ export default function KanbanColumn({
     },
   })
 
+  const totalItems = tarefas.length + agendaItems.length
+
   return (
     <div className="flex flex-col h-full bg-white rounded-lg border border-slate-200 overflow-hidden">
       {/* Header */}
@@ -41,7 +48,7 @@ export default function KanbanColumn({
           {icone}
           <span className="font-semibold text-sm">{titulo}</span>
           <span className="ml-auto text-xs bg-white/20 px-2 py-0.5 rounded-full font-medium">
-            {tarefas.length}
+            {totalItems}
           </span>
         </div>
       </div>
@@ -54,22 +61,32 @@ export default function KanbanColumn({
           isOver && 'bg-blue-50 border-2 border-dashed border-blue-400 rounded-md'
         )}
       >
+        {/* Agenda items (compromissos/audiências) - não-draggable, aparecem primeiro */}
+        {agendaItems.map((item) => (
+          <KanbanAgendaCard
+            key={item.id}
+            item={item}
+            onClick={() => onClickAgendaItem?.(item)}
+          />
+        ))}
+
+        {/* Tarefas - draggable */}
         {tarefas.map((tarefa) => (
           <KanbanTaskCard key={tarefa.id} tarefa={tarefa} onClick={() => onClickTarefa(tarefa)} />
         ))}
 
-        {tarefas.length === 0 && !isOver && (
+        {totalItems === 0 && !isOver && (
           <div className="flex items-center justify-center h-32 text-center text-slate-400 text-sm">
             <div>
               <div className="mb-2 text-slate-300">
                 {icone}
               </div>
-              Nenhuma tarefa {titulo.toLowerCase()}
+              Nenhum item {titulo.toLowerCase()}
             </div>
           </div>
         )}
 
-        {isOver && tarefas.length === 0 && (
+        {isOver && totalItems === 0 && (
           <div className="flex items-center justify-center h-32 text-center text-blue-500 text-sm font-medium">
             Solte aqui para mover
           </div>

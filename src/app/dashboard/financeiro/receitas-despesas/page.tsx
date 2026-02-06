@@ -162,9 +162,12 @@ export default function ExtratoFinanceiroPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
-  // Filtros
-  const [tipoFiltro, setTipoFiltro] = useState<'todos' | 'receita' | 'despesa' | 'transferencia'>('todos')
-  const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pendente' | 'vencido' | 'efetivado'>('todos')
+  // Filtros - ler status da URL se disponível (ex: ?status=vencido vindo do card Atenção Imediata)
+  const statusUrl = searchParams.get('status')
+  const statusInicial = (statusUrl === 'vencido' || statusUrl === 'pendente' || statusUrl === 'efetivado') ? statusUrl : 'todos'
+
+  const [tipoFiltro, setTipoFiltro] = useState<'todos' | 'receita' | 'despesa' | 'transferencia'>(statusUrl ? 'receita' : 'todos')
+  const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pendente' | 'vencido' | 'efetivado'>(statusInicial)
   const [contaFiltro, setContaFiltro] = useState<string>('todas')  // 'todas' ou ID da conta
 
   // Filtro de período - padrão: mês atual
@@ -261,15 +264,6 @@ export default function ExtratoFinanceiroPage() {
   })
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
-
-  // Ler filtro de status da URL (ex: ?status=vencido vindo do card Atenção Imediata)
-  useEffect(() => {
-    const statusParam = searchParams.get('status')
-    if (statusParam === 'vencido' || statusParam === 'pendente' || statusParam === 'efetivado') {
-      setStatusFiltro(statusParam)
-      setTipoFiltro('receita')
-    }
-  }, [searchParams])
 
   // Debounce search
   useEffect(() => {

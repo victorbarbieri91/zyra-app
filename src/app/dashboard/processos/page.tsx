@@ -81,11 +81,14 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 const DEFAULT_PAGE_SIZE = 20
 
 export default function ProcessosPage() {
+  const searchParams = useSearchParams()
+  const initialView = searchParams.get('view') === 'sem_contrato' ? 'sem_contrato' as const : 'todos' as const
+
   const [processos, setProcessos] = useState<Processo[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [currentView, setCurrentView] = useState<'todos' | 'ativos' | 'criticos' | 'meus' | 'arquivados' | 'sem_contrato'>('todos')
+  const [currentView, setCurrentView] = useState<'todos' | 'ativos' | 'criticos' | 'meus' | 'arquivados' | 'sem_contrato'>(initialView)
   const [showFilters, setShowFilters] = useState(false)
 
   // Pagination state
@@ -123,16 +126,7 @@ export default function ProcessosPage() {
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const router = useRouter()
-  const searchParams = useSearchParams()
   const supabase = createClient()
-
-  // Ler filtro da URL (ex: ?view=sem_contrato vindo do card Atenção Imediata)
-  useEffect(() => {
-    const viewParam = searchParams.get('view')
-    if (viewParam === 'sem_contrato') {
-      setCurrentView('sem_contrato')
-    }
-  }, [searchParams])
 
   // TODO: Se precisar abrir wizard automaticamente via ?novo=true,
   // implementar com ref no NovoProcessoDropdown

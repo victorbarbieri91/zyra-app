@@ -57,11 +57,14 @@ import { useUserPreferences } from '@/hooks/useUserPreferences'
 export default function AgendaPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const filtroUrl = searchParams.get('filtro')
+  const filtroInicial = (filtroUrl === 'vencidos' || filtroUrl === 'hoje') ? filtroUrl : null
+
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-  const [viewMode, setViewMode] = useState<'month' | 'week' | 'day' | 'list'>('month')
-  const [viewInitialized, setViewInitialized] = useState(false)
+  const [viewMode, setViewMode] = useState<'month' | 'week' | 'day' | 'list'>(filtroInicial ? 'list' : 'month')
+  const [viewInitialized, setViewInitialized] = useState(!!filtroInicial)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [urlFiltroAtivo, setUrlFiltroAtivo] = useState<'vencidos' | 'hoje' | null>(null)
+  const [urlFiltroAtivo, setUrlFiltroAtivo] = useState<'vencidos' | 'hoje' | null>(filtroInicial)
   const [escritorioId, setEscritorioId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
 
@@ -106,10 +109,10 @@ export default function AgendaPage() {
 
   const [filters, setFilters] = useState({
     tipos: {
-      compromisso: true,
-      audiencia: true,
+      compromisso: !filtroInicial,
+      audiencia: !filtroInicial,
       prazo: true,
-      tarefa: true,
+      tarefa: !filtroInicial ? true : true,
     },
     status: {
       agendado: true,
@@ -126,27 +129,6 @@ export default function AgendaPage() {
       setViewInitialized(true)
     }
   }, [preferencesLoading, preferences.agenda_view_padrao, viewInitialized])
-
-  // Aplicar filtros da URL (ex: ?filtro=vencidos vindo do card Atenção Imediata)
-  useEffect(() => {
-    const filtro = searchParams.get('filtro')
-    if (filtro === 'vencidos' || filtro === 'hoje') {
-      setUrlFiltroAtivo(filtro)
-      // Mostrar apenas prazos e tarefas (que têm prazo_data_limite)
-      setFilters(prev => ({
-        ...prev,
-        tipos: {
-          compromisso: false,
-          audiencia: false,
-          prazo: true,
-          tarefa: true,
-        },
-      }))
-      // Usar modo lista para melhor visualização de prazos
-      setViewMode('list')
-      setViewInitialized(true)
-    }
-  }, [searchParams])
 
   // Buscar escritório ativo ao carregar
   useEffect(() => {
@@ -1083,6 +1065,14 @@ export default function AgendaPage() {
                 onClickTarefa={(tarefa) => {
                   setTarefaSelecionada(tarefa)
                   setTarefaDetailOpen(true)
+                }}
+                onClickEvento={(evento) => {
+                  setEventoSelecionado(evento)
+                  setEventoDetailOpen(true)
+                }}
+                onClickAudiencia={(audiencia) => {
+                  setAudienciaSelecionada(audiencia)
+                  setAudienciaDetailOpen(true)
                 }}
                 onCreateTarefa={(status) => {
                   setTarefaSelecionada(null)

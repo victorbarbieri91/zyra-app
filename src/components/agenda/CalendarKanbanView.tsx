@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react'
 import { DndContext, DragOverlay, DragEndEvent, DragStartEvent, closestCenter } from '@dnd-kit/core'
-import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, ListTodo, PlayCircle, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -10,8 +9,11 @@ import { parseDBDate } from '@/lib/timezone'
 import { format, addDays, subDays, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Tarefa, useTarefas } from '@/hooks/useTarefas'
+import { useEventos, Evento } from '@/hooks/useEventos'
+import { useAudiencias, Audiencia } from '@/hooks/useAudiencias'
 import KanbanColumn from './KanbanColumn'
 import KanbanTaskCard from './KanbanTaskCard'
+import { AgendaCardItem } from './KanbanAgendaCard'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useTimer } from '@/contexts/TimerContext'
@@ -32,8 +34,10 @@ interface CalendarKanbanViewProps {
   selectedDate: Date
   onDateSelect: (date: Date) => void
   onClickTarefa: (tarefa: Tarefa) => void
+  onClickEvento?: (evento: Evento) => void
+  onClickAudiencia?: (audiencia: Audiencia) => void
   onCreateTarefa: (status: 'pendente' | 'em_andamento' | 'concluida') => void
-  onTaskComplete?: (tarefaId: string) => void // Callback externo para conclusão (abre modal de horas)
+  onTaskComplete?: (tarefaId: string) => void
   className?: string
 }
 
@@ -43,12 +47,16 @@ export default function CalendarKanbanView({
   selectedDate,
   onDateSelect,
   onClickTarefa,
+  onClickEvento,
+  onClickAudiencia,
   onCreateTarefa,
   onTaskComplete,
   className,
 }: CalendarKanbanViewProps) {
   const supabase = createClient()
   const { tarefas: todasTarefas, refreshTarefas: refetchTarefas } = useTarefas(escritorioId)
+  const { eventos: todosEventos } = useEventos(escritorioId)
+  const { audiencias: todasAudiencias } = useAudiencias(escritorioId)
   const [activeTarefa, setActiveTarefa] = useState<Tarefa | null>(null)
 
   // Hook de timers para automação
@@ -188,6 +196,86 @@ export default function CalendarKanbanView({
     }
   }, [todasTarefas, selectedDate, userId])
 
+  // Filtrar eventos e audiências do dia e mapear para colunas
+  const { eventosPendentes, eventosRealizados, audienciasPendentes, audienciasRealizadas } = useMemo(() => {
+    // Eventos do dia (filtrar por responsáveis se userId disponível)
+    const eventosDoDia = (todosEventos || []).filter((evento) => {
+      const eventoDate = parseDBDate(evento.data_inicio)
+      if (!isSameDay(eventoDate, selectedDate)) return false
+      if (userId && evento.responsaveis_ids?.length > 0 && !evento.responsaveis_ids.includes(userId)) return false
+      if (evento.status === 'cancelado') return false
+      return true
+    })
+
+    // Audiências do dia (filtrar por responsáveis se userId disponível)
+    const audienciasDoDia = (todasAudiencias || []).filter((audiencia) => {
+      const audienciaDate = parseDBDate(audiencia.data_hora)
+      if (!isSameDay(audienciaDate, selectedDate)) return false
+      if (userId && audiencia.responsaveis_ids?.length > 0 && !audiencia.responsaveis_ids.includes(userId)) return false
+      if (audiencia.status === 'cancelada') return false
+      return true
+    })
+
+    return {
+      eventosPendentes: eventosDoDia.filter(e => e.status !== 'realizado'),
+      eventosRealizados: eventosDoDia.filter(e => e.status === 'realizado'),
+      audienciasPendentes: audienciasDoDia.filter(a => a.status !== 'realizada'),
+      audienciasRealizadas: audienciasDoDia.filter(a => a.status === 'realizada'),
+    }
+  }, [todosEventos, todasAudiencias, selectedDate, userId])
+
+  // Converter eventos para AgendaCardItem
+  const mapEventoToCard = (evento: Evento): AgendaCardItem => ({
+    id: evento.id,
+    tipo: 'evento',
+    titulo: evento.titulo,
+    descricao: evento.descricao,
+    data_inicio: evento.data_inicio,
+    data_fim: evento.data_fim,
+    dia_inteiro: evento.dia_inteiro,
+    local: evento.local,
+    status: evento.status || 'agendado',
+    responsavel_nome: (evento as any).responsavel_nome,
+    processo_id: evento.processo_id,
+    consultivo_id: evento.consultivo_id,
+  })
+
+  const mapAudienciaToCard = (audiencia: Audiencia): AgendaCardItem => ({
+    id: audiencia.id,
+    tipo: 'audiencia',
+    titulo: audiencia.titulo,
+    descricao: audiencia.observacoes,
+    data_inicio: audiencia.data_hora,
+    local: audiencia.forum || audiencia.tribunal || audiencia.link_virtual || undefined,
+    status: audiencia.status,
+    responsavel_nome: audiencia.responsavel_nome,
+    processo_id: audiencia.processo_id,
+    consultivo_id: audiencia.consultivo_id,
+    subtipo: audiencia.tipo_audiencia,
+  })
+
+  // Items de agenda para cada coluna
+  const agendaPendente: AgendaCardItem[] = [
+    ...eventosPendentes.map(mapEventoToCard),
+    ...audienciasPendentes.map(mapAudienciaToCard),
+  ]
+
+  const agendaConcluida: AgendaCardItem[] = [
+    ...eventosRealizados.map(mapEventoToCard),
+    ...audienciasRealizadas.map(mapAudienciaToCard),
+  ]
+
+  // Handler para click em agenda item
+  const handleClickAgendaItem = (item: AgendaCardItem) => {
+    if (item.tipo === 'evento') {
+      const evento = todosEventos?.find(e => e.id === item.id)
+      if (evento && onClickEvento) onClickEvento(evento)
+    } else if (item.tipo === 'audiencia') {
+      const audiencia = todasAudiencias?.find(a => a.id === item.id)
+      if (audiencia && onClickAudiencia) onClickAudiencia(audiencia)
+    }
+  }
+
   // Handlers de Drag-and-Drop
   const handleDragStart = (event: DragStartEvent) => {
     const tarefa = todasTarefas?.find((t) => t.id === event.active.id)
@@ -303,6 +391,8 @@ export default function CalendarKanbanView({
   }
 
   const totalTarefas = pendente.length + em_andamento.length + concluida.length
+  const totalAgenda = agendaPendente.length + agendaConcluida.length
+  const totalItems = totalTarefas + totalAgenda
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -333,9 +423,9 @@ export default function CalendarKanbanView({
         </div>
 
         <div className="flex items-center gap-2">
-          {totalTarefas > 0 && (
+          {totalItems > 0 && (
             <span className="text-sm text-slate-600">
-              {totalTarefas} {totalTarefas === 1 ? 'tarefa' : 'tarefas'}
+              {totalItems} {totalItems === 1 ? 'item' : 'itens'}
             </span>
           )}
           <Button
@@ -361,8 +451,10 @@ export default function CalendarKanbanView({
             icone={<ListTodo className="w-4 h-4" />}
             status="pendente"
             tarefas={pendente}
+            agendaItems={agendaPendente}
             corHeader="bg-gradient-to-r from-[#34495e] to-[#46627f]"
             onClickTarefa={onClickTarefa}
+            onClickAgendaItem={handleClickAgendaItem}
             onCreateTarefa={() => onCreateTarefa('pendente')}
           />
 
@@ -373,6 +465,7 @@ export default function CalendarKanbanView({
             tarefas={em_andamento}
             corHeader="bg-gradient-to-r from-[#89bcbe] to-[#aacfd0]"
             onClickTarefa={onClickTarefa}
+            onClickAgendaItem={handleClickAgendaItem}
           />
 
           <KanbanColumn
@@ -380,8 +473,10 @@ export default function CalendarKanbanView({
             icone={<CheckCircle2 className="w-4 h-4" />}
             status="concluida"
             tarefas={concluida}
+            agendaItems={agendaConcluida}
             corHeader="bg-gradient-to-r from-emerald-500 to-emerald-600"
             onClickTarefa={onClickTarefa}
+            onClickAgendaItem={handleClickAgendaItem}
           />
         </div>
 

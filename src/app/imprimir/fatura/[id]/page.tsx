@@ -143,6 +143,9 @@ export default function FaturaImprimirPage() {
     return a.data_trabalho.localeCompare(b.data_trabalho)
   })
 
+  // Total de itens na tabela principal (não-timesheet + 1 consolidado se tiver timesheet)
+  const totalLinhasTabela = nonTimesheetItens.length + (hasTimesheet ? 1 : 0)
+
   // Montar itens para a tabela principal (não-timesheet individuais + timesheet consolidado)
   const renderMainTableItems = () => {
     const rows: React.ReactElement[] = []
@@ -156,26 +159,20 @@ export default function FaturaImprimirPage() {
           key={item.id}
           className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
         >
-          <td className="py-2 px-3">
-            <p className="font-medium text-[#34495e] print-text-sm">{item.descricao}</p>
-            {/* Título do caso */}
+          <td className="py-1.5 px-2">
+            <p className="text-[11px] font-medium text-[#34495e] leading-snug">{item.descricao}</p>
             {item.caso_titulo && (
-              <p className="mt-0.5 text-xs print-text-xs text-slate-500 italic">
+              <p className="mt-0.5 text-[10px] text-slate-400 italic leading-snug">
                 {item.caso_titulo}
               </p>
             )}
           </td>
-          <td className="py-2 px-3 text-center text-slate-600 print-text-sm">
+          <td className="py-1.5 px-2 text-center text-[11px] text-slate-600">
             {item.tipo_item === 'pasta'
               ? (item.quantidade ? `${item.quantidade} proc.` : 1)
               : (item.quantidade || 1)}
           </td>
-          <td className="py-2 px-3 text-right text-slate-600 print-text-sm">
-            {item.valor_unitario
-              ? formatCurrency(Number(item.valor_unitario))
-              : '-'}
-          </td>
-          <td className="py-2 px-3 text-right font-semibold text-[#34495e] print-text-sm">
+          <td className="py-1.5 px-2 text-right text-[11px] font-semibold text-[#34495e]">
             {formatCurrency(Number(item.valor_total))}
           </td>
         </tr>
@@ -186,27 +183,32 @@ export default function FaturaImprimirPage() {
     if (hasTimesheet) {
       const idx = rowIndex++
       const descricaoConsolidada = periodoInicio && periodoFim
-        ? `Timesheet - Serviço prestado do período de ${formatBrazilDate(periodoInicio)} a ${formatBrazilDate(periodoFim)}`
+        ? `Timesheet - Horas trabalhadas`
         : 'Timesheet - Horas trabalhadas'
+      const periodoTexto = periodoInicio && periodoFim
+        ? `Período: ${formatBrazilDate(periodoInicio)} a ${formatBrazilDate(periodoFim)}`
+        : null
 
       rows.push(
         <tr
           key="timesheet-consolidado"
           className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
         >
-          <td className="py-2 px-3">
-            <p className="font-medium text-[#34495e] print-text-sm">{descricaoConsolidada}</p>
-            <p className="mt-0.5 text-xs print-text-xs text-slate-400 italic">
+          <td className="py-1.5 px-2">
+            <p className="text-[11px] font-medium text-[#34495e] leading-snug">{descricaoConsolidada}</p>
+            {periodoTexto && (
+              <p className="text-[10px] text-slate-500 leading-snug">
+                {periodoTexto}
+              </p>
+            )}
+            <p className="text-[10px] text-slate-400 italic leading-snug">
               (Ver Anexo - Detalhamento de Horas)
             </p>
           </td>
-          <td className="py-2 px-3 text-center text-slate-600 print-text-sm">
+          <td className="py-1.5 px-2 text-center text-[11px] text-slate-600">
             {formatHoras(totalHorasTimesheet, 'curto')}
           </td>
-          <td className="py-2 px-3 text-right text-slate-600 print-text-sm">
-            -
-          </td>
-          <td className="py-2 px-3 text-right font-semibold text-[#34495e] print-text-sm">
+          <td className="py-1.5 px-2 text-right text-[11px] font-semibold text-[#34495e]">
             {formatCurrency(totalValorTimesheet)}
           </td>
         </tr>
@@ -236,7 +238,7 @@ export default function FaturaImprimirPage() {
             print-color-adjust: exact !important;
             margin: 0;
             padding: 0;
-            font-size: 11pt !important;
+            font-size: 9pt !important;
           }
 
           .print-hidden {
@@ -269,107 +271,107 @@ export default function FaturaImprimirPage() {
           }
 
           .print-logo {
-            max-height: 60px !important;
-            max-width: 180px !important;
+            max-height: 50px !important;
+            max-width: 160px !important;
           }
 
           .print-title-box {
-            padding: 0.6rem 1.5rem !important;
-            margin-bottom: 1rem !important;
+            padding: 0.4rem 1rem !important;
+            margin-bottom: 0.6rem !important;
           }
 
           .print-title-small {
-            font-size: 10pt !important;
+            font-size: 7pt !important;
           }
 
           .print-title-main {
-            font-size: 16pt !important;
+            font-size: 13pt !important;
           }
 
           .print-section {
-            margin-bottom: 0.8rem !important;
-            padding-bottom: 0.5rem !important;
+            margin-bottom: 0.5rem !important;
+            padding-bottom: 0.3rem !important;
           }
 
           .print-header-section {
-            margin-bottom: 0.6rem !important;
-            padding-bottom: 0.5rem !important;
+            margin-bottom: 0.4rem !important;
+            padding-bottom: 0.3rem !important;
           }
 
           .print-text-base {
-            font-size: 10pt !important;
+            font-size: 8.5pt !important;
           }
 
           .print-text-sm {
-            font-size: 9pt !important;
-          }
-
-          .print-text-xs {
             font-size: 8pt !important;
           }
 
+          .print-text-xs {
+            font-size: 7pt !important;
+          }
+
           .print-text-lg {
-            font-size: 11pt !important;
+            font-size: 9pt !important;
           }
 
           .print-text-xl {
-            font-size: 12pt !important;
+            font-size: 10pt !important;
           }
 
           .print-text-2xl {
-            font-size: 14pt !important;
+            font-size: 11pt !important;
           }
 
           .print-compact-table th,
           .print-compact-table td {
-            padding: 0.4rem 0.5rem !important;
-            font-size: 9pt !important;
+            padding: 0.2rem 0.3rem !important;
+            font-size: 8pt !important;
           }
 
           .print-totals {
-            width: 220px !important;
+            width: 200px !important;
           }
 
           .print-totals-item {
-            font-size: 9pt !important;
+            font-size: 8pt !important;
           }
 
           .print-totals-main {
-            font-size: 11pt !important;
+            font-size: 9pt !important;
           }
 
           .print-totals-value {
-            font-size: 13pt !important;
+            font-size: 11pt !important;
           }
 
           .print-obs {
-            padding: 0.5rem !important;
-            margin-bottom: 0.5rem !important;
+            padding: 0.4rem !important;
+            margin-bottom: 0.4rem !important;
           }
 
           .print-footer {
-            margin-top: 0.5rem !important;
-            padding-top: 0.3rem !important;
+            margin-top: 0.3rem !important;
+            padding-top: 0.2rem !important;
           }
 
           .print-footer p {
-            font-size: 7pt !important;
+            font-size: 6.5pt !important;
           }
 
           /* Anexo de horas */
           .print-anexo-table th,
           .print-anexo-table td {
-            padding: 0.25rem 0.4rem !important;
-            font-size: 8pt !important;
+            padding: 0.15rem 0.3rem !important;
+            font-size: 7pt !important;
           }
 
           .print-anexo-title {
-            font-size: 11pt !important;
-            padding: 0.4rem 1rem !important;
+            font-size: 9pt !important;
+            padding: 0.3rem 0.8rem !important;
           }
 
           .print-anexo-subtitle {
-            font-size: 8pt !important;
+            font-size: 7pt !important;
           }
         }
 
@@ -410,9 +412,9 @@ export default function FaturaImprimirPage() {
         {/* Area do Papel */}
         <div className="py-8 px-4 print:py-0 print:px-0">
           <div className="paper-preview print-card">
-            <div className="p-10 print:p-4 flex flex-col min-h-[inherit]">
+            <div className="p-8 print:p-4 flex flex-col min-h-[inherit]">
               {/* Cabecalho: Logo + Emitente */}
-              <div className="mb-6 print-header-section flex items-center justify-between gap-8 pb-4 border-b border-slate-200">
+              <div className="mb-6 print-header-section flex items-center justify-between gap-6 pb-4 border-b border-slate-200">
                 {escritorio.logo_url && (
                   <div className="flex-shrink-0">
                     <img
@@ -423,24 +425,24 @@ export default function FaturaImprimirPage() {
                   </div>
                 )}
                 <div className="text-right flex-shrink-0">
-                  <h3 className="text-xs print-text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">
+                  <h3 className="text-[10px] print-text-xs font-bold text-slate-400 uppercase tracking-wide mb-0.5">
                     Emitente
                   </h3>
-                  <p className="text-base print-text-base font-semibold text-[#34495e]">
+                  <p className="text-sm print-text-base font-semibold text-[#34495e]">
                     {escritorio.nome}
                   </p>
                   {escritorio.cnpj && (
-                    <p className="text-sm print-text-sm text-slate-600 mt-0.5">
+                    <p className="text-xs print-text-sm text-slate-600 mt-0.5">
                       CNPJ: {formatCNPJ(escritorio.cnpj)}
                     </p>
                   )}
                   {escritorio.endereco && (
-                    <p className="text-xs print-text-xs text-slate-500 mt-1 leading-relaxed max-w-[280px] ml-auto">
+                    <p className="text-[10px] print-text-xs text-slate-500 mt-0.5 leading-relaxed max-w-[260px] ml-auto">
                       {formatEndereco(escritorio.endereco)}
                     </p>
                   )}
                   {(escritorio.telefone || escritorio.email) && (
-                    <div className="text-xs print-text-xs text-slate-500 mt-0.5 space-y-0">
+                    <div className="text-[10px] print-text-xs text-slate-500 mt-0.5 space-y-0">
                       {escritorio.telefone && <p>Tel: {escritorio.telefone}</p>}
                       {escritorio.email && <p>{escritorio.email}</p>}
                     </div>
@@ -449,58 +451,58 @@ export default function FaturaImprimirPage() {
               </div>
 
               {/* Titulo da Fatura */}
-              <div className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white py-5 px-8 print-title-box rounded-lg mb-8 print-section text-center">
-                <p className="text-sm print-title-small uppercase tracking-widest text-white/80 mb-1">
+              <div className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white py-3 px-6 print-title-box rounded-lg mb-7 print-section text-center">
+                <p className="text-[10px] print-title-small uppercase tracking-widest text-white/80 mb-0.5">
                   Fatura de Honorarios
                 </p>
-                <h2 className="text-3xl print-title-main font-bold tracking-wide text-white">
+                <h2 className="text-2xl print-title-main font-bold tracking-wide text-white">
                   {fatura.numero_fatura}
                 </h2>
               </div>
 
               {/* Destinatario e Datas */}
-              <div className="grid grid-cols-2 gap-8 mb-8 print-section pb-4 border-b border-slate-200 print-break-inside-avoid">
+              <div className="grid grid-cols-2 gap-6 mb-7 print-section pb-4 border-b border-slate-200 print-break-inside-avoid">
                 <div>
-                  <h3 className="text-xs print-text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">
+                  <h3 className="text-[10px] print-text-xs font-bold text-slate-400 uppercase tracking-wide mb-0.5">
                     Destinatario
                   </h3>
-                  <p className="text-base print-text-base font-semibold text-[#34495e]">
+                  <p className="text-sm print-text-base font-semibold text-[#34495e]">
                     {cliente.nome_completo}
                   </p>
                   {cliente.nome_fantasia && (
-                    <p className="text-sm print-text-sm text-slate-600">{cliente.nome_fantasia}</p>
+                    <p className="text-xs print-text-sm text-slate-600">{cliente.nome_fantasia}</p>
                   )}
                   {cliente.cpf_cnpj && (
-                    <p className="text-sm print-text-sm text-slate-600 mt-0.5">
+                    <p className="text-xs print-text-sm text-slate-600 mt-0.5">
                       {cliente.tipo_pessoa === 'pf' ? 'CPF' : 'CNPJ'}:{' '}
                       {formatCPFCNPJ(cliente.cpf_cnpj, cliente.tipo_pessoa)}
                     </p>
                   )}
                   {cliente.logradouro && (
-                    <p className="text-xs print-text-xs text-slate-500 mt-1 leading-relaxed">
+                    <p className="text-[10px] print-text-xs text-slate-500 mt-0.5 leading-relaxed">
                       {formatEnderecoCliente(cliente)}
                     </p>
                   )}
                   {cliente.email_principal && (
-                    <p className="text-xs print-text-xs text-slate-500 mt-0.5">
+                    <p className="text-[10px] print-text-xs text-slate-500 mt-0.5">
                       {cliente.email_principal}
                     </p>
                   )}
                 </div>
                 <div className="text-right">
-                  <div className="mb-3">
-                    <p className="text-xs print-text-xs font-bold text-slate-500 uppercase tracking-wide">
+                  <div className="mb-2">
+                    <p className="text-[10px] print-text-xs font-bold text-slate-400 uppercase tracking-wide">
                       Data de Emissao
                     </p>
-                    <p className="text-lg print-text-lg font-semibold text-[#34495e]">
+                    <p className="text-sm print-text-lg font-semibold text-[#34495e]">
                       {formatBrazilDateLong(fatura.data_emissao)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs print-text-xs font-bold text-slate-500 uppercase tracking-wide">
+                    <p className="text-[10px] print-text-xs font-bold text-slate-400 uppercase tracking-wide">
                       Data de Vencimento
                     </p>
-                    <p className="text-xl print-text-xl font-bold text-[#1E3A8A]">
+                    <p className="text-base print-text-xl font-bold text-[#1E3A8A]">
                       {formatBrazilDateLong(fatura.data_vencimento)}
                     </p>
                   </div>
@@ -508,18 +510,17 @@ export default function FaturaImprimirPage() {
               </div>
 
               {/* Discriminacao dos Servicos */}
-              <div className="mb-6 print-section print-break-inside-avoid">
-                <h3 className="text-sm print-text-sm font-bold text-[#34495e] uppercase tracking-wide mb-3 pb-1 border-b-2 border-[#89bcbe]">
+              <div className="mb-2 print-section print-break-inside-avoid">
+                <h3 className="text-xs print-text-sm font-bold text-[#34495e] uppercase tracking-wide mb-3 pb-1 border-b-2 border-[#89bcbe]">
                   Discriminacao dos Servicos
                 </h3>
 
                 <table className="w-full print-compact-table">
                   <thead>
-                    <tr className="bg-slate-100 text-xs print-text-xs font-bold text-slate-600 uppercase">
-                      <th className="py-2 px-3 text-left w-[55%]">Descricao</th>
-                      <th className="py-2 px-3 text-center w-[15%]">Qtd</th>
-                      <th className="py-2 px-3 text-right w-[15%]">Unitario</th>
-                      <th className="py-2 px-3 text-right w-[15%]">Total</th>
+                    <tr className="bg-slate-100 text-[10px] print-text-xs font-bold text-slate-500 uppercase">
+                      <th className="py-1.5 px-2 text-left w-[65%]">Descricao</th>
+                      <th className="py-1.5 px-2 text-center w-[15%]">Qtd</th>
+                      <th className="py-1.5 px-2 text-right w-[20%]">Valor</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -528,38 +529,43 @@ export default function FaturaImprimirPage() {
                 </table>
               </div>
 
+              {/* Espaço reservado - garante respiro entre itens e total quando poucos itens */}
+              {totalLinhasTabela <= 5 && (
+                <div className="min-h-[140px] print:min-h-[100px]" />
+              )}
+
               {/* Totais */}
               <div className="flex justify-end mb-6 print-section print-break-inside-avoid">
-                <div className="w-80 print-totals space-y-1">
+                <div className="w-64 print-totals space-y-0.5">
                   {totais.subtotal_honorarios > 0 && (
-                    <div className="flex justify-between text-sm print-totals-item">
-                      <span className="text-slate-600">Subtotal Honorarios:</span>
-                      <span className="font-medium">
+                    <div className="flex justify-between text-xs print-totals-item">
+                      <span className="text-slate-500">Subtotal Honorarios:</span>
+                      <span className="font-medium text-slate-700">
                         {formatCurrency(totais.subtotal_honorarios)}
                       </span>
                     </div>
                   )}
                   {totais.subtotal_horas > 0 && (
-                    <div className="flex justify-between text-sm print-totals-item">
-                      <span className="text-slate-600">
+                    <div className="flex justify-between text-xs print-totals-item">
+                      <span className="text-slate-500">
                         Subtotal Horas ({formatHoras(totais.soma_horas, 'curto')}):
                       </span>
-                      <span className="font-medium">
+                      <span className="font-medium text-slate-700">
                         {formatCurrency(totais.subtotal_horas)}
                       </span>
                     </div>
                   )}
                   {totais.subtotal_despesas > 0 && (
-                    <div className="flex justify-between text-sm print-totals-item">
-                      <span className="text-slate-600">Subtotal Despesas:</span>
-                      <span className="font-medium">
+                    <div className="flex justify-between text-xs print-totals-item">
+                      <span className="text-slate-500">Subtotal Despesas:</span>
+                      <span className="font-medium text-slate-700">
                         {formatCurrency(totais.subtotal_despesas)}
                       </span>
                     </div>
                   )}
-                  <div className="flex justify-between pt-2 border-t-2 border-[#34495e]">
-                    <span className="text-lg print-totals-main font-bold text-[#34495e]">VALOR TOTAL:</span>
-                    <span className="text-2xl print-totals-value font-bold text-[#1E3A8A]">
+                  <div className="flex justify-between items-baseline pt-2 mt-1 border-t-2 border-[#34495e]">
+                    <span className="text-sm print-totals-main font-bold text-[#34495e] uppercase">Valor Total:</span>
+                    <span className="text-xl print-totals-value font-bold text-[#1E3A8A]">
                       {formatCurrency(totais.valor_total)}
                     </span>
                   </div>
@@ -568,11 +574,11 @@ export default function FaturaImprimirPage() {
 
               {/* Observacoes */}
               {fatura.observacoes && (
-                <div className="mb-6 print-obs p-4 bg-slate-50 rounded-lg border border-slate-200 print-break-inside-avoid">
-                  <h4 className="text-xs print-text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">
+                <div className="mb-4 print-obs p-3 bg-slate-50 rounded-lg border border-slate-200 print-break-inside-avoid">
+                  <h4 className="text-[10px] print-text-xs font-bold text-slate-400 uppercase tracking-wide mb-0.5">
                     Observacoes
                   </h4>
-                  <p className="text-sm print-text-sm text-slate-700 whitespace-pre-line leading-relaxed">
+                  <p className="text-xs print-text-sm text-slate-700 whitespace-pre-line leading-relaxed">
                     {fatura.observacoes}
                   </p>
                 </div>
@@ -582,11 +588,11 @@ export default function FaturaImprimirPage() {
               <div className="flex-1" />
 
               {/* Rodape */}
-              <footer className="mt-8 print-footer pt-3 border-t border-slate-200 text-center">
-                <p className="text-xs print-text-xs text-slate-400">
+              <footer className="mt-6 print-footer pt-2 border-t border-slate-200 text-center">
+                <p className="text-[10px] print-text-xs text-slate-400">
                   Documento gerado em {formatBrazilDateTime(new Date())}
                 </p>
-                <p className="text-xs print-text-xs text-slate-400 mt-0.5">
+                <p className="text-[10px] print-text-xs text-slate-400 mt-0.5">
                   Sistema Zyra Legal
                 </p>
               </footer>
@@ -598,25 +604,25 @@ export default function FaturaImprimirPage() {
           {/* ============================================ */}
           {hasTimesheet && (
             <div className="paper-preview print-card mt-8 print:mt-0 print-page-break-before">
-              <div className="p-10 print:p-4 flex flex-col min-h-[inherit]">
+              <div className="p-8 print:p-4 flex flex-col min-h-[inherit]">
                 {/* Header do Anexo */}
-                <div className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white py-4 px-6 print-anexo-title rounded-lg mb-6 text-center">
-                  <p className="text-xs print-text-xs uppercase tracking-widest text-white/80 mb-1">
+                <div className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white py-3 px-5 print-anexo-title rounded-lg mb-4 text-center">
+                  <p className="text-[10px] print-text-xs uppercase tracking-widest text-white/80 mb-0.5">
                     Anexo - Detalhamento de Horas Trabalhadas
                   </p>
-                  <p className="text-base print-anexo-subtitle font-semibold text-white">
+                  <p className="text-sm print-anexo-subtitle font-semibold text-white">
                     {fatura.numero_fatura}
                     {periodoInicio && periodoFim && (
                       <span className="font-normal text-white/80">
-                        {' '}| Período: {formatBrazilDate(periodoInicio)} a {formatBrazilDate(periodoFim)}
+                        {' '}| Periodo: {formatBrazilDate(periodoInicio)} a {formatBrazilDate(periodoFim)}
                       </span>
                     )}
                   </p>
                 </div>
 
                 {/* Info do cliente no anexo */}
-                <div className="mb-4 pb-3 border-b border-slate-200">
-                  <p className="text-xs print-text-xs text-slate-500">
+                <div className="mb-3 pb-2 border-b border-slate-200">
+                  <p className="text-[10px] print-text-xs text-slate-500">
                     Cliente: <span className="font-semibold text-[#34495e]">{cliente.nome_completo}</span>
                   </p>
                 </div>
@@ -624,13 +630,13 @@ export default function FaturaImprimirPage() {
                 {/* Tabela de Detalhamento */}
                 <table className="w-full print-anexo-table">
                   <thead>
-                    <tr className="bg-slate-100 text-[10px] print-text-xs font-bold text-slate-600 uppercase">
-                      <th className="py-2 px-2 text-left w-[10%]">Data</th>
-                      <th className="py-2 px-2 text-left w-[28%]">Descricao</th>
-                      <th className="py-2 px-2 text-left w-[24%]">Caso</th>
-                      <th className="py-2 px-2 text-center w-[10%]">Horas</th>
-                      <th className="py-2 px-2 text-left w-[16%]">Profissional</th>
-                      <th className="py-2 px-2 text-right w-[12%]">Valor</th>
+                    <tr className="bg-slate-100 text-[9px] print-text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      <th className="py-1.5 px-1.5 text-left w-[9%]">Data</th>
+                      <th className="py-1.5 px-1.5 text-left w-[32%]">Descricao</th>
+                      <th className="py-1.5 px-1.5 text-left w-[22%]">Caso</th>
+                      <th className="py-1.5 px-1.5 text-center w-[7%]">Horas</th>
+                      <th className="py-1.5 px-1.5 text-left w-[18%]">Profissional</th>
+                      <th className="py-1.5 px-1.5 text-right w-[12%]">Valor</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -638,61 +644,61 @@ export default function FaturaImprimirPage() {
                       <tr
                         key={item.id}
                         className={`border-b border-slate-100 ${
-                          index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'
+                          index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'
                         }`}
                       >
                         {/* Data */}
-                        <td className="py-1.5 px-2 text-xs print-text-xs text-slate-600 align-top">
+                        <td className="py-1 px-1.5 text-[10px] print-text-xs text-slate-600 align-top whitespace-nowrap">
                           {item.data_trabalho
                             ? formatBrazilDate(item.data_trabalho)
                             : '-'}
                         </td>
 
                         {/* Descrição */}
-                        <td className="py-1.5 px-2 align-top">
-                          <p className="text-xs print-text-xs font-medium text-[#34495e] leading-snug">
+                        <td className="py-1 px-1.5 align-top">
+                          <p className="text-[10px] print-text-xs text-[#34495e] leading-snug">
                             {item.descricao}
                           </p>
                         </td>
 
                         {/* Caso (título) */}
-                        <td className="py-1.5 px-2 align-top">
+                        <td className="py-1 px-1.5 align-top">
                           {item.caso_titulo ? (
-                            <p className="text-xs print-text-xs text-slate-600 leading-snug">
+                            <p className="text-[10px] print-text-xs text-slate-500 leading-snug">
                               {item.caso_titulo}
                             </p>
                           ) : (
-                            <p className="text-xs print-text-xs text-slate-400">-</p>
+                            <p className="text-[10px] print-text-xs text-slate-300">-</p>
                           )}
                         </td>
 
                         {/* Horas */}
-                        <td className="py-1.5 px-2 text-center text-xs print-text-xs text-slate-600 font-medium align-top">
+                        <td className="py-1 px-1.5 text-center text-[10px] print-text-xs text-slate-600 font-medium align-top whitespace-nowrap">
                           {item.quantidade
                             ? formatHoras(Number(item.quantidade), 'curto')
                             : '-'}
                         </td>
 
                         {/* Profissional */}
-                        <td className="py-1.5 px-2 align-top">
+                        <td className="py-1 px-1.5 align-top">
                           {item.profissional_nome ? (
                             <div>
-                              <p className="text-xs print-text-xs text-slate-700 leading-snug">
+                              <p className="text-[10px] print-text-xs text-slate-700 leading-snug">
                                 {item.profissional_nome}
                               </p>
                               {item.cargo_nome && (
-                                <p className="text-[10px] print-text-xs text-slate-400 leading-snug">
+                                <p className="text-[9px] print-text-xs text-slate-400 leading-snug">
                                   {item.cargo_nome}
                                 </p>
                               )}
                             </div>
                           ) : (
-                            <p className="text-xs print-text-xs text-slate-400">-</p>
+                            <p className="text-[10px] print-text-xs text-slate-300">-</p>
                           )}
                         </td>
 
                         {/* Valor */}
-                        <td className="py-1.5 px-2 text-right text-xs print-text-xs font-semibold text-[#34495e] align-top">
+                        <td className="py-1 px-1.5 text-right text-[10px] print-text-xs font-semibold text-[#34495e] align-top whitespace-nowrap">
                           {formatCurrency(Number(item.valor_total))}
                         </td>
                       </tr>
@@ -701,18 +707,18 @@ export default function FaturaImprimirPage() {
                 </table>
 
                 {/* Totais do Anexo */}
-                <div className="mt-4 pt-3 border-t-2 border-[#34495e]">
+                <div className="mt-3 pt-2 border-t-2 border-[#34495e]">
                   <div className="flex justify-end">
-                    <div className="w-72 space-y-1">
-                      <div className="flex justify-between text-sm print-text-sm">
+                    <div className="w-56 space-y-0.5">
+                      <div className="flex justify-between text-xs print-text-sm">
                         <span className="font-bold text-[#34495e] uppercase">Total de Horas:</span>
                         <span className="font-bold text-[#34495e]">
                           {formatHoras(totalHorasTimesheet, 'curto')}
                         </span>
                       </div>
-                      <div className="flex justify-between text-sm print-text-sm">
+                      <div className="flex justify-between items-baseline text-xs print-text-sm">
                         <span className="font-bold text-[#34495e] uppercase">Valor Total:</span>
-                        <span className="font-bold text-[#1E3A8A] text-base">
+                        <span className="font-bold text-[#1E3A8A] text-sm">
                           {formatCurrency(totalValorTimesheet)}
                         </span>
                       </div>
@@ -724,11 +730,11 @@ export default function FaturaImprimirPage() {
                 <div className="flex-1" />
 
                 {/* Rodapé do Anexo */}
-                <footer className="mt-8 print-footer pt-3 border-t border-slate-200 text-center">
-                  <p className="text-xs print-text-xs text-slate-400">
+                <footer className="mt-6 print-footer pt-2 border-t border-slate-200 text-center">
+                  <p className="text-[10px] print-text-xs text-slate-400">
                     Anexo da Fatura {fatura.numero_fatura} - {escritorio.nome}
                   </p>
-                  <p className="text-xs print-text-xs text-slate-400 mt-0.5">
+                  <p className="text-[10px] print-text-xs text-slate-400 mt-0.5">
                     Documento gerado em {formatBrazilDateTime(new Date())} - Sistema Zyra Legal
                   </p>
                 </footer>

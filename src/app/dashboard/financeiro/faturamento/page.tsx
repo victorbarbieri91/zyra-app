@@ -30,6 +30,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { useFaturamento } from '@/hooks/useFaturamento'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
@@ -38,7 +48,9 @@ import { FaturaGeradaCard } from '@/components/faturamento/FaturaGeradaCard'
 import { FaturasTable } from '@/components/faturamento/FaturasTable'
 import { FaturaDetalhesPanel } from '@/components/faturamento/FaturaDetalhesPanel'
 import { ClientesTable } from '@/components/faturamento/ClientesTable'
-import { cn } from '@/lib/utils'
+import { cn, formatHoras } from '@/lib/utils'
+import { formatDateForDB } from '@/lib/timezone'
+import { toast } from 'sonner'
 import type {
   ClienteParaFaturar,
   LancamentoProntoFaturar,
@@ -80,6 +92,11 @@ export default function FaturamentoPage() {
 
   // Dialog de confirmação para desmontar fatura
   const [faturaParaDesmontar, setFaturaParaDesmontar] = useState<string | null>(null)
+
+  // Modal de confirmação para gerar fatura
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [dataEmissao, setDataEmissao] = useState('')
+  const [dataVencimento, setDataVencimento] = useState('')
 
   // Carregar escritórios do grupo (com todos selecionados por padrão)
   useEffect(() => {
@@ -174,7 +191,20 @@ export default function FaturamentoPage() {
     )
   }
 
-  const handleGerarFatura = async () => {
+  const handleGerarFatura = () => {
+    if (!selectedCliente) return
+
+    // Calcular defaults
+    const hoje = new Date()
+    const vencimento = new Date(hoje)
+    vencimento.setDate(vencimento.getDate() + 30)
+
+    setDataEmissao(formatDateForDB(hoje))
+    setDataVencimento(formatDateForDB(vencimento))
+    setShowConfirmModal(true)
+  }
+
+  const handleConfirmarFatura = async () => {
     if (!selectedCliente) return
 
     const honorariosIds = selectedLancamentosIds.filter((id) =>
@@ -196,14 +226,17 @@ export default function FaturamentoPage() {
       selectedCliente.cliente_id,
       honorariosIds,
       timesheetIds,
-      undefined, // observacoes
-      undefined, // dataVencimento
+      undefined, // observações
+      dataVencimento || undefined,
       undefined, // escritorioIdOverride
-      fechamentosIds
+      fechamentosIds,
+      undefined, // despesasIds
+      dataEmissao || undefined
     )
 
     if (faturaId) {
-      alert('Fatura gerada com sucesso!')
+      toast.success('Fatura gerada com sucesso!')
+      setShowConfirmModal(false)
       setSelectedCliente(null)
       setShowPreview(false)
       setSelectedLancamentosIds([])
@@ -211,7 +244,7 @@ export default function FaturamentoPage() {
       loadData()
       setActiveTab('faturados')
     } else {
-      alert('Erro ao gerar fatura. Tente novamente.')
+      toast.error('Erro ao gerar fatura. Tente novamente.')
     }
   }
 
@@ -231,14 +264,14 @@ export default function FaturamentoPage() {
     const success = await desmontarFatura(faturaId)
 
     if (success) {
-      alert('Fatura desmontada com sucesso! Os itens foram retornados para faturamento.')
+      toast.success('Fatura desmontada com sucesso!')
       setFaturaParaDesmontar(null)
       setSelectedFatura(null)
       setShowFaturaDetails(false)
       loadData()
       setActiveTab('prontos')
     } else {
-      alert('Erro ao desmontar fatura. Tente novamente.')
+      toast.error('Erro ao desmontar fatura. Tente novamente.')
     }
   }
 
@@ -521,6 +554,92 @@ export default function FaturamentoPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog de Confirmação - Gerar Fatura */}
+      <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#34495e] text-sm">
+              <FileText className="h-4 w-4" />
+              Confirmar Geração de Fatura
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedCliente && (
+            <div className="space-y-3">
+              {/* Resumo */}
+              <div className="bg-slate-50 rounded-lg p-2.5 space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Cliente</span>
+                  <span className="font-medium text-[#34495e]">{selectedCliente.cliente_nome}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Itens</span>
+                  <span className="font-medium text-[#34495e]">
+                    {selectedLancamentosIds.length} {selectedLancamentosIds.length === 1 ? 'lançamento' : 'lançamentos'}
+                  </span>
+                </div>
+                <Separator />
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Valor Total</span>
+                  <span className="font-bold text-emerald-600 text-sm">
+                    {formatCurrency(
+                      lancamentos
+                        .filter(l => selectedLancamentosIds.includes(l.lancamento_id))
+                        .reduce((sum, l) => sum + (l.valor || 0), 0)
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {/* Datas */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="data-emissao" className="text-[11px] text-slate-600">
+                    Data de Emissão
+                  </Label>
+                  <Input
+                    id="data-emissao"
+                    type="date"
+                    value={dataEmissao}
+                    onChange={(e) => setDataEmissao(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="data-vencimento" className="text-[11px] text-slate-600">
+                    Data de Vencimento
+                  </Label>
+                  <Input
+                    id="data-vencimento"
+                    type="date"
+                    value={dataVencimento}
+                    onChange={(e) => setDataVencimento(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmModal(false)}
+              className="border-slate-200 text-xs h-8"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmarFatura}
+              disabled={loading || !dataVencimento}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8"
+            >
+              {loading ? 'Gerando...' : 'Gerar Fatura'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

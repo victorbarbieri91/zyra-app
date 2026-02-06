@@ -16,6 +16,7 @@ export interface Evento {
   recorrencia_id?: string | null
   responsavel_id?: string
   cor?: string
+  status?: string
   // Vinculações (FK diretas)
   processo_id?: string | null
   consultivo_id?: string | null

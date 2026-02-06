@@ -150,9 +150,9 @@ export function useFaturaImpressao() {
         const itensJsonb = faturaData.itens || []
 
         // Buscar dados de processos para os itens que têm processo_id
-        const processosIds = itensJsonb
+        const processosIds = [...new Set(itensJsonb
           .filter((item: any) => item.processo_id)
-          .map((item: any) => item.processo_id)
+          .map((item: any) => item.processo_id))]
 
         let processosMap: Record<string, any> = {}
 
@@ -162,20 +162,104 @@ export function useFaturaImpressao() {
             .select('id, numero_cnj, numero_pasta, autor, reu')
             .in('id', processosIds)
 
-          processos?.forEach((p) => {
+          processos?.forEach((p: any) => {
             processosMap[p.id] = p
           })
+        }
+
+        // Enriquecer itens de timesheet que não têm data_trabalho/profissional
+        // (faturas geradas antes da migração de enriquecimento)
+        const timesheetIdsSemDados = itensJsonb
+          .filter((item: any) => item.tipo === 'timesheet' && item.timesheet_id && !item.data_trabalho)
+          .map((item: any) => item.timesheet_id)
+
+        let timesheetMap: Record<string, any> = {}
+
+        if (timesheetIdsSemDados.length > 0) {
+          const { data: timesheets } = await supabase
+            .from('financeiro_timesheet')
+            .select(`
+              id, data_trabalho, user_id, consulta_id, processo_id,
+              profiles:user_id (nome_completo)
+            `)
+            .in('id', timesheetIdsSemDados)
+
+          if (timesheets) {
+            for (const t of timesheets) {
+              timesheetMap[t.id] = {
+                data_trabalho: t.data_trabalho,
+                user_id: t.user_id,
+                profissional_nome: (t.profiles as any)?.nome_completo || null,
+                consulta_id: t.consulta_id,
+                processo_id: t.processo_id,
+              }
+            }
+          }
+
+          // Buscar cargos dos profissionais
+          const userIds = [...new Set(Object.values(timesheetMap).map((t: any) => t.user_id).filter(Boolean))]
+          if (userIds.length > 0) {
+            const { data: usuarios } = await supabase
+              .from('escritorios_usuarios')
+              .select('user_id, cargo_id, escritorios_cargos:cargo_id (nome_display)')
+              .eq('escritorio_id', faturaData.escritorio_id)
+              .in('user_id', userIds)
+
+            if (usuarios) {
+              const cargoMap: Record<string, string> = {}
+              for (const u of usuarios) {
+                cargoMap[u.user_id] = (u.escritorios_cargos as any)?.nome_display || ''
+              }
+              for (const tsId of Object.keys(timesheetMap)) {
+                const uid = timesheetMap[tsId].user_id
+                if (uid && cargoMap[uid]) {
+                  timesheetMap[tsId].cargo_nome = cargoMap[uid]
+                }
+              }
+            }
+          }
+        }
+
+        // Buscar títulos de consultas para itens que têm consulta_id mas não têm caso_titulo
+        const consultaIdsSemTitulo = [...new Set(itensJsonb
+          .filter((item: any) => item.consulta_id && !item.caso_titulo)
+          .map((item: any) => item.consulta_id))]
+
+        let consultasMap: Record<string, string> = {}
+
+        if (consultaIdsSemTitulo.length > 0) {
+          const { data: consultas } = await supabase
+            .from('consultivo_consultas')
+            .select('id, titulo')
+            .in('id', consultaIdsSemTitulo)
+
+          if (consultas) {
+            for (const c of consultas) {
+              if (c.titulo) consultasMap[c.id] = c.titulo
+            }
+          }
         }
 
         // Mapear itens JSONB para o formato de impressão
         const itens: ItemFaturaImpressao[] = itensJsonb.map((item: any, index: number) => {
           const processo = item.processo_id ? processosMap[item.processo_id] : null
+          const tsEnriquecido = item.timesheet_id ? timesheetMap[item.timesheet_id] : null
 
           // Determinar tipo do item
           let tipoItem: ItemFaturaImpressao['tipo_item'] = 'despesa'
           if (item.tipo === 'timesheet') tipoItem = 'timesheet'
           else if (item.tipo === 'honorario') tipoItem = 'honorario'
           else if (item.tipo === 'pasta') tipoItem = 'pasta'
+
+          // Resolver caso_titulo: JSONB > consulta > processo
+          const consultaId = item.consulta_id || tsEnriquecido?.consulta_id
+          let casoTitulo = item.caso_titulo || item.partes_resumo || null
+          if (!casoTitulo && consultaId && consultasMap[consultaId]) {
+            casoTitulo = consultasMap[consultaId]
+          }
+          if (!casoTitulo && processo?.autor && processo?.reu) {
+            casoTitulo = `${processo.autor} x ${processo.reu}`
+          }
 
           return {
             id: `${faturaId}-item-${index}`,
@@ -191,14 +275,12 @@ export function useFaturaImpressao() {
               item.partes_resumo || (processo?.autor && processo?.reu
                 ? `${processo.autor} vs ${processo.reu}`
                 : null),
-            caso_titulo: item.caso_titulo || item.partes_resumo || (processo?.autor && processo?.reu
-                ? `${processo.autor} x ${processo.reu}`
-                : null),
-            // Campos de profissional (para timesheet)
-            profissional_nome: item.profissional_nome || null,
-            cargo_nome: item.cargo_nome || null,
-            data_trabalho: item.data_trabalho || null,
-            user_id: item.user_id || null,
+            caso_titulo: casoTitulo,
+            // Campos de profissional (para timesheet) - fallback para dados enriquecidos
+            profissional_nome: item.profissional_nome || tsEnriquecido?.profissional_nome || null,
+            cargo_nome: item.cargo_nome || tsEnriquecido?.cargo_nome || null,
+            data_trabalho: item.data_trabalho || tsEnriquecido?.data_trabalho || null,
+            user_id: item.user_id || tsEnriquecido?.user_id || null,
             // Campos específicos para 'pasta'
             competencia: item.competencia || null,
             processos_lista: item.processos || null,

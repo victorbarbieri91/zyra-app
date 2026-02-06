@@ -414,7 +414,8 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
       dataVencimento?: string,
       escritorioIdOverride?: string,
       fechamentosIds?: string[],
-      despesasIds?: string[]
+      despesasIds?: string[],
+      dataEmissao?: string
     ): Promise<string | null> => {
       const targetEscritorioId = escritorioIdOverride || escritorioIdPrincipal
       if (!targetEscritorioId) {
@@ -440,7 +441,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
             p_timesheet_ids: timesheetIds.length > 0 ? timesheetIds : null,
             p_despesas_ids: despesasIds && despesasIds.length > 0 ? despesasIds : null,
             p_fechamentos_ids: fechamentosIds && fechamentosIds.length > 0 ? fechamentosIds : null,
-            p_data_emissao: new Date().toISOString().split('T')[0],
+            p_data_emissao: dataEmissao || new Date().toISOString().split('T')[0],
             p_data_vencimento: dataVencimento || null,
             p_observacoes: observacoes || null,
             p_user_id: user?.id || null,

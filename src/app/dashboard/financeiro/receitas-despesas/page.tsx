@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -152,6 +153,7 @@ const subMeses = (date: Date, meses: number) => {
 type PeriodoPreset = 'mes_atual' | 'ultimos_3_meses' | 'ultimos_6_meses' | 'ano_atual' | 'ano_anterior' | 'personalizado'
 
 export default function ExtratoFinanceiroPage() {
+  const searchParams = useSearchParams()
   const { escritorioAtivo } = useEscritorioAtivo()
   const supabase = createClient()
 
@@ -259,6 +261,15 @@ export default function ExtratoFinanceiroPage() {
   })
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Ler filtro de status da URL (ex: ?status=vencido vindo do card Atenção Imediata)
+  useEffect(() => {
+    const statusParam = searchParams.get('status')
+    if (statusParam === 'vencido' || statusParam === 'pendente' || statusParam === 'efetivado') {
+      setStatusFiltro(statusParam)
+      setTipoFiltro('receita')
+    }
+  }, [searchParams])
 
   // Debounce search
   useEffect(() => {

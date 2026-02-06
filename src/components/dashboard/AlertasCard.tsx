@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/utils'
-import { useDashboardAlertas } from '@/hooks/useDashboardAlertas'
+import { useDashboardAlertas, AudienciaProxima } from '@/hooks/useDashboardAlertas'
 
 interface AlertaItemProps {
   label: string
@@ -12,9 +12,10 @@ interface AlertaItemProps {
   sublabel?: string
   color: 'red' | 'amber' | 'yellow' | 'emerald'
   href?: string
+  onClick?: () => void
 }
 
-function AlertaItem({ label, value, sublabel, color, href }: AlertaItemProps) {
+function AlertaItem({ label, value, sublabel, color, href, onClick }: AlertaItemProps) {
   const dotColors = {
     red: 'bg-red-500',
     amber: 'bg-amber-500',
@@ -29,8 +30,10 @@ function AlertaItem({ label, value, sublabel, color, href }: AlertaItemProps) {
     emerald: 'text-emerald-600',
   }
 
+  const isClickable = href || onClick
+
   const content = (
-    <div className={`flex items-center gap-2 py-1.5 ${href ? 'cursor-pointer hover:bg-slate-50 -mx-2 px-2 rounded' : ''}`}>
+    <div className={`flex items-center gap-2 py-1.5 ${isClickable ? 'cursor-pointer hover:bg-slate-50 -mx-2 px-2 rounded' : ''}`}>
       <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotColors[color]}`} />
       <div className="flex-1 min-w-0">
         <span className="text-[11px] text-slate-600">{label}</span>
@@ -42,6 +45,10 @@ function AlertaItem({ label, value, sublabel, color, href }: AlertaItemProps) {
     </div>
   )
 
+  if (onClick) {
+    return <button type="button" onClick={onClick} className="w-full text-left">{content}</button>
+  }
+
   if (href) {
     return <Link href={href}>{content}</Link>
   }
@@ -51,9 +58,10 @@ function AlertaItem({ label, value, sublabel, color, href }: AlertaItemProps) {
 
 interface AlertasCardProps {
   className?: string
+  onAudienciasClick?: (audiencias: AudienciaProxima[]) => void
 }
 
-export default function AlertasCard({ className }: AlertasCardProps) {
+export default function AlertasCard({ className, onAudienciasClick }: AlertasCardProps) {
   const { alertas, loading, temAlertasCriticos, totalAlertas, isSocio } = useDashboardAlertas()
 
   return (
@@ -87,7 +95,7 @@ export default function AlertasCard({ className }: AlertasCardProps) {
                 label="Parcelas vencidas"
                 value={formatCurrency(alertas.valorParcelasVencidas)}
                 color="red"
-                href="/dashboard/financeiro/receitas?status=atrasado"
+                href="/dashboard/financeiro/receitas-despesas?status=vencido"
               />
             )}
 
@@ -107,7 +115,10 @@ export default function AlertasCard({ className }: AlertasCardProps) {
                 label="Audiências em 7 dias"
                 value={alertas.audienciasProximas}
                 color="amber"
-                href="/dashboard/agenda?tipo=audiencia"
+                onClick={onAudienciasClick
+                  ? () => onAudienciasClick(alertas.audienciasProximasData)
+                  : undefined}
+                href={onAudienciasClick ? undefined : '/dashboard/agenda?tipo=audiencia'}
               />
             )}
 
@@ -117,7 +128,7 @@ export default function AlertasCard({ className }: AlertasCardProps) {
                 label="Processos sem contrato"
                 value={alertas.processosSemContrato}
                 color="yellow"
-                href="/dashboard/processos?sem_contrato=true"
+                href="/dashboard/processos?view=sem_contrato"
               />
             )}
 

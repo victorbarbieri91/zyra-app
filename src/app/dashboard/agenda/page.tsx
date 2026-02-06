@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import {
@@ -54,10 +55,13 @@ import { useEventos, Evento, EventoFormData } from '@/hooks/useEventos'
 import { useUserPreferences } from '@/hooks/useUserPreferences'
 
 export default function AgendaPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day' | 'list'>('month')
   const [viewInitialized, setViewInitialized] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [urlFiltroAtivo, setUrlFiltroAtivo] = useState<'vencidos' | 'hoje' | null>(null)
   const [escritorioId, setEscritorioId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
 
@@ -123,6 +127,27 @@ export default function AgendaPage() {
     }
   }, [preferencesLoading, preferences.agenda_view_padrao, viewInitialized])
 
+  // Aplicar filtros da URL (ex: ?filtro=vencidos vindo do card Atenção Imediata)
+  useEffect(() => {
+    const filtro = searchParams.get('filtro')
+    if (filtro === 'vencidos' || filtro === 'hoje') {
+      setUrlFiltroAtivo(filtro)
+      // Mostrar apenas prazos e tarefas (que têm prazo_data_limite)
+      setFilters(prev => ({
+        ...prev,
+        tipos: {
+          compromisso: false,
+          audiencia: false,
+          prazo: true,
+          tarefa: true,
+        },
+      }))
+      // Usar modo lista para melhor visualização de prazos
+      setViewMode('list')
+      setViewInitialized(true)
+    }
+  }, [searchParams])
+
   // Buscar escritório ativo ao carregar
   useEffect(() => {
     async function loadEscritorio() {
@@ -163,6 +188,8 @@ export default function AgendaPage() {
 
   // Converter items consolidados para formato do EventCard
   const eventosFormatados = useMemo((): EventCardProps[] => {
+    const hoje = startOfDay(new Date())
+
     return agendaItems
       .filter(item => {
         // Mapear tipo_entidade para os filtros
@@ -173,6 +200,28 @@ export default function AgendaPage() {
           if (isPrazo && !filters.tipos.prazo) return false
           if (!isPrazo && !filters.tipos.compromisso) return false
         }
+
+        // Filtro de URL: prazos vencidos ou prazos de hoje
+        if (urlFiltroAtivo) {
+          const prazoLimite = item.prazo_data_limite ? parseDBDate(item.prazo_data_limite) : null
+          const dataInicio = parseDBDate(item.data_inicio)
+
+          if (urlFiltroAtivo === 'vencidos') {
+            // Mostrar apenas itens com prazo vencido (antes de hoje) e não concluídos
+            if (prazoLimite) {
+              return isBefore(startOfDay(prazoLimite), hoje) && item.status !== 'concluida'
+            }
+            return isBefore(startOfDay(dataInicio), hoje) && item.status !== 'concluida' && item.status !== 'realizado'
+          }
+          if (urlFiltroAtivo === 'hoje') {
+            // Mostrar apenas itens com prazo para hoje e não concluídos
+            if (prazoLimite) {
+              return isSameDay(prazoLimite, hoje) && item.status !== 'concluida'
+            }
+            return isSameDay(dataInicio, hoje) && item.status !== 'concluida' && item.status !== 'realizado'
+          }
+        }
+
         return true
       })
       .map(item => ({
@@ -190,7 +239,7 @@ export default function AgendaPage() {
         prazo_data_limite: item.prazo_data_limite ? parseDBDate(item.prazo_data_limite) : undefined,
         recorrencia_id: item.recorrencia_id,
       }))
-  }, [agendaItems, filters])
+  }, [agendaItems, filters, urlFiltroAtivo])
 
   // Prioridade de exibição por tipo
   const tipoPrioridade: Record<string, number> = {
@@ -969,6 +1018,40 @@ export default function AgendaPage() {
             </Tabs>
           </div>
         </div>
+
+        {/* Banner de filtro ativo da URL */}
+        {urlFiltroAtivo && (
+          <div className="flex items-center justify-between px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              <span className="text-sm text-amber-800 font-medium">
+                {urlFiltroAtivo === 'vencidos'
+                  ? `Mostrando prazos vencidos (${eventosFormatados.length})`
+                  : `Mostrando prazos de hoje (${eventosFormatados.length})`}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setUrlFiltroAtivo(null)
+                setFilters(prev => ({
+                  ...prev,
+                  tipos: {
+                    compromisso: true,
+                    audiencia: true,
+                    prazo: true,
+                    tarefa: true,
+                  },
+                }))
+                router.replace('/dashboard/agenda')
+              }}
+              className="text-xs text-amber-700 hover:text-amber-900 hover:bg-amber-100 h-7"
+            >
+              Limpar filtro
+            </Button>
+          </div>
+        )}
 
         {/* Layout Principal - Largura Completa */}
         {loading ? (

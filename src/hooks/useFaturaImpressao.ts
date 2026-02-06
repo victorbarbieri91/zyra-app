@@ -77,6 +77,12 @@ export interface ItemFaturaImpressao {
   processo_numero: string | null
   processo_pasta: string | null
   partes_resumo: string | null
+  caso_titulo: string | null // "Autor x Réu" ou título da consulta
+  // Campos de profissional (para timesheet)
+  profissional_nome: string | null
+  cargo_nome: string | null
+  data_trabalho: string | null
+  user_id: string | null
   // Campos para itens do tipo 'pasta' (fechamento mensal)
   competencia: string | null
   processos_lista: ProcessoAnexo[] | null
@@ -182,9 +188,17 @@ export function useFaturaImpressao() {
             processo_numero: processo?.numero_cnj || null,
             processo_pasta: processo?.numero_pasta || null,
             partes_resumo:
-              processo?.autor && processo?.reu
+              item.partes_resumo || (processo?.autor && processo?.reu
                 ? `${processo.autor} vs ${processo.reu}`
-                : null,
+                : null),
+            caso_titulo: item.caso_titulo || item.partes_resumo || (processo?.autor && processo?.reu
+                ? `${processo.autor} x ${processo.reu}`
+                : null),
+            // Campos de profissional (para timesheet)
+            profissional_nome: item.profissional_nome || null,
+            cargo_nome: item.cargo_nome || null,
+            data_trabalho: item.data_trabalho || null,
+            user_id: item.user_id || null,
             // Campos específicos para 'pasta'
             competencia: item.competencia || null,
             processos_lista: item.processos || null,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { X, FileText, Clock, DollarSign, Calendar, CheckCircle2, CreditCard, Banknote, Printer } from 'lucide-react'
+import { X, FileText, Clock, DollarSign, Calendar, CheckCircle2, CreditCard, Banknote, Printer, ChevronDown, ChevronUp, FolderOpen } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -24,6 +24,8 @@ import { useFaturamento } from '@/hooks/useFaturamento'
 import type { FaturaGerada, ItemFatura } from '@/hooks/useFaturamento'
 import { toast } from 'sonner'
 import { formatHoras } from '@/lib/utils'
+import { formatBrazilDate } from '@/lib/timezone'
+import Link from 'next/link'
 
 interface ContaBancaria {
   id: string
@@ -145,9 +147,21 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
     }
   }
 
+  const [showTimesheetDetail, setShowTimesheetDetail] = useState(false)
+
   const statusInfo = getStatusInfo()
   const honorarios = itens.filter(i => i.tipo_item === 'honorario')
   const timesheet = itens.filter(i => i.tipo_item === 'timesheet')
+
+  // Calcular período do timesheet
+  const timesheetDatas = timesheet
+    .map(i => i.data_trabalho)
+    .filter(Boolean)
+    .sort() as string[]
+  const periodoInicio = timesheetDatas[0] || null
+  const periodoFim = timesheetDatas[timesheetDatas.length - 1] || null
+  const totalHorasTimesheet = timesheet.reduce((sum, i) => sum + (i.quantidade || 0), 0)
+  const totalValorTimesheet = timesheet.reduce((sum, i) => sum + i.valor_total, 0)
 
   // Determinar aba padrão: se só tiver um tipo, mostrar ele; senão, mostrar honorários
   const getDefaultTab = () => {
@@ -273,23 +287,23 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
                                   {formatCurrency(item.valor_unitario)} / unidade
                                 </p>
                               )}
-                              {/* Detalhes do Processo - Descrição para o cliente */}
-                              {item.processo_id && (item.processo_numero || item.processo_pasta || item.partes_resumo) && (
-                                <div className="mt-1.5 pt-1.5 border-t border-slate-100">
-                                  {item.processo_numero && (
-                                    <p className="text-[10px] text-slate-500">
-                                      Processo nº {item.processo_numero}
-                                    </p>
-                                  )}
-                                  {!item.processo_numero && item.processo_pasta && (
-                                    <p className="text-[10px] text-slate-500">
-                                      Ref: {item.processo_pasta}
-                                    </p>
-                                  )}
-                                  {item.partes_resumo && (
-                                    <p className="text-[10px] text-slate-500 italic">
-                                      {item.partes_resumo}
-                                    </p>
+                              {/* Título do Caso */}
+                              {(item.caso_titulo || item.partes_resumo) && (
+                                <div className="mt-1 flex items-center gap-0.5">
+                                  {item.processo_id ? (
+                                    <Link
+                                      href={`/dashboard/processos/${item.processo_id}`}
+                                      className="text-[10px] text-blue-600 hover:underline inline-flex items-center gap-0.5"
+                                      target="_blank"
+                                    >
+                                      <FolderOpen className="h-2.5 w-2.5 shrink-0" />
+                                      {item.caso_titulo || item.partes_resumo}
+                                    </Link>
+                                  ) : (
+                                    <span className="text-[10px] text-slate-500 inline-flex items-center gap-0.5">
+                                      <FolderOpen className="h-2.5 w-2.5 shrink-0" />
+                                      {item.caso_titulo || item.partes_resumo}
+                                    </span>
                                   )}
                                 </div>
                               )}
@@ -330,45 +344,108 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
                           <div className="col-span-3 text-right">Valor</div>
                         </div>
 
-                        {/* Linhas de Itens */}
-                        {timesheet.map((item, index) => (
-                          <div
-                            key={item.id}
-                            className={`grid grid-cols-12 gap-2 px-3 py-2.5 text-xs border-b border-slate-100 ${
-                              index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'
-                            }`}
-                          >
-                            <div className="col-span-7 text-slate-700">
-                              <p className="font-medium">{item.descricao}</p>
-                              {/* Detalhes do Processo - Descrição para o cliente */}
-                              {item.processo_id && (item.processo_numero || item.processo_pasta || item.partes_resumo) && (
-                                <div className="mt-1.5 pt-1.5 border-t border-slate-100">
-                                  {item.processo_numero && (
-                                    <p className="text-[10px] text-slate-500">
-                                      Processo nº {item.processo_numero}
-                                    </p>
-                                  )}
-                                  {!item.processo_numero && item.processo_pasta && (
-                                    <p className="text-[10px] text-slate-500">
-                                      Ref: {item.processo_pasta}
-                                    </p>
-                                  )}
-                                  {item.partes_resumo && (
-                                    <p className="text-[10px] text-slate-500 italic">
-                                      {item.partes_resumo}
-                                    </p>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                            <div className="col-span-2 text-center text-slate-600 font-medium">
-                              {item.quantidade ? `${item.quantidade}h` : '-'}
-                            </div>
-                            <div className="col-span-3 text-right font-semibold text-slate-700">
-                              {formatCurrency(item.valor_total)}
-                            </div>
+                        {/* Linha Consolidada */}
+                        <div className="grid grid-cols-12 gap-2 px-3 py-2.5 text-xs border-b border-slate-100 bg-white">
+                          <div className="col-span-7 text-slate-700">
+                            <p className="font-medium">
+                              {periodoInicio && periodoFim
+                                ? `Serviços prestados - Período de ${formatBrazilDate(periodoInicio)} a ${formatBrazilDate(periodoFim)}`
+                                : 'Horas trabalhadas'
+                              }
+                            </p>
+                            <p className="text-[10px] text-slate-500 mt-0.5">
+                              {timesheet.length} {timesheet.length === 1 ? 'entrada' : 'entradas'} de timesheet
+                            </p>
                           </div>
-                        ))}
+                          <div className="col-span-2 text-center text-slate-600 font-medium">
+                            {formatHoras(totalHorasTimesheet, 'curto')}
+                          </div>
+                          <div className="col-span-3 text-right font-semibold text-slate-700">
+                            {formatCurrency(totalValorTimesheet)}
+                          </div>
+                        </div>
+
+                        {/* Botão Ver Detalhamento */}
+                        <div className="px-3 py-2 border-b border-slate-100">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-[10px] text-[#1E3A8A] h-6 px-2 hover:bg-blue-50"
+                            onClick={() => setShowTimesheetDetail(!showTimesheetDetail)}
+                          >
+                            {showTimesheetDetail ? (
+                              <ChevronUp className="h-3 w-3 mr-1" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3 mr-1" />
+                            )}
+                            {showTimesheetDetail ? 'Ocultar detalhamento' : 'Ver detalhamento'}
+                          </Button>
+                        </div>
+
+                        {/* Detalhamento Expansível */}
+                        {showTimesheetDetail && (
+                          <div className="bg-slate-50/50 border-b border-slate-200">
+                            {timesheet.map((item, index) => (
+                              <div
+                                key={item.id}
+                                className={`grid grid-cols-12 gap-2 px-3 py-2 text-xs border-b border-slate-100/80 ${
+                                  index % 2 === 0 ? 'bg-slate-50/30' : 'bg-white/50'
+                                }`}
+                              >
+                                <div className="col-span-7 text-slate-600">
+                                  <p className="font-medium text-[11px]">{item.descricao}</p>
+                                  {/* Título do Caso */}
+                                  {(item.caso_titulo || item.partes_resumo) && (
+                                    <div className="mt-0.5">
+                                      {item.processo_id ? (
+                                        <Link
+                                          href={`/dashboard/processos/${item.processo_id}`}
+                                          className="text-[10px] text-blue-600 hover:underline inline-flex items-center gap-0.5"
+                                          target="_blank"
+                                        >
+                                          <FolderOpen className="h-2.5 w-2.5 shrink-0" />
+                                          {item.caso_titulo || item.partes_resumo}
+                                        </Link>
+                                      ) : item.consulta_id ? (
+                                        <Link
+                                          href={`/dashboard/consultivo/${item.consulta_id}`}
+                                          className="text-[10px] text-blue-600 hover:underline inline-flex items-center gap-0.5"
+                                          target="_blank"
+                                        >
+                                          <FolderOpen className="h-2.5 w-2.5 shrink-0" />
+                                          {item.caso_titulo || item.partes_resumo}
+                                        </Link>
+                                      ) : (
+                                        <span className="text-[10px] text-slate-400 inline-flex items-center gap-0.5">
+                                          <FolderOpen className="h-2.5 w-2.5 shrink-0" />
+                                          {item.caso_titulo || item.partes_resumo}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                  {/* Data e Profissional */}
+                                  <div className="flex items-center gap-2 mt-0.5 text-[9px] text-slate-400">
+                                    {item.data_trabalho && (
+                                      <span>{formatBrazilDate(item.data_trabalho)}</span>
+                                    )}
+                                    {item.profissional_nome && (
+                                      <>
+                                        {item.data_trabalho && <span>•</span>}
+                                        <span>{item.profissional_nome}{item.cargo_nome ? ` · ${item.cargo_nome}` : ''}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="col-span-2 text-center text-slate-500 text-[11px]">
+                                  {item.quantidade ? formatHoras(item.quantidade, 'curto') : '-'}
+                                </div>
+                                <div className="col-span-3 text-right text-slate-600 text-[11px]">
+                                  {formatCurrency(item.valor_total)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
                         {/* Subtotal */}
                         <div className="grid grid-cols-12 gap-2 px-3 py-2.5 bg-slate-100 border-b border-slate-200">

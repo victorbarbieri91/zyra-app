@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -85,7 +85,7 @@ export default function ProcessosPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [currentView, setCurrentView] = useState<'todos' | 'ativos' | 'criticos' | 'meus' | 'arquivados'>('todos')
+  const [currentView, setCurrentView] = useState<'todos' | 'ativos' | 'criticos' | 'meus' | 'arquivados' | 'sem_contrato'>('todos')
   const [showFilters, setShowFilters] = useState(false)
 
   // Pagination state
@@ -123,7 +123,16 @@ export default function ProcessosPage() {
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  // Ler filtro da URL (ex: ?view=sem_contrato vindo do card Atenção Imediata)
+  useEffect(() => {
+    const viewParam = searchParams.get('view')
+    if (viewParam === 'sem_contrato') {
+      setCurrentView('sem_contrato')
+    }
+  }, [searchParams])
 
   // TODO: Se precisar abrir wizard automaticamente via ?novo=true,
   // implementar com ref no NovoProcessoDropdown
@@ -215,6 +224,8 @@ export default function ProcessosPage() {
         query = query.eq('status', 'arquivado')
       } else if (currentView === 'meus' && userId) {
         query = query.eq('responsavel_id', userId)
+      } else if (currentView === 'sem_contrato') {
+        query = query.is('contrato_id', null).in('status', ['ativo', 'em_andamento', 'aguardando'])
       }
 
       // Get total count first (for pagination)
@@ -471,6 +482,7 @@ export default function ProcessosPage() {
                 <option value="ativos">Ativos</option>
                 <option value="criticos">Críticos</option>
                 <option value="meus">Meus Processos</option>
+                <option value="sem_contrato">Sem Contrato</option>
                 <option value="arquivados">Arquivados</option>
               </select>
 

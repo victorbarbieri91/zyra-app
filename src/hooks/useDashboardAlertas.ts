@@ -4,11 +4,33 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from './useEscritorioAtivo'
 
+export interface AudienciaProxima {
+  id: string
+  titulo: string
+  data_hora: string
+  tipo_audiencia?: string
+  modalidade?: string
+  status?: string
+  local?: string
+  link_virtual?: string
+  processo_id?: string
+  responsavel_id?: string
+  observacoes?: string
+  descricao?: string
+  tribunal?: string
+  comarca?: string
+  vara?: string
+  juiz?: string
+  promotor?: string
+  advogado_contrario?: string
+}
+
 export interface DashboardAlertas {
   prazosHoje: number
   prazosVencidos: number
   processosSemContrato: number
   audienciasProximas: number
+  audienciasProximasData: AudienciaProxima[]
   parcelasVencidas: number
   valorParcelasVencidas: number
   valorHorasProntasFaturar: number
@@ -19,6 +41,7 @@ const defaultAlertas: DashboardAlertas = {
   prazosVencidos: 0,
   processosSemContrato: 0,
   audienciasProximas: 0,
+  audienciasProximasData: [],
   parcelasVencidas: 0,
   valorParcelasVencidas: 0,
   valorHorasProntasFaturar: 0,
@@ -89,15 +112,17 @@ export function useDashboardAlertas() {
           .is('contrato_id', null),
 
         // 4. Audiências nos próximos 7 dias - APENAS onde o usuário é responsável
+        // Busca dados completos para permitir abrir modal de detalhes direto do dashboard
         userId ? supabase
           .from('agenda_audiencias')
-          .select('id', { count: 'exact', head: true })
+          .select('id, titulo, data_hora, tipo_audiencia, modalidade, status, local, link_virtual, processo_id, responsavel_id, observacoes, descricao, tribunal, comarca, vara, juiz, promotor, advogado_contrario')
           .eq('escritorio_id', escritorioAtivo)
           .gte('data_hora', hojeStr)
           .lte('data_hora', em7dias.toISOString().split('T')[0])
           .not('status', 'in', '("realizada","cancelada")')
           .or(`responsavel_id.eq.${userId},responsaveis_ids.cs.{${userId}}`)
-        : Promise.resolve({ count: 0 }),
+          .order('data_hora', { ascending: true })
+        : Promise.resolve({ data: [] }),
 
         // 5. Parcelas vencidas (inadimplência) - apenas para sócios
         isSocio ? supabase
@@ -155,11 +180,14 @@ export function useDashboardAlertas() {
         }
       }
 
+      const audienciasData = (audienciasResult.data || []) as AudienciaProxima[]
+
       setAlertas({
         prazosHoje: prazosHojeResult.count || 0,
         prazosVencidos: prazosVencidosResult.count || 0,
         processosSemContrato: processosSemContratoResult.count || 0,
-        audienciasProximas: audienciasResult.count || 0,
+        audienciasProximas: audienciasData.length,
+        audienciasProximasData: audienciasData,
         parcelasVencidas,
         valorParcelasVencidas,
         valorHorasProntasFaturar: Math.round(valorHorasProntas * 100) / 100,

@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Printer, FileText, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useFaturaImpressao, FaturaImpressaoData } from '@/hooks/useFaturaImpressao'
-import { formatBrazilDateLong, formatBrazilDateTime } from '@/lib/timezone'
+import { useFaturaImpressao, FaturaImpressaoData, ItemFaturaImpressao } from '@/hooks/useFaturaImpressao'
+import { formatBrazilDateLong, formatBrazilDateTime, formatBrazilDate } from '@/lib/timezone'
 import { formatHoras } from '@/lib/utils'
 
 export default function FaturaImprimirPage() {
@@ -120,6 +120,102 @@ export default function FaturaImprimirPage() {
 
   const { escritorio, fatura, cliente, itens, totais } = dados
 
+  // Separar itens por tipo
+  const timesheetItens = itens.filter(i => i.tipo_item === 'timesheet')
+  const nonTimesheetItens = itens.filter(i => i.tipo_item !== 'timesheet')
+  const hasTimesheet = timesheetItens.length > 0
+
+  // Calcular dados consolidados do timesheet
+  const timesheetDatas = timesheetItens
+    .map(i => i.data_trabalho)
+    .filter(Boolean)
+    .sort() as string[]
+  const periodoInicio = timesheetDatas[0] || null
+  const periodoFim = timesheetDatas[timesheetDatas.length - 1] || null
+  const totalHorasTimesheet = timesheetItens.reduce((sum, i) => sum + Number(i.quantidade || 0), 0)
+  const totalValorTimesheet = timesheetItens.reduce((sum, i) => sum + Number(i.valor_total), 0)
+
+  // Ordenar timesheet por data para o anexo
+  const timesheetOrdenado = [...timesheetItens].sort((a, b) => {
+    if (!a.data_trabalho && !b.data_trabalho) return 0
+    if (!a.data_trabalho) return 1
+    if (!b.data_trabalho) return -1
+    return a.data_trabalho.localeCompare(b.data_trabalho)
+  })
+
+  // Montar itens para a tabela principal (não-timesheet individuais + timesheet consolidado)
+  const renderMainTableItems = () => {
+    const rows: React.ReactElement[] = []
+    let rowIndex = 0
+
+    // Itens não-timesheet (honorários, despesas, etc.) - individuais
+    nonTimesheetItens.forEach((item) => {
+      const idx = rowIndex++
+      rows.push(
+        <tr
+          key={item.id}
+          className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
+        >
+          <td className="py-2 px-3">
+            <p className="font-medium text-[#34495e] print-text-sm">{item.descricao}</p>
+            {/* Título do caso */}
+            {item.caso_titulo && (
+              <p className="mt-0.5 text-xs print-text-xs text-slate-500 italic">
+                {item.caso_titulo}
+              </p>
+            )}
+          </td>
+          <td className="py-2 px-3 text-center text-slate-600 print-text-sm">
+            {item.tipo_item === 'pasta'
+              ? (item.quantidade ? `${item.quantidade} proc.` : 1)
+              : (item.quantidade || 1)}
+          </td>
+          <td className="py-2 px-3 text-right text-slate-600 print-text-sm">
+            {item.valor_unitario
+              ? formatCurrency(Number(item.valor_unitario))
+              : '-'}
+          </td>
+          <td className="py-2 px-3 text-right font-semibold text-[#34495e] print-text-sm">
+            {formatCurrency(Number(item.valor_total))}
+          </td>
+        </tr>
+      )
+    })
+
+    // Linha consolidada de timesheet
+    if (hasTimesheet) {
+      const idx = rowIndex++
+      const descricaoConsolidada = periodoInicio && periodoFim
+        ? `Timesheet - Serviço prestado do período de ${formatBrazilDate(periodoInicio)} a ${formatBrazilDate(periodoFim)}`
+        : 'Timesheet - Horas trabalhadas'
+
+      rows.push(
+        <tr
+          key="timesheet-consolidado"
+          className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
+        >
+          <td className="py-2 px-3">
+            <p className="font-medium text-[#34495e] print-text-sm">{descricaoConsolidada}</p>
+            <p className="mt-0.5 text-xs print-text-xs text-slate-400 italic">
+              (Ver Anexo - Detalhamento de Horas)
+            </p>
+          </td>
+          <td className="py-2 px-3 text-center text-slate-600 print-text-sm">
+            {formatHoras(totalHorasTimesheet, 'curto')}
+          </td>
+          <td className="py-2 px-3 text-right text-slate-600 print-text-sm">
+            -
+          </td>
+          <td className="py-2 px-3 text-right font-semibold text-[#34495e] print-text-sm">
+            {formatCurrency(totalValorTimesheet)}
+          </td>
+        </tr>
+      )
+    }
+
+    return rows
+  }
+
   return (
     <>
       {/* CSS de Impressao */}
@@ -130,7 +226,6 @@ export default function FaturaImprimirPage() {
             size: A4;
           }
 
-          /* Remove cabecalho e rodape do navegador */
           html {
             margin: 0;
             padding: 0;
@@ -144,32 +239,35 @@ export default function FaturaImprimirPage() {
             font-size: 11pt !important;
           }
 
-          /* Esconde a barra de ferramentas na impressao */
           .print-hidden {
             display: none !important;
           }
 
-          /* Fundo branco na impressao */
           .print-bg-white {
             background: white !important;
             padding: 0 !important;
             min-height: auto !important;
           }
 
-          /* Card sem sombra e sem margens na impressao */
           .print-card {
             box-shadow: none !important;
             margin: 0 !important;
             max-width: 100% !important;
+            width: 100% !important;
             border-radius: 0 !important;
             padding: 0 !important;
+            min-height: auto !important;
           }
 
           .print-break-inside-avoid {
             break-inside: avoid;
           }
 
-          /* Reducao de tamanhos para impressao */
+          .print-page-break-before {
+            page-break-before: always;
+            break-before: page;
+          }
+
           .print-logo {
             max-height: 60px !important;
             max-width: 180px !important;
@@ -257,19 +355,38 @@ export default function FaturaImprimirPage() {
           .print-footer p {
             font-size: 7pt !important;
           }
+
+          /* Anexo de horas */
+          .print-anexo-table th,
+          .print-anexo-table td {
+            padding: 0.25rem 0.4rem !important;
+            font-size: 8pt !important;
+          }
+
+          .print-anexo-title {
+            font-size: 11pt !important;
+            padding: 0.4rem 1rem !important;
+          }
+
+          .print-anexo-subtitle {
+            font-size: 8pt !important;
+          }
         }
 
-        /* Estilo para visualizacao na tela (simula papel) */
         @media screen {
           .paper-preview {
             background: white;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.05);
             border-radius: 4px;
+            width: 210mm;
+            min-height: 297mm;
+            margin-left: auto;
+            margin-right: auto;
           }
         }
       `}</style>
 
-      {/* Container principal - fundo cinza escuro para contraste */}
+      {/* Container principal */}
       <div className="min-h-screen bg-slate-300 print-bg-white">
         {/* Barra de Ferramentas (nao imprime) */}
         <div className="print-hidden sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
@@ -292,11 +409,10 @@ export default function FaturaImprimirPage() {
 
         {/* Area do Papel */}
         <div className="py-8 px-4 print:py-0 print:px-0">
-          <div className="max-w-4xl mx-auto paper-preview print-card">
-            <div className="p-10 print:p-4">
-              {/* Cabecalho: Logo + Emitente lado a lado */}
+          <div className="paper-preview print-card">
+            <div className="p-10 print:p-4 flex flex-col min-h-[inherit]">
+              {/* Cabecalho: Logo + Emitente */}
               <div className="mb-6 print-header-section flex items-center justify-between gap-8 pb-4 border-b border-slate-200">
-                {/* Logo */}
                 {escritorio.logo_url && (
                   <div className="flex-shrink-0">
                     <img
@@ -306,8 +422,6 @@ export default function FaturaImprimirPage() {
                     />
                   </div>
                 )}
-
-                {/* Emitente */}
                 <div className="text-right flex-shrink-0">
                   <h3 className="text-xs print-text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">
                     Emitente
@@ -346,7 +460,6 @@ export default function FaturaImprimirPage() {
 
               {/* Destinatario e Datas */}
               <div className="grid grid-cols-2 gap-8 mb-8 print-section pb-4 border-b border-slate-200 print-break-inside-avoid">
-                {/* Destinatario */}
                 <div>
                   <h3 className="text-xs print-text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">
                     Destinatario
@@ -374,8 +487,6 @@ export default function FaturaImprimirPage() {
                     </p>
                   )}
                 </div>
-
-                {/* Datas */}
                 <div className="text-right">
                   <div className="mb-3">
                     <p className="text-xs print-text-xs font-bold text-slate-500 uppercase tracking-wide">
@@ -412,45 +523,7 @@ export default function FaturaImprimirPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {itens.map((item, index) => (
-                      <tr
-                        key={item.id}
-                        className={`border-b border-slate-100 ${
-                          index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'
-                        }`}
-                      >
-                        <td className="py-2 px-3">
-                          <p className="font-medium text-[#34495e] print-text-sm">{item.descricao}</p>
-                          {/* Detalhes do processo */}
-                          {(item.processo_numero || item.processo_pasta || item.partes_resumo) && (
-                            <div className="mt-1 text-xs print-text-xs text-slate-500">
-                              {item.processo_numero && (
-                                <p>Processo n {item.processo_numero}</p>
-                              )}
-                              {!item.processo_numero && item.processo_pasta && (
-                                <p>Ref: {item.processo_pasta}</p>
-                              )}
-                              {item.partes_resumo && (
-                                <p className="italic">{item.partes_resumo}</p>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-2 px-3 text-center text-slate-600 print-text-sm">
-                          {item.tipo_item === 'timesheet'
-                            ? formatHoras(Number(item.quantidade || 0), 'curto')
-                            : item.quantidade || 1}
-                        </td>
-                        <td className="py-2 px-3 text-right text-slate-600 print-text-sm">
-                          {item.valor_unitario
-                            ? formatCurrency(Number(item.valor_unitario))
-                            : '-'}
-                        </td>
-                        <td className="py-2 px-3 text-right font-semibold text-[#34495e] print-text-sm">
-                          {formatCurrency(Number(item.valor_total))}
-                        </td>
-                      </tr>
-                    ))}
+                    {renderMainTableItems()}
                   </tbody>
                 </table>
               </div>
@@ -505,6 +578,9 @@ export default function FaturaImprimirPage() {
                 </div>
               )}
 
+              {/* Spacer para empurrar rodapé para o final da página A4 */}
+              <div className="flex-1" />
+
               {/* Rodape */}
               <footer className="mt-8 print-footer pt-3 border-t border-slate-200 text-center">
                 <p className="text-xs print-text-xs text-slate-400">
@@ -516,6 +592,149 @@ export default function FaturaImprimirPage() {
               </footer>
             </div>
           </div>
+
+          {/* ============================================ */}
+          {/* ANEXO - DETALHAMENTO DE HORAS TRABALHADAS */}
+          {/* ============================================ */}
+          {hasTimesheet && (
+            <div className="paper-preview print-card mt-8 print:mt-0 print-page-break-before">
+              <div className="p-10 print:p-4 flex flex-col min-h-[inherit]">
+                {/* Header do Anexo */}
+                <div className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white py-4 px-6 print-anexo-title rounded-lg mb-6 text-center">
+                  <p className="text-xs print-text-xs uppercase tracking-widest text-white/80 mb-1">
+                    Anexo - Detalhamento de Horas Trabalhadas
+                  </p>
+                  <p className="text-base print-anexo-subtitle font-semibold text-white">
+                    {fatura.numero_fatura}
+                    {periodoInicio && periodoFim && (
+                      <span className="font-normal text-white/80">
+                        {' '}| Período: {formatBrazilDate(periodoInicio)} a {formatBrazilDate(periodoFim)}
+                      </span>
+                    )}
+                  </p>
+                </div>
+
+                {/* Info do cliente no anexo */}
+                <div className="mb-4 pb-3 border-b border-slate-200">
+                  <p className="text-xs print-text-xs text-slate-500">
+                    Cliente: <span className="font-semibold text-[#34495e]">{cliente.nome_completo}</span>
+                  </p>
+                </div>
+
+                {/* Tabela de Detalhamento */}
+                <table className="w-full print-anexo-table">
+                  <thead>
+                    <tr className="bg-slate-100 text-[10px] print-text-xs font-bold text-slate-600 uppercase">
+                      <th className="py-2 px-2 text-left w-[10%]">Data</th>
+                      <th className="py-2 px-2 text-left w-[28%]">Descricao</th>
+                      <th className="py-2 px-2 text-left w-[24%]">Caso</th>
+                      <th className="py-2 px-2 text-center w-[10%]">Horas</th>
+                      <th className="py-2 px-2 text-left w-[16%]">Profissional</th>
+                      <th className="py-2 px-2 text-right w-[12%]">Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {timesheetOrdenado.map((item, index) => (
+                      <tr
+                        key={item.id}
+                        className={`border-b border-slate-100 ${
+                          index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'
+                        }`}
+                      >
+                        {/* Data */}
+                        <td className="py-1.5 px-2 text-xs print-text-xs text-slate-600 align-top">
+                          {item.data_trabalho
+                            ? formatBrazilDate(item.data_trabalho)
+                            : '-'}
+                        </td>
+
+                        {/* Descrição */}
+                        <td className="py-1.5 px-2 align-top">
+                          <p className="text-xs print-text-xs font-medium text-[#34495e] leading-snug">
+                            {item.descricao}
+                          </p>
+                        </td>
+
+                        {/* Caso (título) */}
+                        <td className="py-1.5 px-2 align-top">
+                          {item.caso_titulo ? (
+                            <p className="text-xs print-text-xs text-slate-600 leading-snug">
+                              {item.caso_titulo}
+                            </p>
+                          ) : (
+                            <p className="text-xs print-text-xs text-slate-400">-</p>
+                          )}
+                        </td>
+
+                        {/* Horas */}
+                        <td className="py-1.5 px-2 text-center text-xs print-text-xs text-slate-600 font-medium align-top">
+                          {item.quantidade
+                            ? formatHoras(Number(item.quantidade), 'curto')
+                            : '-'}
+                        </td>
+
+                        {/* Profissional */}
+                        <td className="py-1.5 px-2 align-top">
+                          {item.profissional_nome ? (
+                            <div>
+                              <p className="text-xs print-text-xs text-slate-700 leading-snug">
+                                {item.profissional_nome}
+                              </p>
+                              {item.cargo_nome && (
+                                <p className="text-[10px] print-text-xs text-slate-400 leading-snug">
+                                  {item.cargo_nome}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-xs print-text-xs text-slate-400">-</p>
+                          )}
+                        </td>
+
+                        {/* Valor */}
+                        <td className="py-1.5 px-2 text-right text-xs print-text-xs font-semibold text-[#34495e] align-top">
+                          {formatCurrency(Number(item.valor_total))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Totais do Anexo */}
+                <div className="mt-4 pt-3 border-t-2 border-[#34495e]">
+                  <div className="flex justify-end">
+                    <div className="w-72 space-y-1">
+                      <div className="flex justify-between text-sm print-text-sm">
+                        <span className="font-bold text-[#34495e] uppercase">Total de Horas:</span>
+                        <span className="font-bold text-[#34495e]">
+                          {formatHoras(totalHorasTimesheet, 'curto')}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm print-text-sm">
+                        <span className="font-bold text-[#34495e] uppercase">Valor Total:</span>
+                        <span className="font-bold text-[#1E3A8A] text-base">
+                          {formatCurrency(totalValorTimesheet)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Spacer para empurrar rodapé para o final da página A4 */}
+                <div className="flex-1" />
+
+                {/* Rodapé do Anexo */}
+                <footer className="mt-8 print-footer pt-3 border-t border-slate-200 text-center">
+                  <p className="text-xs print-text-xs text-slate-400">
+                    Anexo da Fatura {fatura.numero_fatura} - {escritorio.nome}
+                  </p>
+                  <p className="text-xs print-text-xs text-slate-400 mt-0.5">
+                    Documento gerado em {formatBrazilDateTime(new Date())} - Sistema Zyra Legal
+                  </p>
+                </footer>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>

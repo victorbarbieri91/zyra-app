@@ -31,6 +31,8 @@ import {
   Scale,
   List,
   BarChart3,
+  Gavel,
+  X,
 } from 'lucide-react'
 import { formatCurrency, formatHoras } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -49,6 +51,8 @@ import TarefaWizard from '@/components/agenda/TarefaWizard'
 import { ConsultaWizardModal } from '@/components/consultivo/ConsultaWizardModal'
 import ProcessoWizard from '@/components/processos/ProcessoWizard'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
+import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
+import { AudienciaProxima } from '@/hooks/useDashboardAlertas'
 
 // Hooks de dados reais
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics'
@@ -74,6 +78,12 @@ export default function DashboardPage() {
   const [consultaModalOpen, setConsultaModalOpen] = useState(false)
   const [processoModalOpen, setProcessoModalOpen] = useState(false)
   const [timesheetModalOpen, setTimesheetModalOpen] = useState(false)
+
+  // Estados para modal de audiência (vindo do card Atenção Imediata)
+  const [audienciaDetailOpen, setAudienciaDetailOpen] = useState(false)
+  const [audienciaSelecionada, setAudienciaSelecionada] = useState<AudienciaProxima | null>(null)
+  const [audienciasListOpen, setAudienciasListOpen] = useState(false)
+  const [audienciasProximas, setAudienciasProximas] = useState<AudienciaProxima[]>([])
 
   // Estados para multi-escritório
   const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
@@ -138,6 +148,19 @@ export default function DashboardPage() {
   const { publicacoes, loading: loadingPublicacoes, isEmpty: isPublicacoesEmpty, urgentes: publicacoesUrgentes } = useDashboardPublicacoes()
   const { resumo, loading: loadingResumo, refresh: refreshResumo, tempoDesdeAtualizacao } = useDashboardResumoIA()
   const { insights, loading: loadingInsights, hasPermission: hasInsightsPermission, refresh: refreshInsights } = useDashboardInsightsIA()
+
+  // Handler para clique nas audiências do card Atenção Imediata
+  const handleAudienciasClick = (audiencias: AudienciaProxima[]) => {
+    if (audiencias.length === 1) {
+      // Se for apenas 1 audiência, abre o modal de detalhes direto
+      setAudienciaSelecionada(audiencias[0])
+      setAudienciaDetailOpen(true)
+    } else if (audiencias.length > 1) {
+      // Se múltiplas, abre a lista para o usuário escolher
+      setAudienciasProximas(audiencias)
+      setAudienciasListOpen(true)
+    }
+  }
 
   // Calcular progresso
   const progressoReceita = ((metrics?.receita_mes || 0) / (metrics?.receita_meta || 1)) * 100
@@ -469,7 +492,7 @@ export default function DashboardPage() {
           {/* COLUNA ESQUERDA (3 cols): Alertas + Seus Números */}
           <div className="lg:col-span-3 space-y-4">
             {/* Alertas de Atenção */}
-            <AlertasCard />
+            <AlertasCard onAudienciasClick={handleAudienciasClick} />
 
             {/* Seus Números do Mês */}
             <Card className="border-slate-200 shadow-sm">
@@ -701,12 +724,12 @@ export default function DashboardPage() {
                               </div>
                               <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden ml-5 flex">
                                 <div
-                                  className="h-full bg-[#1E3A8A]"
-                                  style={{ width: `${Math.min((membro.horasCobraveis / (equipe[0]?.horas || 1)) * 100, 100)}%` }}
+                                  className="h-full bg-[#1E3A8A] transition-all duration-300"
+                                  style={{ width: `${membro.horas > 0 ? (membro.horasCobraveis / membro.horas) * 100 : 0}%` }}
                                 />
                                 <div
-                                  className="h-full bg-[#89bcbe]"
-                                  style={{ width: `${Math.min((membro.horasNaoCobraveis / (equipe[0]?.horas || 1)) * 100, 100)}%` }}
+                                  className="h-full bg-[#89bcbe] transition-all duration-300"
+                                  style={{ width: `${membro.horas > 0 ? (membro.horasNaoCobraveis / membro.horas) * 100 : 0}%` }}
                                 />
                               </div>
                             </div>
@@ -902,6 +925,79 @@ export default function DashboardPage() {
             setTimesheetModalOpen(false)
           }}
         />
+
+        {/* Modal de detalhes da audiência (vindo do card Atenção Imediata) */}
+        {audienciaSelecionada && (
+          <AudienciaDetailModal
+            open={audienciaDetailOpen}
+            onOpenChange={(open) => {
+              setAudienciaDetailOpen(open)
+              if (!open) setAudienciaSelecionada(null)
+            }}
+            audiencia={{
+              id: audienciaSelecionada.id,
+              titulo: audienciaSelecionada.titulo,
+              data_inicio: audienciaSelecionada.data_hora,
+              tipo_audiencia: audienciaSelecionada.tipo_audiencia,
+              modalidade: audienciaSelecionada.modalidade as 'presencial' | 'virtual' | undefined,
+              status: audienciaSelecionada.status as 'agendada' | 'realizada' | 'cancelada' | 'remarcada' | undefined,
+              local: audienciaSelecionada.local,
+              link_virtual: audienciaSelecionada.link_virtual,
+              processo_id: audienciaSelecionada.processo_id,
+              responsavel_id: audienciaSelecionada.responsavel_id,
+              observacoes: audienciaSelecionada.observacoes,
+              descricao: audienciaSelecionada.descricao,
+              tribunal: audienciaSelecionada.tribunal,
+              comarca: audienciaSelecionada.comarca,
+              vara: audienciaSelecionada.vara,
+              juiz_nome: audienciaSelecionada.juiz,
+              promotor_nome: audienciaSelecionada.promotor,
+              advogado_contrario: audienciaSelecionada.advogado_contrario,
+            }}
+            onProcessoClick={(processoId) => router.push(`/dashboard/processos/${processoId}`)}
+          />
+        )}
+
+        {/* Lista de audiências para selecionar (quando há múltiplas) */}
+        <Dialog open={audienciasListOpen} onOpenChange={setAudienciasListOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-[#34495e]">
+                <Gavel className="w-4 h-4 text-amber-500" />
+                Audiências nos próximos 7 dias
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-500">
+                Clique em uma audiência para ver os detalhes
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-1 mt-2">
+              {audienciasProximas.map((aud) => (
+                <button
+                  key={aud.id}
+                  onClick={() => {
+                    setAudienciasListOpen(false)
+                    setAudienciaSelecionada(aud)
+                    setAudienciaDetailOpen(true)
+                  }}
+                  className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-[#34495e] truncate">{aud.titulo}</span>
+                    <span className="text-[10px] text-slate-400 ml-2 flex-shrink-0">
+                      {aud.tipo_audiencia || 'Audiência'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <Calendar className="w-3 h-3 text-slate-400" />
+                    <span className="text-xs text-slate-500">
+                      {format(new Date(aud.data_hora), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Clock, DollarSign, ExternalLink, Users, FileText } from 'lucide-react'
+import { Clock, DollarSign, ExternalLink, FolderOpen, FileText } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn, formatHoras, formatDescricaoFatura } from '@/lib/utils'
 import type { LancamentoProntoFaturar } from '@/hooks/useFaturamento'
@@ -88,29 +88,24 @@ export function LancamentoSelectableItem({
               )}
             </div>
 
-            {/* Detalhes do Processo */}
-            {lancamento.processo_id && (
-              <div className="mt-1 space-y-0">
-                {/* Número do processo com link */}
-                <div className="flex items-center gap-1">
-                  <Link
-                    href={`/dashboard/processos/${lancamento.processo_id}`}
-                    className="text-[10px] text-blue-600 hover:underline inline-flex items-center gap-0.5"
-                    onClick={(e) => e.stopPropagation()}
-                    target="_blank"
-                  >
-                    {lancamento.processo_pasta || lancamento.processo_numero || 'Ver processo'}
-                    <ExternalLink className="h-2 w-2 text-slate-400" />
-                  </Link>
-                </div>
-
-                {/* Partes */}
-                {lancamento.partes_resumo && (
-                  <div className="flex items-center gap-0.5 text-[9px] text-slate-400">
-                    <Users className="h-2.5 w-2.5 shrink-0" />
-                    <span className="truncate">{lancamento.partes_resumo}</span>
-                  </div>
-                )}
+            {/* Detalhes do Caso (Processo ou Consultivo) */}
+            {(lancamento.processo_id || lancamento.consulta_id) && (
+              <div className="mt-1">
+                <Link
+                  href={lancamento.processo_id
+                    ? `/dashboard/processos/${lancamento.processo_id}`
+                    : `/dashboard/consultivo/${lancamento.consulta_id}`
+                  }
+                  className="text-[10px] text-blue-600 hover:underline inline-flex items-center gap-1"
+                  onClick={(e) => e.stopPropagation()}
+                  target="_blank"
+                >
+                  <FolderOpen className="h-2.5 w-2.5 shrink-0" />
+                  <span className="truncate">
+                    {lancamento.partes_resumo || lancamento.processo_pasta || 'Ver caso'}
+                  </span>
+                  <ExternalLink className="h-2 w-2 text-slate-400 shrink-0" />
+                </Link>
               </div>
             )}
           </div>

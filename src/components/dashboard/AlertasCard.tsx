@@ -1,9 +1,9 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertTriangle, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import Link from 'next/link'
-import { formatCurrency } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 import { useDashboardAlertas, AudienciaProxima } from '@/hooks/useDashboardAlertas'
 
 interface AlertaItemProps {
@@ -33,15 +33,18 @@ function AlertaItem({ label, value, sublabel, color, href, onClick }: AlertaItem
   const isClickable = href || onClick
 
   const content = (
-    <div className={`flex items-center gap-2 py-1.5 ${isClickable ? 'cursor-pointer hover:bg-slate-50 -mx-2 px-2 rounded' : ''}`}>
-      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotColors[color]}`} />
+    <div className={cn(
+      'flex items-center gap-2.5 px-2 py-2 rounded-lg transition-colors',
+      isClickable && 'hover:bg-slate-50 cursor-pointer'
+    )}>
+      <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', dotColors[color])} />
       <div className="flex-1 min-w-0">
         <span className="text-[11px] text-slate-600">{label}</span>
         {sublabel && (
           <span className="text-[10px] text-slate-400 ml-1">({sublabel})</span>
         )}
       </div>
-      <span className={`text-xs font-semibold ${valueColors[color]}`}>{value}</span>
+      <span className={cn('text-xs font-semibold', valueColors[color])}>{value}</span>
     </div>
   )
 
@@ -65,14 +68,24 @@ export default function AlertasCard({ className, onAudienciasClick }: AlertasCar
   const { alertas, loading, temAlertasCriticos, totalAlertas, isSocio } = useDashboardAlertas()
 
   return (
-    <Card className={`border-slate-200 shadow-sm ${className || ''}`}>
-      <CardHeader className="pb-1 pt-4 px-4">
+    <Card className={cn(
+      'rounded-2xl border-0 shadow-sm hover:shadow-md transition-all duration-300',
+      className
+    )}>
+      <CardHeader className="pb-1 pt-5 px-5">
         <CardTitle className="text-sm flex items-center gap-2 text-[#34495e]">
-          <AlertTriangle className={`w-3.5 h-3.5 ${temAlertasCriticos ? 'text-red-500' : 'text-amber-500'}`} />
-          Atenção Imediata
+          <span className="font-bold">Atenção Imediata</span>
+          {totalAlertas > 0 && (
+            <span className={cn(
+              'inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-semibold',
+              temAlertasCriticos ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+            )}>
+              {totalAlertas}
+            </span>
+          )}
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-1 pb-4 px-4">
+      <CardContent className="pt-1 pb-5 px-5">
         {loading ? (
           <div className="flex justify-center py-2">
             <Loader2 className="w-4 h-4 text-[#89bcbe] animate-spin" />

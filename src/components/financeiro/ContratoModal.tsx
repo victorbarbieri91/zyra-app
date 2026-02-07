@@ -93,7 +93,7 @@ const AREAS_JURIDICAS = [
   { value: 'consumidor', label: 'Consumidor' },
 ]
 
-// Funções de máscara de moeda
+// Funções de máscara de moeda (estilo ATM - dígitos acumulam da direita)
 const formatCurrencyInput = (value: number | null | undefined): string => {
   if (value === undefined || value === null || value === 0) return ''
   return value.toLocaleString('pt-BR', {
@@ -102,31 +102,22 @@ const formatCurrencyInput = (value: number | null | undefined): string => {
   })
 }
 
-const parseCurrencyInput = (value: string): number => {
-  if (!value) return 0
-  // Remove tudo exceto números e vírgula/ponto
-  const cleaned = value.replace(/[^\d,.-]/g, '')
-  // Converte vírgula para ponto e remove pontos de milhar
-  const normalized = cleaned.replace(/\./g, '').replace(',', '.')
-  const parsed = parseFloat(normalized)
-  return isNaN(parsed) ? 0 : parsed
-}
-
 const handleCurrencyChange = (
   e: React.ChangeEvent<HTMLInputElement>,
   setValue: (value: number) => void
 ) => {
-  const input = e.target
-  const rawValue = input.value
+  const rawValue = e.target.value
 
-  // Se está vazio, define como 0
-  if (!rawValue) {
+  // Extrai apenas dígitos
+  const digits = rawValue.replace(/\D/g, '')
+
+  if (!digits) {
     setValue(0)
     return
   }
 
-  // Parse o valor e atualiza o estado
-  const numericValue = parseCurrencyInput(rawValue)
+  // Converte centavos para reais
+  const numericValue = parseInt(digits, 10) / 100
   setValue(numericValue)
 }
 
@@ -588,6 +579,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
       if (data) {
         // Pegar valores já salvos (se for edição)
         const atosExistentes = formData.atos_configurados || []
+        const isEdicao = !!contrato && atosExistentes.length > 0
 
         // Mesclar atos do escritório com valores existentes
         const atosConfig: AtoContrato[] = data.map((a) => {
@@ -596,9 +588,13 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
           return {
             ato_tipo_id: a.id,
             ato_nome: a.nome,
-            percentual_valor_causa: existente?.percentual_valor_causa ?? a.percentual_padrao ?? undefined,
-            valor_fixo: existente?.valor_fixo ?? a.valor_fixo_padrao ?? undefined,
-            ativo: existente ? true : true, // Por padrão todos vêm ativos
+            percentual_valor_causa: existente?.percentual_valor_causa ?? (isEdicao ? undefined : a.percentual_padrao) ?? undefined,
+            valor_fixo: existente?.valor_fixo ?? (isEdicao ? undefined : a.valor_fixo_padrao) ?? undefined,
+            modo_cobranca: existente?.modo_cobranca,
+            valor_hora: existente?.valor_hora,
+            horas_minimas: existente?.horas_minimas,
+            horas_maximas: existente?.horas_maximas,
+            ativo: isEdicao ? !!existente : true, // Na edição, só ativa os salvos
           }
         })
         setFormData((prev) => ({ ...prev, atos_configurados: atosConfig }))

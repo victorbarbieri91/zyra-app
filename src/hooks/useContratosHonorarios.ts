@@ -48,6 +48,8 @@ export interface ContratoHonorario {
   }
   // Indica se o contrato tem configuração de valores preenchida
   configurado?: boolean
+  // Formas de cobrança que realmente têm configuração válida
+  formas_configuradas?: FormaCobranca[]
   // Grupo de clientes (grupo econômico)
   grupo_clientes?: GrupoClientes | null
   // Reajuste monetário (contratos fixos)
@@ -327,40 +329,45 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           ? (contrato.formas_pagamento as Array<{ forma: FormaCobranca }>).map(f => f.forma)
           : [contrato.forma_cobranca]
 
-        // Verificar se o contrato está configurado baseado na forma de cobrança
+        // Verificar se o contrato está configurado baseado nas formas de cobrança
         const configData = contrato.config as Record<string, unknown> | null
         let configurado = false
+        let formasConfiguradas: FormaCobranca[] = []
 
         if (configData && Object.keys(configData).length > 0) {
-          const formaCobranca = contrato.forma_cobranca as FormaCobranca
-          switch (formaCobranca) {
-            case 'fixo':
-              configurado = !!configData.valor_fixo
-              break
-            case 'por_hora':
-              configurado = !!configData.valor_hora
-              break
-            case 'por_cargo':
-              configurado = Array.isArray(configData.valores_por_cargo) &&
-                (configData.valores_por_cargo as unknown[]).length > 0
-              break
-            case 'por_pasta':
-              configurado = !!configData.valor_por_processo
-              break
-            case 'por_ato':
-              configurado = Array.isArray(configData.atos_configurados) &&
-                (configData.atos_configurados as unknown[]).length > 0
-              break
-            case 'misto':
-              // Para misto, precisa ter pelo menos uma configuração válida
-              configurado = !!configData.valor_fixo ||
-                !!configData.valor_hora ||
-                !!configData.percentual_exito ||
-                (!!configData.etapas_valores && Object.keys(configData.etapas_valores as object).length > 0)
-              break
-            default:
-              configurado = false
+          // Verificar todas as formas configuradas, não só a principal
+          const formasParaVerificar = formasDisponiveis.length > 0
+            ? formasDisponiveis
+            : [contrato.forma_cobranca as FormaCobranca]
+
+          const verificarForma = (forma: FormaCobranca): boolean => {
+            switch (forma) {
+              case 'fixo':
+                return (Array.isArray(configData.valores_fixos) && (configData.valores_fixos as unknown[]).length > 0) ||
+                  !!configData.valor_fixo
+              case 'por_hora':
+                return !!configData.valor_hora
+              case 'por_cargo':
+                return Array.isArray(configData.valores_por_cargo) &&
+                  (configData.valores_por_cargo as unknown[]).length > 0
+              case 'por_pasta':
+                return !!configData.valor_por_processo
+              case 'por_ato':
+                return Array.isArray(configData.atos_configurados) &&
+                  (configData.atos_configurados as unknown[]).length > 0
+              case 'misto':
+                return !!configData.valor_fixo ||
+                  !!configData.valor_hora ||
+                  !!configData.percentual_exito ||
+                  (!!configData.etapas_valores && Object.keys(configData.etapas_valores as object).length > 0)
+              default:
+                return false
+            }
           }
+
+          // Filtrar apenas as formas que realmente têm config válida
+          formasConfiguradas = formasParaVerificar.filter(verificarForma)
+          configurado = formasConfiguradas.length > 0
         }
 
         return {
@@ -396,6 +403,7 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           dias_atraso: diasAtraso,
           proxima_parcela: proximaParcela,
           configurado,
+          formas_configuradas: formasConfiguradas,
           // Grupo de clientes (carregado do campo JSONB)
           grupo_clientes: contrato.grupo_clientes as GrupoClientes | null,
         }

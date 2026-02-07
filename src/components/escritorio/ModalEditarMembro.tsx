@@ -223,7 +223,7 @@ export function ModalEditarMembro({
           {isDono ? (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <p className="text-xs text-amber-700">
-                O Dono do escritorio nao pode ter seu cargo alterado ou ser removido.
+                O Sócio Administrador do escritório não pode ter seu cargo alterado ou ser removido.
                 Apenas as informacoes de remuneracao podem ser editadas.
               </p>
             </div>

@@ -24,6 +24,8 @@ import { useAgendaResponsaveis } from '@/hooks/useAgendaResponsaveis'
 import { useEscritorioMembros } from '@/hooks/useEscritorioMembros'
 import { createClient } from '@/lib/supabase/client'
 import { parseDateInBrazil, formatBrazilDateLong } from '@/lib/timezone'
+import { useAuth } from '@/contexts/AuthContext'
+import { toast } from 'sonner'
 
 interface TarefaWizardProps {
   escritorioId: string
@@ -71,6 +73,7 @@ const TIPO_CONFIG = {
 }
 
 export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreated, initialData }: TarefaWizardProps) {
+  const { user } = useAuth()
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -93,7 +96,9 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   const [dataExecucao, setDataExecucao] = useState(initialData?.data_inicio || '')
   const [prazoFatal, setPrazoFatal] = useState(initialData?.data_fim || '')
   const [prioridade, setPrioridade] = useState<Prioridade>(initialData?.prioridade || 'media')
-  const [responsaveisIds, setResponsaveisIds] = useState<string[]>(initialData?.responsavel_id ? [initialData.responsavel_id] : [])
+  const [responsaveisIds, setResponsaveisIds] = useState<string[]>(
+    initialData?.responsavel_id ? [initialData.responsavel_id] : (user?.id ? [user.id] : [])
+  )
 
   const [processoId, setProcessoId] = useState<string | null>(initialData?.processo_id || null)
   const [consultivoId, setConsultivoId] = useState<string | null>(initialData?.consultivo_id || null)
@@ -269,6 +274,10 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   const filteredSteps = steps
 
   const handleComplete = async () => {
+    if (responsaveisIds.length === 0) {
+      toast.error('Selecione pelo menos um responsável')
+      return
+    }
     setIsSubmitting(true)
     try {
       // Converter datas YYYY-MM-DD para ISO com horário meio-dia para evitar problemas de timezone
@@ -525,7 +534,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
               escritorioId={escritorioId}
               selectedIds={responsaveisIds}
               onChange={setResponsaveisIds}
-              label="Responsáveis"
+              label="Responsáveis *"
               placeholder="Selecionar responsáveis..."
             />
           </div>

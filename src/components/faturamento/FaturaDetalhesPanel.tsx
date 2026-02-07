@@ -100,7 +100,6 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
       pagamentoForm.dataPagamento,
       pagamentoForm.formaPagamento,
       pagamentoForm.contaBancariaId || undefined,
-      undefined,
       pagamentoForm.observacoes || undefined
     )
 

@@ -21,14 +21,11 @@ import {
   UserPlus,
   Pencil,
   Calculator,
-  Check,
-  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Input } from '@/components/ui/input';
 
 // Modais
 import { ModalConvidarMembro } from '@/components/escritorio/ModalConvidarMembro';
@@ -101,8 +98,7 @@ export default function EscritorioPage() {
     useState<MembroCompleto | null>(null);
 
   // Estado para edição de valores por hora
-  const [editandoValorHora, setEditandoValorHora] = useState<string | null>(null);
-  const [valorHoraTemp, setValorHoraTemp] = useState<string>('');
+  const [valoresHora, setValoresHora] = useState<Record<string, string>>({});
 
   // Handlers
   const handleTrocarEscritorio = async (escritorioId: string) => {
@@ -129,29 +125,52 @@ export default function EscritorioPage() {
     }
   };
 
-  // Handler para iniciar edição de valor por hora
-  const handleIniciarEdicaoValorHora = (cargoId: string, valorAtual: number | null) => {
-    setEditandoValorHora(cargoId);
-    setValorHoraTemp(valorAtual?.toString() || '0');
+  // Formata número → "350,00" ou "1.500,00"
+  const formatNumero = (value: number): string => {
+    return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  // Handler para salvar valor por hora
-  const handleSalvarValorHora = async (cargoId: string) => {
-    const valor = parseFloat(valorHoraTemp) || 0;
+  // Valor exibido no input (estado local durante edição, ou formatado do cargo)
+  const getValorHoraDisplay = (cargo: { id: string; valor_hora_padrao: number | null }): string => {
+    if (cargo.id in valoresHora) return valoresHora[cargo.id];
+    return formatNumero(cargo.valor_hora_padrao || 0);
+  };
+
+  // Change: permite dígitos e vírgula (digitação livre)
+  const handleValorHoraChange = (cargoId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const cleaned = e.target.value.replace(/[^\d,]/g, '');
+    // Garantir no máximo uma vírgula e 2 casas decimais
+    const parts = cleaned.split(',');
+    let result = parts[0];
+    if (parts.length > 1) {
+      result += ',' + parts[1].slice(0, 2);
+    }
+    setValoresHora((prev) => ({ ...prev, [cargoId]: result }));
+  };
+
+  // Focus: seleciona tudo pra poder digitar por cima
+  const handleValorHoraFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    setTimeout(() => e.target.select(), 0);
+  };
+
+  // Blur: formata e salva no banco
+  const handleValorHoraBlur = async (cargoId: string) => {
+    const raw = valoresHora[cargoId];
+    if (raw === undefined) return;
+    // "1500" ou "350,50" → número
+    const valor = parseFloat(raw.replace(/\./g, '').replace(',', '.')) || 0;
     const sucesso = await updateCargoValorHora(cargoId, valor);
     if (sucesso) {
       toast.success('Valor por hora atualizado');
     } else {
       toast.error('Erro ao atualizar valor');
     }
-    setEditandoValorHora(null);
-    setValorHoraTemp('');
-  };
-
-  // Handler para cancelar edição
-  const handleCancelarEdicaoValorHora = () => {
-    setEditandoValorHora(null);
-    setValorHoraTemp('');
+    // Limpa estado local pra voltar a usar valor formatado do cargo
+    setValoresHora((prev) => {
+      const next = { ...prev };
+      delete next[cargoId];
+      return next;
+    });
   };
 
   // Convites pendentes (não expirados e não aceitos)
@@ -377,7 +396,7 @@ export default function EscritorioPage() {
                         variant="secondary"
                         className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600"
                       >
-                        {membro.cargo?.nome_display || (membro.is_owner ? 'Dono' : 'Membro')}
+                        {membro.cargo?.nome_display || (membro.is_owner ? 'Sócio Administrador' : 'Membro')}
                       </Badge>
                     </div>
                   ))
@@ -445,72 +464,38 @@ export default function EscritorioPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {cargos.map((cargo) => (
-                      <div
-                        key={cargo.id}
-                        className={`flex items-center justify-between p-2.5 rounded-lg transition-all ${
-                          editandoValorHora === cargo.id
-                            ? 'bg-[#89bcbe]/10 ring-1 ring-[#89bcbe]'
-                            : 'bg-slate-50 hover:bg-slate-100 cursor-pointer'
-                        }`}
-                        onClick={() => {
-                          if (editandoValorHora !== cargo.id) {
-                            handleIniciarEdicaoValorHora(cargo.id, cargo.valor_hora_padrao);
-                          }
-                        }}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div
-                            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: cargo.cor || '#64748b' }}
-                          />
-                          <span className="text-sm text-slate-700 truncate">
-                            {cargo.nome_display}
-                          </span>
-                        </div>
-
-                        {editandoValorHora === cargo.id ? (
-                          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                            <div className="relative">
-                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">R$</span>
-                              <Input
-                                type="number"
-                                value={valorHoraTemp}
-                                onChange={(e) => setValorHoraTemp(e.target.value)}
-                                className="w-24 h-7 pl-7 pr-2 text-sm text-right border-slate-200"
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleSalvarValorHora(cargo.id);
-                                  if (e.key === 'Escape') handleCancelarEdicaoValorHora();
-                                }}
-                              />
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleSalvarValorHora(cargo.id)}
-                              className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                            >
-                              <Check className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleCancelarEdicaoValorHora}
-                              className="h-7 w-7 p-0 text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[#34495e]">
-                              R$ {(cargo.valor_hora_padrao || 0).toFixed(0)}/h
-                            </span>
-                            <Pencil className="w-3 h-3 text-slate-400" />
-                          </div>
-                        )}
+                    <div
+                      key={cargo.id}
+                      className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 transition-all"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div
+                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: cargo.cor || '#64748b' }}
+                        />
+                        <span className="text-sm text-slate-700 truncate">
+                          {cargo.nome_display}
+                        </span>
                       </div>
-                    ))}
+
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-slate-400">R$</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={getValorHoraDisplay(cargo)}
+                          onChange={(e) => handleValorHoraChange(cargo.id, e)}
+                          onFocus={handleValorHoraFocus}
+                          onBlur={() => handleValorHoraBlur(cargo.id)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                          className={`w-24 h-7 px-2 text-xs text-right font-medium rounded-md border bg-white transition-colors cursor-text
+                            focus:outline-none focus:ring-1 focus:ring-[#89bcbe] focus:border-[#89bcbe]
+                            ${cargo.valor_hora_padrao ? 'text-[#34495e] border-slate-200' : 'text-slate-400 border-slate-200'}`}
+                        />
+                        <span className="text-[10px] text-slate-400">/h</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
                 {cargos.length === 0 && (
                   <p className="text-xs text-slate-400 text-center py-3">

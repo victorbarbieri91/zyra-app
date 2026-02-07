@@ -22,6 +22,7 @@ import { useEscritorioMembros } from '@/hooks/useEscritorioMembros'
 import { createClient } from '@/lib/supabase/client'
 import { formatBrazilDateTime } from '@/lib/timezone'
 import { toast } from 'sonner'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface AudienciaWizardProps {
   escritorioId: string
@@ -82,6 +83,7 @@ export default function AudienciaWizard({
   onSubmit,
   initialData,
 }: AudienciaWizardProps) {
+  const { user } = useAuth()
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -102,7 +104,9 @@ export default function AudienciaWizard({
 
   const [dataHora, setDataHora] = useState(initialData?.data_hora || '')
   const [duracaoMinutos, setDuracaoMinutos] = useState(initialData?.duracao_minutos || 60)
-  const [responsaveisIds, setResponsaveisIds] = useState<string[]>(initialData?.responsavel_id ? [initialData.responsavel_id] : [])
+  const [responsaveisIds, setResponsaveisIds] = useState<string[]>(
+    initialData?.responsavel_id ? [initialData.responsavel_id] : (user?.id ? [user.id] : [])
+  )
 
   const [modalidade, setModalidade] = useState<Modalidade>(initialData?.modalidade || 'presencial')
 
@@ -280,6 +284,10 @@ export default function AudienciaWizard({
   ]
 
   const handleComplete = async () => {
+    if (responsaveisIds.length === 0) {
+      toast.error('Selecione pelo menos um responsável')
+      return
+    }
     setIsSubmitting(true)
     try {
       const formData: AudienciaFormData = {
@@ -477,7 +485,7 @@ export default function AudienciaWizard({
               escritorioId={escritorioId}
               selectedIds={responsaveisIds}
               onChange={setResponsaveisIds}
-              label="Advogados Responsáveis"
+              label="Advogados Responsáveis *"
               placeholder="Selecionar responsáveis..."
             />
           </div>

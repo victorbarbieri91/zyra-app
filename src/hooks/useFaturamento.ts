@@ -510,7 +510,6 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
       dataPagamento: string,
       formaPagamento: string,
       contaBancariaId?: string,
-      comprovanteUrl?: string,
       observacoes?: string
     ): Promise<string | null> => {
       try {
@@ -529,7 +528,6 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
           p_forma_pagamento: formaPagamento,
           p_conta_bancaria_id: contaBancariaId || null,
           p_user_id: user?.id || null,
-          p_comprovante_url: comprovanteUrl || null,
           p_observacoes: observacoes || null,
         })
 

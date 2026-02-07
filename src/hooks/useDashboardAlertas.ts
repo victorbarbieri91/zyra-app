@@ -115,7 +115,7 @@ export function useDashboardAlertas() {
         // Busca dados completos para permitir abrir modal de detalhes direto do dashboard
         userId ? supabase
           .from('agenda_audiencias')
-          .select('id, titulo, data_hora, tipo_audiencia, modalidade, status, local, link_virtual, processo_id, responsavel_id, observacoes, descricao, tribunal, comarca, vara, juiz, promotor, advogado_contrario')
+          .select('id, titulo, data_hora, tipo_audiencia, modalidade, status, forum, link_virtual, processo_id, responsavel_id, observacoes, descricao, tribunal, comarca, vara, juiz, promotor, advogado_contrario')
           .eq('escritorio_id', escritorioAtivo)
           .gte('data_hora', hojeStr)
           .lte('data_hora', em7dias.toISOString().split('T')[0])
@@ -180,7 +180,10 @@ export function useDashboardAlertas() {
         }
       }
 
-      const audienciasData = (audienciasResult.data || []) as AudienciaProxima[]
+      const audienciasData = (audienciasResult.data || []).map((item: any) => ({
+        ...item,
+        local: item.forum || item.link_virtual || undefined,
+      })) as AudienciaProxima[]
 
       setAlertas({
         prazosHoje: prazosHojeResult.count || 0,

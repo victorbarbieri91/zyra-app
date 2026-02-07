@@ -75,7 +75,7 @@ export interface ConviteEscritorio {
 
 // Helpers para nomes de cargo
 export const CARGO_LABELS: Record<CargoNome, string> = {
-  dono: 'Dono',
+  dono: 'Sócio Administrador',
   socio: 'Sócio',
   gerente: 'Gerente',
   senior: 'Sênior',

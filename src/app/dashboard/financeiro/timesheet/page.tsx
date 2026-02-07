@@ -29,6 +29,7 @@ interface TimesheetRow {
   processo_id?: string
   numero_processo?: string
   processo_pasta?: string
+  processo_titulo?: string
   consulta_id?: string
   consulta_titulo?: string
   data_trabalho: string
@@ -836,7 +837,7 @@ export default function TimesheetPage() {
                         title={`Abrir pasta ${ts.processo_pasta || ts.numero_processo}`}
                       >
                         <Briefcase className="w-3 h-3 flex-shrink-0" />
-                        <span className="truncate">{ts.processo_pasta || ts.numero_processo}</span>
+                        <span className="truncate">{ts.processo_titulo || ts.processo_pasta || ts.numero_processo}</span>
                       </Link>
                     ) : ts.consulta_id ? (
                       <Link

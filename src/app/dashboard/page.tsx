@@ -1,21 +1,20 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible'
 import {
   Briefcase,
   Users,
   FileText,
   Calendar,
   Clock,
-  Target,
   Sparkles,
   RefreshCw,
   Loader2,
@@ -23,6 +22,8 @@ import {
   MessageSquare,
   Building2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Check,
   Bell,
   FileBarChart,
@@ -33,6 +34,14 @@ import {
   BarChart3,
   Gavel,
   X,
+  AlertTriangle,
+  TrendingUp,
+  TrendingDown,
+  Zap,
+  ArrowRight,
+  Timer,
+  CircleDollarSign,
+  Activity,
 } from 'lucide-react'
 import { formatCurrency, formatHoras } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -41,7 +50,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 // Custom components
-import MetricCard from '@/components/dashboard/MetricCard'
 import InsightCard from '@/components/dashboard/InsightCard'
 import EmptyState from '@/components/dashboard/EmptyState'
 import AlertasCard from '@/components/dashboard/AlertasCard'
@@ -52,11 +60,15 @@ import { ConsultaWizardModal } from '@/components/consultivo/ConsultaWizardModal
 import ProcessoWizard from '@/components/processos/ProcessoWizard'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
+import TarefaDetailModal from '@/components/agenda/TarefaDetailModal'
+import EventoDetailModal from '@/components/agenda/EventoDetailModal'
 import { AudienciaProxima } from '@/hooks/useDashboardAlertas'
+import { Tarefa } from '@/hooks/useTarefas'
+import { createClient } from '@/lib/supabase/client'
 
 // Hooks de dados reais
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics'
-import { useDashboardAgenda } from '@/hooks/useDashboardAgenda'
+import { useDashboardAgenda, AgendaItemDashboard } from '@/hooks/useDashboardAgenda'
 import { useDashboardPerformance } from '@/hooks/useDashboardPerformance'
 import { useDashboardPublicacoes } from '@/hooks/useDashboardPublicacoes'
 import { useDashboardResumoIA } from '@/hooks/useDashboardResumoIA'
@@ -64,6 +76,46 @@ import { useDashboardInsightsIA } from '@/hooks/useDashboardInsightsIA'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 import { cn } from '@/lib/utils'
+
+// ── Circular Progress Component ──────────────────────────────────────
+function CircularProgress({ value, max, size = 64, strokeWidth = 5, color = '#89bcbe', bgColor = 'rgba(137,188,190,0.15)' }: {
+  value: number
+  max: number
+  size?: number
+  strokeWidth?: number
+  color?: string
+  bgColor?: string
+}) {
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const percentage = Math.min((value / (max || 1)) * 100, 100)
+  const strokeDashoffset = circumference - (percentage / 100) * circumference
+
+  return (
+    <svg width={size} height={size} className="transform -rotate-90">
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke={bgColor}
+        strokeWidth={strokeWidth}
+        fill="none"
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke={color}
+        strokeWidth={strokeWidth}
+        fill="none"
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={strokeDashoffset}
+        className="transition-all duration-1000 ease-out"
+      />
+    </svg>
+  )
+}
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -93,13 +145,27 @@ export default function DashboardPage() {
   // Estado para visualização de horas (lista ou barras)
   const [horasViewMode, setHorasViewMode] = useState<'list' | 'bars'>('list')
 
+  // Estado para paginação da agenda
+  const [agendaPage, setAgendaPage] = useState(0)
+  const AGENDA_PER_PAGE = 5
+
+  // Estados para modais de detalhe dos itens da agenda
+  const [tarefaDetailData, setTarefaDetailData] = useState<Tarefa | null>(null)
+  const [tarefaDetailOpen, setTarefaDetailOpen] = useState(false)
+  const [eventoDetailData, setEventoDetailData] = useState<Record<string, unknown> | null>(null)
+  const [eventoDetailOpen, setEventoDetailOpen] = useState(false)
+  const [agendaAudienciaData, setAgendaAudienciaData] = useState<Record<string, unknown> | null>(null)
+  const [agendaAudienciaOpen, setAgendaAudienciaOpen] = useState(false)
+
+  // Estado para publicações colapsáveis
+  const [pubExpanded, setPubExpanded] = useState(false)
+
   // Carregar escritórios do grupo
   useEffect(() => {
     const loadEscritoriosGrupo = async () => {
       try {
         const escritorios = await getEscritoriosDoGrupo()
         setEscritoriosGrupo(escritorios)
-        // Iniciar com todos os escritórios selecionados (visão consolidada)
         if (escritorios.length > 0) {
           setEscritoriosSelecionados(escritorios.map(e => e.id))
         }
@@ -114,7 +180,6 @@ export default function DashboardPage() {
   const toggleEscritorio = (id: string) => {
     setEscritoriosSelecionados(prev => {
       if (prev.includes(id)) {
-        // Não permitir desmarcar se for o único selecionado
         if (prev.length === 1) return prev
         return prev.filter(e => e !== id)
       }
@@ -130,7 +195,6 @@ export default function DashboardPage() {
     setEscritoriosSelecionados([id])
   }
 
-  // Texto do botão do seletor
   const getSeletorLabel = () => {
     if (escritoriosSelecionados.length === 0) return 'Selecione'
     if (escritoriosSelecionados.length === escritoriosGrupo.length) return 'Todos os escritórios'
@@ -142,21 +206,60 @@ export default function DashboardPage() {
   }
 
   // Hooks de dados
-  const { metrics, loading: loadingMetrics, isEmpty: isMetricsEmpty } = useDashboardMetrics()
+  const { metrics, loading: loadingMetrics } = useDashboardMetrics()
   const { items: agendaItems, loading: loadingAgenda, isEmpty: isAgendaEmpty, audienciasHoje, prazosHoje } = useDashboardAgenda()
-  const { equipe, areas, topClientes, totalHorasEquipe, totalAReceber, taxaInadimplencia, currentUserId, currentUserPosition, loading: loadingPerformance, isEmpty: isPerformanceEmpty } = useDashboardPerformance()
+  const { equipe, totalHorasEquipe, currentUserId, loading: loadingPerformance } = useDashboardPerformance()
   const { publicacoes, loading: loadingPublicacoes, isEmpty: isPublicacoesEmpty, urgentes: publicacoesUrgentes } = useDashboardPublicacoes()
   const { resumo, loading: loadingResumo, refresh: refreshResumo, tempoDesdeAtualizacao } = useDashboardResumoIA()
   const { insights, loading: loadingInsights, hasPermission: hasInsightsPermission, refresh: refreshInsights } = useDashboardInsightsIA()
 
+  // Handler para clique nos itens da agenda do dashboard
+  const handleAgendaItemClick = async (item: AgendaItemDashboard) => {
+    const supabase = createClient()
+
+    if (item.tipo === 'audiencia') {
+      const { data } = await supabase
+        .from('agenda_audiencias')
+        .select('*, processos_processos(numero_processo)')
+        .eq('id', item.id)
+        .single()
+      if (data) {
+        setAgendaAudienciaData(data)
+        setAgendaAudienciaOpen(true)
+      }
+    } else if (item.tipo === 'tarefa' || item.tipo === 'prazo') {
+      const { data } = await supabase
+        .from('agenda_tarefas')
+        .select('*, profiles:responsavel_id(nome_completo)')
+        .eq('id', item.id)
+        .single()
+      if (data) {
+        setTarefaDetailData({
+          ...data,
+          responsavel_nome: data.profiles?.nome_completo || undefined,
+          responsaveis_ids: data.responsaveis_ids || [],
+        } as Tarefa)
+        setTarefaDetailOpen(true)
+      }
+    } else {
+      const { data } = await supabase
+        .from('agenda_eventos')
+        .select('*')
+        .eq('id', item.id)
+        .single()
+      if (data) {
+        setEventoDetailData(data)
+        setEventoDetailOpen(true)
+      }
+    }
+  }
+
   // Handler para clique nas audiências do card Atenção Imediata
   const handleAudienciasClick = (audiencias: AudienciaProxima[]) => {
     if (audiencias.length === 1) {
-      // Se for apenas 1 audiência, abre o modal de detalhes direto
       setAudienciaSelecionada(audiencias[0])
       setAudienciaDetailOpen(true)
     } else if (audiencias.length > 1) {
-      // Se múltiplas, abre a lista para o usuário escolher
       setAudienciasProximas(audiencias)
       setAudienciasListOpen(true)
     }
@@ -181,504 +284,550 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-10 h-10 text-[#89bcbe] animate-spin" />
-          <p className="text-sm text-[#6c757d]">Carregando dashboard...</p>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-[#f0f9f9]/30 to-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center shadow-lg">
+            <Loader2 className="w-7 h-7 text-white animate-spin" />
+          </div>
+          <p className="text-sm text-[#46627f] font-medium">Preparando seu dashboard...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-[#34495e]">
-              Dashboard
-            </h1>
-            <p className="text-sm text-[#6c757d] mt-0.5 font-normal">
-              {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
-            </p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f0f9f9]/20 to-slate-50">
+      {/* ═══════════════════════════════════════════════════════════════
+          HERO BANNER - Light gradient with decorative elements
+          ═══════════════════════════════════════════════════════════════ */}
+      <div className="bg-gradient-to-br from-[#f0f9f9] via-[#e8f5f5]/60 to-slate-50 px-6 pt-4 pb-10 relative overflow-hidden border-b border-[#aacfd0]/20">
+        {/* Decorative geometric shapes - darker for contrast */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] -translate-y-1/2 translate-x-1/4">
+          <div className="w-full h-full rounded-full bg-gradient-to-br from-[#34495e]/[0.04] to-[#89bcbe]/[0.06]" />
+        </div>
+        <div className="absolute -bottom-20 -left-10 w-80 h-80">
+          <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#46627f]/[0.05] to-transparent" />
+        </div>
+        <div className="absolute top-8 right-[15%] w-24 h-24 rounded-2xl bg-[#34495e]/[0.03] rotate-12" />
+        <div className="absolute bottom-4 right-[35%] w-16 h-16 rounded-xl bg-[#89bcbe]/[0.06] -rotate-6" />
+        <div className="absolute top-1/2 left-[8%] w-2 h-2 rounded-full bg-[#34495e]/10" />
+        <div className="absolute top-[30%] right-[25%] w-1.5 h-1.5 rounded-full bg-[#89bcbe]/15" />
+        <div className="absolute bottom-8 left-[20%] w-3 h-3 rounded-full bg-[#46627f]/[0.07]" />
 
-          {/* Seletor de Escritórios - só aparece se tem mais de 1 no grupo */}
-          {escritoriosGrupo.length > 1 && (
-            <Popover open={seletorAberto} onOpenChange={setSeletorAberto}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "h-9 px-3 gap-2 border-slate-200 hover:bg-slate-50",
-                    escritoriosSelecionados.length === escritoriosGrupo.length && "border-[#89bcbe] bg-[#f0f9f9]/50"
-                  )}
-                >
-                  <Building2 className="h-4 w-4 text-[#89bcbe]" />
-                  <span className="text-sm text-[#34495e] font-medium">
-                    {getSeletorLabel()}
-                  </span>
-                  <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-72 p-0" align="end">
-                <div className="p-3 border-b border-slate-100">
-                  <p className="text-xs font-medium text-[#34495e]">Visualizar dados de:</p>
-                </div>
+        <div className="relative z-10">
+          {/* Top bar */}
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-[#89bcbe] text-[10px] font-medium tracking-wide uppercase">
+                {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Quick Action Pills */}
+              <div className="hidden md:flex items-center gap-1.5">
+                {[
+                  { label: 'Tarefa', icon: CheckSquare, action: () => setTarefaModalOpen(true) },
+                  { label: 'Processo', icon: Briefcase, action: () => setProcessoModalOpen(true) },
+                  { label: 'Consultivo', icon: Scale, action: () => setConsultaModalOpen(true) },
+                  { label: 'Horas', icon: Timer, action: () => setTimesheetModalOpen(true) },
+                ].map((btn) => (
+                  <button
+                    key={btn.label}
+                    onClick={btn.action}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#46627f] hover:bg-[#3d5a80] shadow-sm hover:shadow transition-all text-xs text-white/90 hover:text-white border border-[#46627f]/80"
+                  >
+                    <btn.icon className="w-3.5 h-3.5" />
+                    <span className="hidden lg:inline">{btn.label}</span>
+                  </button>
+                ))}
+              </div>
 
-                {/* Opção "Todos" */}
-                <div
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 border-b border-slate-100",
-                    escritoriosSelecionados.length === escritoriosGrupo.length && "bg-[#f0f9f9]"
-                  )}
-                  onClick={selecionarTodos}
-                >
-                  <div className={cn(
-                    "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
-                    escritoriosSelecionados.length === escritoriosGrupo.length
-                      ? "bg-[#89bcbe] border-[#89bcbe]"
-                      : "border-slate-300"
-                  )}>
-                    {escritoriosSelecionados.length === escritoriosGrupo.length && (
-                      <Check className="h-3 w-3 text-white" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-[#34495e]">Todos os escritórios</p>
-                    <p className="text-[10px] text-slate-500">Visão consolidada do grupo</p>
-                  </div>
-                </div>
-
-                {/* Lista de escritórios */}
-                <div className="max-h-64 overflow-y-auto">
-                  {escritoriosGrupo.map((escritorio) => {
-                    const isSelected = escritoriosSelecionados.includes(escritorio.id)
-                    const isAtivo = escritorio.id === escritorioAtivo
-
-                    return (
-                      <div
-                        key={escritorio.id}
-                        className={cn(
-                          "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 border-b border-slate-50 last:border-0",
-                          isSelected && escritoriosSelecionados.length < escritoriosGrupo.length && "bg-[#f0f9f9]/50"
-                        )}
-                        onClick={() => toggleEscritorio(escritorio.id)}
-                      >
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => toggleEscritorio(escritorio.id)}
-                          className="data-[state=checked]:bg-[#89bcbe] data-[state=checked]:border-[#89bcbe]"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-[#34495e] truncate">
-                              {escritorio.nome}
-                            </p>
-                            {isAtivo && (
-                              <span className="text-[9px] font-medium text-[#89bcbe] bg-[#89bcbe]/10 px-1.5 py-0.5 rounded">
-                                Atual
-                              </span>
-                            )}
-                          </div>
-                          {escritorio.cnpj && (
-                            <p className="text-[10px] text-slate-400 truncate">
-                              {escritorio.cnpj}
-                            </p>
-                          )}
-                        </div>
-                        {/* Botão "Apenas este" */}
-                        {escritoriosSelecionados.length > 1 && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              selecionarApenas(escritorio.id)
-                            }}
-                            className="text-[10px] text-[#89bcbe] hover:text-[#6ba9ab] hover:underline whitespace-nowrap"
-                          >
-                            Apenas
-                          </button>
+              {/* Seletor de Escritórios */}
+              {escritoriosGrupo.length > 1 && (
+                <Popover open={seletorAberto} onOpenChange={setSeletorAberto}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "h-8 px-3 gap-2 text-[#46627f] hover:text-[#34495e] hover:bg-white/70 border border-[#aacfd0]/30 shadow-sm"
+                      )}
+                    >
+                      <Building2 className="h-3.5 w-3.5" />
+                      <span className="text-xs font-medium">{getSeletorLabel()}</span>
+                      <ChevronDown className="h-3 w-3 opacity-60" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-0" align="end">
+                    <div className="p-3 border-b border-slate-100">
+                      <p className="text-xs font-medium text-[#34495e]">Visualizar dados de:</p>
+                    </div>
+                    <div
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 border-b border-slate-100",
+                        escritoriosSelecionados.length === escritoriosGrupo.length && "bg-[#f0f9f9]"
+                      )}
+                      onClick={selecionarTodos}
+                    >
+                      <div className={cn(
+                        "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                        escritoriosSelecionados.length === escritoriosGrupo.length
+                          ? "bg-[#89bcbe] border-[#89bcbe]"
+                          : "border-slate-300"
+                      )}>
+                        {escritoriosSelecionados.length === escritoriosGrupo.length && (
+                          <Check className="h-3 w-3 text-white" />
                         )}
                       </div>
-                    )
-                  })}
-                </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-[#34495e]">Todos os escritórios</p>
+                        <p className="text-[10px] text-slate-500">Visão consolidada do grupo</p>
+                      </div>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {escritoriosGrupo.map((escritorio) => {
+                        const isSelected = escritoriosSelecionados.includes(escritorio.id)
+                        const isAtivo = escritorio.id === escritorioAtivo
+                        return (
+                          <div
+                            key={escritorio.id}
+                            className={cn(
+                              "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 border-b border-slate-50 last:border-0",
+                              isSelected && escritoriosSelecionados.length < escritoriosGrupo.length && "bg-[#f0f9f9]/50"
+                            )}
+                            onClick={() => toggleEscritorio(escritorio.id)}
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleEscritorio(escritorio.id)}
+                              className="data-[state=checked]:bg-[#89bcbe] data-[state=checked]:border-[#89bcbe]"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-[#34495e] truncate">{escritorio.nome}</p>
+                                {isAtivo && (
+                                  <span className="text-[9px] font-medium text-[#89bcbe] bg-[#89bcbe]/10 px-1.5 py-0.5 rounded">Atual</span>
+                                )}
+                              </div>
+                              {escritorio.cnpj && <p className="text-[10px] text-slate-400 truncate">{escritorio.cnpj}</p>}
+                            </div>
+                            {escritoriosSelecionados.length > 1 && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); selecionarApenas(escritorio.id) }}
+                                className="text-[10px] text-[#89bcbe] hover:text-[#6ba9ab] hover:underline whitespace-nowrap"
+                              >
+                                Apenas
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="p-2.5 bg-slate-50 border-t border-slate-100">
+                      <p className="text-[10px] text-slate-500 text-center">
+                        {escritoriosSelecionados.length === 1
+                          ? 'Exibindo dados de 1 escritório'
+                          : `Exibindo dados consolidados de ${escritoriosSelecionados.length} escritórios`}
+                      </p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
+          </div>
 
-                {/* Rodapé com info */}
-                <div className="p-2.5 bg-slate-50 border-t border-slate-100">
-                  <p className="text-[10px] text-slate-500 text-center">
-                    {escritoriosSelecionados.length === 1
-                      ? 'Exibindo dados de 1 escritório'
-                      : `Exibindo dados consolidados de ${escritoriosSelecionados.length} escritórios`}
+          {/* Greeting + AI Summary */}
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h1 className="text-xl font-bold text-[#34495e] mb-0.5">
+                {loadingResumo ? 'Carregando...' : resumo.saudacao}
+              </h1>
+              {loadingResumo ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-3 h-3 text-[#89bcbe] animate-spin" />
+                  <span className="text-sm text-[#46627f]/60">Analisando seu dia...</span>
+                </div>
+              ) : (
+                <p className="text-sm text-[#46627f]/80 leading-relaxed max-w-2xl line-clamp-2">
+                  {resumo.mensagem}
+                </p>
+              )}
+
+              {/* Quick stat pills */}
+              {!loadingResumo && resumo.dados && (
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  {resumo.dados.audiencias > 0 && (
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-[11px] font-medium text-red-600 border border-red-100">
+                      <Gavel className="w-3 h-3" />
+                      {resumo.dados.audiencias} {resumo.dados.audiencias === 1 ? 'audiência' : 'audiências'}
+                    </span>
+                  )}
+                  {resumo.dados.tarefas > 0 && (
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#e8f5f5] text-[11px] font-medium text-[#46627f] border border-[#aacfd0]/30">
+                      <CheckSquare className="w-3 h-3" />
+                      {resumo.dados.tarefas} {resumo.dados.tarefas === 1 ? 'tarefa' : 'tarefas'}
+                    </span>
+                  )}
+                  {resumo.dados.eventos > 0 && (
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-[11px] font-medium text-blue-600 border border-blue-100">
+                      <Calendar className="w-3 h-3" />
+                      {resumo.dados.eventos} {resumo.dados.eventos === 1 ? 'evento' : 'eventos'}
+                    </span>
+                  )}
+                  {resumo.dados.prazos_urgentes > 0 && (
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-[11px] font-semibold text-amber-600 border border-amber-100">
+                      <Zap className="w-3 h-3" />
+                      {resumo.dados.prazos_urgentes} {resumo.dados.prazos_urgentes === 1 ? 'prazo urgente' : 'prazos urgentes'}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Refresh */}
+            <div className="flex items-center gap-1.5 ml-4 flex-shrink-0">
+              <span className="text-[10px] text-[#46627f]/40">{loadingResumo ? '' : tempoDesdeAtualizacao}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-[#46627f]/50 hover:text-[#34495e] hover:bg-white/60"
+                onClick={() => refreshResumo()}
+                disabled={loadingResumo}
+              >
+                <RefreshCw className={cn("w-3.5 h-3.5", loadingResumo && "animate-spin")} />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          KPI STRIP - Floating cards overlapping the hero
+          ═══════════════════════════════════════════════════════════════ */}
+      <div className="px-6 -mt-6 relative z-20">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            {
+              label: 'Processos Ativos',
+              value: metrics?.processos_ativos || 0,
+              trend: metrics?.processos_trend_qtd,
+              trendLabel: 'este mês',
+              icon: Briefcase,
+              gradient: 'from-[#34495e] to-[#4a6fa5]',
+              iconBg: 'bg-white/15',
+            },
+            {
+              label: 'Clientes Ativos',
+              value: metrics?.clientes_ativos || 0,
+              trend: metrics?.clientes_trend_qtd,
+              trendLabel: 'este mês',
+              icon: Users,
+              gradient: 'from-[#46627f] to-[#5a8f9e]',
+              iconBg: 'bg-white/15',
+            },
+            {
+              label: 'Casos Consultivos',
+              value: metrics?.consultas_abertas || 0,
+              trend: metrics?.consultas_trend_qtd,
+              trendLabel: 'este mês',
+              icon: FileText,
+              gradient: 'from-[#5a8f9e] to-[#89bcbe]',
+              iconBg: 'bg-white/20',
+            },
+            {
+              label: 'Horas Cobráveis',
+              value: formatHoras(metrics?.horas_cobraveis || 0, 'curto'),
+              trend: metrics?.horas_cobraveis_trend_percent,
+              trendLabel: 'vs mês',
+              trendSuffix: '%',
+              icon: Activity,
+              gradient: 'from-[#89bcbe] to-[#6ba9ab]',
+              iconBg: 'bg-white/20',
+            },
+          ].map((kpi) => (
+            <div
+              key={kpi.label}
+              className={cn(
+                "rounded-2xl p-4 bg-gradient-to-br shadow-[0_6px_28px_-4px_rgba(52,73,94,0.35)] hover:shadow-[0_12px_40px_-6px_rgba(52,73,94,0.45)] transition-all duration-300 hover:-translate-y-1",
+                kpi.gradient
+              )}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-medium text-white/80">{kpi.label}</span>
+                <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", kpi.iconBg)}>
+                  <kpi.icon className="w-4 h-4 text-white" />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-white tracking-tight">{kpi.value}</div>
+              {(kpi.trend ?? 0) !== 0 && (
+                <div className="flex items-center gap-1 mt-1.5">
+                  {(kpi.trend ?? 0) > 0 ? (
+                    <TrendingUp className="w-3 h-3 text-emerald-300" />
+                  ) : (
+                    <TrendingDown className="w-3 h-3 text-red-300" />
+                  )}
+                  <span className={cn(
+                    "text-[10px] font-semibold",
+                    (kpi.trend ?? 0) > 0 ? "text-emerald-300" : "text-red-300"
+                  )}>
+                    {(kpi.trend ?? 0) > 0 ? '+' : ''}{kpi.trend}{kpi.trendSuffix || ''}
+                  </span>
+                  <span className="text-[10px] text-white/50">{kpi.trendLabel}</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          MAIN CONTENT
+          ═══════════════════════════════════════════════════════════════ */}
+      <div className="px-6 pt-6 pb-8 space-y-5">
+        {/* Row 1: Agenda + Meus Números */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* ── AGENDA DO DIA (Hero) ── */}
+          <div className="lg:col-span-7">
+            <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] transition-all duration-300 overflow-hidden">
+              {/* Agenda Header */}
+              <div className="flex items-center justify-between px-5 pt-5 pb-3">
+                <div>
+                  <h2 className="text-sm font-bold text-[#34495e]">Agenda do Dia</h2>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {agendaItems.length > 0
+                      ? `${agendaItems.length} ${agendaItems.length === 1 ? 'compromisso' : 'compromissos'} hoje`
+                      : 'Nenhum compromisso'}
                   </p>
                 </div>
-              </PopoverContent>
-            </Popover>
-          )}
-        </div>
-
-        {/* Modal Comando IA */}
-        <Dialog open={commandOpen} onOpenChange={setCommandOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-[#89bcbe]" />
-                Comando IA
-              </DialogTitle>
-              <DialogDescription>
-                Digite um comando ou escolha uma ação rápida abaixo
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6c757d]" />
-                <Input
-                  placeholder="O que você gostaria de fazer?"
-                  value={commandInput}
-                  onChange={(e) => setCommandInput(e.target.value)}
-                  className="pl-9"
-                  autoFocus
-                />
-              </div>
-              <div className="border-t pt-3">
-                <p className="text-xs text-[#6c757d] mb-2 font-medium">Ações rápidas</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {commandShortcuts.map((shortcut) => (
-                    <button
-                      key={shortcut.label}
-                      onClick={() => {
-                        shortcut.action()
-                        setCommandOpen(false)
-                      }}
-                      className="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 hover:bg-[#f0f9f9] hover:border-[#89bcbe] transition-colors text-left"
-                    >
-                      <shortcut.icon className="w-4 h-4 text-[#89bcbe]" />
-                      <span className="text-sm text-[#34495e]">{shortcut.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="border-t pt-3">
-                <div className="flex items-center gap-2 text-xs text-[#adb5bd]">
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  <span>Pressione <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">Ctrl+K</kbd> para abrir a qualquer momento</span>
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* LINHA 1: Agenda + Resumo IA + KPIs (alinhados horizontalmente) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 items-stretch mb-4">
-          {/* Agenda de Hoje */}
-          <div className="lg:col-span-3">
-            <Card className="border-[#89bcbe] shadow-sm bg-gradient-to-br from-white to-[#f0f9f9]/30 h-full">
-              <CardHeader className="pb-2 pt-5 px-5">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm flex items-center gap-2 text-[#34495e]">
-                    <Calendar className="w-4 h-4 text-[#89bcbe]" />
-                    Agenda de Hoje
-                  </CardTitle>
-                  <Link href="/dashboard/agenda">
-                    <Button variant="ghost" size="sm" className="text-[10px] text-[#89bcbe] hover:text-[#6ba9ab] h-5 px-1.5">
-                      Ver →
-                    </Button>
+                <div className="flex items-center gap-2">
+                  {audienciasHoje > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-red-50 text-[10px] font-semibold text-red-600">
+                      {audienciasHoje} {audienciasHoje === 1 ? 'audiência' : 'audiências'}
+                    </span>
+                  )}
+                  {prazosHoje > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-50 text-[10px] font-semibold text-amber-600">
+                      {prazosHoje} {prazosHoje === 1 ? 'prazo' : 'prazos'}
+                    </span>
+                  )}
+                  <Link href="/dashboard/agenda" className="text-[11px] font-medium text-[#89bcbe] hover:text-[#6ba9ab] transition-colors">
+                    Ver agenda →
                   </Link>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-1 pb-5 px-5">
+              </div>
+
+              {/* Agenda Items */}
+              <div className="px-5 pb-4">
                 {loadingAgenda ? (
-                  <div className="flex justify-center py-2">
-                    <Loader2 className="w-4 h-4 text-[#89bcbe] animate-spin" />
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-5 h-5 text-[#89bcbe] animate-spin" />
                   </div>
                 ) : isAgendaEmpty ? (
-                  <p className="text-[11px] text-[#9ca3af] text-center py-2">Nenhum compromisso</p>
-                ) : (
-                  <div className="space-y-1">
-                    {agendaItems.slice(0, 3).map((event, index) => {
-                      const tipoConfig: Record<string, { label: string; color: string }> = {
-                        audiencia: { label: 'Aud', color: 'text-red-600' },
-                        prazo: { label: 'Prazo', color: 'text-amber-600' },
-                        tarefa: { label: 'Tarefa', color: 'text-slate-500' },
-                        evento: { label: 'Comp', color: 'text-blue-600' },
-                      }
-                      const config = tipoConfig[event.tipo] || tipoConfig.evento
-                      const temHorario = event.tipo !== 'tarefa' && event.time && event.time !== 'Dia todo'
-
-                      return (
-                        <div key={`${event.id}-${index}`} className="flex items-center gap-2">
-                          <span className={`text-[9px] font-semibold w-[34px] flex-shrink-0 ${config.color}`}>
-                            {config.label}
-                          </span>
-                          <p className="text-[11px] text-[#34495e] flex-1 truncate">
-                            {event.title}
-                          </p>
-                          {temHorario && (
-                            <span className="text-[9px] text-[#adb5bd] tabular-nums flex-shrink-0">
-                              {event.time}
-                            </span>
-                          )}
-                        </div>
-                      )
-                    })}
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <p className="text-sm font-medium text-[#34495e] mb-1">Dia livre!</p>
+                    <p className="text-xs text-slate-400">Aproveite para organizar suas tarefas ou registrar horas</p>
                   </div>
+                ) : (
+                  <>
+                    {/* Fixed-height items area */}
+                    <div className="min-h-[260px]">
+                      <div className="space-y-0.5">
+                        {agendaItems
+                          .slice(agendaPage * AGENDA_PER_PAGE, (agendaPage + 1) * AGENDA_PER_PAGE)
+                          .map((event, index) => {
+                            const dotColor: Record<string, string> = {
+                              audiencia: 'bg-red-500',
+                              prazo: 'bg-amber-500',
+                              tarefa: 'bg-[#89bcbe]',
+                              evento: 'bg-[#1E3A8A]',
+                            }
+                            const badgeConfig: Record<string, { className: string; label: string }> = {
+                              audiencia: { className: 'text-red-600', label: 'Audiência' },
+                              prazo: { className: 'text-amber-600', label: 'Prazo' },
+                              tarefa: { className: 'text-[#46627f]', label: 'Tarefa' },
+                              evento: { className: 'text-[#1E3A8A]', label: 'Evento' },
+                            }
+                            const dot = dotColor[event.tipo] || dotColor.evento
+                            const badge = badgeConfig[event.tipo] || badgeConfig.evento
+                            const temHorario = event.time && event.time !== 'Dia todo'
+
+                            return (
+                              <button
+                                key={`${event.id}-${index}`}
+                                onClick={() => handleAgendaItemClick(event)}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer text-left group"
+                              >
+                                {/* Dot */}
+                                <div className={cn("w-2 h-2 rounded-full flex-shrink-0", dot)} />
+
+                                {/* Content */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <p className="text-sm font-medium text-[#34495e] truncate group-hover:text-[#1E3A8A] transition-colors">{event.title}</p>
+                                    {event.urgente && (
+                                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
+                                    )}
+                                  </div>
+                                  {event.subtitle && (
+                                    <p className="text-[11px] text-slate-400 truncate">{event.subtitle}</p>
+                                  )}
+                                </div>
+
+                                {/* Time + Type */}
+                                <div className="flex items-center gap-2.5 flex-shrink-0">
+                                  <span className="text-xs text-slate-500 tabular-nums">
+                                    {temHorario ? event.time : 'Dia todo'}
+                                  </span>
+                                  <span className={cn("text-[10px] font-medium", badge.className)}>
+                                    {badge.label}
+                                  </span>
+                                </div>
+                              </button>
+                            )
+                          })}
+                      </div>
+                    </div>
+
+                    {/* Pagination */}
+                    {agendaItems.length > AGENDA_PER_PAGE && (
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                        <span className="text-[10px] text-slate-400">
+                          {agendaPage * AGENDA_PER_PAGE + 1}-{Math.min((agendaPage + 1) * AGENDA_PER_PAGE, agendaItems.length)} de {agendaItems.length}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setAgendaPage(p => Math.max(0, p - 1))}
+                            disabled={agendaPage === 0}
+                            className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5 text-slate-500" />
+                          </button>
+                          <button
+                            onClick={() => setAgendaPage(p => Math.min(Math.ceil(agendaItems.length / AGENDA_PER_PAGE) - 1, p + 1))}
+                            disabled={agendaPage >= Math.ceil(agendaItems.length / AGENDA_PER_PAGE) - 1}
+                            className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
 
-          {/* Resumo do Dia (IA) */}
-          <div className="lg:col-span-5">
-            <Card className="border-slate-200 shadow-sm bg-gradient-to-br from-white to-slate-50/30 h-full">
-              <CardHeader className="pb-2 pt-6 px-6">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm flex items-center gap-2 text-[#34495e]">
-                    <Sparkles className="w-4 h-4 text-[#89bcbe]" />
-                    {loadingResumo ? 'Carregando...' : resumo.saudacao}
-                  </CardTitle>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-[#adb5bd]">
-                      {loadingResumo ? '' : tempoDesdeAtualizacao}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-5 w-5 p-0"
-                      onClick={() => refreshResumo()}
-                      disabled={loadingResumo}
-                    >
-                      <RefreshCw className={cn("w-3 h-3 text-[#89bcbe]", loadingResumo && "animate-spin")} />
-                    </Button>
+          {/* ── MEUS NÚMEROS + ALERTAS ── */}
+          <div className="lg:col-span-5 space-y-5">
+            {/* Meus Números do Mês */}
+            <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] transition-all duration-300 p-5">
+              <h2 className="text-sm font-bold text-[#34495e] mb-4">Meus Números</h2>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Horas */}
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-shrink-0">
+                    <CircularProgress
+                      value={metrics?.horas_faturadas_mes || 0}
+                      max={metrics?.horas_meta || 160}
+                      size={56}
+                      strokeWidth={5}
+                      color="#89bcbe"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-[#34495e]">{Math.round(progressoHoras)}%</span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium text-slate-500 mb-0.5">Horas Faturadas</p>
+                    <p className="text-sm font-bold text-[#34495e]">{formatHoras(metrics?.horas_faturadas_mes || 0, 'curto')}</p>
+                    <p className="text-[9px] text-slate-400">de {formatHoras(metrics?.horas_meta || 160, 'curto')}</p>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-2 pb-6 px-6">
-                {loadingResumo ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-3 h-3 text-[#89bcbe] animate-spin" />
-                    <span className="text-xs text-[#6c757d]">Analisando seu dia...</span>
+
+                {/* Receita */}
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-shrink-0">
+                    <CircularProgress
+                      value={metrics?.receita_mes || 0}
+                      max={metrics?.receita_meta || 40000}
+                      size={56}
+                      strokeWidth={5}
+                      color="#10b981"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-[#34495e]">{Math.round(progressoReceita)}%</span>
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-sm text-[#6c757d] leading-relaxed line-clamp-2">
-                    {resumo.mensagem}
+                  <div>
+                    <p className="text-[10px] font-medium text-slate-500 mb-0.5">Receita Gerada</p>
+                    <p className="text-sm font-bold text-[#34495e]">{formatCurrency(metrics?.receita_mes || 0)}</p>
+                    <p className="text-[9px] text-slate-400">Meta: {formatCurrency(metrics?.receita_meta || 40000)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Horas não cobráveis - compact */}
+              <div className="mt-4 pt-3 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-slate-300" />
+                    <span className="text-[11px] text-slate-500">Horas não cobráveis</span>
+                  </div>
+                  <span className="text-xs font-semibold text-slate-500">{formatHoras(metrics?.horas_nao_cobraveis || 0, 'curto')}</span>
+                </div>
+                {(metrics?.valor_horas_nao_cobraveis ?? 0) > 0 && (
+                  <p className="text-[9px] text-slate-400 ml-4 mt-0.5">
+                    Oportunidade: {formatCurrency(metrics?.valor_horas_nao_cobraveis || 0)}
                   </p>
                 )}
-              </CardContent>
-            </Card>
-          </div>
+                {(metrics?.horas_trend_valor ?? 0) !== 0 && (
+                  <div className="flex items-center gap-1 ml-4 mt-1">
+                    {(metrics?.horas_trend_valor ?? 0) > 0 ? (
+                      <TrendingUp className="w-3 h-3 text-emerald-500" />
+                    ) : (
+                      <TrendingDown className="w-3 h-3 text-red-500" />
+                    )}
+                    <span className={cn(
+                      "text-[10px] font-medium",
+                      (metrics?.horas_trend_valor ?? 0) > 0 ? "text-emerald-600" : "text-red-500"
+                    )}>
+                      {formatHoras(Math.abs(metrics?.horas_trend_valor || 0), 'curto')} vs mês passado
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
 
-          {/* KPIs - Primeira linha (2 KPIs) */}
-          <div className="lg:col-span-4 grid grid-cols-2 gap-2">
-            <MetricCard
-              title="Processos Ativos"
-              value={metrics?.processos_ativos || 0}
-              icon={Briefcase}
-              trend={metrics?.processos_trend_qtd !== 0 ? { value: `${metrics?.processos_trend_qtd > 0 ? '+' : ''}${metrics?.processos_trend_qtd}`, label: 'este mês', positive: (metrics?.processos_trend_qtd ?? 0) >= 0 } : undefined}
-              gradient="kpi1"
-            />
-            <MetricCard
-              title="Clientes Ativos"
-              value={metrics?.clientes_ativos || 0}
-              icon={Users}
-              trend={(metrics?.clientes_trend_qtd ?? 0) > 0 ? { value: `+${metrics?.clientes_trend_qtd}`, label: 'este mês', positive: true } : undefined}
-              gradient="kpi2"
-            />
+            {/* Atenção Imediata */}
+            <AlertasCard onAudienciasClick={handleAudienciasClick} />
           </div>
         </div>
 
-        {/* LINHA 2: Conteúdo Principal (3 Colunas) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 items-start">
-
-          {/* COLUNA ESQUERDA (3 cols): Alertas + Seus Números */}
-          <div className="lg:col-span-3 space-y-4">
-            {/* Alertas de Atenção */}
-            <AlertasCard onAudienciasClick={handleAudienciasClick} />
-
-            {/* Seus Números do Mês */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="pb-2 pt-5 px-5">
-                <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2">
-                  <Target className="w-4 h-4 text-[#89bcbe]" />
-                  Seus Números do Mês
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-1 pb-5 px-5 space-y-3">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[11px] font-medium text-[#46627f]">Horas Faturadas</span>
-                    <span className="text-[11px] font-semibold text-[#34495e]">{formatHoras(metrics?.horas_faturadas_mes || 0, 'curto')} / {formatHoras(metrics?.horas_meta || 160, 'curto')}</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-[#89bcbe] to-[#6ba9ab] rounded-full transition-all duration-1000"
-                      style={{ width: `${Math.min(progressoHoras, 100)}%` }}
-                    />
-                  </div>
-                  {metrics?.horas_trend_valor !== 0 && (
-                    <p className={cn(
-                      "text-[9px] font-medium mt-0.5",
-                      metrics?.horas_trend_valor > 0 ? "text-emerald-600" : "text-red-500"
-                    )}>
-                      {metrics?.horas_trend_valor > 0 ? '↑' : '↓'} {formatHoras(Math.abs(metrics?.horas_trend_valor || 0), 'curto')} vs mês passado
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[11px] font-medium text-[#46627f]">Receita Gerada</span>
-                    <span className="text-[11px] font-semibold text-[#34495e]">{formatCurrency(metrics?.receita_mes || 0)}</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full transition-all duration-1000"
-                      style={{ width: `${Math.min(progressoReceita, 100)}%` }}
-                    />
-                  </div>
-                  <p className="text-[9px] text-[#adb5bd] mt-0.5 font-normal">Meta: {formatCurrency(metrics?.receita_meta || 40000)}</p>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[11px] font-medium text-[#46627f]">Horas Não Cobráveis</span>
-                    <span className="text-[11px] font-semibold text-slate-500">{formatHoras(metrics?.horas_nao_cobraveis || 0, 'curto')}</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-slate-300 to-slate-400 rounded-full"
-                      style={{ width: `${Math.min((metrics?.horas_nao_cobraveis || 0) / 50 * 100, 100)}%` }}
-                    />
-                  </div>
-                  <p className="text-[9px] text-slate-500 mt-0.5 font-normal">
-                    Oportunidade: {formatCurrency(metrics?.valor_horas_nao_cobraveis || 0)}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Insights de Gestão - Apenas para donos/sócios */}
-            {hasInsightsPermission && (
-              <Card className="border-slate-200 shadow-sm">
-                <CardHeader className="pb-2 pt-5 px-5">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm flex items-center gap-2 text-[#34495e]">
-                      <Sparkles className="w-4 h-4 text-[#89bcbe]" />
-                      Insights de Gestão
-                    </CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={() => refreshInsights()}
-                      disabled={loadingInsights}
-                    >
-                      {loadingInsights ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#89bcbe]" />
-                      ) : (
-                        <RefreshCw className="w-3.5 h-3.5 text-[#89bcbe]" />
-                      )}
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-1 pb-5 px-5 space-y-2">
-                  {loadingInsights ? (
-                    <div className="flex items-center justify-center py-3">
-                      <Loader2 className="w-4 h-4 text-[#89bcbe] animate-spin" />
-                    </div>
-                  ) : insights.length === 0 ? (
-                    <p className="text-[11px] text-[#6c757d] text-center py-3">Nenhum insight disponível</p>
-                  ) : (
-                    insights.map((insight, index) => (
-                      <InsightCard
-                        key={index}
-                        type={insight.tipo}
-                        title={insight.titulo}
-                        description={insight.descricao}
-                        action={insight.acao ? { label: insight.acao.label, onClick: () => window.location.href = insight.acao!.href } : undefined}
-                      />
-                    ))
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* COLUNA CENTRAL (5 cols): Ações Rápidas + Performance Geral */}
-          <div className="lg:col-span-5 space-y-4">
-            {/* Ações Rápidas */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="pb-2 pt-4 px-5">
-                <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2">
-                  <Plus className="w-4 h-4 text-[#89bcbe]" />
-                  Ações Rápidas
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-1 pb-4 px-5">
-                <div className="grid grid-cols-4 gap-2">
+        {/* Row 2: Performance + Publicações/Insights */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* ── PERFORMANCE DE HORAS ── */}
+          <div className="lg:col-span-7">
+            <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] transition-all duration-300 overflow-hidden">
+              <div className="flex items-center justify-between px-5 pt-5 pb-3">
+                <h2 className="text-sm font-bold text-[#34495e]">Performance da Equipe</h2>
+                <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-lg">
                   <button
-                    onClick={() => setTarefaModalOpen(true)}
-                    className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg border border-slate-200 hover:border-[#89bcbe] hover:bg-[#f0f9f9] transition-all"
+                    onClick={() => setHorasViewMode('list')}
+                    className={cn("p-1.5 rounded-md transition-all", horasViewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-slate-200')}
                   >
-                    <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-                      <CheckSquare className="w-4 h-4 text-amber-600" />
-                    </div>
-                    <span className="text-[10px] font-medium text-[#46627f]">Nova Tarefa</span>
+                    <List className={cn("w-3.5 h-3.5", horasViewMode === 'list' ? 'text-[#1E3A8A]' : 'text-slate-400')} />
                   </button>
                   <button
-                    onClick={() => setProcessoModalOpen(true)}
-                    className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg border border-slate-200 hover:border-[#89bcbe] hover:bg-[#f0f9f9] transition-all"
+                    onClick={() => setHorasViewMode('bars')}
+                    className={cn("p-1.5 rounded-md transition-all", horasViewMode === 'bars' ? 'bg-white shadow-sm' : 'hover:bg-slate-200')}
                   >
-                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                      <Briefcase className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <span className="text-[10px] font-medium text-[#46627f]">Novo Processo</span>
-                  </button>
-                  <button
-                    onClick={() => setConsultaModalOpen(true)}
-                    className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg border border-slate-200 hover:border-[#89bcbe] hover:bg-[#f0f9f9] transition-all"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
-                      <Scale className="w-4 h-4 text-purple-600" />
-                    </div>
-                    <span className="text-[10px] font-medium text-[#46627f]">Novo Consultivo</span>
-                  </button>
-                  <button
-                    onClick={() => setTimesheetModalOpen(true)}
-                    className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg border border-slate-200 hover:border-[#89bcbe] hover:bg-[#f0f9f9] transition-all"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                      <Clock className="w-4 h-4 text-emerald-600" />
-                    </div>
-                    <span className="text-[10px] font-medium text-[#46627f]">Lançar Horas</span>
+                    <BarChart3 className={cn("w-3.5 h-3.5", horasViewMode === 'bars' ? 'text-[#1E3A8A]' : 'text-slate-400')} />
                   </button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
 
-            {/* Performance de Horas */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="pb-3 pt-6 px-6">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-[#34495e]">Performance de Horas</CardTitle>
-                  <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-md">
-                    <button
-                      onClick={() => setHorasViewMode('list')}
-                      className={`p-1.5 rounded transition-colors ${horasViewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-slate-200'}`}
-                      title="Visualização em lista"
-                    >
-                      <List className={`w-3.5 h-3.5 ${horasViewMode === 'list' ? 'text-[#1E3A8A]' : 'text-slate-400'}`} />
-                    </button>
-                    <button
-                      onClick={() => setHorasViewMode('bars')}
-                      className={`p-1.5 rounded transition-colors ${horasViewMode === 'bars' ? 'bg-white shadow-sm' : 'hover:bg-slate-200'}`}
-                      title="Visualização em barras"
-                    >
-                      <BarChart3 className={`w-3.5 h-3.5 ${horasViewMode === 'bars' ? 'text-[#1E3A8A]' : 'text-slate-400'}`} />
-                    </button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-2 px-6 pb-6">
+              <div className="px-5 pb-5">
                 {loadingPerformance ? (
                   <div className="flex justify-center py-8">
                     <Loader2 className="w-6 h-6 text-[#89bcbe] animate-spin" />
@@ -691,99 +840,111 @@ export default function DashboardPage() {
                     variant="default"
                   />
                 ) : horasViewMode === 'list' ? (
-                  /* Visualização em Lista */
                   <div className="space-y-3">
                     <ScrollArea className={equipe.length > 5 ? "h-[200px] pr-2" : ""}>
-                      <div className="space-y-1.5">
+                      <div className="space-y-2">
                         {equipe.map((membro, index) => {
                           const isCurrentUser = membro.id === currentUserId
                           const position = index + 1
+                          const cobraveisPercent = membro.horas > 0 ? (membro.horasCobraveis / membro.horas) * 100 : 0
+                          const naoCobraveisPercent = membro.horas > 0 ? (membro.horasNaoCobraveis / membro.horas) * 100 : 0
 
                           return (
-                            <div
-                              key={membro.id}
-                              className="space-y-1 p-1.5 rounded-md -mx-1.5"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[10px] font-medium text-slate-400 w-4">
-                                    {position}.
-                                  </span>
-                                  <span className="text-xs font-medium text-[#46627f]">
-                                    {membro.nome}
-                                    {isCurrentUser && (
-                                      <span className="ml-1 text-[8px] font-medium text-[#89bcbe] bg-[#89bcbe]/10 px-1 py-0.5 rounded">
-                                        Você
-                                      </span>
-                                    )}
-                                  </span>
+                            <div key={membro.id} className={cn(
+                              "flex items-center gap-3 p-2 rounded-xl transition-colors",
+                              isCurrentUser ? "bg-[#f0f9f9]" : "hover:bg-slate-50"
+                            )}>
+                              {/* Position */}
+                              <span className={cn(
+                                "w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0",
+                                position <= 3 ? "bg-[#89bcbe]/15 text-[#46627f]" : "bg-slate-50 text-slate-400"
+                              )}>
+                                {position}
+                              </span>
+
+                              {/* Name + Bar */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <span className="text-xs font-semibold text-[#34495e] truncate">{membro.nome}</span>
+                                  {isCurrentUser && (
+                                    <span className="px-1.5 py-0.5 rounded-full bg-[#89bcbe]/20 text-[8px] font-bold text-[#46627f]">
+                                      Você
+                                    </span>
+                                  )}
                                 </div>
-                                <span className="text-xs font-semibold text-[#34495e]">
-                                  {formatHoras(membro.horas, 'curto')}
-                                </span>
+                                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
+                                  <div
+                                    className="h-full bg-emerald-500 transition-all duration-500"
+                                    style={{ width: `${cobraveisPercent}%` }}
+                                  />
+                                  <div
+                                    className="h-full bg-[#34495e] transition-all duration-500"
+                                    style={{ width: `${naoCobraveisPercent}%` }}
+                                  />
+                                </div>
                               </div>
-                              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden ml-5 flex">
-                                <div
-                                  className="h-full bg-[#1E3A8A] transition-all duration-300"
-                                  style={{ width: `${membro.horas > 0 ? (membro.horasCobraveis / membro.horas) * 100 : 0}%` }}
-                                />
-                                <div
-                                  className="h-full bg-[#89bcbe] transition-all duration-300"
-                                  style={{ width: `${membro.horas > 0 ? (membro.horasNaoCobraveis / membro.horas) * 100 : 0}%` }}
-                                />
-                              </div>
+
+                              {/* Hours */}
+                              <span className="text-xs font-bold text-[#34495e] tabular-nums flex-shrink-0">
+                                {formatHoras(membro.horas, 'curto')}
+                              </span>
                             </div>
                           )
                         })}
                       </div>
                     </ScrollArea>
-                    {/* Legenda das cores */}
-                    <div className="flex items-center gap-4 mt-2 ml-5">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-sm bg-[#1E3A8A]" />
-                        <span className="text-[10px] text-[#46627f]">Cobráveis</span>
+                    {/* Legend + Total */}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span className="text-[10px] text-slate-400">Cobráveis</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2.5 h-1.5 rounded-full bg-[#34495e]" />
+                          <span className="text-[10px] text-slate-400">Não cobráveis</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-sm bg-[#89bcbe]" />
-                        <span className="text-[10px] text-[#46627f]">Não cobráveis</span>
-                      </div>
-                    </div>
-                    <Separator className="my-2" />
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-[#46627f]">Total da Equipe</span>
-                      <span className="font-semibold text-[#34495e]">{formatHoras(totalHorasEquipe, 'curto')}</span>
+                      <span className="text-[10px] text-slate-400">Total: <span className="font-semibold text-[#34495e]">{formatHoras(totalHorasEquipe, 'curto')}</span></span>
                     </div>
                   </div>
                 ) : (
-                  /* Visualização em Barras */
+                  /* Bar chart view */
                   <div className="space-y-3">
-                    <div className="flex items-end justify-center gap-2 h-[160px]">
+                    <div className="flex items-end justify-center gap-3 h-[180px] pt-4">
                       {equipe.slice(0, 6).map((membro) => {
                         const isCurrentUser = membro.id === currentUserId
                         const maxHoras = equipe[0]?.horas || 1
-                        const cobraveisHeight = (membro.horasCobraveis / maxHoras) * 100
-                        const naoCobraveisHeight = (membro.horasNaoCobraveis / maxHoras) * 100
+                        const totalHeight = (membro.horas / maxHoras) * 100
+                        const cobraveisPercent = membro.horas > 0 ? (membro.horasCobraveis / membro.horas) * 100 : 0
+                        const naoCobraveisPercent = membro.horas > 0 ? (membro.horasNaoCobraveis / membro.horas) * 100 : 0
 
                         return (
-                          <div key={membro.id} className="flex flex-col items-center w-14">
-                            <div className="w-9 flex flex-col justify-end h-[120px]">
-                              <div
-                                className="w-full bg-[#89bcbe]"
-                                style={{ height: `${naoCobraveisHeight}%` }}
-                              />
-                              <div
-                                className="w-full bg-[#1E3A8A]"
-                                style={{ height: `${cobraveisHeight}%` }}
-                              />
+                          <div key={membro.id} className="flex flex-col items-center group" style={{ width: `${100 / Math.min(equipe.length, 6)}%`, maxWidth: '80px' }}>
+                            <div className="w-full max-w-[36px] flex flex-col justify-end h-[130px] mx-auto">
+                              <div className="w-full flex flex-col rounded-t overflow-hidden transition-all duration-500" style={{ height: `${totalHeight}%` }}>
+                                {naoCobraveisPercent > 0 && (
+                                  <div
+                                    className="w-full bg-[#34495e] transition-all duration-500"
+                                    style={{ height: `${naoCobraveisPercent}%` }}
+                                  />
+                                )}
+                                {cobraveisPercent > 0 && (
+                                  <div
+                                    className="w-full bg-emerald-500 transition-all duration-500"
+                                    style={{ height: `${cobraveisPercent}%` }}
+                                  />
+                                )}
+                              </div>
                             </div>
-                            <div className="flex flex-col items-center mt-1.5">
-                              <span
-                                className={`text-[9px] font-medium truncate max-w-[50px] text-center ${isCurrentUser ? 'text-[#89bcbe]' : 'text-[#46627f]'}`}
-                                title={isCurrentUser ? `${membro.nome} (Você)` : membro.nome}
-                              >
+                            <div className="flex flex-col items-center mt-2">
+                              <span className={cn(
+                                "text-[10px] truncate max-w-[60px] text-center",
+                                isCurrentUser ? 'font-semibold text-[#34495e]' : 'text-slate-400'
+                              )}>
                                 {isCurrentUser ? 'Você' : membro.nome.split(' ')[0]}
                               </span>
-                              <span className="text-[9px] font-semibold text-[#34495e]">
+                              <span className="text-[10px] font-semibold text-[#34495e]">
                                 {formatHoras(membro.horas, 'curto')}
                               </span>
                             </div>
@@ -791,213 +952,355 @@ export default function DashboardPage() {
                         )
                       })}
                     </div>
-                    {/* Legenda das cores */}
-                    <div className="flex items-center justify-center gap-4 mt-2">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-sm bg-[#1E3A8A]" />
-                        <span className="text-[10px] text-[#46627f]">Cobráveis</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-sm bg-[#89bcbe]" />
-                        <span className="text-[10px] text-[#46627f]">Não cobráveis</span>
-                      </div>
-                    </div>
-                    <Separator className="my-2" />
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-[#46627f]">Total da Equipe</span>
-                      <span className="font-semibold text-[#34495e]">{formatHoras(totalHorasEquipe, 'curto')}</span>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-          </div>
-
-          {/* COLUNA DIREITA (4 cols): KPIs secundários + Publicações Recentes */}
-          <div className="lg:col-span-4 space-y-4">
-            {/* KPIs secundários (Casos Consultivos + Horas Cobráveis) */}
-            <div className="grid grid-cols-2 gap-2">
-              <MetricCard
-                title="Casos Consultivos"
-                value={metrics?.consultas_abertas || 0}
-                icon={FileText}
-                trend={metrics?.consultas_trend_qtd !== 0 ? { value: `${metrics?.consultas_trend_qtd > 0 ? '+' : ''}${metrics?.consultas_trend_qtd}`, label: 'este mês', positive: metrics?.consultas_trend_qtd >= 0 } : undefined}
-                subtitle={metrics?.consultas_trend_qtd === 0 ? 'em andamento' : undefined}
-                gradient="kpi3"
-              />
-              <MetricCard
-                title="Horas Cobráveis"
-                value={formatHoras(metrics?.horas_cobraveis || 0, 'curto')}
-                icon={Clock}
-                trend={metrics?.horas_cobraveis_trend_percent !== 0 ? {
-                  value: `${metrics?.horas_cobraveis_trend_percent > 0 ? '+' : ''}${metrics?.horas_cobraveis_trend_percent}%`,
-                  label: 'vs mês',
-                  positive: metrics?.horas_cobraveis_trend_percent >= 0
-                } : undefined}
-                subtitle={metrics?.horas_cobraveis_trend_percent === 0 ? 'este mês' : undefined}
-                gradient="kpi4"
-              />
-            </div>
-
-            {/* Publicações Recentes */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="pb-3 pt-6 px-6">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm flex items-center gap-2 text-[#34495e]">
-                    <Bell className="w-4 h-4 text-[#89bcbe]" />
-                    Publicações Recentes
-                  </CardTitle>
-                  <Link href="/dashboard/publicacoes">
-                    <Button variant="ghost" size="sm" className="text-[10px] text-[#89bcbe] hover:text-[#6ba9ab] h-5 px-1.5">
-                      Ver →
-                    </Button>
-                  </Link>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-2 pb-6 px-6 space-y-2.5">
-                {loadingPublicacoes ? (
-                  <div className="flex justify-center py-3">
-                    <Loader2 className="w-4 h-4 text-[#89bcbe] animate-spin" />
-                  </div>
-                ) : isPublicacoesEmpty ? (
-                  <EmptyState
-                    icon={Bell}
-                    title="Nenhuma publicação"
-                    description="Configure a integração AASP"
-                    actionLabel="Configurar"
-                    actionHref="/dashboard/publicacoes/config"
-                    variant="compact"
-                  />
-                ) : (
-                  publicacoes.slice(0, 4).map((pub) => (
-                    <Link key={pub.id} href={`/dashboard/publicacoes/${pub.id}`} className="block">
-                      <div className="p-3 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-200 transition-all cursor-pointer">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-[#34495e] leading-tight truncate">
-                              {pub.processo}
-                            </p>
-                            <p className="text-[11px] text-[#6c757d] mt-1 truncate">{pub.conteudo}</p>
-                          </div>
-                          {pub.urgente && (
-                            <span className="text-[9px] font-medium text-red-600 bg-red-50 px-1.5 py-0.5 rounded flex-shrink-0">
-                              Urg
-                            </span>
-                          )}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span className="text-[10px] text-slate-400">Cobráveis</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2.5 h-1.5 rounded-full bg-[#34495e]" />
+                          <span className="text-[10px] text-slate-400">Não cobráveis</span>
                         </div>
                       </div>
-                    </Link>
-                  ))
+                      <span className="text-[10px] text-slate-400">Total: <span className="font-semibold text-[#34495e]">{formatHoras(totalHorasEquipe, 'curto')}</span></span>
+                    </div>
+                  </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
 
-        </div>
+          {/* ── RIGHT: Publications + Insights ── */}
+          <div className="lg:col-span-5 space-y-5">
+            {/* Publicações (Collapsible) */}
+            <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] transition-all duration-300 overflow-hidden">
+              <Collapsible open={pubExpanded} onOpenChange={setPubExpanded}>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-[#34495e]">Publicações</span>
+                      {!loadingPublicacoes && !isPublicacoesEmpty && (
+                        <span className={cn(
+                          'inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-semibold',
+                          (publicacoesUrgentes ?? 0) > 0
+                            ? 'bg-red-100 text-red-600'
+                            : 'bg-slate-100 text-slate-500'
+                        )}>
+                          {publicacoes.length}
+                        </span>
+                      )}
+                    </div>
+                    <ChevronDown className={cn(
+                      "w-4 h-4 text-slate-300 transition-transform duration-200",
+                      pubExpanded && "rotate-180"
+                    )} />
+                  </button>
+                </CollapsibleTrigger>
 
-        {/* Modais de Ações Rápidas */}
-        {tarefaModalOpen && escritorioAtivo && (
-          <TarefaWizard
-            escritorioId={escritorioAtivo}
-            onClose={() => setTarefaModalOpen(false)}
-          />
-        )}
-
-        <ConsultaWizardModal
-          open={consultaModalOpen}
-          onOpenChange={setConsultaModalOpen}
-          escritorioId={escritorioAtivo || undefined}
-        />
-
-        <ProcessoWizard
-          open={processoModalOpen}
-          onOpenChange={setProcessoModalOpen}
-          onSuccess={() => {
-            setProcessoModalOpen(false)
-          }}
-        />
-
-        <TimesheetModal
-          open={timesheetModalOpen}
-          onOpenChange={setTimesheetModalOpen}
-          onSuccess={() => {
-            setTimesheetModalOpen(false)
-          }}
-        />
-
-        {/* Modal de detalhes da audiência (vindo do card Atenção Imediata) */}
-        {audienciaSelecionada && (
-          <AudienciaDetailModal
-            open={audienciaDetailOpen}
-            onOpenChange={(open) => {
-              setAudienciaDetailOpen(open)
-              if (!open) setAudienciaSelecionada(null)
-            }}
-            audiencia={{
-              id: audienciaSelecionada.id,
-              titulo: audienciaSelecionada.titulo,
-              data_inicio: audienciaSelecionada.data_hora,
-              tipo_audiencia: audienciaSelecionada.tipo_audiencia,
-              modalidade: audienciaSelecionada.modalidade as 'presencial' | 'virtual' | undefined,
-              status: audienciaSelecionada.status as 'agendada' | 'realizada' | 'cancelada' | 'remarcada' | undefined,
-              local: audienciaSelecionada.local,
-              link_virtual: audienciaSelecionada.link_virtual,
-              processo_id: audienciaSelecionada.processo_id,
-              responsavel_id: audienciaSelecionada.responsavel_id,
-              observacoes: audienciaSelecionada.observacoes,
-              descricao: audienciaSelecionada.descricao,
-              tribunal: audienciaSelecionada.tribunal,
-              comarca: audienciaSelecionada.comarca,
-              vara: audienciaSelecionada.vara,
-              juiz_nome: audienciaSelecionada.juiz,
-              promotor_nome: audienciaSelecionada.promotor,
-              advogado_contrario: audienciaSelecionada.advogado_contrario,
-            }}
-            onProcessoClick={(processoId) => router.push(`/dashboard/processos/${processoId}`)}
-          />
-        )}
-
-        {/* Lista de audiências para selecionar (quando há múltiplas) */}
-        <Dialog open={audienciasListOpen} onOpenChange={setAudienciasListOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-[#34495e]">
-                <Gavel className="w-4 h-4 text-amber-500" />
-                Audiências nos próximos 7 dias
-              </DialogTitle>
-              <DialogDescription className="text-xs text-slate-500">
-                Clique em uma audiência para ver os detalhes
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-1 mt-2">
-              {audienciasProximas.map((aud) => (
-                <button
-                  key={aud.id}
-                  onClick={() => {
-                    setAudienciasListOpen(false)
-                    setAudienciaSelecionada(aud)
-                    setAudienciaDetailOpen(true)
-                  }}
-                  className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-[#34495e] truncate">{aud.titulo}</span>
-                    <span className="text-[10px] text-slate-400 ml-2 flex-shrink-0">
-                      {aud.tipo_audiencia || 'Audiência'}
-                    </span>
+                <CollapsibleContent>
+                  <div className="px-5 pb-4 space-y-2">
+                    {loadingPublicacoes ? (
+                      <div className="flex justify-center py-3">
+                        <Loader2 className="w-4 h-4 text-[#89bcbe] animate-spin" />
+                      </div>
+                    ) : isPublicacoesEmpty ? (
+                      <EmptyState
+                        icon={Bell}
+                        title="Nenhuma publicação"
+                        description="Configure a integração AASP"
+                        actionLabel="Configurar"
+                        actionHref="/dashboard/publicacoes/config"
+                        variant="compact"
+                      />
+                    ) : (
+                      <>
+                        {publicacoes.slice(0, 4).map((pub) => (
+                          <Link key={pub.id} href={`/dashboard/publicacoes/${pub.id}`} className="block">
+                            <div className="px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-medium text-[#34495e] truncate">{pub.processo}</p>
+                                  <p className="text-[11px] text-slate-400 truncate">{pub.conteudo}</p>
+                                </div>
+                                {pub.urgente && (
+                                  <span className="text-[9px] font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded flex-shrink-0">
+                                    Urgente
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                        <Link href="/dashboard/publicacoes" className="block">
+                          <p className="text-center py-1.5 text-[11px] text-slate-400 hover:text-[#89bcbe] transition-colors">
+                            Ver todas →
+                          </p>
+                        </Link>
+                      </>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <Calendar className="w-3 h-3 text-slate-400" />
-                    <span className="text-xs text-slate-500">
-                      {format(new Date(aud.data_hora), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                    </span>
-                  </div>
-                </button>
-              ))}
+                </CollapsibleContent>
+              </Collapsible>
             </div>
-          </DialogContent>
-        </Dialog>
+
+            {/* Insights de Gestão */}
+            {hasInsightsPermission && (
+              <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] transition-all duration-300 overflow-hidden">
+                <div className="flex items-center justify-between px-5 pt-5 pb-3">
+                  <h2 className="text-sm font-bold text-[#34495e]">Insights IA</h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 hover:bg-slate-100 rounded-lg"
+                    onClick={() => refreshInsights()}
+                    disabled={loadingInsights}
+                  >
+                    {loadingInsights ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#89bcbe]" />
+                    ) : (
+                      <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </Button>
+                </div>
+                <div className="px-5 pb-5 space-y-2">
+                  {loadingInsights ? (
+                    <div className="flex items-center justify-center py-3">
+                      <Loader2 className="w-4 h-4 text-[#89bcbe] animate-spin" />
+                    </div>
+                  ) : insights.length === 0 ? (
+                    <p className="text-[11px] text-slate-400 text-center py-3">Nenhum insight disponível</p>
+                  ) : (
+                    insights.map((insight, index) => (
+                      <InsightCard
+                        key={index}
+                        type={insight.tipo}
+                        title={insight.titulo}
+                        description={insight.descricao}
+                        action={insight.acao ? { label: insight.acao.label, onClick: () => window.location.href = insight.acao!.href } : undefined}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          MODAIS (unchanged)
+          ═══════════════════════════════════════════════════════════════ */}
+      <Dialog open={commandOpen} onOpenChange={setCommandOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-[#89bcbe]" />
+              Comando IA
+            </DialogTitle>
+            <DialogDescription>
+              Digite um comando ou escolha uma ação rápida abaixo
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6c757d]" />
+              <Input
+                placeholder="O que você gostaria de fazer?"
+                value={commandInput}
+                onChange={(e) => setCommandInput(e.target.value)}
+                className="pl-9"
+                autoFocus
+              />
+            </div>
+            <div className="border-t pt-3">
+              <p className="text-xs text-[#6c757d] mb-2 font-medium">Ações rápidas</p>
+              <div className="grid grid-cols-2 gap-2">
+                {commandShortcuts.map((shortcut) => (
+                  <button
+                    key={shortcut.label}
+                    onClick={() => { shortcut.action(); setCommandOpen(false) }}
+                    className="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 hover:bg-[#f0f9f9] hover:border-[#89bcbe] transition-colors text-left"
+                  >
+                    <shortcut.icon className="w-4 h-4 text-[#89bcbe]" />
+                    <span className="text-sm text-[#34495e]">{shortcut.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="border-t pt-3">
+              <div className="flex items-center gap-2 text-xs text-[#adb5bd]">
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Pressione <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">Ctrl+K</kbd> para abrir a qualquer momento</span>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {tarefaModalOpen && escritorioAtivo && (
+        <TarefaWizard
+          escritorioId={escritorioAtivo}
+          onClose={() => setTarefaModalOpen(false)}
+        />
+      )}
+
+      <ConsultaWizardModal
+        open={consultaModalOpen}
+        onOpenChange={setConsultaModalOpen}
+        escritorioId={escritorioAtivo || undefined}
+      />
+
+      <ProcessoWizard
+        open={processoModalOpen}
+        onOpenChange={setProcessoModalOpen}
+        onSuccess={() => { setProcessoModalOpen(false) }}
+      />
+
+      <TimesheetModal
+        open={timesheetModalOpen}
+        onOpenChange={setTimesheetModalOpen}
+        onSuccess={() => { setTimesheetModalOpen(false) }}
+      />
+
+      {audienciaSelecionada && (
+        <AudienciaDetailModal
+          open={audienciaDetailOpen}
+          onOpenChange={(open) => {
+            setAudienciaDetailOpen(open)
+            if (!open) setAudienciaSelecionada(null)
+          }}
+          audiencia={{
+            id: audienciaSelecionada.id,
+            titulo: audienciaSelecionada.titulo,
+            data_inicio: audienciaSelecionada.data_hora,
+            tipo_audiencia: audienciaSelecionada.tipo_audiencia,
+            modalidade: audienciaSelecionada.modalidade as 'presencial' | 'virtual' | undefined,
+            status: audienciaSelecionada.status as 'agendada' | 'realizada' | 'cancelada' | 'remarcada' | undefined,
+            local: audienciaSelecionada.local,
+            link_virtual: audienciaSelecionada.link_virtual,
+            processo_id: audienciaSelecionada.processo_id,
+            responsavel_id: audienciaSelecionada.responsavel_id,
+            observacoes: audienciaSelecionada.observacoes,
+            descricao: audienciaSelecionada.descricao,
+            tribunal: audienciaSelecionada.tribunal,
+            comarca: audienciaSelecionada.comarca,
+            vara: audienciaSelecionada.vara,
+            juiz_nome: audienciaSelecionada.juiz,
+            promotor_nome: audienciaSelecionada.promotor,
+            advogado_contrario: audienciaSelecionada.advogado_contrario,
+          }}
+          onProcessoClick={(processoId) => router.push(`/dashboard/processos/${processoId}`)}
+        />
+      )}
+
+      {/* Modais de detalhe dos itens da agenda (reutilizando modais do módulo agenda) */}
+      {tarefaDetailData && (
+        <TarefaDetailModal
+          open={tarefaDetailOpen}
+          onOpenChange={(open) => {
+            setTarefaDetailOpen(open)
+            if (!open) setTarefaDetailData(null)
+          }}
+          tarefa={tarefaDetailData}
+          onProcessoClick={(processoId) => router.push(`/dashboard/processos/${processoId}`)}
+          onConsultivoClick={(consultivoId) => router.push(`/dashboard/consultivo/${consultivoId}`)}
+        />
+      )}
+
+      {agendaAudienciaData && (
+        <AudienciaDetailModal
+          open={agendaAudienciaOpen}
+          onOpenChange={(open) => {
+            setAgendaAudienciaOpen(open)
+            if (!open) setAgendaAudienciaData(null)
+          }}
+          audiencia={{
+            id: agendaAudienciaData.id as string,
+            titulo: agendaAudienciaData.titulo as string,
+            data_inicio: (agendaAudienciaData.data_hora || agendaAudienciaData.data_inicio) as string,
+            tipo_audiencia: agendaAudienciaData.tipo_audiencia as string | undefined,
+            modalidade: agendaAudienciaData.modalidade as 'presencial' | 'virtual' | undefined,
+            status: agendaAudienciaData.status as 'agendada' | 'realizada' | 'cancelada' | 'remarcada' | undefined,
+            local: agendaAudienciaData.local as string | undefined,
+            link_virtual: agendaAudienciaData.link_virtual as string | undefined,
+            processo_id: agendaAudienciaData.processo_id as string | undefined,
+            responsavel_id: agendaAudienciaData.responsavel_id as string | undefined,
+            observacoes: agendaAudienciaData.observacoes as string | undefined,
+            descricao: agendaAudienciaData.descricao as string | undefined,
+            tribunal: agendaAudienciaData.tribunal as string | undefined,
+            comarca: agendaAudienciaData.comarca as string | undefined,
+            vara: agendaAudienciaData.vara as string | undefined,
+            juiz_nome: agendaAudienciaData.juiz_nome as string | undefined,
+            promotor_nome: agendaAudienciaData.promotor_nome as string | undefined,
+            advogado_contrario: agendaAudienciaData.advogado_contrario as string | undefined,
+          }}
+          onProcessoClick={(processoId) => router.push(`/dashboard/processos/${processoId}`)}
+        />
+      )}
+
+      {eventoDetailData && (
+        <EventoDetailModal
+          open={eventoDetailOpen}
+          onOpenChange={(open) => {
+            setEventoDetailOpen(open)
+            if (!open) setEventoDetailData(null)
+          }}
+          evento={{
+            id: eventoDetailData.id as string,
+            titulo: eventoDetailData.titulo as string,
+            descricao: eventoDetailData.descricao as string | undefined,
+            data_inicio: eventoDetailData.data_inicio as string,
+            data_fim: eventoDetailData.data_fim as string | undefined,
+            dia_inteiro: eventoDetailData.dia_inteiro as boolean | undefined,
+            subtipo: (eventoDetailData.subtipo || 'compromisso') as string,
+            status: eventoDetailData.status as string | undefined,
+            local: eventoDetailData.local as string | undefined,
+            processo_id: eventoDetailData.processo_id as string | undefined,
+            consultivo_id: eventoDetailData.consultivo_id as string | undefined,
+          }}
+          onProcessoClick={(processoId) => router.push(`/dashboard/processos/${processoId}`)}
+          onConsultivoClick={(consultivoId) => router.push(`/dashboard/consultivo/${consultivoId}`)}
+        />
+      )}
+
+      <Dialog open={audienciasListOpen} onOpenChange={setAudienciasListOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#34495e]">
+              <Gavel className="w-4 h-4 text-amber-500" />
+              Audiências nos próximos 7 dias
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Clique em uma audiência para ver os detalhes
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1 mt-2">
+            {audienciasProximas.map((aud) => (
+              <button
+                key={aud.id}
+                onClick={() => {
+                  setAudienciasListOpen(false)
+                  setAudienciaSelecionada(aud)
+                  setAudienciaDetailOpen(true)
+                }}
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-[#34495e] truncate">{aud.titulo}</span>
+                  <span className="text-[10px] text-slate-400 ml-2 flex-shrink-0">{aud.tipo_audiencia || 'Audiência'}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <Calendar className="w-3 h-3 text-slate-400" />
+                  <span className="text-xs text-slate-500">
+                    {format(new Date(aud.data_hora), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

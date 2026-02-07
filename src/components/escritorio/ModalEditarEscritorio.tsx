@@ -228,7 +228,7 @@ export function ModalEditarEscritorio({
       // Verificar se o update realmente funcionou (RLS pode bloquear silenciosamente)
       if (!updateResult || updateResult.length === 0) {
         console.error('RLS bloqueou o update - nenhum registro retornado');
-        toast.error('Você não tem permissão para editar este escritório. Apenas o dono ou administradores podem editar.');
+        toast.error('Você não tem permissão para editar este escritório. Apenas o sócio administrador ou administradores podem editar.');
         return;
       }
 

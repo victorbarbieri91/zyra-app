@@ -26,6 +26,7 @@ import { useRecorrencias } from '@/hooks/useRecorrencias'
 // useAgendaResponsaveis não mais necessário - responsaveis_ids é passado diretamente no formData
 import { useEscritorioMembros } from '@/hooks/useEscritorioMembros'
 import { toBrazilTime, formatBrazilDateLong, formatBrazilDateTime } from '@/lib/timezone'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface EventoWizardProps {
   escritorioId: string
@@ -76,6 +77,7 @@ const TIPO_CONFIG = {
 }
 
 export default function EventoWizard({ escritorioId, onClose, onSubmit, initialData }: EventoWizardProps) {
+  const { user } = useAuth()
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -103,7 +105,7 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
   const [consultivoId, setConsultivoId] = useState<string | null>(initialData?.consultivo_id || null)
 
   const [responsaveisIds, setResponsaveisIds] = useState<string[]>(
-    initialData?.responsavel_id ? [initialData.responsavel_id] : []
+    initialData?.responsavel_id ? [initialData.responsavel_id] : (user?.id ? [user.id] : [])
   )
   const [cor, setCor] = useState(initialData?.cor || '#6366F1')
 
@@ -266,6 +268,10 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
   ]
 
   const handleComplete = async () => {
+    if (responsaveisIds.length === 0) {
+      toast.error('Selecione pelo menos um responsável')
+      return
+    }
     setIsSubmitting(true)
     try {
       const formData: EventoFormData = {
@@ -506,8 +512,8 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
               escritorioId={escritorioId}
               selectedIds={responsaveisIds}
               onChange={setResponsaveisIds}
-              label="Responsáveis"
-              placeholder="Selecionar responsáveis (opcional)..."
+              label="Responsáveis *"
+              placeholder="Selecionar responsáveis..."
             />
           </div>
         </WizardStep>

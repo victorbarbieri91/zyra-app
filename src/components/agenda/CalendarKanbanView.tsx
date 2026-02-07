@@ -202,7 +202,7 @@ export default function CalendarKanbanView({
     const eventosDoDia = (todosEventos || []).filter((evento) => {
       const eventoDate = parseDBDate(evento.data_inicio)
       if (!isSameDay(eventoDate, selectedDate)) return false
-      if (userId && evento.responsaveis_ids?.length > 0 && !evento.responsaveis_ids.includes(userId)) return false
+      if (userId && !evento.responsaveis_ids?.includes(userId)) return false
       if (evento.status === 'cancelado') return false
       return true
     })
@@ -211,7 +211,7 @@ export default function CalendarKanbanView({
     const audienciasDoDia = (todasAudiencias || []).filter((audiencia) => {
       const audienciaDate = parseDBDate(audiencia.data_hora)
       if (!isSameDay(audienciaDate, selectedDate)) return false
-      if (userId && audiencia.responsaveis_ids?.length > 0 && !audiencia.responsaveis_ids.includes(userId)) return false
+      if (userId && !audiencia.responsaveis_ids?.includes(userId)) return false
       if (audiencia.status === 'cancelada') return false
       return true
     })

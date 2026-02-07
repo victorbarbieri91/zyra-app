@@ -85,9 +85,11 @@ export default function CalendarListView({
       return itemDate >= dataInicio && itemDate <= dataFim
     })
 
-    // Filtro por usuário
+    // Filtro por usuário (inclui items sem responsável para retrocompatibilidade)
     if (userId) {
-      filtered = filtered.filter((item) => item.responsaveis_ids?.includes(userId))
+      filtered = filtered.filter((item) =>
+        !item.responsaveis_ids?.length || item.responsaveis_ids.includes(userId)
+      )
     }
 
     return filtered

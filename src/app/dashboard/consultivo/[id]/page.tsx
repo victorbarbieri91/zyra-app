@@ -33,24 +33,32 @@ import {
   Pencil,
   Trash2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  User,
+  CalendarClock,
+  Gavel,
+  Clock
 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { formatBrazilDateTime } from '@/lib/timezone'
+import { formatBrazilDateTime, formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
 import TarefaWizard from '@/components/agenda/TarefaWizard'
 import EventoWizard from '@/components/agenda/EventoWizard'
+import AudienciaWizard from '@/components/agenda/AudienciaWizard'
 import TarefaDetailModal from '@/components/agenda/TarefaDetailModal'
 import EventoDetailModal from '@/components/agenda/EventoDetailModal'
+import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
 import TransformarConsultivoWizard from '@/components/consultivo/TransformarConsultivoWizard'
 import EditarConsultivoModal from '@/components/consultivo/EditarConsultivoModal'
 import ConsultivoFinanceiroCard from '@/components/consultivo/ConsultivoFinanceiroCard'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import type { TarefaFormData } from '@/hooks/useTarefas'
 import type { EventoFormData } from '@/hooks/useEventos'
+import type { AudienciaFormData } from '@/hooks/useAudiencias'
 
 interface Consulta {
   id: string
@@ -90,17 +98,24 @@ export default function ConsultaDetalhePage() {
 
   // Estados para novo andamento
   const [novoAndamentoOpen, setNovoAndamentoOpen] = useState(false)
-  const [novoAndamento, setNovoAndamento] = useState({ descricao: '' })
+  const [novoAndamento, setNovoAndamento] = useState({
+    data: format(new Date(), 'yyyy-MM-dd'),
+    tipo: '',
+    descricao: ''
+  })
   const [salvandoAndamento, setSalvandoAndamento] = useState(false)
 
   // Estados para editar andamento
-  const [editandoAndamento, setEditandoAndamento] = useState<{ index: number; descricao: string } | null>(null)
+  const [editandoAndamento, setEditandoAndamento] = useState<{ index: number; tipo: string; descricao: string } | null>(null)
   const [editAndamentoOpen, setEditAndamentoOpen] = useState(false)
   const [salvandoEdicao, setSalvandoEdicao] = useState(false)
 
   // Estados para excluir andamento
   const [excluindoAndamentoIndex, setExcluindoAndamentoIndex] = useState<number | null>(null)
   const [deleteAndamentoOpen, setDeleteAndamentoOpen] = useState(false)
+
+  // Estado para detalhe de andamento
+  const [selectedAndamento, setSelectedAndamento] = useState<Andamento | null>(null)
 
   // Paginação de andamentos
   const [andamentoPage, setAndamentoPage] = useState(1)
@@ -109,16 +124,26 @@ export default function ConsultaDetalhePage() {
   // Estados para Agenda
   const [agendaItems, setAgendaItems] = useState<any[]>([])
   const [loadingAgenda, setLoadingAgenda] = useState(true)
+  const [agendaPage, setAgendaPage] = useState(1)
+  const agendaPerPage = 5
   const [showTarefaWizard, setShowTarefaWizard] = useState(false)
   const [showEventoWizard, setShowEventoWizard] = useState(false)
+  const [showAudienciaWizard, setShowAudienciaWizard] = useState(false)
   const [escritorioId, setEscritorioId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
 
   // Estados para Modais de Detalhes
   const [selectedTarefa, setSelectedTarefa] = useState<any | null>(null)
   const [selectedEvento, setSelectedEvento] = useState<any | null>(null)
+  const [selectedAudiencia, setSelectedAudiencia] = useState<any | null>(null)
   const [tarefaDetailOpen, setTarefaDetailOpen] = useState(false)
   const [eventoDetailOpen, setEventoDetailOpen] = useState(false)
+  const [audienciaDetailOpen, setAudienciaDetailOpen] = useState(false)
+
+  // Estados para edição de tarefa/evento/audiência
+  const [editingTarefa, setEditingTarefa] = useState(false)
+  const [editingEvento, setEditingEvento] = useState(false)
+  const [editingAudiencia, setEditingAudiencia] = useState(false)
 
   // Estados para Financeiro
   const [timesheetModalOpen, setTimesheetModalOpen] = useState(false)
@@ -200,33 +225,57 @@ export default function ConsultaDetalhePage() {
     try {
       setLoadingAgenda(true)
 
-      const [tarefasRes, eventosRes] = await Promise.all([
+      const [tarefasRes, eventosRes, audienciasRes] = await Promise.all([
         supabase
           .from('agenda_tarefas')
-          .select('id, titulo, status, data_inicio, responsavel_id')
+          .select('id, titulo, status, data_inicio, responsavel_id, prazo_data_limite, profiles!agenda_tarefas_responsavel_id_fkey(nome_completo)')
           .eq('consultivo_id', params.id)
-          .order('data_inicio', { ascending: true })
-          .limit(5),
+          .order('data_inicio', { ascending: true }),
         supabase
           .from('agenda_eventos')
-          .select('id, titulo, status, data_inicio, responsavel_id')
+          .select('id, titulo, status, data_inicio, responsavel_id, profiles!agenda_eventos_responsavel_id_fkey(nome_completo)')
           .eq('consultivo_id', params.id)
-          .order('data_inicio', { ascending: true })
-          .limit(5)
+          .order('data_inicio', { ascending: true }),
+        supabase
+          .from('agenda_audiencias')
+          .select('id, titulo, status, data_hora, responsavel_id, profiles!agenda_audiencias_responsavel_id_fkey(nome_completo)')
+          .eq('consultivo_id', params.id)
+          .order('data_hora', { ascending: true })
       ])
 
       const items: any[] = []
 
       if (tarefasRes.data) {
-        tarefasRes.data.forEach(t => items.push({ ...t, tipo_entidade: 'tarefa' }))
+        tarefasRes.data.forEach((t: any) => items.push({
+          ...t,
+          tipo_entidade: 'tarefa',
+          responsavel_nome: t.profiles?.nome_completo || null
+        }))
       }
       if (eventosRes.data) {
-        eventosRes.data.forEach(e => items.push({ ...e, tipo_entidade: 'evento' }))
+        eventosRes.data.forEach((e: any) => items.push({
+          ...e,
+          tipo_entidade: 'evento',
+          responsavel_nome: e.profiles?.nome_completo || null
+        }))
+      }
+      if (audienciasRes.data) {
+        audienciasRes.data.forEach((a: any) => items.push({
+          ...a,
+          tipo_entidade: 'audiencia',
+          data_inicio: a.data_hora,
+          responsavel_nome: a.profiles?.nome_completo || null
+        }))
       }
 
-      items.sort((a, b) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime())
+      // Filtrar itens concluídos/realizados (ficam apenas nos andamentos)
+      const activeItems = items.filter(item =>
+        item.status !== 'concluida' && item.status !== 'realizada' && item.status !== 'cancelada'
+      )
 
-      setAgendaItems(items.slice(0, 5))
+      activeItems.sort((a, b) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime())
+
+      setAgendaItems(activeItems)
       setLoadingAgenda(false)
     } catch (error) {
       console.error('Erro ao carregar agenda:', error)
@@ -236,16 +285,19 @@ export default function ConsultaDetalhePage() {
 
   // Adicionar andamento
   const handleAddAndamento = async () => {
-    if (!novoAndamento.descricao.trim()) {
-      toast.error('Preencha a descricao')
+    if (!novoAndamento.tipo.trim() || !novoAndamento.descricao.trim()) {
+      toast.error('Preencha o tipo e a descrição')
       return
     }
 
     setSalvandoAndamento(true)
 
     try {
+      const dataAndamento = parseDateInBrazil(novoAndamento.data, 'yyyy-MM-dd')
+
       const novoItem: Andamento = {
-        data: new Date().toISOString(),
+        data: dataAndamento.toISOString(),
+        tipo: novoAndamento.tipo,
         descricao: novoAndamento.descricao,
         user_id: userId || undefined
       }
@@ -260,7 +312,11 @@ export default function ConsultaDetalhePage() {
       if (error) throw error
 
       setConsulta(prev => prev ? { ...prev, andamentos: andamentosAtualizados } : null)
-      setNovoAndamento({ descricao: '' })
+      setNovoAndamento({
+        data: format(new Date(), 'yyyy-MM-dd'),
+        tipo: '',
+        descricao: ''
+      })
       setNovoAndamentoOpen(false)
       toast.success('Andamento adicionado')
     } catch (error) {
@@ -277,7 +333,7 @@ export default function ConsultaDetalhePage() {
     const reversedIndex = andamentos.length - 1 - index // Ajustar para array reverso
     const andamento = andamentos[reversedIndex]
     if (andamento) {
-      setEditandoAndamento({ index: reversedIndex, descricao: andamento.descricao })
+      setEditandoAndamento({ index: reversedIndex, tipo: andamento.tipo || '', descricao: andamento.descricao })
       setEditAndamentoOpen(true)
     }
   }
@@ -294,6 +350,7 @@ export default function ConsultaDetalhePage() {
       const andamentosAtualizados = [...(consulta?.andamentos || [])]
       andamentosAtualizados[editandoAndamento.index] = {
         ...andamentosAtualizados[editandoAndamento.index],
+        tipo: editandoAndamento.tipo || undefined,
         descricao: editandoAndamento.descricao
       }
 
@@ -361,6 +418,33 @@ export default function ConsultaDetalhePage() {
     }
   }
 
+  const formatTipoAndamento = (tipo: string) => {
+    const map: Record<string, string> = {
+      'tarefa_concluida': 'Tarefa Concluída',
+      'tarefa_criada': 'Tarefa Criada',
+      'tarefa_reaberta': 'Tarefa Reaberta',
+      'tarefa_cancelada': 'Tarefa Cancelada',
+      'evento_criado': 'Evento Criado',
+      'evento_cancelado': 'Evento Cancelado',
+      'audiencia_realizada': 'Audiência Realizada',
+      'audiencia_agendada': 'Audiência Agendada',
+      'audiencia_cancelada': 'Audiência Cancelada',
+      'andamento': 'Andamento',
+      'manual': 'Andamento Manual',
+      'reuniao': 'Reunião',
+      'analise': 'Análise',
+      'parecer': 'Parecer',
+      'atualizacao': 'Atualização',
+      'contrato_vinculado': 'Contrato Vinculado',
+      'status_alterado': 'Status Alterado',
+    }
+    if (map[tipo]) return map[tipo]
+    // Fallback: converter snake_case para texto legível
+    return tipo
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase())
+  }
+
   const formatArea = (area: string) => {
     const map: Record<string, string> = {
       'civel': 'Cível', 'trabalhista': 'Trabalhista',
@@ -405,6 +489,128 @@ export default function ConsultaDetalhePage() {
     } catch (err) {
       console.error('Erro ao alterar status:', err)
       toast.error('Erro ao alterar status')
+    }
+  }
+
+  // Handlers para Tarefas
+  const handleEditTarefa = () => {
+    setTarefaDetailOpen(false)
+    setEditingTarefa(true)
+    setShowTarefaWizard(true)
+  }
+
+  const handleDeleteTarefa = async (tarefaId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta tarefa?')) return
+    try {
+      const { error } = await supabase.from('agenda_tarefas').delete().eq('id', tarefaId)
+      if (error) throw error
+      toast.success('Tarefa excluída com sucesso!')
+      setTarefaDetailOpen(false)
+      setSelectedTarefa(null)
+      await loadAgenda()
+    } catch (error) {
+      console.error('Erro ao excluir tarefa:', error)
+      toast.error('Erro ao excluir tarefa')
+    }
+  }
+
+  const handleConcluirTarefa = async (tarefaId: string) => {
+    try {
+      const { error } = await supabase
+        .from('agenda_tarefas')
+        .update({ status: 'concluida', data_conclusao: new Date().toISOString() })
+        .eq('id', tarefaId)
+      if (error) throw error
+      toast.success('Tarefa concluída!')
+      setTarefaDetailOpen(false)
+      setSelectedTarefa(null)
+      await loadAgenda()
+    } catch (error) {
+      console.error('Erro ao concluir tarefa:', error)
+      toast.error('Erro ao concluir tarefa')
+    }
+  }
+
+  const handleReabrirTarefa = async (tarefaId: string) => {
+    try {
+      const { error } = await supabase
+        .from('agenda_tarefas')
+        .update({ status: 'pendente', data_conclusao: null })
+        .eq('id', tarefaId)
+      if (error) throw error
+      toast.success('Tarefa reaberta!')
+      setTarefaDetailOpen(false)
+      setSelectedTarefa(null)
+      await loadAgenda()
+    } catch (error) {
+      console.error('Erro ao reabrir tarefa:', error)
+      toast.error('Erro ao reabrir tarefa')
+    }
+  }
+
+  const handleLancarHorasTarefa = () => {
+    setTarefaDetailOpen(false)
+    setTimesheetModalOpen(true)
+  }
+
+  // Handlers para Eventos
+  const handleEditEvento = () => {
+    setEventoDetailOpen(false)
+    setEditingEvento(true)
+    setShowEventoWizard(true)
+  }
+
+  const handleDeleteEvento = async (eventoId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este evento?')) return
+    try {
+      const { error } = await supabase.from('agenda_eventos').delete().eq('id', eventoId)
+      if (error) throw error
+      toast.success('Evento excluído com sucesso!')
+      setEventoDetailOpen(false)
+      setSelectedEvento(null)
+      await loadAgenda()
+    } catch (error) {
+      console.error('Erro ao excluir evento:', error)
+      toast.error('Erro ao excluir evento')
+    }
+  }
+
+  // Handlers para Audiências
+  const handleEditAudiencia = () => {
+    setAudienciaDetailOpen(false)
+    setEditingAudiencia(true)
+    setShowAudienciaWizard(true)
+  }
+
+  const handleDeleteAudiencia = async (audienciaId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta audiência?')) return
+    try {
+      const { error } = await supabase.from('agenda_audiencias').delete().eq('id', audienciaId)
+      if (error) throw error
+      toast.success('Audiência excluída com sucesso!')
+      setAudienciaDetailOpen(false)
+      setSelectedAudiencia(null)
+      await loadAgenda()
+    } catch (error) {
+      console.error('Erro ao excluir audiência:', error)
+      toast.error('Erro ao excluir audiência')
+    }
+  }
+
+  const handleConcluirAudiencia = async (audienciaId: string) => {
+    try {
+      const { error } = await supabase
+        .from('agenda_audiencias')
+        .update({ status: 'realizada' })
+        .eq('id', audienciaId)
+      if (error) throw error
+      toast.success('Audiência marcada como realizada!')
+      setAudienciaDetailOpen(false)
+      setSelectedAudiencia(null)
+      await loadAgenda()
+    } catch (error) {
+      console.error('Erro ao concluir audiência:', error)
+      toast.error('Erro ao atualizar audiência')
     }
   }
 
@@ -580,29 +786,86 @@ export default function ConsultaDetalhePage() {
             {/* Andamentos */}
             <Card className="border-slate-200 shadow-sm">
               <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-[#34495e]">Andamentos ({consulta.andamentos?.length || 0})</CardTitle>
+                <div className="flex items-center justify-between mb-1">
+                  <CardTitle className="text-sm font-medium text-[#34495e]">
+                    Últimos Andamentos
+                  </CardTitle>
                   <Dialog open={novoAndamentoOpen} onOpenChange={setNovoAndamentoOpen}>
                     <DialogTrigger asChild>
                       <Button variant="outline" size="sm" className="h-8 text-xs">
                         <Plus className="w-3.5 h-3.5 mr-1.5" />
-                        Adicionar
+                        Adicionar Andamento
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-lg">
+                    <DialogContent className="max-w-2xl">
                       <DialogHeader>
-                        <DialogTitle className="text-base font-semibold text-[#34495e]">Novo Andamento</DialogTitle>
+                        <DialogTitle className="text-lg font-semibold text-[#34495e]">
+                          Novo Andamento
+                        </DialogTitle>
                       </DialogHeader>
-                      <div className="space-y-4 pt-2">
-                        <Textarea placeholder="Descreva o andamento..." value={novoAndamento.descricao} onChange={(e) => setNovoAndamento({ descricao: e.target.value })} className="text-sm min-h-[120px]" />
+
+                      <div className="space-y-4 pt-4">
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                              Data
+                            </label>
+                            <Input
+                              type="date"
+                              value={novoAndamento.data}
+                              onChange={(e) => setNovoAndamento({ ...novoAndamento, data: e.target.value })}
+                              className="text-sm"
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                              Tipo de Andamento
+                            </label>
+                            <Input
+                              placeholder="Ex: Atualização, Reunião com cliente, Análise..."
+                              value={novoAndamento.tipo}
+                              onChange={(e) => setNovoAndamento({ ...novoAndamento, tipo: e.target.value })}
+                              className="text-sm"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                            Descrição
+                          </label>
+                          <Textarea
+                            placeholder="Descreva o andamento..."
+                            value={novoAndamento.descricao}
+                            onChange={(e) => setNovoAndamento({ ...novoAndamento, descricao: e.target.value })}
+                            className="text-sm min-h-[120px]"
+                          />
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => setNovoAndamentoOpen(false)}
+                            disabled={salvandoAndamento}
+                          >
+                            Cancelar
+                          </Button>
+                          <Button
+                            onClick={handleAddAndamento}
+                            disabled={!novoAndamento.tipo || !novoAndamento.descricao || salvandoAndamento}
+                            className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e]"
+                          >
+                            {salvandoAndamento ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Salvando...
+                              </>
+                            ) : (
+                              'Adicionar Andamento'
+                            )}
+                          </Button>
+                        </div>
                       </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setNovoAndamentoOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleAddAndamento} disabled={salvandoAndamento || !novoAndamento.descricao.trim()} className="bg-gradient-to-r from-[#34495e] to-[#46627f]">
-                          {salvandoAndamento ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                          Salvar
-                        </Button>
-                      </DialogFooter>
                     </DialogContent>
                   </Dialog>
                 </div>
@@ -618,25 +881,41 @@ export default function ConsultaDetalhePage() {
                     <div className="space-y-3">
                       {(() => {
                         const reversed = [...consulta.andamentos].reverse()
-                        const totalPages = Math.ceil(reversed.length / andamentosPerPage)
                         const startIndex = (andamentoPage - 1) * andamentosPerPage
                         const paginated = reversed.slice(startIndex, startIndex + andamentosPerPage)
 
                         return paginated.map((andamento: Andamento, index) => (
-                          <div key={index} className="border-b border-slate-100 pb-3 last:border-0 last:pb-0 group">
+                          <div
+                            key={index}
+                            className="transition-colors duration-300 cursor-pointer hover:bg-slate-50 rounded-md p-2 -mx-2 group border-b border-slate-100 last:border-0"
+                            onClick={() => setSelectedAndamento(andamento)}
+                          >
                             <div className="flex gap-3">
+                              {/* Data */}
                               <div className="flex-shrink-0 w-20">
-                                <p className="text-xs font-medium text-slate-700">{format(new Date(andamento.data), "dd/MM/yyyy", { locale: ptBR })}</p>
-                                <p className="text-[10px] text-slate-500">{format(new Date(andamento.data), "HH:mm", { locale: ptBR })}</p>
+                                <p className="text-xs font-medium text-slate-700">
+                                  {format(new Date(andamento.data), "dd/MM/yyyy", { locale: ptBR })}
+                                </p>
                               </div>
+
+                              {/* Conteúdo */}
                               <div className="flex-1">
-                                <p className="text-sm text-slate-700 leading-relaxed">{andamento.descricao}</p>
+                                {andamento.tipo && (
+                                  <p className="text-xs font-semibold text-[#34495e] mb-0.5">
+                                    {formatTipoAndamento(andamento.tipo)}
+                                  </p>
+                                )}
+                                <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
+                                  {andamento.descricao}
+                                </p>
                               </div>
+
+                              {/* Botões Editar/Excluir */}
                               <div className="flex items-start gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleEditAndamento(startIndex + index)}
+                                  onClick={(e) => { e.stopPropagation(); handleEditAndamento(startIndex + index) }}
                                   className="h-7 w-7 p-0 text-slate-400 hover:text-[#34495e]"
                                 >
                                   <Pencil className="w-3.5 h-3.5" />
@@ -644,7 +923,7 @@ export default function ConsultaDetalhePage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleDeleteAndamentoClick(startIndex + index)}
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteAndamentoClick(startIndex + index) }}
                                   className="h-7 w-7 p-0 text-slate-400 hover:text-red-600"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
@@ -747,13 +1026,17 @@ export default function ConsultaDetalhePage() {
             <Card className="border-slate-200 shadow-sm">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+                  <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2 mb-1">
                     <Calendar className="w-4 h-4 text-[#89bcbe]" />
                     Agenda
                   </CardTitle>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-[#89bcbe] hover:text-white transition-colors">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 hover:bg-[#89bcbe] hover:text-white transition-colors"
+                      >
                         <Plus className="w-3.5 h-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -766,6 +1049,10 @@ export default function ConsultaDetalhePage() {
                         <Calendar className="w-4 h-4 mr-2 text-[#89bcbe]" />
                         <span className="text-sm">Novo Compromisso</span>
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setShowAudienciaWizard(true)}>
+                        <Gavel className="w-4 h-4 mr-2 text-emerald-600" />
+                        <span className="text-sm">Nova Audiência</span>
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -773,47 +1060,148 @@ export default function ConsultaDetalhePage() {
               <CardContent>
                 {loadingAgenda ? (
                   <div className="text-center py-3">
-                    <Loader2 className="w-5 h-5 mx-auto animate-spin text-[#89bcbe]" />
+                    <div className="w-5 h-5 mx-auto border-2 border-teal-200 border-t-teal-500 rounded-full animate-spin"></div>
                   </div>
                 ) : agendaItems.length === 0 ? (
                   <div className="text-center py-4">
                     <p className="text-xs text-slate-500">Nenhum agendamento vinculado</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {agendaItems.map((item) => {
-                      const Icon = item.tipo_entidade === 'tarefa' ? ListTodo : Calendar
-                      const iconBg = item.tipo_entidade === 'tarefa'
-                        ? 'bg-gradient-to-br from-[#34495e] to-[#46627f]'
-                        : 'bg-gradient-to-br from-[#89bcbe] to-[#aacfd0]'
+                  <div className="space-y-3.5">
+                    {(() => {
+                      const totalAgendaPages = Math.ceil(agendaItems.length / agendaPerPage)
+                      const agendaStartIndex = (agendaPage - 1) * agendaPerPage
+                      const paginatedAgenda = agendaItems.slice(agendaStartIndex, agendaStartIndex + agendaPerPage)
+                      return paginatedAgenda
+                    })().map((item) => {
+                      const statusConfig: Record<string, { bg: string; text: string }> = {
+                        pendente: { bg: 'bg-amber-100', text: 'text-amber-700' },
+                        em_andamento: { bg: 'bg-blue-100', text: 'text-blue-700' },
+                        concluida: { bg: 'bg-emerald-100', text: 'text-emerald-700' },
+                        agendada: { bg: 'bg-blue-100', text: 'text-blue-700' },
+                      }
+                      const statusStyle = statusConfig[item.status] || statusConfig.pendente
+
+                      const handleClick = async () => {
+                        if (item.tipo_entidade === 'tarefa') {
+                          const { data: tarefa } = await supabase
+                            .from('agenda_tarefas').select('*').eq('id', item.id).single()
+                          if (tarefa) { setSelectedTarefa(tarefa); setTarefaDetailOpen(true) }
+                        } else if (item.tipo_entidade === 'evento') {
+                          const { data: evento } = await supabase
+                            .from('agenda_eventos').select('*').eq('id', item.id).single()
+                          if (evento) { setSelectedEvento(evento); setEventoDetailOpen(true) }
+                        } else if (item.tipo_entidade === 'audiencia') {
+                          const { data: audiencia } = await supabase
+                            .from('agenda_audiencias').select('*').eq('id', item.id).single()
+                          if (audiencia) { setSelectedAudiencia(audiencia); setAudienciaDetailOpen(true) }
+                        }
+                      }
 
                       return (
                         <div
                           key={item.id}
-                          className="border border-slate-200 rounded-lg p-3 hover:border-[#89bcbe] hover:shadow-sm transition-all cursor-pointer"
-                          onClick={async () => {
-                            if (item.tipo_entidade === 'tarefa') {
-                              const { data } = await supabase.from('agenda_tarefas').select('*').eq('id', item.id).single()
-                              if (data) { setSelectedTarefa(data); setTarefaDetailOpen(true) }
-                            } else {
-                              const { data } = await supabase.from('agenda_eventos').select('*').eq('id', item.id).single()
-                              if (data) { setSelectedEvento(data); setEventoDetailOpen(true) }
-                            }
-                          }}
+                          onClick={handleClick}
+                          className="border border-slate-200 rounded-lg p-4 hover:border-[#89bcbe] hover:shadow-sm transition-all cursor-pointer"
                         >
-                          <div className="flex items-start gap-2.5">
-                            <div className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 ${iconBg}`}>
-                              <Icon className="w-3 h-3 text-white" />
-                            </div>
+                          {/* Header com título e status */}
+                          <div className="flex items-start gap-2.5 mb-2.5">
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-[#34495e] truncate">{item.titulo}</p>
-                              <p className="text-[10px] text-slate-500 mt-1">{formatBrazilDateTime(item.data_inicio)}</p>
+                              <p className="text-xs font-semibold text-[#34495e] leading-tight truncate">
+                                {item.titulo}
+                              </p>
                             </div>
+                            <Badge className={`text-[10px] h-4 px-1.5 flex-shrink-0 border ${statusStyle.bg} ${statusStyle.text}`}>
+                              {item.status}
+                            </Badge>
+                          </div>
+
+                          {/* Info adicional */}
+                          <div className="space-y-1.5">
+                            {/* Data/Horário */}
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="w-3 h-3 text-[#89bcbe]" />
+                              <span className="text-[10px] text-slate-600">
+                                {item.tipo_entidade === 'tarefa'
+                                  ? formatBrazilDate(item.data_inicio)
+                                  : formatBrazilDateTime(item.data_inicio)}
+                              </span>
+                            </div>
+
+                            {/* Responsável */}
+                            {item.responsavel_nome && (
+                              <div className="flex items-center gap-1.5">
+                                <User className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
+                                <span className="text-[10px] text-slate-600 truncate">
+                                  {item.responsavel_nome}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Prazo Fatal (apenas para tarefas) */}
+                            {item.tipo_entidade === 'tarefa' && item.prazo_data_limite && (
+                              <div className="flex items-center gap-1.5">
+                                <CalendarClock className="w-3 h-3 text-red-500" />
+                                <span className="text-[10px] text-red-600 font-medium">
+                                  Fatal: {formatBrazilDate(item.prazo_data_limite)}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )
                     })}
+
+                    {/* Paginação da Agenda */}
+                    {agendaItems.length > agendaPerPage && (
+                      <div className="flex items-center justify-between pt-3 mt-2 border-t border-slate-100">
+                        <p className="text-xs text-slate-500">
+                          {((agendaPage - 1) * agendaPerPage) + 1}-{Math.min(agendaPage * agendaPerPage, agendaItems.length)} de {agendaItems.length}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setAgendaPage(p => Math.max(1, p - 1))}
+                            disabled={agendaPage === 1}
+                            className="h-6 w-6 p-0"
+                          >
+                            <ChevronLeft className="w-3 h-3" />
+                          </Button>
+                          {Array.from({ length: Math.ceil(agendaItems.length / agendaPerPage) }, (_, i) => i + 1).slice(0, 5).map(page => (
+                            <Button
+                              key={page}
+                              variant={agendaPage === page ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setAgendaPage(page)}
+                              className={`h-6 w-6 p-0 text-[10px] ${agendaPage === page ? 'bg-[#34495e] hover:bg-[#46627f]' : ''}`}
+                            >
+                              {page}
+                            </Button>
+                          ))}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setAgendaPage(p => Math.min(Math.ceil(agendaItems.length / agendaPerPage), p + 1))}
+                            disabled={agendaPage === Math.ceil(agendaItems.length / agendaPerPage)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <ChevronRight className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
+                )}
+
+                {agendaItems.length > 0 && (
+                  <Button
+                    variant="link"
+                    className="text-xs text-[#89bcbe] hover:text-[#6ba9ab] p-0 h-auto mt-3 w-full"
+                    onClick={() => router.push(`/dashboard/agenda?consultivo_id=${consulta.id}`)}
+                  >
+                    Ver agenda completa →
+                  </Button>
                 )}
               </CardContent>
             </Card>
@@ -842,23 +1230,82 @@ export default function ConsultaDetalhePage() {
       {showTarefaWizard && escritorioId && (
         <TarefaWizard
           escritorioId={escritorioId}
-          onClose={() => setShowTarefaWizard(false)}
-          onCreated={loadAgenda}
-          initialData={{ consultivo_id: consulta.id }}
+          onClose={() => {
+            setShowTarefaWizard(false)
+            setEditingTarefa(false)
+            setSelectedTarefa(null)
+          }}
+          onSubmit={editingTarefa && selectedTarefa ? async (data: TarefaFormData) => {
+            const { error } = await supabase
+              .from('agenda_tarefas')
+              .update(data)
+              .eq('id', selectedTarefa.id)
+            if (error) throw error
+            toast.success('Tarefa atualizada com sucesso!')
+          } : undefined}
+          onCreated={async () => {
+            await loadAgenda()
+            if (!editingTarefa) {
+              toast.success('Tarefa criada com sucesso!')
+            }
+          }}
+          initialData={editingTarefa && selectedTarefa ? selectedTarefa : { consultivo_id: consulta.id }}
         />
       )}
 
       {showEventoWizard && escritorioId && (
         <EventoWizard
           escritorioId={escritorioId}
-          onClose={() => setShowEventoWizard(false)}
-          onSubmit={async (data: EventoFormData) => {
-            const { error } = await supabase.from('agenda_eventos').insert(data)
-            if (error) throw error
+          onClose={() => {
             setShowEventoWizard(false)
-            loadAgenda()
+            setEditingEvento(false)
+            setSelectedEvento(null)
           }}
-          initialData={{ consultivo_id: consulta.id }}
+          onSubmit={async (data: EventoFormData) => {
+            if (editingEvento && selectedEvento) {
+              const { error } = await supabase
+                .from('agenda_eventos')
+                .update(data)
+                .eq('id', selectedEvento.id)
+              if (error) throw error
+              toast.success('Evento atualizado com sucesso!')
+            } else {
+              const { error } = await supabase.from('agenda_eventos').insert(data)
+              if (error) throw error
+              toast.success('Evento criado com sucesso!')
+            }
+            setShowEventoWizard(false)
+            await loadAgenda()
+          }}
+          initialData={editingEvento && selectedEvento ? selectedEvento : { consultivo_id: consulta.id }}
+        />
+      )}
+
+      {showAudienciaWizard && escritorioId && (
+        <AudienciaWizard
+          escritorioId={escritorioId}
+          onClose={() => {
+            setShowAudienciaWizard(false)
+            setEditingAudiencia(false)
+            setSelectedAudiencia(null)
+          }}
+          onSubmit={async (data: AudienciaFormData) => {
+            if (editingAudiencia && selectedAudiencia) {
+              const { error } = await supabase
+                .from('agenda_audiencias')
+                .update(data)
+                .eq('id', selectedAudiencia.id)
+              if (error) throw error
+              toast.success('Audiência atualizada com sucesso!')
+            } else {
+              const { error } = await supabase.from('agenda_audiencias').insert(data)
+              if (error) throw error
+              toast.success('Audiência criada com sucesso!')
+            }
+            setShowAudienciaWizard(false)
+            await loadAgenda()
+          }}
+          initialData={editingAudiencia && selectedAudiencia ? selectedAudiencia : { consultivo_id: consulta.id }}
         />
       )}
 
@@ -866,8 +1313,16 @@ export default function ConsultaDetalhePage() {
       {selectedTarefa && (
         <TarefaDetailModal
           open={tarefaDetailOpen}
-          onOpenChange={(open) => { setTarefaDetailOpen(open); if (!open) setSelectedTarefa(null) }}
+          onOpenChange={(open) => {
+            setTarefaDetailOpen(open)
+            if (!open && !showTarefaWizard) setSelectedTarefa(null)
+          }}
           tarefa={selectedTarefa}
+          onEdit={handleEditTarefa}
+          onDelete={() => handleDeleteTarefa(selectedTarefa.id)}
+          onConcluir={() => handleConcluirTarefa(selectedTarefa.id)}
+          onReabrir={() => handleReabrirTarefa(selectedTarefa.id)}
+          onLancarHoras={handleLancarHorasTarefa}
           onUpdate={loadAgenda}
         />
       )}
@@ -875,9 +1330,26 @@ export default function ConsultaDetalhePage() {
       {selectedEvento && (
         <EventoDetailModal
           open={eventoDetailOpen}
-          onOpenChange={(open) => { setEventoDetailOpen(open); if (!open) { setSelectedEvento(null); loadAgenda() } }}
+          onOpenChange={(open) => {
+            setEventoDetailOpen(open)
+            if (!open && !showEventoWizard) setSelectedEvento(null)
+          }}
           evento={selectedEvento}
-          onConsultivoClick={() => {}}
+          onEdit={handleEditEvento}
+          onCancelar={() => handleDeleteEvento(selectedEvento.id)}
+        />
+      )}
+
+      {selectedAudiencia && (
+        <AudienciaDetailModal
+          open={audienciaDetailOpen}
+          onOpenChange={(open) => {
+            setAudienciaDetailOpen(open)
+            if (!open && !showAudienciaWizard) setSelectedAudiencia(null)
+          }}
+          audiencia={selectedAudiencia}
+          onEdit={handleEditAudiencia}
+          onCancelar={() => handleDeleteAudiencia(selectedAudiencia.id)}
         />
       )}
 
@@ -919,6 +1391,49 @@ export default function ConsultaDetalhePage() {
         consultaId={consulta.id}
       />
 
+      {/* Modal Detalhe do Andamento */}
+      <Dialog open={!!selectedAndamento} onOpenChange={(open) => !open && setSelectedAndamento(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold text-[#34495e]">
+              Detalhe do Andamento
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedAndamento && (
+            <div className="space-y-4 pt-2">
+              {/* Data e Tipo */}
+              <div className="flex items-baseline gap-4 pb-3 border-b border-slate-100">
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Data</p>
+                  <p className="text-sm font-medium text-[#34495e]">
+                    {format(new Date(selectedAndamento.data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  </p>
+                </div>
+                {selectedAndamento.tipo && (
+                  <div className="flex-1">
+                    <p className="text-xs text-slate-500 mb-1">Tipo</p>
+                    <p className="text-sm font-medium text-[#34495e]">
+                      {formatTipoAndamento(selectedAndamento.tipo)}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Descrição Completa */}
+              <div>
+                <p className="text-xs text-slate-500 mb-2">Descrição</p>
+                <div className="bg-slate-50 rounded-lg p-4 max-h-[400px] overflow-y-auto">
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                    {selectedAndamento.descricao}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Modal Editar Andamento */}
       <Dialog open={editAndamentoOpen} onOpenChange={setEditAndamentoOpen}>
         <DialogContent className="max-w-lg">
@@ -926,12 +1441,24 @@ export default function ConsultaDetalhePage() {
             <DialogTitle className="text-base font-semibold text-[#34495e]">Editar Andamento</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
-            <Textarea
-              placeholder="Descreva o andamento..."
-              value={editandoAndamento?.descricao || ''}
-              onChange={(e) => setEditandoAndamento(prev => prev ? { ...prev, descricao: e.target.value } : null)}
-              className="text-sm min-h-[120px]"
-            />
+            <div>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">Tipo</label>
+              <Input
+                placeholder="Ex: Reunião, Análise, Parecer..."
+                value={editandoAndamento?.tipo || ''}
+                onChange={(e) => setEditandoAndamento(prev => prev ? { ...prev, tipo: e.target.value } : null)}
+                className="text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-500 mb-1 block">Descrição *</label>
+              <Textarea
+                placeholder="Descreva o andamento..."
+                value={editandoAndamento?.descricao || ''}
+                onChange={(e) => setEditandoAndamento(prev => prev ? { ...prev, descricao: e.target.value } : null)}
+                className="text-sm min-h-[120px]"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditAndamentoOpen(false)}>Cancelar</Button>

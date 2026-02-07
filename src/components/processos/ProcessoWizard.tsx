@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { ChevronLeft, ChevronRight, Check, Search, Loader2, FileText, DollarSign, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Check, Search, Loader2, FileText, Plus, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { PessoaWizardModal } from '@/components/crm/PessoaWizardModal'
@@ -375,8 +375,11 @@ export default function ProcessoWizard({
     }
   }, [open])
 
-  // Buscar clientes com debounce
+  // Buscar clientes com debounce (minimo 3 caracteres)
   useEffect(() => {
+    if (!clienteSearch || clienteSearch.length < 3) {
+      return
+    }
     const debounce = setTimeout(() => {
       if (open) {
         loadClientes(clienteSearch)
@@ -425,17 +428,12 @@ export default function ProcessoWizard({
         const config = c.config || {}
 
         // formas_pagamento é um JSONB array com formas disponíveis
+        // O campo no DB é "forma" (não "forma_cobranca")
         const formasDisponiveis: FormaContrato[] = Array.isArray(c.formas_pagamento)
           ? c.formas_pagamento
               .filter((f: any) => f.ativo !== false)
               .map((f: any) => ({
-                forma_cobranca: f.forma_cobranca || f.tipo,
-                config: {
-                  valor_fixo: f.valor_fixo || config.valor_fixo,
-                  valor_hora: f.valor_hora || config.valor_hora,
-                  percentual_exito: f.percentual_exito || config.percentual_exito,
-                  valor_por_processo: f.valor_por_processo || config.valor_por_processo,
-                }
+                forma_cobranca: f.forma || f.forma_cobranca || f.tipo,
               }))
           : []
 
@@ -443,21 +441,20 @@ export default function ProcessoWizard({
         if (formasDisponiveis.length === 0 && c.forma_cobranca) {
           formasDisponiveis.push({
             forma_cobranca: c.forma_cobranca,
-            config: {
-              valor_fixo: config.valor_fixo,
-              valor_hora: config.valor_hora,
-              percentual_exito: config.percentual_exito,
-              valor_por_processo: config.valor_por_processo,
-            }
           })
         }
+
+        // Extrair valor_fixo do novo formato (valores_fixos array) ou legado
+        const valorFixo = Array.isArray(config.valores_fixos) && config.valores_fixos.length > 0
+          ? config.valores_fixos.reduce((sum: number, v: any) => sum + (v.valor || 0), 0)
+          : config.valor_fixo || null
 
         return {
           id: c.id,
           titulo: c.titulo,
           forma_cobranca: c.forma_cobranca || formasDisponiveis[0]?.forma_cobranca || 'fixo',
           formas_disponiveis: formasDisponiveis,
-          valor_fixo: config.valor_fixo || null,
+          valor_fixo: valorFixo,
           percentual_exito: config.percentual_exito || null,
           valor_hora: config.valor_hora || null,
           valor_por_processo: config.valor_por_processo || null,
@@ -624,6 +621,19 @@ export default function ProcessoWizard({
       // Converter valores para números e filtrar outros_numeros vazios
       const outrosNumerosValidos = formData.outros_numeros.filter(n => n.numero.trim().length > 0)
 
+      // Derivar autor e réu a partir do polo do cliente e parte contrária
+      const nomeCliente = clientes.find(c => c.id === formData.cliente_id)?.nome_completo || null
+      const parteContraria = formData.parte_contraria?.trim() || null
+      let autor: string | null = null
+      let reu: string | null = null
+      if (formData.polo_cliente === 'ativo') {
+        autor = nomeCliente
+        reu = parteContraria
+      } else if (formData.polo_cliente === 'passivo') {
+        autor = parteContraria
+        reu = nomeCliente
+      }
+
       const processData = {
         numero_cnj: formData.numero_cnj.trim() || null,
         outros_numeros: outrosNumerosValidos.length > 0 ? outrosNumerosValidos : [],
@@ -638,7 +648,9 @@ export default function ProcessoWizard({
         objeto_acao: formData.objeto_acao || null,
         cliente_id: formData.cliente_id,
         polo_cliente: formData.polo_cliente,
-        parte_contraria: formData.parte_contraria || null,
+        parte_contraria: parteContraria,
+        autor,
+        reu,
         contrato_id: formData.contrato_id || null,
         modalidade_cobranca: formData.modalidade_cobranca || null,
         tribunal: formData.tribunal,
@@ -701,8 +713,12 @@ export default function ProcessoWizard({
           .single()
 
         if (error) {
-          console.error('Erro ao criar processo:', error)
-          toast.error(error.message || 'Erro ao criar processo')
+          console.error('Erro ao criar processo:', error.message, error.code)
+          if (error.code === '23505') {
+            toast.error('Já existe um processo com este número CNJ neste escritório')
+          } else {
+            toast.error(error.message || 'Erro ao criar processo')
+          }
           return
         }
 
@@ -978,57 +994,107 @@ export default function ProcessoWizard({
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="cliente_id">Cliente *</Label>
-                  <Select value={formData.cliente_id} onValueChange={handleClienteChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o cliente..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {/* Campo de busca */}
-                      <div className="px-2 py-1.5 sticky top-0 bg-white border-b">
-                        <div className="relative">
-                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                          <Input
-                            value={clienteSearch}
-                            onChange={(e) => setClienteSearch(e.target.value)}
-                            placeholder="Buscar cliente..."
-                            className="h-8 text-xs pl-7"
-                          />
-                        </div>
+
+                  {/* Cliente selecionado */}
+                  {formData.cliente_id ? (
+                    <div className="relative bg-white border border-slate-200 rounded-lg p-3 pr-8 hover:border-slate-300 transition-colors mt-1">
+                      <div className="text-sm font-semibold text-[#34495e]">
+                        {clientes.find(c => c.id === formData.cliente_id)?.nome_completo || 'Cliente selecionado'}
                       </div>
-                      {/* Botao criar novo */}
-                      <div className="px-2 py-1.5 border-b">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full justify-start text-xs h-8 text-[#34495e] hover:bg-slate-100"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            setPessoaModalOpen(true)
-                          }}
-                        >
-                          <Plus className="w-3.5 h-3.5 mr-2" />
-                          Criar novo cliente
-                        </Button>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        {clientes.find(c => c.id === formData.cliente_id)?.tipo_pessoa === 'juridica' ? 'Pessoa Juridica' : 'Pessoa Fisica'}
                       </div>
-                      {/* Lista de clientes */}
-                      {loadingClientes ? (
-                        <div className="flex items-center justify-center py-4">
-                          <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleClienteChange('')
+                          setClienteSearch('')
+                        }}
+                        className="absolute top-3 right-3 w-4 h-4 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors"
+                        title="Remover cliente"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-1">
+                      {/* Input de busca */}
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Input
+                          value={clienteSearch}
+                          onChange={(e) => setClienteSearch(e.target.value)}
+                          placeholder="Buscar cliente por nome..."
+                          className="pl-10 text-sm border-slate-300 focus:border-[#89bcbe] focus:ring-[#89bcbe]"
+                          autoFocus
+                        />
+                      </div>
+
+                      {/* Botao criar novo cliente */}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start text-xs h-8 text-[#34495e] hover:bg-slate-100 mt-1.5"
+                        onClick={() => setPessoaModalOpen(true)}
+                      >
+                        <Plus className="w-3.5 h-3.5 mr-2" />
+                        Criar novo cliente
+                      </Button>
+
+                      {/* Lista de resultados - so aparece a partir de 3 letras */}
+                      {clienteSearch.length >= 3 && (
+                        <div className="mt-2 bg-white border border-slate-200 rounded-lg shadow-sm max-h-64 overflow-y-auto">
+                          {loadingClientes ? (
+                            <div className="flex items-center justify-center gap-2 p-5 text-sm text-slate-400">
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>Buscando clientes...</span>
+                            </div>
+                          ) : clientes.length === 0 ? (
+                            <div className="p-5 text-center">
+                              <Search className="w-5 h-5 text-slate-300 mx-auto mb-1.5" />
+                              <p className="text-sm text-slate-400">Nenhum cliente encontrado</p>
+                              <p className="text-[11px] text-slate-300 mt-1">Tente outro termo ou crie um novo cliente</p>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="mt-3 text-xs h-8 text-[#34495e]"
+                                onClick={() => setPessoaModalOpen(true)}
+                              >
+                                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                                Criar novo cliente
+                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="px-3 py-1.5 text-[10px] font-medium text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                                {clientes.length} resultado{clientes.length !== 1 ? 's' : ''}
+                              </div>
+                              {clientes.map((cliente) => (
+                                <button
+                                  key={cliente.id}
+                                  type="button"
+                                  onClick={() => {
+                                    handleClienteChange(cliente.id)
+                                    setClienteSearch('')
+                                  }}
+                                  className="w-full text-left px-3 py-2.5 hover:bg-[#89bcbe]/8 transition-colors border-b border-slate-100 last:border-0"
+                                >
+                                  <div className="text-sm font-medium text-[#34495e]">
+                                    {cliente.nome_completo}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 mt-0.5">
+                                    {cliente.tipo_pessoa === 'juridica' ? 'Pessoa Juridica' : 'Pessoa Fisica'}
+                                  </div>
+                                </button>
+                              ))}
+                            </>
+                          )}
                         </div>
-                      ) : clientes.length === 0 ? (
-                        <div className="text-center py-4 text-xs text-slate-500">
-                          Nenhum cliente encontrado
-                        </div>
-                      ) : (
-                        clientes.map((cliente) => (
-                          <SelectItem key={cliente.id} value={cliente.id} className="text-xs">
-                            {cliente.nome_completo}
-                          </SelectItem>
-                        ))
                       )}
-                    </SelectContent>
-                  </Select>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -1175,27 +1241,20 @@ export default function ProcessoWizard({
                         </SelectContent>
                       </Select>
 
-                      {/* Preview do contrato e seletor de modalidade */}
+                      {/* Preview do contrato */}
                       {contratoSelecionado && (
-                        <div className="p-2.5 bg-white rounded border border-[#89bcbe]/30 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-                            <span className="text-xs font-medium text-[#34495e]">Regras</span>
-                            <Badge variant="outline" className="text-[10px] h-5">
-                              {FORMA_COBRANCA_LABELS[contratoSelecionado.forma_cobranca]}
+                        <div className="flex flex-wrap items-center gap-1.5 px-1 mt-1">
+                          {contratoSelecionado.formas_disponiveis.map((f) => (
+                            <Badge key={f.forma_cobranca} variant="outline" className="text-[10px] h-5 font-normal text-slate-600">
+                              {FORMA_COBRANCA_LABELS[f.forma_cobranca] || f.forma_cobranca}
                             </Badge>
-                          </div>
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                            {contratoSelecionado.valor_fixo && (
-                              <span><span className="text-slate-500">Fixo:</span> <span className="font-medium text-emerald-600">{formatarValor(contratoSelecionado.valor_fixo)}</span></span>
-                            )}
-                            {contratoSelecionado.valor_hora && (
-                              <span><span className="text-slate-500">Hora:</span> <span className="font-medium text-emerald-600">{formatarValor(contratoSelecionado.valor_hora)}</span></span>
-                            )}
-                            {contratoSelecionado.percentual_exito && (
-                              <span><span className="text-slate-500">Êxito:</span> <span className="font-medium text-emerald-600">{contratoSelecionado.percentual_exito}%</span></span>
-                            )}
-                          </div>
+                          ))}
+                          {contratoSelecionado.valor_fixo && (
+                            <span className="text-[10px] text-slate-400 ml-1">{formatarValor(contratoSelecionado.valor_fixo)}</span>
+                          )}
+                          {contratoSelecionado.valor_hora && (
+                            <span className="text-[10px] text-slate-400 ml-1">{formatarValor(contratoSelecionado.valor_hora)}/h</span>
+                          )}
                         </div>
                       )}
 

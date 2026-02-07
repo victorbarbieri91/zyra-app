@@ -3,9 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Briefcase, FileText, X, Search, Scale, Users } from 'lucide-react'
+import { FileText, X, Search, Scale } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface Vinculacao {
@@ -34,6 +32,76 @@ interface ResultadoBusca {
   titulo?: string
   partes?: string
   tipo?: string
+}
+
+function ResultItem({ resultado, onSelect }: { resultado: ResultadoBusca; onSelect: (r: ResultadoBusca) => void }) {
+  const isProcesso = resultado.modulo === 'processo'
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(resultado)}
+      className="w-full text-left px-3 py-2.5 hover:bg-[#89bcbe]/8 transition-colors border-b border-slate-100 last:border-0 group"
+    >
+      <div className="flex items-start gap-2.5">
+        <div className={cn(
+          "mt-0.5 w-6 h-6 rounded flex items-center justify-center flex-shrink-0",
+          isProcesso ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
+        )}>
+          {isProcesso
+            ? <Scale className="w-3.5 h-3.5" />
+            : <FileText className="w-3.5 h-3.5" />
+          }
+        </div>
+
+        <div className="flex-1 min-w-0">
+          {isProcesso ? (
+            <>
+              {/* Processo: partes como destaque principal */}
+              <div className="text-sm font-semibold text-[#34495e] truncate">
+                {resultado.partes || `Pasta ${resultado.numero_pasta}`}
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                {resultado.partes && (
+                  <span className="text-xs text-slate-500 font-medium">
+                    Pasta {resultado.numero_pasta}
+                  </span>
+                )}
+                {resultado.numero_cnj && (
+                  <>
+                    {resultado.partes && <span className="text-slate-300">&middot;</span>}
+                    <span className="text-[10px] text-slate-400 font-mono truncate">
+                      CNJ: {resultado.numero_cnj}
+                    </span>
+                  </>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Consultivo: titulo como destaque principal */}
+              <div className="text-sm font-semibold text-[#34495e] line-clamp-1">
+                {resultado.titulo || `Pasta ${resultado.numero_pasta}`}
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-xs text-slate-500 font-medium">
+                  Pasta {resultado.numero_pasta}
+                </span>
+                {resultado.partes && (
+                  <>
+                    <span className="text-slate-300">&middot;</span>
+                    <span className="text-xs text-slate-400 truncate">
+                      {resultado.partes}
+                    </span>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </button>
+  )
 }
 
 export default function VinculacaoSelector({
@@ -74,11 +142,10 @@ export default function VinculacaoSelector({
               crm_pessoas!processos_processos_cliente_id_fkey(nome_completo, nome_fantasia)
             `)
             .or(`numero_pasta.ilike.%${buscaTexto}%,numero_cnj.ilike.%${buscaTexto}%,parte_contraria.ilike.%${buscaTexto}%`)
-            .limit(10)
+            .limit(20)
 
           if (processos) {
             processos.forEach((p: any) => {
-              // Montar string de partes: Cliente vs Parte Contrária
               const clienteNome = p.crm_pessoas?.nome_completo || p.crm_pessoas?.nome_fantasia
               const parteContraria = p.parte_contraria
 
@@ -115,16 +182,14 @@ export default function VinculacaoSelector({
               )
             `)
             .or(`nome_completo.ilike.%${buscaTexto}%,nome_fantasia.ilike.%${buscaTexto}%`)
-            .limit(10)
+            .limit(20)
 
           if (processosPorCliente) {
             processosPorCliente.forEach((cliente: any) => {
               const clienteNome = cliente.nome_completo || cliente.nome_fantasia
 
-              // Para cada processo deste cliente
               if (cliente.processos_processos && Array.isArray(cliente.processos_processos)) {
                 cliente.processos_processos.forEach((proc: any) => {
-                  // Evitar duplicatas
                   if (!resultadosUnificados.find(r => r.id === proc.id)) {
                     const parteContraria = proc.parte_contraria
                     let partes = ''
@@ -161,7 +226,7 @@ export default function VinculacaoSelector({
               crm_pessoas!consultivo_consultas_cliente_id_fkey(nome_completo, nome_fantasia)
             `)
             .or(`numero.ilike.%${buscaTexto}%,titulo.ilike.%${buscaTexto}%`)
-            .limit(10)
+            .limit(20)
 
           if (consultivos) {
             consultivos.forEach((c: any) => {
@@ -190,7 +255,7 @@ export default function VinculacaoSelector({
               )
             `)
             .or(`nome_completo.ilike.%${buscaTexto}%,nome_fantasia.ilike.%${buscaTexto}%`)
-            .limit(10)
+            .limit(20)
 
           if (consultivosPorCliente) {
             consultivosPorCliente.forEach((cliente: any) => {
@@ -198,7 +263,6 @@ export default function VinculacaoSelector({
 
               if (cliente.consultivo_consultas && Array.isArray(cliente.consultivo_consultas)) {
                 cliente.consultivo_consultas.forEach((cons: any) => {
-                  // Evitar duplicatas
                   if (!resultadosUnificados.find(r => r.id === cons.id)) {
                     resultadosUnificados.push({
                       id: cons.id,
@@ -254,28 +318,28 @@ export default function VinculacaoSelector({
     setMostrarResultados(false)
   }
 
+  // Agrupar resultados por módulo
+  const resultadosProcessos = resultados.filter(r => r.modulo === 'processo')
+  const resultadosConsultivos = resultados.filter(r => r.modulo === 'consultivo')
+
   return (
     <div className={cn('space-y-3', className)}>
-      {/* Card de Vinculação Ativa - Minimalista */}
+      {/* Card de Vinculacao Ativa */}
       {vinculacao && (
         <div className="relative bg-white border border-slate-200 rounded-lg p-3 pr-8 hover:border-slate-300 transition-colors">
-          {/* Partes - Destaque Principal (se existir) */}
           {vinculacao.metadados?.partes && (
             <div className="text-sm font-semibold text-[#34495e] mb-1.5">
               {vinculacao.metadados.partes}
             </div>
           )}
 
-          {/* Título - Destaque Principal (consultivo sem partes) */}
           {vinculacao.metadados?.titulo && !vinculacao.metadados?.partes && (
             <div className="text-sm font-semibold text-[#34495e] mb-1.5 line-clamp-1">
               {vinculacao.metadados.titulo}
             </div>
           )}
 
-          {/* Informações */}
           <div className="space-y-0.5 text-xs">
-            {/* Pasta - destaque se não tiver partes nem título */}
             <div className={cn(
               !vinculacao.metadados?.partes && !vinculacao.metadados?.titulo
                 ? "font-semibold text-[#34495e] text-sm mb-1"
@@ -284,14 +348,12 @@ export default function VinculacaoSelector({
               Pasta {vinculacao.metadados?.numero_pasta || 'S/N'}
             </div>
 
-            {/* CNJ */}
             {vinculacao.metadados?.numero_cnj && (
               <div className="font-mono text-[10px] text-slate-500">
                 CNJ: {vinculacao.metadados.numero_cnj}
               </div>
             )}
 
-            {/* Título (se consultivo com partes) */}
             {vinculacao.metadados?.titulo && vinculacao.metadados?.partes && (
               <div className="text-slate-500 line-clamp-1">
                 {vinculacao.metadados.titulo}
@@ -299,12 +361,11 @@ export default function VinculacaoSelector({
             )}
           </div>
 
-          {/* Botão Remover - Discreto */}
           <button
             type="button"
             onClick={handleRemoverVinculacao}
             className="absolute top-3 right-3 w-4 h-4 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors"
-            title="Remover vinculação"
+            title="Remover vinculacao"
           >
             <X className="w-4 h-4" />
           </button>
@@ -313,82 +374,66 @@ export default function VinculacaoSelector({
 
       {/* Campo de Busca Inteligente */}
       {!vinculacao && (
-        <div className="relative">
+        <div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
               value={buscaTexto}
               onChange={(e) => setBuscaTexto(e.target.value)}
-              onFocus={() => buscaTexto && setMostrarResultados(true)}
-              placeholder="Buscar por pasta, processo ou título..."
+              onFocus={() => buscaTexto.length >= 2 && resultados.length > 0 && setMostrarResultados(true)}
+              placeholder="Buscar por pasta, CNJ, cliente ou titulo..."
               className="pl-10 text-sm border-slate-300 focus:border-[#89bcbe] focus:ring-[#89bcbe]"
             />
           </div>
 
-          {/* Lista de Resultados */}
+          {/* Lista de Resultados - Inline */}
           {mostrarResultados && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-64 overflow-y-auto z-50">
+            <div className="mt-2 bg-white border border-slate-200 rounded-lg shadow-sm max-h-80 overflow-y-auto">
               {loading ? (
-                <div className="p-4 text-center text-sm text-slate-400">
-                  Buscando...
+                <div className="flex items-center justify-center gap-2 p-6 text-sm text-slate-400">
+                  <div className="w-4 h-4 border-2 border-slate-200 border-t-[#89bcbe] rounded-full animate-spin" />
+                  <span>Buscando processos e consultivos...</span>
                 </div>
               ) : resultados.length > 0 ? (
-                <div className="py-1">
-                  {resultados.map((resultado) => (
-                    <button
-                      key={resultado.id}
-                      type="button"
-                      onClick={() => handleSelecionarResultado(resultado)}
-                      className="w-full text-left px-3 py-2.5 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0"
-                    >
-                      <div className="space-y-1">
-                        {/* Partes - Destaque Principal (se existir) */}
-                        {resultado.partes && (
-                          <div className="text-sm font-semibold text-[#34495e]">
-                            {resultado.partes}
-                          </div>
-                        )}
+                <div>
+                  {/* Contador de resultados */}
+                  <div className="px-3 py-1.5 text-[10px] font-medium text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                    {resultados.length} resultado{resultados.length !== 1 ? 's' : ''} encontrado{resultados.length !== 1 ? 's' : ''}
+                  </div>
 
-                        {/* Título (consultivo) - Destaque se não tiver partes */}
-                        {resultado.titulo && !resultado.partes && (
-                          <div className="text-sm font-semibold text-[#34495e] line-clamp-1">
-                            {resultado.titulo}
-                          </div>
-                        )}
-
-                        {/* Informações */}
-                        <div className="space-y-0.5">
-                          {/* Pasta - destaque se não tiver partes nem título */}
-                          <div className={cn(
-                            "text-xs",
-                            !resultado.partes && !resultado.titulo
-                              ? "font-semibold text-[#34495e] text-sm"
-                              : "font-medium text-slate-600"
-                          )}>
-                            Pasta {resultado.numero_pasta}
-                          </div>
-
-                          {/* Número CNJ */}
-                          {resultado.numero_cnj && (
-                            <div className="text-[10px] text-slate-500 font-mono">
-                              CNJ: {resultado.numero_cnj}
-                            </div>
-                          )}
-
-                          {/* Título (se consultivo COM partes) */}
-                          {resultado.titulo && resultado.partes && (
-                            <div className="text-[10px] text-slate-500 line-clamp-1">
-                              {resultado.titulo}
-                            </div>
-                          )}
-                        </div>
+                  {/* Grupo: Processos */}
+                  {resultadosProcessos.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-2 px-3 py-2 bg-slate-50/80 border-b border-slate-100">
+                        <Scale className="w-3.5 h-3.5 text-blue-600" />
+                        <span className="text-xs font-semibold text-[#34495e]">Processos</span>
+                        <span className="text-[10px] text-slate-400 ml-auto">{resultadosProcessos.length}</span>
                       </div>
-                    </button>
-                  ))}
+                      {resultadosProcessos.map((resultado) => (
+                        <ResultItem key={resultado.id} resultado={resultado} onSelect={handleSelecionarResultado} />
+                      ))}
+                    </>
+                  )}
+
+                  {/* Grupo: Consultivos */}
+                  {resultadosConsultivos.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-2 px-3 py-2 bg-slate-50/80 border-b border-slate-100">
+                        <FileText className="w-3.5 h-3.5 text-purple-600" />
+                        <span className="text-xs font-semibold text-[#34495e]">Consultivos</span>
+                        <span className="text-[10px] text-slate-400 ml-auto">{resultadosConsultivos.length}</span>
+                      </div>
+                      {resultadosConsultivos.map((resultado) => (
+                        <ResultItem key={resultado.id} resultado={resultado} onSelect={handleSelecionarResultado} />
+                      ))}
+                    </>
+                  )}
                 </div>
               ) : (
-                <div className="p-4 text-center text-sm text-slate-400">
-                  Nenhum resultado encontrado
+                <div className="p-6 text-center">
+                  <Search className="w-5 h-5 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm text-slate-400">Nenhum resultado encontrado</p>
+                  <p className="text-[11px] text-slate-300 mt-1">Tente buscar por pasta, CNJ, cliente ou titulo</p>
                 </div>
               )}
             </div>

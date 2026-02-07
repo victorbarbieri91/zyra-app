@@ -310,7 +310,11 @@ export default function ContratoDetailModal({
   const configData = contrato.config?.[0] as Record<string, unknown> | undefined
 
   // Criar objetos de config baseados no configData
-  const configFixo = configData?.valor_fixo ? { valor_fixo: Number(configData.valor_fixo) } : null
+  // valores_fixos é um array de { descricao, valor, ... } - calcular o total
+  const valoresFixosArr = Array.isArray(configData?.valores_fixos) ? (configData.valores_fixos as Array<{ descricao?: string; valor: number }>) : []
+  const configFixo = valoresFixosArr.length > 0
+    ? { valores_fixos: valoresFixosArr, valor_total: valoresFixosArr.reduce((sum, v) => sum + (v.valor || 0), 0) }
+    : configData?.valor_fixo ? { valores_fixos: [{ descricao: 'Valor Fixo', valor: Number(configData.valor_fixo) }], valor_total: Number(configData.valor_fixo) } : null
   const configHora = configData?.valor_hora ? {
     valor_hora: Number(configData.valor_hora),
     descricao: configData.horas_estimadas ? `Horas estimadas: ${configData.horas_estimadas}` : undefined
@@ -352,11 +356,29 @@ export default function ContratoDetailModal({
   const renderFormaValores = (formaCobranca: string) => {
     switch (formaCobranca) {
       case 'fixo':
-        if (configFixo?.valor_fixo) {
+        if (configFixo) {
           return (
-            <span className="text-sm font-semibold text-[#34495e]">
-              {formatCurrency(configFixo.valor_fixo)}
-            </span>
+            <div className="text-right space-y-0.5">
+              {configFixo.valores_fixos.length === 1 ? (
+                <span className="text-sm font-semibold text-[#34495e]">
+                  {formatCurrency(configFixo.valor_total)}
+                </span>
+              ) : (
+                <>
+                  {configFixo.valores_fixos.slice(0, 2).map((v, i) => (
+                    <p key={i} className="text-xs">
+                      <span className="text-slate-500">{v.descricao || 'Fixo'}:</span>{' '}
+                      <span className="font-semibold text-[#34495e]">{formatCurrency(v.valor)}</span>
+                    </p>
+                  ))}
+                  {configFixo.valores_fixos.length > 2 && (
+                    <p className="text-[10px] text-slate-400">
+                      +{configFixo.valores_fixos.length - 2} valores
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
           )
         }
         return <span className="text-xs text-slate-400 italic">Não configurado</span>

@@ -85,9 +85,8 @@ export function useAgendaConsolidada(escritorioId: string | undefined, filters?:
       }
 
       if (filters?.responsavel_id) {
-        // Usar contains para verificar se o usuário está no array responsaveis_ids
-        // Isso garante que tarefas com múltiplos responsáveis apareçam para todos
-        query = query.contains('responsaveis_ids', [filters.responsavel_id])
+        // Incluir items do usuário OU items sem responsável (retrocompatibilidade com dados antigos)
+        query = query.or(`responsaveis_ids.cs.{${filters.responsavel_id}},responsaveis_ids.eq.{}`)
       }
 
       if (filters?.data_inicio) {

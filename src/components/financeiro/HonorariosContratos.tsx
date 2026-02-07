@@ -631,10 +631,10 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                         <div className="flex flex-col gap-1 items-end">
                           {/* Badges de configuração ou forma de cobrança */}
                           <div className="flex flex-wrap gap-1 justify-end max-w-[180px]">
-                            {contrato.configurado ? (
-                              // Se configurado, mostra as formas de cobrança configuradas
+                            {contrato.configurado && contrato.formas_configuradas && contrato.formas_configuradas.length > 0 ? (
+                              // Se configurado, mostra apenas as formas que têm config válida
                               <>
-                                {(contrato.formas_disponiveis || [contrato.forma_cobranca]).slice(0, 3).map((forma) => {
+                                {contrato.formas_configuradas.slice(0, 3).map((forma) => {
                                   const badge = getTipoBadge(forma)
                                   return (
                                     <Badge key={forma} className={cn('text-[10px] px-1.5 py-0', badge.class)}>
@@ -642,9 +642,9 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                                     </Badge>
                                   )
                                 })}
-                                {(contrato.formas_disponiveis || []).length > 3 && (
+                                {contrato.formas_configuradas.length > 3 && (
                                   <Badge className="text-[10px] px-1.5 py-0 bg-slate-100 text-slate-600">
-                                    +{(contrato.formas_disponiveis || []).length - 3}
+                                    +{contrato.formas_configuradas.length - 3}
                                   </Badge>
                                 )}
                               </>
@@ -806,9 +806,9 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                         )}
                         <TableCell>
                           <div className="flex flex-wrap gap-1 max-w-[200px]">
-                            {contrato.configurado ? (
+                            {contrato.configurado && contrato.formas_configuradas && contrato.formas_configuradas.length > 0 ? (
                               <>
-                                {(contrato.formas_disponiveis || [contrato.forma_cobranca]).slice(0, 3).map((forma) => {
+                                {contrato.formas_configuradas.slice(0, 3).map((forma) => {
                                   const badge = getTipoBadge(forma)
                                   return (
                                     <Badge key={forma} className={cn('text-[10px] px-1.5 py-0', badge.class)}>
@@ -816,9 +816,9 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                                     </Badge>
                                   )
                                 })}
-                                {(contrato.formas_disponiveis || []).length > 3 && (
+                                {contrato.formas_configuradas.length > 3 && (
                                   <Badge className="text-[10px] px-1.5 py-0 bg-slate-100 text-slate-600">
-                                    +{(contrato.formas_disponiveis || []).length - 3}
+                                    +{contrato.formas_configuradas.length - 3}
                                   </Badge>
                                 )}
                               </>

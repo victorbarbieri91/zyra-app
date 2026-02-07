@@ -68,11 +68,9 @@ export default function ModalWizard({
           <StepIndicator steps={steps} currentStep={currentStep} />
         </div>
 
-        {/* Main Content Area - Fixed Height to Prevent Scroll */}
-        <div className="flex-1 px-5 pb-3 overflow-hidden">
-          <div className="h-full max-h-[500px]">
-            {children}
-          </div>
+        {/* Main Content Area - Scrollable */}
+        <div className="flex-1 px-5 pb-3 overflow-y-auto max-h-[500px]">
+          {children}
         </div>
 
         {/* Navigation Footer */}

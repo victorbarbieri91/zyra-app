@@ -14,6 +14,12 @@ export interface AgendaItemDashboard {
   color: string
   urgente?: boolean
   processo_numero?: string
+  descricao?: string
+  local?: string
+  prioridade?: string
+  status?: string
+  data_inicio?: string
+  dia_inteiro?: boolean
 }
 
 // Mapeamento de cores por tipo
@@ -67,7 +73,7 @@ export function useDashboardAgenda() {
         .lte('data_inicio', fimHoje.toISOString())
         .neq('status', 'concluida') // Mostrar apenas itens pendentes
         .order('data_inicio', { ascending: true })
-        .limit(8)
+        .limit(20)
 
       if (queryError) throw queryError
 
@@ -119,6 +125,12 @@ export function useDashboardAgenda() {
           color,
           urgente,
           processo_numero: item.processo_numero,
+          descricao: item.descricao || undefined,
+          local: item.local || undefined,
+          prioridade: item.prioridade || undefined,
+          status: item.status || undefined,
+          data_inicio: item.data_inicio || undefined,
+          dia_inteiro: item.dia_inteiro || false,
         }
       })
 

@@ -159,7 +159,7 @@ export function useFaturaImpressao() {
         if (processosIds.length > 0) {
           const { data: processos } = await supabase
             .from('processos_processos')
-            .select('id, numero_cnj, numero_pasta, autor, reu')
+            .select('id, numero_cnj, numero_pasta, autor, reu, objeto_acao, parte_contraria')
             .in('id', processosIds)
 
           processos?.forEach((p: any) => {
@@ -253,12 +253,21 @@ export function useFaturaImpressao() {
 
           // Resolver caso_titulo: JSONB > consulta > processo
           const consultaId = item.consulta_id || tsEnriquecido?.consulta_id
-          let casoTitulo = item.caso_titulo || item.partes_resumo || null
+          const invalidTitulos = ['null x null', 'null x', 'x null', 'x']
+          const cleanTitulo = (v: string | null | undefined) =>
+            v && typeof v === 'string' && !invalidTitulos.includes(v.trim().toLowerCase()) ? v.trim() : null
+          let casoTitulo = cleanTitulo(item.caso_titulo) || cleanTitulo(item.partes_resumo) || null
           if (!casoTitulo && consultaId && consultasMap[consultaId]) {
             casoTitulo = consultasMap[consultaId]
           }
-          if (!casoTitulo && processo?.autor && processo?.reu) {
-            casoTitulo = `${processo.autor} x ${processo.reu}`
+          if (!casoTitulo && processo) {
+            if (processo.autor && processo.reu) {
+              casoTitulo = `${processo.autor} x ${processo.reu}`
+            } else if (processo.autor || processo.reu) {
+              casoTitulo = processo.autor || processo.reu
+            } else {
+              casoTitulo = processo.objeto_acao || processo.parte_contraria || null
+            }
           }
 
           return {

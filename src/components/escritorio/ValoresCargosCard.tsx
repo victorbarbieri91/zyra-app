@@ -1,9 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { DollarSign, Clock, Check, X, Pencil } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useState, useRef } from 'react';
+import { DollarSign, Clock } from 'lucide-react';
 import { Cargo } from '@/types/escritorio';
 import { cn } from '@/lib/utils';
 
@@ -13,45 +11,78 @@ interface ValoresCargosCardProps {
   carregando?: boolean;
 }
 
+const formatCurrency = (value: number): string => {
+  return value.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
+};
+
 export function ValoresCargosCard({
   cargos,
   onUpdateValorHora,
   carregando = false,
 }: ValoresCargosCardProps) {
-  const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [valorEditando, setValorEditando] = useState<string>('');
-  const [salvando, setSalvando] = useState(false);
+  // raw = valor digitado como string enquanto focused, keyed por cargo.id
+  const [rawValues, setRawValues] = useState<Record<string, string>>({});
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+  const [salvandoId, setSalvandoId] = useState<string | null>(null);
+  const valoresAtuais = useRef<Record<string, number>>({});
 
-  // Ordenar cargos por nível
   const cargosOrdenados = [...cargos].sort((a, b) => a.nivel - b.nivel);
 
-  const iniciarEdicao = (cargo: Cargo) => {
-    setEditandoId(cargo.id);
-    setValorEditando(cargo.valor_hora_padrao?.toString() || '');
+  const getValor = (cargo: Cargo): number => {
+    return valoresAtuais.current[cargo.id] ?? cargo.valor_hora_padrao ?? 0;
   };
 
-  const cancelarEdicao = () => {
-    setEditandoId(null);
-    setValorEditando('');
+  const handleFocus = (cargo: Cargo) => {
+    setFocusedId(cargo.id);
+    const valor = getValor(cargo);
+    // Mostra número limpo: "350" ou "" se zero
+    setRawValues((prev) => ({
+      ...prev,
+      [cargo.id]: valor > 0 ? String(valor).replace('.', ',') : '',
+    }));
   };
 
-  const salvarEdicao = async (cargoId: string) => {
-    setSalvando(true);
-    const valorNumerico = valorEditando ? parseFloat(valorEditando) : null;
-    const sucesso = await onUpdateValorHora(cargoId, valorNumerico);
-    if (sucesso) {
-      setEditandoId(null);
-      setValorEditando('');
-    }
-    setSalvando(false);
+  const handleChange = (cargoId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    // Permite apenas dígitos e vírgula
+    const cleaned = e.target.value.replace(/[^\d,]/g, '');
+    setRawValues((prev) => ({ ...prev, [cargoId]: cleaned }));
   };
 
-  const formatarValor = (valor: number | null) => {
-    if (valor === null) return '—';
-    return valor.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
+  const parseRawToNumber = (raw: string): number => {
+    if (!raw.trim()) return 0;
+    // "350,50" → 350.50
+    const normalized = raw.replace(',', '.');
+    const num = parseFloat(normalized);
+    return isNaN(num) ? 0 : num;
+  };
+
+  const salvar = async (cargoId: string, valor: number) => {
+    setSalvandoId(cargoId);
+    valoresAtuais.current[cargoId] = valor;
+    await onUpdateValorHora(cargoId, valor || null);
+    setSalvandoId(null);
+  };
+
+  const handleBlur = (cargoId: string) => {
+    setFocusedId(null);
+    const raw = rawValues[cargoId] ?? '';
+    const valor = parseRawToNumber(raw);
+    salvar(cargoId, valor);
+    // Limpa raw pra voltar a mostrar o formatado
+    setRawValues((prev) => {
+      const next = { ...prev };
+      delete next[cargoId];
+      return next;
     });
+  };
+
+  const handleKeyDown = (cargoId: string, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.currentTarget.blur();
+    }
   };
 
   return (
@@ -69,7 +100,7 @@ export function ValoresCargosCard({
         </div>
       </div>
 
-      {/* Tabela de valores */}
+      {/* Lista de cargos */}
       <div className="flex-1 p-4">
         {carregando ? (
           <div className="text-center py-6 text-[#6c757d]">
@@ -82,86 +113,49 @@ export function ValoresCargosCard({
             <p className="text-sm">Nenhum cargo configurado</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
             {cargosOrdenados.map((cargo) => {
-              const isEditando = editandoId === cargo.id;
+              const valor = getValor(cargo);
+              const isFocused = focusedId === cargo.id;
+              const isSalvando = salvandoId === cargo.id;
+              const isEditing = cargo.id in rawValues;
 
               return (
                 <div
                   key={cargo.id}
                   className={cn(
-                    'flex items-center justify-between p-3 rounded-lg transition-colors',
-                    isEditando ? 'bg-blue-50 border border-blue-200' : 'bg-slate-50 hover:bg-slate-100'
+                    'flex items-center gap-3 p-3 rounded-lg transition-colors',
+                    isFocused ? 'bg-blue-50 ring-1 ring-blue-300' : 'bg-slate-50 hover:bg-slate-100'
                   )}
                 >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-3 h-3 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: cargo.cor || '#64748b' }}
-                    />
-                    <span className="text-sm font-medium text-[#34495e]">
+                  <div
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: cargo.cor || '#64748b' }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-[#34495e] truncate block">
                       {cargo.nome_display}
                     </span>
                   </div>
-
-                  {isEditando ? (
-                    <div className="flex items-center gap-2">
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                          R$
-                        </span>
-                        <Input
-                          type="number"
-                          value={valorEditando}
-                          onChange={(e) => setValorEditando(e.target.value)}
-                          className="w-32 pl-10 h-8 text-sm"
-                          placeholder="0,00"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') salvarEdicao(cargo.id);
-                            if (e.key === 'Escape') cancelarEdicao();
-                          }}
-                        />
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => salvarEdicao(cargo.id)}
-                        disabled={salvando}
-                        className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                      >
-                        <Check className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={cancelarEdicao}
-                        disabled={salvando}
-                        className="h-8 w-8 p-0 text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          'text-sm font-medium',
-                          cargo.valor_hora_padrao ? 'text-emerald-600' : 'text-slate-400'
-                        )}
-                      >
-                        {formatarValor(cargo.valor_hora_padrao)}
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => iniciarEdicao(cargo)}
-                        className="h-7 w-7 p-0 text-slate-400 hover:text-[#34495e] hover:bg-slate-200"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  )}
+                  <div className="relative flex-shrink-0">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={isEditing ? rawValues[cargo.id] : formatCurrency(valor)}
+                      onChange={(e) => handleChange(cargo.id, e)}
+                      onFocus={() => handleFocus(cargo)}
+                      onBlur={() => handleBlur(cargo.id)}
+                      onKeyDown={(e) => handleKeyDown(cargo.id, e)}
+                      placeholder="0"
+                      className={cn(
+                        'w-28 h-7 pr-6 pl-2 text-xs text-right font-medium rounded-md border bg-white transition-colors cursor-text',
+                        'focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400',
+                        isSalvando && 'opacity-60',
+                        !isEditing && valor > 0 ? 'text-emerald-600 border-slate-200' : 'text-slate-500 border-slate-200'
+                      )}
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none">/h</span>
+                  </div>
                 </div>
               );
             })}
@@ -169,7 +163,7 @@ export function ValoresCargosCard({
         )}
       </div>
 
-      {/* Footer com dica */}
+      {/* Footer */}
       <div className="px-4 py-3 border-t border-slate-100 bg-slate-50">
         <p className="text-xs text-[#6c757d]">
           <Clock className="w-3 h-3 inline mr-1" />

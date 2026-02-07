@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -76,6 +76,7 @@ import { useDashboardInsightsIA } from '@/hooks/useDashboardInsightsIA'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 import { cn } from '@/lib/utils'
+import { getNowInBrazil } from '@/lib/timezone'
 
 // ── Circular Progress Component ──────────────────────────────────────
 function CircularProgress({ value, max, size = 64, strokeWidth = 5, color = '#89bcbe', bgColor = 'rgba(137,188,190,0.15)' }: {
@@ -157,8 +158,42 @@ export default function DashboardPage() {
   const [agendaAudienciaData, setAgendaAudienciaData] = useState<Record<string, unknown> | null>(null)
   const [agendaAudienciaOpen, setAgendaAudienciaOpen] = useState(false)
 
+  // Estado para nome do usuário (saudação local)
+  const [nomeUsuario, setNomeUsuario] = useState<string>('')
+
   // Estado para publicações colapsáveis
   const [pubExpanded, setPubExpanded] = useState(false)
+
+  // Saudação baseada no horário de Brasília (sempre atualizada, sem depender da IA)
+  const saudacao = useMemo(() => {
+    const hora = getNowInBrazil().getHours()
+    if (hora >= 5 && hora < 12) return 'Bom dia'
+    if (hora >= 12 && hora < 18) return 'Boa tarde'
+    return 'Boa noite'
+  }, [])
+
+  // Carregar nome do usuário para saudação
+  useEffect(() => {
+    const loadNomeUsuario = async () => {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('nome_completo')
+            .eq('id', user.id)
+            .single()
+          if (profile?.nome_completo) {
+            setNomeUsuario(profile.nome_completo.split(' ')[0])
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao carregar nome do usuário:', err)
+      }
+    }
+    loadNomeUsuario()
+  }, [])
 
   // Carregar escritórios do grupo
   useEffect(() => {
@@ -439,7 +474,7 @@ export default function DashboardPage() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <h1 className="text-xl font-bold text-[#34495e] mb-0.5">
-                {loadingResumo ? 'Carregando...' : resumo.saudacao}
+                {saudacao}{nomeUsuario ? `, ${nomeUsuario}!` : '!'}
               </h1>
               {loadingResumo ? (
                 <div className="flex items-center gap-2">

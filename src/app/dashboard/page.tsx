@@ -336,18 +336,28 @@ export default function DashboardPage() {
           HERO BANNER - Light gradient with decorative elements
           ═══════════════════════════════════════════════════════════════ */}
       <div className="bg-gradient-to-br from-[#f0f9f9] via-[#e8f5f5]/60 to-slate-50 px-6 pt-4 pb-10 relative overflow-hidden border-b border-[#aacfd0]/20">
-        {/* Decorative geometric shapes - darker for contrast */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] -translate-y-1/2 translate-x-1/4">
-          <div className="w-full h-full rounded-full bg-gradient-to-br from-[#34495e]/[0.04] to-[#89bcbe]/[0.06]" />
+        {/* Decorative geometric shapes */}
+
+        {/* Rounded rectangles */}
+        <div className="absolute top-6 right-[14%] w-28 h-28 rounded-2xl bg-[#34495e]/[0.08] rotate-12" />
+        <div className="absolute bottom-3 right-[32%] w-20 h-20 rounded-xl bg-[#89bcbe]/[0.12] -rotate-6" />
+        <div className="absolute bottom-6 left-[12%] w-16 h-16 rounded-2xl bg-[#89bcbe]/[0.09] rotate-[35deg]" />
+
+        {/* Ring */}
+        <div className="absolute top-[35%] left-[32%] w-20 h-20 rounded-full border-2 border-[#89bcbe]/[0.14]" />
+
+        {/* Dots */}
+        <div className="absolute top-[45%] left-[8%] w-2.5 h-2.5 rounded-full bg-[#89bcbe]/[0.22]" />
+        <div className="absolute top-[25%] right-[22%] w-2 h-2 rounded-full bg-[#34495e]/[0.18]" />
+        <div className="absolute bottom-8 left-[22%] w-3 h-3 rounded-full bg-[#46627f]/[0.16]" />
+        <div className="absolute top-3 left-[38%] w-1.5 h-1.5 rounded-full bg-[#89bcbe]/[0.25]" />
+        <div className="absolute top-[15%] left-[18%] w-2 h-2 rounded-full bg-[#89bcbe]/20" />
+
+        {/* Cross */}
+        <div className="absolute top-[50%] left-[60%] opacity-[0.10]">
+          <div className="w-5 h-[2px] bg-[#34495e] rounded-full" />
+          <div className="w-[2px] h-5 bg-[#34495e] rounded-full -mt-3.5 ml-[9px]" />
         </div>
-        <div className="absolute -bottom-20 -left-10 w-80 h-80">
-          <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#46627f]/[0.05] to-transparent" />
-        </div>
-        <div className="absolute top-8 right-[15%] w-24 h-24 rounded-2xl bg-[#34495e]/[0.03] rotate-12" />
-        <div className="absolute bottom-4 right-[35%] w-16 h-16 rounded-xl bg-[#89bcbe]/[0.06] -rotate-6" />
-        <div className="absolute top-1/2 left-[8%] w-2 h-2 rounded-full bg-[#34495e]/10" />
-        <div className="absolute top-[30%] right-[25%] w-1.5 h-1.5 rounded-full bg-[#89bcbe]/15" />
-        <div className="absolute bottom-8 left-[20%] w-3 h-3 rounded-full bg-[#46627f]/[0.07]" />
 
         <div className="relative z-10">
           {/* Top bar */}

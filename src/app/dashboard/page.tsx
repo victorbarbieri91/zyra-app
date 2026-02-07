@@ -242,7 +242,7 @@ export default function DashboardPage() {
 
   // Hooks de dados
   const { metrics, loading: loadingMetrics } = useDashboardMetrics()
-  const { items: agendaItems, loading: loadingAgenda, isEmpty: isAgendaEmpty, audienciasHoje, prazosHoje } = useDashboardAgenda()
+  const { items: agendaItems, loading: loadingAgenda, isEmpty: isAgendaEmpty, audienciasHoje, prazosHoje, refresh: refreshAgenda } = useDashboardAgenda()
   const { equipe, totalHorasEquipe, currentUserId, loading: loadingPerformance } = useDashboardPerformance()
   const { publicacoes, loading: loadingPublicacoes, isEmpty: isPublicacoesEmpty, urgentes: publicacoesUrgentes } = useDashboardPublicacoes()
   const { resumo, loading: loadingResumo, refresh: refreshResumo, tempoDesdeAtualizacao } = useDashboardResumoIA()
@@ -709,9 +709,11 @@ export default function DashboardPage() {
 
                                 {/* Time + Type */}
                                 <div className="flex items-center gap-2.5 flex-shrink-0">
-                                  <span className="text-xs text-slate-500 tabular-nums">
-                                    {temHorario ? event.time : 'Dia todo'}
-                                  </span>
+                                  {(event.tipo === 'audiencia' || event.tipo === 'evento') && temHorario && (
+                                    <span className="text-xs text-slate-500 tabular-nums">
+                                      {event.time}
+                                    </span>
+                                  )}
                                   <span className={cn("text-[10px] font-medium", badge.className)}>
                                     {badge.label}
                                   </span>
@@ -1238,6 +1240,7 @@ export default function DashboardPage() {
             if (!open) setTarefaDetailData(null)
           }}
           tarefa={tarefaDetailData}
+          onUpdate={refreshAgenda}
           onProcessoClick={(processoId) => router.push(`/dashboard/processos/${processoId}`)}
           onConsultivoClick={(consultivoId) => router.push(`/dashboard/consultivo/${consultivoId}`)}
         />
@@ -1248,7 +1251,10 @@ export default function DashboardPage() {
           open={agendaAudienciaOpen}
           onOpenChange={(open) => {
             setAgendaAudienciaOpen(open)
-            if (!open) setAgendaAudienciaData(null)
+            if (!open) {
+              setAgendaAudienciaData(null)
+              refreshAgenda()
+            }
           }}
           audiencia={{
             id: agendaAudienciaData.id as string,
@@ -1279,7 +1285,10 @@ export default function DashboardPage() {
           open={eventoDetailOpen}
           onOpenChange={(open) => {
             setEventoDetailOpen(open)
-            if (!open) setEventoDetailData(null)
+            if (!open) {
+              setEventoDetailData(null)
+              refreshAgenda()
+            }
           }}
           evento={{
             id: eventoDetailData.id as string,

@@ -436,12 +436,12 @@ export default function FinanceiroDashboard() {
   const contasPagar = contasProximas.filter(c => c.tipo === 'pagar')
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h1 className="text-2xl font-semibold text-[#34495e]">Dashboard Financeiro</h1>
-            <p className="text-sm text-slate-600 mt-1">
+            <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">Dashboard Financeiro</h1>
+            <p className="text-xs md:text-sm text-slate-600 mt-1">
               {escritoriosSelecionados.length === escritoriosGrupo.length && escritoriosGrupo.length > 1
                 ? 'Visão consolidada de todos os escritórios do grupo'
                 : 'Visão geral das finanças do escritório'}
@@ -547,7 +547,7 @@ export default function FinanceiroDashboard() {
         </div>
 
         {/* KPIs Top Row - 4 cards estratégicos */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
           {/* 1. Receita do Mês */}
           <MetricCard
             title="Receita"
@@ -575,7 +575,7 @@ export default function FinanceiroDashboard() {
                 </div>
               </div>
               <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-2xl font-bold text-white">
+                <span className="text-lg md:text-2xl font-bold text-white">
                   {formatCurrency(metrics.lucro_mes)}
                 </span>
                 {metrics.variacao_lucro !== 0 && (
@@ -631,7 +631,7 @@ export default function FinanceiroDashboard() {
         </div>
 
         {/* Grid Principal - 3 colunas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
 
           {/* Coluna Esquerda (2 colunas) */}
           <div className="md:col-span-2 space-y-4">

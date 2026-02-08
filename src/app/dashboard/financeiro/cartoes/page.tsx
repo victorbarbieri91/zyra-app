@@ -193,12 +193,12 @@ export default function CartoesPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-[#34495e]">Cartões de Crédito</h1>
-          <p className="text-sm text-slate-600 mt-1">
+          <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">Cartões de Crédito</h1>
+          <p className="text-xs md:text-sm text-slate-600 mt-1">
             Gerencie os cartões de crédito e suas faturas
           </p>
         </div>
@@ -269,15 +269,15 @@ export default function CartoesPage() {
             variant="outline"
             onClick={() => router.push('/dashboard/financeiro/cartoes/importar')}
           >
-            <Upload className="h-4 w-4 mr-2" />
-            Importar PDF
+            <Upload className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">Importar PDF</span>
           </Button>
           <Button
             onClick={handleNewCartao}
             className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white hover:from-[#2c3e50] hover:to-[#3d5469] shadow-sm"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Cartão
+            <Plus className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">Novo Cartão</span>
           </Button>
         </div>
       </div>

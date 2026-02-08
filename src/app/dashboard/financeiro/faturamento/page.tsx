@@ -283,12 +283,12 @@ export default function FaturamentoPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-[#34495e]">Faturamento Inteligente</h1>
-          <p className="text-sm text-slate-600 mt-1">
+          <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">Faturamento Inteligente</h1>
+          <p className="text-xs md:text-sm text-slate-600 mt-1">
             Gere faturas consolidadas automaticamente
           </p>
         </div>
@@ -362,8 +362,8 @@ export default function FaturamentoPage() {
             disabled={loading}
             className="border-slate-200"
           >
-            <RefreshCw className={cn('h-4 w-4 mr-2', loading && 'animate-spin')} />
-            Atualizar
+            <RefreshCw className={cn('h-4 w-4 md:mr-2', loading && 'animate-spin')} />
+            <span className="hidden md:inline">Atualizar</span>
           </Button>
         </div>
       </div>

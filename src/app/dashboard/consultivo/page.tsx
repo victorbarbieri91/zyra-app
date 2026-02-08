@@ -444,28 +444,28 @@ export default function ConsultivoPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-[#34495e]">Consultivo</h1>
-          <p className="text-sm text-slate-600 mt-0.5 font-normal">
-            {loading ? 'Carregando...' : `${totalCount} ${totalCount === 1 ? 'consulta' : 'consultas'} encontradas`}
+          <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">Consultivo</h1>
+          <p className="text-xs md:text-sm text-slate-600 mt-0.5 font-normal">
+            {loading ? 'Carregando...' : `${totalCount} ${totalCount === 1 ? 'consulta' : 'consultas'}`}
           </p>
         </div>
         <Button
           onClick={() => setWizardModalOpen(true)}
           className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#2c3e50] hover:to-[#34495e] text-white shadow-lg"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Consulta
+          <Plus className="w-4 h-4 md:mr-2" />
+          <span className="hidden md:inline">Nova Consulta</span>
         </Button>
       </div>
 
       {/* Busca e Filtros */}
       <Card className="border-slate-200 shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex gap-2">
+        <CardContent className="p-3 md:p-4">
+          <div className="flex flex-col md:flex-row gap-2">
             <div className="relative flex-1">
               {loading && searchQuery ? (
                 <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 animate-spin" />
@@ -473,37 +473,112 @@ export default function ConsultivoPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               )}
               <Input
-                placeholder="Buscar por cliente, título, número ou responsável..."
+                placeholder="Buscar por cliente, título..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
 
-            {/* Dropdown Visualizacao */}
-            <select
-              value={currentView}
-              onChange={(e) => {
-                setCurrentView(e.target.value as typeof currentView)
-                setCurrentPage(1)
-              }}
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#89bcbe] min-w-[160px]"
-            >
-              <option value="ativas">Ativas</option>
-              <option value="arquivadas">Arquivadas</option>
-              <option value="minhas">Minhas Consultas</option>
-            </select>
+            <div className="flex gap-2">
+              {/* Dropdown Visualizacao */}
+              <select
+                value={currentView}
+                onChange={(e) => {
+                  setCurrentView(e.target.value as typeof currentView)
+                  setCurrentPage(1)
+                }}
+                className="px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#89bcbe] flex-1 md:min-w-[160px]"
+              >
+                <option value="ativas">Ativas</option>
+                <option value="arquivadas">Arquivadas</option>
+                <option value="minhas">Minhas Consultas</option>
+              </select>
 
-            <Button variant="outline">
-              <Filter className="w-4 h-4 mr-2" />
-              Mais Filtros
-            </Button>
+              <Button variant="outline" className="whitespace-nowrap">
+                <Filter className="w-4 h-4 md:mr-2" />
+                <span className="hidden md:inline">Mais Filtros</span>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tabela de Consultas */}
-      <Card className="border-slate-200 shadow-sm">
+      {/* Mobile: Card list view */}
+      <div className="md:hidden space-y-2">
+        {loading && consultas.length === 0 && (
+          <div className="flex items-center justify-center py-8 gap-3">
+            <Loader2 className="w-5 h-5 text-[#34495e] animate-spin" />
+            <span className="text-sm text-slate-600">Carregando...</span>
+          </div>
+        )}
+        {!loading && consultas.length === 0 && (
+          <div className="flex flex-col items-center py-8 gap-2">
+            <Scale className="w-10 h-10 text-slate-300" />
+            <p className="text-sm text-slate-600">Nenhuma consulta encontrada</p>
+          </div>
+        )}
+        {consultas.map((consulta) => (
+          <div
+            key={consulta.id}
+            onClick={() => router.push(`/dashboard/consultivo/${consulta.id}`)}
+            className="bg-white rounded-xl border border-slate-200 p-3.5 active:bg-slate-50 transition-colors cursor-pointer shadow-sm"
+          >
+            <div className="flex items-start justify-between mb-1">
+              <p className="text-sm font-medium text-[#34495e] line-clamp-2 flex-1 mr-2">{consulta.titulo}</p>
+              {getStatusBadge(consulta.status)}
+            </div>
+            {consulta.numero && (
+              <p className="text-[11px] font-mono text-slate-400 mb-1">#{consulta.numero}</p>
+            )}
+            <p className="text-xs text-slate-600 truncate">{consulta.cliente_nome}</p>
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-slate-500">{formatArea(consulta.area)}</span>
+                {getPrioridadeBadge(consulta.prioridade)}
+              </div>
+              <span className="text-[11px] text-slate-400">
+                {formatPrazo(consulta.prazo)}
+              </span>
+            </div>
+          </div>
+        ))}
+
+        {/* Mobile Pagination */}
+        {totalCount > 0 && (
+          <div className="flex items-center justify-between pt-2">
+            <span className="text-xs text-slate-500">
+              {startItem}-{endItem} de {totalCount}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1 || loading}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="text-xs font-medium text-slate-700 px-2">
+                {currentPage}/{totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages || totalPages === 0 || loading}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: Tabela de Consultas */}
+      <Card className="hidden md:block border-slate-200 shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full table-fixed">
             <thead className="bg-slate-50 border-b border-slate-200">

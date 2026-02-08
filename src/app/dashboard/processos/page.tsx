@@ -422,21 +422,21 @@ export default function ProcessosPage() {
   const selectedProcessos = processos.filter(p => selectedIds.has(p.id))
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
 
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-[#34495e]">Processos</h1>
-            <p className="text-sm text-slate-600 mt-0.5 font-normal">
-              {loading ? 'Carregando...' : `${totalCount} ${totalCount === 1 ? 'processo' : 'processos'} encontrados`}
+            <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">Processos</h1>
+            <p className="text-xs md:text-sm text-slate-600 mt-0.5 font-normal">
+              {loading ? 'Carregando...' : `${totalCount} ${totalCount === 1 ? 'processo' : 'processos'}`}
             </p>
           </div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               onClick={() => router.push('/dashboard/processos/relatorios')}
-              className="h-10"
+              className="hidden md:flex h-10"
             >
               <FileText className="w-4 h-4 mr-2" />
               Relatorios
@@ -447,8 +447,8 @@ export default function ProcessosPage() {
 
         {/* Busca e Filtros */}
         <Card className="border-slate-200 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex gap-2">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex flex-col md:flex-row gap-2">
               <div className="relative flex-1">
                 {loading && searchQuery ? (
                   <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 animate-spin" />
@@ -456,43 +456,131 @@ export default function ProcessosPage() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 )}
                 <Input
-                  placeholder="Buscar por cliente, CNJ, pasta, parte contrária ou responsável..."
+                  placeholder="Buscar por cliente, CNJ, pasta..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
                 />
               </div>
 
-              {/* Dropdown Visualização */}
-              <select
-                value={currentView}
-                onChange={(e) => {
-                  setCurrentView(e.target.value as typeof currentView)
-                  setCurrentPage(1) // Reset page on view change
-                }}
-                className="px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#89bcbe] min-w-[160px]"
-              >
-                <option value="todos">Todos</option>
-                <option value="ativos">Ativos</option>
-                <option value="criticos">Críticos</option>
-                <option value="meus">Meus Processos</option>
-                <option value="sem_contrato">Sem Contrato</option>
-                <option value="arquivados">Arquivados</option>
-              </select>
+              <div className="flex gap-2">
+                {/* Dropdown Visualização */}
+                <select
+                  value={currentView}
+                  onChange={(e) => {
+                    setCurrentView(e.target.value as typeof currentView)
+                    setCurrentPage(1)
+                  }}
+                  className="px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#89bcbe] flex-1 md:min-w-[160px]"
+                >
+                  <option value="todos">Todos</option>
+                  <option value="ativos">Ativos</option>
+                  <option value="criticos">Críticos</option>
+                  <option value="meus">Meus Processos</option>
+                  <option value="sem_contrato">Sem Contrato</option>
+                  <option value="arquivados">Arquivados</option>
+                </select>
 
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <Filter className="w-4 h-4 mr-2" />
-                Mais Filtros
-              </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="whitespace-nowrap"
+                >
+                  <Filter className="w-4 h-4 md:mr-2" />
+                  <span className="hidden md:inline">Mais Filtros</span>
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Tabela de Processos */}
-        <Card className="border-slate-200 shadow-sm">
+        {/* Mobile: Card list view */}
+        <div className="md:hidden space-y-2">
+          {loading && processos.length === 0 && (
+            <div className="flex items-center justify-center py-8 gap-3">
+              <Loader2 className="w-5 h-5 text-[#34495e] animate-spin" />
+              <span className="text-sm text-slate-600">Carregando...</span>
+            </div>
+          )}
+          {!loading && processos.length === 0 && (
+            <div className="flex flex-col items-center py-8 gap-2">
+              <FileText className="w-10 h-10 text-slate-300" />
+              <p className="text-sm text-slate-600">Nenhum processo encontrado</p>
+            </div>
+          )}
+          {processos.map((processo) => (
+            <div
+              key={processo.id}
+              onClick={() => router.push(`/dashboard/processos/${processo.id}`)}
+              className="bg-white rounded-xl border border-slate-200 p-3.5 active:bg-slate-50 transition-colors cursor-pointer shadow-sm"
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-[#34495e]">{processo.numero_pasta}</span>
+                  {processo.escavador_monitoramento_id && (
+                    <Eye className="w-3 h-3 text-emerald-500" />
+                  )}
+                </div>
+                <Badge className={`text-[10px] border ${getStatusBadge(processo.status)}`}>
+                  {processo.status}
+                </Badge>
+              </div>
+              <p className="text-xs text-slate-500 mb-1">{processo.numero_cnj}</p>
+              <p className="text-xs font-medium text-slate-700 truncate">{processo.cliente_nome || '-'}</p>
+              {processo.parte_contraria && (
+                <p className="text-[11px] text-slate-400 truncate">vs {processo.parte_contraria}</p>
+              )}
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+                <div className="flex items-center gap-2">
+                  <Badge className={`text-[9px] border ${getAreaBadge(processo.area)}`}>
+                    {processo.area}
+                  </Badge>
+                  {processo.tem_prazo_critico && (
+                    <AlertCircle className="w-3 h-3 text-red-500" />
+                  )}
+                </div>
+                <span className="text-[10px] text-slate-400">
+                  {formatTimestamp(processo.ultima_movimentacao)}
+                </span>
+              </div>
+            </div>
+          ))}
+
+          {/* Mobile Pagination */}
+          {totalCount > 0 && (
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-xs text-slate-500">
+                {startItem}-{endItem} de {totalCount}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1 || loading}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-xs font-medium text-slate-700 px-2">
+                  {currentPage}/{totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages || totalPages === 0 || loading}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop: Tabela de Processos */}
+        <Card className="hidden md:block border-slate-200 shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full table-fixed">
               <thead className="bg-slate-50 border-b border-slate-200">

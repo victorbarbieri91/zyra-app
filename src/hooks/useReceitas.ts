@@ -244,6 +244,8 @@ export function useReceitas(escritorioId: string | null) {
     setError(null)
 
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+
       const { data, error: insertError } = await supabase
         .from('financeiro_receitas')
         .insert({
@@ -264,6 +266,8 @@ export function useReceitas(escritorioId: string | null) {
           config_recorrencia: formData.recorrente ? formData.config_recorrencia : null,
           observacoes: formData.observacoes,
           status: 'pendente',
+          responsavel_id: user?.id,
+          created_by: user?.id,
         })
         .select('id')
         .single()

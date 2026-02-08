@@ -207,7 +207,7 @@ export default function EscritorioPage() {
   }
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-5">
       {/* Header da Página */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-[#34495e]">Escritório</h1>

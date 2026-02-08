@@ -1619,12 +1619,12 @@ export default function ExtratoFinanceiroPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-[#34495e]">Receitas e Despesas</h1>
-          <p className="text-sm text-slate-600 mt-0.5 font-normal">
+          <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">Receitas e Despesas</h1>
+          <p className="text-xs md:text-sm text-slate-600 mt-0.5 font-normal">
             {loading ? 'Carregando...' : `${totalCount} lançamentos`}
           </p>
         </div>
@@ -1746,16 +1746,16 @@ export default function ExtratoFinanceiroPage() {
             variant="outline"
             onClick={() => setModalDespesa(true)}
           >
-            <Plus className="w-4 h-4 mr-1" />
-            Despesa
+            <Plus className="w-4 h-4 md:mr-1" />
+            <span className="hidden md:inline">Despesa</span>
           </Button>
           <Button
             size="sm"
             onClick={() => setModalReceita(true)}
             className="bg-[#34495e] hover:bg-[#46627f] text-white"
           >
-            <Plus className="w-4 h-4 mr-1" />
-            Receita
+            <Plus className="w-4 h-4 md:mr-1" />
+            <span className="hidden md:inline">Receita</span>
           </Button>
           <Button
             size="sm"
@@ -1770,8 +1770,8 @@ export default function ExtratoFinanceiroPage() {
               setModalTransferencia(true)
             }}
           >
-            <ArrowLeftRight className="w-4 h-4 mr-1" />
-            Transferir
+            <ArrowLeftRight className="w-4 h-4 md:mr-1" />
+            <span className="hidden md:inline">Transferir</span>
           </Button>
         </div>
       </div>
@@ -2002,7 +2002,170 @@ export default function ExtratoFinanceiroPage() {
 
       {/* Tabela */}
       <Card className="border-slate-200 shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="md:hidden">
+          {loading && extrato.length === 0 && (
+            <div className="p-8 text-center">
+              <Loader2 className="w-5 h-5 text-[#34495e] animate-spin mx-auto" />
+              <span className="text-sm text-slate-600 mt-2 block">Carregando...</span>
+            </div>
+          )}
+          {!loading && extrato.length === 0 && (
+            <div className="p-8 text-center">
+              <FileText className="w-10 h-10 text-slate-300 mx-auto" />
+              <p className="text-sm text-slate-600 mt-2">Nenhum lançamento encontrado</p>
+            </div>
+          )}
+          <div className={cn("divide-y divide-slate-100", loading && extrato.length > 0 && "opacity-50")}>
+            {extrato.map((item) => {
+              const diasVenc = getDiasVencimento(item.data_vencimento)
+              const isVencido = item.status === 'vencido' || (diasVenc !== null && diasVenc < 0)
+              const isPendente = item.status === 'pendente' || item.status === 'vencido'
+              const categoriaConfig = getCategoriaConfig(item.categoria)
+              const isSelected = itensSelecionados.includes(item.id)
+
+              return (
+                <div
+                  key={`mobile-${item.origem}-${item.id}`}
+                  className={cn(
+                    "px-4 py-3 space-y-2",
+                    isSelected && "bg-[#f0f9f9]"
+                  )}
+                >
+                  {/* Top row: type badge + description + value */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setItensSelecionados([...itensSelecionados, item.id])
+                            } else {
+                              setItensSelecionados(itensSelecionados.filter(id => id !== item.id))
+                            }
+                          }}
+                          className="data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
+                        />
+                        {item.tipo_movimento === 'receita' ? (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <TrendingUp className="w-2.5 h-2.5" />
+                            Receita
+                          </span>
+                        ) : item.tipo_movimento === 'despesa' ? (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-red-50 text-red-700 border border-red-200">
+                            <TrendingDown className="w-2.5 h-2.5" />
+                            Despesa
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                            <ArrowLeftRight className="w-2.5 h-2.5" />
+                            Transf.
+                          </span>
+                        )}
+                        {item.status === 'efetivado' ? (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <CheckCircle className="w-2.5 h-2.5" />
+                            Pago
+                          </span>
+                        ) : item.status === 'vencido' ? (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-red-50 text-red-600 border border-red-200">
+                            <AlertTriangle className="w-2.5 h-2.5" />
+                            Vencido
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                            <Clock className="w-2.5 h-2.5" />
+                            Pendente
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-700 truncate">{item.descricao}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <span className={cn(
+                        "text-sm font-semibold",
+                        item.tipo_movimento === 'receita' ? 'text-emerald-600' :
+                        item.tipo_movimento === 'despesa' ? 'text-red-600' :
+                        'text-blue-600'
+                      )}>
+                        {item.tipo_movimento === 'receita' ? '+ ' :
+                         item.tipo_movimento === 'despesa' ? '- ' :
+                         ''}{formatCurrency(item.valor)}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Bottom row: vencimento, categoria, actions */}
+                  <div className="flex items-center justify-between gap-2 pl-6">
+                    <div className="flex items-center gap-2 text-[10px] text-slate-500 min-w-0">
+                      {item.data_vencimento && (
+                        <span className={isVencido ? 'text-red-500 font-medium' : ''}>
+                          Venc. {formatDate(item.data_vencimento)}
+                        </span>
+                      )}
+                      {item.entidade && (
+                        <span className="truncate max-w-[80px]">{item.entidade}</span>
+                      )}
+                      <span className={cn("inline-block px-1.5 py-0.5 rounded text-[10px] font-medium border", categoriaConfig.color)}>
+                        {categoriaConfig.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {isPendente && contasBancarias.length > 0 && (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 hover:bg-emerald-50"
+                          title={item.tipo_movimento === 'receita' ? 'Receber' : 'Pagar'}
+                          onClick={() => {
+                            const contaId = contasBancarias[0].id
+                            if (item.tipo_movimento === 'receita') {
+                              handleReceberTotal(item, contaId)
+                            } else {
+                              handlePagarDespesa(item, contaId)
+                            }
+                          }}
+                        >
+                          <CheckCircle className="w-4 h-4 text-emerald-600" />
+                        </Button>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                            <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            Ver Detalhes
+                          </DropdownMenuItem>
+                          {item.origem !== 'fatura' && (
+                            <DropdownMenuItem onClick={() => handlePrepararEdicao(item)}>
+                              <Pencil className="w-4 h-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handlePrepararExclusao(item)}
+                            className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>

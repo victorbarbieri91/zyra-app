@@ -30,11 +30,11 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-slate-50">
       {/* Header com Navegação */}
       <div className="bg-white border-b border-slate-200">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between mb-4">
+        <div className="px-4 md:px-6 py-3 md:py-4">
+          <div className="flex items-center justify-between mb-3 md:mb-4">
             <div>
-              <h1 className="text-2xl font-semibold text-[#34495e]">CRM</h1>
-              <p className="text-sm text-slate-600 mt-1">
+              <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">CRM</h1>
+              <p className="text-xs md:text-sm text-slate-600 mt-0.5 md:mt-1">
                 Gestão de relacionamento com clientes
               </p>
             </div>
@@ -70,7 +70,7 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Conteúdo */}
-      <div className="p-6">{children}</div>
+      <div className="p-4 md:p-6">{children}</div>
     </div>
   );
 }

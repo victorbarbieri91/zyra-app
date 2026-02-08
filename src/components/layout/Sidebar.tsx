@@ -129,7 +129,7 @@ export default function Sidebar() {
       initial={false}
       animate={{ width: collapsed ? 72 : 280 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="bg-gradient-to-b from-white to-slate-50/50 border-r border-slate-200 flex flex-col relative shadow-sm"
+      className="hidden md:flex bg-gradient-to-b from-white to-slate-50/50 border-r border-slate-200 flex-col relative shadow-sm"
     >
       {/* Collapse Button */}
       <button

@@ -592,20 +592,20 @@ export default function PublicacoesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white p-6">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white p-4 md:p-6">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-4 md:mb-6">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h1 className="text-2xl font-bold text-[#34495e]">Publicações & Intimações</h1>
-            <p className="text-sm text-slate-600">Gestão de publicações e intimações</p>
+            <h1 className="text-xl md:text-2xl font-bold text-[#34495e]">Publicações</h1>
+            <p className="text-xs md:text-sm text-slate-600">Gestão de publicações e intimações</p>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              className="gap-2"
+              className="gap-1.5"
               onClick={handleSincronizar}
               disabled={sincronizando}
             >
@@ -614,12 +614,12 @@ export default function PublicacoesPage() {
               ) : (
                 <RefreshCw className="w-4 h-4" />
               )}
-              {sincronizando ? 'Sincronizando...' : 'Sincronizar'}
+              <span className="hidden md:inline">{sincronizando ? 'Sincronizando...' : 'Sincronizar'}</span>
             </Button>
             <Link href="/dashboard/publicacoes/config">
-              <Button variant="outline" size="sm" className="gap-2">
+              <Button variant="outline" size="sm" className="gap-1.5">
                 <Settings className="w-4 h-4" />
-                Configurações
+                <span className="hidden md:inline">Configurações</span>
               </Button>
             </Link>
           </div>
@@ -627,7 +627,7 @@ export default function PublicacoesPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 mb-4 md:mb-6">
         <MetricCard
           title="Pendentes"
           value={stats.pendentes}
@@ -662,7 +662,7 @@ export default function PublicacoesPage() {
       </div>
 
       {/* Filtros Rápidos */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 overflow-x-auto no-scrollbar whitespace-nowrap pb-1">
         <span className="text-xs font-medium text-slate-500 mr-1">Filtros rápidos:</span>
         {FILTROS_RAPIDOS.map(filtro => (
           <Button
@@ -825,7 +825,7 @@ export default function PublicacoesPage() {
 
       {/* Barra de ações em massa (quando há seleção) */}
       {selecionados.size > 0 && (
-        <div className="bg-[#34495e] text-white rounded-lg p-3 mb-4 flex items-center justify-between shadow-lg">
+        <div className="bg-[#34495e] text-white rounded-lg p-3 mb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 shadow-lg">
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium">
               {selecionados.size} selecionada{selecionados.size > 1 ? 's' : ''}
@@ -836,7 +836,7 @@ export default function PublicacoesPage() {
               className="h-7 text-xs text-white/80 hover:text-white hover:bg-white/10"
               onClick={limparSelecao}
             >
-              Limpar seleção
+              Limpar
             </Button>
           </div>
 
@@ -844,16 +844,16 @@ export default function PublicacoesPage() {
             <Button
               variant="secondary"
               size="sm"
-              className="h-8 gap-2"
+              className="h-8 gap-1.5"
               onClick={marcarComoProcessada}
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
-              Marcar como Tratada
+              <span className="hidden md:inline">Marcar como</span> Tratada
             </Button>
             <Button
               variant="secondary"
               size="sm"
-              className="h-8 gap-2"
+              className="h-8 gap-1.5"
               onClick={arquivarSelecionados}
             >
               <Archive className="w-3.5 h-3.5" />
@@ -863,45 +863,48 @@ export default function PublicacoesPage() {
         </div>
       )}
 
-      {/* Tabela de Publicações */}
+      {/* Publicações */}
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
         {/* Abas dentro do card */}
-        <div className="p-4 border-b border-slate-200">
+        <div className="p-3 md:p-4 border-b border-slate-200 overflow-x-auto no-scrollbar">
           <Tabs value={abaAtiva} onValueChange={(v) => setAbaAtiva(v as AbaPublicacoes)}>
-            <TabsList className="bg-slate-100 p-1 h-9">
+            <TabsList className="bg-slate-100 p-1 h-9 w-max md:w-auto">
               <TabsTrigger
                 value="todas"
-                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-3 text-sm h-7"
+                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
               >
                 Todas
-                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px] bg-slate-200/80 text-slate-600">
+                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-slate-200/80 text-slate-600">
                   {stats.total}
                 </Badge>
               </TabsTrigger>
               <TabsTrigger
                 value="com_processo"
-                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-3 text-sm h-7"
+                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
               >
-                Com Pasta
-                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px] bg-[#89bcbe]/30 text-[#34495e]">
+                <span className="hidden md:inline">Com Pasta</span>
+                <span className="md:hidden">Pasta</span>
+                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-[#89bcbe]/30 text-[#34495e]">
                   {stats.comProcesso}
                 </Badge>
               </TabsTrigger>
               <TabsTrigger
                 value="sem_processo"
-                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-3 text-sm h-7"
+                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
               >
-                Sem Pasta
-                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px] bg-[#34495e]/10 text-[#46627f]">
+                <span className="hidden md:inline">Sem Pasta</span>
+                <span className="md:hidden">S/ Pasta</span>
+                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-[#34495e]/10 text-[#46627f]">
                   {stats.semProcesso}
                 </Badge>
               </TabsTrigger>
               <TabsTrigger
                 value="arquivadas"
-                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-3 text-sm h-7"
+                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
               >
-                Arquivadas
-                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px] bg-slate-200/80 text-slate-500">
+                <span className="hidden md:inline">Arquivadas</span>
+                <span className="md:hidden">Arq.</span>
+                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-slate-200/80 text-slate-500">
                   {stats.arquivadas}
                 </Badge>
               </TabsTrigger>
@@ -964,7 +967,49 @@ export default function PublicacoesPage() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Mobile: Card list */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {publicacoesFiltradas.map((pub) => (
+              <div
+                key={pub.id}
+                onClick={() => router.push(`/dashboard/publicacoes/${pub.id}`)}
+                className="p-3.5 active:bg-slate-50 transition-colors cursor-pointer"
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {getStatusBadge(pub.status)}
+                    {pub.urgente && (
+                      <Badge variant="outline" className="text-[10px] bg-red-50 text-red-700 border-red-200">
+                        Urgente
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-[11px] text-slate-400">
+                    {new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}
+                  </span>
+                </div>
+                <p className="text-xs font-medium text-slate-700 truncate">{pub.tribunal}</p>
+                {pub.vara && <p className="text-[11px] text-slate-500">{pub.vara}</p>}
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+                  <span className="text-[11px] text-slate-500">{getTipoLabel(pub.tipo_publicacao)}</span>
+                  {pub.numero_processo ? (
+                    <span className={cn(
+                      'text-[11px] font-mono truncate max-w-[160px]',
+                      pub.processo_id ? 'text-blue-600' : 'text-slate-600'
+                    )}>
+                      {pub.numero_processo}
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-slate-400">Sem processo</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
@@ -1182,6 +1227,7 @@ export default function PublicacoesPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 

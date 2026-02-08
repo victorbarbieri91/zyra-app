@@ -464,12 +464,12 @@ export default function TimesheetPage() {
   const pendentesCount = timesheets.filter(t => t.status === 'pendente').length
 
   return (
-    <div className="space-y-4 p-6">
+    <div className="space-y-4 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-[#34495e]">Timesheet</h1>
-          <p className="text-sm text-slate-600 mt-1">
+          <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">Timesheet</h1>
+          <p className="text-xs md:text-sm text-slate-600 mt-1">
             Aprovação e revisão de horas trabalhadas
           </p>
         </div>
@@ -481,7 +481,7 @@ export default function TimesheetPage() {
             className="bg-[#34495e] hover:bg-[#46627f] text-white"
           >
             <Plus className="w-4 h-4 mr-1.5" />
-            Lançar Horas
+            <span className="hidden md:inline">Lançar Horas</span>
           </Button>
 
           {/* Seletor de Escritórios */}

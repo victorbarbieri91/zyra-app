@@ -301,8 +301,8 @@ export default function DashboardPage() {
   }
 
   // Calcular progresso
-  const progressoReceita = ((metrics?.receita_mes || 0) / (metrics?.receita_meta || 1)) * 100
-  const progressoHoras = ((metrics?.horas_faturadas_mes || 0) / (metrics?.horas_meta || 1)) * 100
+  const progressoReceita = ((metrics?.honorarios_mes || 0) / (metrics?.receita_meta || 1)) * 100
+  const progressoHoras = ((metrics?.horas_cobraveis_usuario || 0) / (metrics?.horas_meta || 1)) * 100
 
   // Loading geral
   const isLoading = loadingMetrics && loadingAgenda && loadingResumo
@@ -335,28 +335,22 @@ export default function DashboardPage() {
       {/* ═══════════════════════════════════════════════════════════════
           HERO BANNER - Light gradient with decorative elements
           ═══════════════════════════════════════════════════════════════ */}
-      <div className="bg-gradient-to-br from-[#f0f9f9] via-[#e8f5f5]/60 to-slate-50 px-6 pt-4 pb-10 relative overflow-hidden border-b border-[#aacfd0]/20">
-        {/* Decorative geometric shapes */}
-
-        {/* Rounded rectangles */}
-        <div className="absolute top-6 right-[14%] w-28 h-28 rounded-2xl bg-[#34495e]/[0.08] rotate-12" />
-        <div className="absolute bottom-3 right-[32%] w-20 h-20 rounded-xl bg-[#89bcbe]/[0.12] -rotate-6" />
-        <div className="absolute bottom-6 left-[12%] w-16 h-16 rounded-2xl bg-[#89bcbe]/[0.09] rotate-[35deg]" />
-
-        {/* Ring */}
-        <div className="absolute top-[35%] left-[32%] w-20 h-20 rounded-full border-2 border-[#89bcbe]/[0.14]" />
-
-        {/* Dots */}
-        <div className="absolute top-[45%] left-[8%] w-2.5 h-2.5 rounded-full bg-[#89bcbe]/[0.22]" />
-        <div className="absolute top-[25%] right-[22%] w-2 h-2 rounded-full bg-[#34495e]/[0.18]" />
-        <div className="absolute bottom-8 left-[22%] w-3 h-3 rounded-full bg-[#46627f]/[0.16]" />
-        <div className="absolute top-3 left-[38%] w-1.5 h-1.5 rounded-full bg-[#89bcbe]/[0.25]" />
-        <div className="absolute top-[15%] left-[18%] w-2 h-2 rounded-full bg-[#89bcbe]/20" />
-
-        {/* Cross */}
-        <div className="absolute top-[50%] left-[60%] opacity-[0.10]">
-          <div className="w-5 h-[2px] bg-[#34495e] rounded-full" />
-          <div className="w-[2px] h-5 bg-[#34495e] rounded-full -mt-3.5 ml-[9px]" />
+      <div className="bg-gradient-to-br from-[#f0f9f9] via-[#e8f5f5]/60 to-slate-50 px-4 md:px-6 pt-3 md:pt-4 pb-8 md:pb-10 relative overflow-hidden border-b border-[#aacfd0]/20">
+        {/* Decorative geometric shapes - hidden on mobile */}
+        <div className="hidden md:block">
+          <div className="absolute top-6 right-[14%] w-28 h-28 rounded-2xl bg-[#34495e]/[0.08] rotate-12" />
+          <div className="absolute bottom-3 right-[32%] w-20 h-20 rounded-xl bg-[#89bcbe]/[0.12] -rotate-6" />
+          <div className="absolute bottom-6 left-[12%] w-16 h-16 rounded-2xl bg-[#89bcbe]/[0.09] rotate-[35deg]" />
+          <div className="absolute top-[35%] left-[32%] w-20 h-20 rounded-full border-2 border-[#89bcbe]/[0.14]" />
+          <div className="absolute top-[45%] left-[8%] w-2.5 h-2.5 rounded-full bg-[#89bcbe]/[0.22]" />
+          <div className="absolute top-[25%] right-[22%] w-2 h-2 rounded-full bg-[#34495e]/[0.18]" />
+          <div className="absolute bottom-8 left-[22%] w-3 h-3 rounded-full bg-[#46627f]/[0.16]" />
+          <div className="absolute top-3 left-[38%] w-1.5 h-1.5 rounded-full bg-[#89bcbe]/[0.25]" />
+          <div className="absolute top-[15%] left-[18%] w-2 h-2 rounded-full bg-[#89bcbe]/20" />
+          <div className="absolute top-[50%] left-[60%] opacity-[0.10]">
+            <div className="w-5 h-[2px] bg-[#34495e] rounded-full" />
+            <div className="w-[2px] h-5 bg-[#34495e] rounded-full -mt-3.5 ml-[9px]" />
+          </div>
         </div>
 
         <div className="relative z-10">
@@ -368,8 +362,8 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {/* Quick Action Pills */}
-              <div className="hidden md:flex items-center gap-1.5">
+              {/* Quick Action Pills - scrollable on mobile */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                 {[
                   { label: 'Tarefa', icon: CheckSquare, action: () => setTarefaModalOpen(true) },
                   { label: 'Processo', icon: Briefcase, action: () => setProcessoModalOpen(true) },
@@ -379,7 +373,7 @@ export default function DashboardPage() {
                   <button
                     key={btn.label}
                     onClick={btn.action}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#46627f] hover:bg-[#3d5a80] shadow-sm hover:shadow transition-all text-xs text-white/90 hover:text-white border border-[#46627f]/80"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#46627f] hover:bg-[#3d5a80] active:bg-[#2d4a60] shadow-sm hover:shadow transition-all text-xs text-white/90 hover:text-white border border-[#46627f]/80 whitespace-nowrap"
                   >
                     <btn.icon className="w-3.5 h-3.5" />
                     <span className="hidden lg:inline">{btn.label}</span>
@@ -548,8 +542,8 @@ export default function DashboardPage() {
       {/* ═══════════════════════════════════════════════════════════════
           KPI STRIP - Floating cards overlapping the hero
           ═══════════════════════════════════════════════════════════════ */}
-      <div className="px-6 -mt-6 relative z-20">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="px-4 md:px-6 -mt-6 relative z-20">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
           {[
             {
               label: 'Processos Ativos',
@@ -592,7 +586,7 @@ export default function DashboardPage() {
             <div
               key={kpi.label}
               className={cn(
-                "rounded-2xl p-4 bg-gradient-to-br shadow-[0_6px_28px_-4px_rgba(52,73,94,0.35)] hover:shadow-[0_12px_40px_-6px_rgba(52,73,94,0.45)] transition-all duration-300 hover:-translate-y-1",
+                "rounded-2xl p-3 md:p-4 bg-gradient-to-br shadow-[0_6px_28px_-4px_rgba(52,73,94,0.35)] hover:shadow-[0_12px_40px_-6px_rgba(52,73,94,0.45)] transition-all duration-300 hover:-translate-y-1",
                 kpi.gradient
               )}
             >
@@ -602,7 +596,7 @@ export default function DashboardPage() {
                   <kpi.icon className="w-4 h-4 text-white" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-white tracking-tight">{kpi.value}</div>
+              <div className="text-lg md:text-2xl font-bold text-white tracking-tight">{kpi.value}</div>
               {(kpi.trend ?? 0) !== 0 && (
                 <div className="flex items-center gap-1 mt-1.5">
                   {(kpi.trend ?? 0) > 0 ? (
@@ -627,7 +621,7 @@ export default function DashboardPage() {
       {/* ═══════════════════════════════════════════════════════════════
           MAIN CONTENT
           ═══════════════════════════════════════════════════════════════ */}
-      <div className="px-6 pt-6 pb-8 space-y-5">
+      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-8 space-y-4 md:space-y-5">
         {/* Row 1: Agenda + Meus Números */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* ── AGENDA DO DIA (Hero) ── */}
@@ -773,11 +767,11 @@ export default function DashboardPage() {
               <h2 className="text-sm font-bold text-[#34495e] mb-4">Meus Números</h2>
 
               <div className="grid grid-cols-2 gap-4">
-                {/* Horas */}
+                {/* Horas Cobráveis */}
                 <div className="flex items-center gap-3">
                   <div className="relative flex-shrink-0">
                     <CircularProgress
-                      value={metrics?.horas_faturadas_mes || 0}
+                      value={metrics?.horas_cobraveis_usuario || 0}
                       max={metrics?.horas_meta || 160}
                       size={56}
                       strokeWidth={5}
@@ -788,17 +782,20 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-[10px] font-medium text-slate-500 mb-0.5">Horas Faturadas</p>
-                    <p className="text-sm font-bold text-[#34495e]">{formatHoras(metrics?.horas_faturadas_mes || 0, 'curto')}</p>
+                    <p className="text-[10px] font-medium text-slate-500 mb-0.5">Horas Cobráveis</p>
+                    <p className="text-sm font-bold text-[#34495e]">{formatHoras(metrics?.horas_cobraveis_usuario || 0, 'curto')}</p>
                     <p className="text-[9px] text-slate-400">de {formatHoras(metrics?.horas_meta || 160, 'curto')}</p>
+                    {(metrics?.horas_ja_faturadas_usuario ?? 0) > 0 && (
+                      <p className="text-[9px] text-emerald-500">{formatHoras(metrics?.horas_ja_faturadas_usuario || 0, 'curto')} já faturadas</p>
+                    )}
                   </div>
                 </div>
 
-                {/* Receita */}
+                {/* Honorários */}
                 <div className="flex items-center gap-3">
                   <div className="relative flex-shrink-0">
                     <CircularProgress
-                      value={metrics?.receita_mes || 0}
+                      value={metrics?.honorarios_mes || 0}
                       max={metrics?.receita_meta || 40000}
                       size={56}
                       strokeWidth={5}
@@ -809,8 +806,8 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-[10px] font-medium text-slate-500 mb-0.5">Receita Gerada</p>
-                    <p className="text-sm font-bold text-[#34495e]">{formatCurrency(metrics?.receita_mes || 0)}</p>
+                    <p className="text-[10px] font-medium text-slate-500 mb-0.5">Honorários</p>
+                    <p className="text-sm font-bold text-[#34495e]">{formatCurrency(metrics?.honorarios_mes || 0)}</p>
                     <p className="text-[9px] text-slate-400">Meta: {formatCurrency(metrics?.receita_meta || 40000)}</p>
                   </div>
                 </div>

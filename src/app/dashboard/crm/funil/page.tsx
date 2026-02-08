@@ -201,16 +201,18 @@ export default function FunilPage() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="bg-white border border-slate-200 rounded-lg">
-          <div className="p-4 border-b border-slate-200">
-            <div className="flex items-center justify-between">
-              <TabsList className="bg-slate-100">
-                <TabsTrigger value="funil" className="gap-2">
+          <div className="p-3 md:p-4 border-b border-slate-200">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+              <TabsList className="bg-slate-100 w-full md:w-auto">
+                <TabsTrigger value="funil" className="gap-1.5 flex-1 md:flex-none text-xs md:text-sm">
                   <TrendingUp className="w-4 h-4" />
-                  Funil de Vendas
+                  <span className="hidden md:inline">Funil de Vendas</span>
+                  <span className="md:hidden">Funil</span>
                 </TabsTrigger>
-                <TabsTrigger value="interacoes" className="gap-2">
+                <TabsTrigger value="interacoes" className="gap-1.5 flex-1 md:flex-none text-xs md:text-sm">
                   <MessageSquare className="w-4 h-4" />
-                  Todas as Interações
+                  <span className="hidden md:inline">Todas as Interações</span>
+                  <span className="md:hidden">Interações</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -221,8 +223,8 @@ export default function FunilPage() {
                     className="bg-gradient-to-r from-[#34495e] to-[#46627f]"
                     onClick={() => setOportunidadeModalOpen(true)}
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nova Oportunidade
+                    <Plus className="w-4 h-4 md:mr-2" />
+                    <span className="hidden md:inline">Nova Oportunidade</span>
                   </Button>
                 )}
 
@@ -232,8 +234,8 @@ export default function FunilPage() {
                     className="bg-gradient-to-r from-[#34495e] to-[#46627f]"
                     onClick={() => setInteracaoModalOpen(true)}
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Registrar Interação
+                    <Plus className="w-4 h-4 md:mr-2" />
+                    <span className="hidden md:inline">Registrar Interação</span>
                   </Button>
                 )}
               </div>
@@ -241,7 +243,7 @@ export default function FunilPage() {
           </div>
 
           {/* Tab: Funil de Vendas */}
-          <TabsContent value="funil" className="p-6 mt-0">
+          <TabsContent value="funil" className="p-3 md:p-6 mt-0 overflow-x-auto">
             {oportunidades.length === 0 ? (
               <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-lg p-12 text-center">
                 <Target className="w-12 h-12 text-slate-300 mx-auto mb-4" />
@@ -271,12 +273,12 @@ export default function FunilPage() {
           </TabsContent>
 
           {/* Tab: Todas as Interações */}
-          <TabsContent value="interacoes" className="p-6 mt-0">
-            <div className="space-y-6">
+          <TabsContent value="interacoes" className="p-3 md:p-6 mt-0">
+            <div className="space-y-4 md:space-y-6">
               {todasInteracoes.length > 0 && (
                 <>
                   {/* Filtros Rápidos */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar">
                     <Button variant="outline" size="sm" className="bg-white">
                       Todas
                     </Button>
@@ -292,7 +294,7 @@ export default function FunilPage() {
                   </div>
 
                   {/* Timeline de Interações */}
-                  <div className="bg-white border border-slate-200 rounded-lg p-6">
+                  <div className="bg-white border border-slate-200 rounded-lg p-3 md:p-6">
                     <InteracaoTimeline interacoes={todasInteracoes} />
                   </div>
                 </>

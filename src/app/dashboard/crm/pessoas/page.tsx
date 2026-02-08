@@ -272,14 +272,14 @@ export default function PessoasPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-12rem)] gap-4">
+    <div className="flex flex-col md:flex-row md:h-[calc(100vh-12rem)] gap-4 p-4 md:p-0">
       {/* Lista Principal */}
-      <div className="flex-1 flex flex-col space-y-4 min-w-0">
+      <div className="flex-1 flex flex-col space-y-3 md:space-y-4 min-w-0">
         {/* Filtros e Acoes */}
-        <div className="bg-white border border-slate-200 rounded-lg p-4 flex-shrink-0">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="bg-white border border-slate-200 rounded-lg p-3 md:p-4 flex-shrink-0">
+          <div className="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center gap-2 md:gap-3">
             {/* Busca */}
-            <div className="flex-1 min-w-[300px]">
+            <div className="flex-1 min-w-0 md:min-w-[300px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input

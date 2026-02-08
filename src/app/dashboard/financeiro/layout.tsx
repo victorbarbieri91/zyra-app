@@ -16,36 +16,43 @@ import {
 const financeiroMenuItems = [
   {
     title: 'Dashboard',
+    shortTitle: 'Dash',
     icon: LayoutDashboard,
     href: '/dashboard/financeiro',
   },
   {
     title: 'Receitas/Despesas',
+    shortTitle: 'Receitas',
     icon: TrendingUpDown,
     href: '/dashboard/financeiro/receitas-despesas',
   },
   {
     title: 'Timesheet',
+    shortTitle: 'Horas',
     icon: Clock,
     href: '/dashboard/financeiro/timesheet',
   },
   {
     title: 'Contratos de Honorários',
+    shortTitle: 'Contratos',
     icon: DollarSign,
     href: '/dashboard/financeiro/contratos-honorarios',
   },
   {
     title: 'Contas Bancárias',
+    shortTitle: 'Contas',
     icon: Building2,
     href: '/dashboard/financeiro/contas-bancarias',
   },
   {
     title: 'Cartões de Crédito',
+    shortTitle: 'Cartões',
     icon: CreditCard,
     href: '/dashboard/financeiro/cartoes',
   },
   {
     title: 'Faturamento',
+    shortTitle: 'Faturas',
     icon: FileText,
     href: '/dashboard/financeiro/faturamento',
   },
@@ -68,8 +75,8 @@ export default function FinanceiroLayout({
     <div className="h-full flex flex-col">
       {/* Submenu */}
       <div className="border-b border-slate-200 bg-white">
-        <div className="px-6 py-3">
-          <div className="flex items-center gap-2 overflow-x-auto">
+        <div className="px-3 md:px-6 py-2 md:py-3">
+          <div className="flex items-center gap-1.5 md:gap-2 overflow-x-auto no-scrollbar">
             {financeiroMenuItems.map((item) => {
               const isActive = pathname === item.href
               const Icon = item.icon
@@ -79,14 +86,15 @@ export default function FinanceiroLayout({
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
+                    'flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap',
                     isActive
                       ? 'bg-gradient-to-r from-[#34495e] to-[#46627f] text-white shadow-md'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-[#34495e]'
                   )}
                 >
-                  <Icon className="h-4 w-4" />
-                  {item.title}
+                  <Icon className="h-4 w-4 flex-shrink-0" />
+                  <span className="hidden md:inline">{item.title}</span>
+                  <span className="md:hidden">{item.shortTitle}</span>
                 </Link>
               )
             })}

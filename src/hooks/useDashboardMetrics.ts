@@ -12,17 +12,17 @@ export interface DashboardMetrics {
   clientes_novos_mes: number
   consultas_abertas: number
 
-  // Financeiro - "Seus Números do Mês" (dados do USUÁRIO logado)
+  // Financeiro - "Meus Números" (dados do USUÁRIO logado)
   // Horas: filtrado por user_id no timesheet
-  // Receitas: filtrado por responsavel_id em financeiro_receitas
-  faturamento_mes: number
+  // Honorários: filtrado por responsavel_id em financeiro_receitas
+  horas_cobraveis_usuario: number    // Todas horas faturavel=true do usuário (produção cobrável)
+  horas_ja_faturadas_usuario: number // Horas faturavel=true AND faturado=true (já em faturas)
+  honorarios_mes: number             // Honorários do usuário via responsavel_id + data_competencia
   a_receber: number
-  horas_faturadas_mes: number
   horas_nao_cobraveis: number // Horas com faturavel=false
   valor_horas_nao_cobraveis: number // Calculado com valor_hora do usuário
   valor_hora_usuario: number // Valor/hora do cargo do usuário
   horas_meta: number
-  receita_mes: number
   receita_meta: number
 
   // Horas cobráveis (do escritório, para KPI) - total de horas com faturavel=true
@@ -46,14 +46,14 @@ const defaultMetrics: DashboardMetrics = {
   clientes_ativos: 0,
   clientes_novos_mes: 0,
   consultas_abertas: 0,
-  faturamento_mes: 0,
+  horas_cobraveis_usuario: 0,
+  horas_ja_faturadas_usuario: 0,
+  honorarios_mes: 0,
   a_receber: 0,
-  horas_faturadas_mes: 0,
   horas_nao_cobraveis: 0,
   valor_horas_nao_cobraveis: 0,
   valor_hora_usuario: 0,
   horas_meta: 160, // Meta padrão de horas
-  receita_mes: 0,
   receita_meta: 40000, // Meta padrão
   horas_cobraveis: 0,
   horas_cobraveis_trend_percent: 0,
@@ -93,6 +93,8 @@ export function useDashboardMetrics() {
       const fimMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth(), 0)
       const inicioSemana = new Date(hoje)
       inicioSemana.setDate(hoje.getDate() - 7)
+
+      const inicioProximoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1)
 
       // Para comparação de horas faturáveis: mesmo dia do mês passado
       const diaAtual = hoje.getDate()
@@ -203,25 +205,23 @@ export function useDashboardMetrics() {
           .eq('escritorio_id', escritorioAtivo)
           .single(),
 
-        // Horas faturadas no mês DO USUÁRIO LOGADO
+        // Horas COBRÁVEIS no mês DO USUÁRIO LOGADO (faturavel=true, independente de faturado)
         userId ? supabase
           .from('financeiro_timesheet')
-          .select('horas')
+          .select('horas, faturado')
           .eq('escritorio_id', escritorioAtivo)
           .eq('user_id', userId)
           .eq('faturavel', true)
-          .eq('faturado', true)
           .gte('data_trabalho', inicioMes.toISOString().split('T')[0])
         : Promise.resolve({ data: [] }),
 
-        // Horas do mês anterior DO USUÁRIO LOGADO (para tendência)
+        // Horas cobráveis do mês anterior DO USUÁRIO LOGADO (para tendência)
         userId ? supabase
           .from('financeiro_timesheet')
           .select('horas')
           .eq('escritorio_id', escritorioAtivo)
           .eq('user_id', userId)
           .eq('faturavel', true)
-          .eq('faturado', true)
           .gte('data_trabalho', inicioMesAnterior.toISOString().split('T')[0])
           .lte('data_trabalho', fimMesAnterior.toISOString().split('T')[0])
         : Promise.resolve({ data: [] }),
@@ -263,13 +263,15 @@ export function useDashboardMetrics() {
           .gte('data_fim', hoje.toISOString().split('T')[0])
           .lte('data_inicio', hoje.toISOString().split('T')[0]),
 
-        // Receitas GERADAS no mês DO USUÁRIO LOGADO (enviadas ao financeiro, independente de pagamento)
+        // Honorários do mês DO USUÁRIO LOGADO (por data_competencia, anti-duplicação no processamento)
         userId ? supabase
           .from('financeiro_receitas')
-          .select('valor')
+          .select('valor, tipo, parcelado')
           .eq('escritorio_id', escritorioAtivo)
           .eq('responsavel_id', userId)
-          .gte('created_at', inicioMes.toISOString())
+          .neq('status', 'cancelado')
+          .gte('data_competencia', inicioMes.toISOString().split('T')[0])
+          .lt('data_competencia', inicioProximoMes.toISOString().split('T')[0])
         : Promise.resolve({ data: [] }),
 
         // Valor/hora do usuário logado (direto ou via cargo)
@@ -293,10 +295,14 @@ export function useDashboardMetrics() {
       ])
 
       // Processar resultados - Horas do USUÁRIO LOGADO
-      const horasFaturadas = timesheetFaturadoResult.data?.reduce(
+      const todasCobraveis = timesheetFaturadoResult.data || []
+      const horasCobraveisUsuario = todasCobraveis.reduce(
         (acc: number, item: { horas: number | null }) => acc + (Number(item.horas) || 0),
         0
-      ) || 0
+      )
+      const horasJaFaturadasUsuario = todasCobraveis
+        .filter((item: { faturado?: boolean | null }) => item.faturado === true)
+        .reduce((acc: number, item: { horas: number | null }) => acc + (Number(item.horas) || 0), 0)
 
       const horasMesAnterior = timesheetMesAnteriorResult.data?.reduce(
         (acc: number, item: { horas: number | null }) => acc + (Number(item.horas) || 0),
@@ -340,9 +346,15 @@ export function useDashboardMetrics() {
         if (metaReceita) receitaMeta = Number(metaReceita.valor_meta)
       }
 
-      // Calcular receita gerada no mês (soma de valor das receitas criadas, independente de pagamento)
-      const faturamentoMes = receitasGeradasResult.data?.reduce(
-        (acc: number, item: { valor: number | null }) => acc + (Number(item.valor) || 0),
+      // Calcular honorários do mês (anti-duplicação: excluir pais parcelados e saldos)
+      const honorariosMes = receitasGeradasResult.data?.reduce(
+        (acc: number, item: { valor: number | null; tipo: string | null; parcelado: boolean | null }) => {
+          // Pular pais parcelados (filhos parcelas já representam o valor)
+          if (item.tipo === 'honorario' && item.parcelado) return acc
+          // Pular saldo (já contabilizado na receita original)
+          if (item.tipo === 'saldo') return acc
+          return acc + (Number(item.valor) || 0)
+        },
         0
       ) || 0
 
@@ -367,7 +379,7 @@ export function useDashboardMetrics() {
       const consultasFinalizadasEsteMes = consultasFinalizadasEsteMesResult.count || 0
       const consultasTrendQtd = consultasNovasEsteMes - consultasFinalizadasEsteMes
 
-      const horasTrend = Math.round((horasFaturadas - horasMesAnterior) * 10) / 10
+      const horasTrend = Math.round((horasCobraveisUsuario - horasMesAnterior) * 10) / 10
 
       setMetrics({
         processos_ativos: processosAtivos,
@@ -375,14 +387,14 @@ export function useDashboardMetrics() {
         clientes_ativos: clientesResult.count || 0,
         clientes_novos_mes: clientesNovos,
         consultas_abertas: consultasResult.count || 0,
-        faturamento_mes: faturamentoMes,
+        horas_cobraveis_usuario: horasCobraveisUsuario,
+        horas_ja_faturadas_usuario: horasJaFaturadasUsuario,
+        honorarios_mes: honorariosMes,
         a_receber: totalAReceber,
-        horas_faturadas_mes: horasFaturadas,
         horas_nao_cobraveis: horasNaoCobraveis,
-        valor_horas_nao_cobraveis: horasNaoCobraveis * valorHoraUsuario, // Usando valor/hora do cargo
+        valor_horas_nao_cobraveis: horasNaoCobraveis * valorHoraUsuario,
         valor_hora_usuario: valorHoraUsuario,
         horas_meta: horasMeta,
-        receita_mes: faturamentoMes,
         receita_meta: receitaMeta,
         horas_cobraveis: horasCobraveis,
         horas_cobraveis_trend_percent: horasCobraveisPercent,

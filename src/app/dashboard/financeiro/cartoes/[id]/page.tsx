@@ -457,7 +457,7 @@ export default function CartaoDetalhePage() {
 
   if (loading) {
     return (
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <div className="py-12 text-center">
           <div className="h-8 w-8 mx-auto border-4 border-slate-200 border-t-[#1E3A8A] rounded-full animate-spin" />
           <p className="text-sm text-slate-500 mt-2">Carregando...</p>
@@ -468,7 +468,7 @@ export default function CartaoDetalhePage() {
 
   if (!cartao) {
     return (
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <Card className="border-slate-200">
           <CardContent className="py-12 text-center">
             <AlertCircle className="h-12 w-12 mx-auto text-slate-300" />
@@ -495,7 +495,7 @@ export default function CartaoDetalhePage() {
   )
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -524,15 +524,15 @@ export default function CartaoDetalhePage() {
         </div>
         <div className="flex items-center gap-2.5">
           <Button variant="outline" onClick={() => setModalCartaoOpen(true)}>
-            <Edit2 className="h-4 w-4 mr-2" />
-            Editar
+            <Edit2 className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">Editar</span>
           </Button>
           <Button
             onClick={() => setModalDespesaOpen(true)}
             className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Lançamento
+            <Plus className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">Novo Lançamento</span>
           </Button>
         </div>
       </div>

@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -57,11 +58,19 @@ import { useUserPreferences } from '@/hooks/useUserPreferences'
 export default function AgendaPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const isMobile = useIsMobile()
   const filtroUrl = searchParams.get('filtro')
   const filtroInicial = (filtroUrl === 'vencidos' || filtroUrl === 'hoje') ? filtroUrl : null
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day' | 'list'>(filtroInicial ? 'list' : 'month')
+
+  // On mobile, force list/day views (month and kanban not available)
+  useEffect(() => {
+    if (isMobile && (viewMode === 'month' || viewMode === 'week')) {
+      setViewMode('list')
+    }
+  }, [isMobile, viewMode])
   const [viewInitialized, setViewInitialized] = useState(!!filtroInicial)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [urlFiltroAtivo, setUrlFiltroAtivo] = useState<'vencidos' | 'hoje' | null>(filtroInicial)
@@ -924,25 +933,25 @@ export default function AgendaPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         {/* Header */}
         <div>
           {/* Linha 1: Título */}
-          <div className="mb-4">
-            <h1 className="text-2xl font-semibold text-[#34495e]">Agenda</h1>
-            <p className="text-sm text-[#6c757d] mt-0.5 font-normal">
+          <div className="mb-3 md:mb-4">
+            <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">Agenda</h1>
+            <p className="text-xs md:text-sm text-[#6c757d] mt-0.5 font-normal">
               {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
             </p>
           </div>
 
           {/* Linha 2: Botões de Ação e View Mode Selector */}
-          <div className="flex items-center justify-between py-3">
-            {/* Botões de Ação Rápida */}
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 py-2 md:py-3">
+            {/* Botões de Ação Rápida - scrollable on mobile */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
               <Button
                 size="sm"
                 onClick={() => handleCreateEvent(undefined, 'compromisso')}
-                className="h-8 w-[130px] text-xs bg-gradient-to-br from-[#aacfd0] to-[#89bcbe] hover:from-[#89bcbe] hover:to-[#6ba9ab] text-[#34495e] border-0 shadow-sm"
+                className="h-8 min-w-[110px] md:w-[130px] text-xs bg-gradient-to-br from-[#aacfd0] to-[#89bcbe] hover:from-[#89bcbe] hover:to-[#6ba9ab] active:from-[#6ba9ab] text-[#34495e] border-0 shadow-sm whitespace-nowrap"
               >
                 <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
                 Compromisso
@@ -950,7 +959,7 @@ export default function AgendaPage() {
               <Button
                 size="sm"
                 onClick={() => handleCreateEvent(undefined, 'audiencia')}
-                className="h-8 w-[130px] text-xs bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white border-0 shadow-sm"
+                className="h-8 min-w-[100px] md:w-[130px] text-xs bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 active:from-emerald-700 text-white border-0 shadow-sm whitespace-nowrap"
               >
                 <CalendarDays className="w-3.5 h-3.5 mr-1.5" />
                 Audiência
@@ -958,26 +967,26 @@ export default function AgendaPage() {
               <Button
                 size="sm"
                 onClick={() => handleCreateEvent(undefined, 'tarefa')}
-                className="h-8 w-[130px] text-xs bg-gradient-to-br from-[#34495e] to-[#46627f] hover:from-[#2c3e50] hover:to-[#34495e] text-white border-0 shadow-sm"
+                className="h-8 min-w-[100px] md:w-[130px] text-xs bg-gradient-to-br from-[#34495e] to-[#46627f] hover:from-[#2c3e50] hover:to-[#34495e] active:from-[#2c3e50] text-white border-0 shadow-sm whitespace-nowrap"
               >
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
                 Nova Tarefa
               </Button>
             </div>
 
-            {/* View Mode Selector - Destacado */}
+            {/* View Mode Selector - Mobile: only list/day. Desktop: all 4 */}
             <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as typeof viewMode)}>
               <TabsList className="bg-white border border-slate-200 shadow-sm p-1">
                 <TabsTrigger
                   value="month"
-                  className="text-sm data-[state=active]:bg-gradient-to-br data-[state=active]:from-[#89bcbe] data-[state=active]:to-[#6ba9ab] data-[state=active]:text-white data-[state=active]:shadow-sm"
+                  className="hidden md:flex text-sm data-[state=active]:bg-gradient-to-br data-[state=active]:from-[#89bcbe] data-[state=active]:to-[#6ba9ab] data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
                   <CalendarIcon className="w-4 h-4 mr-2" />
                   Mês
                 </TabsTrigger>
                 <TabsTrigger
                   value="week"
-                  className="text-sm data-[state=active]:bg-gradient-to-br data-[state=active]:from-[#89bcbe] data-[state=active]:to-[#6ba9ab] data-[state=active]:text-white data-[state=active]:shadow-sm"
+                  className="hidden md:flex text-sm data-[state=active]:bg-gradient-to-br data-[state=active]:from-[#89bcbe] data-[state=active]:to-[#6ba9ab] data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
                   <CalendarDays className="w-4 h-4 mr-2" />
                   Kanban
@@ -986,14 +995,14 @@ export default function AgendaPage() {
                   value="day"
                   className="text-sm data-[state=active]:bg-gradient-to-br data-[state=active]:from-[#89bcbe] data-[state=active]:to-[#6ba9ab] data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
-                  <Clock className="w-4 h-4 mr-2" />
+                  <Clock className="w-4 h-4 mr-1 md:mr-2" />
                   Dia
                 </TabsTrigger>
                 <TabsTrigger
                   value="list"
                   className="text-sm data-[state=active]:bg-gradient-to-br data-[state=active]:from-[#89bcbe] data-[state=active]:to-[#6ba9ab] data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
-                  <List className="w-4 h-4 mr-2" />
+                  <List className="w-4 h-4 mr-1 md:mr-2" />
                   Lista
                 </TabsTrigger>
               </TabsList>

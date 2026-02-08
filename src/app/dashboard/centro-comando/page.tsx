@@ -88,26 +88,26 @@ export default function CentroComandoPage() {
   return (
     <div className="h-full flex flex-col bg-slate-50">
       {/* Header */}
-      <div className="flex-shrink-0 bg-white border-b border-slate-200 px-6 py-4">
+      <div className="flex-shrink-0 bg-white border-b border-slate-200 px-4 md:px-6 py-3 md:py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-[#34495e]">
+            <h1 className="text-lg md:text-2xl font-semibold text-[#34495e]">
               Centro de Comando
             </h1>
-            <p className="text-sm text-slate-600 mt-0.5">
+            <p className="text-xs md:text-sm text-slate-600 mt-0.5 hidden md:block">
               Converse com a Zyra para gerenciar seus processos
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 md:gap-2">
             <Button
               variant="outline"
               size="sm"
               className="text-xs"
               onClick={() => setMostrarHistorico(!mostrarHistorico)}
             >
-              <History className="w-3.5 h-3.5 mr-1.5" />
-              Histórico
+              <History className="w-3.5 h-3.5 md:mr-1.5" />
+              <span className="hidden md:inline">Histórico</span>
             </Button>
             <Button variant="outline" size="sm" className="text-xs" onClick={limparChat}>
               <Plus className="w-3.5 h-3.5 mr-1.5" />

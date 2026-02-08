@@ -71,18 +71,18 @@ export default function PecasTesesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6">
-      <div className="max-w-[1800px] mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-4 md:p-6">
+      <div className="max-w-[1800px] mx-auto space-y-4 md:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-[#34495e]">Peças e Teses</h1>
-        <p className="text-sm text-slate-600 mt-1">
+        <h1 className="text-xl md:text-2xl font-bold text-[#34495e]">Peças e Teses</h1>
+        <p className="text-xs md:text-sm text-slate-600 mt-1">
           Gerencie templates, banco de conhecimento jurídico e crie peças processuais
         </p>
       </div>
 
       {/* Navigation Cards - 3 colunas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {/* Card 1: Templates */}
         <Link href="/dashboard/pecas-teses/templates">
           <Card className="border-slate-200 hover:shadow-lg hover:border-[#34495e]/30 transition-all cursor-pointer group h-full">

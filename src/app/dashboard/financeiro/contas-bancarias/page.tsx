@@ -336,12 +336,12 @@ export default function ContasBancariasPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-[#34495e]">Contas Bancárias</h1>
-          <p className="text-sm text-slate-600 mt-1">
+          <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">Contas Bancárias</h1>
+          <p className="text-xs md:text-sm text-slate-600 mt-1">
             Consolidação e gestão de contas bancárias do escritório
           </p>
         </div>
@@ -466,18 +466,18 @@ export default function ContasBancariasPage() {
             className="text-xs"
           >
             {viewMode === 'cards' ? (
-              <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
+              <BarChart3 className="w-3.5 h-3.5 md:mr-1.5" />
             ) : (
-              <Landmark className="w-3.5 h-3.5 mr-1.5" />
+              <Landmark className="w-3.5 h-3.5 md:mr-1.5" />
             )}
-            {viewMode === 'cards' ? 'Lista' : 'Cards'}
+            <span className="hidden md:inline">{viewMode === 'cards' ? 'Lista' : 'Cards'}</span>
           </Button>
           <Button
             onClick={handleOpenCreate}
             className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white border-0 shadow-sm"
           >
-            <Landmark className="h-4 w-4 mr-2" />
-            Nova Conta
+            <Landmark className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">Nova Conta</span>
           </Button>
         </div>
       </div>

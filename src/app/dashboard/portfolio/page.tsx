@@ -238,9 +238,9 @@ export default function PortfolioCatalogoPage() {
     .filter(area => getAreaCount(area) > 0)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-0">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
           <h1 className="text-xl font-semibold text-slate-800">Catálogo de Produtos</h1>
           <p className="text-sm text-slate-500">Serviços jurídicos padronizados</p>

@@ -84,12 +84,22 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground font-normal;
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior: contain;
+  }
+
+  /* PWA standalone mode - account for status bar */
+  @media all and (display-mode: standalone) {
+    body {
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
   }
 
   /* Typography Defaults - Lighter weights */
@@ -116,4 +126,13 @@
     @apply font-normal;
     color: var(--text-body);
   }
+}
+
+/* Hide scrollbar but allow scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

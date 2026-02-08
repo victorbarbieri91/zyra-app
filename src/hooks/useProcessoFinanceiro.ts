@@ -509,6 +509,7 @@ export function useProcessoFinanceiro(processoId: string | null) {
             numero_parcelas: data.numero_parcelas || 1,
             status: 'pendente',
             created_by: user.id,
+            responsavel_id: user.id,
           })
 
         if (insertError) throw insertError

@@ -204,6 +204,7 @@ export function useCobrancaFixa(escritorioId: string | null): UseCobrancaFixaRet
           data_vencimento: dataVencimento,
           status: 'pendente',
           created_by: user.id,
+          responsavel_id: user.id,
         })
         .select('id')
         .single();

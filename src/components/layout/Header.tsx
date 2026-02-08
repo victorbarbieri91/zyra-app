@@ -10,18 +10,23 @@ import {
   Building2,
   Check,
   Plus,
-  Upload
+  Upload,
+  Menu,
+  Search,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useEscritorio } from '@/contexts/EscritorioContext'
 import SearchDropdown from '@/components/search/SearchDropdown'
+import MobileDrawer from './MobileDrawer'
 
 export default function Header() {
   const [user, setUser] = useState<any>(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showOfficeMenu, setShowOfficeMenu] = useState(false)
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const router = useRouter()
   const supabase = createClient()
   const { escritorioAtivo, escritorios, trocarEscritorio, carregando } = useEscritorio()
@@ -50,14 +55,42 @@ export default function Header() {
   }
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shadow-sm">
-      {/* Left Section - Search */}
-      <div className="flex items-center flex-1 max-w-xl">
+    <>
+    <header className="h-14 md:h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 shadow-sm">
+      {/* Mobile: Hamburger + Logo + Avatar */}
+      <div className="flex md:hidden items-center gap-3 flex-1">
+        <button
+          onClick={() => setMobileDrawerOpen(true)}
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-600 active:bg-slate-100"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        <img src="/zyra.logo.png" alt="Zyra Legal" className="h-7 w-auto object-contain" />
+      </div>
+
+      {/* Mobile: Search + Avatar */}
+      <div className="flex md:hidden items-center gap-2">
+        <button
+          onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 active:bg-slate-100"
+        >
+          <Search className="w-4.5 h-4.5" />
+        </button>
+        <button
+          onClick={() => setShowProfileMenu(!showProfileMenu)}
+          className="w-8 h-8 bg-gradient-to-br from-[#34495e] to-[#46627f] rounded-full flex items-center justify-center shadow-sm"
+        >
+          <User className="w-4 h-4 text-white" />
+        </button>
+      </div>
+
+      {/* Desktop: Left Section - Search */}
+      <div className="hidden md:flex items-center flex-1 max-w-xl">
         <SearchDropdown />
       </div>
 
-      {/* Right Section */}
-      <div className="flex items-center gap-4">
+      {/* Desktop: Right Section */}
+      <div className="hidden md:flex items-center gap-4">
 
         {/* Office Switcher */}
         {escritorios && escritorios.length > 0 && (
@@ -267,5 +300,16 @@ export default function Header() {
         </div>
       </div>
     </header>
+
+    {/* Mobile search bar (expandable) */}
+    {mobileSearchOpen && (
+      <div className="md:hidden bg-white border-b border-slate-200 px-4 py-2">
+        <SearchDropdown />
+      </div>
+    )}
+
+    {/* Mobile drawer */}
+    <MobileDrawer open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen} />
+    </>
   )
 }

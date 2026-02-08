@@ -169,11 +169,11 @@ export default function PerfilPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#34495e]">Meu Perfil</h1>
-        <p className="text-sm text-[#46627f] mt-1">
+      <div className="mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-[#34495e]">Meu Perfil</h1>
+        <p className="text-xs md:text-sm text-[#46627f] mt-1">
           Gerencie seus dados pessoais e preferências do sistema
         </p>
       </div>

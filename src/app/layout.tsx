@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'sonner'
+import { RegisterSW } from '@/components/layout/RegisterSW'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -22,9 +23,9 @@ export const metadata: Metadata = {
   description: 'Sistema jurídico completo com IA para escritórios de advocacia',
   manifest: '/manifest.json',
   icons: {
-    icon: '/zyra.icone_sem_fundo.png',
-    shortcut: '/zyra.icone_sem_fundo.png',
-    apple: '/zyra.icone_sem_fundo.png',
+    icon: '/icons/icon-192x192.png',
+    shortcut: '/icons/icon-192x192.png',
+    apple: '/icons/icon-512x512.png',
   },
   appleWebApp: {
     capable: true,
@@ -41,6 +42,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={inter.variable}>
       <body className={`${inter.className} antialiased`}>
+        <RegisterSW />
         {children}
         <Toaster
           position="top-right"

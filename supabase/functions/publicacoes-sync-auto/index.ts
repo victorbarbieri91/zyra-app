@@ -276,7 +276,7 @@ async function sincronizarEscavador(supabase: any, escritorioId: string) {
       const aparicoes = data.items || data.aparicoes || []
 
       for (const aparicao of aparicoes) {
-        const saved = await salvarPublicacaoEscavador(supabase, escritorioId, termo.id, aparicao)
+        const saved = await salvarPublicacaoEscavador(supabase, escritorioId, termo.id, aparicao, escavadorToken)
         if (saved === 'nova') resultado.novas++
         if (saved === 'vinculada') resultado.vinculadas++
       }
@@ -335,10 +335,39 @@ async function salvarPublicacaoAASP(
 
   const textoCompleto = pub.textoPublicacao || pub.texto || ''
   const hashConteudo = await gerarHash(textoCompleto)
+  const numeroCNJ = pub.numeroUnicoProcesso || null
 
   let dataPublicacao = new Date().toISOString().split('T')[0]
   if (pub.jornal?.dataDisponibilizacao_Publicacao) {
     dataPublicacao = pub.jornal.dataDisponibilizacao_Publicacao.split('T')[0]
+  }
+
+  // Dedup cross-source: verificar se Escavador já tem esta publicação
+  if (numeroCNJ) {
+    const { data: crossDup } = await supabase
+      .from('publicacoes_publicacoes')
+      .select('id, texto_completo, is_snippet')
+      .eq('escritorio_id', escritorioId)
+      .eq('numero_processo', numeroCNJ)
+      .eq('data_publicacao', dataPublicacao)
+      .neq('source', 'aasp_api')
+      .single()
+
+    if (crossDup) {
+      // Se a existente do Escavador é snippet e a AASP tem texto completo, atualizar
+      if (crossDup.is_snippet && textoCompleto.length > (crossDup.texto_completo?.length || 0)) {
+        await supabase
+          .from('publicacoes_publicacoes')
+          .update({
+            texto_completo: textoCompleto,
+            hash_conteudo: hashConteudo,
+            is_snippet: false,
+          })
+          .eq('id', crossDup.id)
+        console.log(`[AASP] Cross-source: atualizado texto do Escavador snippet → AASP completo (${numeroCNJ})`)
+      }
+      return 'existente'
+    }
   }
 
   const { error: insertError } = await supabase.from('publicacoes_publicacoes').insert({
@@ -349,7 +378,7 @@ async function salvarPublicacaoAASP(
     data_captura: new Date().toISOString(),
     tribunal: pub.titulo || pub.jornal?.nomeJornal || 'Não informado',
     tipo_publicacao: mapearTipo(pub.cabecalho || pub.tipo || ''),
-    numero_processo: pub.numeroUnicoProcesso || null,
+    numero_processo: numeroCNJ,
     texto_completo: textoCompleto,
     hash_conteudo: hashConteudo,
     status: 'pendente',
@@ -380,7 +409,8 @@ async function salvarPublicacaoEscavador(
   supabase: any,
   escritorioId: string,
   termoId: string,
-  aparicao: any
+  aparicao: any,
+  escavadorToken?: string
 ): Promise<'nova' | 'existente' | 'vinculada'> {
   const escavadorId = String(aparicao.id || aparicao.aparicao_id)
 
@@ -399,31 +429,74 @@ async function salvarPublicacaoEscavador(
   if (existente) return 'existente'
 
   // Extrair texto de múltiplos campos possíveis (ordem de prioridade)
-  // IMPORTANTE: A API do Escavador retorna o texto em movimentacao.conteudo
-  const textoCompleto =
+  // IMPORTANTE: Separar campos de texto completo vs campos de snippet
+  // Campos de texto completo (prioridade)
+  const textoFonte =
     aparicao.movimentacao?.conteudo ||         // Campo CORRETO da API Escavador
-    aparicao.movimentacao?.snippet ||          // Snippet como fallback
     aparicao.texto ||                          // Campo padrão esperado
     aparicao.conteudo ||                       // Campo alternativo
-    aparicao.conteudo_snippet ||               // Snippet direto
     aparicao.content ||                        // Inglês
     aparicao.texto_publicacao ||               // Variante
     aparicao.texto_completo ||                 // Variante
-    aparicao.descricao ||                      // Descrição como fallback
     aparicao.publicacao?.texto ||              // Objeto aninhado
     aparicao.publicacao?.conteudo ||           // Objeto aninhado
     aparicao.diario?.texto ||                  // Dentro do diário
     aparicao.diario?.conteudo ||               // Dentro do diário
+    null
+
+  // Se não encontrou texto completo, usar campos de snippet (sabemos que são truncados)
+  let textoCompleto = textoFonte ||
+    aparicao.movimentacao?.snippet ||          // Snippet da movimentação
+    aparicao.conteudo_snippet ||               // Snippet direto
+    aparicao.descricao ||                      // Descrição como fallback
     ''
 
-  // DEBUG: Logar qual campo foi usado e se texto está vazio
+  // Detectar se é snippet
+  let isSnippet = !textoFonte // Se veio de campo de snippet, é snippet
+  if (textoCompleto) {
+    const trimmed = textoCompleto.trim()
+    if (trimmed.startsWith('...') || trimmed.endsWith('...')) isSnippet = true
+    if (trimmed.length < 100 && !trimmed.toLowerCase().startsWith('processo')) isSnippet = true
+  }
+
+  // Se é snippet, tentar buscar texto completo via endpoint individual
+  if (isSnippet && escavadorId && escavadorToken) {
+    try {
+      const enrichUrl = `${ESCAVADOR_API_BASE}/diarios/aparicoes/${escavadorId}`
+      const enrichHeaders = {
+        'Authorization': `Bearer ${escavadorToken}`,
+        'Content-Type': 'application/json',
+      }
+      const enrichResponse = await fetch(enrichUrl, { method: 'GET', headers: enrichHeaders })
+
+      if (enrichResponse.ok) {
+        const enrichData = await enrichResponse.json()
+        const textoEnriquecido =
+          enrichData.movimentacao?.conteudo ||
+          enrichData.conteudo ||
+          enrichData.texto ||
+          enrichData.texto_completo ||
+          null
+
+        if (textoEnriquecido && textoEnriquecido.length > textoCompleto.length) {
+          console.log(`[DEBUG Escavador] Texto enriquecido para aparição ${escavadorId}: ${textoEnriquecido.length} chars (antes: ${textoCompleto.length})`)
+          textoCompleto = textoEnriquecido
+          // Verificar se o texto enriquecido ainda é snippet
+          const trimmedEnrich = textoEnriquecido.trim()
+          isSnippet = trimmedEnrich.startsWith('...') || trimmedEnrich.endsWith('...')
+        }
+      }
+    } catch (enrichError) {
+      console.warn(`[DEBUG Escavador] Não foi possível enriquecer aparição ${escavadorId}`)
+    }
+  }
+
+  // DEBUG: Logar resultado
   if (!textoCompleto) {
-    console.warn(`[DEBUG Escavador] ⚠️ Aparição ${escavadorId} SEM TEXTO! Campos verificados: texto, conteudo, content, texto_publicacao, texto_completo, descricao, publicacao.texto, publicacao.conteudo, diario.texto, diario.conteudo`)
+    console.warn(`[DEBUG Escavador] ⚠️ Aparição ${escavadorId} SEM TEXTO!`)
     console.warn(`[DEBUG Escavador] Raw aparicao keys:`, Object.keys(aparicao))
-    if (aparicao.diario) console.warn(`[DEBUG Escavador] Raw diario keys:`, Object.keys(aparicao.diario))
-    if (aparicao.publicacao) console.warn(`[DEBUG Escavador] Raw publicacao keys:`, Object.keys(aparicao.publicacao))
   } else {
-    console.log(`[DEBUG Escavador] Aparição ${escavadorId} - Texto extraído com ${textoCompleto.length} caracteres`)
+    console.log(`[DEBUG Escavador] Aparição ${escavadorId} - ${textoCompleto.length} chars${isSnippet ? ' (SNIPPET)' : ''}`)
   }
 
   // Limpar HTML do texto para exibição
@@ -479,6 +552,34 @@ async function salvarPublicacaoEscavador(
     }
   }
 
+  // Dedup cross-source: verificar se AASP já tem esta publicação
+  if (numeroCNJ) {
+    const { data: crossDup } = await supabase
+      .from('publicacoes_publicacoes')
+      .select('id, texto_completo, is_snippet')
+      .eq('escritorio_id', escritorioId)
+      .eq('numero_processo', numeroCNJ)
+      .eq('data_publicacao', dataPublicacao)
+      .neq('source', 'escavador')
+      .single()
+
+    if (crossDup) {
+      // Se AASP já tem e Escavador tem texto melhor (mais longo e não snippet), atualizar
+      if (!isSnippet && textoLimpo.length > (crossDup.texto_completo?.length || 0)) {
+        await supabase
+          .from('publicacoes_publicacoes')
+          .update({
+            texto_completo: textoLimpo,
+            hash_conteudo: hashConteudo,
+            is_snippet: false,
+          })
+          .eq('id', crossDup.id)
+        console.log(`[Escavador] Cross-source: atualizado texto do AASP → Escavador mais completo (${numeroCNJ})`)
+      }
+      return 'existente'
+    }
+  }
+
   const { error: insertError } = await supabase.from('publicacoes_publicacoes').insert({
     escritorio_id: escritorioId,
     escavador_aparicao_id: escavadorId,
@@ -496,6 +597,7 @@ async function salvarPublicacaoEscavador(
     source: 'escavador',
     source_type: 'escavador_termo',
     confianca_vinculacao: vinculado ? 1.00 : null,  // numeric(3,2): 1.00 = 100%
+    is_snippet: isSnippet,
   })
 
   if (insertError) {

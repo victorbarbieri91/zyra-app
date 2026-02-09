@@ -698,7 +698,7 @@ export default function ConfiguracoesPublicacoesPage() {
                   </Button>
                   <Button
                     size="sm"
-                    onClick={handleAbrirModalTermo}
+                    onClick={() => handleAbrirModalTermo()}
                     className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f]"
                   >
                     <Plus className="w-4 h-4" />
@@ -720,7 +720,7 @@ export default function ConfiguracoesPublicacoesPage() {
                   </p>
                   <Button
                     size="sm"
-                    onClick={handleAbrirModalTermo}
+                    onClick={() => handleAbrirModalTermo()}
                     className="mt-4 gap-2"
                     variant="outline"
                   >

@@ -613,29 +613,55 @@ export function extrairNumeroCNJ(texto: string): string | null {
  * Extrai texto de uma aparição verificando múltiplos campos possíveis
  * A API do Escavador pode retornar o texto em diferentes campos dependendo da versão/diário
  */
-export function extrairTextoAparicao(aparicao: any): string {
+export function extrairTextoAparicao(aparicao: any): { texto: string; isSnippet: boolean } {
   // IMPORTANTE: A API do Escavador retorna o texto em movimentacao.conteudo
-  const texto =
+  // Campos de texto completo (prioridade)
+  const textoCompleto =
     aparicao.movimentacao?.conteudo ||         // Campo CORRETO da API Escavador
-    aparicao.movimentacao?.snippet ||          // Snippet como fallback
     aparicao.texto ||                          // Campo padrão esperado
     aparicao.conteudo ||                       // Campo alternativo comum
-    aparicao.conteudo_snippet ||               // Snippet direto
     aparicao.content ||                        // Versão em inglês
     aparicao.texto_publicacao ||               // Variante
     aparicao.texto_completo ||                 // Variante
-    aparicao.descricao ||                      // Descrição como fallback
     aparicao.publicacao?.texto ||              // Objeto aninhado
     aparicao.publicacao?.conteudo ||           // Objeto aninhado
     aparicao.diario?.texto ||                  // Dentro do diário
     aparicao.diario?.conteudo ||               // Dentro do diário
+    null
+
+  if (textoCompleto) {
+    // Verificar se mesmo o campo "completo" é na verdade um snippet
+    const isSnippet = detectarSnippet(textoCompleto)
+    return { texto: textoCompleto, isSnippet }
+  }
+
+  // Campos de snippet (fallback - sabemos que são truncados)
+  const textoSnippet =
+    aparicao.movimentacao?.snippet ||          // Snippet da movimentação
+    aparicao.conteudo_snippet ||               // Snippet direto
+    aparicao.descricao ||                      // Descrição como fallback
     ''
 
-  if (!texto) {
+  if (!textoSnippet) {
     console.warn(`[Escavador] Aparição ${aparicao.id} sem texto. Campos disponíveis:`, Object.keys(aparicao))
   }
 
-  return texto
+  return { texto: textoSnippet, isSnippet: true }
+}
+
+/**
+ * Detecta se um texto é um snippet (trecho truncado)
+ * Verifica reticências no início/fim e tamanho muito curto
+ */
+export function detectarSnippet(texto: string): boolean {
+  if (!texto) return true
+  const trimmed = texto.trim()
+  // Começa ou termina com reticências
+  if (trimmed.startsWith('...') || trimmed.endsWith('...')) return true
+  // Texto muito curto para ser uma publicação completa (< 100 chars)
+  // Exceto publicações que são naturalmente curtas (distribuição, etc.)
+  if (trimmed.length < 100 && !trimmed.toLowerCase().startsWith('processo')) return true
+  return false
 }
 
 export function normalizarAparicao(
@@ -654,9 +680,10 @@ export function normalizarAparicao(
   numero_processo: string | null
   status: 'pendente'
   urgente: boolean
+  is_snippet: boolean
 } {
   // Usar função que verifica múltiplos campos possíveis
-  const textoCompleto = extrairTextoAparicao(aparicao)
+  const { texto: textoCompleto, isSnippet } = extrairTextoAparicao(aparicao)
   const numeroCNJ = textoCompleto ? extrairNumeroCNJ(textoCompleto) : null
 
   // Detecta urgência por palavras-chave
@@ -678,6 +705,57 @@ export function normalizarAparicao(
     texto_completo: textoCompleto,
     numero_processo: numeroCNJ,
     status: 'pendente',
-    urgente
+    urgente,
+    is_snippet: isSnippet
+  }
+}
+
+/**
+ * Tenta buscar o texto completo de uma aparição individual
+ * Usa o endpoint GET /api/v1/diarios/aparicoes/{id} que pode retornar mais detalhes
+ *
+ * @param aparicaoId ID da aparição no Escavador
+ * @returns Texto completo ou null se não conseguiu
+ */
+export async function buscarConteudoAparicao(
+  aparicaoId: number | string
+): Promise<{ texto: string | null; sucesso: boolean }> {
+  try {
+    console.log(`[Escavador] Buscando texto completo da aparição ${aparicaoId}`)
+
+    const response = await fetch(
+      `${ESCAVADOR_V1_BASE_URL}/diarios/aparicoes/${aparicaoId}`,
+      {
+        method: 'GET',
+        headers: getHeaders()
+      }
+    )
+
+    if (!response.ok) {
+      console.warn(`[Escavador] Erro ${response.status} ao buscar aparição ${aparicaoId}`)
+      return { texto: null, sucesso: false }
+    }
+
+    const data = await response.json()
+
+    // Tentar extrair texto completo da resposta individual
+    const texto =
+      data.movimentacao?.conteudo ||
+      data.conteudo ||
+      data.texto ||
+      data.texto_completo ||
+      data.content ||
+      null
+
+    if (texto && !detectarSnippet(texto)) {
+      console.log(`[Escavador] Texto completo obtido para aparição ${aparicaoId}: ${texto.length} chars`)
+      return { texto, sucesso: true }
+    }
+
+    console.log(`[Escavador] Aparição ${aparicaoId}: endpoint individual não retornou texto completo`)
+    return { texto: null, sucesso: false }
+  } catch (error) {
+    console.error(`[Escavador] Erro ao buscar texto da aparição ${aparicaoId}:`, error)
+    return { texto: null, sucesso: false }
   }
 }

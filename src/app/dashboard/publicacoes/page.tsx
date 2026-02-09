@@ -87,6 +87,7 @@ interface Publicacao {
   agendamento_tipo?: 'tarefa' | 'compromisso' | 'audiencia'
   hash_conteudo?: string
   duplicata_revisada?: boolean
+  is_snippet?: boolean
 }
 
 interface Stats {
@@ -984,6 +985,11 @@ export default function PublicacoesPage() {
                         Urgente
                       </Badge>
                     )}
+                    {pub.is_snippet && (
+                      <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                        Trecho
+                      </Badge>
+                    )}
                   </div>
                   <span className="text-[11px] text-slate-400">
                     {new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}
@@ -1057,6 +1063,11 @@ export default function PublicacoesPage() {
                             {pub.agendamento_tipo === 'compromisso' && <Calendar className="w-3 h-3 mr-1" />}
                             {pub.agendamento_tipo === 'audiencia' && <Gavel className="w-3 h-3 mr-1" />}
                             Agendado
+                          </Badge>
+                        )}
+                        {pub.is_snippet && (
+                          <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                            Trecho
                           </Badge>
                         )}
                       </div>

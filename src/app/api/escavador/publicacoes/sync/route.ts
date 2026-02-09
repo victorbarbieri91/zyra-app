@@ -6,7 +6,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
   buscarAparicoes,
-  normalizarAparicao
+  normalizarAparicao,
+  buscarConteudoAparicao,
+  detectarSnippet
 } from '@/lib/escavador/publicacoes'
 
 /**
@@ -168,6 +170,20 @@ export async function POST(request: NextRequest) {
             // Normalizar aparição
             const publicacao = normalizarAparicao(aparicao, monitoramentoId, escritorioId)
 
+            // Se é snippet, tentar buscar texto completo
+            if (publicacao.is_snippet && aparicao.id) {
+              try {
+                const { texto, sucesso } = await buscarConteudoAparicao(aparicao.id)
+                if (sucesso && texto) {
+                  publicacao.texto_completo = texto
+                  publicacao.is_snippet = false
+                  console.log(`[Sync Escavador] Texto completo obtido para aparição ${aparicao.id}`)
+                }
+              } catch (enrichError) {
+                console.warn(`[Sync Escavador] Não foi possível enriquecer aparição ${aparicao.id}`)
+              }
+            }
+
             // Verificar duplicata por hash_conteudo
             const crypto = await import('crypto')
             const hashConteudo = crypto
@@ -185,6 +201,34 @@ export async function POST(request: NextRequest) {
             if (duplicataHash) {
               totalDuplicadas++
               continue
+            }
+
+            // Dedup cross-source: verificar se AASP já tem esta publicação
+            if (publicacao.numero_processo) {
+              const { data: crossDup } = await supabase
+                .from('publicacoes_publicacoes')
+                .select('id, texto_completo, is_snippet')
+                .eq('escritorio_id', escritorioId)
+                .eq('numero_processo', publicacao.numero_processo)
+                .eq('data_publicacao', publicacao.data_publicacao)
+                .neq('source', 'escavador')
+                .single()
+
+              if (crossDup) {
+                // Se AASP já tem e Escavador tem texto melhor, atualizar
+                if (!publicacao.is_snippet && publicacao.texto_completo.length > (crossDup.texto_completo?.length || 0)) {
+                  await supabase
+                    .from('publicacoes_publicacoes')
+                    .update({
+                      texto_completo: publicacao.texto_completo,
+                      hash_conteudo: hashConteudo,
+                      is_snippet: false,
+                    })
+                    .eq('id', crossDup.id)
+                }
+                totalDuplicadas++
+                continue
+              }
             }
 
             // Inserir publicação

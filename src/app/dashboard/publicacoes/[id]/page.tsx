@@ -66,6 +66,7 @@ interface Publicacao {
   status: StatusPublicacao
   urgente: boolean
   texto_completo?: string
+  is_snippet?: boolean
   created_at: string
   escritorio_id: string
 }
@@ -523,6 +524,13 @@ export default function PublicacaoDetalhePage() {
                 </Button>
               </div>
               <div className="p-4">
+                {publicacao.is_snippet && (
+                  <div className="mb-3 p-2.5 bg-amber-50 border border-amber-200 rounded-md">
+                    <p className="text-xs text-amber-700">
+                      Este texto pode estar incompleto. A fonte retornou apenas um trecho da publicacao original.
+                    </p>
+                  </div>
+                )}
                 <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
                   {publicacao.texto_completo || 'Sem texto disponivel'}
                 </p>

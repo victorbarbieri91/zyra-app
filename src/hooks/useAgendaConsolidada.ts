@@ -28,6 +28,7 @@ export interface AgendaItem {
   // Vinculações
   processo_id?: string
   processo_numero?: string
+  caso_titulo?: string  // Título do caso (autor x réu para processos)
   consultivo_id?: string
   consultivo_titulo?: string
   // Recorrência

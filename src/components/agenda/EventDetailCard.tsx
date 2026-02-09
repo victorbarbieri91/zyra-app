@@ -56,6 +56,7 @@ export interface EventDetailCardProps {
   // Vinculações
   processo_numero?: string
   processo_id?: string
+  caso_titulo?: string
   consultivo_titulo?: string
   consultivo_id?: string
 
@@ -153,6 +154,7 @@ export default function EventDetailCard({
   recorrencia_id,
   processo_numero,
   processo_id,
+  caso_titulo,
   consultivo_titulo,
   consultivo_id,
   prazo_data_limite,
@@ -182,9 +184,9 @@ export default function EventDetailCard({
       )}
       onClick={onViewDetails}
     >
-      <CardContent className="p-2.5">
+      <CardContent className="p-2">
         {/* Header com título e tipo */}
-        <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex items-start justify-between gap-2 mb-1.5">
           <h4 className={cn(
             'text-xs font-bold text-[#34495e] leading-tight line-clamp-2',
             tipo === 'tarefa' && status === 'concluida' && 'line-through opacity-60'
@@ -201,13 +203,13 @@ export default function EventDetailCard({
 
         {/* Descrição (se houver) */}
         {descricao && (
-          <p className="text-[11px] text-slate-600 mb-2 line-clamp-2">
+          <p className="text-[11px] text-slate-600 mb-1.5 line-clamp-1">
             {descricao}
           </p>
         )}
 
         {/* Info grid */}
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           {/* Tipo de Tarefa (só para tarefas) */}
           {tipo === 'tarefa' && subtipoLabel && (
             <div className="flex items-center gap-1.5">
@@ -271,29 +273,36 @@ export default function EventDetailCard({
 
           {/* Processo Vinculado */}
           {processo_numero && (
-            <div className="flex items-center gap-1.5">
-              <FileText className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  if (processo_id) onProcessoClick?.(processo_id)
-                }}
-                className="text-[11px] text-[#1E3A8A] hover:text-[#89bcbe] font-medium truncate flex items-center gap-1 group"
-              >
-                <span className="truncate">{processo_numero}</span>
-                <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  navigator.clipboard.writeText(processo_numero)
-                  toast.success('Número copiado!')
-                }}
-                className="p-0.5 rounded hover:bg-slate-100 text-slate-400 hover:text-[#89bcbe] transition-colors"
-                title="Copiar número do processo"
-              >
-                <Copy className="w-3 h-3" />
-              </button>
+            <div className="flex items-start gap-1.5">
+              <FileText className="w-3 h-3 text-[#89bcbe] flex-shrink-0 mt-0.5" />
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (processo_id) onProcessoClick?.(processo_id)
+                    }}
+                    className="text-[11px] text-[#1E3A8A] hover:text-[#89bcbe] font-medium truncate flex items-center gap-1 group"
+                  >
+                    <span className="truncate">{processo_numero}</span>
+                    <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      navigator.clipboard.writeText(processo_numero)
+                      toast.success('Número copiado!')
+                    }}
+                    className="p-0.5 rounded hover:bg-slate-100 text-slate-400 hover:text-[#89bcbe] transition-colors flex-shrink-0"
+                    title="Copiar número do processo"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
+                {caso_titulo && (
+                  <span className="text-[10px] text-slate-500 truncate">{caso_titulo}</span>
+                )}
+              </div>
             </div>
           )}
 
@@ -357,7 +366,7 @@ export default function EventDetailCard({
 
         {/* Footer com ações */}
         {(podeSerConcluido || tipo === 'tarefa' || onLancarHoras) && (
-          <div className="flex items-center justify-between gap-2 mt-2.5 pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-between gap-2 mt-2 pt-1.5 border-t border-slate-100">
             {/* Status badge para tarefas */}
             {tipo === 'tarefa' && (
               <Badge

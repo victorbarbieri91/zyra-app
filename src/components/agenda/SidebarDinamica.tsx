@@ -1,6 +1,7 @@
 'use client'
 
 import { X, Calendar } from 'lucide-react'
+import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -39,6 +40,7 @@ export default function SidebarDinamica({
   className,
 }: SidebarDinamicaProps) {
   if (!isOpen || !selectedDate) return null
+  if (typeof document === 'undefined') return null
 
   // Ordenar eventos por prioridade
   const eventosOrdenados = [...eventos].sort((a, b) => {
@@ -66,12 +68,12 @@ export default function SidebarDinamica({
     return 0
   })
 
-  return (
+  return createPortal(
     <>
       {/* Overlay */}
       <div
         className={cn(
-          'fixed inset-0 bg-black/20 z-40 transition-opacity',
+          'fixed inset-0 bg-black/20 z-[55] transition-opacity',
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         )}
         onClick={onClose}
@@ -80,7 +82,7 @@ export default function SidebarDinamica({
       {/* Sidebar */}
       <div
         className={cn(
-          'fixed right-0 top-0 bottom-0 w-[540px] max-w-[90vw] bg-white shadow-2xl z-50',
+          'fixed right-0 top-0 bottom-0 h-screen w-[700px] max-w-[90vw] bg-white shadow-2xl z-[60]',
           'transform transition-transform duration-300 ease-in-out',
           'border-l border-slate-200',
           'flex flex-col',
@@ -89,7 +91,7 @@ export default function SidebarDinamica({
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-gradient-to-br from-slate-50 to-white">
+        <div className="flex items-center justify-between p-3 border-b border-slate-200 bg-gradient-to-br from-slate-50 to-white">
           <div>
             <h3 className="text-base font-semibold text-[#34495e]">
               {format(selectedDate, "d 'de' MMMM", { locale: ptBR })}
@@ -110,7 +112,7 @@ export default function SidebarDinamica({
 
         {/* Lista de Eventos - área scrollável */}
         <div className="flex-1 overflow-y-auto">
-          <div className="p-4">
+          <div className="p-3">
             {eventos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
@@ -122,8 +124,8 @@ export default function SidebarDinamica({
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
-                <p className="text-xs font-medium text-[#46627f] mb-3">
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-[#46627f] mb-2">
                   {eventos.length} {eventos.length === 1 ? 'evento' : 'eventos'}
                 </p>
                 {eventosOrdenados.map((evento) => (
@@ -143,6 +145,7 @@ export default function SidebarDinamica({
                     prioridade={evento.prioridade}
                     processo_numero={evento.processo_numero}
                     processo_id={evento.processo_id}
+                    caso_titulo={evento.caso_titulo}
                     consultivo_titulo={evento.consultivo_titulo}
                     consultivo_id={evento.consultivo_id}
                     prazo_data_limite={evento.prazo_data_limite}
@@ -167,7 +170,7 @@ export default function SidebarDinamica({
 
         {/* Footer (estatísticas) - sempre visível no final */}
         {eventos.length > 0 && (
-          <div className="p-4 border-t border-slate-200 bg-slate-50/50">
+          <div className="p-3 border-t border-slate-200 bg-slate-50/50">
             <div className="grid grid-cols-3 gap-2 text-center">
               <div>
                 <p className="text-xs font-semibold text-[#34495e]">
@@ -191,6 +194,7 @@ export default function SidebarDinamica({
           </div>
         )}
       </div>
-    </>
+    </>,
+    document.body
   )
 }

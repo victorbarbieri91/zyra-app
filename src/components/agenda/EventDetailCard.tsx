@@ -179,12 +179,12 @@ export default function EventDetailCard({
   return (
     <Card
       className={cn(
-        'border border-slate-200 hover:border-[#89bcbe] transition-all shadow-sm hover:shadow-md cursor-pointer',
+        'border border-slate-200 hover:border-[#89bcbe] transition-all shadow hover:shadow-md cursor-pointer',
         'bg-white'
       )}
       onClick={onViewDetails}
     >
-      <CardContent className="p-2">
+      <CardContent className="p-3">
         {/* Header com título e tipo */}
         <div className="flex items-start justify-between gap-2 mb-1.5">
           <h4 className={cn(

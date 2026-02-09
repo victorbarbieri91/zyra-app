@@ -10,11 +10,32 @@ import {
   ArrowLeft,
   Edit,
   Copy,
-  Check
+  Check,
+  Archive,
+  RotateCcw,
+  Info,
 } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { formatBrazilDate } from '@/lib/timezone'
+import { formatCurrency } from '@/lib/utils'
+import {
+  PROCESSO_STATUS_ENCERRADO,
+  PROCESSO_STATUS_LABELS,
+  PROCESSO_RESULTADO_LABELS,
+} from '@/lib/constants/processo-enums'
 
 // Abas
 import ProcessoResumo from '@/components/processos/ProcessoResumo'
@@ -24,6 +45,7 @@ import ProcessoJurisprudencias from '@/components/processos/ProcessoJurisprudenc
 import ProcessoDepositos from '@/components/processos/ProcessoDepositos'
 import ProcessoHistorico from '@/components/processos/ProcessoHistorico'
 import ProcessoWizard from '@/components/processos/ProcessoWizard'
+import EncerrarProcessoModal from '@/components/processos/EncerrarProcessoModal'
 
 interface Processo {
   id: string
@@ -61,6 +83,12 @@ interface Processo {
   tags: string[]
   data_transito_julgado?: string
   data_arquivamento?: string
+  data_encerramento?: string
+  resultado?: string
+  resumo_encerramento?: string
+  encerrado_por?: string
+  encerrado_por_nome?: string
+  encerrado_em?: string
   contrato_id?: string | null
   created_at: string
   updated_at: string
@@ -108,6 +136,8 @@ export default function ProcessoDetalhe() {
   const [activeTab, setActiveTab] = useState('ficha')
   const [copiedCNJ, setCopiedCNJ] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showEncerrarModal, setShowEncerrarModal] = useState(false)
+  const [reabrindo, setReabrindo] = useState(false)
   const supabase = createClient()
 
   // Contadores para badges das abas
@@ -131,7 +161,8 @@ export default function ProcessoDetalhe() {
         .select(`
           *,
           cliente:crm_pessoas!processos_processos_cliente_id_fkey(nome_completo),
-          responsavel:profiles!processos_processos_responsavel_id_fkey(nome_completo)
+          responsavel:profiles!processos_processos_responsavel_id_fkey(nome_completo),
+          encerrador:profiles!processos_processos_encerrado_por_fkey(nome_completo)
         `)
         .eq('id', id)
         .single()
@@ -184,6 +215,12 @@ export default function ProcessoDetalhe() {
         tags: data.tags || [],
         data_transito_julgado: data.data_transito_julgado || undefined,
         data_arquivamento: data.data_arquivamento || undefined,
+        data_encerramento: data.data_encerramento || undefined,
+        resultado: data.resultado || undefined,
+        resumo_encerramento: data.resumo_encerramento || undefined,
+        encerrado_por: data.encerrado_por || undefined,
+        encerrado_por_nome: data.encerrador?.nome_completo || undefined,
+        encerrado_em: data.encerrado_em || undefined,
         contrato_id: data.contrato_id || undefined,
         created_at: data.created_at,
         updated_at: data.updated_at
@@ -293,6 +330,34 @@ export default function ProcessoDetalhe() {
     }
   }
 
+  const isEncerrado = processo
+    ? (PROCESSO_STATUS_ENCERRADO as readonly string[]).includes(processo.status)
+    : false
+
+  const handleReabrir = async () => {
+    if (!processo) return
+    setReabrindo(true)
+    try {
+      const { error } = await supabase
+        .from('processos_processos')
+        .update({
+          status: 'ativo',
+          data_encerramento: null,
+          resultado: null,
+          resumo_encerramento: null,
+          encerrado_por: null,
+          encerrado_em: null,
+        })
+        .eq('id', processo.id)
+
+      if (!error) {
+        loadProcesso(processo.id)
+      }
+    } finally {
+      setReabrindo(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -330,15 +395,56 @@ export default function ProcessoDetalhe() {
               <ArrowLeft className="w-4 h-4 mr-1" />
               Voltar
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-white/80 hover:text-white hover:bg-white/10 h-8"
-              onClick={() => setShowEditModal(true)}
-            >
-              <Edit className="w-4 h-4 mr-2" />
-              Editar
-            </Button>
+            <div className="flex items-center gap-1">
+              {!isEncerrado ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white/80 hover:text-white hover:bg-white/10 h-8"
+                  onClick={() => setShowEncerrarModal(true)}
+                >
+                  <Archive className="w-4 h-4 mr-2" />
+                  Encerrar
+                </Button>
+              ) : (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white/80 hover:text-white hover:bg-white/10 h-8"
+                      disabled={reabrindo}
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Reabrir
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Reabrir processo?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        O processo voltará ao status &quot;Ativo&quot; e as informações de encerramento serão removidas. Esta ação será registrada no histórico.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleReabrir}>
+                        Reabrir Processo
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white/80 hover:text-white hover:bg-white/10 h-8"
+                onClick={() => setShowEditModal(true)}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Editar
+              </Button>
+            </div>
           </div>
 
           <div className="flex items-center justify-between">
@@ -389,6 +495,54 @@ export default function ProcessoDetalhe() {
             </div>
           </div>
         </div>
+
+        {/* Banner de encerramento */}
+        {isEncerrado && processo.data_encerramento && (
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Info className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-[#34495e]">
+                  Processo encerrado em {formatBrazilDate(processo.data_encerramento)}
+                </p>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                  <Badge className={`text-[10px] border ${getStatusBadge(processo.status)}`}>
+                    {PROCESSO_STATUS_LABELS[processo.status] || processo.status}
+                  </Badge>
+                  {processo.resultado && (
+                    <>
+                      <span className="text-slate-300">|</span>
+                      <span>Resultado: {PROCESSO_RESULTADO_LABELS[processo.resultado] || processo.resultado}</span>
+                    </>
+                  )}
+                  {processo.valor_acordo != null && processo.valor_acordo > 0 && (
+                    <>
+                      <span className="text-slate-300">|</span>
+                      <span>Acordo: {formatCurrency(processo.valor_acordo)}</span>
+                    </>
+                  )}
+                  {processo.valor_condenacao != null && processo.valor_condenacao > 0 && (
+                    <>
+                      <span className="text-slate-300">|</span>
+                      <span>Condenação: {formatCurrency(processo.valor_condenacao)}</span>
+                    </>
+                  )}
+                  {processo.encerrado_por_nome && (
+                    <>
+                      <span className="text-slate-300">|</span>
+                      <span>por {processo.encerrado_por_nome}</span>
+                    </>
+                  )}
+                </div>
+                {processo.resumo_encerramento && (
+                  <p className="text-xs text-slate-500 mt-1 italic">
+                    &ldquo;{processo.resumo_encerramento}&rdquo;
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Sistema de Abas */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -467,11 +621,24 @@ export default function ProcessoDetalhe() {
           onClose={() => setShowEditModal(false)}
           onSuccess={() => {
             setShowEditModal(false)
-            // Recarregar dados do processo
             loadProcesso(params.id as string)
           }}
           initialData={processoRaw}
           mode="edit"
+        />
+      )}
+
+      {/* Modal de Encerramento */}
+      {showEncerrarModal && (
+        <EncerrarProcessoModal
+          open={showEncerrarModal}
+          onClose={() => setShowEncerrarModal(false)}
+          processoId={processo.id}
+          processoNumero={processo.numero_pasta}
+          onSuccess={() => {
+            setShowEncerrarModal(false)
+            loadProcesso(params.id as string)
+          }}
         />
       )}
     </div>

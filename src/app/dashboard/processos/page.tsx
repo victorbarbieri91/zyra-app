@@ -82,13 +82,18 @@ const DEFAULT_PAGE_SIZE = 20
 
 export default function ProcessosPage() {
   const searchParams = useSearchParams()
-  const initialView = searchParams.get('view') === 'sem_contrato' ? 'sem_contrato' as const : 'todos' as const
+  const viewParam = searchParams.get('view')
+  const initialView = viewParam === 'sem_contrato'
+    ? 'sem_contrato' as const
+    : viewParam === 'todos'
+      ? 'todos' as const
+      : 'ativos' as const
 
   const [processos, setProcessos] = useState<Processo[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [currentView, setCurrentView] = useState<'todos' | 'ativos' | 'criticos' | 'meus' | 'arquivados' | 'sem_contrato'>(initialView)
+  const [currentView, setCurrentView] = useState<'todos' | 'ativos' | 'criticos' | 'meus' | 'encerrados' | 'sem_contrato'>(initialView)
   const [showFilters, setShowFilters] = useState(false)
 
   // Pagination state
@@ -214,12 +219,12 @@ export default function ProcessosPage() {
       // Apply view filter
       if (currentView === 'ativos') {
         query = query.eq('status', 'ativo')
-      } else if (currentView === 'arquivados') {
-        query = query.eq('status', 'arquivado')
+      } else if (currentView === 'encerrados') {
+        query = query.in('status', ['arquivado', 'baixado', 'transito_julgado', 'acordo'])
       } else if (currentView === 'meus' && userId) {
         query = query.eq('responsavel_id', userId)
       } else if (currentView === 'sem_contrato') {
-        query = query.is('contrato_id', null).in('status', ['ativo', 'em_andamento', 'aguardando'])
+        query = query.is('contrato_id', null).eq('status', 'ativo')
       }
 
       // Get total count first (for pagination)
@@ -473,12 +478,12 @@ export default function ProcessosPage() {
                   }}
                   className="px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#89bcbe] flex-1 md:min-w-[160px]"
                 >
-                  <option value="todos">Todos</option>
                   <option value="ativos">Ativos</option>
+                  <option value="todos">Todos</option>
                   <option value="criticos">Críticos</option>
                   <option value="meus">Meus Processos</option>
                   <option value="sem_contrato">Sem Contrato</option>
-                  <option value="arquivados">Arquivados</option>
+                  <option value="encerrados">Encerrados</option>
                 </select>
 
                 <Button

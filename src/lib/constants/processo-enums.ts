@@ -135,6 +135,26 @@ export const PROCESSO_MODALIDADE_COBRANCA_LABELS: Record<string, string> = {
   por_cargo: 'Por Cargo',
 }
 
+// Valores aceitos pelo banco para o campo 'resultado' (encerramento)
+export const PROCESSO_RESULTADO = {
+  FAVORAVEL: 'favoravel',
+  DESFAVORAVEL: 'desfavoravel',
+  PARCIAL: 'parcial',
+  SEM_MERITO: 'sem_merito',
+} as const
+
+export const PROCESSO_RESULTADO_LABELS: Record<string, string> = {
+  favoravel: 'Favorável',
+  desfavoravel: 'Desfavorável',
+  parcial: 'Parcialmente Favorável',
+  sem_merito: 'Sem Mérito / N/A',
+}
+
+// Status que representam processo encerrado (para filtros de listagem)
+export const PROCESSO_STATUS_ENCERRADO = [
+  'arquivado', 'baixado', 'transito_julgado', 'acordo'
+] as const
+
 // Types para TypeScript
 export type ProcessoFase = typeof PROCESSO_FASE[keyof typeof PROCESSO_FASE]
 export type ProcessoInstancia = typeof PROCESSO_INSTANCIA[keyof typeof PROCESSO_INSTANCIA]
@@ -144,3 +164,4 @@ export type ProcessoRito = typeof PROCESSO_RITO[keyof typeof PROCESSO_RITO]
 export type ProcessoStatus = typeof PROCESSO_STATUS[keyof typeof PROCESSO_STATUS]
 export type ProcessoTipo = typeof PROCESSO_TIPO[keyof typeof PROCESSO_TIPO]
 export type ProcessoModalidadeCobranca = typeof PROCESSO_MODALIDADE_COBRANCA[keyof typeof PROCESSO_MODALIDADE_COBRANCA]
+export type ProcessoResultado = typeof PROCESSO_RESULTADO[keyof typeof PROCESSO_RESULTADO]

@@ -55,6 +55,7 @@ import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
 import TransformarConsultivoWizard from '@/components/consultivo/TransformarConsultivoWizard'
 import EditarConsultivoModal from '@/components/consultivo/EditarConsultivoModal'
 import ConsultivoFinanceiroCard from '@/components/consultivo/ConsultivoFinanceiroCard'
+import ProcessoCobrancaFixaCard from '@/components/processos/ProcessoCobrancaFixaCard'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import type { TarefaFormData } from '@/hooks/useTarefas'
 import type { EventoFormData } from '@/hooks/useEventos'
@@ -1222,6 +1223,13 @@ export default function ConsultaDetalhePage() {
               }}
               onContratoVinculado={loadConsulta}
             />
+
+            {/* Cobrança Fixa (quando contrato vinculado) */}
+            {consulta.contrato_id && (
+              <ProcessoCobrancaFixaCard
+                consultivoId={consulta.id}
+              />
+            )}
           </div>
         </div>
       </div>

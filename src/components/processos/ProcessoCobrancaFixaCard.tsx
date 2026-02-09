@@ -33,7 +33,8 @@ import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { cn } from '@/lib/utils'
 
 interface ProcessoCobrancaFixaCardProps {
-  processoId: string
+  processoId?: string
+  consultivoId?: string
   formasDisponiveis?: string[]  // Array de formas do contrato
 }
 
@@ -45,6 +46,7 @@ interface ValorComEstado extends ValorFixoDisponivel {
 
 export default function ProcessoCobrancaFixaCard({
   processoId,
+  consultivoId,
   formasDisponiveis,
 }: ProcessoCobrancaFixaCardProps) {
   const { escritorioAtivo } = useEscritorioAtivo()
@@ -67,9 +69,9 @@ export default function ProcessoCobrancaFixaCard({
 
   // Carregar dados
   const loadData = useCallback(async () => {
-    if (!processoId || !escritorioAtivo) return
-    await loadValoresFixos(processoId)
-  }, [processoId, escritorioAtivo, loadValoresFixos])
+    if ((!processoId && !consultivoId) || !escritorioAtivo) return
+    await loadValoresFixos({ processoId, consultivoId })
+  }, [processoId, consultivoId, escritorioAtivo, loadValoresFixos])
 
   useEffect(() => {
     loadData()
@@ -130,7 +132,7 @@ export default function ProcessoCobrancaFixaCard({
     setLancando(true)
     try {
       await lancarValorFixo(
-        processoId,
+        { processoId, consultivoId },
         modalConfirmacao.id,
         modalConfirmacao.valorFinal,
         modalConfirmacao.descricao

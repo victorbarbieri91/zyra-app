@@ -24,9 +24,9 @@ export interface UseCobrancaFixaReturn {
   contratoNumero: string | null;
   formaCobranca: string | null;
   formasDisponiveis: string[];  // Todas as formas do contrato
-  loadValoresFixos: (processoId: string) => Promise<void>;
+  loadValoresFixos: (opts: { processoId?: string; consultivoId?: string }) => Promise<void>;
   lancarValorFixo: (
-    processoId: string,
+    opts: { processoId?: string; consultivoId?: string },
     valorId: string,
     valorFinal: number,
     descricao?: string
@@ -48,10 +48,12 @@ export function useCobrancaFixa(escritorioId: string | null): UseCobrancaFixaRet
   const [formasDisponiveis, setFormasDisponiveis] = useState<string[]>([]);
 
   /**
-   * Carrega valores fixos disponíveis para um processo
+   * Carrega valores fixos disponíveis para um processo ou consultivo
    */
-  const loadValoresFixos = useCallback(async (processoId: string): Promise<void> => {
+  const loadValoresFixos = useCallback(async (opts: { processoId?: string; consultivoId?: string }): Promise<void> => {
     if (!escritorioId) return;
+    const { processoId, consultivoId } = opts;
+    if (!processoId && !consultivoId) return;
 
     setLoading(true);
     setError(null);
@@ -62,15 +64,28 @@ export function useCobrancaFixa(escritorioId: string | null): UseCobrancaFixaRet
     setFormasDisponiveis([]);
 
     try {
-      // Buscar processo com contrato
-      const { data: processo, error: processoError } = await supabase
-        .from('processos_processos')
-        .select('contrato_id, cliente_id')
-        .eq('id', processoId)
-        .single();
+      // Buscar contrato_id e cliente_id da origem (processo ou consultivo)
+      let contratoId: string | null = null;
 
-      if (processoError) throw processoError;
-      if (!processo?.contrato_id) {
+      if (consultivoId) {
+        const { data: consulta, error: consultaError } = await supabase
+          .from('consultivo_consultas')
+          .select('contrato_id, cliente_id')
+          .eq('id', consultivoId)
+          .single();
+        if (consultaError) throw consultaError;
+        contratoId = consulta?.contrato_id || null;
+      } else if (processoId) {
+        const { data: processo, error: processoError } = await supabase
+          .from('processos_processos')
+          .select('contrato_id, cliente_id')
+          .eq('id', processoId)
+          .single();
+        if (processoError) throw processoError;
+        contratoId = processo?.contrato_id || null;
+      }
+
+      if (!contratoId) {
         return; // Sem contrato, sem valores
       }
 
@@ -78,7 +93,7 @@ export function useCobrancaFixa(escritorioId: string | null): UseCobrancaFixaRet
       const { data: contrato, error: contratoError } = await supabase
         .from('financeiro_contratos_honorarios')
         .select('id, titulo, numero_contrato, forma_cobranca, config, formas_pagamento')
-        .eq('id', processo.contrato_id)
+        .eq('id', contratoId)
         .single();
 
       if (contratoError) throw contratoError;
@@ -151,12 +166,13 @@ export function useCobrancaFixa(escritorioId: string | null): UseCobrancaFixaRet
    * Lança um valor fixo como receita de honorário
    */
   const lancarValorFixo = useCallback(async (
-    processoId: string,
+    opts: { processoId?: string; consultivoId?: string },
     valorId: string,
     valorFinal: number,
     descricao?: string
   ): Promise<string> => {
     if (!escritorioId) throw new Error('Escritório não selecionado');
+    const { processoId, consultivoId } = opts;
 
     setLoading(true);
     setError(null);
@@ -165,16 +181,32 @@ export function useCobrancaFixa(escritorioId: string | null): UseCobrancaFixaRet
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      // Buscar dados do processo
-      const { data: processo, error: processoError } = await supabase
-        .from('processos_processos')
-        .select('cliente_id, contrato_id')
-        .eq('id', processoId)
-        .single();
+      // Buscar dados da origem (processo ou consultivo)
+      let clienteId: string | null = null;
+      let contratoId: string | null = null;
 
-      if (processoError) throw processoError;
-      if (!processo?.cliente_id) {
-        throw new Error('Processo não tem cliente vinculado');
+      if (consultivoId) {
+        const { data: consulta, error: consultaError } = await supabase
+          .from('consultivo_consultas')
+          .select('cliente_id, contrato_id')
+          .eq('id', consultivoId)
+          .single();
+        if (consultaError) throw consultaError;
+        clienteId = consulta?.cliente_id || null;
+        contratoId = consulta?.contrato_id || null;
+      } else if (processoId) {
+        const { data: processo, error: processoError } = await supabase
+          .from('processos_processos')
+          .select('cliente_id, contrato_id')
+          .eq('id', processoId)
+          .single();
+        if (processoError) throw processoError;
+        clienteId = processo?.cliente_id || null;
+        contratoId = processo?.contrato_id || null;
+      }
+
+      if (!clienteId) {
+        throw new Error('Caso não tem cliente vinculado');
       }
 
       // Encontrar o valor selecionado para pegar a descrição
@@ -193,9 +225,10 @@ export function useCobrancaFixa(escritorioId: string | null): UseCobrancaFixaRet
         .from('financeiro_receitas')
         .insert({
           escritorio_id: escritorioId,
-          cliente_id: processo.cliente_id,
-          processo_id: processoId,
-          contrato_id: processo.contrato_id,
+          cliente_id: clienteId,
+          ...(processoId ? { processo_id: processoId } : {}),
+          ...(consultivoId ? { consultivo_id: consultivoId } : {}),
+          contrato_id: contratoId,
           tipo: 'honorario',
           categoria: 'honorarios',
           descricao: descricaoFinal,

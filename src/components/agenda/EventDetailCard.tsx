@@ -407,6 +407,15 @@ export default function EventDetailCard({
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation()
+                        onReschedule(new Date())
+                      }}
+                      className="text-xs"
+                    >
+                      Hoje
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation()
                         onReschedule(addDays(new Date(), 1))
                       }}
                       className="text-xs"

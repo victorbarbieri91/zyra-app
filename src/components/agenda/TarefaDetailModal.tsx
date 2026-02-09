@@ -376,11 +376,14 @@ export default function TarefaDetailModal({
     field: 'data_inicio' | 'prazo_data_limite'
     currentDate: string
   }) => {
-    const handleQuickOption = async (option: 'tomorrow' | 'nextMonday' | 'plus7') => {
+    const handleQuickOption = async (option: 'today' | 'tomorrow' | 'nextMonday' | 'plus7') => {
       const today = new Date()
       let newDate: Date
 
       switch(option) {
+        case 'today':
+          newDate = today
+          break
         case 'tomorrow':
           newDate = addDays(today, 1)
           break
@@ -433,6 +436,9 @@ export default function TarefaDetailModal({
           <div className="px-2 py-1.5 text-[10px] font-medium text-slate-500">
             Reagendar para:
           </div>
+          <DropdownMenuItem onClick={() => handleQuickOption('today')} className="text-xs">
+            Hoje
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleQuickOption('tomorrow')} className="text-xs">
             Amanhã
           </DropdownMenuItem>

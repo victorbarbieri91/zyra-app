@@ -4,14 +4,18 @@ import { useEffect } from 'react'
 
 export function RegisterSW() {
   useEffect(() => {
-    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+    if ('serviceWorker' in navigator) {
       navigator.serviceWorker
-        .register('/sw.js')
+        .register('/sw.js', { scope: '/' })
         .then((registration) => {
           console.log('SW registered:', registration.scope)
+          // Check for updates periodically
+          setInterval(() => {
+            registration.update()
+          }, 60 * 60 * 1000) // Every hour
         })
         .catch((error) => {
-          console.log('SW registration failed:', error)
+          console.error('SW registration failed:', error)
         })
     }
   }, [])

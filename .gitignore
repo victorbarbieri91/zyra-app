@@ -47,6 +47,11 @@ supabase/.temp/
 # Claude local settings
 .claude/settings.local.json
 
+# Serwist/PWA build artifacts
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js
+
 # Temporary files
 nul
 tsconfig.tsbuildinfo

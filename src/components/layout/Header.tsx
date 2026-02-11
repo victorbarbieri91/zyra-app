@@ -89,10 +89,6 @@ export default function Header() {
       {/* Desktop: Right Section */}
       <div className="hidden md:flex items-center gap-4">
 
-        {/* Office Switcher removido — seleção de escritório fica nas páginas específicas */}
-          </div>
-        )}
-
         {/* Profile Menu */}
         <div className="relative">
           <button

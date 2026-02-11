@@ -34,7 +34,7 @@ export default function RecorrenciaDeleteModal({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md">
+      <AlertDialogContent className="max-w-md z-[100]">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2 text-[#34495e]">
             <Repeat className="w-5 h-5 text-[#89bcbe]" />

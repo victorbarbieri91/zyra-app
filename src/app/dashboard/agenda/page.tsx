@@ -812,10 +812,11 @@ export default function AgendaPage() {
       const recId = parts[1]
       const dataOc = parts[2]
       const tarefa = tarefas.find(t => t.id === tarefaId)
-      // Fechar modais de detalhe ANTES de abrir o de exclusão (evita conflito de focus trap)
+      // Fechar modais e sidebar ANTES de abrir o de exclusão (evita conflito de z-index e focus trap)
       setTarefaDetailOpen(false)
       setEventoDetailOpen(false)
-      // Pequeno delay para garantir que o modal anterior fechou
+      setSidebarOpen(false)
+      // Pequeno delay para garantir que os modais/sidebar fecharam
       setTimeout(() => {
         setRecorrenciaDeleteTarget({
           itemId: tarefaId,
@@ -976,9 +977,10 @@ export default function AgendaPage() {
       const recId = parts[1]
       const dataOc = parts[2]
       const titulo = eventoSelecionado?.titulo || 'Evento recorrente'
-      // Fechar modais de detalhe antes para evitar conflito de focus trap do Radix
+      // Fechar modais e sidebar antes para evitar conflito de z-index e focus trap
       setTarefaDetailOpen(false)
       setEventoDetailOpen(false)
+      setSidebarOpen(false)
       setTimeout(() => {
         setRecorrenciaDeleteTarget({
           itemId: eventoId,

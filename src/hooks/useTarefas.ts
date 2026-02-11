@@ -7,9 +7,9 @@ export interface Tarefa {
   escritorio_id: string
   titulo: string
   descricao?: string
-  tipo: 'prazo_processual' | 'acompanhamento' | 'follow_up' | 'administrativo' | 'outro'
+  tipo: 'prazo_processual' | 'acompanhamento' | 'follow_up' | 'administrativo' | 'outro' | 'fixa'
   prioridade: 'alta' | 'media' | 'baixa'
-  status: 'pendente' | 'em_andamento' | 'concluida' | 'cancelada'
+  status: 'pendente' | 'em_andamento' | 'em_pausa' | 'concluida' | 'cancelada'
   data_inicio: string
   data_fim?: string
   data_conclusao?: string
@@ -42,6 +42,7 @@ export interface Tarefa {
   // Relations (populated)
   responsavel_nome?: string
   criado_por_nome?: string
+  caso_titulo?: string | null
 
   // Múltiplos responsáveis (array direto na coluna)
   responsaveis_ids: string[]
@@ -69,7 +70,9 @@ export function useTarefas(escritorioId?: string) {
         .select(`
           *,
           responsavel:profiles!responsavel_id(nome_completo),
-          criado_por_user:profiles!criado_por(nome_completo)
+          criado_por_user:profiles!criado_por(nome_completo),
+          processo:processos_processos!processo_id(autor, reu),
+          consultivo:consultivo_consultas!consultivo_id(titulo)
         `)
         .order('data_inicio', { ascending: true })
 
@@ -86,6 +89,9 @@ export function useTarefas(escritorioId?: string) {
         ...t,
         responsavel_nome: t.responsavel?.nome_completo,
         criado_por_nome: t.criado_por_user?.nome_completo,
+        caso_titulo: t.processo
+          ? `${t.processo.autor} x ${t.processo.reu}`
+          : t.consultivo?.titulo || null,
       }))
 
       setTarefas(tarefasFormatadas)

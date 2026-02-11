@@ -3,10 +3,10 @@
 import { useMemo, useState } from 'react'
 import { DndContext, DragOverlay, DragEndEvent, DragStartEvent, closestCenter } from '@dnd-kit/core'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight, ListTodo, PlayCircle, CheckCircle2 } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, ListTodo, PlayCircle, PauseCircle, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { parseDBDate } from '@/lib/timezone'
-import { format, addDays, subDays, isSameDay } from 'date-fns'
+import { format, addDays, subDays, isSameDay, startOfDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Tarefa, useTarefas } from '@/hooks/useTarefas'
 import { useEventos, Evento } from '@/hooks/useEventos'
@@ -14,7 +14,10 @@ import { useAudiencias, Audiencia } from '@/hooks/useAudiencias'
 import KanbanColumn from './KanbanColumn'
 import KanbanTaskCard from './KanbanTaskCard'
 import { AgendaCardItem } from './KanbanAgendaCard'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { createClient } from '@/lib/supabase/client'
+import type { DateRange } from 'react-day-picker'
 import { toast } from 'sonner'
 import { useTimer } from '@/contexts/TimerContext'
 import {
@@ -28,6 +31,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 
+type KanbanFilter = 'todos' | 'tarefa' | 'audiencia' | 'evento'
+
 interface CalendarKanbanViewProps {
   escritorioId?: string
   userId?: string
@@ -36,7 +41,7 @@ interface CalendarKanbanViewProps {
   onClickTarefa: (tarefa: Tarefa) => void
   onClickEvento?: (evento: Evento) => void
   onClickAudiencia?: (audiencia: Audiencia) => void
-  onCreateTarefa: (status: 'pendente' | 'em_andamento' | 'concluida') => void
+  onCreateTarefa: (status: 'pendente' | 'em_andamento' | 'em_pausa' | 'concluida') => void
   onTaskComplete?: (tarefaId: string) => void
   className?: string
 }
@@ -58,6 +63,9 @@ export default function CalendarKanbanView({
   const { eventos: todosEventos } = useEventos(escritorioId)
   const { audiencias: todasAudiencias } = useAudiencias(escritorioId)
   const [activeTarefa, setActiveTarefa] = useState<Tarefa | null>(null)
+  const [activeFilter, setActiveFilter] = useState<KanbanFilter>('todos')
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
+  const [calendarOpen, setCalendarOpen] = useState(false)
 
   // Hook de timers para automação
   const {
@@ -76,9 +84,29 @@ export default function CalendarKanbanView({
     timerId: string | null
   }>({ open: false, tarefa: null, timerId: null })
 
-  const previousDay = () => onDateSelect(subDays(selectedDate, 1))
-  const nextDay = () => onDateSelect(addDays(selectedDate, 1))
-  const goToToday = () => onDateSelect(new Date())
+  const previousDay = () => { setDateRange(undefined); onDateSelect(subDays(selectedDate, 1)) }
+  const nextDay = () => { setDateRange(undefined); onDateSelect(addDays(selectedDate, 1)) }
+  const goToToday = () => { setDateRange(undefined); onDateSelect(new Date()) }
+
+  // Date range helpers
+  const isRangeActive = !!(dateRange?.from && dateRange?.to && !isSameDay(dateRange.from, dateRange.to))
+
+  const isDateInView = (date: Date) => {
+    if (isRangeActive) {
+      const day = startOfDay(date)
+      return day >= startOfDay(dateRange!.from!) && day <= startOfDay(dateRange!.to!)
+    }
+    return isSameDay(date, selectedDate)
+  }
+
+  const handleDateRangeSelect = (range: DateRange | undefined) => {
+    setDateRange(range)
+    // Só aplicar quando 2 datas DIFERENTES forem selecionadas (período real)
+    if (range?.from && range?.to && !isSameDay(range.from, range.to)) {
+      onDateSelect(range.from)
+      setCalendarOpen(false)
+    }
+  }
 
   // Funções auxiliares para automação de timer
   const getTimerParaTarefa = (tarefaId: string) => {
@@ -110,9 +138,10 @@ export default function CalendarKanbanView({
       const labels: Record<string, string> = {
         pendente: 'Pendente',
         em_andamento: 'Em Andamento',
+        em_pausa: 'Em Pausa',
         concluida: 'Concluída',
       }
-      toast.success(`Tarefa movida para ${labels[novoStatus]}`)
+      toast.success(`Tarefa movida para ${labels[novoStatus] || novoStatus}`)
     } catch (error) {
       console.error('Erro ao atualizar status:', error)
       toast.error('Erro ao atualizar status da tarefa')
@@ -159,11 +188,12 @@ export default function CalendarKanbanView({
   }
 
   // Filtrar tarefas do dia selecionado e agrupar por status
-  const { pendente, em_andamento, concluida } = useMemo(() => {
+  const { pendente, em_andamento, em_pausa, concluida } = useMemo(() => {
     if (!todasTarefas) {
       return {
         pendente: [],
         em_andamento: [],
+        em_pausa: [],
         concluida: [],
       }
     }
@@ -171,8 +201,8 @@ export default function CalendarKanbanView({
     // Filtrar tarefas do dia e do usuário logado
     const tarefasDoDia = todasTarefas.filter((tarefa) => {
       const tarefaDate = parseDBDate(tarefa.data_inicio)
-      // Filtro 1: dia selecionado
-      if (!isSameDay(tarefaDate, selectedDate)) return false
+      // Filtro 1: dia selecionado ou range
+      if (!isDateInView(tarefaDate)) return false
       // Filtro 2: apenas tarefas do usuário logado
       if (userId && !tarefa.responsaveis_ids?.includes(userId)) return false
       return true
@@ -185,6 +215,9 @@ export default function CalendarKanbanView({
     const emAndamento = ordenarPorPrioridade(
       tarefasDoDia.filter((t) => t.status === 'em_andamento')
     )
+    const emPausa = ordenarPorPrioridade(
+      tarefasDoDia.filter((t) => t.status === 'em_pausa')
+    )
     const concluidas = ordenarPorPrioridade(
       tarefasDoDia.filter((t) => t.status === 'concluida')
     )
@@ -192,16 +225,18 @@ export default function CalendarKanbanView({
     return {
       pendente: pendentes,
       em_andamento: emAndamento,
+      em_pausa: emPausa,
       concluida: concluidas,
     }
-  }, [todasTarefas, selectedDate, userId])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todasTarefas, selectedDate, userId, dateRange])
 
   // Filtrar eventos e audiências do dia e mapear para colunas
   const { eventosPendentes, eventosRealizados, audienciasPendentes, audienciasRealizadas } = useMemo(() => {
     // Eventos do dia (filtrar por responsáveis se userId disponível)
     const eventosDoDia = (todosEventos || []).filter((evento) => {
       const eventoDate = parseDBDate(evento.data_inicio)
-      if (!isSameDay(eventoDate, selectedDate)) return false
+      if (!isDateInView(eventoDate)) return false
       if (userId && !evento.responsaveis_ids?.includes(userId)) return false
       if (evento.status === 'cancelado') return false
       return true
@@ -210,7 +245,7 @@ export default function CalendarKanbanView({
     // Audiências do dia (filtrar por responsáveis se userId disponível)
     const audienciasDoDia = (todasAudiencias || []).filter((audiencia) => {
       const audienciaDate = parseDBDate(audiencia.data_hora)
-      if (!isSameDay(audienciaDate, selectedDate)) return false
+      if (!isDateInView(audienciaDate)) return false
       if (userId && !audiencia.responsaveis_ids?.includes(userId)) return false
       if (audiencia.status === 'cancelada') return false
       return true
@@ -222,7 +257,8 @@ export default function CalendarKanbanView({
       audienciasPendentes: audienciasDoDia.filter(a => a.status !== 'realizada'),
       audienciasRealizadas: audienciasDoDia.filter(a => a.status === 'realizada'),
     }
-  }, [todosEventos, todasAudiencias, selectedDate, userId])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todosEventos, todasAudiencias, selectedDate, userId, dateRange])
 
   // Converter eventos para AgendaCardItem
   const mapEventoToCard = (evento: Evento): AgendaCardItem => ({
@@ -265,6 +301,22 @@ export default function CalendarKanbanView({
     ...audienciasRealizadas.map(mapAudienciaToCard),
   ]
 
+  // Filtrar items por tipo selecionado
+  const filterTarefas = (tarefas: Tarefa[]) => {
+    if (activeFilter === 'todos' || activeFilter === 'tarefa') return tarefas
+    return []
+  }
+
+  const filterAgendaItems = (items: AgendaCardItem[]) => {
+    if (activeFilter === 'todos') return items
+    if (activeFilter === 'tarefa') return []
+    return items.filter(item => {
+      if (activeFilter === 'audiencia') return item.tipo === 'audiencia'
+      if (activeFilter === 'evento') return item.tipo === 'evento'
+      return false
+    })
+  }
+
   // Handler para click em agenda item
   const handleClickAgendaItem = (item: AgendaCardItem) => {
     if (item.tipo === 'evento') {
@@ -293,16 +345,37 @@ export default function CalendarKanbanView({
     const tarefa = todasTarefas?.find((t) => t.id === tarefaId)
 
     // Validações
-    if (!tarefa || !['pendente', 'em_andamento', 'concluida'].includes(novoStatus)) {
+    if (!tarefa || !['pendente', 'em_andamento', 'em_pausa', 'concluida'].includes(novoStatus)) {
       return
     }
     if (tarefa.status === novoStatus) return // Não mudou
+
+    // Tarefas fixas não podem mudar de status
+    if (tarefa.tipo === 'fixa') {
+      toast.info('Tarefas fixas não podem ser movidas')
+      return
+    }
 
     const timerExistente = getTimerParaTarefa(tarefa.id)
 
     // ========================================
     // LÓGICA DE TIMER BASEADA NA TRANSIÇÃO
     // ========================================
+
+    // CASO: Movendo para EM_PAUSA — Pausar timer automaticamente (sem dialog)
+    if (novoStatus === 'em_pausa') {
+      if (timerExistente && timerExistente.status === 'rodando') {
+        try {
+          await pausarTimer(timerExistente.id)
+          toast.info('Timer pausado automaticamente')
+        } catch (error) {
+          console.error('Erro ao pausar timer:', error)
+          toast.error('Erro ao pausar timer')
+        }
+      }
+      await atualizarStatusTarefa(tarefaId, 'em_pausa')
+      return
+    }
 
     // CASO 1: Movendo para EM_ANDAMENTO - Iniciar ou retomar timer automaticamente
     if (novoStatus === 'em_andamento') {
@@ -325,7 +398,7 @@ export default function CalendarKanbanView({
           }
         } else {
           // Tarefa sem vínculo - mostrar aviso informativo
-          toast.info('Tarefa movida (sem timer - vincule a um processo/consulta para habilitar)')
+          toast.info('Tarefa movida (sem timer — vincule a um processo/consulta para habilitar)')
         }
       } else if (timerExistente.status === 'pausado') {
         // Timer existe mas está pausado - retomar automaticamente
@@ -390,52 +463,103 @@ export default function CalendarKanbanView({
     await atualizarStatusTarefa(tarefaId, novoStatus)
   }
 
-  const totalTarefas = pendente.length + em_andamento.length + concluida.length
+  const totalTarefas = pendente.length + em_andamento.length + em_pausa.length + concluida.length
   const totalAgenda = agendaPendente.length + agendaConcluida.length
   const totalItems = totalTarefas + totalAgenda
 
+  const filterOptions: { key: KanbanFilter; label: string }[] = [
+    { key: 'todos', label: 'Todos' },
+    { key: 'tarefa', label: 'Tarefas' },
+    { key: 'audiencia', label: 'Audiências' },
+    { key: 'evento', label: 'Compromissos' },
+  ]
+
   return (
-    <div className={cn('space-y-4', className)}>
+    <div className={cn('space-y-3', className)}>
       {/* Header de Navegação */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-semibold text-[#34495e]">
-            {format(selectedDate, "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+          <h2 className="text-xl font-semibold text-[#34495e]">
+            {isRangeActive
+              ? `${format(dateRange!.from!, "d MMM", { locale: ptBR }).replace('.', '')} — ${format(dateRange!.to!, "d MMM", { locale: ptBR }).replace('.', '')}`
+              : format(selectedDate, "d 'de' MMMM", { locale: ptBR })}
           </h2>
           <div className="flex items-center gap-1">
             <Button
               variant="outline"
               size="sm"
               onClick={previousDay}
-              className="h-8 w-8 p-0 border-slate-200"
+              className="h-7 w-7 p-0 border-slate-200"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-3.5 w-3.5" />
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={nextDay}
-              className="h-8 w-8 p-0 border-slate-200"
+              className="h-7 w-7 p-0 border-slate-200"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3.5 w-3.5" />
             </Button>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {totalItems > 0 && (
-            <span className="text-sm text-slate-600">
-              {totalItems} {totalItems === 1 ? 'item' : 'itens'}
-            </span>
-          )}
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  'h-7 w-7 p-0 border-slate-200',
+                  isRangeActive && 'border-[#89bcbe] bg-[#f0f9f9] text-[#89bcbe]'
+                )}
+                title="Selecionar período"
+              >
+                <CalendarDays className="h-3.5 w-3.5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="range"
+                selected={dateRange}
+                onSelect={handleDateRangeSelect}
+                numberOfMonths={1}
+                defaultMonth={selectedDate}
+              />
+            </PopoverContent>
+          </Popover>
           <Button
             variant="outline"
             size="sm"
             onClick={goToToday}
-            className="text-xs border-slate-200 hover:border-[#89bcbe] hover:bg-[#f0f9f9]"
+            className="h-7 text-xs border-slate-200 hover:border-[#89bcbe] hover:bg-[#f0f9f9] px-2.5"
           >
             Hoje
           </Button>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Filtros por tipo */}
+          <div className="flex items-center gap-1">
+            {filterOptions.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setActiveFilter(key)}
+                className={cn(
+                  'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
+                  activeFilter === key
+                    ? 'bg-[#34495e] text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {totalItems > 0 && (
+            <span className="text-xs text-slate-400">
+              {totalItems} {totalItems === 1 ? 'item' : 'itens'}
+            </span>
+          )}
         </div>
       </div>
 
@@ -445,14 +569,15 @@ export default function CalendarKanbanView({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-3 gap-4 h-[calc(100vh-280px)] min-h-[500px]">
+        <div className="grid grid-cols-4 gap-3 h-[calc(100vh-300px)] min-h-[500px]">
           <KanbanColumn
             titulo="Pendente"
-            icone={<ListTodo className="w-4 h-4" />}
+            icone={<ListTodo className="w-3.5 h-3.5 text-[#46627f]" />}
             status="pendente"
-            tarefas={pendente}
-            agendaItems={agendaPendente}
-            corHeader="bg-gradient-to-r from-[#34495e] to-[#46627f]"
+            tarefas={filterTarefas(pendente)}
+            agendaItems={filterAgendaItems(agendaPendente)}
+            corBarra="bg-[#34495e]"
+            corIconeBg="bg-slate-100"
             onClickTarefa={onClickTarefa}
             onClickAgendaItem={handleClickAgendaItem}
             onCreateTarefa={() => onCreateTarefa('pendente')}
@@ -460,21 +585,36 @@ export default function CalendarKanbanView({
 
           <KanbanColumn
             titulo="Em Andamento"
-            icone={<PlayCircle className="w-4 h-4" />}
+            icone={<PlayCircle className="w-3.5 h-3.5 text-[#89bcbe]" />}
             status="em_andamento"
-            tarefas={em_andamento}
-            corHeader="bg-gradient-to-r from-[#89bcbe] to-[#aacfd0]"
+            tarefas={filterTarefas(em_andamento)}
+            agendaItems={[]}
+            corBarra="bg-[#89bcbe]"
+            corIconeBg="bg-[#f0f9f9]"
+            onClickTarefa={onClickTarefa}
+            onClickAgendaItem={handleClickAgendaItem}
+          />
+
+          <KanbanColumn
+            titulo="Em Pausa"
+            icone={<PauseCircle className="w-3.5 h-3.5 text-amber-500" />}
+            status="em_pausa"
+            tarefas={filterTarefas(em_pausa)}
+            agendaItems={[]}
+            corBarra="bg-amber-400"
+            corIconeBg="bg-amber-50"
             onClickTarefa={onClickTarefa}
             onClickAgendaItem={handleClickAgendaItem}
           />
 
           <KanbanColumn
             titulo="Concluída"
-            icone={<CheckCircle2 className="w-4 h-4" />}
+            icone={<CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
             status="concluida"
-            tarefas={concluida}
-            agendaItems={agendaConcluida}
-            corHeader="bg-gradient-to-r from-emerald-500 to-emerald-600"
+            tarefas={filterTarefas(concluida)}
+            agendaItems={filterAgendaItems(agendaConcluida)}
+            corBarra="bg-emerald-500"
+            corIconeBg="bg-emerald-50"
             onClickTarefa={onClickTarefa}
             onClickAgendaItem={handleClickAgendaItem}
           />

@@ -284,6 +284,11 @@ export default function CalendarGridDnD({
       const dropData = over.data.current as { date: Date }
 
       if (dropData?.date) {
+        // Tarefas fixas não podem ser movidas
+        if (eventData.subtipo === 'fixa') {
+          return
+        }
+
         // Verificar se é tarefa com prazo fatal e se ultrapassa
         const isTarefaComPrazoFatal = eventData.tipo === 'tarefa' && eventData.prazo_data_limite
 

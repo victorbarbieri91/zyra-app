@@ -228,6 +228,7 @@ export default function AgendaPage() {
         status: (item.status || 'agendado') as EventCardProps['status'],
         prazo_criticidade: item.prioridade === 'alta' ? 'critico' : item.prioridade === 'media' ? 'atencao' : 'normal',
         prazo_data_limite: item.prazo_data_limite ? parseDBDate(item.prazo_data_limite) : undefined,
+        subtipo: item.subtipo,
         recorrencia_id: item.recorrencia_id,
       }))
   }, [agendaItems, filters, urlFiltroAtivo])
@@ -494,6 +495,13 @@ export default function AgendaPage() {
   // Handler para conclusão rápida de tarefa (toggle)
   const handleCompleteTask = async (taskId: string) => {
     try {
+      // Verificar se é tarefa fixa (não pode ser concluída)
+      const itemFixaCheck = agendaItems.find(item => item.id === taskId)
+      if (itemFixaCheck?.subtipo === 'fixa') {
+        toast.info('Tarefas fixas não podem ser concluídas. Use "Lançar Horas" ou exclua se não precisar mais.')
+        return
+      }
+
       // Encontrar a tarefa para verificar o status atual
       let tarefa = tarefas.find(t => t.id === taskId)
 
@@ -643,6 +651,12 @@ export default function AgendaPage() {
     // Encontrar a tarefa para verificar prazo fatal
     // Nota: agendaItems usa tipo_entidade da view v_agenda_consolidada
     const tarefa = agendaItems.find(item => item.id === taskId && item.tipo_entidade === 'tarefa')
+
+    // Tarefas fixas não podem ser reagendadas
+    if (tarefa?.subtipo === 'fixa') {
+      toast.info('Tarefas fixas não podem ser reagendadas')
+      return
+    }
 
     if (tarefa?.prazo_data_limite) {
       const prazoFatal = parseDBDate(tarefa.prazo_data_limite)
@@ -907,6 +921,12 @@ export default function AgendaPage() {
       const evento = agendaItems.find(item => item.id === eventId)
       if (!evento) {
         throw new Error('Evento não encontrado')
+      }
+
+      // Tarefas fixas não podem ser movidas
+      if (evento.tipo_entidade === 'tarefa' && evento.subtipo === 'fixa') {
+        toast.info('Tarefas fixas não podem ser reagendadas')
+        return
       }
 
       // Pegar a data e hora original

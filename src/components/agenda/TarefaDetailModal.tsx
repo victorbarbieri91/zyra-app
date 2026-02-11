@@ -196,6 +196,7 @@ export default function TarefaDetailModal({
 
   // Determinar tipo
   const isPrazoProcessual = tarefa.tipo === 'prazo_processual'
+  const isFixa = tarefa.tipo === 'fixa'
   const isConcluido = tarefa.status === 'concluido'
 
   // Helper functions
@@ -204,6 +205,11 @@ export default function TarefaDetailModal({
       normal: 'Tarefa Normal',
       prazo_processual: 'Prazo Processual',
       recorrente: 'Tarefa Recorrente',
+      fixa: 'Tarefa Fixa',
+      acompanhamento: 'Acompanhamento',
+      follow_up: 'Follow-up',
+      administrativo: 'Administrativo',
+      outro: 'Outro',
     }
     return labels[tipo] || tipo
   }
@@ -472,6 +478,11 @@ export default function TarefaDetailModal({
               </h2>
               <div className="flex items-center gap-3 text-[10px] text-slate-500">
                 <span>{getTipoLabel(tarefa.tipo)}</span>
+                {isFixa && (
+                  <span className="inline-flex items-center gap-1 bg-teal-50 text-teal-700 border border-teal-200 rounded px-1.5 py-0.5 text-[10px] font-medium">
+                    Aparece todo dia
+                  </span>
+                )}
                 <span className={cn("font-medium", getPrioridadeColor(tarefa.prioridade))}>
                   {getPrioridadeLabel(tarefa.prioridade)}
                 </span>
@@ -593,18 +604,22 @@ export default function TarefaDetailModal({
               <div className="min-w-[140px]">
                 <div className="text-[10px] text-slate-500 mb-1 h-4">
                   <CalendarDays className="w-3 h-3 text-slate-400 inline mr-1.5 align-text-bottom" />
-                  Data de Execução
+                  {isFixa ? 'Frequência' : 'Data de Execução'}
                 </div>
                 <div className="h-5">
-                  <DateReschedule
-                    field="data_inicio"
-                    currentDate={tarefa.data_inicio}
-                  />
+                  {isFixa ? (
+                    <span className="text-xs text-teal-600 font-medium">Todo dia (tarefa fixa)</span>
+                  ) : (
+                    <DateReschedule
+                      field="data_inicio"
+                      currentDate={tarefa.data_inicio}
+                    />
+                  )}
                 </div>
               </div>
 
-              {/* Prazo Fatal - Para todas as tarefas com prazo_data_limite */}
-              {tarefa.prazo_data_limite && (
+              {/* Prazo Fatal - Para todas as tarefas com prazo_data_limite (nunca para fixas) */}
+              {!isFixa && tarefa.prazo_data_limite && (
                 <div className="min-w-[140px]">
                   <div className="text-[10px] text-red-600 font-medium mb-1 h-4">
                     <AlertCircle className="w-3 h-3 text-red-500 inline mr-1.5 align-text-bottom" />
@@ -667,9 +682,10 @@ export default function TarefaDetailModal({
                 <div className="h-5 flex items-center gap-2">
                   <div className={cn(
                     "w-2 h-2 rounded-full",
-                    tarefa.status === 'concluido' ? "bg-emerald-500" :
+                    tarefa.status === 'concluida' ? "bg-emerald-500" :
                     tarefa.status === 'em_andamento' ? "bg-blue-500" :
-                    tarefa.status === 'cancelado' ? "bg-slate-400" :
+                    tarefa.status === 'em_pausa' ? "bg-amber-400" :
+                    tarefa.status === 'cancelada' ? "bg-slate-400" :
                     "bg-amber-500"
                   )} />
                   <span className="text-xs text-slate-700 capitalize">
@@ -742,34 +758,43 @@ export default function TarefaDetailModal({
           <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {!isConcluido ? (
-                  <Button
-                    size="sm"
-                    onClick={onConcluir}
-                    className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                  >
-                    <Check className="w-3 h-3 mr-1" />
-                    Concluir
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={onReabrir}
-                    className="h-8 text-xs border-slate-200"
-                  >
-                    <RotateCcw className="w-3 h-3 mr-1" />
-                    Reabrir
-                  </Button>
+                {/* Concluir/Reabrir - NÃO aparece para tarefas fixas */}
+                {!isFixa && (
+                  !isConcluido ? (
+                    <Button
+                      size="sm"
+                      onClick={onConcluir}
+                      className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      <Check className="w-3 h-3 mr-1" />
+                      Concluir
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={onReabrir}
+                      className="h-8 text-xs border-slate-200"
+                    >
+                      <RotateCcw className="w-3 h-3 mr-1" />
+                      Reabrir
+                    </Button>
+                  )
                 )}
 
                 {/* Botão Lançar Horas - só aparece se tem processo ou consultivo vinculado */}
+                {/* Para fixas é a ação principal (estilo destacado) */}
                 {onLancarHoras && (tarefa.processo_id || tarefa.consultivo_id) && (
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant={isFixa ? 'default' : 'outline'}
                     onClick={onLancarHoras}
-                    className="h-8 text-xs border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
+                    className={cn(
+                      "h-8 text-xs",
+                      isFixa
+                        ? "bg-[#89bcbe] hover:bg-[#6ba9ab] text-white"
+                        : "border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
+                    )}
                   >
                     <Timer className="w-3 h-3 mr-1" />
                     Lançar Horas

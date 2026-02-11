@@ -128,7 +128,7 @@ const SCHEMA_PRINCIPAIS = `
 
 3. **agenda_tarefas** - Tarefas e afazeres
    Campos: id, titulo, descricao, tipo (obrigatório: 'prazo_processual'/'acompanhamento'/'follow_up'/'administrativo'/'outro'),
-   prioridade ('alta'/'media'/'baixa'), status ('pendente'/'em_andamento'/'concluida'/'cancelada'),
+   prioridade ('alta'/'media'/'baixa'), status ('pendente'/'em_andamento'/'em_pausa'/'concluida'/'cancelada'),
    data_inicio (timestamptz, obrigatório), data_fim (timestamptz), prazo_data_limite (date),
    responsavel_id (uuid - DEVE vir de profiles.id, NÃO de crm_pessoas!), processo_id
    Para INSERT usar: titulo, tipo='administrativo', data_inicio, prioridade, status='pendente'

@@ -128,6 +128,7 @@ const subtipoTarefaLabels: Record<string, string> = {
   follow_up: 'Follow-up',
   administrativo: 'Administrativo',
   outro: 'Outro',
+  fixa: 'Tarefa Fixa',
 }
 
 const prioridadeConfig = {
@@ -186,8 +187,9 @@ export default function EventDetailCard({
   const [calendarOpen, setCalendarOpen] = useState(false)
   const config = tipoConfig[tipo]
 
+  const isFixa = subtipo === 'fixa'
   const estaConcluida = isItemCompleted(tipo, status)
-  const podeSerConcluido = !estaConcluida && !isItemCancelled(status)
+  const podeSerConcluido = !estaConcluida && !isItemCancelled(status) && !isFixa
   const subtipoLabel = subtipo ? subtipoTarefaLabels[subtipo] || subtipo : null
   const labelConcluir = tipo === 'tarefa' ? 'Concluir'
     : tipo === 'audiencia' ? 'Realizada'
@@ -350,6 +352,18 @@ export default function EventDetailCard({
             </div>
           )}
 
+          {/* Badge de Tarefa Fixa */}
+          {isFixa && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 h-4 font-medium bg-teal-50 text-teal-700 border-teal-200"
+              >
+                Fixa — todo dia
+              </Badge>
+            </div>
+          )}
+
           {/* Badge de Recorrência */}
           {recorrencia_id && (
             <div className="flex items-center gap-1.5 mt-1">
@@ -391,6 +405,7 @@ export default function EventDetailCard({
                 'text-[10px] px-1.5 py-0 h-4 font-medium',
                 estaConcluida && 'bg-emerald-100 text-emerald-700 border-emerald-200',
                 status === 'em_andamento' && 'bg-blue-100 text-blue-700 border-blue-200',
+                status === 'em_pausa' && 'bg-amber-100 text-amber-700 border-amber-200',
                 (status === 'pendente' || status === 'agendada' || status === 'agendado') && 'bg-slate-100 text-slate-700 border-slate-200',
                 status === 'confirmada' && 'bg-emerald-100 text-emerald-700 border-emerald-200',
                 isItemCancelled(status) && 'bg-red-100 text-red-700 border-red-200'
@@ -398,6 +413,7 @@ export default function EventDetailCard({
             >
               {estaConcluida && (tipo === 'tarefa' ? 'Concluída' : tipo === 'audiencia' ? 'Realizada' : 'Cumprido')}
               {status === 'em_andamento' && 'Em andamento'}
+              {status === 'em_pausa' && 'Em pausa'}
               {status === 'pendente' && 'Pendente'}
               {(status === 'agendada' || status === 'agendado') && 'Agendado'}
               {status === 'confirmada' && 'Confirmada'}
@@ -405,8 +421,8 @@ export default function EventDetailCard({
             </Badge>
 
             <div className="flex items-center gap-1.5 ml-auto">
-              {/* Botão Reagendar - só para tarefas */}
-              {tipo === 'tarefa' && onReschedule && status !== 'concluida' && (
+              {/* Botão Reagendar - só para tarefas (nunca para fixas) */}
+              {tipo === 'tarefa' && !isFixa && onReschedule && status !== 'concluida' && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                     <Button
@@ -503,8 +519,8 @@ export default function EventDetailCard({
                 </Button>
               )}
 
-              {/* Botão reabrir para itens concluídos */}
-              {estaConcluida && onReopen && (
+              {/* Botão reabrir para itens concluídos (nunca para fixas) */}
+              {!isFixa && estaConcluida && onReopen && (
                 <Button
                   size="sm"
                   onClick={(e) => {

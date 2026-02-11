@@ -28,6 +28,8 @@ export interface EventCardProps {
   prazo_perdido?: boolean
   prazo_criticidade?: 'vencido' | 'hoje' | 'critico' | 'urgente' | 'atencao' | 'normal'
   prazo_data_limite?: Date | string  // Para tarefas com prazo fatal
+  // Subtipo (ex: fixa, prazo_processual, etc.)
+  subtipo?: string
   // Recorrência
   recorrencia_id?: string | null
   onClick?: () => void
@@ -184,11 +186,13 @@ export default function EventCard({
                     'text-[10px] px-1.5 py-0 h-4 font-medium',
                     status === 'concluida' && 'bg-emerald-100 text-emerald-700 border-emerald-200',
                     status === 'em_andamento' && 'bg-blue-100 text-blue-700 border-blue-200',
+                    status === 'em_pausa' && 'bg-amber-100 text-amber-700 border-amber-200',
                     status === 'pendente' && 'bg-slate-100 text-slate-700 border-slate-200'
                   )}
                 >
                   {status === 'concluida' && 'Concluída'}
                   {status === 'em_andamento' && 'Em andamento'}
+                  {status === 'em_pausa' && 'Em pausa'}
                   {status === 'pendente' && 'Pendente'}
                   {status === 'cancelada' && 'Cancelada'}
                 </Badge>

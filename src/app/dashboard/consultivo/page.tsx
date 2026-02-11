@@ -49,6 +49,7 @@ import { useTarefas } from '@/hooks/useTarefas'
 import { useEventos } from '@/hooks/useEventos'
 import { BulkActionsToolbarCRM, BulkActionCRM } from '@/components/crm/BulkActionsToolbarCRM'
 import { VincularContratoModal } from '@/components/financeiro/VincularContratoModal'
+import { BulkEditStatusConsultivoModal } from '@/components/consultivo/BulkEditStatusConsultivoModal'
 
 interface Consulta {
   id: string
@@ -96,6 +97,7 @@ export default function ConsultivoPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkLoading, setBulkLoading] = useState(false)
   const [showVincularContratoModal, setShowVincularContratoModal] = useState(false)
+  const [showBulkStatusModal, setShowBulkStatusModal] = useState(false)
 
   // Estados para modal de edição
   const [editModalOpen, setEditModalOpen] = useState(false)
@@ -437,8 +439,9 @@ export default function ConsultivoPage() {
   const handleBulkAction = async (action: BulkActionCRM) => {
     if (action === 'vincular_contrato') {
       setShowVincularContratoModal(true)
+    } else if (action === 'alterar_status') {
+      setShowBulkStatusModal(true)
     } else {
-      // Outras ações a implementar depois se necessário
       console.log('Bulk action:', action, selectedIds)
     }
   }
@@ -976,6 +979,17 @@ export default function ConsultivoPage() {
           loading={bulkLoading}
         />
       )}
+
+      {/* Modal de Alterar Status em Massa */}
+      <BulkEditStatusConsultivoModal
+        open={showBulkStatusModal}
+        onClose={() => setShowBulkStatusModal(false)}
+        selectedIds={Array.from(selectedIds)}
+        onSuccess={() => {
+          loadConsultas()
+          clearSelection()
+        }}
+      />
 
       {/* Modal de Vincular Contrato */}
       <VincularContratoModal

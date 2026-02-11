@@ -10,10 +10,11 @@ import KanbanAgendaCard, { AgendaCardItem } from './KanbanAgendaCard'
 interface KanbanColumnProps {
   titulo: string
   icone: React.ReactNode
-  status: 'pendente' | 'em_andamento' | 'concluida'
+  status: 'pendente' | 'em_andamento' | 'em_pausa' | 'concluida'
   tarefas: Tarefa[]
   agendaItems?: AgendaCardItem[]
-  corHeader: string
+  corBarra: string
+  corIconeBg: string
   onClickTarefa: (tarefa: Tarefa) => void
   onClickAgendaItem?: (item: AgendaCardItem) => void
   onCreateTarefa?: () => void
@@ -25,7 +26,8 @@ export default function KanbanColumn({
   status,
   tarefas,
   agendaItems = [],
-  corHeader,
+  corBarra,
+  corIconeBg,
   onClickTarefa,
   onClickAgendaItem,
   onCreateTarefa,
@@ -42,23 +44,28 @@ export default function KanbanColumn({
 
   return (
     <div className="flex flex-col h-full bg-white rounded-lg border border-slate-200 overflow-hidden">
-      {/* Header */}
-      <div className={cn('p-3', corHeader)}>
-        <div className="flex items-center gap-2 text-white">
-          {icone}
-          <span className="font-semibold text-sm">{titulo}</span>
-          <span className="ml-auto text-xs bg-white/20 px-2 py-0.5 rounded-full font-medium">
-            {totalItems}
-          </span>
+      {/* Barra colorida fina no topo */}
+      <div className={cn('h-1 rounded-t-lg', corBarra)} />
+
+      {/* Header minimalista */}
+      <div className="px-3 py-2 flex items-center justify-between border-b border-slate-100">
+        <div className="flex items-center gap-2">
+          <div className={cn('w-5 h-5 rounded-md flex items-center justify-center', corIconeBg)}>
+            {icone}
+          </div>
+          <span className="font-semibold text-xs text-[#34495e]">{titulo}</span>
         </div>
+        <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full font-medium">
+          {totalItems}
+        </span>
       </div>
 
       {/* Lista de Cards - Droppable */}
       <div
         ref={setNodeRef}
         className={cn(
-          'flex-1 p-3 bg-slate-50 overflow-y-auto space-y-3 min-h-[200px]',
-          isOver && 'bg-blue-50 border-2 border-dashed border-blue-400 rounded-md'
+          'flex-1 p-2 bg-slate-50/50 overflow-y-auto space-y-2 min-h-[200px]',
+          isOver && 'bg-blue-50 border-2 border-dashed border-blue-300 rounded-md'
         )}
       >
         {/* Agenda items (compromissos/audiências) - não-draggable, aparecem primeiro */}
@@ -76,19 +83,14 @@ export default function KanbanColumn({
         ))}
 
         {totalItems === 0 && !isOver && (
-          <div className="flex items-center justify-center h-32 text-center text-slate-400 text-sm">
-            <div>
-              <div className="mb-2 text-slate-300">
-                {icone}
-              </div>
-              Nenhum item {titulo.toLowerCase()}
-            </div>
+          <div className="flex items-center justify-center h-24 text-center text-slate-400 text-xs">
+            Nenhum item
           </div>
         )}
 
         {isOver && totalItems === 0 && (
-          <div className="flex items-center justify-center h-32 text-center text-blue-500 text-sm font-medium">
-            Solte aqui para mover
+          <div className="flex items-center justify-center h-24 text-center text-blue-500 text-xs font-medium">
+            Solte aqui
           </div>
         )}
       </div>
@@ -97,9 +99,9 @@ export default function KanbanColumn({
       {status === 'pendente' && onCreateTarefa && (
         <button
           onClick={onCreateTarefa}
-          className="p-3 border-t border-slate-200 text-sm text-[#89bcbe] hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
+          className="px-3 py-2 border-t border-slate-100 text-xs text-[#89bcbe] hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5" />
           <span className="font-medium">Nova Tarefa</span>
         </button>
       )}

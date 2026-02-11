@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, CalendarClock, Clock, Link as LinkIcon, CheckSquare, Briefcase, UserCheck, FileText, ClipboardList, Zap, TrendingUp, ChevronRight, Repeat, ListTree } from 'lucide-react'
+import { Calendar, CalendarClock, Clock, Link as LinkIcon, CheckSquare, Briefcase, UserCheck, FileText, ClipboardList, Zap, TrendingUp, ChevronRight, Repeat, ListTree, Pin } from 'lucide-react'
 import { ModalWizard, WizardStep, ReviewCard } from '@/components/wizards'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
@@ -35,7 +35,7 @@ interface TarefaWizardProps {
   initialData?: Partial<TarefaFormData>
 }
 
-type TipoTarefa = 'prazo_processual' | 'acompanhamento' | 'follow_up' | 'administrativo' | 'outro'
+type TipoTarefa = 'prazo_processual' | 'acompanhamento' | 'follow_up' | 'administrativo' | 'outro' | 'fixa'
 type Prioridade = 'alta' | 'media' | 'baixa'
 type PrazoTipo = 'recurso' | 'manifestacao' | 'cumprimento' | 'juntada' | 'pagamento' | 'outro'
 
@@ -69,6 +69,12 @@ const TIPO_CONFIG = {
     icon: ClipboardList,
     color: 'slate',
     description: 'Outras tarefas',
+  },
+  fixa: {
+    label: 'Tarefa Fixa',
+    icon: Pin,
+    color: 'teal',
+    description: 'Aparece todo dia',
   },
 }
 
@@ -235,6 +241,8 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
     loadResponsaveis()
   }, [initialData?.id])
 
+  const isFixa = tipo === 'fixa'
+
   // Step Definitions
   const steps: WizardStepType[] = [
     {
@@ -245,16 +253,16 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
     },
     {
       id: 'quando-responsabilidade',
-      title: 'Quando e Responsabilidade',
-      subtitle: 'Quando você vai fazer esta tarefa?',
-      validate: () => dataExecucao !== '',
+      title: isFixa ? 'Responsabilidade' : 'Quando e Responsabilidade',
+      subtitle: isFixa ? 'Quem será responsável por esta tarefa fixa?' : 'Quando você vai fazer esta tarefa?',
+      validate: () => isFixa ? true : dataExecucao !== '',
     },
     {
       id: 'vinculos',
       title: 'Vínculos',
-      subtitle: 'Vincule a processos ou consultivos',
-      isOptional: true,
-      validate: () => true,
+      subtitle: isFixa ? 'Vincule a um processo ou consultivo (obrigatório para lançar horas)' : 'Vincule a processos ou consultivos',
+      isOptional: !isFixa,
+      validate: () => isFixa ? (!!processoId || !!consultivoId) : true,
     },
     {
       id: 'recorrencia',
@@ -271,7 +279,8 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
     },
   ]
 
-  const filteredSteps = steps
+  // Tarefas fixas não usam recorrência
+  const filteredSteps = isFixa ? steps.filter(s => s.id !== 'recorrencia') : steps
 
   const handleComplete = async () => {
     if (responsaveisIds.length === 0) {
@@ -287,13 +296,18 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
         return `${dateStr}T12:00:00`
       }
 
+      // Tarefas fixas usam hoje como data_inicio (a view substituirá por CURRENT_DATE)
+      const dataInicioFinal = isFixa
+        ? format(new Date(), 'yyyy-MM-dd')
+        : dataExecucao
+
       const formData: TarefaFormData = {
         escritorio_id: escritorioId,
         tipo,
         titulo,
         descricao: descricao || undefined,
-        data_inicio: formatDateToISO(dataExecucao),
-        data_fim: prazoFatal ? formatDateToISO(prazoFatal) : undefined,
+        data_inicio: formatDateToISO(dataInicioFinal),
+        data_fim: (isFixa || !prazoFatal) ? undefined : formatDateToISO(prazoFatal),
         prioridade,
         // Responsáveis: array direto + responsavel_id para retrocompatibilidade
         responsaveis_ids: responsaveisIds,
@@ -301,8 +315,8 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
         cor,
         processo_id: processoId,
         consultivo_id: consultivoId,
-        // Para prazos processuais, enviar prazo_data_limite
-        prazo_data_limite: (tipo === 'prazo_processual' && prazoFatal) ? prazoFatal : undefined,
+        // Para prazos processuais, enviar prazo_data_limite (nunca para fixas)
+        prazo_data_limite: (!isFixa && tipo === 'prazo_processual' && prazoFatal) ? prazoFatal : undefined,
       }
 
       // Verificar se estamos editando (initialData tem id)
@@ -357,12 +371,13 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   }
 
   const getTipoLabel = (t: TipoTarefa) => {
-    const labels = {
+    const labels: Record<TipoTarefa, string> = {
       prazo_processual: 'Prazo Processual',
       acompanhamento: 'Acompanhamento',
       follow_up: 'Follow-up',
       administrativo: 'Administrativo',
       outro: 'Outro',
+      fixa: 'Tarefa Fixa',
     }
     return labels[t]
   }
@@ -383,13 +398,13 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       isSubmitting={isSubmitting}
     >
       {/* ETAPA 1: Tipo e Identificação */}
-      {currentStep === 0 && (
-        <WizardStep title={filteredSteps[0].title} subtitle={filteredSteps[0].subtitle}>
+      {filteredSteps[currentStep]?.id === 'tipo-identificacao' && (
+        <WizardStep title={filteredSteps[currentStep].title} subtitle={filteredSteps[currentStep].subtitle}>
           <div className="space-y-4">
             {/* Tipo de Tarefa */}
             <div className="space-y-2">
               <Label className="text-sm font-medium text-[#34495e]">Tipo de Tarefa *</Label>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-6 gap-2">
                 {(Object.entries(TIPO_CONFIG) as [TipoTarefa, typeof TIPO_CONFIG[keyof typeof TIPO_CONFIG]][]).map(
                   ([key, config]) => {
                     const Icon = config.icon
@@ -409,7 +424,8 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
                                 config.color === 'blue' && 'bg-blue-50 text-blue-600 border-blue-300',
                                 config.color === 'emerald' && 'bg-emerald-50 text-emerald-600 border-emerald-300',
                                 config.color === 'purple' && 'bg-purple-50 text-purple-600 border-purple-300',
-                                config.color === 'slate' && 'bg-slate-50 text-slate-600 border-slate-300'
+                                config.color === 'slate' && 'bg-slate-50 text-slate-600 border-slate-300',
+                                config.color === 'teal' && 'bg-teal-50 text-teal-600 border-teal-300'
                               )
                             : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600'
                         )}
@@ -459,33 +475,48 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       )}
 
       {/* ETAPA 2: Quando e Responsabilidade */}
-      {currentStep === 1 && (
-        <WizardStep title={filteredSteps[1].title} subtitle={filteredSteps[1].subtitle}>
+      {filteredSteps[currentStep]?.id === 'quando-responsabilidade' && (
+        <WizardStep title={filteredSteps[currentStep].title} subtitle={filteredSteps[currentStep].subtitle}>
           <div className="space-y-4">
-            {/* Data de Execução */}
-            <div className="space-y-2">
-              <Label htmlFor="data-execucao" className="text-sm font-medium text-[#34495e] flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[#89bcbe]" />
-                Data que irei realizar *
-              </Label>
-              <DateInput
-                value={dataExecucao}
-                onChange={setDataExecucao}
-              />
-            </div>
+            {/* Info para tarefa fixa */}
+            {isFixa && (
+              <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 text-xs text-teal-700">
+                <div className="flex items-center gap-2 font-medium mb-1">
+                  <Pin className="w-3.5 h-3.5" />
+                  Tarefa Fixa — aparece todo dia
+                </div>
+                <p className="text-teal-600">Não é necessário definir data. Esta tarefa aparecerá automaticamente no dia atual.</p>
+              </div>
+            )}
 
-            {/* Prazo Fatal */}
-            <div className="space-y-2">
-              <Label htmlFor="prazo-fatal" className="text-sm font-medium text-[#34495e] flex items-center gap-2">
-                <CalendarClock className="w-4 h-4 text-[#34495e]" />
-                Prazo Fatal
-                <span className="text-xs text-slate-500 font-normal">(Opcional)</span>
-              </Label>
-              <DateInput
-                value={prazoFatal}
-                onChange={setPrazoFatal}
-              />
-            </div>
+            {/* Data de Execução (esconde para fixa) */}
+            {!isFixa && (
+              <div className="space-y-2">
+                <Label htmlFor="data-execucao" className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-[#89bcbe]" />
+                  Data que irei realizar *
+                </Label>
+                <DateInput
+                  value={dataExecucao}
+                  onChange={setDataExecucao}
+                />
+              </div>
+            )}
+
+            {/* Prazo Fatal (esconde para fixa) */}
+            {!isFixa && (
+              <div className="space-y-2">
+                <Label htmlFor="prazo-fatal" className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+                  <CalendarClock className="w-4 h-4 text-[#34495e]" />
+                  Prazo Fatal
+                  <span className="text-xs text-slate-500 font-normal">(Opcional)</span>
+                </Label>
+                <DateInput
+                  value={prazoFatal}
+                  onChange={setPrazoFatal}
+                />
+              </div>
+            )}
 
             {/* Prioridade */}
             <div className="space-y-2">
@@ -542,13 +573,19 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       )}
 
       {/* ETAPA 3: Vínculos */}
-      {currentStep === 2 && (
+      {filteredSteps[currentStep]?.id === 'vinculos' && (
         <WizardStep
-          title={filteredSteps[2].title}
-          subtitle={filteredSteps[2].subtitle}
-          isOptional
+          title={filteredSteps[currentStep].title}
+          subtitle={filteredSteps[currentStep].subtitle}
+          isOptional={!isFixa}
         >
           <div className="space-y-4">
+            {/* Aviso para tarefa fixa */}
+            {isFixa && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
+                Obrigatório vincular a um processo ou consultivo para poder lançar horas.
+              </div>
+            )}
             {/* Vínculos */}
             <div className="space-y-2">
               <VinculacaoSelector
@@ -561,10 +598,10 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       )}
 
       {/* ETAPA 4: Recorrência */}
-      {currentStep === 3 && (
+      {filteredSteps[currentStep]?.id === 'recorrencia' && (
         <WizardStep
-          title={filteredSteps[3].title}
-          subtitle={filteredSteps[3].subtitle}
+          title={filteredSteps[currentStep].title}
+          subtitle={filteredSteps[currentStep].subtitle}
           isOptional
         >
           <RecorrenciaConfig
@@ -576,8 +613,8 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       )}
 
       {/* ETAPA 5: Revisão - Ficha Completa */}
-      {currentStep === 4 && (
-        <WizardStep title={filteredSteps[4].title} subtitle={filteredSteps[4].subtitle}>
+      {filteredSteps[currentStep]?.id === 'revisao' && (
+        <WizardStep title={filteredSteps[currentStep].title} subtitle={filteredSteps[currentStep].subtitle}>
           <div className="bg-white border border-slate-200 rounded-lg p-4">
             {/* Grid de Informações */}
             <div className="space-y-4">
@@ -603,10 +640,10 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
               <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
                 <span className="text-slate-500">Execução</span>
                 <span className="text-[#34495e] font-medium">
-                  {dataExecucao ? formatBrazilDateLong(parseDateInBrazil(dataExecucao, 'yyyy-MM-dd')) : 'Não definida'}
+                  {isFixa ? 'Todo dia (tarefa fixa)' : (dataExecucao ? formatBrazilDateLong(parseDateInBrazil(dataExecucao, 'yyyy-MM-dd')) : 'Não definida')}
                 </span>
 
-                {prazoFatal && (
+                {!isFixa && prazoFatal && (
                   <>
                     <span className="text-slate-500">Prazo Fatal</span>
                     <span className="text-red-600 font-medium">

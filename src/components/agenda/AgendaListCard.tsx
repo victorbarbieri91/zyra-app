@@ -89,6 +89,7 @@ const isCompletedStatus = (status: string | undefined | null) =>
   ['concluida', 'realizada', 'realizado', 'concluido'].includes(status || '')
 
 export default function AgendaListCard({ item, onClick, onComplete, className }: AgendaListCardProps) {
+  const isFixa = item.tipo_entidade === 'tarefa' && item.subtipo === 'fixa'
   const prioridadeInfo = item.prioridade ? prioridadeConfig[item.prioridade] : null
   const statusInfo = statusConfig[item.status as keyof typeof statusConfig] || statusConfig.pendente
 
@@ -123,8 +124,8 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
       <CardContent className="p-2.5">
         {/* Header com checkbox e título */}
         <div className="flex items-start gap-2 mb-2">
-          {/* Checkbox de Concluir - ESQUERDA */}
-          {onComplete && (
+          {/* Checkbox de Concluir - ESQUERDA (nunca para fixas) */}
+          {onComplete && !isFixa && (
             <button
               onClick={(e) => {
                 e.stopPropagation()
@@ -236,6 +237,18 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
             <div className="flex items-center gap-1.5">
               <User className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
               <span className="text-[11px] text-slate-600 truncate">{item.responsavel_nome}</span>
+            </div>
+          )}
+
+          {/* Indicador de Tarefa Fixa */}
+          {isFixa && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 h-4 font-medium bg-teal-50 text-teal-700 border-teal-200"
+              >
+                Fixa — todo dia
+              </Badge>
             </div>
           )}
 

@@ -1,12 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Repeat, Calendar, Clock, Pin } from 'lucide-react'
+import { Repeat, Pin } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { DateInput } from '@/components/ui/date-picker'
 import { cn } from '@/lib/utils'
 import { getRecorrenciaSummary } from '@/lib/recorrencia-utils'
@@ -60,14 +59,28 @@ const MESES = [
   { label: 'Dezembro', value: 12 },
 ]
 
-export default function RecorrenciaConfig({ value, onChange, tipo }: RecorrenciaConfigProps) {
-  const [recorrenciaAtiva, setRecorrenciaAtiva] = useState(value?.ativa || false)
-  const [isFixa, setIsFixa] = useState(value?.isFixa || false)
+type Modo = 'nenhum' | 'fixa' | 'recorrente'
 
-  const handleFixaToggle = (checked: boolean) => {
-    setIsFixa(checked)
-    if (checked) {
-      setRecorrenciaAtiva(false)
+export default function RecorrenciaConfig({ value, onChange, tipo }: RecorrenciaConfigProps) {
+  const getModoInicial = (): Modo => {
+    if (value?.isFixa) return 'fixa'
+    if (value?.ativa) return 'recorrente'
+    return 'nenhum'
+  }
+
+  const [modo, setModo] = useState<Modo>(getModoInicial)
+
+  const handleModoChange = (novoModo: Modo) => {
+    if (novoModo === modo) {
+      // Click no mesmo = desativar
+      setModo('nenhum')
+      onChange(null)
+      return
+    }
+
+    setModo(novoModo)
+
+    if (novoModo === 'fixa') {
       onChange({
         ativa: false,
         isFixa: true,
@@ -77,22 +90,13 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
         terminoTipo: 'permanente',
         horaPadrao: '09:00',
       })
-    } else {
-      onChange(null)
-    }
-  }
-
-  const handleCheckboxChange = (checked: boolean) => {
-    setRecorrenciaAtiva(checked)
-
-    if (checked) {
-      setIsFixa(false)
-      // Inicializar com valores padrão
+    } else if (novoModo === 'recorrente') {
       onChange({
         ativa: true,
+        isFixa: false,
         frequencia: 'semanal',
         intervalo: 1,
-        diasSemana: [1, 2, 3, 4, 5], // Seg-Sex
+        diasSemana: [1, 2, 3, 4, 5],
         dataInicio: new Date().toISOString().split('T')[0],
         terminoTipo: 'permanente',
         horaPadrao: '09:00',
@@ -107,7 +111,6 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
 
     let updates: Partial<RecorrenciaData> = { [field]: newValue }
 
-    // Limpar estado irrelevante ao trocar frequência
     if (field === 'frequencia') {
       switch (newValue) {
         case 'diaria':
@@ -120,16 +123,14 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
           updates.mes = undefined
           updates.apenasUteis = undefined
           if (!value.diasSemana || value.diasSemana.length === 0) {
-            updates.diasSemana = [1, 2, 3, 4, 5] // Default: Seg-Sex
+            updates.diasSemana = [1, 2, 3, 4, 5]
           }
           break
         case 'mensal':
           updates.diasSemana = undefined
           updates.mes = undefined
           updates.apenasUteis = undefined
-          if (!value.diaMes) {
-            updates.diaMes = 1
-          }
+          if (!value.diaMes) updates.diaMes = 1
           break
         case 'anual':
           updates.diasSemana = undefined
@@ -145,208 +146,185 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
 
   const toggleDiaSemana = (dia: number) => {
     if (!value) return
-
     const diasAtuais = value.diasSemana || []
     const novos = diasAtuais.includes(dia)
       ? diasAtuais.filter(d => d !== dia)
       : [...diasAtuais, dia].sort()
-
     handleFieldChange('diasSemana', novos)
   }
 
-  // Tarefa Fixa selecionada — mostrar card teal e esconder recorrência
-  if (isFixa) {
-    return (
-      <div className="space-y-4">
-        {/* Toggle Tarefa Fixa */}
-        <button
-          type="button"
-          onClick={() => handleFixaToggle(false)}
-          className="w-full flex items-start gap-3 p-3 rounded-lg border-2 border-teal-300 bg-teal-50 text-left transition-all"
-        >
-          <div className="w-8 h-8 rounded-md bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <Pin className="w-4 h-4 text-teal-600" />
-          </div>
-          <div>
-            <span className="text-sm font-medium text-teal-700">Tarefa Fixa</span>
-            <p className="text-[11px] text-teal-600 mt-0.5">Aparece todo dia automaticamente, sem acumular atrasos</p>
-          </div>
-        </button>
-
-        {/* Info box */}
-        <div className="bg-teal-50 border border-teal-200 rounded-md p-3">
-          <p className="text-xs text-teal-700 flex items-start gap-2">
-            <Pin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-            <span>
-              Esta tarefa aparecerá automaticamente no dia atual. Nunca acumula atrasos.
-              Ação principal: lançar horas. Vínculo com processo/consultivo será obrigatório.
-            </span>
-          </p>
-        </div>
-      </div>
-    )
+  const unidadeLabel = () => {
+    switch (value?.frequencia) {
+      case 'diaria': return 'dia(s)'
+      case 'semanal': return 'semana(s)'
+      case 'mensal': return 'mês(es)'
+      case 'anual': return 'ano(s)'
+      default: return ''
+    }
   }
 
-  if (!recorrenciaAtiva) {
-    return (
-      <div className="space-y-4">
-        {/* Toggle Tarefa Fixa (só para tarefas) */}
+  return (
+    <div className="space-y-4">
+      {/* Toggle cards: Fixa / Recorrente */}
+      <div className={cn('grid gap-3', tipo === 'tarefa' ? 'grid-cols-2' : 'grid-cols-1')}>
+        {/* Tarefa Fixa — só para tarefas */}
         {tipo === 'tarefa' && (
           <button
             type="button"
-            onClick={() => handleFixaToggle(true)}
-            className="w-full flex items-start gap-3 p-3 rounded-lg border-2 border-slate-200 bg-white text-left hover:border-teal-300 hover:bg-teal-50/50 transition-all"
+            onClick={() => handleModoChange('fixa')}
+            className={cn(
+              'flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-all',
+              modo === 'fixa'
+                ? 'border-teal-400 bg-teal-50'
+                : 'border-slate-200 bg-white hover:border-teal-300 hover:bg-teal-50/30'
+            )}
           >
-            <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <Pin className="w-4 h-4 text-slate-400" />
+            <div className={cn(
+              'w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0',
+              modo === 'fixa' ? 'bg-teal-100' : 'bg-slate-100'
+            )}>
+              <Pin className={cn('w-4 h-4', modo === 'fixa' ? 'text-teal-600' : 'text-slate-400')} />
             </div>
-            <div>
-              <span className="text-sm font-medium text-slate-600">Tarefa Fixa</span>
-              <p className="text-[11px] text-slate-400 mt-0.5">Aparece todo dia automaticamente, sem acumular atrasos</p>
+            <div className="min-w-0">
+              <div className={cn('text-sm font-medium', modo === 'fixa' ? 'text-teal-700' : 'text-slate-600')}>
+                Tarefa Fixa
+              </div>
+              <div className={cn('text-[11px] mt-0.5', modo === 'fixa' ? 'text-teal-600' : 'text-slate-400')}>
+                Todo dia, sem acumular
+              </div>
             </div>
           </button>
         )}
 
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="recorrencia-ativa"
-            checked={false}
-            onCheckedChange={handleCheckboxChange}
-          />
-          <Label htmlFor="recorrencia-ativa" className="text-sm font-medium cursor-pointer">
-            Esta {tipo} se repete
-          </Label>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Checkbox principal */}
-      <div className="flex items-center gap-2">
-        <Checkbox
-          id="recorrencia-ativa"
-          checked={true}
-          onCheckedChange={handleCheckboxChange}
-        />
-        <Label htmlFor="recorrencia-ativa" className="text-sm font-medium cursor-pointer">
-          Esta {tipo} se repete
-        </Label>
-      </div>
-
-      {/* Card de configuração */}
-      <div className="border border-slate-200 rounded-lg p-4 space-y-4 bg-slate-50">
-        {/* Frequência */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Frequência</Label>
-          <Select
-            value={value?.frequencia}
-            onValueChange={(v) => handleFieldChange('frequencia', v)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="diaria">Diária</SelectItem>
-              <SelectItem value="semanal">Semanal</SelectItem>
-              <SelectItem value="mensal">Mensal</SelectItem>
-              <SelectItem value="anual">Anual</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Intervalo */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">
-            Repetir a cada
-          </Label>
-          <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              min="1"
-              value={value?.intervalo || 1}
-              onChange={(e) => handleFieldChange('intervalo', parseInt(e.target.value) || 1)}
-              className="w-20"
-            />
-            <span className="text-sm text-slate-600">
-              {value?.frequencia === 'diaria' && 'dia(s)'}
-              {value?.frequencia === 'semanal' && 'semana(s)'}
-              {value?.frequencia === 'mensal' && 'mês/meses'}
-              {value?.frequencia === 'anual' && 'ano(s)'}
-            </span>
+        {/* Recorrente */}
+        <button
+          type="button"
+          onClick={() => handleModoChange('recorrente')}
+          className={cn(
+            'flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-all',
+            modo === 'recorrente'
+              ? 'border-[#89bcbe] bg-[#aacfd0]/10'
+              : 'border-slate-200 bg-white hover:border-[#89bcbe]/60 hover:bg-[#aacfd0]/5'
+          )}
+        >
+          <div className={cn(
+            'w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0',
+            modo === 'recorrente' ? 'bg-[#aacfd0]/30' : 'bg-slate-100'
+          )}>
+            <Repeat className={cn('w-4 h-4', modo === 'recorrente' ? 'text-[#34495e]' : 'text-slate-400')} />
           </div>
-        </div>
-
-        {/* Configurações específicas por frequência */}
-        {value?.frequencia === 'diaria' && (
-          <div className="flex items-center gap-2 p-3 bg-white rounded-md border border-slate-200">
-            <Checkbox
-              id="apenas-uteis"
-              checked={value?.apenasUteis || false}
-              onCheckedChange={(checked) => handleFieldChange('apenasUteis', checked)}
-            />
-            <Label htmlFor="apenas-uteis" className="text-sm cursor-pointer">
-              Apenas em dias úteis
-            </Label>
-          </div>
-        )}
-
-        {value?.frequencia === 'semanal' && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Repetir nos dias</Label>
-            <div className="grid grid-cols-7 gap-2">
-              {DIAS_SEMANA.map((dia) => (
-                <button
-                  key={dia.value}
-                  type="button"
-                  onClick={() => toggleDiaSemana(dia.value)}
-                  className={cn(
-                    'h-10 rounded-md border-2 transition-all text-sm font-medium',
-                    value?.diasSemana?.includes(dia.value)
-                      ? 'bg-[#89bcbe] border-[#89bcbe] text-white'
-                      : 'bg-white border-slate-200 text-slate-600 hover:border-[#89bcbe]'
-                  )}
-                  title={dia.nome}
-                >
-                  {dia.label}
-                </button>
-              ))}
+          <div className="min-w-0">
+            <div className={cn('text-sm font-medium', modo === 'recorrente' ? 'text-[#34495e]' : 'text-slate-600')}>
+              Recorrente
+            </div>
+            <div className={cn('text-[11px] mt-0.5', modo === 'recorrente' ? 'text-[#46627f]' : 'text-slate-400')}>
+              Personalizar frequência
             </div>
           </div>
-        )}
+        </button>
+      </div>
 
-        {value?.frequencia === 'mensal' && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">No dia</Label>
+      {/* Config de recorrência (expandido quando modo === 'recorrente') */}
+      {modo === 'recorrente' && value && (
+        <div className="border border-slate-200 rounded-lg p-4 space-y-3 bg-slate-50">
+          {/* Frequência + Intervalo na mesma linha */}
+          <div className="flex items-center gap-2 flex-wrap">
             <Select
-              value={value?.diaMes?.toString() || '1'}
-              onValueChange={(v) => handleFieldChange('diaMes', parseInt(v))}
+              value={value.frequencia}
+              onValueChange={(v) => handleFieldChange('frequencia', v)}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-[130px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Array.from({ length: 31 }, (_, i) => i + 1).map((dia) => (
-                  <SelectItem key={dia} value={dia.toString()}>
-                    Dia {dia}
-                  </SelectItem>
-                ))}
-                <SelectItem value="99">Último dia do mês</SelectItem>
+                <SelectItem value="diaria">Diária</SelectItem>
+                <SelectItem value="semanal">Semanal</SelectItem>
+                <SelectItem value="mensal">Mensal</SelectItem>
+                <SelectItem value="anual">Anual</SelectItem>
               </SelectContent>
             </Select>
+            <span className="text-sm text-slate-500">a cada</span>
+            <Input
+              type="number"
+              min="1"
+              value={value.intervalo || 1}
+              onChange={(e) => handleFieldChange('intervalo', parseInt(e.target.value) || 1)}
+              className="w-16 text-center"
+            />
+            <span className="text-sm text-slate-500">{unidadeLabel()}</span>
           </div>
-        )}
 
-        {value?.frequencia === 'anual' && (
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Dia</Label>
+          {/* Condicional: dias úteis (diária) */}
+          {value.frequencia === 'diaria' && (
+            <div className="flex items-center gap-2 pl-1">
+              <Checkbox
+                id="apenas-uteis"
+                checked={value.apenasUteis || false}
+                onCheckedChange={(checked) => handleFieldChange('apenasUteis', checked)}
+              />
+              <Label htmlFor="apenas-uteis" className="text-sm cursor-pointer text-slate-600">
+                Apenas dias úteis
+              </Label>
+            </div>
+          )}
+
+          {/* Condicional: dias da semana (semanal) */}
+          {value.frequencia === 'semanal' && (
+            <div className="space-y-1.5">
+              <Label className="text-xs text-slate-500">Dias</Label>
+              <div className="grid grid-cols-7 gap-1.5">
+                {DIAS_SEMANA.map((dia) => (
+                  <button
+                    key={dia.value}
+                    type="button"
+                    onClick={() => toggleDiaSemana(dia.value)}
+                    className={cn(
+                      'h-9 rounded-md border transition-all text-sm font-medium',
+                      value.diasSemana?.includes(dia.value)
+                        ? 'bg-[#89bcbe] border-[#89bcbe] text-white'
+                        : 'bg-white border-slate-200 text-slate-500 hover:border-[#89bcbe]'
+                    )}
+                    title={dia.nome}
+                  >
+                    {dia.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Condicional: dia do mês (mensal) */}
+          {value.frequencia === 'mensal' && (
+            <div className="flex items-center gap-2">
+              <Label className="text-sm text-slate-500">No dia</Label>
               <Select
-                value={value?.diaMes?.toString() || '1'}
+                value={value.diaMes?.toString() || '1'}
                 onValueChange={(v) => handleFieldChange('diaMes', parseInt(v))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((dia) => (
+                    <SelectItem key={dia} value={dia.toString()}>
+                      Dia {dia}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="99">Último dia</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Condicional: dia + mês (anual) */}
+          {value.frequencia === 'anual' && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <Label className="text-sm text-slate-500">No dia</Label>
+              <Select
+                value={value.diaMes?.toString() || '1'}
+                onValueChange={(v) => handleFieldChange('diaMes', parseInt(v))}
+              >
+                <SelectTrigger className="w-[80px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -357,14 +335,12 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Mês</Label>
+              <Label className="text-sm text-slate-500">de</Label>
               <Select
-                value={value?.mes?.toString() || '1'}
+                value={value.mes?.toString() || '1'}
                 onValueChange={(v) => handleFieldChange('mes', parseInt(v))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-[140px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -376,116 +352,92 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
                 </SelectContent>
               </Select>
             </div>
+          )}
+
+          {/* Horário padrão — apenas para eventos */}
+          {tipo === 'evento' && (
+            <div className="flex items-center gap-2">
+              <Label className="text-sm text-slate-500">Horário</Label>
+              <Input
+                type="time"
+                value={value.horaPadrao || '09:00'}
+                onChange={(e) => handleFieldChange('horaPadrao', e.target.value)}
+                className="w-[120px]"
+              />
+            </div>
+          )}
+
+          {/* Separador fino */}
+          <div className="border-t border-slate-200" />
+
+          {/* Período: início + término lado a lado */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-slate-500">Início</Label>
+              <DateInput
+                value={value.dataInicio || ''}
+                onChange={(date) => handleFieldChange('dataInicio', date)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-slate-500">Término</Label>
+              <Select
+                value={value.terminoTipo || 'permanente'}
+                onValueChange={(v) => handleFieldChange('terminoTipo', v)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="permanente">Nunca</SelectItem>
+                  <SelectItem value="data">Em data específica</SelectItem>
+                  <SelectItem value="ocorrencias">Após N ocorrências</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        )}
 
-        {/* Horário padrão */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5" />
-            Horário padrão
-          </Label>
-          <Input
-            type="time"
-            value={value?.horaPadrao || '09:00'}
-            onChange={(e) => handleFieldChange('horaPadrao', e.target.value)}
-          />
-        </div>
+          {/* Sub-campo condicional para término */}
+          {value.terminoTipo === 'data' && (
+            <div className="pl-[calc(50%+0.375rem)]">
+              <DateInput
+                value={value.dataFim || ''}
+                onChange={(date) => handleFieldChange('dataFim', date)}
+              />
+            </div>
+          )}
+          {value.terminoTipo === 'ocorrencias' && (
+            <div className="flex items-center gap-2 pl-[calc(50%+0.375rem)]">
+              <Input
+                type="number"
+                min="1"
+                value={value.numeroOcorrencias || 10}
+                onChange={(e) => handleFieldChange('numeroOcorrencias', parseInt(e.target.value) || 10)}
+                className="w-20"
+              />
+              <span className="text-sm text-slate-500">vezes</span>
+            </div>
+          )}
 
-        {/* Separador */}
-        <div className="border-t border-slate-200" />
-
-        {/* Período */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5" />
-            Período
-          </Label>
-
-          <div className="space-y-2">
-            <Label className="text-xs text-slate-600">Inicia em</Label>
-            <DateInput
-              value={value?.dataInicio || ''}
-              onChange={(date) => handleFieldChange('dataInicio', date)}
-            />
-          </div>
-
-          <div className="space-y-3 bg-white p-3 rounded-md border border-slate-200">
-            <Label className="text-xs text-slate-600">Termina</Label>
-
-            <RadioGroup
-              value={value?.terminoTipo || 'permanente'}
-              onValueChange={(v) => handleFieldChange('terminoTipo', v)}
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="permanente" id="termino-permanente" />
-                <Label htmlFor="termino-permanente" className="text-sm font-normal cursor-pointer">
-                  Nunca (permanente)
-                </Label>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="data" id="termino-data" />
-                  <Label htmlFor="termino-data" className="text-sm font-normal cursor-pointer">
-                    Em data específica
-                  </Label>
-                </div>
-                {value?.terminoTipo === 'data' && (
-                  <div className="ml-6">
-                    <DateInput
-                      value={value?.dataFim || ''}
-                      onChange={(date) => handleFieldChange('dataFim', date)}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="ocorrencias" id="termino-ocorrencias" />
-                  <Label htmlFor="termino-ocorrencias" className="text-sm font-normal cursor-pointer">
-                    Após número de ocorrências
-                  </Label>
-                </div>
-                {value?.terminoTipo === 'ocorrencias' && (
-                  <div className="ml-6 flex items-center gap-2">
-                    <Input
-                      type="number"
-                      min="1"
-                      value={value?.numeroOcorrencias || 10}
-                      onChange={(e) => handleFieldChange('numeroOcorrencias', parseInt(e.target.value) || 10)}
-                      className="w-24"
-                    />
-                    <span className="text-sm text-slate-600">vezes</span>
-                  </div>
-                )}
-              </div>
-            </RadioGroup>
-          </div>
-        </div>
-
-        {/* Resumo legível da recorrência */}
-        {value && (
-          <div className="bg-[#aacfd0]/20 border border-[#89bcbe]/50 rounded-md p-3">
-            <p className="text-xs text-[#34495e] font-medium flex items-start gap-2">
-              <Repeat className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[#89bcbe]" />
+          {/* Resumo compacto */}
+          <div className="bg-[#aacfd0]/20 border border-[#89bcbe]/40 rounded-md px-3 py-2">
+            <p className="text-xs text-[#34495e] font-medium flex items-center gap-2">
+              <Repeat className="w-3.5 h-3.5 flex-shrink-0 text-[#89bcbe]" />
               <span>{getRecorrenciaSummary(value)}</span>
             </p>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-          <p className="text-xs text-blue-700 flex items-start gap-2">
-            <Repeat className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-            <span>
-              As ocorrências aparecerão automaticamente no calendário.
-              Você poderá editar ou pular ocorrências individuais.
-            </span>
+      {/* Info compacta para Tarefa Fixa */}
+      {modo === 'fixa' && (
+        <div className="bg-teal-50 border border-teal-200 rounded-lg px-3 py-2">
+          <p className="text-xs text-teal-700 flex items-center gap-2">
+            <Pin className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>Aparece todo dia automaticamente. Nunca acumula atrasos. Vínculo com processo/consultivo obrigatório.</span>
           </p>
         </div>
-      </div>
+      )}
     </div>
   )
 }

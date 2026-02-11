@@ -3,11 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { AgendaItem } from './useAgendaConsolidada';
-import { formatDateForDB } from '@/lib/timezone';
 
 export interface TarefaDoDia extends AgendaItem {
   // Adiciona campos úteis para o timer
   temTimerAtivo?: boolean;
+  numero_pasta?: string;
 }
 
 interface UseTarefasDoDiaReturn {
@@ -42,23 +42,46 @@ export function useTarefasDoDia(escritorioId: string | null): UseTarefasDoDiaRet
         return;
       }
 
-      // Data de hoje
-      const hoje = new Date();
-      const hojeStr = formatDateForDB(hoje);
+      // Data de hoje em São Paulo (YYYY-MM-DD) via Intl API
+      // formatDateForDB retorna ISO completo, não serve para concatenar
+      const agora = new Date();
+      const hojeStr = agora.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+      // Converter para range UTC: São Paulo = UTC-3
+      // Meia-noite São Paulo = 03:00 UTC do mesmo dia
+      const inicioHojeUTC = `${hojeStr}T03:00:00`;
+      // 23:59:59 São Paulo = dia seguinte 02:59:59 UTC
+      const [y, m, d] = hojeStr.split('-').map(Number);
+      const amanhaStr = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+      const fimHojeUTC = `${amanhaStr}T02:59:59`;
 
       // Buscar tarefas do dia da view consolidada - APENAS do usuário logado
+      // data_inicio é timestamptz → compara em UTC (meia-noite SP = 03:00 UTC)
       const { data, error: queryError } = await supabase
         .from('v_agenda_consolidada')
         .select('*')
         .eq('escritorio_id', escritorioId)
         .eq('tipo_entidade', 'tarefa')
-        .contains('responsaveis_ids', [user.id]) // Filtrar tarefas onde o usuário é responsável
+        .contains('responsaveis_ids', [user.id])
         .in('status', ['pendente', 'em_andamento'])
-        .or(`data_inicio.gte.${hojeStr}T00:00:00,data_inicio.lte.${hojeStr}T23:59:59,prazo_data_limite.gte.${hojeStr}T00:00:00,prazo_data_limite.lte.${hojeStr}T23:59:59`)
+        .gte('data_inicio', inicioHojeUTC)
+        .lte('data_inicio', fimHojeUTC)
         .order('prioridade', { ascending: true }) // alta primeiro
         .order('data_inicio', { ascending: true });
 
       if (queryError) throw queryError;
+
+      // Buscar numero_pasta dos processos vinculados
+      const processoIds = [...new Set((data || []).filter((t) => t.processo_id).map((t) => t.processo_id!))];
+      const numeroPastaMap = new Map<string, string>();
+      if (processoIds.length > 0) {
+        const { data: processos } = await supabase
+          .from('processos_processos')
+          .select('id, numero_pasta')
+          .in('id', processoIds);
+        (processos || []).forEach((p: any) => {
+          if (p.numero_pasta) numeroPastaMap.set(p.id, p.numero_pasta);
+        });
+      }
 
       // Verificar quais tarefas já têm timer ativo
       const { data: timersAtivos } = await supabase
@@ -68,10 +91,11 @@ export function useTarefasDoDia(escritorioId: string | null): UseTarefasDoDiaRet
 
       const tarefasComTimerIds = new Set(timersAtivos?.map((t) => t.tarefa_id) || []);
 
-      // Marcar tarefas com timer ativo
+      // Marcar tarefas com timer ativo e numero_pasta
       const tarefasComFlag = (data || []).map((tarefa) => ({
         ...tarefa,
         temTimerAtivo: tarefasComTimerIds.has(tarefa.id),
+        numero_pasta: tarefa.processo_id ? numeroPastaMap.get(tarefa.processo_id) : undefined,
       }));
 
       setTarefas(tarefasComFlag);

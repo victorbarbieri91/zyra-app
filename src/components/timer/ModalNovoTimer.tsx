@@ -14,12 +14,16 @@ interface ModalNovoTimerProps {
 interface ProcessoOption {
   id: string;
   numero: string;
+  numero_pasta?: string;
+  autor?: string;
+  reu?: string;
   cliente_nome?: string;
 }
 
 interface ConsultaOption {
   id: string;
   titulo: string;
+  numero?: string;
   cliente_nome?: string;
 }
 
@@ -34,7 +38,6 @@ export function ModalNovoTimer({ onClose }: ModalNovoTimerProps) {
   // Form state
   const [titulo, setTitulo] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [faturavel, setFaturavel] = useState(true);
   const [vinculoTipo, setVinculoTipo] = useState<'processo' | 'consulta'>('processo');
   const [vinculoId, setVinculoId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,33 +58,121 @@ export function ModalNovoTimer({ onClose }: ModalNovoTimerProps) {
       setSearchLoading(true);
       try {
         if (vinculoTipo === 'processo') {
-          const { data } = await supabase
+          // Busca por numero_cnj, numero_pasta OU parte_contraria
+          const { data: processosData } = await supabase
             .from('processos_processos')
-            .select('id, numero_cnj, crm_pessoas(nome_completo)')
+            .select('id, numero_cnj, numero_pasta, autor, reu, parte_contraria, cliente_id')
             .eq('escritorio_id', escritorioAtivo.id)
-            .ilike('numero_cnj', `%${searchTerm}%`)
+            .or(`numero_cnj.ilike.%${searchTerm}%,numero_pasta.ilike.%${searchTerm}%,parte_contraria.ilike.%${searchTerm}%`)
+            .limit(15);
+
+          // Também buscar por nome do cliente
+          const { data: clientesData } = await supabase
+            .from('crm_pessoas')
+            .select('id, nome_completo')
+            .eq('escritorio_id', escritorioAtivo.id)
+            .ilike('nome_completo', `%${searchTerm}%`)
             .limit(10);
 
+          const clienteMap = new Map((clientesData || []).map((c: any) => [c.id, c.nome_completo]));
+
+          // Buscar processos desses clientes
+          let processosCliente: any[] = [];
+          if (clienteMap.size > 0) {
+            const { data: pcData } = await supabase
+              .from('processos_processos')
+              .select('id, numero_cnj, numero_pasta, autor, reu, parte_contraria, cliente_id')
+              .eq('escritorio_id', escritorioAtivo.id)
+              .in('cliente_id', Array.from(clienteMap.keys()))
+              .limit(10);
+            processosCliente = pcData || [];
+          }
+
+          // Combinar e remover duplicados
+          const todosProcessos = [...(processosData || []), ...processosCliente];
+          const processosUnicos = Array.from(
+            new Map(todosProcessos.map((p: any) => [p.id, p])).values()
+          ).slice(0, 10);
+
+          // Buscar nomes dos clientes restantes
+          const clienteIdsParaBuscar = processosUnicos
+            .filter((p: any) => p.cliente_id && !clienteMap.has(p.cliente_id))
+            .map((p: any) => p.cliente_id);
+
+          if (clienteIdsParaBuscar.length > 0) {
+            const { data: clientesExtra } = await supabase
+              .from('crm_pessoas')
+              .select('id, nome_completo')
+              .in('id', clienteIdsParaBuscar);
+            (clientesExtra || []).forEach((c: any) => clienteMap.set(c.id, c.nome_completo));
+          }
+
           setProcessos(
-            (data || []).map((p: any) => ({
+            processosUnicos.map((p: any) => ({
               id: p.id,
               numero: p.numero_cnj,
-              cliente_nome: p.crm_pessoas?.nome_completo,
+              numero_pasta: p.numero_pasta,
+              autor: p.autor,
+              reu: p.reu,
+              cliente_nome: clienteMap.get(p.cliente_id) || p.parte_contraria,
             }))
           );
         } else {
-          const { data } = await supabase
+          // Busca por titulo ou numero
+          const { data: consultasData } = await supabase
             .from('consultivo_consultas')
-            .select('id, titulo, numero, crm_pessoas(nome_completo)')
+            .select('id, titulo, numero, cliente_id')
             .eq('escritorio_id', escritorioAtivo.id)
-            .ilike('titulo', `%${searchTerm}%`)
+            .or(`titulo.ilike.%${searchTerm}%,numero.ilike.%${searchTerm}%`)
+            .limit(15);
+
+          // Também buscar por nome do cliente
+          const { data: clientesConsultas } = await supabase
+            .from('crm_pessoas')
+            .select('id, nome_completo')
+            .eq('escritorio_id', escritorioAtivo.id)
+            .ilike('nome_completo', `%${searchTerm}%`)
             .limit(10);
 
+          const clienteMapConsultas = new Map((clientesConsultas || []).map((c: any) => [c.id, c.nome_completo]));
+
+          // Buscar consultas desses clientes
+          let consultasDoCliente: any[] = [];
+          if (clienteMapConsultas.size > 0) {
+            const { data: ccData } = await supabase
+              .from('consultivo_consultas')
+              .select('id, titulo, numero, cliente_id')
+              .eq('escritorio_id', escritorioAtivo.id)
+              .in('cliente_id', Array.from(clienteMapConsultas.keys()))
+              .limit(10);
+            consultasDoCliente = ccData || [];
+          }
+
+          // Combinar e remover duplicados
+          const todasConsultas = [...(consultasData || []), ...consultasDoCliente];
+          const consultasUnicas = Array.from(
+            new Map(todasConsultas.map((c: any) => [c.id, c])).values()
+          ).slice(0, 10);
+
+          // Buscar nomes dos clientes restantes
+          const clienteIdsBuscar = consultasUnicas
+            .filter((c: any) => c.cliente_id && !clienteMapConsultas.has(c.cliente_id))
+            .map((c: any) => c.cliente_id);
+
+          if (clienteIdsBuscar.length > 0) {
+            const { data: clientesExtra } = await supabase
+              .from('crm_pessoas')
+              .select('id, nome_completo')
+              .in('id', clienteIdsBuscar);
+            (clientesExtra || []).forEach((c: any) => clienteMapConsultas.set(c.id, c.nome_completo));
+          }
+
           setConsultas(
-            (data || []).map((c: any) => ({
+            consultasUnicas.map((c: any) => ({
               id: c.id,
-              titulo: c.numero ? `${c.numero} - ${c.titulo}` : c.titulo,
-              cliente_nome: c.crm_pessoas?.nome_completo,
+              titulo: c.titulo,
+              numero: c.numero,
+              cliente_nome: clienteMapConsultas.get(c.cliente_id),
             }))
           );
         }
@@ -114,7 +205,6 @@ export function ModalNovoTimer({ onClose }: ModalNovoTimerProps) {
         descricao: descricao.trim() || undefined,
         processo_id: vinculoTipo === 'processo' ? vinculoId : undefined,
         consulta_id: vinculoTipo === 'consulta' ? vinculoId : undefined,
-        faturavel,
       });
       toast.success('Timer iniciado!');
       onClose();
@@ -203,53 +293,100 @@ export function ModalNovoTimer({ onClose }: ModalNovoTimerProps) {
             <label className="block text-xs font-medium text-slate-600 mb-1.5">
               Buscar {vinculoTipo}
             </label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={`Digite o número do ${vinculoTipo}...`}
-                className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#34495e]"
-              />
-            </div>
 
-            {/* Lista de opções */}
-            {searchTerm.length >= 2 && (
-              <div className="mt-2 max-h-32 overflow-y-auto border border-slate-200 rounded-lg">
-                {searchLoading ? (
-                  <div className="p-3 text-center text-sm text-slate-500">Buscando...</div>
-                ) : opcoes.length === 0 ? (
-                  <div className="p-3 text-center text-sm text-slate-500">Nenhum resultado</div>
-                ) : (
-                  opcoes.map((opcao) => (
-                    <button
-                      key={opcao.id}
-                      type="button"
-                      onClick={() => {
-                        setVinculoId(opcao.id);
-                        setSearchTerm(vinculoTipo === 'processo' ? (opcao as ProcessoOption).numero : (opcao as ConsultaOption).titulo);
-                        // Auto-preencher título se vazio
-                        if (!titulo) {
-                          setTitulo(vinculoTipo === 'processo' ? (opcao as ProcessoOption).numero : (opcao as ConsultaOption).titulo);
-                        }
-                      }}
-                      className={`w-full px-3 py-2 text-left text-sm hover:bg-slate-50 transition-colors ${
-                        vinculoId === opcao.id ? 'bg-slate-100' : ''
-                      }`}
-                    >
-                      <span className="font-medium">
-                        {vinculoTipo === 'processo'
-                          ? (opcao as ProcessoOption).numero
-                          : (opcao as ConsultaOption).titulo}
-                      </span>
-                      {opcao.cliente_nome && (
-                        <span className="text-slate-400 ml-2">({opcao.cliente_nome})</span>
-                      )}
-                    </button>
-                  ))
-                )}
+            {/* Selecionado — chip */}
+            {vinculoId ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-[#f0f9f9] border border-[#aacfd0] rounded-lg">
+                <span className="flex-1 text-xs text-[#34495e] truncate">{searchTerm}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVinculoId('');
+                    setSearchTerm('');
+                  }}
+                  className="p-0.5 rounded hover:bg-slate-200 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5 text-slate-400" />
+                </button>
               </div>
+            ) : (
+              <>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder={vinculoTipo === 'processo' ? 'Buscar por nº processo, pasta, parte ou cliente...' : 'Buscar por título, número ou cliente...'}
+                    className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#34495e]"
+                  />
+                </div>
+
+                {/* Lista de opções */}
+                {searchTerm.length >= 2 && (
+                  <div className="mt-1.5 max-h-40 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100">
+                    {searchLoading ? (
+                      <div className="p-2.5 text-center text-xs text-slate-500">Buscando...</div>
+                    ) : opcoes.length === 0 ? (
+                      <div className="p-2.5 text-center text-xs text-slate-500">Nenhum resultado</div>
+                    ) : (
+                      opcoes.map((opcao) => {
+                        const isProcesso = vinculoTipo === 'processo';
+                        const proc = opcao as ProcessoOption;
+                        const cons = opcao as ConsultaOption;
+
+                        return (
+                          <button
+                            key={opcao.id}
+                            type="button"
+                            onClick={() => {
+                              setVinculoId(opcao.id);
+                              // Montar texto do chip
+                              if (isProcesso) {
+                                setSearchTerm(proc.numero_pasta ? `${proc.numero_pasta} — ${proc.numero}` : proc.numero);
+                              } else {
+                                setSearchTerm(cons.numero ? `${cons.numero} — ${cons.titulo}` : cons.titulo);
+                              }
+                              // Auto-preencher título se vazio
+                              if (!titulo) {
+                                setTitulo(isProcesso ? proc.numero : cons.titulo);
+                              }
+                            }}
+                            className="w-full px-3 py-1.5 text-left hover:bg-slate-50 transition-colors"
+                          >
+                            {isProcesso ? (
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-medium text-[#34495e]">
+                                    {proc.numero_pasta || proc.numero}
+                                  </span>
+                                  {proc.numero_pasta && (
+                                    <span className="text-[10px] text-slate-400 truncate">{proc.numero}</span>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-slate-400 truncate">
+                                  {proc.autor && proc.reu
+                                    ? `${proc.autor} x ${proc.reu}`
+                                    : proc.cliente_nome || ''}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-xs font-medium text-[#34495e] truncate">
+                                  {cons.numero ? `${cons.numero} — ` : ''}{cons.titulo}
+                                </span>
+                                {cons.cliente_nome && (
+                                  <span className="text-[10px] text-slate-400 truncate">{cons.cliente_nome}</span>
+                                )}
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -267,16 +404,6 @@ export function ModalNovoTimer({ onClose }: ModalNovoTimerProps) {
             />
           </div>
 
-          {/* Faturável */}
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={faturavel}
-              onChange={(e) => setFaturavel(e.target.checked)}
-              className="w-4 h-4 rounded border-slate-300 text-[#34495e] focus:ring-[#34495e]"
-            />
-            <span className="text-sm text-slate-600">Hora faturável</span>
-          </label>
         </div>
 
         {/* Footer */}

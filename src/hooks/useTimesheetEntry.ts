@@ -118,13 +118,15 @@ export function useTimesheetEntry(escritorioId: string | null): UseTimesheetEntr
       p_escritorio_id: escritorioId,
       p_user_id: user.id,
       p_data_trabalho: dados.data_trabalho,
-      p_hora_inicio: dados.hora_inicio,
-      p_hora_fim: dados.hora_fim,
+      p_hora_inicio: dados.hora_inicio || null,
+      p_hora_fim: dados.hora_fim || null,
+      p_horas: dados.horas || null,
       p_atividade: dados.atividade,
       p_processo_id: dados.processo_id || null,
       p_consulta_id: dados.consulta_id || null,
       p_tarefa_id: dados.tarefa_id || null,
-      p_faturavel: dados.faturavel, // Sobrescrito pelo trigger baseado no contrato
+      p_faturavel: dados.faturavel,
+      p_faturavel_manual: dados.faturavel_manual ?? false,
     });
 
     if (error) throw error;

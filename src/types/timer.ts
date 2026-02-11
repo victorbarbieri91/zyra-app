@@ -101,14 +101,16 @@ export interface NovoTimesheetData {
 
 export interface RegistroRetroativoData {
   data_trabalho: string; // YYYY-MM-DD
-  hora_inicio: string; // HH:mm
-  hora_fim: string; // HH:mm
+  hora_inicio?: string; // HH:mm - opcional no modo duração
+  hora_fim?: string; // HH:mm - opcional no modo duração
+  horas?: number; // Duração direta em decimal - opcional no modo horário
   atividade: string;
   processo_id?: string;
   consulta_id?: string;
   tarefa_id?: string;
   ato_tipo_id?: string; // Para contratos por_ato com modo hora
   faturavel: boolean;
+  faturavel_manual?: boolean;
 }
 
 export interface AjusteHorariosData {

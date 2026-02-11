@@ -7,9 +7,8 @@ import { useTimer } from '@/contexts/TimerContext';
 import { TimerDisplay } from './TimerDisplay';
 import { TimerCard } from './TimerCard';
 import { QuickStartPanel } from './QuickStartPanel';
-import { ModalFinalizarTimer } from './ModalFinalizarTimer';
-import { ModalRegistroRetroativo } from './ModalRegistroRetroativo';
 import { ModalNovoTimer } from './ModalNovoTimer';
+import TimesheetModal from '@/components/financeiro/TimesheetModal';
 
 export function FloatingTimerWidget() {
   const {
@@ -23,11 +22,18 @@ export function FloatingTimerWidget() {
     setWidgetTab,
     pausarTimer,
     retomarTimer,
-    finalizarTimer,
     descartarTimer,
   } = useTimer();
 
-  const [timerParaFinalizar, setTimerParaFinalizar] = useState<string | null>(null);
+  const [timerParaSalvar, setTimerParaSalvar] = useState<{
+    id: string;
+    processoId?: string | null;
+    consultaId?: string | null;
+    tarefaId?: string | null;
+    duracaoHoras: number;
+    duracaoMinutos: number;
+    atividade: string;
+  } | null>(null);
   const [showRetroativo, setShowRetroativo] = useState(false);
   const [showNovoTimer, setShowNovoTimer] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -91,7 +97,7 @@ export function FloatingTimerWidget() {
     const handleClickOutside = (event: MouseEvent) => {
       if (widgetRef.current && !widgetRef.current.contains(event.target as Node)) {
         // Não fechar se tiver modais abertos
-        if (!timerParaFinalizar && !showRetroativo && !showNovoTimer) {
+        if (!timerParaSalvar && !showRetroativo && !showNovoTimer) {
           setWidgetExpandido(false);
         }
       }
@@ -104,26 +110,36 @@ export function FloatingTimerWidget() {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [widgetExpandido, timerParaFinalizar, showRetroativo, showNovoTimer, setWidgetExpandido]);
+  }, [widgetExpandido, timerParaSalvar, showRetroativo, showNovoTimer, setWidgetExpandido]);
 
-  // Handler para finalizar timer
-  const handleStopTimer = (timerId: string) => {
-    setTimerParaFinalizar(timerId);
-  };
+  // Handler para parar timer e abrir TimesheetModal
+  const handleStopTimer = async (timerId: string) => {
+    const timer = timersAtivos.find((t) => t.id === timerId);
+    if (!timer) return;
 
-  // Handler para confirmar finalização
-  const handleConfirmFinalizar = async (descricao: string, ajusteMinutos: number) => {
-    if (timerParaFinalizar) {
+    // Pausar timer para congelar o tempo
+    if (timer.status === 'rodando') {
       try {
-        await finalizarTimer(timerParaFinalizar, { descricao, ajuste_minutos: ajusteMinutos });
-        setTimerParaFinalizar(null);
-        toast.success('Tempo registrado com sucesso!');
-      } catch (err: any) {
-        const errorMessage = err?.message || err?.error?.message || 'Erro desconhecido ao finalizar timer';
-        toast.error(errorMessage);
-        console.error('Erro ao finalizar timer:', err);
+        await pausarTimer(timerId);
+      } catch (err) {
+        console.error('Erro ao pausar timer:', err);
       }
     }
+
+    // Calcular horas e minutos do tempo acumulado
+    const totalSegundos = timer.tempo_atual;
+    const h = Math.floor(totalSegundos / 3600);
+    const m = Math.round((totalSegundos % 3600) / 60);
+
+    setTimerParaSalvar({
+      id: timerId,
+      processoId: timer.processo_id,
+      consultaId: timer.consulta_id,
+      tarefaId: timer.tarefa_id,
+      duracaoHoras: h,
+      duracaoMinutos: m,
+      atividade: timer.descricao || timer.titulo,
+    });
   };
 
   // Handler para descartar timer
@@ -158,10 +174,6 @@ export function FloatingTimerWidget() {
     });
   }, [timersAtivos, searchTerm]);
 
-  // Timer selecionado para finalizar
-  const timerSelecionado = timerParaFinalizar
-    ? timersAtivos.find((t) => t.id === timerParaFinalizar)
-    : null;
 
   // Widget minimizado
   if (!widgetExpandido) {
@@ -339,23 +351,33 @@ export function FloatingTimerWidget() {
         </div>
       </div>
 
-      {/* Modal Finalizar Timer */}
-      {timerSelecionado && (
-        <ModalFinalizarTimer
-          timer={timerSelecionado}
-          onConfirm={handleConfirmFinalizar}
-          onCancel={() => setTimerParaFinalizar(null)}
-          onDiscard={() => {
-            handleDiscardTimer(timerSelecionado.id);
-            setTimerParaFinalizar(null);
-          }}
-        />
-      )}
-
-      {/* Modal Registro Retroativo */}
-      {showRetroativo && (
-        <ModalRegistroRetroativo onClose={() => setShowRetroativo(false)} />
-      )}
+      {/* Modal TimesheetModal - para salvar timer ou registro retroativo */}
+      <TimesheetModal
+        open={!!timerParaSalvar || showRetroativo}
+        onOpenChange={(open) => {
+          if (!open) {
+            setTimerParaSalvar(null);
+            setShowRetroativo(false);
+          }
+        }}
+        processoId={timerParaSalvar?.processoId}
+        consultaId={timerParaSalvar?.consultaId}
+        tarefaId={timerParaSalvar?.tarefaId}
+        defaultModoRegistro={timerParaSalvar ? 'duracao' : undefined}
+        defaultDuracaoHoras={timerParaSalvar?.duracaoHoras}
+        defaultDuracaoMinutos={timerParaSalvar?.duracaoMinutos}
+        defaultAtividade={timerParaSalvar?.atividade}
+        onSuccess={() => {
+          if (timerParaSalvar) {
+            descartarTimer(timerParaSalvar.id);
+            setTimerParaSalvar(null);
+            toast.success('Horas registradas com sucesso!');
+          } else {
+            setShowRetroativo(false);
+            toast.success('Horas registradas com sucesso!');
+          }
+        }}
+      />
 
       {/* Modal Novo Timer */}
       {showNovoTimer && <ModalNovoTimer onClose={() => setShowNovoTimer(false)} />}

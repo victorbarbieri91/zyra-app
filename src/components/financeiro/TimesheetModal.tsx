@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import {
   Clock,
+  Timer,
   Loader2,
   Search,
   FileText,
@@ -36,9 +37,14 @@ interface TimesheetModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   // Pré-seleção opcional
-  processoId?: string
-  consultaId?: string
-  tarefaId?: string
+  processoId?: string | null
+  consultaId?: string | null
+  tarefaId?: string | null
+  // Defaults para integração com timer
+  defaultModoRegistro?: 'horario' | 'duracao'
+  defaultDuracaoHoras?: number
+  defaultDuracaoMinutos?: number
+  defaultAtividade?: string
   // Callbacks
   onSuccess?: () => void
 }
@@ -92,6 +98,10 @@ export default function TimesheetModal({
   processoId,
   consultaId,
   tarefaId,
+  defaultModoRegistro,
+  defaultDuracaoHoras,
+  defaultDuracaoMinutos,
+  defaultAtividade,
   onSuccess,
 }: TimesheetModalProps) {
   const supabase = createClient()
@@ -104,6 +114,11 @@ export default function TimesheetModal({
   const [atividade, setAtividade] = useState('')
   const [faturavel, setFaturavel] = useState<boolean | null>(null) // null = usar padrão do contrato
   const [faturavelManual, setFaturavelManual] = useState(false) // Indica se usuário sobrescreveu
+
+  // Modo de registro: duração (horas diretas) ou horário (início/fim)
+  const [modoRegistro, setModoRegistro] = useState<'horario' | 'duracao'>('duracao')
+  const [duracaoHoras, setDuracaoHoras] = useState(1)
+  const [duracaoMinutos, setDuracaoMinutos] = useState(0)
 
   // Vínculo state
   const [vinculoTipo, setVinculoTipo] = useState<'processo' | 'consulta'>('processo')
@@ -155,6 +170,25 @@ export default function TimesheetModal({
     return Math.max(0, totalMinutos / 60)
   }, [horaInicio, horaFim])
 
+  // Calcular horas em decimal - unificado para ambos os modos
+  const calcularHorasDecimalUnificado = useCallback(() => {
+    if (modoRegistro === 'duracao') {
+      return Math.max(0, duracaoHoras + duracaoMinutos / 60)
+    }
+    return calcularHorasDecimal()
+  }, [modoRegistro, duracaoHoras, duracaoMinutos, calcularHorasDecimal])
+
+  // Display de horas - unificado para ambos os modos
+  const calcularHorasDisplayUnificado = useCallback(() => {
+    if (modoRegistro === 'duracao') {
+      if (duracaoHoras === 0 && duracaoMinutos === 0) return '0min'
+      if (duracaoHoras === 0) return `${duracaoMinutos}min`
+      if (duracaoMinutos === 0) return `${duracaoHoras}h`
+      return `${duracaoHoras}h${duracaoMinutos}min`
+    }
+    return calcularHorasDisplay()
+  }, [modoRegistro, duracaoHoras, duracaoMinutos, calcularHorasDisplay])
+
   // Calcular faturável padrão baseado no contrato
   const faturavelPadrao = useCallback((): boolean => {
     if (!contratoInfo) return true // Sem contrato, assume faturável
@@ -175,7 +209,7 @@ export default function TimesheetModal({
       setDataTrabalho(formatDateForInput())
       setHoraInicio('09:00')
       setHoraFim('10:00')
-      setAtividade('')
+      setAtividade(defaultAtividade || '')
       setFaturavel(null)
       setFaturavelManual(false)
       setSearchTerm('')
@@ -185,6 +219,9 @@ export default function TimesheetModal({
       setAtosHora([])
       setAtoSelecionado(null)
       setHorasAcumuladasAto(null)
+      setModoRegistro(defaultModoRegistro || 'duracao')
+      setDuracaoHoras(defaultDuracaoHoras ?? 1)
+      setDuracaoMinutos(defaultDuracaoMinutos ?? 0)
 
       // Se tem processoId ou consultaId, carregar
       if (processoId) {
@@ -195,7 +232,7 @@ export default function TimesheetModal({
         loadConsultaById(consultaId)
       }
     }
-  }, [open, processoId, consultaId])
+  }, [open, processoId, consultaId, defaultModoRegistro, defaultDuracaoHoras, defaultDuracaoMinutos, defaultAtividade])
 
   // Carregar atos hora quando contrato é por_ato
   useEffect(() => {
@@ -615,9 +652,18 @@ export default function TimesheetModal({
       return
     }
 
-    if (horaFim <= horaInicio) {
-      toast.error('Hora fim deve ser maior que hora início')
-      return
+    // Validação de horário/duração conforme modo
+    if (modoRegistro === 'horario') {
+      if (horaFim <= horaInicio) {
+        toast.error('Hora fim deve ser maior que hora início')
+        return
+      }
+    } else {
+      const totalMin = duracaoHoras * 60 + duracaoMinutos
+      if (totalMin <= 0) {
+        toast.error('Informe a duração do trabalho')
+        return
+      }
     }
 
     if (!atividade.trim()) {
@@ -640,8 +686,9 @@ export default function TimesheetModal({
         p_escritorio_id: escritorioAtivo,
         p_user_id: user.id,
         p_data_trabalho: dataTrabalho,
-        p_hora_inicio: horaInicio,
-        p_hora_fim: horaFim,
+        p_hora_inicio: modoRegistro === 'horario' ? horaInicio : null,
+        p_hora_fim: modoRegistro === 'horario' ? horaFim : null,
+        p_horas: modoRegistro === 'duracao' ? calcularHorasDecimalUnificado() : null,
         p_atividade: atividade.trim(),
         p_processo_id: processoSelecionado?.id || null,
         p_consulta_id: consultaSelecionada?.id || null,
@@ -678,7 +725,7 @@ export default function TimesheetModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-[#34495e]">
             <Clock className="w-5 h-5 text-[#89bcbe]" />
@@ -956,14 +1003,44 @@ export default function TimesheetModal({
                   horasMinimas={atosHora.find(a => a.ato_tipo_id === atoSelecionado)?.horas_minimas}
                   horasMaximas={atosHora.find(a => a.ato_tipo_id === atoSelecionado)?.horas_maximas}
                   valorHora={atosHora.find(a => a.ato_tipo_id === atoSelecionado)?.valor_hora}
-                  horasNovas={calcularHorasDecimal()}
+                  horasNovas={calcularHorasDecimalUnificado()}
                 />
               )}
             </div>
           )}
 
-          {/* Data e Horários */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Toggle Modo de Registro */}
+          <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setModoRegistro('duracao')}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs transition-colors",
+                modoRegistro === 'duracao'
+                  ? "bg-[#f0f9f9] text-[#34495e] font-medium border-r border-slate-200"
+                  : "bg-white text-slate-500 hover:bg-slate-50 border-r border-slate-200"
+              )}
+            >
+              <Timer className="w-3 h-3" />
+              Duração
+            </button>
+            <button
+              type="button"
+              onClick={() => setModoRegistro('horario')}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs transition-colors",
+                modoRegistro === 'horario'
+                  ? "bg-[#f0f9f9] text-[#34495e] font-medium"
+                  : "bg-white text-slate-500 hover:bg-slate-50"
+              )}
+            >
+              <Clock className="w-3 h-3" />
+              Horário
+            </button>
+          </div>
+
+          {/* Data */}
+          <div className={cn("grid gap-3", modoRegistro === 'horario' ? "grid-cols-3" : "grid-cols-1")}>
             <div>
               <Label className="text-xs text-slate-600">Data</Label>
               <Input
@@ -974,33 +1051,84 @@ export default function TimesheetModal({
                 className="h-9 mt-1 text-sm"
               />
             </div>
-            <div>
-              <Label className="text-xs text-slate-600">Início</Label>
-              <Input
-                type="time"
-                value={horaInicio}
-                onChange={(e) => setHoraInicio(e.target.value)}
-                className="h-9 mt-1 text-sm"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-slate-600">Fim</Label>
-              <Input
-                type="time"
-                value={horaFim}
-                onChange={(e) => setHoraFim(e.target.value)}
-                className="h-9 mt-1 text-sm"
-              />
-            </div>
+            {modoRegistro === 'horario' && (
+              <>
+                <div>
+                  <Label className="text-xs text-slate-600">Início</Label>
+                  <Input
+                    type="time"
+                    value={horaInicio}
+                    onChange={(e) => setHoraInicio(e.target.value)}
+                    className="h-9 mt-1 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-600">Fim</Label>
+                  <Input
+                    type="time"
+                    value={horaFim}
+                    onChange={(e) => setHoraFim(e.target.value)}
+                    className="h-9 mt-1 text-sm"
+                  />
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Total de horas */}
-          <div className="flex items-center justify-center gap-2 py-2 bg-slate-50 rounded-lg border border-slate-200">
-            <Clock className="w-4 h-4 text-[#89bcbe]" />
-            <span className="text-sm text-slate-600">
-              Total: <strong className="text-[#34495e]">{calcularHorasDisplay()}</strong>
-            </span>
-          </div>
+          {/* Duração - Stepper compacto */}
+          {modoRegistro === 'duracao' && (
+            <div className="flex items-center justify-center gap-3 py-2.5 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setDuracaoHoras(Math.max(0, duracaoHoras - 1))}
+                  className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] transition-colors leading-none"
+                >
+                  <span className="relative" style={{ top: '-1px' }}>&#8722;</span>
+                </button>
+                <span className="text-base font-semibold text-[#34495e] w-7 text-center tabular-nums">{duracaoHoras}</span>
+                <span className="text-[11px] text-slate-400 -ml-0.5">h</span>
+                <button
+                  type="button"
+                  onClick={() => setDuracaoHoras(Math.min(23, duracaoHoras + 1))}
+                  className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] transition-colors leading-none"
+                >
+                  <span className="relative" style={{ top: '-0.5px' }}>+</span>
+                </button>
+              </div>
+
+              <span className="text-slate-300 text-sm">:</span>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setDuracaoMinutos(Math.max(0, duracaoMinutos - 15))}
+                  className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] transition-colors leading-none"
+                >
+                  <span className="relative" style={{ top: '-1px' }}>&#8722;</span>
+                </button>
+                <span className="text-base font-semibold text-[#34495e] w-7 text-center tabular-nums">{String(duracaoMinutos).padStart(2, '0')}</span>
+                <span className="text-[11px] text-slate-400 -ml-0.5">min</span>
+                <button
+                  type="button"
+                  onClick={() => setDuracaoMinutos(Math.min(45, duracaoMinutos + 15))}
+                  className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] transition-colors leading-none"
+                >
+                  <span className="relative" style={{ top: '-0.5px' }}>+</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Total de horas - apenas no modo horário */}
+          {modoRegistro === 'horario' && (
+            <div className="flex items-center justify-center gap-2 py-2 bg-slate-50 rounded-lg border border-slate-200">
+              <Clock className="w-4 h-4 text-[#89bcbe]" />
+              <span className="text-sm text-slate-600">
+                Total: <strong className="text-[#34495e]">{calcularHorasDisplayUnificado()}</strong>
+              </span>
+            </div>
+          )}
 
           {/* Atividade */}
           <div>
@@ -1063,7 +1191,7 @@ export default function TimesheetModal({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={loading || !hasSelection || !atividade.trim()}
+            disabled={loading || !hasSelection || !atividade.trim() || calcularHorasDecimalUnificado() <= 0}
             className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e] text-white"
           >
             {loading ? (

@@ -108,7 +108,7 @@ export function QuickStartPanel() {
               </p>
               <p className="text-[10px] text-slate-400 truncate leading-tight">
                 {tarefa.processo_id
-                  ? tarefa.processo_numero || 'Processo'
+                  ? tarefa.numero_pasta || tarefa.caso_titulo || tarefa.processo_numero || 'Processo'
                   : tarefa.consultivo_id
                   ? tarefa.consultivo_titulo || 'Consulta'
                   : 'Sem vínculo'}

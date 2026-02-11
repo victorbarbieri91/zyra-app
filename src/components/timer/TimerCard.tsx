@@ -82,7 +82,6 @@ export function TimerCard({
             />
             <span className="text-[10px] text-slate-400">
               {timer.status === 'rodando' ? 'Rodando' : 'Pausado'}
-              {timer.faturavel && ' • Faturável'}
             </span>
           </div>
           <h4 className="text-xs font-medium text-[#34495e] truncate">{timer.titulo}</h4>

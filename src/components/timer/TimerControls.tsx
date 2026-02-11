@@ -1,6 +1,6 @@
 'use client';
 
-import { Play, Pause, Square, Trash2 } from 'lucide-react';
+import { Play, Pause, Save, Trash2 } from 'lucide-react';
 import { TimerStatus } from '@/types/timer';
 
 interface TimerControlsProps {
@@ -66,7 +66,7 @@ export function TimerControls({
         className={`${buttonBase} ${sizeClasses[size]} bg-slate-100 text-slate-500 hover:bg-slate-200`}
         title="Parar e salvar"
       >
-        <Square className={iconSizes[size]} />
+        <Save className={iconSizes[size]} />
       </button>
 
       {/* Discard */}

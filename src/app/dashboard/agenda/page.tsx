@@ -806,20 +806,26 @@ export default function AgendaPage() {
 
   // Handlers para deletar
   const handleDeleteTarefa = async (tarefaId: string) => {
-    // Instâncias virtuais → abrir modal de exclusão de recorrência
+    // Instâncias virtuais → fechar detail modal e abrir modal de exclusão de recorrência
     if (tarefaId.startsWith('virtual_')) {
       const parts = tarefaId.split('_')
       const recId = parts[1]
       const dataOc = parts[2]
       const tarefa = tarefas.find(t => t.id === tarefaId)
-      setRecorrenciaDeleteTarget({
-        itemId: tarefaId,
-        titulo: tarefa?.titulo || 'Tarefa recorrente',
-        tipo: 'tarefa',
-        recorrenciaId: recId,
-        dataOcorrencia: dataOc,
-      })
-      setRecorrenciaDeleteOpen(true)
+      // Fechar modais de detalhe ANTES de abrir o de exclusão (evita conflito de focus trap)
+      setTarefaDetailOpen(false)
+      setEventoDetailOpen(false)
+      // Pequeno delay para garantir que o modal anterior fechou
+      setTimeout(() => {
+        setRecorrenciaDeleteTarget({
+          itemId: tarefaId,
+          titulo: tarefa?.titulo || 'Tarefa recorrente',
+          tipo: 'tarefa',
+          recorrenciaId: recId,
+          dataOcorrencia: dataOc,
+        })
+        setRecorrenciaDeleteOpen(true)
+      }, 150)
       return
     }
 
@@ -964,19 +970,25 @@ export default function AgendaPage() {
   }
 
   const handleCancelarEvento = async (eventoId: string) => {
-    // Instâncias virtuais → abrir modal de exclusão de recorrência
+    // Instâncias virtuais → fechar modal de detalhe primeiro, depois abrir modal de exclusão
     if (eventoId.startsWith('virtual_')) {
       const parts = eventoId.split('_')
       const recId = parts[1]
       const dataOc = parts[2]
-      setRecorrenciaDeleteTarget({
-        itemId: eventoId,
-        titulo: eventoSelecionado?.titulo || 'Evento recorrente',
-        tipo: 'evento',
-        recorrenciaId: recId,
-        dataOcorrencia: dataOc,
-      })
-      setRecorrenciaDeleteOpen(true)
+      const titulo = eventoSelecionado?.titulo || 'Evento recorrente'
+      // Fechar modais de detalhe antes para evitar conflito de focus trap do Radix
+      setTarefaDetailOpen(false)
+      setEventoDetailOpen(false)
+      setTimeout(() => {
+        setRecorrenciaDeleteTarget({
+          itemId: eventoId,
+          titulo,
+          tipo: 'evento',
+          recorrenciaId: recId,
+          dataOcorrencia: dataOc,
+        })
+        setRecorrenciaDeleteOpen(true)
+      }, 150)
       return
     }
 

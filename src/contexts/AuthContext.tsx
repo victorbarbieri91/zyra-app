@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
+import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -52,6 +53,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       setUser(user);
+      Sentry.setUser({ id: user.id, email: user.email || undefined });
     } catch (err) {
       console.error('Erro inesperado na verificacao de auth:', err);
       // Em caso de erro inesperado, redirecionar para login
@@ -66,6 +68,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       await supabase.auth.signOut();
       setUser(null);
+      Sentry.setUser(null);
       router.replace('/login');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);

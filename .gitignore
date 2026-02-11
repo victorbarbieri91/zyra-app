@@ -52,6 +52,16 @@ public/sw.js
 public/sw.js.map
 public/swe-worker-*.js
 
+# Sentry
+.sentryclirc
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/e2e/.auth/
+
 # Temporary files
 nul
 tsconfig.tsbuildinfo

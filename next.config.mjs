@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs";
 import withSerwistInit from "@serwist/next";
 
 const withSerwist = withSerwistInit({
@@ -28,4 +29,20 @@ const nextConfig = {
   },
 };
 
-export default withSerwist(nextConfig);
+// Sentry wraps outermost, Serwist wraps inner
+export default withSentryConfig(
+  withSerwist(nextConfig),
+  {
+    // Suprimir logs do Sentry exceto em CI
+    silent: !process.env.CI,
+
+    // Upload de source maps mais amplo
+    widenClientFileUpload: true,
+
+    // Ocultar source maps do browser
+    hideSourceMaps: true,
+
+    // Remover logger do bundle de produção
+    disableLogger: true,
+  }
+);

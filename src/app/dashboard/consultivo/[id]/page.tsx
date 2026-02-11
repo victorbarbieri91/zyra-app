@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -148,6 +148,11 @@ export default function ConsultaDetalhePage() {
 
   // Estados para Financeiro
   const [timesheetModalOpen, setTimesheetModalOpen] = useState(false)
+
+  // Estados para conclusão com modal de horas
+  const [tarefaParaConcluirId, setTarefaParaConcluirId] = useState<string | null>(null)
+  const [confirmSemHoras, setConfirmSemHoras] = useState(false)
+  const horasRegistradasRef = useRef(false)
 
   // Estado para Transformar em Processo
   const [transformarModalOpen, setTransformarModalOpen] = useState(false)
@@ -516,6 +521,15 @@ export default function ConsultaDetalhePage() {
   }
 
   const handleConcluirTarefa = async (tarefaId: string) => {
+    // Abrir modal de horas antes de concluir (consultivo sempre vinculado neste contexto)
+    setTarefaParaConcluirId(tarefaId)
+    horasRegistradasRef.current = false
+    setTarefaDetailOpen(false)
+    setTimesheetModalOpen(true)
+  }
+
+  // Executar conclusão direta (após horas ou sem horas)
+  const executeConcluirTarefa = async (tarefaId: string) => {
     try {
       const { error } = await supabase
         .from('agenda_tarefas')
@@ -523,7 +537,6 @@ export default function ConsultaDetalhePage() {
         .eq('id', tarefaId)
       if (error) throw error
       toast.success('Tarefa concluída!')
-      setTarefaDetailOpen(false)
       setSelectedTarefa(null)
       await loadAgenda()
     } catch (error) {
@@ -1395,9 +1408,65 @@ export default function ConsultaDetalhePage() {
       {/* Modal Lançar Horas */}
       <TimesheetModal
         open={timesheetModalOpen}
-        onOpenChange={setTimesheetModalOpen}
+        onOpenChange={(open) => {
+          if (!open && tarefaParaConcluirId && !horasRegistradasRef.current) {
+            // Fechou sem registrar horas → perguntar se quer concluir mesmo assim
+            setTimesheetModalOpen(false)
+            setConfirmSemHoras(true)
+            return
+          }
+          if (!open && tarefaParaConcluirId && horasRegistradasRef.current) {
+            setTarefaParaConcluirId(null)
+          }
+          setTimesheetModalOpen(open)
+        }}
         consultaId={consulta.id}
+        onSuccess={async () => {
+          horasRegistradasRef.current = true
+          setTimesheetModalOpen(false)
+          // Se estava concluindo tarefa, concluir agora
+          if (tarefaParaConcluirId) {
+            await executeConcluirTarefa(tarefaParaConcluirId)
+            setTarefaParaConcluirId(null)
+          }
+        }}
       />
+
+      {/* Dialog: concluir sem horas */}
+      <Dialog open={confirmSemHoras} onOpenChange={setConfirmSemHoras}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#34495e]">Concluir sem registrar horas?</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Você não registrou horas para esta tarefa. Deseja concluí-la mesmo assim?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTarefaParaConcluirId(null)
+                setConfirmSemHoras(false)
+              }}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={async () => {
+                if (tarefaParaConcluirId) {
+                  await executeConcluirTarefa(tarefaParaConcluirId)
+                }
+                setTarefaParaConcluirId(null)
+                setConfirmSemHoras(false)
+              }}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              Concluir sem horas
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal Detalhe do Andamento */}
       <Dialog open={!!selectedAndamento} onOpenChange={(open) => !open && setSelectedAndamento(null)}>

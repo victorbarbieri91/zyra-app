@@ -824,8 +824,13 @@ export default function TarefaDetailModal({
     </Dialog>
 
     {/* Modal de Confirmação para Editar Prazo Fatal */}
-    <Dialog open={confirmPrazoFatalOpen} onOpenChange={setConfirmPrazoFatalOpen}>
-      <DialogContent className="max-w-md p-0 overflow-hidden border-0">
+    <Dialog open={confirmPrazoFatalOpen} onOpenChange={(open) => {
+      setConfirmPrazoFatalOpen(open)
+      if (!open) {
+        setPendingPrazoFatalDate(null)
+      }
+    }}>
+      <DialogContent className="max-w-md p-0 overflow-hidden border-0 z-[100]">
         <DialogTitle className="sr-only">Confirmar Alteração do Prazo Fatal</DialogTitle>
         <div className="bg-white rounded-lg">
           {/* Header */}
@@ -900,7 +905,7 @@ export default function TarefaDetailModal({
         setPrazoFatalCalendarOpen(false)
       }
     }}>
-      <DialogContent className="max-w-md p-0 overflow-hidden border-0">
+      <DialogContent className="max-w-md p-0 overflow-hidden border-0 z-[100]">
         <DialogTitle className="sr-only">Reagendar Prazo Fatal</DialogTitle>
         <div className="bg-white rounded-lg">
           {/* Header */}

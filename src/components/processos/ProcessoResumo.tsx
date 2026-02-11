@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -143,6 +143,11 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
   const [editingEvento, setEditingEvento] = useState(false)
   const [editingAudiencia, setEditingAudiencia] = useState(false)
 
+  // Estados para conclusão com modal de horas
+  const [tarefaParaConcluirId, setTarefaParaConcluirId] = useState<string | null>(null)
+  const [confirmSemHoras, setConfirmSemHoras] = useState(false)
+  const horasRegistradasRef = useRef(false)
+
   const supabase = createClient()
   const router = useRouter()
 
@@ -283,6 +288,15 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
   }
 
   const handleConcluirTarefa = async (tarefaId: string) => {
+    // Abrir modal de horas antes de concluir (processo sempre vinculado neste contexto)
+    setTarefaParaConcluirId(tarefaId)
+    horasRegistradasRef.current = false
+    setTarefaDetailOpen(false)
+    setShowTimesheetModal(true)
+  }
+
+  // Executar conclusão direta (após horas ou sem horas)
+  const executeConcluirTarefa = async (tarefaId: string) => {
     try {
       const { error } = await supabase
         .from('agenda_tarefas')
@@ -295,7 +309,6 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
       if (error) throw error
 
       toast.success('Tarefa concluída!')
-      setTarefaDetailOpen(false)
       setSelectedTarefa(null)
       await reloadAgenda()
     } catch (error) {
@@ -1368,13 +1381,67 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
       {/* Modal de Timesheet */}
       <TimesheetModal
         open={showTimesheetModal}
-        onOpenChange={setShowTimesheetModal}
+        onOpenChange={(open) => {
+          if (!open && tarefaParaConcluirId && !horasRegistradasRef.current) {
+            // Fechou sem registrar horas → perguntar se quer concluir mesmo assim
+            setShowTimesheetModal(false)
+            setConfirmSemHoras(true)
+            return
+          }
+          if (!open && tarefaParaConcluirId && horasRegistradasRef.current) {
+            // Já registrou com sucesso - limpar
+            setTarefaParaConcluirId(null)
+          }
+          setShowTimesheetModal(open)
+        }}
         processoId={processo.id}
-        onSuccess={() => {
+        onSuccess={async () => {
+          horasRegistradasRef.current = true
           setShowTimesheetModal(false)
           setFinanceiroRefreshTrigger(prev => prev + 1)
+          // Se estava concluindo tarefa, concluir agora
+          if (tarefaParaConcluirId) {
+            await executeConcluirTarefa(tarefaParaConcluirId)
+            setTarefaParaConcluirId(null)
+          }
         }}
       />
+
+      {/* Dialog: concluir sem horas */}
+      <Dialog open={confirmSemHoras} onOpenChange={setConfirmSemHoras}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#34495e]">Concluir sem registrar horas?</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Você não registrou horas para esta tarefa. Deseja concluí-la mesmo assim?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTarefaParaConcluirId(null)
+                setConfirmSemHoras(false)
+              }}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={async () => {
+                if (tarefaParaConcluirId) {
+                  await executeConcluirTarefa(tarefaParaConcluirId)
+                }
+                setTarefaParaConcluirId(null)
+                setConfirmSemHoras(false)
+              }}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              Concluir sem horas
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal Editar Movimentação */}
       <Dialog open={editMovimentacaoOpen} onOpenChange={setEditMovimentacaoOpen}>

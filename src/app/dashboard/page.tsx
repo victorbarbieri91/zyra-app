@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -44,6 +44,7 @@ import {
   Activity,
 } from 'lucide-react'
 import { formatCurrency, formatHoras } from '@/lib/utils'
+import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import Link from 'next/link'
@@ -157,6 +158,13 @@ export default function DashboardPage() {
   const [eventoDetailOpen, setEventoDetailOpen] = useState(false)
   const [agendaAudienciaData, setAgendaAudienciaData] = useState<Record<string, unknown> | null>(null)
   const [agendaAudienciaOpen, setAgendaAudienciaOpen] = useState(false)
+
+  // Estados para conclusão de tarefas com modal de horas (dashboard)
+  const [dashTimesheetOpen, setDashTimesheetOpen] = useState(false)
+  const [dashTarefaParaConcluir, setDashTarefaParaConcluir] = useState<Tarefa | null>(null)
+  const [dashModoAvulso, setDashModoAvulso] = useState(false)
+  const [dashConfirmSemHoras, setDashConfirmSemHoras] = useState(false)
+  const dashHorasRegistradasRef = useRef(false)
 
   // Estado para nome do usuário (saudação local)
   const [nomeUsuario, setNomeUsuario] = useState<string>('')
@@ -299,6 +307,261 @@ export default function DashboardPage() {
       setAudienciasListOpen(true)
     }
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  // HANDLERS DE CONCLUSÃO DOS AGENDAMENTOS (Dashboard)
+  // ═══════════════════════════════════════════════════════════════
+
+  // Concluir tarefa (com lógica de modal de horas)
+  const handleDashCompleteTask = async (taskId: string) => {
+    try {
+      const supabase = createClient()
+      const { data: tarefa } = await supabase
+        .from('agenda_tarefas')
+        .select('*')
+        .eq('id', taskId)
+        .single()
+
+      if (!tarefa) {
+        toast.error('Tarefa não encontrada')
+        return
+      }
+
+      if (tarefa.status === 'concluida') {
+        // Reabrir tarefa
+        await supabase
+          .from('agenda_tarefas')
+          .update({ status: 'pendente', data_conclusao: null })
+          .eq('id', taskId)
+        setAgendaPage(0)
+        await refreshAgenda()
+        toast.success('Tarefa reaberta!')
+      } else if (tarefa.processo_id || tarefa.consultivo_id) {
+        // Tem vínculo → abrir modal de horas antes de concluir
+        setDashTarefaParaConcluir(tarefa as Tarefa)
+        setDashModoAvulso(false)
+        dashHorasRegistradasRef.current = false
+        setTarefaDetailOpen(false)
+        setDashTimesheetOpen(true)
+      } else {
+        // Sem vínculo → concluir direto
+        await supabase
+          .from('agenda_tarefas')
+          .update({ status: 'concluida', data_conclusao: new Date().toISOString() })
+          .eq('id', taskId)
+        setTarefaDetailOpen(false)
+        setTarefaDetailData(null)
+        setAgendaPage(0)
+        await refreshAgenda()
+        toast.success('Tarefa concluída!')
+      }
+    } catch (error) {
+      console.error('Erro ao concluir tarefa:', error)
+      toast.error('Erro ao concluir tarefa')
+    }
+  }
+
+  // Reabrir tarefa
+  const handleDashReopenTask = async (taskId: string) => {
+    try {
+      const supabase = createClient()
+      await supabase
+        .from('agenda_tarefas')
+        .update({ status: 'pendente', data_conclusao: null })
+        .eq('id', taskId)
+      setTarefaDetailOpen(false)
+      setTarefaDetailData(null)
+      setAgendaPage(0)
+      await refreshAgenda()
+      toast.success('Tarefa reaberta!')
+    } catch (error) {
+      console.error('Erro ao reabrir tarefa:', error)
+      toast.error('Erro ao reabrir tarefa')
+    }
+  }
+
+  // Lançar horas avulso (sem concluir)
+  const handleDashLancarHoras = () => {
+    if (tarefaDetailData) {
+      setDashTarefaParaConcluir(tarefaDetailData)
+      setDashModoAvulso(true)
+      dashHorasRegistradasRef.current = false
+      setTarefaDetailOpen(false)
+      setDashTimesheetOpen(true)
+    }
+  }
+
+  // Callback quando horas foram registradas com sucesso
+  const handleDashTimesheetSuccess = async () => {
+    dashHorasRegistradasRef.current = true
+
+    if (dashModoAvulso) {
+      // Modo avulso: reabrir modal de detalhe
+      if (dashTarefaParaConcluir) {
+        setTarefaDetailData(dashTarefaParaConcluir)
+        setTarefaDetailOpen(true)
+      }
+      setDashTarefaParaConcluir(null)
+      setDashModoAvulso(false)
+    } else if (dashTarefaParaConcluir) {
+      // Modo conclusão: concluir após registrar horas
+      try {
+        const supabase = createClient()
+        await supabase
+          .from('agenda_tarefas')
+          .update({ status: 'concluida', data_conclusao: new Date().toISOString() })
+          .eq('id', dashTarefaParaConcluir.id)
+        setAgendaPage(0)
+        await refreshAgenda()
+        toast.success('Tarefa concluída!')
+      } catch (error) {
+        console.error('Erro ao concluir tarefa após timesheet:', error)
+        toast.error('Horas registradas, mas erro ao concluir tarefa')
+      }
+      setDashTarefaParaConcluir(null)
+    }
+  }
+
+  // Callback quando modal de horas é fechado
+  const handleDashTimesheetClose = (open: boolean) => {
+    if (!open) {
+      if (dashModoAvulso && !dashHorasRegistradasRef.current) {
+        // Cancelou modo avulso: reabrir modal de detalhe
+        if (dashTarefaParaConcluir) {
+          setTarefaDetailData(dashTarefaParaConcluir)
+          setTarefaDetailOpen(true)
+        }
+        setDashTarefaParaConcluir(null)
+        setDashModoAvulso(false)
+      } else if (dashModoAvulso && dashHorasRegistradasRef.current) {
+        setDashTarefaParaConcluir(null)
+        setDashModoAvulso(false)
+      } else if (dashTarefaParaConcluir && !dashHorasRegistradasRef.current) {
+        // Fechou sem registrar horas → perguntar se quer concluir mesmo assim
+        setDashConfirmSemHoras(true)
+      } else {
+        setDashTarefaParaConcluir(null)
+      }
+    }
+    setDashTimesheetOpen(open)
+  }
+
+  // Concluir sem horas
+  const handleDashConcluirSemHoras = async () => {
+    if (dashTarefaParaConcluir) {
+      try {
+        const supabase = createClient()
+        await supabase
+          .from('agenda_tarefas')
+          .update({ status: 'concluida', data_conclusao: new Date().toISOString() })
+          .eq('id', dashTarefaParaConcluir.id)
+        setAgendaPage(0)
+        await refreshAgenda()
+        toast.success('Tarefa concluída!')
+      } catch (error) {
+        console.error('Erro ao concluir tarefa:', error)
+        toast.error('Erro ao concluir tarefa')
+      }
+    }
+    setDashTarefaParaConcluir(null)
+    setDashConfirmSemHoras(false)
+  }
+
+  // Marcar audiência como realizada
+  const handleDashRealizarAudiencia = async (audienciaId: string) => {
+    if (!confirm('Deseja marcar esta audiência como realizada?')) return
+
+    try {
+      const supabase = createClient()
+      await supabase
+        .from('agenda_audiencias')
+        .update({ status: 'realizada' })
+        .eq('id', audienciaId)
+
+      setAgendaAudienciaOpen(false)
+      setAgendaAudienciaData(null)
+      setAgendaPage(0)
+      await refreshAgenda()
+      toast.success('Audiência marcada como realizada!')
+    } catch (error) {
+      console.error('Erro ao marcar audiência como realizada:', error)
+      toast.error('Erro ao marcar audiência como realizada')
+    }
+  }
+
+  // Marcar evento/prazo como cumprido
+  const handleDashMarcarCumprido = async (eventoId: string) => {
+    if (!confirm('Deseja marcar este evento/prazo como cumprido?')) return
+
+    try {
+      const supabase = createClient()
+      await supabase
+        .from('agenda_eventos')
+        .update({ status: 'realizado' })
+        .eq('id', eventoId)
+
+      setEventoDetailOpen(false)
+      setEventoDetailData(null)
+      setAgendaPage(0)
+      await refreshAgenda()
+      toast.success('Evento marcado como cumprido!')
+    } catch (error) {
+      console.error('Erro ao marcar evento como cumprido:', error)
+      toast.error('Erro ao marcar evento como cumprido')
+    }
+  }
+
+  // Reabrir audiência
+  const handleDashReabrirAudiencia = async (audienciaId: string) => {
+    try {
+      const supabase = createClient()
+      await supabase
+        .from('agenda_audiencias')
+        .update({ status: 'agendada' })
+        .eq('id', audienciaId)
+
+      setAgendaAudienciaOpen(false)
+      setAgendaAudienciaData(null)
+      setAgendaPage(0)
+      await refreshAgenda()
+      toast.success('Audiência reaberta!')
+    } catch (error) {
+      console.error('Erro ao reabrir audiência:', error)
+      toast.error('Erro ao reabrir audiência')
+    }
+  }
+
+  // Reabrir evento
+  const handleDashReabrirEvento = async (eventoId: string) => {
+    try {
+      const supabase = createClient()
+      await supabase
+        .from('agenda_eventos')
+        .update({ status: 'agendado' })
+        .eq('id', eventoId)
+
+      setEventoDetailOpen(false)
+      setEventoDetailData(null)
+      setAgendaPage(0)
+      await refreshAgenda()
+      toast.success('Evento reaberto!')
+    } catch (error) {
+      console.error('Erro ao reabrir evento:', error)
+      toast.error('Erro ao reabrir evento')
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // FIM DOS HANDLERS DE CONCLUSÃO
+  // ═══════════════════════════════════════════════════════════════
+
+  // Bug 5: Corrigir paginação quando itens mudam
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(agendaItems.length / AGENDA_PER_PAGE) - 1)
+    if (agendaPage > maxPage) {
+      setAgendaPage(maxPage)
+    }
+  }, [agendaItems.length, agendaPage])
 
   // Calcular progresso
   const progressoReceita = ((metrics?.honorarios_mes || 0) / (metrics?.receita_meta || 1)) * 100
@@ -1250,6 +1513,9 @@ export default function DashboardPage() {
           }}
           tarefa={tarefaDetailData}
           onUpdate={refreshAgenda}
+          onConcluir={() => handleDashCompleteTask(tarefaDetailData.id)}
+          onReabrir={() => handleDashReopenTask(tarefaDetailData.id)}
+          onLancarHoras={handleDashLancarHoras}
           onProcessoClick={(processoId) => router.push(`/dashboard/processos/${processoId}`)}
           onConsultivoClick={(consultivoId) => router.push(`/dashboard/consultivo/${consultivoId}`)}
         />
@@ -1285,6 +1551,8 @@ export default function DashboardPage() {
             promotor_nome: agendaAudienciaData.promotor_nome as string | undefined,
             advogado_contrario: agendaAudienciaData.advogado_contrario as string | undefined,
           }}
+          onRealizar={() => handleDashRealizarAudiencia(agendaAudienciaData.id as string)}
+          onReabrir={() => handleDashReabrirAudiencia(agendaAudienciaData.id as string)}
           onProcessoClick={(processoId) => router.push(`/dashboard/processos/${processoId}`)}
         />
       )}
@@ -1312,10 +1580,51 @@ export default function DashboardPage() {
             processo_id: eventoDetailData.processo_id as string | undefined,
             consultivo_id: eventoDetailData.consultivo_id as string | undefined,
           }}
+          onMarcarCumprido={() => handleDashMarcarCumprido(eventoDetailData.id as string)}
+          onReabrir={() => handleDashReabrirEvento(eventoDetailData.id as string)}
           onProcessoClick={(processoId) => router.push(`/dashboard/processos/${processoId}`)}
           onConsultivoClick={(consultivoId) => router.push(`/dashboard/consultivo/${consultivoId}`)}
         />
       )}
+
+      {/* TimesheetModal para conclusão de tarefas do dashboard */}
+      <TimesheetModal
+        open={dashTimesheetOpen}
+        onOpenChange={handleDashTimesheetClose}
+        onSuccess={handleDashTimesheetSuccess}
+        processoId={dashTarefaParaConcluir?.processo_id || undefined}
+        consultaId={dashTarefaParaConcluir?.consultivo_id || undefined}
+      />
+
+      {/* Dialog de confirmação: concluir sem horas */}
+      <Dialog open={dashConfirmSemHoras} onOpenChange={setDashConfirmSemHoras}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#34495e]">Concluir sem registrar horas?</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Você não registrou horas para esta tarefa. Deseja concluí-la mesmo assim?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDashTarefaParaConcluir(null)
+                setDashConfirmSemHoras(false)
+              }}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleDashConcluirSemHoras}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              Concluir sem horas
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={audienciasListOpen} onOpenChange={setAudienciasListOpen}>
         <DialogContent className="sm:max-w-md">

@@ -42,6 +42,21 @@ const statusConfig = {
     text: 'text-emerald-700',
     label: 'Concluída',
   },
+  realizada: {
+    bg: 'bg-emerald-100',
+    text: 'text-emerald-700',
+    label: 'Realizada',
+  },
+  realizado: {
+    bg: 'bg-emerald-100',
+    text: 'text-emerald-700',
+    label: 'Cumprido',
+  },
+  concluido: {
+    bg: 'bg-emerald-100',
+    text: 'text-emerald-700',
+    label: 'Cumprido',
+  },
   em_andamento: {
     bg: 'bg-blue-100',
     text: 'text-blue-700',
@@ -68,6 +83,10 @@ const statusConfig = {
     label: 'Reagendada',
   },
 }
+
+// Helper: verifica se um status indica conclusão (para qualquer tipo de agendamento)
+const isCompletedStatus = (status: string | undefined | null) =>
+  ['concluida', 'realizada', 'realizado', 'concluido'].includes(status || '')
 
 export default function AgendaListCard({ item, onClick, onComplete, className }: AgendaListCardProps) {
   const prioridadeInfo = item.prioridade ? prioridadeConfig[item.prioridade] : null
@@ -96,7 +115,7 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
       className={cn(
         'border border-slate-200 hover:border-[#89bcbe] transition-all cursor-pointer',
         'bg-white shadow-md hover:shadow-lg',
-        item.status === 'concluida' && 'opacity-60',
+        isCompletedStatus(item.status) && 'opacity-60',
         'group', // Para hover effects
         className
       )}
@@ -116,11 +135,11 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
                 'transition-all duration-150 mt-0.5',
                 'border-slate-300 hover:border-emerald-500 hover:bg-emerald-50',
                 'focus:outline-none focus:ring-1 focus:ring-emerald-500',
-                item.status === 'concluida' && 'bg-emerald-500 border-emerald-500'
+                isCompletedStatus(item.status) && 'bg-emerald-500 border-emerald-500'
               )}
-              title={item.status === 'concluida' ? 'Reabrir tarefa' : 'Marcar como concluída'}
+              title={isCompletedStatus(item.status) ? 'Reabrir' : 'Marcar como concluído'}
             >
-              {item.status === 'concluida' && (
+              {isCompletedStatus(item.status) && (
                 <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
               )}
             </button>
@@ -132,7 +151,7 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
               <h4
                 className={cn(
                   'text-xs font-bold text-[#34495e] leading-tight line-clamp-2',
-                  item.status === 'concluida' && 'line-through opacity-60'
+                  isCompletedStatus(item.status) && 'line-through opacity-60'
                 )}
               >
                 {item.titulo}

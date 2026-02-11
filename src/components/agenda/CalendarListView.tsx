@@ -33,6 +33,8 @@ interface CalendarListViewProps {
   onAudienciaClick: (audiencia: Audiencia) => void
   onEventoClick: (evento: Evento) => void
   onTaskComplete?: (tarefaId: string) => void
+  onAudienciaComplete?: (audienciaId: string) => void
+  onEventoComplete?: (eventoId: string) => void
   className?: string
 }
 
@@ -43,6 +45,8 @@ export default function CalendarListView({
   onAudienciaClick,
   onEventoClick,
   onTaskComplete,
+  onAudienciaComplete,
+  onEventoComplete,
   className,
 }: CalendarListViewProps) {
   const [periodoSelecionado, setPeriodoSelecionado] = useState('proximos-7d')
@@ -325,9 +329,15 @@ export default function CalendarListView({
                         key={item.id}
                         item={item}
                         onClick={() => handleItemClick(item)}
-                        onComplete={item.tipo_entidade === 'tarefa' && onTaskComplete
-                          ? () => onTaskComplete(item.id)
-                          : undefined}
+                        onComplete={
+                          item.tipo_entidade === 'tarefa' && onTaskComplete
+                            ? () => onTaskComplete(item.id)
+                            : item.tipo_entidade === 'audiencia' && onAudienciaComplete
+                              ? () => onAudienciaComplete(item.id)
+                              : item.tipo_entidade === 'evento' && onEventoComplete
+                                ? () => onEventoComplete(item.id)
+                                : undefined
+                        }
                       />
                     ))}
                   </div>

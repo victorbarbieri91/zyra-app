@@ -13,7 +13,8 @@ import {
   Calendar,
   MapPin,
   Video,
-  User
+  User,
+  RotateCcw
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -64,6 +65,7 @@ interface AudienciaDetailModalProps {
   onReagendar?: () => void
   onCancelar?: () => void
   onRealizar?: () => void
+  onReabrir?: () => void
   onProcessoClick?: (processoId: string) => void
 }
 
@@ -75,6 +77,7 @@ export default function AudienciaDetailModal({
   onReagendar,
   onCancelar,
   onRealizar,
+  onReabrir,
   onProcessoClick,
 }: AudienciaDetailModalProps) {
   const supabase = createClient()
@@ -442,30 +445,39 @@ export default function AudienciaDetailModal({
           {/* Footer com Ações */}
           <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
             <div className="flex items-center gap-2">
-              {isAgendada && (
-                <>
-                  {onRealizar && (
-                    <Button
-                      onClick={onRealizar}
-                      size="sm"
-                      className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                    >
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                      Marcar como Realizada
-                    </Button>
-                  )}
+              {/* Botão de concluir/reabrir */}
+              {isAgendada && onRealizar && (
+                <Button
+                  onClick={onRealizar}
+                  size="sm"
+                  className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                  Marcar como Realizada
+                </Button>
+              )}
 
-                  {onReagendar && (
-                    <Button
-                      onClick={onReagendar}
-                      size="sm"
-                      variant="outline"
-                      className="h-8 text-xs border-slate-200"
-                    >
-                      Reagendar
-                    </Button>
-                  )}
-                </>
+              {audiencia.status === 'realizada' && onReabrir && (
+                <Button
+                  onClick={onReabrir}
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs border-slate-200"
+                >
+                  <RotateCcw className="w-3 h-3 mr-1" />
+                  Reabrir
+                </Button>
+              )}
+
+              {isAgendada && onReagendar && (
+                <Button
+                  onClick={onReagendar}
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs border-slate-200"
+                >
+                  Reagendar
+                </Button>
               )}
 
               {onEdit && (

@@ -9,6 +9,7 @@ import {
   Edit,
   X,
   CheckCircle2,
+  RotateCcw,
   User,
   MapPin,
   FileText,
@@ -56,6 +57,7 @@ interface EventoDetailModalProps {
   onEdit?: () => void
   onCancelar?: () => void
   onMarcarCumprido?: () => void
+  onReabrir?: () => void
   onProcessoClick?: (processoId: string) => void
   onConsultivoClick?: (consultivoId: string) => void
 }
@@ -67,6 +69,7 @@ export default function EventoDetailModal({
   onEdit,
   onCancelar,
   onMarcarCumprido,
+  onReabrir,
   onProcessoClick,
   onConsultivoClick,
 }: EventoDetailModalProps) {
@@ -101,7 +104,7 @@ export default function EventoDetailModal({
 
   // Status badge color
   const getStatusColor = () => {
-    if (evento.status === 'concluido') return 'text-emerald-600'
+    if (evento.status === 'realizado') return 'text-emerald-600'
     if (evento.status === 'cancelado') return 'text-slate-400'
     if (prazoVencido && isPrazo) return 'text-red-600'
     return 'text-blue-600'
@@ -362,7 +365,8 @@ export default function EventoDetailModal({
           {/* Footer - Botões de Ação */}
           <div className="p-6 pt-4 border-t border-slate-100">
             <div className="flex items-center justify-end gap-2">
-              {isPrazo && onMarcarCumprido && evento.status !== 'concluido' && (
+              {/* Marcar como Cumprido - para prazos e compromissos */}
+              {onMarcarCumprido && evento.status !== 'realizado' && evento.status !== 'cancelado' && (
                 <Button
                   onClick={onMarcarCumprido}
                   size="sm"
@@ -370,6 +374,19 @@ export default function EventoDetailModal({
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
                   Marcar como Cumprido
+                </Button>
+              )}
+
+              {/* Reabrir - quando já concluído */}
+              {evento.status === 'realizado' && onReabrir && (
+                <Button
+                  onClick={onReabrir}
+                  size="sm"
+                  variant="outline"
+                  className="text-xs h-8"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                  Reabrir
                 </Button>
               )}
 

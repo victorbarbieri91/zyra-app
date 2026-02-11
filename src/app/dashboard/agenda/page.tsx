@@ -802,6 +802,74 @@ export default function AgendaPage() {
     }
   }
 
+  const handleReabrirAudiencia = async (audienciaId: string) => {
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+
+      const { error } = await supabase
+        .from('agenda_audiencias')
+        .update({ status: 'agendada' })
+        .eq('id', audienciaId)
+
+      if (error) throw error
+
+      setAudienciaDetailOpen(false)
+      setAudienciaSelecionada(null)
+      await refreshItems()
+      toast.success('Audiência reaberta!')
+    } catch (error) {
+      console.error('Erro ao reabrir audiência:', error)
+      toast.error('Erro ao reabrir audiência')
+    }
+  }
+
+  const handleMarcarEventoCumprido = async (eventoId: string) => {
+    if (!confirm('Deseja marcar este evento/prazo como cumprido?')) return
+
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+
+      const { error } = await supabase
+        .from('agenda_eventos')
+        .update({ status: 'realizado' })
+        .eq('id', eventoId)
+
+      if (error) throw error
+
+      setEventoDetailOpen(false)
+      setEventoSelecionado(null)
+      await refreshItems()
+      toast.success('Evento marcado como cumprido!')
+    } catch (error) {
+      console.error('Erro ao marcar evento como cumprido:', error)
+      toast.error('Erro ao marcar evento como cumprido')
+    }
+  }
+
+  const handleReabrirEvento = async (eventoId: string) => {
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+
+      const { error } = await supabase
+        .from('agenda_eventos')
+        .update({ status: 'agendado' })
+        .eq('id', eventoId)
+
+      if (error) throw error
+
+      setEventoDetailOpen(false)
+      setEventoSelecionado(null)
+      await refreshItems()
+      toast.success('Evento reaberto!')
+    } catch (error) {
+      console.error('Erro ao reabrir evento:', error)
+      toast.error('Erro ao reabrir evento')
+    }
+  }
+
   const handleCancelarEvento = async (eventoId: string) => {
     if (!confirm('Tem certeza que deseja cancelar este evento?')) return
 
@@ -1147,6 +1215,8 @@ export default function AgendaPage() {
                   setEventoDetailOpen(true)
                 }}
                 onTaskComplete={handleCompleteTask}
+                onAudienciaComplete={handleRealizarAudiencia}
+                onEventoComplete={handleMarcarEventoCumprido}
               />
             )}
           </>
@@ -1175,6 +1245,10 @@ export default function AgendaPage() {
         }}
         onCompleteTask={handleCompleteTask}
         onReopenTask={handleReopenTask}
+        onCompleteAudiencia={(id) => handleRealizarAudiencia(id)}
+        onReopenAudiencia={(id) => handleReabrirAudiencia(id)}
+        onCompleteEvento={(id) => handleMarcarEventoCumprido(id)}
+        onReopenEvento={(id) => handleReabrirEvento(id)}
         onLancarHoras={handleLancarHoras}
         onRescheduleTask={handleRescheduleTask}
         onProcessoClick={handleProcessoClick}
@@ -1252,6 +1326,7 @@ export default function AgendaPage() {
           onEdit={handleEditAudiencia}
           onCancelar={() => handleCancelarAudiencia(audienciaSelecionada.id)}
           onRealizar={() => handleRealizarAudiencia(audienciaSelecionada.id)}
+          onReabrir={() => handleReabrirAudiencia(audienciaSelecionada.id)}
           onProcessoClick={handleProcessoClick}
         />
       )}
@@ -1268,6 +1343,8 @@ export default function AgendaPage() {
           evento={eventoSelecionado as any}
           onEdit={handleEditEvento}
           onCancelar={() => handleCancelarEvento(eventoSelecionado.id)}
+          onMarcarCumprido={() => handleMarcarEventoCumprido(eventoSelecionado.id)}
+          onReabrir={() => handleReabrirEvento(eventoSelecionado.id)}
           onProcessoClick={handleProcessoClick}
           onConsultivoClick={handleConsultivoClick}
         />
@@ -1341,7 +1418,7 @@ export default function AgendaPage() {
 
       {/* Dialog de Confirmação - Concluir sem Lançar Horas */}
       <AlertDialog open={confirmConcluirSemHoras} onOpenChange={setConfirmConcluirSemHoras}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[100]">
           <AlertDialogHeader>
             <AlertDialogTitle>Concluir sem lançar horas?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1372,7 +1449,7 @@ export default function AgendaPage() {
           setPrazoFatalCalendarOpenSidebar(false)
         }
       }}>
-        <AlertDialogContent className="max-w-md p-0 overflow-hidden border-0">
+        <AlertDialogContent className="max-w-md p-0 overflow-hidden border-0 z-[100]">
           <div className="bg-white rounded-lg">
             {/* Header */}
             <div className="px-6 pt-5 pb-4 border-b border-slate-100">

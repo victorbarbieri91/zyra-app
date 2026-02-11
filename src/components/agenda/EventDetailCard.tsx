@@ -108,6 +108,20 @@ const criticidadeColors = {
   normal: 'bg-slate-400 text-white',
 }
 
+// Status que indica conclusão para cada tipo de agendamento
+const completedStatusMap: Record<string, string> = {
+  tarefa: 'concluida',
+  audiencia: 'realizada',
+  prazo: 'realizado',
+  compromisso: 'realizado',
+}
+
+const isItemCompleted = (tipo: string, status: string) =>
+  status === completedStatusMap[tipo]
+
+const isItemCancelled = (status: string) =>
+  ['cancelada', 'cancelado'].includes(status)
+
 const subtipoTarefaLabels: Record<string, string> = {
   prazo_processual: 'Prazo Processual',
   acompanhamento: 'Acompanhamento',
@@ -172,9 +186,12 @@ export default function EventDetailCard({
   const [calendarOpen, setCalendarOpen] = useState(false)
   const config = tipoConfig[tipo]
 
-  const podeSerConcluido = tipo === 'tarefa' && status !== 'concluida'
-  const estaConcluida = tipo === 'tarefa' && status === 'concluida'
+  const estaConcluida = isItemCompleted(tipo, status)
+  const podeSerConcluido = !estaConcluida && !isItemCancelled(status)
   const subtipoLabel = subtipo ? subtipoTarefaLabels[subtipo] || subtipo : null
+  const labelConcluir = tipo === 'tarefa' ? 'Concluir'
+    : tipo === 'audiencia' ? 'Realizada'
+    : 'Cumprido'
 
   return (
     <Card
@@ -189,7 +206,7 @@ export default function EventDetailCard({
         <div className="flex items-start justify-between gap-2 mb-1.5">
           <h4 className={cn(
             'text-xs font-bold text-[#34495e] leading-tight line-clamp-2',
-            tipo === 'tarefa' && status === 'concluida' && 'line-through opacity-60'
+            estaConcluida && 'line-through opacity-60'
           )}>
             {titulo}
           </h4>
@@ -365,26 +382,27 @@ export default function EventDetailCard({
         </div>
 
         {/* Footer com ações */}
-        {(podeSerConcluido || tipo === 'tarefa' || onLancarHoras) && (
+        {(podeSerConcluido || estaConcluida || onLancarHoras || (tipo === 'tarefa' && onReschedule)) && (
           <div className="flex items-center justify-between gap-2 mt-2 pt-1.5 border-t border-slate-100">
-            {/* Status badge para tarefas */}
-            {tipo === 'tarefa' && (
-              <Badge
-                variant="outline"
-                className={cn(
-                  'text-[10px] px-1.5 py-0 h-4 font-medium',
-                  status === 'concluida' && 'bg-emerald-100 text-emerald-700 border-emerald-200',
-                  status === 'em_andamento' && 'bg-blue-100 text-blue-700 border-blue-200',
-                  status === 'pendente' && 'bg-slate-100 text-slate-700 border-slate-200',
-                  status === 'cancelada' && 'bg-red-100 text-red-700 border-red-200'
-                )}
-              >
-                {status === 'concluida' && 'Concluída'}
-                {status === 'em_andamento' && 'Em andamento'}
-                {status === 'pendente' && 'Pendente'}
-                {status === 'cancelada' && 'Cancelada'}
-              </Badge>
-            )}
+            {/* Status badge */}
+            <Badge
+              variant="outline"
+              className={cn(
+                'text-[10px] px-1.5 py-0 h-4 font-medium',
+                estaConcluida && 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                status === 'em_andamento' && 'bg-blue-100 text-blue-700 border-blue-200',
+                (status === 'pendente' || status === 'agendada' || status === 'agendado') && 'bg-slate-100 text-slate-700 border-slate-200',
+                status === 'confirmada' && 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                isItemCancelled(status) && 'bg-red-100 text-red-700 border-red-200'
+              )}
+            >
+              {estaConcluida && (tipo === 'tarefa' ? 'Concluída' : tipo === 'audiencia' ? 'Realizada' : 'Cumprido')}
+              {status === 'em_andamento' && 'Em andamento'}
+              {status === 'pendente' && 'Pendente'}
+              {(status === 'agendada' || status === 'agendado') && 'Agendado'}
+              {status === 'confirmada' && 'Confirmada'}
+              {isItemCancelled(status) && 'Cancelado'}
+            </Badge>
 
             <div className="flex items-center gap-1.5 ml-auto">
               {/* Botão Reagendar - só para tarefas */}
@@ -470,22 +488,22 @@ export default function EventDetailCard({
                 </Button>
               )}
 
-              {/* Botão concluir para tarefas pendentes */}
-              {podeSerConcluido && (
+              {/* Botão concluir para itens pendentes */}
+              {podeSerConcluido && onComplete && (
                 <Button
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation()
-                    onComplete?.()
+                    onComplete()
                   }}
                   className="h-6 px-2 text-[10px] bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white"
                 >
                   <CheckCheck className="w-3 h-3 mr-1" />
-                  Concluir
+                  {labelConcluir}
                 </Button>
               )}
 
-              {/* Botão reabrir para tarefas concluídas */}
+              {/* Botão reabrir para itens concluídos */}
               {estaConcluida && onReopen && (
                 <Button
                   size="sm"

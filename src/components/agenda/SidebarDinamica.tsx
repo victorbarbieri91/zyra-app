@@ -19,6 +19,10 @@ interface SidebarDinamicaProps {
   onEventClick: (evento: AgendaItem) => void
   onCompleteTask?: (taskId: string) => void
   onReopenTask?: (taskId: string) => void
+  onCompleteAudiencia?: (audienciaId: string) => void
+  onReopenAudiencia?: (audienciaId: string) => void
+  onCompleteEvento?: (eventoId: string) => void
+  onReopenEvento?: (eventoId: string) => void
   onLancarHoras?: (taskId: string) => void
   onRescheduleTask?: (taskId: string, newDate: Date) => void
   onProcessoClick?: (processoId: string) => void
@@ -36,6 +40,10 @@ export default function SidebarDinamica({
   onEventClick,
   onCompleteTask,
   onReopenTask,
+  onCompleteAudiencia,
+  onReopenAudiencia,
+  onCompleteEvento,
+  onReopenEvento,
   onLancarHoras,
   onRescheduleTask,
   onProcessoClick,
@@ -68,9 +76,12 @@ export default function SidebarDinamica({
     }
 
     // Ordenar
+    const completedStatuses = ['concluida', 'realizada', 'realizado', 'concluido']
     resultado.sort((a, b) => {
-      if (a.tipo_entidade === 'tarefa' && a.status === 'concluida' && b.status !== 'concluida') return 1
-      if (b.tipo_entidade === 'tarefa' && b.status === 'concluida' && a.status !== 'concluida') return -1
+      const aCompleted = completedStatuses.includes(a.status)
+      const bCompleted = completedStatuses.includes(b.status)
+      if (aCompleted && !bCompleted) return 1
+      if (!aCompleted && bCompleted) return -1
       if (a.tipo_entidade === 'audiencia' && b.tipo_entidade !== 'audiencia') return -1
       if (a.tipo_entidade !== 'audiencia' && b.tipo_entidade === 'audiencia') return 1
       if (a.tipo_entidade === 'evento' && b.tipo_entidade === 'tarefa') return -1
@@ -252,8 +263,16 @@ export default function SidebarDinamica({
                       subtipo={evento.subtipo}
                       recorrencia_id={evento.recorrencia_id}
                       onViewDetails={() => onEventClick(evento)}
-                      onComplete={() => onCompleteTask?.(evento.id)}
-                      onReopen={() => onReopenTask?.(evento.id)}
+                      onComplete={() => {
+                        if (evento.tipo_entidade === 'tarefa') onCompleteTask?.(evento.id)
+                        else if (evento.tipo_entidade === 'audiencia') onCompleteAudiencia?.(evento.id)
+                        else if (evento.tipo_entidade === 'evento') onCompleteEvento?.(evento.id)
+                      }}
+                      onReopen={() => {
+                        if (evento.tipo_entidade === 'tarefa') onReopenTask?.(evento.id)
+                        else if (evento.tipo_entidade === 'audiencia') onReopenAudiencia?.(evento.id)
+                        else if (evento.tipo_entidade === 'evento') onReopenEvento?.(evento.id)
+                      }}
                       onLancarHoras={() => onLancarHoras?.(evento.id)}
                       onReschedule={(newDate) => onRescheduleTask?.(evento.id, newDate)}
                       onProcessoClick={onProcessoClick}

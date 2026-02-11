@@ -37,6 +37,9 @@ Sentry.init({
     // Erros de navegação do Next.js
     "NEXT_REDIRECT",
     "NEXT_NOT_FOUND",
+    // Service Worker em previews da Vercel
+    "Failed to register a ServiceWorker",
+    "The script resource is behind a redirect",
   ],
 
   beforeSend(event) {

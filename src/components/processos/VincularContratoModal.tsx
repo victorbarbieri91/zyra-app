@@ -32,7 +32,9 @@ import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
 import { formatCurrency } from '@/lib/utils'
-import { useRouter } from 'next/navigation'
+import { ContratoModal } from '@/components/financeiro/ContratoModal'
+import { useContratosHonorarios, ContratoFormData } from '@/hooks/useContratosHonorarios'
+import { toast } from 'sonner'
 
 type FormaCobranca = 'fixo' | 'por_hora' | 'misto' | 'por_pasta' | 'por_ato' | 'por_cargo'
 
@@ -98,13 +100,15 @@ export default function VincularContratoModal({
   onSuccess,
 }: VincularContratoModalProps) {
   const supabase = createClient()
-  const router = useRouter()
+  const { createContrato } = useContratosHonorarios()
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [contratos, setContratos] = useState<ContratoDisponivel[]>([])
   const [selectedContrato, setSelectedContrato] = useState<string | null>(null)
   const [selectedModalidade, setSelectedModalidade] = useState<FormaCobranca | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [contratoModalOpen, setContratoModalOpen] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   // Carregar contratos do cliente
   useEffect(() => {
@@ -117,45 +121,30 @@ export default function VincularContratoModal({
       setSelectedModalidade(null)
 
       try {
-        // Buscar contratos ativos do cliente
+        // Buscar contratos ativos do cliente (config e formas são JSONB na tabela principal)
         const { data, error: queryError } = await supabase
           .from('financeiro_contratos_honorarios')
-          .select(`
-            id,
-            numero_contrato,
-            forma_cobranca,
-            data_inicio,
-            data_fim,
-            financeiro_contratos_honorarios_config (
-              tipo_config,
-              valor_fixo,
-              valor_hora,
-              valor_por_processo
-            ),
-            financeiro_contratos_formas (
-              forma_cobranca,
-              ativo
-            )
-          `)
+          .select('id, numero_contrato, forma_cobranca, data_inicio, data_fim, config, formas_pagamento')
           .eq('cliente_id', clienteId)
           .eq('ativo', true)
           .order('created_at', { ascending: false })
 
         if (queryError) throw queryError
 
-        // Processar dados
+        // Processar dados usando colunas JSONB
         const contratosProcessados: ContratoDisponivel[] = (data || []).map((c: any) => {
-          const formasAtivas = c.financeiro_contratos_formas
-            ?.filter((f: any) => f.ativo)
-            ?.map((f: any) => f.forma_cobranca) || [c.forma_cobranca]
+          // Extrair formas de cobrança do JSONB formas_pagamento
+          const formasAtivas: FormaCobranca[] = c.formas_pagamento
+            ? (c.formas_pagamento as Array<{ forma: FormaCobranca }>).map((f: any) => f.forma)
+            : [c.forma_cobranca]
 
+          // Extrair config do JSONB
           const config: ContratoDisponivel['config'] = {}
-          if (c.financeiro_contratos_honorarios_config) {
-            c.financeiro_contratos_honorarios_config.forEach((cfg: any) => {
-              if (cfg.valor_hora) config.valor_hora = cfg.valor_hora
-              if (cfg.valor_fixo) config.valor_fixo = cfg.valor_fixo
-              if (cfg.valor_por_processo) config.valor_por_processo = cfg.valor_por_processo
-            })
+          if (c.config) {
+            const configData = c.config as Record<string, any>
+            if (configData.valor_hora) config.valor_hora = Number(configData.valor_hora)
+            if (configData.valor_fixo) config.valor_fixo = Number(configData.valor_fixo)
+            if (configData.valor_por_processo) config.valor_por_processo = Number(configData.valor_por_processo)
           }
 
           return {
@@ -179,7 +168,7 @@ export default function VincularContratoModal({
     }
 
     loadContratos()
-  }, [clienteId, open, supabase])
+  }, [clienteId, open, supabase, reloadKey])
 
   // Quando seleciona um contrato, preenche a modalidade se só tiver uma
   useEffect(() => {
@@ -245,9 +234,29 @@ export default function VincularContratoModal({
     }
   }
 
+  // Handler para criar contrato inline
+  const handleSaveContrato = async (data: ContratoFormData): Promise<string | null | boolean> => {
+    try {
+      const contratoId = await createContrato(data)
+      if (contratoId) {
+        setReloadKey(prev => prev + 1)
+        setSelectedContrato(contratoId)
+        toast.success('Contrato criado com sucesso!')
+        setContratoModalOpen(false)
+        return contratoId
+      }
+      return null
+    } catch (error) {
+      console.error('Erro ao criar contrato:', error)
+      toast.error('Erro ao criar contrato')
+      return null
+    }
+  }
+
   const contratoSelecionado = contratos.find((c) => c.id === selectedContrato)
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -291,10 +300,7 @@ export default function VincularContratoModal({
                 Crie um contrato de honorários para vincular a este processo.
               </p>
               <Button
-                onClick={() => {
-                  onOpenChange(false)
-                  router.push(`/dashboard/financeiro?tab=contratos&action=novo&cliente_id=${clienteId}`)
-                }}
+                onClick={() => setContratoModalOpen(true)}
                 className="bg-gradient-to-r from-[#89bcbe] to-[#aacfd0] hover:from-[#aacfd0] hover:to-[#89bcbe] text-white"
               >
                 <Plus className="w-4 h-4 mr-1.5" />
@@ -466,5 +472,14 @@ export default function VincularContratoModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Modal inline para criar contrato */}
+    <ContratoModal
+      open={contratoModalOpen}
+      onOpenChange={setContratoModalOpen}
+      defaultClienteId={clienteId}
+      onSave={handleSaveContrato}
+    />
+    </>
   )
 }

@@ -27,7 +27,9 @@ import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
 import { formatCurrency } from '@/lib/utils'
-import { useRouter } from 'next/navigation'
+import { ContratoModal } from '@/components/financeiro/ContratoModal'
+import { useContratosHonorarios, ContratoFormData } from '@/hooks/useContratosHonorarios'
+import { toast } from 'sonner'
 
 type FormaCobranca = 'fixo' | 'por_hora' | 'misto' | 'por_pasta' | 'por_ato' | 'por_cargo'
 
@@ -78,12 +80,14 @@ export default function VincularContratoConsultivoModal({
   onSuccess,
 }: VincularContratoConsultivoModalProps) {
   const supabase = createClient()
-  const router = useRouter()
+  const { createContrato } = useContratosHonorarios()
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [contratos, setContratos] = useState<ContratoDisponivel[]>([])
   const [selectedContrato, setSelectedContrato] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [contratoModalOpen, setContratoModalOpen] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   // Carregar contratos do cliente
   useEffect(() => {
@@ -114,7 +118,7 @@ export default function VincularContratoConsultivoModal({
     }
 
     loadContratos()
-  }, [clienteId, open, supabase])
+  }, [clienteId, open, supabase, reloadKey])
 
   const handleVincular = async () => {
     if (!selectedContrato) return
@@ -140,7 +144,27 @@ export default function VincularContratoConsultivoModal({
     }
   }
 
+  // Handler para criar contrato inline
+  const handleSaveContrato = async (data: ContratoFormData): Promise<string | null | boolean> => {
+    try {
+      const contratoId = await createContrato(data)
+      if (contratoId) {
+        setReloadKey(prev => prev + 1)
+        setSelectedContrato(contratoId)
+        toast.success('Contrato criado com sucesso!')
+        setContratoModalOpen(false)
+        return contratoId
+      }
+      return null
+    } catch (error) {
+      console.error('Erro ao criar contrato:', error)
+      toast.error('Erro ao criar contrato')
+      return null
+    }
+  }
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -184,10 +208,7 @@ export default function VincularContratoConsultivoModal({
                 Crie um contrato de honorarios para vincular a esta consulta.
               </p>
               <Button
-                onClick={() => {
-                  onOpenChange(false)
-                  router.push(`/dashboard/financeiro?tab=contratos&action=novo&cliente_id=${clienteId}`)
-                }}
+                onClick={() => setContratoModalOpen(true)}
                 className="bg-gradient-to-r from-[#89bcbe] to-[#aacfd0] hover:from-[#aacfd0] hover:to-[#89bcbe] text-white"
               >
                 <Plus className="w-4 h-4 mr-1.5" />
@@ -272,5 +293,14 @@ export default function VincularContratoConsultivoModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Modal inline para criar contrato */}
+    <ContratoModal
+      open={contratoModalOpen}
+      onOpenChange={setContratoModalOpen}
+      defaultClienteId={clienteId}
+      onSave={handleSaveContrato}
+    />
+    </>
   )
 }

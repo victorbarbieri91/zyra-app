@@ -111,7 +111,7 @@ export default function EncerrarProcessoModal({
       .in('status', ['pendente', 'em_andamento'])
 
     if (tarefas) {
-      tarefas.forEach(t => {
+      tarefas.forEach((t: any) => {
         items.push({
           id: t.id,
           tipo: 'tarefa',
@@ -131,7 +131,7 @@ export default function EncerrarProcessoModal({
       .gte('data_hora', new Date().toISOString())
 
     if (audiencias) {
-      audiencias.forEach(a => {
+      audiencias.forEach((a: any) => {
         const tipoLabel: Record<string, string> = {
           instrucao: 'Instrução',
           julgamento: 'Julgamento',

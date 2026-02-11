@@ -29,7 +29,7 @@ export default function ResetPasswordPage() {
     checkSession()
 
     // Listen for auth state changes (when user clicks the recovery link)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string) => {
       if (event === 'PASSWORD_RECOVERY') {
         setIsValidSession(true)
       }

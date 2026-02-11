@@ -2,7 +2,7 @@
 
 import { useDraggable } from '@dnd-kit/core'
 import { Card, CardContent } from '@/components/ui/card'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, Repeat } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tarefa } from '@/hooks/useTarefas'
 import { parseDBDate } from '@/lib/timezone'
@@ -102,6 +102,9 @@ export default function KanbanTaskCard({ tarefa, onClick }: KanbanTaskCardProps)
           <span className="text-[10px] text-slate-400 font-medium">
             {dataFormatada}
           </span>
+          {tarefa.recorrencia_id && (
+            <span title="Tarefa recorrente"><Repeat className="w-3 h-3 text-[#89bcbe]" /></span>
+          )}
         </div>
 
         {/* Linha 3: Título do caso vinculado (linkável) */}

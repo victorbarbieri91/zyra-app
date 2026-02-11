@@ -46,6 +46,7 @@ import TarefaDetailModal from '@/components/agenda/TarefaDetailModal'
 import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
 import EventoDetailModal from '@/components/agenda/EventoDetailModal'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
+import RecorrenciaDeleteModal from '@/components/agenda/RecorrenciaDeleteModal'
 import { EventCardProps } from '@/components/agenda/EventCard'
 
 // Hooks
@@ -53,6 +54,7 @@ import { useAgendaConsolidada } from '@/hooks/useAgendaConsolidada'
 import { useTarefas, Tarefa, TarefaFormData } from '@/hooks/useTarefas'
 import { useAudiencias, Audiencia, AudienciaFormData } from '@/hooks/useAudiencias'
 import { useEventos, Evento, EventoFormData } from '@/hooks/useEventos'
+import { useRecorrencias } from '@/hooks/useRecorrencias'
 import { useUserPreferences } from '@/hooks/useUserPreferences'
 
 export default function AgendaPage() {
@@ -103,6 +105,16 @@ export default function AgendaPage() {
   const [tarefaSelecionada, setTarefaSelecionada] = useState<Tarefa | null>(null)
   const [audienciaSelecionada, setAudienciaSelecionada] = useState<Audiencia | null>(null)
   const [eventoSelecionado, setEventoSelecionado] = useState<Evento | null>(null)
+
+  // Modal de exclusão de recorrência (apenas esta vs todas)
+  const [recorrenciaDeleteOpen, setRecorrenciaDeleteOpen] = useState(false)
+  const [recorrenciaDeleteTarget, setRecorrenciaDeleteTarget] = useState<{
+    itemId: string
+    titulo: string
+    tipo: 'tarefa' | 'evento'
+    recorrenciaId: string
+    dataOcorrencia: string
+  } | null>(null)
 
   // Modal de aviso quando reagendar ultrapassa prazo fatal (sidebar)
   const [rescheduleWarningOpen, setRescheduleWarningOpen] = useState(false)
@@ -176,6 +188,32 @@ export default function AgendaPage() {
   const { tarefas, createTarefa, updateTarefa, concluirTarefa, reabrirTarefa, refreshTarefas } = useTarefas(escritorioId || undefined)
   const { audiencias, createAudiencia, updateAudiencia } = useAudiencias(escritorioId || undefined)
   const { eventos, createEvento, updateEvento } = useEventos(escritorioId || undefined)
+  const { materializarInstancia, excluirOcorrencia, deactivateRecorrencia } = useRecorrencias(escritorioId || undefined)
+
+  /**
+   * Se o item é virtual (recorrência expandida), materializa no banco e retorna o ID real.
+   * Caso contrário, retorna o ID original inalterado.
+   */
+  const materializarSeVirtual = useCallback(async (itemId: string): Promise<string> => {
+    if (!itemId.startsWith('virtual_')) return itemId
+
+    // Extrair recorrencia_id e data do ID virtual: "virtual_{recId}_{YYYY-MM-DD}"
+    const parts = itemId.split('_')
+    // parts = ['virtual', recorrencia_id, 'YYYY-MM-DD']
+    const recorrenciaId = parts[1]
+    const dataOcorrencia = parts[2]
+
+    if (!recorrenciaId || !dataOcorrencia) {
+      throw new Error('ID virtual inválido: ' + itemId)
+    }
+
+    const { id: realId } = await materializarInstancia(recorrenciaId, dataOcorrencia)
+
+    // Refresh both data sources to show the materialized instance
+    await Promise.all([refreshItems(), refreshTarefas()])
+
+    return realId
+  }, [materializarInstancia, refreshItems, refreshTarefas])
 
   // Converter items consolidados para formato do EventCard
   const eventosFormatados = useMemo((): EventCardProps[] => {
@@ -245,7 +283,7 @@ export default function AgendaPage() {
   // Apenas tarefas e prazos têm prazo_data_limite (audiências e compromissos não)
   const getUrgenciaPrazoFatal = (item: typeof agendaItems[0]): number => {
     // Só considerar prazo fatal para tarefas e prazos
-    if (item.tipo !== 'tarefa' && item.tipo !== 'prazo') return 99
+    if (item.tipo_entidade !== 'tarefa' && item.subtipo !== 'prazo_processual') return 99
     if (!item.prazo_data_limite) return 99
 
     const prazoDate = parseDBDate(item.prazo_data_limite)
@@ -267,8 +305,10 @@ export default function AgendaPage() {
         if (urgenciaA !== urgenciaB) return urgenciaA - urgenciaB
 
         // Segundo: ordenar por tipo (audiência primeiro)
-        const prioridadeA = tipoPrioridade[a.tipo] ?? 99
-        const prioridadeB = tipoPrioridade[b.tipo] ?? 99
+        const tipoDisplayA = a.tipo_entidade === 'tarefa' ? 'tarefa' : a.tipo_entidade === 'audiencia' ? 'audiencia' : a.subtipo === 'prazo_processual' ? 'prazo' : 'compromisso'
+        const tipoDisplayB = b.tipo_entidade === 'tarefa' ? 'tarefa' : b.tipo_entidade === 'audiencia' ? 'audiencia' : b.subtipo === 'prazo_processual' ? 'prazo' : 'compromisso'
+        const prioridadeA = tipoPrioridade[tipoDisplayA] ?? 99
+        const prioridadeB = tipoPrioridade[tipoDisplayB] ?? 99
         if (prioridadeA !== prioridadeB) return prioridadeA - prioridadeB
 
         // Terceiro: ordenar por horário
@@ -339,11 +379,13 @@ export default function AgendaPage() {
           data_fim: item.data_fim,
           responsavel_id: item.responsavel_id,
           responsavel_nome: item.responsavel_nome,
+          responsaveis_ids: item.responsaveis_ids || [],
           processo_id: item.processo_id,
           consultivo_id: item.consultivo_id,
           prazo_data_limite: item.prazo_data_limite,
           cor: item.cor,
           recorrencia_id: item.recorrencia_id,
+          is_virtual: item.is_virtual,
           created_at: item.created_at,
           updated_at: item.updated_at,
         } as Tarefa
@@ -384,11 +426,14 @@ export default function AgendaPage() {
           status: item.status || 'agendado',
           responsavel_id: item.responsavel_id,
           responsavel_nome: item.responsavel_nome,
+          responsaveis_ids: item.responsaveis_ids || [],
+          duracao_minutos: 60,
+          modalidade: 'presencial',
           local: item.local,
           observacoes: item.descricao,
           created_at: item.created_at,
           updated_at: item.updated_at,
-        } as Audiencia
+        } as unknown as Audiencia
       }
 
       if (audienciaCompleta) {
@@ -416,6 +461,7 @@ export default function AgendaPage() {
           status: item.status || 'agendado',
           responsavel_id: item.responsavel_id,
           responsavel_nome: item.responsavel_nome,
+          responsaveis_ids: item.responsaveis_ids || [],
           processo_id: item.processo_id,
           consultivo_id: item.consultivo_id,
           recorrencia_id: item.recorrencia_id,
@@ -445,16 +491,19 @@ export default function AgendaPage() {
   }
 
   // Handler para lançar horas manualmente (sem concluir)
-  const handleLancarHoras = (taskId: string) => {
+  const handleLancarHoras = async (taskId: string) => {
+    // Materializar se virtual antes de lançar horas
+    const effectiveId = await materializarSeVirtual(taskId)
+
     // Buscar a tarefa
-    let tarefa = tarefas.find(t => t.id === taskId)
+    let tarefa = tarefas.find(t => t.id === effectiveId)
 
     // Se não encontrou no hook, buscar na agenda consolidada
     if (!tarefa) {
-      const itemCompleto = agendaItems.find(item => item.id === taskId)
+      const itemCompleto = agendaItems.find(item => item.id === effectiveId || item.id === taskId)
       if (itemCompleto) {
         tarefa = {
-          id: itemCompleto.id,
+          id: effectiveId,
           escritorio_id: itemCompleto.escritorio_id,
           titulo: itemCompleto.titulo,
           descricao: itemCompleto.descricao,
@@ -465,6 +514,7 @@ export default function AgendaPage() {
           data_fim: itemCompleto.data_fim,
           responsavel_id: itemCompleto.responsavel_id,
           responsavel_nome: itemCompleto.responsavel_nome,
+          responsaveis_ids: (itemCompleto as any).responsaveis_ids || [],
           processo_id: itemCompleto.processo_id,
           consultivo_id: itemCompleto.consultivo_id,
           created_at: itemCompleto.created_at,
@@ -495,22 +545,27 @@ export default function AgendaPage() {
   // Handler para conclusão rápida de tarefa (toggle)
   const handleCompleteTask = async (taskId: string) => {
     try {
+      // Materializar se for instância virtual de recorrência
+      const realId = await materializarSeVirtual(taskId)
+      // Se foi materializado, usar o ID real daqui em diante
+      const effectiveId = realId
+
       // Verificar se é tarefa fixa (não pode ser concluída)
-      const itemFixaCheck = agendaItems.find(item => item.id === taskId)
+      const itemFixaCheck = agendaItems.find(item => item.id === taskId || item.id === effectiveId)
       if (itemFixaCheck?.subtipo === 'fixa') {
         toast.info('Tarefas fixas não podem ser concluídas. Use "Lançar Horas" ou exclua se não precisar mais.')
         return
       }
 
       // Encontrar a tarefa para verificar o status atual
-      let tarefa = tarefas.find(t => t.id === taskId)
+      let tarefa = tarefas.find(t => t.id === effectiveId)
 
       // Se não encontrou no hook, buscar na agenda consolidada
       if (!tarefa) {
-        const itemCompleto = agendaItems.find(item => item.id === taskId)
+        const itemCompleto = agendaItems.find(item => item.id === effectiveId || item.id === taskId)
         if (itemCompleto) {
           tarefa = {
-            id: itemCompleto.id,
+            id: effectiveId,
             escritorio_id: itemCompleto.escritorio_id,
             titulo: itemCompleto.titulo,
             descricao: itemCompleto.descricao,
@@ -521,6 +576,7 @@ export default function AgendaPage() {
             data_fim: itemCompleto.data_fim,
             responsavel_id: itemCompleto.responsavel_id,
             responsavel_nome: itemCompleto.responsavel_nome,
+            responsaveis_ids: (itemCompleto as any).responsaveis_ids || [],
             processo_id: itemCompleto.processo_id,
             consultivo_id: itemCompleto.consultivo_id,
             created_at: itemCompleto.created_at,
@@ -531,19 +587,19 @@ export default function AgendaPage() {
 
       if (tarefa?.status === 'concluida') {
         // Se já está concluída, reabrir diretamente
-        await reabrirTarefa(taskId)
+        await reabrirTarefa(effectiveId)
         await refreshItems()
         toast.success('Tarefa reaberta com sucesso!')
       } else if (tarefa?.processo_id || tarefa?.consultivo_id) {
         // Se tem processo ou consultivo vinculado, abrir modal de horas ANTES de concluir
         setModoLancamentoAvulso(false) // Modo conclusão - vai concluir após registrar horas
-        setTarefaParaConcluir(tarefa)
+        setTarefaParaConcluir({ ...tarefa, id: effectiveId } as Tarefa)
         setHorasRegistradasComSucesso(false)
         horasRegistradasRef.current = false
         setTimesheetModalOpen(true)
       } else {
         // Se não tem vínculo, concluir diretamente
-        await concluirTarefa(taskId)
+        await concluirTarefa(effectiveId)
         await refreshItems()
         toast.success('Tarefa concluída com sucesso!')
       }
@@ -637,7 +693,8 @@ export default function AgendaPage() {
   // Handler para reabrir tarefa
   const handleReopenTask = async (taskId: string) => {
     try {
-      await reabrirTarefa(taskId)
+      const effectiveId = await materializarSeVirtual(taskId)
+      await reabrirTarefa(effectiveId)
       await refreshItems()
       toast.success('Tarefa reaberta com sucesso!')
     } catch (error) {
@@ -648,9 +705,12 @@ export default function AgendaPage() {
 
   // Handler para reagendar tarefa (com verificação de prazo fatal)
   const handleRescheduleTask = async (taskId: string, newDate: Date) => {
+    // Materializar se virtual antes de reagendar
+    const effectiveId = await materializarSeVirtual(taskId)
+
     // Encontrar a tarefa para verificar prazo fatal
     // Nota: agendaItems usa tipo_entidade da view v_agenda_consolidada
-    const tarefa = agendaItems.find(item => item.id === taskId && item.tipo_entidade === 'tarefa')
+    const tarefa = agendaItems.find(item => (item.id === effectiveId || item.id === taskId) && item.tipo_entidade === 'tarefa')
 
     // Tarefas fixas não podem ser reagendadas
     if (tarefa?.subtipo === 'fixa') {
@@ -668,7 +728,7 @@ export default function AgendaPage() {
         const dataInicioAtual = parseDBDate(tarefa.data_inicio)
         const distancia = differenceInDays(prazoFatalSemHora, startOfDay(dataInicioAtual))
         setPendingReschedule({
-          taskId,
+          taskId: effectiveId,
           newDate,
           prazoFatal,
           distanciaOriginal: Math.max(distancia, 0)
@@ -681,7 +741,7 @@ export default function AgendaPage() {
     }
 
     // Se não tem prazo fatal ou não ultrapassa, reagendar normalmente
-    await executeRescheduleTask(taskId, newDate)
+    await executeRescheduleTask(effectiveId, newDate)
   }
 
   // Executa o reagendamento de fato
@@ -746,6 +806,23 @@ export default function AgendaPage() {
 
   // Handlers para deletar
   const handleDeleteTarefa = async (tarefaId: string) => {
+    // Instâncias virtuais → abrir modal de exclusão de recorrência
+    if (tarefaId.startsWith('virtual_')) {
+      const parts = tarefaId.split('_')
+      const recId = parts[1]
+      const dataOc = parts[2]
+      const tarefa = tarefas.find(t => t.id === tarefaId)
+      setRecorrenciaDeleteTarget({
+        itemId: tarefaId,
+        titulo: tarefa?.titulo || 'Tarefa recorrente',
+        tipo: 'tarefa',
+        recorrenciaId: recId,
+        dataOcorrencia: dataOc,
+      })
+      setRecorrenciaDeleteOpen(true)
+      return
+    }
+
     if (!confirm('Tem certeza que deseja excluir esta tarefa?')) return
 
     try {
@@ -842,13 +919,14 @@ export default function AgendaPage() {
     if (!confirm('Deseja marcar este evento/prazo como cumprido?')) return
 
     try {
+      const effectiveId = await materializarSeVirtual(eventoId)
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
 
       const { error } = await supabase
         .from('agenda_eventos')
         .update({ status: 'realizado' })
-        .eq('id', eventoId)
+        .eq('id', effectiveId)
 
       if (error) throw error
 
@@ -864,13 +942,14 @@ export default function AgendaPage() {
 
   const handleReabrirEvento = async (eventoId: string) => {
     try {
+      const effectiveId = await materializarSeVirtual(eventoId)
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
 
       const { error } = await supabase
         .from('agenda_eventos')
         .update({ status: 'agendado' })
-        .eq('id', eventoId)
+        .eq('id', effectiveId)
 
       if (error) throw error
 
@@ -885,6 +964,22 @@ export default function AgendaPage() {
   }
 
   const handleCancelarEvento = async (eventoId: string) => {
+    // Instâncias virtuais → abrir modal de exclusão de recorrência
+    if (eventoId.startsWith('virtual_')) {
+      const parts = eventoId.split('_')
+      const recId = parts[1]
+      const dataOc = parts[2]
+      setRecorrenciaDeleteTarget({
+        itemId: eventoId,
+        titulo: eventoSelecionado?.titulo || 'Evento recorrente',
+        tipo: 'evento',
+        recorrenciaId: recId,
+        dataOcorrencia: dataOc,
+      })
+      setRecorrenciaDeleteOpen(true)
+      return
+    }
+
     if (!confirm('Tem certeza que deseja cancelar este evento?')) return
 
     try {
@@ -907,6 +1002,43 @@ export default function AgendaPage() {
     }
   }
 
+  // Handler para o modal de exclusão de recorrência
+  const handleRecorrenciaDeleteEsta = async () => {
+    if (!recorrenciaDeleteTarget) return
+    try {
+      await excluirOcorrencia(recorrenciaDeleteTarget.recorrenciaId, recorrenciaDeleteTarget.dataOcorrencia)
+      setRecorrenciaDeleteOpen(false)
+      setRecorrenciaDeleteTarget(null)
+      setTarefaDetailOpen(false)
+      setTarefaSelecionada(null)
+      setEventoDetailOpen(false)
+      setEventoSelecionado(null)
+      await Promise.all([refreshItems(), refreshTarefas()])
+      toast.success('Ocorrência removida')
+    } catch (error) {
+      console.error('Erro ao excluir ocorrência:', error)
+      toast.error('Erro ao excluir ocorrência')
+    }
+  }
+
+  const handleRecorrenciaDeleteTodas = async () => {
+    if (!recorrenciaDeleteTarget) return
+    try {
+      await deactivateRecorrencia(recorrenciaDeleteTarget.recorrenciaId)
+      setRecorrenciaDeleteOpen(false)
+      setRecorrenciaDeleteTarget(null)
+      setTarefaDetailOpen(false)
+      setTarefaSelecionada(null)
+      setEventoDetailOpen(false)
+      setEventoSelecionado(null)
+      await Promise.all([refreshItems(), refreshTarefas()])
+      toast.success('Recorrência desativada — nenhuma nova ocorrência será exibida')
+    } catch (error) {
+      console.error('Erro ao desativar recorrência:', error)
+      toast.error('Erro ao desativar recorrência')
+    }
+  }
+
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date)
     // Abrir sidebar apenas na view de mês
@@ -917,8 +1049,11 @@ export default function AgendaPage() {
 
   const handleEventMove = async (eventId: string, newDate: Date) => {
     try {
+      // Materializar se virtual antes de mover
+      const effectiveId = await materializarSeVirtual(eventId)
+
       // Encontrar o evento nos dados consolidados
-      const evento = agendaItems.find(item => item.id === eventId)
+      const evento = agendaItems.find(item => item.id === effectiveId || item.id === eventId)
       if (!evento) {
         throw new Error('Evento não encontrado')
       }
@@ -958,14 +1093,14 @@ export default function AgendaPage() {
             data_inicio: newDateTime.toISOString(),
             data_fim: newEndDateTime?.toISOString() || null,
           })
-          .eq('id', eventId)
+          .eq('id', effectiveId)
       } else if (evento.tipo_entidade === 'audiencia') {
         updateResult = await supabase
           .from('agenda_audiencias')
           .update({
             data_hora: newDateTime.toISOString(),
           })
-          .eq('id', eventId)
+          .eq('id', effectiveId)
       } else if (evento.tipo_entidade === 'evento') {
         updateResult = await supabase
           .from('agenda_eventos')
@@ -973,7 +1108,7 @@ export default function AgendaPage() {
             data_inicio: newDateTime.toISOString(),
             data_fim: newEndDateTime?.toISOString() || null,
           })
-          .eq('id', eventId)
+          .eq('id', effectiveId)
       }
 
       if (updateResult?.error) {
@@ -1578,6 +1713,16 @@ export default function AgendaPage() {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de Exclusão de Recorrência */}
+      <RecorrenciaDeleteModal
+        open={recorrenciaDeleteOpen}
+        onOpenChange={setRecorrenciaDeleteOpen}
+        titulo={recorrenciaDeleteTarget?.titulo || ''}
+        tipo={recorrenciaDeleteTarget?.tipo || 'tarefa'}
+        onDeleteEsta={handleRecorrenciaDeleteEsta}
+        onDeleteTodas={handleRecorrenciaDeleteTodas}
+      />
     </div>
   )
 }

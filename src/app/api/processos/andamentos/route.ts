@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { solicitarAtualizacao, buscarMovimentacoes } from '@/lib/escavador/client'
 import { normalizarTermoJuridico, normalizarTextoMovimentacao } from '@/lib/utils/text-normalizer'
+import { integrationRateLimit } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 /**
  * POST /api/processos/andamentos
@@ -27,6 +29,12 @@ export async function POST(request: NextRequest) {
         { sucesso: false, erro: 'Nao autorizado' },
         { status: 401 }
       )
+    }
+
+    // Rate limiting
+    const rateLimitResult = integrationRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return integrationRateLimit.errorResponse(rateLimitResult)
     }
 
     // Buscar escritorio_id do usuario
@@ -69,7 +77,7 @@ export async function POST(request: NextRequest) {
       .in('id', processo_ids)
 
     if (queryError) {
-      console.error('[Andamentos] Erro ao buscar processos:', queryError)
+      logger.error('Erro ao buscar processos', { module: 'processos', action: 'andamentos', error: queryError.message })
       return NextResponse.json(
         { sucesso: false, erro: 'Erro ao buscar processos' },
         { status: 500 }
@@ -109,13 +117,13 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        console.log(`[Andamentos] Atualizando ${processo.numero_pasta}`)
+        logger.debug('Atualizando andamentos de processo', { module: 'processos', action: 'andamentos' })
 
         // 1. Solicitar atualizacao no Escavador
         const resultadoAtualizacao = await solicitarAtualizacao(processo.numero_cnj)
 
         if (!resultadoAtualizacao.sucesso) {
-          console.log(`[Andamentos] Erro ao solicitar atualizacao: ${resultadoAtualizacao.erro}`)
+          logger.debug('Erro ao solicitar atualizacao no Escavador', { module: 'processos', action: 'andamentos' })
           // Continua mesmo com erro, pois pode ter dados em cache
         }
 
@@ -123,7 +131,7 @@ export async function POST(request: NextRequest) {
         const resultadoMovimentacoes = await buscarMovimentacoes(processo.numero_cnj, 1, 100)
 
         if (!resultadoMovimentacoes.sucesso || !resultadoMovimentacoes.movimentacoes) {
-          console.log(`[Andamentos] Erro ao buscar movimentacoes: ${resultadoMovimentacoes.erro}`)
+          logger.debug('Erro ao buscar movimentacoes do Escavador', { module: 'processos', action: 'andamentos' })
           resultados.push({
             processo_id: processo.id,
             numero_pasta: processo.numero_pasta || '',
@@ -184,15 +192,14 @@ export async function POST(request: NextRequest) {
             }
           })
 
-          console.log(`[Andamentos] Inserindo ${movimentacoesParaInserir.length} movimentacoes...`)
-          console.log(`[Andamentos] Exemplo de data:`, movimentacoesParaInserir[0]?.data_movimento)
+          logger.debug(`Inserindo ${movimentacoesParaInserir.length} movimentacoes`, { module: 'processos', action: 'andamentos' })
 
           const { error: insertError } = await supabase
             .from('processos_movimentacoes')
             .insert(movimentacoesParaInserir)
 
           if (insertError) {
-            console.error(`[Andamentos] Erro ao inserir movimentacoes:`, insertError.message, insertError.details, insertError.code)
+            logger.error('Erro ao inserir movimentacoes', { module: 'processos', action: 'andamentos', errorCode: insertError.code })
             resultados.push({
               processo_id: processo.id,
               numero_pasta: processo.numero_pasta || '',
@@ -206,7 +213,7 @@ export async function POST(request: NextRequest) {
           totalMovimentacoesNovas += novasMovimentacoes.length
         }
 
-        console.log(`[Andamentos] ${processo.numero_pasta}: ${novasMovimentacoes.length} novas movimentacoes`)
+        logger.debug(`${novasMovimentacoes.length} novas movimentacoes processadas`, { module: 'processos', action: 'andamentos' })
         resultados.push({
           processo_id: processo.id,
           numero_pasta: processo.numero_pasta || '',
@@ -219,7 +226,7 @@ export async function POST(request: NextRequest) {
         await new Promise(resolve => setTimeout(resolve, 500))
 
       } catch (error) {
-        console.error(`[Andamentos] Erro em ${processo.numero_pasta}:`, error)
+        logger.error('Erro ao processar andamentos de processo', { module: 'processos', action: 'andamentos' }, error instanceof Error ? error : undefined)
         resultados.push({
           processo_id: processo.id,
           numero_pasta: processo.numero_pasta || '',
@@ -240,7 +247,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[Andamentos] Erro interno:', error)
+    logger.error('Erro interno no POST andamentos', { module: 'processos', action: 'andamentos' }, error instanceof Error ? error : undefined)
     return NextResponse.json(
       { sucesso: false, erro: 'Erro interno' },
       { status: 500 }
@@ -263,6 +270,12 @@ export async function GET(request: NextRequest) {
         { sucesso: false, erro: 'Nao autorizado' },
         { status: 401 }
       )
+    }
+
+    // Rate limiting
+    const rateLimitResultGet = integrationRateLimit.check(request, user.id)
+    if (!rateLimitResultGet.success) {
+      return integrationRateLimit.errorResponse(rateLimitResultGet)
     }
 
     const { searchParams } = new URL(request.url)
@@ -296,7 +309,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[Andamentos] Erro:', error)
+    logger.error('Erro no GET andamentos', { module: 'processos', action: 'andamentos' }, error instanceof Error ? error : undefined)
     return NextResponse.json(
       { sucesso: false, erro: 'Erro interno' },
       { status: 500 }

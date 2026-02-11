@@ -1,9 +1,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { User } from '@supabase/supabase-js';
+import { User, AuthChangeEvent, Session } from '@supabase/supabase-js';
 import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/lib/supabase/client';
+import { logger } from '@/lib/logger';
 import { useRouter, usePathname } from 'next/navigation';
 
 interface AuthContextData {
@@ -35,7 +36,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const { data: { user }, error } = await supabase.auth.getUser();
 
       if (error) {
-        console.error('Erro ao verificar autenticacao:', error.message);
+        logger.error('Erro ao verificar autenticacao', { module: 'auth', action: 'verificacao' });
 
         // Se houver erro de sessao, limpar e redirecionar
         if (error.message.includes('session') || error.name === 'AuthSessionMissingError') {
@@ -55,7 +56,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(user);
       Sentry.setUser({ id: user.id, email: user.email || undefined });
     } catch (err) {
-      console.error('Erro inesperado na verificacao de auth:', err);
+      logger.error('Erro inesperado na verificacao de auth', { module: 'auth', action: 'verificacao' }, err instanceof Error ? err : undefined);
       // Em caso de erro inesperado, redirecionar para login
       router.replace('/login');
     } finally {
@@ -71,7 +72,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       Sentry.setUser(null);
       router.replace('/login');
     } catch (error) {
-      console.error('Erro ao fazer logout:', error);
+      logger.error('Erro ao fazer logout', { module: 'auth', action: 'logout' }, error instanceof Error ? error : undefined);
       // Mesmo com erro, redirecionar
       router.replace('/login');
     }
@@ -86,7 +87,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
       if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
         if (event === 'SIGNED_OUT') {
           setUser(null);

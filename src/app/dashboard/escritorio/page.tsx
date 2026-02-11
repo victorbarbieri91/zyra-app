@@ -374,7 +374,7 @@ export default function EscritorioPage() {
                       className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
                     >
                       <Avatar className="w-8 h-8">
-                        <AvatarImage src={membro.avatar_url} />
+                        <AvatarImage src={membro.avatar_url ?? undefined} />
                         <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
                           {membro.nome
                             ?.split(' ')

@@ -66,8 +66,8 @@ interface ConsultivoInfo {
 }
 
 interface RecorrenciaInfo {
-  frequencia: string
-  intervalo: number
+  regra_frequencia: string
+  regra_intervalo: number
   data_inicio: string
   data_fim?: string
 }
@@ -111,23 +111,27 @@ export default function TarefaDetailModal({
   useEffect(() => {
     if (!tarefa) return
 
+    // Instâncias virtuais de recorrência não existem no banco — pular queries
+    const isVirtual = tarefa.is_virtual || tarefa.id?.startsWith('virtual_')
+
     async function loadAdditionalInfo() {
       const supabase = createClient()
 
-      // Carregar responsáveis (múltiplos)
+      // Carregar responsáveis (múltiplos) — pular para virtuais (não existe no banco)
       setLoadingResponsaveis(true)
       try {
-        const responsaveisList = await getResponsaveis('tarefa', tarefa.id)
-        setResponsaveis(responsaveisList)
+        if (!isVirtual) {
+          const responsaveisList = await getResponsaveis('tarefa', tarefa.id)
+          setResponsaveis(responsaveisList)
+        }
       } catch (err) {
         console.error('[TarefaDetail] Erro ao carregar responsáveis:', err)
       } finally {
         setLoadingResponsaveis(false)
       }
 
-      // Carregar processo
+      // Carregar processo (maybeSingle para não falhar se foi deletado)
       if (tarefa.processo_id) {
-        console.log('[TarefaDetail] Carregando processo ID:', tarefa.processo_id)
         setLoadingProcesso(true)
 
         const { data: processo, error } = await supabase
@@ -142,17 +146,11 @@ export default function TarefaDetailModal({
             crm_pessoas!cliente_id(nome_completo, nome_fantasia)
           `)
           .eq('id', tarefa.processo_id)
-          .single()
+          .maybeSingle()
 
         if (error) {
-          console.error('[TarefaDetail] Erro ao carregar processo:', error)
-          setLoadingProcesso(false)
-          return
-        }
-
-        console.log('[TarefaDetail] Processo carregado:', processo)
-
-        if (processo) {
+          console.error('[TarefaDetail] Erro ao carregar processo:', error?.message || JSON.stringify(error))
+        } else if (processo) {
           setProcessoInfo({
             id: processo.id,
             numero_pasta: processo.numero_pasta,
@@ -164,26 +162,24 @@ export default function TarefaDetailModal({
           } as ProcessoInfo)
         }
         setLoadingProcesso(false)
-      } else {
-        console.log('[TarefaDetail] Tarefa não tem processo_id')
       }
 
-      // Carregar consultivo
+      // Carregar consultivo (maybeSingle para não falhar se foi deletado)
       if (tarefa.consultivo_id) {
         const { data: consultivo } = await supabase
-          .from('consultas')
+          .from('consultivo_consultas')
           .select('id, titulo, status')
           .eq('id', tarefa.consultivo_id)
-          .single()
+          .maybeSingle()
 
         if (consultivo) setConsultivoInfo(consultivo)
       }
 
-      // Carregar recorrência
-      if (tarefa.recorrencia_id) {
+      // Carregar recorrência (recorrencia_id é UUID real mesmo para instâncias virtuais)
+      if (tarefa.recorrencia_id && !tarefa.recorrencia_id.startsWith('virtual_')) {
         const { data: recorrencia } = await supabase
           .from('agenda_recorrencias')
-          .select('frequencia, intervalo, data_inicio, data_fim')
+          .select('regra_frequencia, regra_intervalo, data_inicio, data_fim')
           .eq('id', tarefa.recorrencia_id)
           .single()
 
@@ -197,7 +193,7 @@ export default function TarefaDetailModal({
   // Determinar tipo
   const isPrazoProcessual = tarefa.tipo === 'prazo_processual'
   const isFixa = tarefa.tipo === 'fixa'
-  const isConcluido = tarefa.status === 'concluido'
+  const isConcluido = tarefa.status === 'concluida'
 
   // Helper functions
   const getTipoLabel = (tipo: string) => {
@@ -730,8 +726,8 @@ export default function TarefaDetailModal({
                   Recorrência
                 </div>
                 <div className="text-xs text-slate-600">
-                  {recorrenciaInfo.frequencia} - A cada {recorrenciaInfo.intervalo}{' '}
-                  {recorrenciaInfo.intervalo === 1 ? 'vez' : 'vezes'}
+                  {recorrenciaInfo.regra_frequencia} - A cada {recorrenciaInfo.regra_intervalo}{' '}
+                  {recorrenciaInfo.regra_intervalo === 1 ? 'vez' : 'vezes'}
                   {recorrenciaInfo.data_fim && (
                     <span className="text-[10px] text-slate-500 block mt-1">
                       Até {formatBrazilDate(parseDBDate(recorrenciaInfo.data_fim))}

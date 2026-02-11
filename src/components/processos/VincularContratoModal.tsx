@@ -36,7 +36,7 @@ import { ContratoModal } from '@/components/financeiro/ContratoModal'
 import { useContratosHonorarios, ContratoFormData } from '@/hooks/useContratosHonorarios'
 import { toast } from 'sonner'
 
-type FormaCobranca = 'fixo' | 'por_hora' | 'misto' | 'por_pasta' | 'por_ato' | 'por_cargo'
+type FormaCobranca = 'fixo' | 'por_hora' | 'misto' | 'por_pasta' | 'por_ato' | 'por_cargo' | 'por_etapa'
 
 interface ContratoDisponivel {
   id: string

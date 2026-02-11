@@ -91,7 +91,7 @@ export function useEscritorioCargos(escritorioId: string | undefined): UseEscrit
 
     if (!cargosData || cargosData.length === 0) return [];
 
-    const cargoIds = cargosData.map((c) => c.id);
+    const cargoIds = cargosData.map((c: Record<string, any>) => c.id);
 
     const { data: permissoesData, error: permissoesError } = await supabase
       .from('escritorios_cargos_permissoes')
@@ -103,7 +103,7 @@ export function useEscritorioCargos(escritorioId: string | undefined): UseEscrit
       return [];
     }
 
-    const permissoesPorCargo = (permissoesData || []).reduce((acc, perm) => {
+    const permissoesPorCargo = ((permissoesData || []) as CargoPermissao[]).reduce((acc: Record<string, CargoPermissao[]>, perm: CargoPermissao) => {
       if (!acc[perm.cargo_id]) {
         acc[perm.cargo_id] = [];
       }
@@ -111,7 +111,7 @@ export function useEscritorioCargos(escritorioId: string | undefined): UseEscrit
       return acc;
     }, {} as Record<string, CargoPermissao[]>);
 
-    return cargosData.map((cargo) => ({
+    return cargosData.map((cargo: Record<string, any>) => ({
       ...cargo,
       permissoes: permissoesPorCargo[cargo.id] || [],
     }));

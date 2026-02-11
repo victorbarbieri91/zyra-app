@@ -71,7 +71,7 @@ export function useTarefasDoDia(escritorioId: string | null): UseTarefasDoDiaRet
       if (queryError) throw queryError;
 
       // Buscar numero_pasta dos processos vinculados
-      const processoIds = [...new Set((data || []).filter((t) => t.processo_id).map((t) => t.processo_id!))];
+      const processoIds = [...new Set((data || []).filter((t: Record<string, any>) => t.processo_id).map((t: Record<string, any>) => t.processo_id as string))];
       const numeroPastaMap = new Map<string, string>();
       if (processoIds.length > 0) {
         const { data: processos } = await supabase
@@ -89,10 +89,10 @@ export function useTarefasDoDia(escritorioId: string | null): UseTarefasDoDiaRet
         .select('tarefa_id')
         .not('tarefa_id', 'is', null);
 
-      const tarefasComTimerIds = new Set(timersAtivos?.map((t) => t.tarefa_id) || []);
+      const tarefasComTimerIds = new Set(timersAtivos?.map((t: { tarefa_id: string | null }) => t.tarefa_id) || []);
 
       // Marcar tarefas com timer ativo e numero_pasta
-      const tarefasComFlag = (data || []).map((tarefa) => ({
+      const tarefasComFlag = (data || []).map((tarefa: Record<string, any>) => ({
         ...tarefa,
         temTimerAtivo: tarefasComTimerIds.has(tarefa.id),
         numero_pasta: tarefa.processo_id ? numeroPastaMap.get(tarefa.processo_id) : undefined,

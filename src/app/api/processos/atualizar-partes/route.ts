@@ -5,6 +5,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { buscarProcessoPorCNJ } from '@/lib/escavador/client'
+import { integrationRateLimit } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 /**
  * POST /api/processos/atualizar-partes
@@ -25,6 +27,12 @@ export async function POST(request: NextRequest) {
         { sucesso: false, error: 'Nao autorizado' },
         { status: 401 }
       )
+    }
+
+    // Rate limiting
+    const rateLimitResult = integrationRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return integrationRateLimit.errorResponse(rateLimitResult)
     }
 
     // Parsear body
@@ -53,7 +61,7 @@ export async function POST(request: NextRequest) {
       .limit(limite)
 
     if (queryError) {
-      console.error('[Atualizar Partes] Erro na query:', queryError)
+      logger.error('Erro na query de processos', { module: 'processos', action: 'atualizar-partes', error: queryError.message })
       return NextResponse.json(
         { sucesso: false, error: 'Erro ao buscar processos' },
         { status: 500 }
@@ -70,7 +78,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log(`[Atualizar Partes] Processando ${processos.length} processos`)
+    logger.debug(`Processando ${processos.length} processos`, { module: 'processos', action: 'atualizar-partes' })
 
     const resultados: Array<{
       numero_pasta: string
@@ -86,13 +94,13 @@ export async function POST(request: NextRequest) {
     // Processar cada processo
     for (const processo of processos) {
       try {
-        console.log(`[Atualizar Partes] Buscando: ${processo.numero_pasta} - ${processo.numero_cnj}`)
+        logger.debug('Buscando processo no Escavador', { module: 'processos', action: 'atualizar-partes' })
 
         // Buscar no Escavador
         const resultado = await buscarProcessoPorCNJ(processo.numero_cnj!)
 
         if (!resultado.sucesso || !resultado.dados) {
-          console.log(`[Atualizar Partes] Nao encontrado: ${processo.numero_cnj}`)
+          logger.debug('Processo nao encontrado no Escavador', { module: 'processos', action: 'atualizar-partes' })
           resultados.push({
             numero_pasta: processo.numero_pasta || '',
             numero_cnj: processo.numero_cnj || '',
@@ -103,7 +111,7 @@ export async function POST(request: NextRequest) {
         }
 
         const dados = resultado.dados
-        const clienteNome = (processo.cliente as { nome_completo: string })?.nome_completo?.toLowerCase() || ''
+        const clienteNome = (processo.cliente as { nome_completo: string }[] | null)?.[0]?.nome_completo?.toLowerCase() || ''
 
         // Determinar parte contraria
         let parteContraria: string | null = null
@@ -141,7 +149,7 @@ export async function POST(request: NextRequest) {
         }
 
         if (!parteContraria) {
-          console.log(`[Atualizar Partes] Nao foi possivel determinar parte contraria: ${processo.numero_cnj}`)
+          logger.debug('Nao foi possivel determinar parte contraria', { module: 'processos', action: 'atualizar-partes' })
           resultados.push({
             numero_pasta: processo.numero_pasta || '',
             numero_cnj: processo.numero_cnj || '',
@@ -158,7 +166,7 @@ export async function POST(request: NextRequest) {
           .eq('id', processo.id)
 
         if (updateError) {
-          console.error(`[Atualizar Partes] Erro ao atualizar ${processo.numero_pasta}:`, updateError)
+          logger.error('Erro ao atualizar parte contraria no banco', { module: 'processos', action: 'atualizar-partes', error: updateError.message })
           resultados.push({
             numero_pasta: processo.numero_pasta || '',
             numero_cnj: processo.numero_cnj || '',
@@ -167,7 +175,7 @@ export async function POST(request: NextRequest) {
           })
           erros++
         } else {
-          console.log(`[Atualizar Partes] Atualizado: ${processo.numero_pasta} -> ${parteContraria}`)
+          logger.debug('Parte contraria atualizada com sucesso', { module: 'processos', action: 'atualizar-partes' })
           resultados.push({
             numero_pasta: processo.numero_pasta || '',
             numero_cnj: processo.numero_cnj || '',
@@ -181,7 +189,7 @@ export async function POST(request: NextRequest) {
         await new Promise(resolve => setTimeout(resolve, 500))
 
       } catch (error) {
-        console.error(`[Atualizar Partes] Erro em ${processo.numero_pasta}:`, error)
+        logger.error('Erro ao processar atualizacao de partes', { module: 'processos', action: 'atualizar-partes' }, error instanceof Error ? error : undefined)
         resultados.push({
           numero_pasta: processo.numero_pasta || '',
           numero_cnj: processo.numero_cnj || '',
@@ -202,7 +210,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[Atualizar Partes] Erro interno:', error)
+    logger.error('Erro interno na atualizacao de partes', { module: 'processos', action: 'atualizar-partes' }, error instanceof Error ? error : undefined)
     return NextResponse.json(
       { sucesso: false, error: 'Erro interno' },
       { status: 500 }
@@ -255,13 +263,13 @@ export async function GET() {
         id: p.id,
         numero_pasta: p.numero_pasta,
         numero_cnj: p.numero_cnj,
-        cliente: (p.cliente as { nome_completo: string })?.nome_completo,
+        cliente: (p.cliente as { nome_completo: string }[] | null)?.[0]?.nome_completo,
         polo_cliente: p.polo_cliente
       }))
     })
 
   } catch (error) {
-    console.error('[Atualizar Partes] Erro:', error)
+    logger.error('Erro no GET atualizar-partes', { module: 'processos', action: 'atualizar-partes' }, error instanceof Error ? error : undefined)
     return NextResponse.json(
       { sucesso: false, error: 'Erro interno' },
       { status: 500 }

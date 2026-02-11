@@ -288,7 +288,7 @@ export async function getEscritoriosDoGrupo(): Promise<EscritorioComRole[]> {
   }
 
   // Buscar roles do usuário em cada escritório
-  const escritoriosIds = (data || []).map(e => e.id);
+  const escritoriosIds = (data || []).map((e: any) => e.id);
   const { data: rolesData } = await supabase
     .from('escritorios_usuarios')
     .select('escritorio_id, role, is_owner')
@@ -296,9 +296,9 @@ export async function getEscritoriosDoGrupo(): Promise<EscritorioComRole[]> {
     .in('escritorio_id', escritoriosIds)
     .eq('ativo', true);
 
-  const rolesMap = new Map((rolesData || []).map(r => [r.escritorio_id, r]));
+  const rolesMap = new Map<string, any>((rolesData || []).map((r: any) => [r.escritorio_id, r]));
 
-  return (data || []).map(e => ({
+  return (data || []).map((e: any) => ({
     ...e,
     role: rolesMap.get(e.id)?.role || 'readonly',
     is_owner: rolesMap.get(e.id)?.is_owner || false,

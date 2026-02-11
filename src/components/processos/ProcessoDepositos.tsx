@@ -82,7 +82,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 const initialFormState = {
-  tipo: 'recursal' as const,
+  tipo: 'recursal' as 'recursal' | 'embargo' | 'caucao' | 'outro',
   descricao: '',
   valor: '',
   data_deposito: format(new Date(), 'yyyy-MM-dd'),
@@ -90,7 +90,7 @@ const initialFormState = {
   agencia: '',
   conta: '',
   numero_guia: '',
-  status: 'ativo' as const,
+  status: 'ativo' as 'ativo' | 'levantado' | 'convertido' | 'perdido',
   data_levantamento: '',
   valor_levantado: '',
   observacoes: '',

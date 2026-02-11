@@ -82,10 +82,10 @@ export function calcularDigitoVerificadorCNJ(numero: string): string {
 
   // Para numeros muito grandes, usa BigInt
   const numeroBigInt = BigInt(numeroParaCalculo)
-  const resto = numeroBigInt % 97n
+  const resto = numeroBigInt % BigInt(97)
 
   // DD = 98 - resto
-  const digito = 98n - resto
+  const digito = BigInt(98) - resto
 
   // Retorna com 2 digitos (padding com zero a esquerda se necessario)
   return digito.toString().padStart(2, '0')

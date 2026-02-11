@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { criarMonitoramento, removerMonitoramento } from '@/lib/escavador/client'
 import type { FrequenciaMonitoramento } from '@/lib/escavador/types'
+import { integrationRateLimit } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 /**
  * POST /api/processos/monitoramento
@@ -26,6 +28,12 @@ export async function POST(request: NextRequest) {
         { sucesso: false, erro: 'Nao autorizado' },
         { status: 401 }
       )
+    }
+
+    // Rate limiting
+    const rateLimitResult = integrationRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return integrationRateLimit.errorResponse(rateLimitResult)
     }
 
     // Parsear body
@@ -57,7 +65,7 @@ export async function POST(request: NextRequest) {
       .in('id', processo_ids)
 
     if (queryError) {
-      console.error('[Monitoramento] Erro ao buscar processos:', queryError)
+      logger.error('Erro ao buscar processos', { module: 'processos', action: 'monitoramento', error: queryError.message })
       return NextResponse.json(
         { sucesso: false, erro: 'Erro ao buscar processos' },
         { status: 500 }
@@ -107,7 +115,7 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        console.log(`[Monitoramento] Criando monitoramento para ${processo.numero_pasta} (frequencia: ${frequencia || 'SEMANAL'})`)
+        logger.debug('Criando monitoramento para processo', { module: 'processos', action: 'monitoramento', frequencia: frequencia || 'SEMANAL' })
 
         // Criar monitoramento no Escavador
         const resultado = await criarMonitoramento({
@@ -116,7 +124,7 @@ export async function POST(request: NextRequest) {
         })
 
         if (!resultado.sucesso || !resultado.monitoramento_id) {
-          console.log(`[Monitoramento] Falha: ${resultado.erro}`)
+          logger.debug('Falha ao criar monitoramento', { module: 'processos', action: 'monitoramento' })
           resultados.push({
             processo_id: processo.id,
             numero_pasta: processo.numero_pasta || '',
@@ -134,7 +142,7 @@ export async function POST(request: NextRequest) {
           .eq('id', processo.id)
 
         if (updateError) {
-          console.error(`[Monitoramento] Erro ao atualizar processo:`, updateError)
+          logger.error('Erro ao atualizar processo com monitoramento', { module: 'processos', action: 'monitoramento', error: updateError.message })
           // Mesmo com erro no banco, o monitoramento foi criado no Escavador
           resultados.push({
             processo_id: processo.id,
@@ -147,7 +155,7 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        console.log(`[Monitoramento] Sucesso: ${processo.numero_pasta} -> ${resultado.monitoramento_id}`)
+        logger.debug('Monitoramento criado com sucesso', { module: 'processos', action: 'monitoramento' })
         resultados.push({
           processo_id: processo.id,
           numero_pasta: processo.numero_pasta || '',
@@ -160,7 +168,7 @@ export async function POST(request: NextRequest) {
         await new Promise(resolve => setTimeout(resolve, 300))
 
       } catch (error) {
-        console.error(`[Monitoramento] Erro em ${processo.numero_pasta}:`, error)
+        logger.error('Erro ao criar monitoramento para processo', { module: 'processos', action: 'monitoramento' }, error instanceof Error ? error : undefined)
         resultados.push({
           processo_id: processo.id,
           numero_pasta: processo.numero_pasta || '',
@@ -180,7 +188,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[Monitoramento] Erro interno:', error)
+    logger.error('Erro interno no POST monitoramento', { module: 'processos', action: 'monitoramento' }, error instanceof Error ? error : undefined)
     return NextResponse.json(
       { sucesso: false, erro: 'Erro interno' },
       { status: 500 }
@@ -209,6 +217,12 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
+    // Rate limiting
+    const rateLimitResultDelete = integrationRateLimit.check(request, user.id)
+    if (!rateLimitResultDelete.success) {
+      return integrationRateLimit.errorResponse(rateLimitResultDelete)
+    }
+
     // Parsear body
     const body = await request.json().catch(() => ({}))
     const { processo_ids } = body as { processo_ids?: string[] }
@@ -228,7 +242,7 @@ export async function DELETE(request: NextRequest) {
       .not('escavador_monitoramento_id', 'is', null)
 
     if (queryError) {
-      console.error('[Monitoramento] Erro ao buscar processos:', queryError)
+      logger.error('Erro ao buscar processos para remocao', { module: 'processos', action: 'monitoramento', error: queryError.message })
       return NextResponse.json(
         { sucesso: false, erro: 'Erro ao buscar processos' },
         { status: 500 }
@@ -259,13 +273,13 @@ export async function DELETE(request: NextRequest) {
     // Processar cada processo
     for (const processo of processos) {
       try {
-        console.log(`[Monitoramento] Removendo monitoramento de ${processo.numero_pasta}`)
+        logger.debug('Removendo monitoramento de processo', { module: 'processos', action: 'monitoramento' })
 
         // Remover monitoramento no Escavador
         const resultado = await removerMonitoramento(processo.escavador_monitoramento_id!)
 
         if (!resultado.sucesso) {
-          console.log(`[Monitoramento] Falha ao remover: ${resultado.erro}`)
+          logger.debug('Falha ao remover monitoramento no Escavador', { module: 'processos', action: 'monitoramento' })
           // Mesmo com erro no Escavador, vamos limpar o campo no banco
         }
 
@@ -276,7 +290,7 @@ export async function DELETE(request: NextRequest) {
           .eq('id', processo.id)
 
         if (updateError) {
-          console.error(`[Monitoramento] Erro ao atualizar processo:`, updateError)
+          logger.error('Erro ao limpar monitoramento no banco', { module: 'processos', action: 'monitoramento', error: updateError.message })
           resultados.push({
             processo_id: processo.id,
             numero_pasta: processo.numero_pasta || '',
@@ -287,7 +301,7 @@ export async function DELETE(request: NextRequest) {
           continue
         }
 
-        console.log(`[Monitoramento] Removido: ${processo.numero_pasta}`)
+        logger.debug('Monitoramento removido com sucesso', { module: 'processos', action: 'monitoramento' })
         resultados.push({
           processo_id: processo.id,
           numero_pasta: processo.numero_pasta || '',
@@ -299,7 +313,7 @@ export async function DELETE(request: NextRequest) {
         await new Promise(resolve => setTimeout(resolve, 300))
 
       } catch (error) {
-        console.error(`[Monitoramento] Erro em ${processo.numero_pasta}:`, error)
+        logger.error('Erro ao remover monitoramento de processo', { module: 'processos', action: 'monitoramento' }, error instanceof Error ? error : undefined)
         resultados.push({
           processo_id: processo.id,
           numero_pasta: processo.numero_pasta || '',
@@ -319,7 +333,7 @@ export async function DELETE(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[Monitoramento] Erro interno:', error)
+    logger.error('Erro interno no DELETE monitoramento', { module: 'processos', action: 'monitoramento' }, error instanceof Error ? error : undefined)
     return NextResponse.json(
       { sucesso: false, erro: 'Erro interno' },
       { status: 500 }
@@ -366,7 +380,7 @@ export async function GET() {
     })
 
   } catch (error) {
-    console.error('[Monitoramento] Erro:', error)
+    logger.error('Erro no GET monitoramento', { module: 'processos', action: 'monitoramento' }, error instanceof Error ? error : undefined)
     return NextResponse.json(
       { sucesso: false, erro: 'Erro interno' },
       { status: 500 }

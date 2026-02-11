@@ -132,19 +132,21 @@ export default function DayViewTimeGrid({
   }
 
   // Detectar sobreposições e calcular offsets horizontais
+  type GridItem = { id: string; top: number; height: number }
+
   const calcularSobreposicoes = useMemo(() => {
-    const items = [
-      ...eventos.map((e) => ({ tipo: 'evento' as const, item: e, ...getEventoPosition(e) })),
-      ...tarefasAgendadas.map((t) => ({ tipo: 'tarefa' as const, item: t, ...getTarefaPosition(t) })),
+    const items: GridItem[] = [
+      ...eventos.map((e) => ({ id: e.id, ...getEventoPosition(e) })),
+      ...tarefasAgendadas.map((t) => ({ id: t.id, ...getTarefaPosition(t) })),
     ]
 
     // Função para verificar se dois itens se sobrepõem
-    const hasOverlap = (a: typeof items[0], b: typeof items[0]) => {
+    const hasOverlap = (a: GridItem, b: GridItem) => {
       return !(a.top + a.height <= b.top || b.top + b.height <= a.top)
     }
 
     // Agrupar itens que se sobrepõem
-    const grupos: typeof items[][] = []
+    const grupos: GridItem[][] = []
 
     items.forEach((item) => {
       let grupoEncontrado = false
@@ -168,8 +170,7 @@ export default function DayViewTimeGrid({
     grupos.forEach((grupo) => {
       const total = grupo.length
       grupo.forEach((item, index) => {
-        const id = item.tipo === 'evento' ? item.item.id : item.item.id
-        posicoes.set(id, {
+        posicoes.set(item.id, {
           left: `${(index * 100) / total}%`,
           width: `${100 / total}%`,
           zIndex: index,

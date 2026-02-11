@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useRef } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from './useEscritorioAtivo'
 
@@ -40,86 +41,85 @@ const defaultResumo: ResumoIA = {
   },
 }
 
+async function fetchDashboardResumoIA(
+  supabase: ReturnType<typeof createClient>,
+  escritorioAtivo: string,
+  forceRefresh: boolean
+): Promise<{ resumo: ResumoIA; geradoEm: string }> {
+  // Buscar usuário atual
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Usuário não autenticado')
+  }
+
+  // Buscar nome do usuário
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('nome_completo')
+    .eq('id', user.id)
+    .single()
+
+  // Chamar Edge Function
+  const { data, error: fnError } = await supabase.functions.invoke('dashboard-resumo-ia', {
+    body: {
+      user_id: user.id,
+      escritorio_id: escritorioAtivo,
+      user_name: profile?.nome_completo || 'Advogado',
+      force_refresh: forceRefresh,
+    },
+  })
+
+  if (fnError) {
+    throw fnError
+  }
+
+  if (data?.sucesso) {
+    return {
+      resumo: {
+        saudacao: data.saudacao,
+        mensagem: data.mensagem,
+        gerado_em: data.gerado_em,
+        gerado_por_ia: data.gerado_por_ia,
+        dados: data.dados,
+      },
+      geradoEm: data.gerado_em,
+    }
+  } else {
+    throw new Error(data?.erro || 'Erro ao gerar resumo')
+  }
+}
+
 export function useDashboardResumoIA() {
-  const [resumo, setResumo] = useState<ResumoIA>(defaultResumo)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const { escritorioAtivo } = useEscritorioAtivo()
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const queryClient = useQueryClient()
 
-  const loadResumo = useCallback(async (forceRefresh = false) => {
-    if (!escritorioAtivo) {
-      setLoading(false)
-      return
-    }
+  const { data, isLoading: loading, error } = useQuery({
+    queryKey: ['dashboard', 'resumoIA', escritorioAtivo],
+    queryFn: () => fetchDashboardResumoIA(supabaseRef.current, escritorioAtivo!, false),
+    enabled: !!escritorioAtivo,
+    staleTime: 30 * 60 * 1000, // 30 minutes - AI generated, expensive
+    meta: {
+      // On error, return fallback resumo
+      errorHandler: 'silent',
+    },
+  })
 
-    try {
-      setLoading(true)
-      setError(null)
+  const resumo = data?.resumo ?? {
+    ...defaultResumo,
+    saudacao: error ? getSaudacao() : defaultResumo.saudacao,
+    mensagem: error ? 'Não foi possível gerar o resumo do dia. Verifique sua conexão.' : defaultResumo.mensagem,
+  }
 
-      // Buscar usuário atual
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        throw new Error('Usuário não autenticado')
-      }
+  const lastUpdated = data?.geradoEm ? new Date(data.geradoEm) : null
 
-      // Buscar nome do usuário
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('nome_completo')
-        .eq('id', user.id)
-        .single()
-
-      // Chamar Edge Function
-      const { data, error: fnError } = await supabase.functions.invoke('dashboard-resumo-ia', {
-        body: {
-          user_id: user.id,
-          escritorio_id: escritorioAtivo,
-          user_name: profile?.nome_completo || 'Advogado',
-          force_refresh: forceRefresh,
-        },
-      })
-
-      if (fnError) {
-        throw fnError
-      }
-
-      if (data?.sucesso) {
-        setResumo({
-          saudacao: data.saudacao,
-          mensagem: data.mensagem,
-          gerado_em: data.gerado_em,
-          gerado_por_ia: data.gerado_por_ia,
-          dados: data.dados,
-        })
-        setLastUpdated(new Date(data.gerado_em))
-      } else {
-        throw new Error(data?.erro || 'Erro ao gerar resumo')
-      }
-    } catch (err) {
-      console.error('Erro ao carregar resumo IA:', err)
-      setError(err as Error)
-
-      // Fallback para mensagem simples
-      setResumo({
-        ...defaultResumo,
-        saudacao: getSaudacao(),
-        mensagem: 'Não foi possível gerar o resumo do dia. Verifique sua conexão.',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [escritorioAtivo, supabase])
-
-  // Função para forçar atualização
-  const refresh = useCallback(() => {
-    return loadResumo(true)
-  }, [loadResumo])
-
-  useEffect(() => {
-    loadResumo()
-  }, [loadResumo])
+  const refresh = () => {
+    // Force refresh by invalidating and refetching with forceRefresh=true
+    queryClient.setQueryDefaults(['dashboard', 'resumoIA', escritorioAtivo], {
+      queryFn: () => fetchDashboardResumoIA(supabaseRef.current, escritorioAtivo!, true),
+    })
+    queryClient.invalidateQueries({ queryKey: ['dashboard', 'resumoIA', escritorioAtivo] })
+  }
 
   // Calcular tempo desde última atualização
   const tempoDesdeAtualizacao = lastUpdated
@@ -129,7 +129,7 @@ export function useDashboardResumoIA() {
   return {
     resumo,
     loading,
-    error,
+    error: error as Error | null,
     refresh,
     lastUpdated,
     tempoDesdeAtualizacao,

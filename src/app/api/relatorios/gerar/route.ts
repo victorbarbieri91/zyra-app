@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import ExcelJS from 'exceljs'
 import { COLUNAS_DISPONIVEIS } from '@/types/relatorios'
+import { reportRateLimit } from '@/lib/rate-limit'
 
 interface RequestBody {
   escritorio_id: string
@@ -50,6 +50,12 @@ export async function POST(request: NextRequest) {
         { sucesso: false, erro: 'Nao autorizado' },
         { status: 401 }
       )
+    }
+
+    // Rate limiting
+    const rateLimitResult = reportRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return reportRateLimit.errorResponse(rateLimitResult)
     }
 
     const body: RequestBody = await request.json()
@@ -124,8 +130,9 @@ export async function POST(request: NextRequest) {
     // Nome do cliente para o titulo
     const nomesClientes = clientes?.map(c => c.nome_completo).join(', ') || 'Cliente'
 
-    // Criar workbook com ExcelJS
-    const workbook = new ExcelJS.Workbook()
+    // Criar workbook com ExcelJS (dynamic import para reduzir bundle size)
+    const ExcelJS = await import('exceljs')
+    const workbook = new ExcelJS.default.Workbook()
     workbook.creator = 'Zyra Legal'
     workbook.created = new Date()
 
@@ -166,8 +173,8 @@ export async function POST(request: NextRequest) {
           // Adicionar logo usando posicionamento por células (mantém proporção melhor)
           // Ocupa da coluna 0 até coluna 2, da linha 0 até linha 3
           worksheet.addImage(imageId, {
-            tl: { col: 0, row: 0 },
-            br: { col: 2, row: 3 }, // Bottom-right: termina na coluna 2, linha 3
+            tl: { col: 0, row: 0 } as any,
+            br: { col: 2, row: 3 } as any, // Bottom-right: termina na coluna 2, linha 3
             editAs: 'oneCell' // Mantém proporção ao redimensionar
           })
 

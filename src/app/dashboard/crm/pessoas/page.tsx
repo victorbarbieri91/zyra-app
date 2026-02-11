@@ -110,7 +110,7 @@ export default function PessoasPage() {
       if (error) throw error;
 
       // Mapear para o tipo PessoaResumo
-      const pessoasMapeadas: PessoaResumo[] = (data || []).map(p => ({
+      const pessoasMapeadas: PessoaResumo[] = (data || []).map((p: any) => ({
         id: p.id,
         escritorio_id: p.escritorio_id,
         tipo_pessoa: p.tipo_pessoa,

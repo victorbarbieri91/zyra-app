@@ -13,10 +13,10 @@ import { DateTimeInput } from '@/components/ui/datetime-picker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 // TagSelector removido - tabelas de tags não são mais utilizadas
 import VinculacaoSelector, { Vinculacao } from '@/components/agenda/VinculacaoSelector'
-import RecorrenciaConfig, { RecorrenciaData } from '@/components/agenda/RecorrenciaConfig'
+import RecorrenciaConfig, { RecorrenciaData, getRecorrenciaSummary } from '@/components/agenda/RecorrenciaConfig'
 import ResponsaveisSelector from '@/components/agenda/ResponsaveisSelector'
 import { useEventos, type EventoFormData } from '@/hooks/useEventos'
-import type { WizardStep as WizardStepType } from '@/components/wizards'
+import type { WizardStep as WizardStepType } from '@/components/wizards/types'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
@@ -292,11 +292,22 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
 
       // Se tem recorrência, criar a recorrência em vez do evento direto
       if (recorrencia && recorrencia.ativa) {
+        // Enriquecer templateDados com dados de display para instâncias virtuais
+        const templateComDisplay = {
+          ...formData,
+          _display: {
+            responsavel_nome: membros.find(m => m.user_id === responsaveisIds[0])?.nome,
+            caso_titulo: vinculacao?.metadados?.partes,
+            processo_numero: vinculacao?.metadados?.numero_cnj,
+            consultivo_titulo: vinculacao?.metadados?.titulo,
+          }
+        }
+
         await createRecorrencia({
           nome: titulo,
           descricao: descricao || undefined,
           tipo: 'evento',
-          templateDados: formData,
+          templateDados: templateComDisplay,
           frequencia: recorrencia.frequencia,
           intervalo: recorrencia.intervalo,
           diasSemana: recorrencia.diasSemana,
@@ -629,6 +640,21 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
                         {vinculacao.metadados?.numero_cnj && ` • CNJ: ${vinculacao.metadados.numero_cnj}`}
                       </div>
                     </div>
+                  </div>
+                </>
+              )}
+
+              {/* Recorrência (se houver) */}
+              {recorrencia?.ativa && (
+                <>
+                  <div className="border-t border-slate-100" />
+
+                  <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
+                    <span className="text-slate-500">Recorrência</span>
+                    <span className="text-[#34495e] font-medium flex items-center gap-1.5">
+                      <Repeat className="w-3.5 h-3.5 text-[#89bcbe]" />
+                      {getRecorrenciaSummary(recorrencia)}
+                    </span>
                   </div>
                 </>
               )}

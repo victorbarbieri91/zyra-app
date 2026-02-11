@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { aiRateLimit } from '@/lib/rate-limit'
 
 const SYSTEM_PROMPT = `Voce e um assistente juridico que cria resumos de processos para clientes leigos.
 
@@ -45,6 +46,12 @@ interface RequestBody {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimitResult = aiRateLimit.check(request)
+    if (!rateLimitResult.success) {
+      return aiRateLimit.errorResponse(rateLimitResult)
+    }
+
     const body: RequestBody = await request.json()
 
     const {

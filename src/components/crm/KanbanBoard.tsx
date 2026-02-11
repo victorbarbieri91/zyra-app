@@ -30,16 +30,16 @@ interface Oportunidade {
   pessoa_id: string
   pessoa_nome: string
   titulo: string
-  valor_estimado: number
+  valor_estimado: number | null
   etapa_id: string
-  area_juridica: string
+  area_juridica: string | null
   responsavel_nome: string
   tempo_na_etapa_dias: number
   ultima_interacao?: {
     data: string
     descricao: string
-  }
-  proxima_acao?: string
+  } | null
+  proxima_acao?: string | null
 }
 
 interface Etapa {

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import VinculacaoSelector, { Vinculacao } from '@/components/agenda/VinculacaoSelector'
 import ResponsaveisSelector from '@/components/agenda/ResponsaveisSelector'
 import { useAudiencias, type AudienciaFormData } from '@/hooks/useAudiencias'
-import type { WizardStep as WizardStepType } from '@/components/wizards'
+import type { WizardStep as WizardStepType } from '@/components/wizards/types'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 // useTags removido - tabelas de tags não são mais utilizadas
@@ -250,7 +250,7 @@ export default function AudienciaWizard({
       id: 'tipo-identificacao',
       title: 'Tipo e Identificação',
       subtitle: 'Qual tipo de audiência você está agendando?',
-      validate: () => titulo.trim().length >= 3 && tipoAudiencia !== '',
+      validate: () => titulo.trim().length >= 3 && (tipoAudiencia as string) !== '',
     },
     {
       id: 'quando',

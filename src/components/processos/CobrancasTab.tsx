@@ -194,7 +194,7 @@ export default function CobrancasTab({ processo, escritorioId }: CobrancasTabPro
   // Handler para abrir modal de cobrança manual
   const handleAbrirCobrarAto = (ato: AtoDisponivel) => {
     setModalCobrarAto(ato)
-    setValorCobrarAto(ato.valor_calculado?.toString() || ato.valor_fixo_contrato?.toString() || ato.valor_fixo_padrao?.toString() || '')
+    setValorCobrarAto(ato.valor_calculado?.toString() || ato.valor_minimo_contrato?.toString() || ato.valor_fixo_padrao?.toString() || '')
     setDescricaoCobrarAto('')
   }
 

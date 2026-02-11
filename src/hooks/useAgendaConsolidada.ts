@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { parseDBDate } from '@/lib/timezone'
+import { expandirRecorrencias, type RecorrenciaRegra } from '@/lib/recorrencia-utils'
 
 export interface AgendaItem {
   id: string
@@ -19,6 +20,8 @@ export interface AgendaItem {
   todos_responsaveis?: string  // Todos os responsáveis agregados (separados por vírgula)
   responsaveis_ids?: string[]  // Array de IDs dos responsáveis
   prazo_data_limite?: string
+  prazo_tipo?: string
+  prazo_cumprido?: boolean
 
   // Planejamento de Horário (usado apenas para tarefas na visualização dia)
   horario_planejado_dia?: string | null
@@ -33,6 +36,7 @@ export interface AgendaItem {
   consultivo_titulo?: string
   // Recorrência
   recorrencia_id?: string | null
+  is_virtual?: boolean // true se for instância virtual expandida de uma recorrência
   escritorio_id: string
   created_at: string
   updated_at: string
@@ -51,7 +55,8 @@ export function useAgendaConsolidada(escritorioId: string | undefined, filters?:
   const [items, setItems] = useState<AgendaItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   const loadItems = async () => {
     // SEGURANCA: Sem escritorioId, nao carrega nada
@@ -98,19 +103,67 @@ export function useAgendaConsolidada(escritorioId: string | undefined, filters?:
         query = query.lte('data_inicio', filters.data_fim)
       }
 
-      const { data, error: queryError } = await query
+      // Buscar items reais e regras de recorrência em paralelo
+      const [itemsResult, regrasResult] = await Promise.all([
+        query,
+        supabase
+          .from('agenda_recorrencias')
+          .select('*')
+          .eq('escritorio_id', escritorioId)
+          .eq('ativo', true)
+      ])
 
-      if (queryError) {
+      if (itemsResult.error) {
         console.error('Erro na query de agenda consolidada:', {
-          message: queryError.message,
-          details: queryError.details,
-          hint: queryError.hint,
-          code: queryError.code
+          message: itemsResult.error.message,
+          details: itemsResult.error.details,
+          hint: itemsResult.error.hint,
+          code: itemsResult.error.code
         })
-        throw queryError
+        throw itemsResult.error
       }
 
-      setItems(data || [])
+      const itemsReais: AgendaItem[] = itemsResult.data || []
+      const regras: RecorrenciaRegra[] = regrasResult.data || []
+
+      // Expandir recorrências se houver regras ativas
+      let itemsFinais = itemsReais
+      if (regras.length > 0) {
+        // Determinar range para expansão
+        const hoje = new Date()
+        hoje.setHours(0, 0, 0, 0)
+        const rangeInicio = filters?.data_inicio ? new Date(filters.data_inicio) : new Date(hoje.getTime() - 7 * 24 * 60 * 60 * 1000) // -7 dias
+        const rangeFim = filters?.data_fim ? new Date(filters.data_fim) : new Date(hoje.getTime() + 60 * 24 * 60 * 60 * 1000) // +60 dias
+
+        // Instâncias reais que vieram de recorrência (para deduplicação)
+        const instanciasExistentes = itemsReais
+          .filter(i => i.recorrencia_id)
+          .map(i => ({
+            recorrencia_id: i.recorrencia_id!,
+            data_inicio: i.data_inicio
+          }))
+
+        // Gerar instâncias virtuais
+        let virtuais = expandirRecorrencias(regras, rangeInicio, rangeFim, instanciasExistentes)
+
+        // Aplicar filtros do usuário às virtuais também
+        if (filters?.tipo_entidade && filters.tipo_entidade.length > 0) {
+          virtuais = virtuais.filter(v => filters.tipo_entidade!.includes(v.tipo_entidade))
+        }
+        if (filters?.responsavel_id) {
+          virtuais = virtuais.filter(v =>
+            v.responsaveis_ids?.includes(filters.responsavel_id!) ||
+            !v.responsaveis_ids || v.responsaveis_ids.length === 0
+          )
+        }
+
+        // Merge e ordenar
+        itemsFinais = [...itemsReais, ...virtuais].sort((a, b) =>
+          a.data_inicio.localeCompare(b.data_inicio)
+        )
+      }
+
+      setItems(itemsFinais)
     } catch (err: any) {
       setError(err as Error)
       console.error('Erro ao carregar agenda consolidada:', {
@@ -133,17 +186,37 @@ export function useAgendaConsolidada(escritorioId: string | undefined, filters?:
     try {
       const dataStr = data.toISOString().split('T')[0]
 
-      const { data: items, error: queryError } = await supabase
-        .from('v_agenda_consolidada')
-        .select('*')
-        .eq('escritorio_id', escritorioId) // SEGURANCA: Filtrar por escritorio
-        .gte('data_inicio', `${dataStr}T00:00:00`)
-        .lte('data_inicio', `${dataStr}T23:59:59`)
-        .order('data_inicio', { ascending: true })
+      const [itemsResult, regrasResult] = await Promise.all([
+        supabase
+          .from('v_agenda_consolidada')
+          .select('*')
+          .eq('escritorio_id', escritorioId)
+          .gte('data_inicio', `${dataStr}T00:00:00`)
+          .lte('data_inicio', `${dataStr}T23:59:59`)
+          .order('data_inicio', { ascending: true }),
+        supabase
+          .from('agenda_recorrencias')
+          .select('*')
+          .eq('escritorio_id', escritorioId)
+          .eq('ativo', true)
+      ])
 
-      if (queryError) throw queryError
+      if (itemsResult.error) throw itemsResult.error
 
-      return items || []
+      const itemsReais: AgendaItem[] = itemsResult.data || []
+      const regras: RecorrenciaRegra[] = regrasResult.data || []
+
+      if (regras.length === 0) return itemsReais
+
+      const instanciasExistentes = itemsReais
+        .filter(i => i.recorrencia_id)
+        .map(i => ({ recorrencia_id: i.recorrencia_id!, data_inicio: i.data_inicio }))
+
+      const virtuais = expandirRecorrencias(regras, data, data, instanciasExistentes)
+
+      return [...itemsReais, ...virtuais].sort((a, b) =>
+        a.data_inicio.localeCompare(b.data_inicio)
+      )
     } catch (err) {
       console.error('Erro ao carregar items do dia:', err)
       throw err
@@ -156,17 +229,37 @@ export function useAgendaConsolidada(escritorioId: string | undefined, filters?:
     if (!escritorioId) return []
 
     try {
-      const { data: items, error: queryError } = await supabase
-        .from('v_agenda_consolidada')
-        .select('*')
-        .eq('escritorio_id', escritorioId) // SEGURANCA: Filtrar por escritorio
-        .gte('data_inicio', dataInicio.toISOString())
-        .lte('data_inicio', dataFim.toISOString())
-        .order('data_inicio', { ascending: true })
+      const [itemsResult, regrasResult] = await Promise.all([
+        supabase
+          .from('v_agenda_consolidada')
+          .select('*')
+          .eq('escritorio_id', escritorioId)
+          .gte('data_inicio', dataInicio.toISOString())
+          .lte('data_inicio', dataFim.toISOString())
+          .order('data_inicio', { ascending: true }),
+        supabase
+          .from('agenda_recorrencias')
+          .select('*')
+          .eq('escritorio_id', escritorioId)
+          .eq('ativo', true)
+      ])
 
-      if (queryError) throw queryError
+      if (itemsResult.error) throw itemsResult.error
 
-      return items || []
+      const itemsReais: AgendaItem[] = itemsResult.data || []
+      const regras: RecorrenciaRegra[] = regrasResult.data || []
+
+      if (regras.length === 0) return itemsReais
+
+      const instanciasExistentes = itemsReais
+        .filter(i => i.recorrencia_id)
+        .map(i => ({ recorrencia_id: i.recorrencia_id!, data_inicio: i.data_inicio }))
+
+      const virtuais = expandirRecorrencias(regras, dataInicio, dataFim, instanciasExistentes)
+
+      return [...itemsReais, ...virtuais].sort((a, b) =>
+        a.data_inicio.localeCompare(b.data_inicio)
+      )
     } catch (err) {
       console.error('Erro ao carregar items do intervalo:', err)
       throw err

@@ -332,7 +332,7 @@ export default function PortfolioAnalyticsPage() {
           <CardContent>
             <div className="space-y-3">
               {produtosMaisVendidos.map((produto, index) => {
-                const AreaIcon = AREA_ICONS[produto.area_juridica]
+                const AreaIcon = AREA_ICONS[produto.area_juridica as AreaJuridica]
 
                 return (
                   <div
@@ -378,19 +378,20 @@ export default function PortfolioAnalyticsPage() {
           <CardContent>
             <div className="space-y-4">
               {taxaSucessoArea.map((area) => {
-                const AreaIcon = AREA_ICONS[area.area_juridica]
+                const areaKey = area.area_juridica as AreaJuridica
+                const AreaIcon = AREA_ICONS[areaKey]
 
                 return (
                   <div key={area.area_juridica} className="flex items-center gap-4">
                     <div
-                      className={`w-10 h-10 rounded-lg ${AREA_COLORS[area.area_juridica]} bg-opacity-20 flex items-center justify-center`}
+                      className={`w-10 h-10 rounded-lg ${AREA_COLORS[areaKey]} bg-opacity-20 flex items-center justify-center`}
                     >
                       <AreaIcon className="w-5 h-5 text-slate-600" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-sm font-medium text-[#34495e]">
-                          {AREA_JURIDICA_LABELS[area.area_juridica]}
+                          {AREA_JURIDICA_LABELS[areaKey]}
                         </span>
                         <span className="text-sm font-semibold text-[#34495e]">
                           {area.taxa_sucesso.toFixed(0)}%

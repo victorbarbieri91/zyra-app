@@ -565,7 +565,7 @@ export default function TimesheetModal({
               id: c.id,
               numero: c.numero,
               titulo: c.titulo,
-              cliente_nome: clienteMapConsultas.get(c.cliente_id),
+              cliente_nome: clienteMapConsultas.get(c.cliente_id) as string | undefined,
               contrato_id: c.contrato_id,
               forma_cobranca: c.contrato_id ? contratoMapConsultas.get(c.contrato_id) : undefined,
             }))

@@ -52,7 +52,7 @@ export function useDashboardInsightsIA() {
   const [error, setError] = useState<Error | null>(null)
   const [hasPermission, setHasPermission] = useState(false)
   const { escritorioAtivo, isOwner, roleAtual } = useEscritorioAtivo()
-  const { podeVisualizar } = usePermissoes()
+  const { podeVisualizar } = usePermissoes(escritorioAtivo ?? undefined)
   const supabase = createClient()
 
   // Verificar se usuário pode ver insights (dono, sócio ou gerente)

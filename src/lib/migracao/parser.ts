@@ -3,7 +3,6 @@
 // ============================================
 
 import Papa from 'papaparse'
-import * as XLSX from 'xlsx'
 import { ParseResult } from '@/types/migracao'
 
 /**
@@ -74,6 +73,7 @@ async function parseCSV(file: File): Promise<ParseResult> {
  */
 async function parseExcel(file: File): Promise<ParseResult> {
   try {
+    const XLSX = await import('xlsx')
     const buffer = await file.arrayBuffer()
     const workbook = XLSX.read(buffer, { type: 'array', cellDates: true })
 

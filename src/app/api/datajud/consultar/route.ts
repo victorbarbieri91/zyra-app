@@ -8,6 +8,8 @@ import { consultarDataJud } from '@/lib/datajud/client'
 import { validarNumeroCNJCompleto, extrairTribunalDoNumero, formatarNumeroCNJ, validarFormatoCNJ } from '@/lib/datajud/validators'
 import { CACHE_TTL_MINUTOS } from '@/lib/datajud/constants'
 import type { ProcessoDataJud } from '@/types/datajud'
+import { integrationRateLimit } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 /**
  * POST /api/datajud/consultar
@@ -31,6 +33,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Rate limiting
+    const rateLimitResult = integrationRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return integrationRateLimit.errorResponse(rateLimitResult)
+    }
+
     // Parsear body
     let body: { numero_cnj?: string }
     try {
@@ -43,11 +51,11 @@ export async function POST(request: NextRequest) {
     }
 
     const { numero_cnj } = body
-    console.log('[DataJud] Numero recebido:', numero_cnj)
+    logger.debug('Numero CNJ recebido', { module: 'datajud', action: 'consultar' })
 
     // Validar input
     if (!numero_cnj || typeof numero_cnj !== 'string') {
-      console.log('[DataJud] Erro: Numero CNJ nao fornecido ou tipo invalido')
+      logger.debug('Numero CNJ nao fornecido ou tipo invalido', { module: 'datajud', action: 'consultar' })
       return NextResponse.json(
         { sucesso: false, error: 'Numero CNJ e obrigatorio' },
         { status: 400 }
@@ -62,36 +70,36 @@ export async function POST(request: NextRequest) {
       const apenasDigitos = numeroCNJNormalizado.replace(/\D/g, '')
       if (apenasDigitos.length === 20) {
         numeroCNJNormalizado = formatarNumeroCNJ(apenasDigitos)
-        console.log('[DataJud] Numero auto-formatado:', numeroCNJNormalizado)
+        logger.debug('Numero CNJ auto-formatado', { module: 'datajud', action: 'consultar' })
       }
     }
-    console.log('[DataJud] Numero normalizado:', numeroCNJNormalizado)
+    logger.debug('Numero CNJ normalizado', { module: 'datajud', action: 'consultar' })
 
     // Validar formato (digito verificador apenas como aviso, nao bloqueia)
     const validacao = validarNumeroCNJCompleto(numeroCNJNormalizado)
     if (!validacao.valido) {
       // Se for erro de formato, rejeita
       if (validacao.erro?.includes('Formato')) {
-        console.log('[DataJud] Erro de formato:', validacao.erro)
+        logger.debug('Erro de formato CNJ', { module: 'datajud', action: 'consultar' })
         return NextResponse.json(
           { sucesso: false, error: validacao.erro },
           { status: 400 }
         )
       }
       // Se for erro de digito, apenas avisa mas continua
-      console.log('[DataJud] Aviso de validacao (continuando):', validacao.erro)
+      logger.debug('Aviso de validacao CNJ (continuando)', { module: 'datajud', action: 'consultar' })
     }
 
     // Verificar se tribunal e suportado
     const tribunal = extrairTribunalDoNumero(numeroCNJNormalizado)
     if (!tribunal) {
-      console.log('[DataJud] Erro: Tribunal nao identificado para', numeroCNJNormalizado)
+      logger.debug('Tribunal nao identificado', { module: 'datajud', action: 'consultar' })
       return NextResponse.json(
         { sucesso: false, error: 'Tribunal nao identificado ou nao suportado' },
         { status: 400 }
       )
     }
-    console.log('[DataJud] Tribunal identificado:', tribunal.nome, tribunal.alias)
+    logger.debug('Tribunal identificado', { module: 'datajud', action: 'consultar' })
 
     // Verificar cache
     const agora = new Date().toISOString()
@@ -103,7 +111,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (cacheHit) {
-      console.log(`[DataJud] Cache hit para ${numeroCNJNormalizado}`)
+      logger.debug('Cache hit', { module: 'datajud', action: 'consultar' })
       return NextResponse.json({
         sucesso: true,
         dados: cacheHit.dados_normalizados as ProcessoDataJud,
@@ -112,7 +120,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Consultar API DataJud
-    console.log(`[DataJud] Consultando API para ${numeroCNJNormalizado}`)
+    logger.debug('Consultando API DataJud', { module: 'datajud', action: 'consultar' })
     const resultado = await consultarDataJud(numeroCNJNormalizado)
 
     if (!resultado.sucesso || !resultado.dados) {
@@ -142,7 +150,7 @@ export async function POST(request: NextRequest) {
 
     if (cacheError) {
       // Log mas nao falha a requisicao por erro de cache
-      console.error('[DataJud] Erro ao salvar cache:', cacheError)
+      logger.error('Erro ao salvar cache', { module: 'datajud', action: 'consultar' }, cacheError instanceof Error ? cacheError : undefined)
     }
 
     return NextResponse.json({
@@ -152,7 +160,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[DataJud] Erro interno:', error)
+    logger.error('Erro interno', { module: 'datajud', action: 'consultar' }, error instanceof Error ? error : undefined)
     return NextResponse.json(
       { sucesso: false, error: 'Erro interno ao consultar DataJud' },
       { status: 500 }

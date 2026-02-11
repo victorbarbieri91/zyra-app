@@ -28,7 +28,7 @@ export function useAgenda() {
 
       if (error) throw error
 
-      setFeriados(data?.map(f => new Date(f.data)) || [])
+      setFeriados(data?.map((f: { data: string }) => new Date(f.data)) || [])
     } catch (err) {
       console.error('Erro ao carregar feriados:', err)
     } finally {

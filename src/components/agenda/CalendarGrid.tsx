@@ -241,8 +241,7 @@ export default function CalendarGrid({
                         dia_inteiro={evento.dia_inteiro}
                         status={evento.status}
                         prazo_data_limite={evento.prazo_data_limite}
-                        onClick={(e) => {
-                          e?.stopPropagation()
+                        onClick={() => {
                           if (evento.onClick) evento.onClick()
                         }}
                       />

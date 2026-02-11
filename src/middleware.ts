@@ -60,14 +60,15 @@ export async function middleware(request: NextRequest) {
     const { data, error } = await supabase.auth.getUser()
 
     if (error) {
-      // Se houver erro de sessao, limpar cookies e redirecionar para login
-      console.error('Erro de autenticacao no middleware:', error.message)
+      // Sessao ausente e esperado para rotas publicas (login, etc) - nao logar como erro
 
       // Limpar cookies de autenticacao do Supabase
+      // Extrair project ref da URL (formato: https://<ref>.supabase.co)
+      const projectRef = process.env.NEXT_PUBLIC_SUPABASE_URL?.match(/https:\/\/([^.]+)\./)?.[1] || ''
       const cookiesToClear = [
-        'sb-lohakxdxgwgpkbmfmzzl-auth-token',
-        'sb-lohakxdxgwgpkbmfmzzl-auth-token.0',
-        'sb-lohakxdxgwgpkbmfmzzl-auth-token.1',
+        `sb-${projectRef}-auth-token`,
+        `sb-${projectRef}-auth-token.0`,
+        `sb-${projectRef}-auth-token.1`,
       ]
 
       for (const cookieName of cookiesToClear) {
@@ -83,8 +84,8 @@ export async function middleware(request: NextRequest) {
     } else {
       user = data.user
     }
-  } catch (err) {
-    console.error('Erro inesperado no middleware:', err)
+  } catch {
+    // Erro inesperado ao verificar sessao - tratar como nao autenticado
     user = null
   }
 

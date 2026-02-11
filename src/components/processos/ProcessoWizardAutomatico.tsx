@@ -215,7 +215,7 @@ export default function ProcessoWizardAutomatico({
 
       // Auto-selecionar usuário atual como responsável
       if (data && data.length > 0 && !responsavelId) {
-        const currentUser = data.find(c => c.id === user.user?.id)
+        const currentUser = data.find((c: any) => c.id === user.user?.id)
         if (currentUser) {
           setResponsavelId(currentUser.id)
         }

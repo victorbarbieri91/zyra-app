@@ -58,7 +58,7 @@ export function useTimers(escritorioId: string | null): UseTimersReturn {
       if (fetchError) throw fetchError;
 
       // Adicionar tempo_atual calculado
-      const timersComTempo = (data || []).map((timer) => ({
+      const timersComTempo = (data || []).map((timer: Record<string, any>) => ({
         ...timer,
         tempo_atual: calcularTempoAtual(timer as TimerAtivo),
       }));

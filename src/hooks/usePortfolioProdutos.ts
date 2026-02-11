@@ -95,7 +95,7 @@ export function usePortfolioProdutos(escritorioId?: string) {
 
       // Buscar checklist de cada fase
       const fasesComChecklist = await Promise.all(
-        (fases || []).map(async (fase) => {
+        (fases || []).map(async (fase: Record<string, any>) => {
           const { data: checklist } = await supabase
             .from('portfolio_produtos_checklist')
             .select('*')

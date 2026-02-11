@@ -10,6 +10,7 @@ import {
   listarMonitoramentosDiario,
   editarMonitoramentoDiario
 } from '@/lib/escavador/publicacoes'
+import { publicationsRateLimit } from '@/lib/rate-limit'
 
 /**
  * POST /api/escavador/publicacoes/termos
@@ -34,6 +35,12 @@ export async function POST(request: NextRequest) {
         { sucesso: false, error: 'Nao autorizado' },
         { status: 401 }
       )
+    }
+
+    // Rate limiting
+    const rateLimitResult = publicationsRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return publicationsRateLimit.errorResponse(rateLimitResult)
     }
 
     // Buscar escritorio do usuario
@@ -193,6 +200,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Rate limiting
+    const rateLimitResult = publicationsRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return publicationsRateLimit.errorResponse(rateLimitResult)
+    }
+
     // Buscar escritorio do usuario
     const { data: profile } = await supabase
       .from('profiles')
@@ -255,6 +268,12 @@ export async function PATCH(request: NextRequest) {
         { sucesso: false, error: 'Nao autorizado' },
         { status: 401 }
       )
+    }
+
+    // Rate limiting
+    const rateLimitResult = publicationsRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return publicationsRateLimit.errorResponse(rateLimitResult)
     }
 
     // Buscar escritorio do usuario
@@ -573,6 +592,12 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    // Rate limiting
+    const rateLimitResult = publicationsRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return publicationsRateLimit.errorResponse(rateLimitResult)
+    }
+
     // Buscar escritorio do usuario
     const { data: profile } = await supabase
       .from('profiles')
@@ -702,6 +727,12 @@ export async function DELETE(request: NextRequest) {
         { sucesso: false, error: 'Nao autorizado' },
         { status: 401 }
       )
+    }
+
+    // Rate limiting
+    const rateLimitResult = publicationsRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return publicationsRateLimit.errorResponse(rateLimitResult)
     }
 
     // Buscar escritorio do usuario

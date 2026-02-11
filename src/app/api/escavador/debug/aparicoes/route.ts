@@ -5,6 +5,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { buscarAparicoes } from '@/lib/escavador/publicacoes'
+import { debugRateLimit } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 /**
  * GET /api/escavador/debug/aparicoes?id=2134565
@@ -24,6 +26,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Rate limiting
+    const rateLimitResult = debugRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return debugRateLimit.errorResponse(rateLimitResult)
+    }
+
     const { searchParams } = new URL(request.url)
     const monitoramentoId = searchParams.get('id')
 
@@ -34,11 +42,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('[Debug Aparicoes] Buscando aparicoes para monitoramento:', monitoramentoId)
+    logger.debug('Buscando aparicoes para monitoramento', { module: 'escavador', action: 'debug-aparicoes' })
 
     const resultado = await buscarAparicoes(parseInt(monitoramentoId, 10))
 
-    console.log('[Debug Aparicoes] Resultado:', JSON.stringify(resultado, null, 2))
+    logger.debug(`Aparicoes encontradas: ${resultado.aparicoes?.length || 0}`, { module: 'escavador', action: 'debug-aparicoes' })
 
     // Para debug: mostrar estrutura completa das aparições incluindo todos os campos
     const aparicoesCampetos = resultado.aparicoes?.slice(0, 5).map((ap: any) => ({
@@ -67,7 +75,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[Debug Aparicoes] Erro:', error)
+    logger.error('Erro no debug aparicoes', { module: 'escavador', action: 'debug-aparicoes' }, error instanceof Error ? error : undefined)
     return NextResponse.json(
       { sucesso: false, error: 'Erro interno' },
       { status: 500 }

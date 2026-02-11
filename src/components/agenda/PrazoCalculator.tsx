@@ -77,7 +77,7 @@ export default function PrazoCalculator({ onCalculate, escritorioId }: PrazoCalc
         .lte('data', data)
         .eq('escritorio_id', escritorioId || null)
 
-      const feriadosDatas = new Set(feriados?.map(f => f.data) || [])
+      const feriadosDatas = new Set(feriados?.map((f: { data: string }) => f.data) || [])
 
       // Gerar timeline
       const timeline: PrazoResult['timeline'] = []

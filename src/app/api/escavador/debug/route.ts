@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { listarMonitoramentosDiario } from '@/lib/escavador/publicacoes'
+import { debugRateLimit } from '@/lib/rate-limit'
 
 /**
  * GET /api/escavador/debug
@@ -23,6 +24,12 @@ export async function GET(request: NextRequest) {
         { sucesso: false, error: 'Nao autorizado' },
         { status: 401 }
       )
+    }
+
+    // Rate limiting
+    const rateLimitResult = debugRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return debugRateLimit.errorResponse(rateLimitResult)
     }
 
     // Buscar escritorio do usuario

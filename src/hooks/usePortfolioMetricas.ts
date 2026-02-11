@@ -177,7 +177,7 @@ export function usePortfolioMetricas(escritorioId?: string) {
         receitaPorMes[mes] = { receita: 0, projetos: 0 }
       }
 
-      (data || []).forEach((projeto) => {
+      (data || []).forEach((projeto: { data_conclusao: string | null; valor_negociado: number | null }) => {
         if (projeto.data_conclusao) {
           const mes = new Date(projeto.data_conclusao).getMonth() + 1
           receitaPorMes[mes].receita += projeto.valor_negociado || 0
@@ -223,7 +223,7 @@ export function usePortfolioMetricas(escritorioId?: string) {
         trabalhista: { total: 0, sucesso: 0 },
         civel: { total: 0, sucesso: 0 },
         outro: { total: 0, sucesso: 0 },
-      }
+      };
 
       (data || []).forEach((projeto: any) => {
         const area = projeto.produto?.area_juridica as AreaJuridica

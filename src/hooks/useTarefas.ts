@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatDateForDB, formatDateTimeForDB, getNowInBrazil } from '@/lib/timezone'
+import { expandirRecorrencias, type RecorrenciaRegra } from '@/lib/recorrencia-utils'
 
 export interface Tarefa {
   id: string
@@ -46,6 +47,10 @@ export interface Tarefa {
 
   // Múltiplos responsáveis (array direto na coluna)
   responsaveis_ids: string[]
+
+  // Recorrência
+  recorrencia_id?: string | null
+  is_virtual?: boolean // true se for instância virtual expandida de uma recorrência
 
   created_at: string
   updated_at: string
@@ -94,7 +99,59 @@ export function useTarefas(escritorioId?: string) {
           : t.consultivo?.titulo || null,
       }))
 
-      setTarefas(tarefasFormatadas)
+      // Expandir recorrências do tipo 'tarefa' para os próximos 30 dias (para Kanban)
+      let tarefasFinais = tarefasFormatadas
+      try {
+        const { data: regrasData } = await supabase
+          .from('agenda_recorrencias')
+          .select('*')
+          .eq('escritorio_id', escritorioId)
+          .eq('ativo', true)
+          .eq('entidade_tipo', 'tarefa')
+
+        const regras: RecorrenciaRegra[] = regrasData || []
+        if (regras.length > 0) {
+          const hoje = new Date()
+          hoje.setHours(0, 0, 0, 0)
+          const fim = new Date(hoje.getTime() + 30 * 24 * 60 * 60 * 1000)
+
+          const existentes = tarefasFormatadas
+            .filter((t: any) => t.recorrencia_id)
+            .map((t: any) => ({ recorrencia_id: t.recorrencia_id, data_inicio: t.data_inicio }))
+
+          const virtuais = expandirRecorrencias(regras, hoje, fim, existentes)
+
+          // Converter AgendaItem virtuais para formato Tarefa
+          const tarefasVirtuais: Tarefa[] = virtuais.map(v => ({
+            id: v.id,
+            escritorio_id: v.escritorio_id,
+            titulo: v.titulo,
+            descricao: v.descricao,
+            tipo: (v.subtipo || 'outro') as Tarefa['tipo'],
+            prioridade: v.prioridade as Tarefa['prioridade'],
+            status: 'pendente' as Tarefa['status'],
+            data_inicio: v.data_inicio,
+            responsavel_id: v.responsavel_id,
+            responsavel_nome: v.responsavel_nome,
+            caso_titulo: v.caso_titulo || null,
+            responsaveis_ids: v.responsaveis_ids || [],
+            processo_id: v.processo_id || null,
+            consultivo_id: v.consultivo_id || null,
+            cor: v.cor,
+            recorrencia_id: v.recorrencia_id,
+            is_virtual: true,
+            created_at: v.created_at,
+            updated_at: v.updated_at,
+          }))
+
+          tarefasFinais = [...tarefasFormatadas, ...tarefasVirtuais]
+        }
+      } catch (recErr) {
+        // Falha na expansão não deve bloquear carregamento normal
+        console.warn('Aviso: expansão de recorrências falhou:', recErr)
+      }
+
+      setTarefas(tarefasFinais)
     } catch (err) {
       setError(err as Error)
       console.error('Erro ao carregar tarefas:', err)

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, CalendarClock, Clock, Link as LinkIcon, CheckSquare, Briefcase, UserCheck, FileText, ClipboardList, Zap, TrendingUp, ChevronRight, Repeat, ListTree, Pin } from 'lucide-react'
+import { Calendar, CalendarClock, Clock, Link as LinkIcon, CheckSquare, Briefcase, UserCheck, FileText, ClipboardList, Zap, TrendingUp, ChevronRight, Repeat, ListTree, Pin } from 'lucide-react' // Pin kept for info banner
 import { ModalWizard, WizardStep, ReviewCard } from '@/components/wizards'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
@@ -11,10 +11,10 @@ import { DateInput } from '@/components/ui/date-picker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 // TagSelector removido - tabelas de tags não são mais utilizadas
 import VinculacaoSelector from '@/components/agenda/VinculacaoSelector'
-import RecorrenciaConfig, { RecorrenciaData } from '@/components/agenda/RecorrenciaConfig'
+import RecorrenciaConfig, { RecorrenciaData, getRecorrenciaSummary } from '@/components/agenda/RecorrenciaConfig'
 import ResponsaveisSelector from '@/components/agenda/ResponsaveisSelector'
 import type { TarefaFormData } from '@/hooks/useTarefas'
-import type { WizardStep as WizardStepType } from '@/components/wizards'
+import type { WizardStep as WizardStepType } from '@/components/wizards/types'
 import { format, parse } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 // useTags removido - tabelas de tags não são mais utilizadas
@@ -35,7 +35,7 @@ interface TarefaWizardProps {
   initialData?: Partial<TarefaFormData>
 }
 
-type TipoTarefa = 'prazo_processual' | 'acompanhamento' | 'follow_up' | 'administrativo' | 'outro' | 'fixa'
+type TipoTarefa = 'prazo_processual' | 'acompanhamento' | 'follow_up' | 'administrativo' | 'outro'
 type Prioridade = 'alta' | 'media' | 'baixa'
 type PrazoTipo = 'recurso' | 'manifestacao' | 'cumprimento' | 'juntada' | 'pagamento' | 'outro'
 
@@ -70,12 +70,6 @@ const TIPO_CONFIG = {
     color: 'slate',
     description: 'Outras tarefas',
   },
-  fixa: {
-    label: 'Tarefa Fixa',
-    icon: Pin,
-    color: 'teal',
-    description: 'Aparece todo dia',
-  },
 }
 
 export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreated, initialData }: TarefaWizardProps) {
@@ -94,8 +88,10 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   // Hook para carregar responsáveis existentes (apenas para edição)
   const { getResponsaveis } = useAgendaResponsaveis()
 
-  // Form State
-  const [tipo, setTipo] = useState<TipoTarefa>(initialData?.tipo || 'outro')
+  // Form State — se editando tarefa fixa, exibir como 'administrativo' (tipo original perdido)
+  const [tipo, setTipo] = useState<TipoTarefa>(
+    initialData?.tipo === 'fixa' ? 'administrativo' : (initialData?.tipo as TipoTarefa || 'outro')
+  )
   const [titulo, setTitulo] = useState(initialData?.titulo || '')
   const [descricao, setDescricao] = useState(initialData?.descricao || '')
 
@@ -111,8 +107,21 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
 
   const [cor, setCor] = useState(initialData?.cor || '#3B82F6')
 
-  // Estado de recorrência
-  const [recorrencia, setRecorrencia] = useState<RecorrenciaData | null>(null)
+  // Estado de recorrência — se editando tarefa fixa, inicializar com isFixa: true
+  const [recorrencia, setRecorrencia] = useState<RecorrenciaData | null>(() => {
+    if (initialData?.tipo === 'fixa') {
+      return {
+        ativa: false,
+        isFixa: true,
+        frequencia: 'diaria',
+        intervalo: 1,
+        dataInicio: new Date().toISOString().split('T')[0],
+        terminoTipo: 'permanente',
+        horaPadrao: '09:00',
+      }
+    }
+    return null
+  })
 
   // Hook de recorrências
   const { createRecorrencia } = useRecorrencias(escritorioId)
@@ -227,21 +236,20 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   }, [vinculacao])
 
   // Carregar responsáveis existentes quando estamos editando (initialData tem id)
+  // Pular para instâncias virtuais (não existem no banco)
   useEffect(() => {
     const loadResponsaveis = async () => {
-      if (initialData?.id) {
-        console.log('[TarefaWizard] Carregando responsáveis para edição, tarefa:', initialData.id)
+      if (initialData?.id && !initialData.id.startsWith('virtual_') && !initialData.is_virtual) {
         const responsaveis = await getResponsaveis('tarefa', initialData.id)
         if (responsaveis.length > 0) {
           setResponsaveisIds(responsaveis.map(r => r.user_id))
-          console.log('[TarefaWizard] Responsáveis carregados:', responsaveis.map(r => r.user_id))
         }
       }
     }
     loadResponsaveis()
   }, [initialData?.id])
 
-  const isFixa = tipo === 'fixa'
+  const isFixa = recorrencia?.isFixa === true
 
   // Step Definitions
   const steps: WizardStepType[] = [
@@ -249,7 +257,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       id: 'tipo-identificacao',
       title: 'Tipo e Identificação',
       subtitle: 'Qual tipo de tarefa você está criando?',
-      validate: () => tipo !== '' && titulo.trim().length >= 3,
+      validate: () => (tipo as string) !== '' && titulo.trim().length >= 3,
     },
     {
       id: 'quando-responsabilidade',
@@ -279,8 +287,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
     },
   ]
 
-  // Tarefas fixas não usam recorrência
-  const filteredSteps = isFixa ? steps.filter(s => s.id !== 'recorrencia') : steps
+  // (steps removido — fixa agora é selecionada dentro do step de recorrência)
 
   const handleComplete = async () => {
     if (responsaveisIds.length === 0) {
@@ -303,7 +310,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
 
       const formData: TarefaFormData = {
         escritorio_id: escritorioId,
-        tipo,
+        tipo: isFixa ? 'fixa' : tipo,
         titulo,
         descricao: descricao || undefined,
         data_inicio: formatDateToISO(dataInicioFinal),
@@ -324,11 +331,22 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
 
       // Se tem recorrência, criar a recorrência em vez da tarefa direta
       if (recorrencia && recorrencia.ativa && !isEditing) {
+        // Enriquecer templateDados com dados de display para instâncias virtuais
+        const templateComDisplay = {
+          ...formData,
+          _display: {
+            responsavel_nome: membros.find(m => m.user_id === responsaveisIds[0])?.nome,
+            caso_titulo: vinculacao?.metadados?.partes,
+            processo_numero: vinculacao?.metadados?.numero_cnj,
+            consultivo_titulo: vinculacao?.metadados?.titulo,
+          }
+        }
+
         await createRecorrencia({
           nome: titulo,
           descricao: descricao || undefined,
           tipo: 'tarefa',
-          templateDados: formData,
+          templateDados: templateComDisplay,
           frequencia: recorrencia.frequencia,
           intervalo: recorrencia.intervalo,
           diasSemana: recorrencia.diasSemana,
@@ -341,6 +359,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
           numeroOcorrencias: recorrencia.numeroOcorrencias,
           apenasUteis: recorrencia.apenasUteis,
         })
+        toast.success('Tarefa recorrente criada com sucesso!')
       } else if (isEditing) {
         // Modo edição - usar onSubmit do pai (se fornecido) para atualizar
         // responsaveis_ids já está incluído no formData e será salvo diretamente
@@ -355,6 +374,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
         // Tarefa única nova - criar usando useTarefas diretamente
         // responsaveis_ids já está incluído no formData e será salvo diretamente
         await createTarefa(formData)
+        toast.success(isFixa ? 'Tarefa fixa criada com sucesso!' : 'Tarefa criada com sucesso!')
 
         // Callback opcional para o pai saber que foi criado (para atualizar listas)
         if (onCreated) {
@@ -363,8 +383,9 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       }
 
       onClose()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao criar tarefa:', error)
+      toast.error(error?.message || 'Erro ao criar tarefa. Verifique os dados e tente novamente.')
     } finally {
       setIsSubmitting(false)
     }
@@ -377,7 +398,6 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       follow_up: 'Follow-up',
       administrativo: 'Administrativo',
       outro: 'Outro',
-      fixa: 'Tarefa Fixa',
     }
     return labels[t]
   }
@@ -389,7 +409,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
 
   return (
     <ModalWizard
-      steps={filteredSteps}
+      steps={steps}
       currentStep={currentStep}
       onStepChange={setCurrentStep}
       title="Nova Tarefa"
@@ -398,13 +418,13 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       isSubmitting={isSubmitting}
     >
       {/* ETAPA 1: Tipo e Identificação */}
-      {filteredSteps[currentStep]?.id === 'tipo-identificacao' && (
-        <WizardStep title={filteredSteps[currentStep].title} subtitle={filteredSteps[currentStep].subtitle}>
+      {steps[currentStep]?.id === 'tipo-identificacao' && (
+        <WizardStep title={steps[currentStep].title} subtitle={steps[currentStep].subtitle}>
           <div className="space-y-4">
             {/* Tipo de Tarefa */}
             <div className="space-y-2">
               <Label className="text-sm font-medium text-[#34495e]">Tipo de Tarefa *</Label>
-              <div className="grid grid-cols-6 gap-2">
+              <div className="grid grid-cols-5 gap-2">
                 {(Object.entries(TIPO_CONFIG) as [TipoTarefa, typeof TIPO_CONFIG[keyof typeof TIPO_CONFIG]][]).map(
                   ([key, config]) => {
                     const Icon = config.icon
@@ -424,8 +444,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
                                 config.color === 'blue' && 'bg-blue-50 text-blue-600 border-blue-300',
                                 config.color === 'emerald' && 'bg-emerald-50 text-emerald-600 border-emerald-300',
                                 config.color === 'purple' && 'bg-purple-50 text-purple-600 border-purple-300',
-                                config.color === 'slate' && 'bg-slate-50 text-slate-600 border-slate-300',
-                                config.color === 'teal' && 'bg-teal-50 text-teal-600 border-teal-300'
+                                config.color === 'slate' && 'bg-slate-50 text-slate-600 border-slate-300'
                               )
                             : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600'
                         )}
@@ -475,8 +494,8 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       )}
 
       {/* ETAPA 2: Quando e Responsabilidade */}
-      {filteredSteps[currentStep]?.id === 'quando-responsabilidade' && (
-        <WizardStep title={filteredSteps[currentStep].title} subtitle={filteredSteps[currentStep].subtitle}>
+      {steps[currentStep]?.id === 'quando-responsabilidade' && (
+        <WizardStep title={steps[currentStep].title} subtitle={steps[currentStep].subtitle}>
           <div className="space-y-4">
             {/* Info para tarefa fixa */}
             {isFixa && (
@@ -573,10 +592,10 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       )}
 
       {/* ETAPA 3: Vínculos */}
-      {filteredSteps[currentStep]?.id === 'vinculos' && (
+      {steps[currentStep]?.id === 'vinculos' && (
         <WizardStep
-          title={filteredSteps[currentStep].title}
-          subtitle={filteredSteps[currentStep].subtitle}
+          title={steps[currentStep].title}
+          subtitle={steps[currentStep].subtitle}
           isOptional={!isFixa}
         >
           <div className="space-y-4">
@@ -598,10 +617,10 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       )}
 
       {/* ETAPA 4: Recorrência */}
-      {filteredSteps[currentStep]?.id === 'recorrencia' && (
+      {steps[currentStep]?.id === 'recorrencia' && (
         <WizardStep
-          title={filteredSteps[currentStep].title}
-          subtitle={filteredSteps[currentStep].subtitle}
+          title={steps[currentStep].title}
+          subtitle={steps[currentStep].subtitle}
           isOptional
         >
           <RecorrenciaConfig
@@ -613,8 +632,8 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       )}
 
       {/* ETAPA 5: Revisão - Ficha Completa */}
-      {filteredSteps[currentStep]?.id === 'revisao' && (
-        <WizardStep title={filteredSteps[currentStep].title} subtitle={filteredSteps[currentStep].subtitle}>
+      {steps[currentStep]?.id === 'revisao' && (
+        <WizardStep title={steps[currentStep].title} subtitle={steps[currentStep].subtitle}>
           <div className="bg-white border border-slate-200 rounded-lg p-4">
             {/* Grid de Informações */}
             <div className="space-y-4">
@@ -622,6 +641,13 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
               <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
                 <span className="text-slate-500">Tipo</span>
                 <span className="text-[#34495e] font-medium">{getTipoLabel(tipo)}</span>
+
+                {isFixa && (
+                  <>
+                    <span className="text-slate-500">Modo</span>
+                    <span className="text-teal-600 font-medium">Tarefa Fixa (todo dia)</span>
+                  </>
+                )}
 
                 <span className="text-slate-500">Título</span>
                 <span className="text-[#34495e] font-medium">{titulo}</span>
@@ -688,6 +714,21 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
                         {vinculacao.metadados?.numero_cnj && ` • CNJ: ${vinculacao.metadados.numero_cnj}`}
                       </div>
                     </div>
+                  </div>
+                </>
+              )}
+
+              {/* Recorrência (se houver) */}
+              {recorrencia?.ativa && (
+                <>
+                  <div className="border-t border-slate-100" />
+
+                  <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
+                    <span className="text-slate-500">Recorrência</span>
+                    <span className="text-[#34495e] font-medium flex items-center gap-1.5">
+                      <Repeat className="w-3.5 h-3.5 text-[#89bcbe]" />
+                      {getRecorrenciaSummary(recorrencia)}
+                    </span>
                   </div>
                 </>
               )}

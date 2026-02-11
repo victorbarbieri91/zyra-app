@@ -32,6 +32,7 @@ export interface CartaoComFaturaAtual extends CartaoCredito {
     valor_total: number
     status: 'aberta' | 'fechada' | 'paga' | 'cancelada'
     total_lancamentos: number
+    total_despesas: number
     dias_para_fechamento: number
     dias_para_vencimento: number
   } | null
@@ -937,7 +938,7 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
         .select('valor')
         .eq('fatura_id', faturaId)
 
-      const novoTotal = (lancamentos || []).reduce((sum, l) => sum + Number(l.valor), 0)
+      const novoTotal = (lancamentos || []).reduce((sum: number, l: { valor: number | string }) => sum + Number(l.valor), 0)
 
       // 3. Atualizar o valor total da fatura
       const { error: faturaError } = await supabase

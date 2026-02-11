@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/server'
 import { buscarProcessoPorCNJ } from '@/lib/escavador/client'
 import { validarNumeroCNJCompleto, formatarNumeroCNJ, validarFormatoCNJ } from '@/lib/datajud/validators'
 import type { ProcessoEscavadorNormalizado } from '@/lib/escavador/types'
+import { integrationRateLimit } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 // Cache TTL em minutos
 const CACHE_TTL_MINUTOS = 30
@@ -33,6 +35,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Rate limiting
+    const rateLimitResult = integrationRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return integrationRateLimit.errorResponse(rateLimitResult)
+    }
+
     // Parsear body
     let body: { numero_cnj?: string }
     try {
@@ -45,11 +53,11 @@ export async function POST(request: NextRequest) {
     }
 
     const { numero_cnj } = body
-    console.log('[Escavador API] Numero recebido:', numero_cnj)
+    logger.debug('Numero CNJ recebido', { module: 'escavador', action: 'buscar' })
 
     // Validar input
     if (!numero_cnj || typeof numero_cnj !== 'string') {
-      console.log('[Escavador API] Erro: Numero CNJ nao fornecido ou tipo invalido')
+      logger.debug('Numero CNJ nao fornecido ou tipo invalido', { module: 'escavador', action: 'buscar' })
       return NextResponse.json(
         { sucesso: false, error: 'Numero CNJ e obrigatorio' },
         { status: 400 }
@@ -64,24 +72,24 @@ export async function POST(request: NextRequest) {
       const apenasDigitos = numeroCNJNormalizado.replace(/\D/g, '')
       if (apenasDigitos.length === 20) {
         numeroCNJNormalizado = formatarNumeroCNJ(apenasDigitos)
-        console.log('[Escavador API] Numero auto-formatado:', numeroCNJNormalizado)
+        logger.debug('Numero CNJ auto-formatado', { module: 'escavador', action: 'buscar' })
       }
     }
-    console.log('[Escavador API] Numero normalizado:', numeroCNJNormalizado)
+    logger.debug('Numero CNJ normalizado', { module: 'escavador', action: 'buscar' })
 
     // Validar formato (digito verificador apenas como aviso, nao bloqueia)
     const validacao = validarNumeroCNJCompleto(numeroCNJNormalizado)
     if (!validacao.valido) {
       // Se for erro de formato, rejeita
       if (validacao.erro?.includes('Formato')) {
-        console.log('[Escavador API] Erro de formato:', validacao.erro)
+        logger.debug('Erro de formato CNJ', { module: 'escavador', action: 'buscar' })
         return NextResponse.json(
           { sucesso: false, error: validacao.erro },
           { status: 400 }
         )
       }
       // Se for erro de digito, apenas avisa mas continua
-      console.log('[Escavador API] Aviso de validacao (continuando):', validacao.erro)
+      logger.debug('Aviso de validacao CNJ (continuando)', { module: 'escavador', action: 'buscar' })
     }
 
     // Verificar cache
@@ -94,13 +102,12 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (cacheHit) {
-      console.log(`[Escavador API] Cache hit para ${numeroCNJNormalizado}`)
-      console.log('[Escavador API] Cache dados_capa keys:', Object.keys(cacheHit.dados_capa || {}))
+      logger.debug('Cache hit', { module: 'escavador', action: 'buscar' })
 
       // Verifica se o cache tem a estrutura nova (com titulo_polo_ativo)
       const dadosCapa = cacheHit.dados_capa as ProcessoEscavadorNormalizado
       if (!dadosCapa.titulo_polo_ativo && !dadosCapa.titulo_polo_passivo) {
-        console.log('[Escavador API] Cache com estrutura antiga, ignorando...')
+        logger.debug('Cache com estrutura antiga, ignorando', { module: 'escavador', action: 'buscar' })
         // Continua para buscar na API
       } else {
         // Monta dados do cache
@@ -118,7 +125,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Consultar API Escavador
-    console.log(`[Escavador API] Consultando API para ${numeroCNJNormalizado}`)
+    logger.debug('Consultando API Escavador', { module: 'escavador', action: 'buscar' })
     const resultado = await buscarProcessoPorCNJ(numeroCNJNormalizado)
 
     if (!resultado.sucesso || !resultado.dados) {
@@ -147,7 +154,7 @@ export async function POST(request: NextRequest) {
 
     if (cacheError) {
       // Log mas nao falha a requisicao por erro de cache
-      console.error('[Escavador API] Erro ao salvar cache:', cacheError)
+      logger.error('Erro ao salvar cache', { module: 'escavador', action: 'buscar' }, cacheError instanceof Error ? cacheError : undefined)
     }
 
     // Incrementar contador de creditos do escritorio
@@ -168,7 +175,7 @@ export async function POST(request: NextRequest) {
         })
         .then(({ error }) => {
           if (error) {
-            console.error('[Escavador API] Erro ao atualizar creditos:', error)
+            logger.error('Erro ao atualizar creditos', { module: 'escavador', action: 'buscar' }, error instanceof Error ? error : undefined)
           }
         })
     }
@@ -181,7 +188,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[Escavador API] Erro interno:', error)
+    logger.error('Erro interno', { module: 'escavador', action: 'buscar' }, error instanceof Error ? error : undefined)
     return NextResponse.json(
       { sucesso: false, error: 'Erro interno ao consultar Escavador' },
       { status: 500 }

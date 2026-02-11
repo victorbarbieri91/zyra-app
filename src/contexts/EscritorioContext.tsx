@@ -10,6 +10,7 @@ import {
 } from '@/lib/supabase/escritorio-helpers';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { logger } from '@/lib/logger';
 
 interface EscritorioContextData {
   escritorioAtivo: Escritorio | null;
@@ -64,7 +65,7 @@ export function EscritorioProvider({ children }: { children: React.ReactNode }) 
         }
       }
     } catch (error) {
-      console.error('Erro ao carregar dados do escritório:', error);
+      logger.error('Erro ao carregar dados do escritorio', { module: 'escritorio', action: 'carregar' }, error instanceof Error ? error : undefined);
     } finally {
       setCarregando(false);
     }
@@ -79,7 +80,7 @@ export function EscritorioProvider({ children }: { children: React.ReactNode }) 
       // Recarregar a página para atualizar todos os dados
       router.refresh();
     } catch (error) {
-      console.error('Erro ao trocar escritório:', error);
+      logger.error('Erro ao trocar escritorio', { module: 'escritorio', action: 'trocar' }, error instanceof Error ? error : undefined);
       throw error;
     } finally {
       setCarregando(false);
@@ -99,7 +100,7 @@ export function EscritorioProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
+    } = supabase.auth.onAuthStateChange((event: string) => {
       if (event === 'SIGNED_IN') {
         carregarDados();
       } else if (event === 'SIGNED_OUT') {

@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 
 // Tipos baseados nas tabelas do banco
-export type FormaCobranca = 'fixo' | 'por_hora' | 'misto' | 'por_pasta' | 'por_ato' | 'por_cargo' | 'pro_bono'
+export type FormaCobranca = 'fixo' | 'por_hora' | 'misto' | 'por_pasta' | 'por_ato' | 'por_cargo' | 'por_etapa' | 'pro_bono'
 
 export interface ContratoHonorario {
   id: string
@@ -72,6 +72,9 @@ export interface ContratoConfig {
   // Novos campos para por_pasta
   valor_por_processo?: number | null
   dia_cobranca?: number | null
+  // Campos de controle de meses
+  meses_cobrados?: number | null
+  limite_meses?: number | null
 }
 
 export interface ValorPorCargo {
@@ -261,7 +264,7 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
       if (contratosError) throw contratosError
 
       // Processar contratos com dados das receitas
-      const contratosComDados: ContratoHonorario[] = (contratosData || []).map((contrato) => {
+      const contratosComDados: ContratoHonorario[] = (contratosData || []).map((contrato: Record<string, any>) => {
         // Calcular valores das receitas vinculadas ao contrato
         let valorTotal = 0
         let valorRecebido = 0

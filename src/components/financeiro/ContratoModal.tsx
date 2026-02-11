@@ -226,8 +226,8 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
           valoresPorCargo = cargosData.map(c => ({
             cargo_id: c.cargo_id,
             cargo_nome: c.cargo_nome || '',
-            valor_padrao: undefined,
-            valor_negociado: c.valor_negociado,
+            valor_padrao: null,
+            valor_negociado: c.valor_negociado ?? null,
           }))
         }
 
@@ -499,7 +499,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
       // Filtrar clientes já no grupo e o cliente principal
       const clientesNoGrupo = formData.grupo_clientes?.map(c => c.cliente_id) || []
       const clientesFiltrados = (data || []).filter(
-        c => c.id !== formData.cliente_id && !clientesNoGrupo.includes(c.id)
+        (c: any) => c.id !== formData.cliente_id && !clientesNoGrupo.includes(c.id)
       )
       setClientesGrupoSearch(clientesFiltrados)
     } catch (error) {
@@ -540,7 +540,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
         const valoresExistentes = formData.valores_por_cargo || []
 
         // Mesclar cargos do escritório com valores existentes
-        const valoresCargo: ValorPorCargo[] = data.map((c) => {
+        const valoresCargo: ValorPorCargo[] = data.map((c: any) => {
           // Procurar se já existe valor salvo para este cargo
           const existente = valoresExistentes.find(v => v.cargo_id === c.id)
           return {
@@ -582,7 +582,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
         const isEdicao = !!contrato && atosExistentes.length > 0
 
         // Mesclar atos do escritório com valores existentes
-        const atosConfig: AtoContrato[] = data.map((a) => {
+        const atosConfig: AtoContrato[] = data.map((a: any) => {
           // Procurar se já existe configuração para este ato
           const existente = atosExistentes.find(e => e.ato_tipo_id === a.id)
           return {
@@ -1429,16 +1429,16 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                         </div>
                       </div>
                       {/* Mostrar contador de meses se for edição */}
-                      {contrato && contrato.config?.meses_cobrados !== undefined && (
+                      {contrato && contrato.config?.[0]?.meses_cobrados !== undefined && (
                         <div className="p-2 bg-slate-50 rounded border border-slate-100">
                           <div className="flex items-center justify-between">
                             <span className="text-xs text-slate-500">
-                              Meses já cobrados: <strong className="text-[#34495e]">{contrato.config.meses_cobrados || 0}</strong>
-                              {contrato.config.limite_meses && (
-                                <span className="text-slate-400"> / {contrato.config.limite_meses}</span>
+                              Meses já cobrados: <strong className="text-[#34495e]">{contrato.config[0]?.meses_cobrados || 0}</strong>
+                              {contrato.config[0]?.limite_meses && (
+                                <span className="text-slate-400"> / {contrato.config[0].limite_meses}</span>
                               )}
                             </span>
-                            {contrato.config.meses_cobrados >= (contrato.config.limite_meses || 24) && (
+                            {(contrato.config[0]?.meses_cobrados ?? 0) >= (contrato.config[0]?.limite_meses || 24) && (
                               <Badge variant="outline" className="text-[10px] h-5 bg-amber-50 text-amber-700 border-amber-200">
                                 Limite atingido
                               </Badge>

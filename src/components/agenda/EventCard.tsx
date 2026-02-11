@@ -19,7 +19,7 @@ export interface EventCardProps {
   processo_numero?: string
   responsavel_nome?: string
   cor?: string
-  status?: 'agendado' | 'realizado' | 'cancelado' | 'remarcado'
+  status?: 'agendado' | 'realizado' | 'cancelado' | 'remarcado' | 'concluida' | 'em_andamento' | 'em_pausa' | 'pendente' | 'cancelada'
   // Dados específicos de audiência
   tipo_audiencia?: string
   modalidade?: 'presencial' | 'virtual'

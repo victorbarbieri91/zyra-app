@@ -88,6 +88,7 @@ interface Publicacao {
   hash_conteudo?: string
   duplicata_revisada?: boolean
   is_snippet?: boolean
+  updated_at?: string
 }
 
 interface Stats {
@@ -104,7 +105,11 @@ interface Stats {
 type AbaPublicacoes = 'todas' | 'com_processo' | 'sem_processo' | 'arquivadas'
 
 // Filtros rápidos pré-definidos
-const FILTROS_RAPIDOS = [
+const FILTROS_RAPIDOS: Array<{
+  id: string
+  label: string
+  filtro: { status?: string; tipo?: string; apenasUrgentes?: boolean; semPasta?: boolean }
+}> = [
   { id: 'pendentes', label: 'Pendentes', filtro: { status: 'pendente' } },
   { id: 'urgentes', label: 'Urgentes', filtro: { apenasUrgentes: true } },
   { id: 'intimacoes', label: 'Intimações', filtro: { tipo: 'intimacao' } },

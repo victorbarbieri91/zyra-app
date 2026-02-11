@@ -68,7 +68,7 @@ export function useMigracaoJob(jobId: string | null): UseMigracaoJobResult {
           table: 'migracao_jobs',
           filter: `id=eq.${jobId}`
         },
-        (payload) => {
+        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
           console.log('Real-time update received, refetching full data...')
           // IMPORTANTE: Não usar payload.new diretamente pois campos JSONB grandes
           // (como resultado_final) podem ser truncados no evento realtime.
@@ -76,7 +76,7 @@ export function useMigracaoJob(jobId: string | null): UseMigracaoJobResult {
           fetchJob()
         }
       )
-      .subscribe((status) => {
+      .subscribe((status: string) => {
         console.log('Subscription status:', status)
       })
 

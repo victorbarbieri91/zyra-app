@@ -124,7 +124,7 @@ export function OportunidadeModal({ open, onOpenChange, onSuccess }: Oportunidad
       setResponsaveis(resp)
 
       // Pre-selecionar usuario logado como responsavel
-      if (resp.some(r => r.id === user.id)) {
+      if (resp.some((r: { id: string; nome: string }) => r.id === user.id)) {
         setFormData(prev => ({ ...prev, responsavel_id: user.id }))
       }
     } catch (error) {

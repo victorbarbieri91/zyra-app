@@ -340,7 +340,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
             .select('id, numero_cnj, numero_pasta, autor, reu')
             .in('id', processosIds)
 
-          processos?.forEach((p) => {
+          processos?.forEach((p: { id: string; numero_cnj: string | null; numero_pasta: string | null; autor: string | null; reu: string | null }) => {
             processosMap[p.id] = p
           })
         }

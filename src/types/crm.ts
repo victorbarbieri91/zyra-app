@@ -94,6 +94,8 @@ export interface InteracaoJSONB {
   user_nome?: string;
   etapa_anterior?: EtapaOportunidade;
   etapa_nova?: EtapaOportunidade;
+  oportunidade_titulo?: string;
+  pessoa_nome?: string;
 }
 
 // =====================================================

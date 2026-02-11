@@ -20,7 +20,10 @@ import {
   UserPlus,
   Search,
   FileText,
-  Link2
+  Link2,
+  Bug,
+  Copy,
+  Check
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -87,6 +90,7 @@ export default function ConfiguracoesPublicacoesPage() {
     historicoSync,
     carregandoHistorico,
     sincronizarTodos,
+    diagnosticarAPI,
     getHistorico
   } = useAaspSync(escritorioId ?? undefined)
 
@@ -139,6 +143,45 @@ export default function ConfiguracoesPublicacoesPage() {
   const [variacaoInput, setVariacaoInput] = useState('')
   const [termoExcluir, setTermoExcluir] = useState<TermoEscavador | null>(null)
   const [excluindoTermo, setExcluindoTermo] = useState(false)
+
+  // Modal diagnóstico API
+  const [diagnosticoAberto, setDiagnosticoAberto] = useState(false)
+  const [diagnosticando, setDiagnosticando] = useState(false)
+  const [diagnosticoResultado, setDiagnosticoResultado] = useState<any>(null)
+  const [copiado, setCopiado] = useState(false)
+
+  const handleDiagnosticar = async (associado: AaspAssociado) => {
+    setDiagnosticando(true)
+    setDiagnosticoAberto(true)
+    setDiagnosticoResultado(null)
+    setCopiado(false)
+
+    try {
+      const resultado = await diagnosticarAPI(associado.id)
+      setDiagnosticoResultado(resultado)
+
+      if (!resultado.sucesso) {
+        toast.error(resultado.mensagem)
+      }
+    } catch (error: any) {
+      setDiagnosticoResultado({ sucesso: false, mensagem: error.message })
+      toast.error(`Erro: ${error.message}`)
+    } finally {
+      setDiagnosticando(false)
+    }
+  }
+
+  const handleCopiarDiagnostico = async () => {
+    if (!diagnosticoResultado) return
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(diagnosticoResultado, null, 2))
+      setCopiado(true)
+      toast.success('JSON copiado!')
+      setTimeout(() => setCopiado(false), 2000)
+    } catch {
+      toast.error('Erro ao copiar')
+    }
+  }
 
   // Histórico agora é carregado automaticamente pelo hook useAaspSync
 
@@ -615,6 +658,15 @@ export default function ConfiguracoesPublicacoesPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDiagnosticar(associado)}
+                          className="text-slate-500 hover:text-amber-600"
+                          title="Diagnosticar API AASP"
+                        >
+                          <Bug className="w-4 h-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1352,6 +1404,50 @@ export default function ConfiguracoesPublicacoesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal Diagnóstico API AASP */}
+      <Dialog open={diagnosticoAberto} onOpenChange={setDiagnosticoAberto}>
+        <DialogContent className="sm:max-w-3xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bug className="w-5 h-5 text-amber-600" />
+              Diagnóstico API AASP
+            </DialogTitle>
+            <DialogDescription>
+              Resposta RAW da API AASP sem nenhum processamento
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-auto">
+            {diagnosticando ? (
+              <div className="p-8 flex flex-col items-center justify-center gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+                <p className="text-sm text-slate-500">Consultando API AASP...</p>
+              </div>
+            ) : diagnosticoResultado ? (
+              <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg text-xs overflow-auto max-h-[55vh] whitespace-pre-wrap break-words">
+                {JSON.stringify(diagnosticoResultado, null, 2)}
+              </pre>
+            ) : null}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopiarDiagnostico}
+              disabled={!diagnosticoResultado || diagnosticando}
+              className="gap-2"
+            >
+              {copiado ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copiado ? 'Copiado!' : 'Copiar JSON'}
+            </Button>
+            <Button variant="outline" onClick={() => setDiagnosticoAberto(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -109,8 +109,8 @@ export default function EventModal({
       setFormData(evento)
       // Carregar responsáveis do evento existente
       if (evento.id) {
-        getResponsaveis('evento', evento.id).then(ids => {
-          setResponsaveisIds(ids)
+        getResponsaveis('evento', evento.id).then(responsaveis => {
+          setResponsaveisIds(responsaveis.map(r => r.user_id))
         })
       }
     } else if (defaultDate) {

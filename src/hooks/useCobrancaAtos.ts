@@ -326,7 +326,7 @@ export function useCobrancaAtos(escritorioId: string | null): UseCobrancaAtosRet
       // Mapear apenas atos que estão configurados no contrato
       // Lógica: valorCalculado = MAX(percentual × valor_causa, valor_minimo)
       // O valor_fixo no contrato é tratado como VALOR MÍNIMO, não valor fixo
-      return (tiposAtos || []).map((ato) => {
+      return (tiposAtos || []).map((ato: { id: string; codigo: string; nome: string; percentual_padrao: number | null; valor_fixo_padrao: number | null }) => {
         const configContrato = atosContrato.find(a => a.ato_tipo_id === ato.id);
 
         // Calcular valor baseado no percentual

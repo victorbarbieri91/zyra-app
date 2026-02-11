@@ -237,7 +237,7 @@ export default function ContratoDetailModal({
 
         if (processosData) {
           setProcessosVinculados(
-            processosData.map(p => ({
+            processosData.map((p: any) => ({
               id: p.id,
               numero_pasta: p.numero_pasta,
               numero_cnj: p.numero_cnj,

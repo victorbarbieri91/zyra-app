@@ -160,8 +160,8 @@ export function ModalEditarEscritorio({
     setUploadingLogo(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${escritorio.id}-${Date.now()}.${fileExt}`;
-      const filePath = `escritorios/${fileName}`;
+      const fileName = `logo-${Date.now()}.${fileExt}`;
+      const filePath = `escritorios/${escritorio.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('logos')

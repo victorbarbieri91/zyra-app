@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { migrationRateLimit } from '@/lib/rate-limit'
 
 interface CriarClienteRequest {
   nome_completo: string
@@ -22,6 +23,12 @@ export async function POST(request: NextRequest) {
         { error: 'Não autorizado' },
         { status: 401 }
       )
+    }
+
+    // Rate limiting
+    const rateLimitResult = migrationRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return migrationRateLimit.errorResponse(rateLimitResult)
     }
 
     const body = await request.json() as CriarClienteRequest

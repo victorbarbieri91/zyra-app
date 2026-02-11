@@ -11,7 +11,7 @@ export type AreaJuridica = 'tributario' | 'societario' | 'trabalhista' | 'civel'
 
 export type StatusProduto = 'rascunho' | 'ativo' | 'inativo' | 'arquivado';
 
-export type Complexidade = 'baixa' | 'media' | 'alta';
+export type Complexidade = 'baixa' | 'media' | 'alta' | 'simples' | 'complexa';
 
 export type TipoPreco = 'fixo' | 'faixa' | 'por_fase' | 'hora' | 'exito';
 
@@ -68,6 +68,8 @@ export const COMPLEXIDADE_LABELS: Record<Complexidade, string> = {
   baixa: 'Baixa',
   media: 'Média',
   alta: 'Alta',
+  simples: 'Simples',
+  complexa: 'Complexa',
 };
 
 export const TIPO_PRECO_LABELS: Record<TipoPreco, string> = {

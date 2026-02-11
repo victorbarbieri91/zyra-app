@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { formatDateForDB } from '@/lib/timezone'
 
 export interface RecorrenciaFormData {
   nome: string
@@ -32,12 +33,15 @@ export interface Recorrencia {
   regra_dias_semana: number[] | null
   regra_mes: number | null
   regra_hora: string
+  regra_apenas_uteis: boolean
   ativo: boolean
   data_inicio: string
   data_fim: string | null
+  max_ocorrencias: number | null
   proxima_execucao: string | null
   ultima_execucao: string | null
   total_criados: number
+  exclusoes: string[] // datas YYYY-MM-DD excluídas
   criado_por: string | null
   created_at: string
   updated_at: string
@@ -46,7 +50,8 @@ export interface Recorrencia {
 export function useRecorrencias(escritorioId?: string) {
   const [recorrencias, setRecorrencias] = useState<Recorrencia[]>([])
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   // Buscar recorrências
   const fetchRecorrencias = async () => {
@@ -94,9 +99,11 @@ export function useRecorrencias(escritorioId?: string) {
           regra_dia_mes: data.diaMes || null,
           regra_mes: data.mes || null,
           regra_hora: data.horaPadrao,
+          regra_apenas_uteis: data.apenasUteis || false,
           ativo: true,
           data_inicio: data.dataInicio,
           data_fim: data.terminoTipo === 'data' ? data.dataFim : null,
+          max_ocorrencias: data.terminoTipo === 'ocorrencias' ? data.numeroOcorrencias : null,
           proxima_execucao: data.dataInicio,
           total_criados: 0,
         })
@@ -131,6 +138,7 @@ export function useRecorrencias(escritorioId?: string) {
       if (updates.horaPadrao) updateData.regra_hora = updates.horaPadrao
       if (updates.dataInicio) updateData.data_inicio = updates.dataInicio
       if (updates.dataFim !== undefined) updateData.data_fim = updates.dataFim
+      if (updates.apenasUteis !== undefined) updateData.regra_apenas_uteis = updates.apenasUteis
 
       const { error } = await supabase
         .from('agenda_recorrencias')
@@ -214,6 +222,137 @@ export function useRecorrencias(escritorioId?: string) {
     }
   }
 
+  /**
+   * Materializa uma instância virtual de recorrência no banco de dados.
+   * Cria uma linha real em agenda_tarefas ou agenda_eventos.
+   * Retorna o ID da instância real criada.
+   */
+  const materializarInstancia = async (
+    recorrenciaId: string,
+    dataOcorrencia: string // "YYYY-MM-DD"
+  ): Promise<{ id: string; tabela: string }> => {
+    // 1. Buscar a regra de recorrência
+    const regra = await getRecorrencia(recorrenciaId)
+    if (!regra) {
+      throw new Error('Recorrência não encontrada')
+    }
+
+    // 2. Extrair template_dados
+    const tpl = regra.template_dados || {}
+
+    // 3. Validar FKs — templates podem referenciar entidades deletadas
+    let processoIdValido: string | undefined = tpl.processo_id || undefined
+    let consultivoIdValido: string | undefined = tpl.consultivo_id || undefined
+
+    if (processoIdValido) {
+      const { count } = await supabase
+        .from('processos_processos')
+        .select('id', { count: 'exact', head: true })
+        .eq('id', processoIdValido)
+      if (!count) processoIdValido = undefined
+    }
+
+    if (consultivoIdValido) {
+      const { count } = await supabase
+        .from('consultivo_consultas')
+        .select('id', { count: 'exact', head: true })
+        .eq('id', consultivoIdValido)
+      if (!count) consultivoIdValido = undefined
+    }
+
+    // 4. Determinar tabela alvo e montar dados com APENAS colunas válidas
+    const tabela = regra.entidade_tipo === 'tarefa' ? 'agenda_tarefas' : 'agenda_eventos'
+
+    let dados: any
+
+    if (regra.entidade_tipo === 'tarefa') {
+      // Colunas válidas em agenda_tarefas
+      dados = {
+        escritorio_id: regra.escritorio_id,
+        recorrencia_id: regra.id,
+        status: 'pendente',
+        titulo: tpl.titulo || regra.template_nome,
+        descricao: tpl.descricao || regra.template_descricao || undefined,
+        tipo: tpl.tipo || 'outro',
+        prioridade: tpl.prioridade || 'media',
+        data_inicio: dataOcorrencia, // tipo date
+        responsavel_id: tpl.responsavel_id || tpl.responsaveis_ids?.[0] || undefined,
+        responsaveis_ids: tpl.responsaveis_ids || [],
+        cor: tpl.cor || undefined,
+        processo_id: processoIdValido,
+        consultivo_id: consultivoIdValido,
+        prazo_data_limite: tpl.prazo_data_limite || undefined,
+        prazo_dias_uteis: tpl.prazo_dias_uteis ?? undefined,
+      }
+    } else {
+      // Colunas válidas em agenda_eventos
+      const hora = regra.regra_hora || '09:00'
+      dados = {
+        escritorio_id: regra.escritorio_id,
+        recorrencia_id: regra.id,
+        status: 'pendente',
+        titulo: tpl.titulo || regra.template_nome,
+        descricao: tpl.descricao || regra.template_descricao || undefined,
+        tipo: tpl.tipo || undefined,
+        data_inicio: `${dataOcorrencia}T${hora}:00`, // tipo timestamptz
+        data_fim: tpl.data_fim || undefined,
+        dia_inteiro: tpl.dia_inteiro ?? false,
+        local: tpl.local || undefined,
+        responsavel_id: tpl.responsavel_id || tpl.responsaveis_ids?.[0] || undefined,
+        responsaveis_ids: tpl.responsaveis_ids || [],
+        cor: tpl.cor || undefined,
+        processo_id: processoIdValido,
+        consultivo_id: consultivoIdValido,
+      }
+    }
+
+    // 5. Inserir no banco
+    const { data: instancia, error } = await supabase
+      .from(tabela)
+      .insert(dados)
+      .select('id')
+      .single()
+
+    if (error) {
+      console.error('Erro ao materializar instância:', error?.message || JSON.stringify(error))
+      throw error
+    }
+
+    // 6. Incrementar total_criados na regra
+    await supabase
+      .from('agenda_recorrencias')
+      .update({ total_criados: regra.total_criados + 1 })
+      .eq('id', regra.id)
+
+    return { id: instancia.id, tabela }
+  }
+
+  /**
+   * Exclui uma ocorrência específica de uma recorrência (adiciona data ao array exclusoes).
+   * A instância virtual dessa data não será mais exibida.
+   */
+  const excluirOcorrencia = async (recorrenciaId: string, dataOcorrencia: string): Promise<void> => {
+    try {
+      const regra = await getRecorrencia(recorrenciaId)
+      if (!regra) throw new Error('Recorrência não encontrada')
+
+      const exclusoesAtuais = regra.exclusoes || []
+      if (exclusoesAtuais.includes(dataOcorrencia)) return // Já excluída
+
+      const { error } = await supabase
+        .from('agenda_recorrencias')
+        .update({ exclusoes: [...exclusoesAtuais, dataOcorrencia] })
+        .eq('id', recorrenciaId)
+
+      if (error) throw error
+
+      await fetchRecorrencias()
+    } catch (error) {
+      console.error('Erro ao excluir ocorrência:', error)
+      throw error
+    }
+  }
+
   return {
     recorrencias,
     loading,
@@ -223,6 +362,8 @@ export function useRecorrencias(escritorioId?: string) {
     activateRecorrencia,
     deleteRecorrencia,
     getRecorrencia,
+    materializarInstancia,
+    excluirOcorrencia,
     refreshRecorrencias: fetchRecorrencias,
   }
 }

@@ -83,7 +83,9 @@ const AREA_STYLES: Record<AreaJuridica, { bg: string; text: string; border: stri
 
 const COMPLEXIDADE_COLORS: Record<Complexidade, string> = {
   simples: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  baixa: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   media: 'bg-amber-50 text-amber-700 border-amber-200',
+  alta: 'bg-rose-50 text-rose-700 border-rose-200',
   complexa: 'bg-rose-50 text-rose-700 border-rose-200',
 }
 

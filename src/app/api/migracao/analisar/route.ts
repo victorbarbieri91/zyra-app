@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { SCHEMAS } from '@/lib/migracao/constants'
 import { ModuloMigracao, CampoSchema } from '@/types/migracao'
+import { migrationRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
   try {
@@ -15,6 +16,12 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
+    // Rate limiting
+    const rateLimitResult = migrationRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return migrationRateLimit.errorResponse(rateLimitResult)
     }
 
     const body = await request.json()

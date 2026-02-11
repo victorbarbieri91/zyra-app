@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Clock, CheckCircle, XCircle, User, Building2, ChevronDown, Check, Pencil, X, Save, Users, Plus, Briefcase, FileText, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { format, startOfMonth, endOfMonth } from 'date-fns'
+import { format, subDays } from 'date-fns'
 import { DateRange } from 'react-day-picker'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -65,10 +65,10 @@ export default function TimesheetPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
 
-  // Filtros - inicializar com mês atual
+  // Filtros - inicializar com últimos 30 dias
   const [periodoSelecionado, setPeriodoSelecionado] = useState<DateRange | undefined>(() => {
     const hoje = new Date()
-    return { from: startOfMonth(hoje), to: endOfMonth(hoje) }
+    return { from: subDays(hoje, 30), to: hoje }
   })
   const [statusFiltro, setStatusFiltro] = useState<'pendente' | 'aprovado'>('pendente')
   const [filtroFaturavel, setFiltroFaturavel] = useState<'todos' | 'cobravel' | 'nao_cobravel'>('todos')
@@ -617,7 +617,7 @@ export default function TimesheetPage() {
         {/* Toggle Status */}
         <div className="flex rounded-lg border border-slate-200 overflow-hidden">
           <button
-            onClick={() => setStatusFiltro('pendente')}
+            onClick={() => { setStatusFiltro('pendente'); setFiltroFaturavel('todos') }}
             className={cn(
               'px-4 py-2 text-sm font-medium transition-colors',
               statusFiltro === 'pendente'
@@ -628,7 +628,7 @@ export default function TimesheetPage() {
             Pendentes
           </button>
           <button
-            onClick={() => setStatusFiltro('aprovado')}
+            onClick={() => { setStatusFiltro('aprovado'); setFiltroFaturavel('cobravel') }}
             className={cn(
               'px-4 py-2 text-sm font-medium transition-colors border-l border-slate-200',
               statusFiltro === 'aprovado'

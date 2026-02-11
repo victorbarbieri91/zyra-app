@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { ResultadoBusca, RespostaBuscaGlobal } from '@/types/search'
+import { searchRateLimit } from '@/lib/rate-limit'
 
 const MAX_RESULTADOS_POR_TIPO = 10
 const MAX_RESULTADOS_TOTAL = 20
@@ -30,6 +31,12 @@ export async function GET(request: NextRequest) {
         { sucesso: false, erro: 'Não autorizado', resultados: [], total: 0, tempo_busca_ms: 0 },
         { status: 401 }
       )
+    }
+
+    // Rate limiting
+    const rateLimitResult = searchRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return searchRateLimit.errorResponse(rateLimitResult)
     }
 
     // Obter escritorio_id do usuário

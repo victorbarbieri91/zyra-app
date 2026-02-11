@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { buscarMovimentacoes, solicitarAtualizacao } from '@/lib/escavador/client'
 import { validarFormatoCNJ, formatarNumeroCNJ } from '@/lib/datajud/validators'
+import { integrationRateLimit } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 /**
  * POST /api/escavador/atualizar
@@ -27,6 +29,12 @@ export async function POST(request: NextRequest) {
         { sucesso: false, error: 'Nao autorizado' },
         { status: 401 }
       )
+    }
+
+    // Rate limiting
+    const rateLimitResult = integrationRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return integrationRateLimit.errorResponse(rateLimitResult)
     }
 
     // Obter escritorio_id do usuario
@@ -73,11 +81,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log('[Escavador Atualizar] Atualizando processo:', numeroCNJNormalizado)
+    logger.debug('Atualizando processo', { module: 'escavador', action: 'atualizar' })
 
     // Verificar se o token do Escavador esta configurado
     if (!process.env.ESCAVADOR_API_TOKEN) {
-      console.error('[Escavador Atualizar] ESCAVADOR_API_TOKEN nao configurado')
+      logger.error('ESCAVADOR_API_TOKEN nao configurado', { module: 'escavador', action: 'atualizar' })
       return NextResponse.json({
         sucesso: false,
         error: 'Integracao com Escavador nao configurada'
@@ -93,7 +101,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (!processo) {
-      console.log('[Escavador Atualizar] Processo nao encontrado:', numeroCNJNormalizado)
+      logger.debug('Processo nao encontrado no sistema', { module: 'escavador', action: 'atualizar' })
       return NextResponse.json(
         { sucesso: false, error: 'Processo nao encontrado no sistema' },
         { status: 404 }
@@ -104,12 +112,12 @@ export async function POST(request: NextRequest) {
     try {
       const resultadoAtualizacao = await solicitarAtualizacao(numeroCNJNormalizado)
       if (resultadoAtualizacao.sucesso) {
-        console.log('[Escavador Atualizar] Atualizacao solicitada')
+        logger.debug('Atualizacao solicitada com sucesso', { module: 'escavador', action: 'atualizar' })
       } else {
-        console.log('[Escavador Atualizar] Nao foi possivel solicitar atualizacao:', resultadoAtualizacao.erro)
+        logger.debug('Nao foi possivel solicitar atualizacao', { module: 'escavador', action: 'atualizar' })
       }
     } catch (err) {
-      console.log('[Escavador Atualizar] Erro ao solicitar atualizacao (ignorando):', err)
+      logger.debug('Erro ao solicitar atualizacao (ignorando)', { module: 'escavador', action: 'atualizar' })
       // Continua mesmo se falhar - vamos buscar as movimentacoes existentes
     }
 
@@ -117,7 +125,7 @@ export async function POST(request: NextRequest) {
     const resultadoMovs = await buscarMovimentacoes(numeroCNJNormalizado, 1, 50)
 
     if (!resultadoMovs.sucesso) {
-      console.error('[Escavador Atualizar] Erro ao buscar movimentacoes:', resultadoMovs.erro)
+      logger.error('Erro ao buscar movimentacoes', { module: 'escavador', action: 'atualizar' })
       return NextResponse.json({
         sucesso: false,
         error: resultadoMovs.erro || 'Erro ao buscar movimentacoes no Escavador'
@@ -126,7 +134,7 @@ export async function POST(request: NextRequest) {
 
     // Se nao encontrou movimentacoes, retorna sucesso mas avisa
     if (!resultadoMovs.movimentacoes || resultadoMovs.movimentacoes.length === 0) {
-      console.log('[Escavador Atualizar] Nenhuma movimentacao encontrada no Escavador')
+      logger.debug('Nenhuma movimentacao encontrada no Escavador', { module: 'escavador', action: 'atualizar' })
       return NextResponse.json({
         sucesso: true,
         movimentacoes_novas: 0,
@@ -135,7 +143,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log('[Escavador Atualizar] Movimentacoes encontradas:', resultadoMovs.movimentacoes.length)
+    logger.debug(`${resultadoMovs.movimentacoes.length} movimentacoes encontradas`, { module: 'escavador', action: 'atualizar' })
 
     // 3. Obter movimentacoes existentes no banco para evitar duplicatas
     const { data: movsExistentes } = await supabase
@@ -162,7 +170,7 @@ export async function POST(request: NextRequest) {
       )
     )
 
-    console.log('[Escavador Atualizar] Movimentacoes existentes no banco:', movsExistentes?.length || 0)
+    logger.debug(`${movsExistentes?.length || 0} movimentacoes existentes no banco`, { module: 'escavador', action: 'atualizar' })
 
     // 4. Filtrar apenas movimentacoes novas (verificando banco E duplicatas no mesmo lote)
     const movsParaInserir: typeof resultadoMovs.movimentacoes = []
@@ -173,13 +181,13 @@ export async function POST(request: NextRequest) {
 
       // Verificar se já existe no banco
       if (existentesSet.has(chave)) {
-        console.log('[Escavador Atualizar] Duplicata (banco) ignorada:', mov.data, mov.conteudo?.substring(0, 50))
+        logger.debug('Duplicata ignorada (banco)', { module: 'escavador', action: 'atualizar' })
         continue
       }
 
       // Verificar se já existe no lote atual (evita duplicatas intra-lote)
       if (chavesNoLote.has(chave)) {
-        console.log('[Escavador Atualizar] Duplicata (lote) ignorada:', mov.data, mov.conteudo?.substring(0, 50))
+        logger.debug('Duplicata ignorada (lote)', { module: 'escavador', action: 'atualizar' })
         continue
       }
 
@@ -188,7 +196,7 @@ export async function POST(request: NextRequest) {
       movsParaInserir.push(mov)
     }
 
-    console.log('[Escavador Atualizar] Movimentacoes novas para inserir:', movsParaInserir.length)
+    logger.debug(`${movsParaInserir.length} movimentacoes novas para inserir`, { module: 'escavador', action: 'atualizar' })
 
     // 5. Inserir novas movimentacoes
     if (movsParaInserir.length > 0) {
@@ -207,7 +215,7 @@ export async function POST(request: NextRequest) {
         .insert(movimentacoesParaInsert)
 
       if (insertError) {
-        console.error('[Escavador Atualizar] Erro ao inserir movimentacoes:', insertError)
+        logger.error('Erro ao inserir movimentacoes', { module: 'escavador', action: 'atualizar' }, insertError instanceof Error ? insertError : undefined)
         return NextResponse.json({
           sucesso: false,
           error: 'Erro ao salvar movimentacoes'
@@ -222,7 +230,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[Escavador Atualizar] Erro interno:', error)
+    logger.error('Erro interno', { module: 'escavador', action: 'atualizar' }, error instanceof Error ? error : undefined)
     return NextResponse.json(
       { sucesso: false, error: 'Erro interno ao atualizar processo' },
       { status: 500 }

@@ -3,6 +3,7 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server'
+import { migrationRateLimit } from '@/lib/rate-limit'
 
 interface ErroComDados {
   linha: number
@@ -21,6 +22,12 @@ interface Sugestao {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimitResult = migrationRateLimit.check(request)
+    if (!rateLimitResult.success) {
+      return migrationRateLimit.errorResponse(rateLimitResult)
+    }
+
     const body = await request.json()
     const { erros, modulo } = body as {
       erros: ErroComDados[]

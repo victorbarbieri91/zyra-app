@@ -57,6 +57,13 @@ serve(async (req) => {
         }
         return await sincronizarAssociado(supabase, escritorio_id, associado_id)
 
+      case 'debug':
+        // Diagnóstico: retorna resposta RAW da API AASP sem processar
+        if (!escritorio_id || !associado_id) {
+          return errorResponse('escritorio_id e associado_id são obrigatórios', 400)
+        }
+        return await diagnosticarAPI(supabase, escritorio_id, associado_id)
+
       default:
         return errorResponse('Ação inválida', 400)
     }
@@ -714,6 +721,203 @@ async function gerarHash(texto: string): Promise<string> {
   const hashBuffer = await crypto.subtle.digest('SHA-256', data)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+// ============================================
+// DIAGNÓSTICO DA API AASP
+// ============================================
+
+async function diagnosticarAPI(supabase: any, escritorioId: string, associadoId: string) {
+  // Buscar associado
+  const { data: associado, error: assocError } = await supabase
+    .from('publicacoes_associados')
+    .select('*')
+    .eq('id', associadoId)
+    .eq('escritorio_id', escritorioId)
+    .single()
+
+  if (assocError || !associado) {
+    return errorResponse('Associado não encontrado', 404)
+  }
+
+  const requestHeaders = {
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  }
+
+  const resultados: any = {
+    associado: {
+      id: associado.id,
+      nome: associado.nome,
+      oab: associado.oab_numero,
+      chave_preview: associado.aasp_chave?.substring(0, 8) + '...',
+    },
+    timestamp: new Date().toISOString(),
+    endpoint_principal: {},
+    endpoint_jornais: {},
+    endpoint_principal_diferencial_true: {},
+  }
+
+  // ---- Endpoint 1: Intimações de HOJE (diferencial=false) ----
+  try {
+    const hoje = new Date()
+    const dataFormatada = `${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`
+
+    const url1 = `${AASP_API_BASE}/api/Associado/intimacao/json?chave=${associado.aasp_chave}&data=${encodeURIComponent(dataFormatada)}&diferencial=false`
+
+    console.log('[DEBUG] Chamando endpoint principal com data:', dataFormatada)
+    const response1 = await fetch(url1, { method: 'GET', headers: requestHeaders })
+
+    resultados.endpoint_principal = {
+      url: url1.replace(associado.aasp_chave, '***CHAVE***'),
+      data_consultada: dataFormatada,
+      diferencial: false,
+      status: response1.status,
+      status_text: response1.statusText,
+      headers: Object.fromEntries(response1.headers.entries()),
+      body: null as any,
+      body_type: '',
+      body_is_array: false,
+      body_keys: [] as string[],
+      body_length: 0,
+    }
+
+    const text1 = await response1.text()
+    resultados.endpoint_principal.body_length = text1.length
+
+    try {
+      const json1 = JSON.parse(text1)
+      resultados.endpoint_principal.body = json1
+      resultados.endpoint_principal.body_type = typeof json1
+      resultados.endpoint_principal.body_is_array = Array.isArray(json1)
+      if (json1 && typeof json1 === 'object' && !Array.isArray(json1)) {
+        resultados.endpoint_principal.body_keys = Object.keys(json1)
+        // Para cada chave, mostrar tipo e tamanho se for array
+        const structure: any = {}
+        for (const key of Object.keys(json1)) {
+          const val = json1[key]
+          structure[key] = {
+            type: typeof val,
+            is_array: Array.isArray(val),
+            length: Array.isArray(val) ? val.length : (typeof val === 'string' ? val.length : undefined),
+            preview: Array.isArray(val) && val.length > 0
+              ? JSON.stringify(val[0]).substring(0, 300)
+              : (typeof val === 'string' ? val.substring(0, 200) : JSON.stringify(val)?.substring(0, 200)),
+          }
+        }
+        resultados.endpoint_principal.body_structure = structure
+      }
+      if (Array.isArray(json1)) {
+        resultados.endpoint_principal.array_length = json1.length
+        if (json1.length > 0) {
+          resultados.endpoint_principal.first_item_keys = Object.keys(json1[0])
+          resultados.endpoint_principal.first_item_preview = JSON.stringify(json1[0]).substring(0, 500)
+        }
+      }
+    } catch {
+      resultados.endpoint_principal.body = text1.substring(0, 2000)
+      resultados.endpoint_principal.body_type = 'text (não é JSON)'
+    }
+  } catch (err: any) {
+    resultados.endpoint_principal = { error: err.message }
+  }
+
+  // ---- Endpoint 2: GetJornaisComIntimacoes (últimos 7 dias) ----
+  try {
+    const url2 = `${AASP_API_BASE}/api/Associado/intimacao/GetJornaisComIntimacoes/json?chave=${associado.aasp_chave}&qtdeDias=7`
+
+    console.log('[DEBUG] Chamando GetJornaisComIntimacoes...')
+    const response2 = await fetch(url2, { method: 'GET', headers: requestHeaders })
+
+    resultados.endpoint_jornais = {
+      url: url2.replace(associado.aasp_chave, '***CHAVE***'),
+      qtde_dias: 7,
+      status: response2.status,
+      status_text: response2.statusText,
+      body: null as any,
+      body_type: '',
+    }
+
+    const text2 = await response2.text()
+
+    try {
+      const json2 = JSON.parse(text2)
+      resultados.endpoint_jornais.body = json2
+      resultados.endpoint_jornais.body_type = typeof json2
+      resultados.endpoint_jornais.body_is_array = Array.isArray(json2)
+      if (Array.isArray(json2)) {
+        resultados.endpoint_jornais.array_length = json2.length
+        if (json2.length > 0) {
+          resultados.endpoint_jornais.first_item = json2[0]
+          resultados.endpoint_jornais.all_items = json2
+        }
+      }
+    } catch {
+      resultados.endpoint_jornais.body = text2.substring(0, 2000)
+      resultados.endpoint_jornais.body_type = 'text (não é JSON)'
+    }
+  } catch (err: any) {
+    resultados.endpoint_jornais = { error: err.message }
+  }
+
+  // ---- Endpoint 3: Intimações de HOJE com diferencial=true ----
+  try {
+    const hoje = new Date()
+    const dataFormatada = `${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`
+
+    const url3 = `${AASP_API_BASE}/api/Associado/intimacao/json?chave=${associado.aasp_chave}&data=${encodeURIComponent(dataFormatada)}&diferencial=true`
+
+    console.log('[DEBUG] Chamando endpoint principal com diferencial=true...')
+    const response3 = await fetch(url3, { method: 'GET', headers: requestHeaders })
+
+    resultados.endpoint_principal_diferencial_true = {
+      url: url3.replace(associado.aasp_chave, '***CHAVE***'),
+      data_consultada: dataFormatada,
+      diferencial: true,
+      status: response3.status,
+      status_text: response3.statusText,
+      body: null as any,
+    }
+
+    const text3 = await response3.text()
+
+    try {
+      const json3 = JSON.parse(text3)
+      resultados.endpoint_principal_diferencial_true.body = json3
+      resultados.endpoint_principal_diferencial_true.body_type = typeof json3
+      resultados.endpoint_principal_diferencial_true.body_is_array = Array.isArray(json3)
+      if (Array.isArray(json3)) {
+        resultados.endpoint_principal_diferencial_true.array_length = json3.length
+      }
+      if (json3 && typeof json3 === 'object' && !Array.isArray(json3)) {
+        resultados.endpoint_principal_diferencial_true.body_keys = Object.keys(json3)
+        // Mesma análise de estrutura
+        const structure: any = {}
+        for (const key of Object.keys(json3)) {
+          const val = json3[key]
+          structure[key] = {
+            type: typeof val,
+            is_array: Array.isArray(val),
+            length: Array.isArray(val) ? val.length : undefined,
+          }
+        }
+        resultados.endpoint_principal_diferencial_true.body_structure = structure
+      }
+    } catch {
+      resultados.endpoint_principal_diferencial_true.body = text3.substring(0, 2000)
+    }
+  } catch (err: any) {
+    resultados.endpoint_principal_diferencial_true = { error: err.message }
+  }
+
+  console.log('[DEBUG] Diagnóstico completo. Retornando resultados...')
+
+  return successResponse({
+    sucesso: true,
+    mensagem: 'Diagnóstico da API AASP concluído',
+    diagnostico: resultados,
+  })
 }
 
 // ============================================

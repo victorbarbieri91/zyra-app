@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Repeat, Calendar, Clock } from 'lucide-react'
+import { Repeat, Calendar, Clock, Pin } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -9,9 +9,13 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { DateInput } from '@/components/ui/date-picker'
 import { cn } from '@/lib/utils'
+import { getRecorrenciaSummary } from '@/lib/recorrencia-utils'
+
+export { getRecorrenciaSummary }
 
 export interface RecorrenciaData {
   ativa: boolean
+  isFixa?: boolean
   frequencia: 'diaria' | 'semanal' | 'mensal' | 'anual'
   intervalo: number
   diasSemana?: number[]
@@ -58,11 +62,31 @@ const MESES = [
 
 export default function RecorrenciaConfig({ value, onChange, tipo }: RecorrenciaConfigProps) {
   const [recorrenciaAtiva, setRecorrenciaAtiva] = useState(value?.ativa || false)
+  const [isFixa, setIsFixa] = useState(value?.isFixa || false)
+
+  const handleFixaToggle = (checked: boolean) => {
+    setIsFixa(checked)
+    if (checked) {
+      setRecorrenciaAtiva(false)
+      onChange({
+        ativa: false,
+        isFixa: true,
+        frequencia: 'diaria',
+        intervalo: 1,
+        dataInicio: new Date().toISOString().split('T')[0],
+        terminoTipo: 'permanente',
+        horaPadrao: '09:00',
+      })
+    } else {
+      onChange(null)
+    }
+  }
 
   const handleCheckboxChange = (checked: boolean) => {
     setRecorrenciaAtiva(checked)
 
     if (checked) {
+      setIsFixa(false)
       // Inicializar com valores padrão
       onChange({
         ativa: true,
@@ -81,10 +105,42 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
   const handleFieldChange = (field: keyof RecorrenciaData, newValue: any) => {
     if (!value) return
 
-    onChange({
-      ...value,
-      [field]: newValue,
-    })
+    let updates: Partial<RecorrenciaData> = { [field]: newValue }
+
+    // Limpar estado irrelevante ao trocar frequência
+    if (field === 'frequencia') {
+      switch (newValue) {
+        case 'diaria':
+          updates.diasSemana = undefined
+          updates.diaMes = undefined
+          updates.mes = undefined
+          break
+        case 'semanal':
+          updates.diaMes = undefined
+          updates.mes = undefined
+          updates.apenasUteis = undefined
+          if (!value.diasSemana || value.diasSemana.length === 0) {
+            updates.diasSemana = [1, 2, 3, 4, 5] // Default: Seg-Sex
+          }
+          break
+        case 'mensal':
+          updates.diasSemana = undefined
+          updates.mes = undefined
+          updates.apenasUteis = undefined
+          if (!value.diaMes) {
+            updates.diaMes = 1
+          }
+          break
+        case 'anual':
+          updates.diasSemana = undefined
+          updates.apenasUteis = undefined
+          if (!value.diaMes) updates.diaMes = 1
+          if (!value.mes) updates.mes = 1
+          break
+      }
+    }
+
+    onChange({ ...value, ...updates })
   }
 
   const toggleDiaSemana = (dia: number) => {
@@ -98,9 +154,59 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
     handleFieldChange('diasSemana', novos)
   }
 
+  // Tarefa Fixa selecionada — mostrar card teal e esconder recorrência
+  if (isFixa) {
+    return (
+      <div className="space-y-4">
+        {/* Toggle Tarefa Fixa */}
+        <button
+          type="button"
+          onClick={() => handleFixaToggle(false)}
+          className="w-full flex items-start gap-3 p-3 rounded-lg border-2 border-teal-300 bg-teal-50 text-left transition-all"
+        >
+          <div className="w-8 h-8 rounded-md bg-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <Pin className="w-4 h-4 text-teal-600" />
+          </div>
+          <div>
+            <span className="text-sm font-medium text-teal-700">Tarefa Fixa</span>
+            <p className="text-[11px] text-teal-600 mt-0.5">Aparece todo dia automaticamente, sem acumular atrasos</p>
+          </div>
+        </button>
+
+        {/* Info box */}
+        <div className="bg-teal-50 border border-teal-200 rounded-md p-3">
+          <p className="text-xs text-teal-700 flex items-start gap-2">
+            <Pin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+            <span>
+              Esta tarefa aparecerá automaticamente no dia atual. Nunca acumula atrasos.
+              Ação principal: lançar horas. Vínculo com processo/consultivo será obrigatório.
+            </span>
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   if (!recorrenciaAtiva) {
     return (
       <div className="space-y-4">
+        {/* Toggle Tarefa Fixa (só para tarefas) */}
+        {tipo === 'tarefa' && (
+          <button
+            type="button"
+            onClick={() => handleFixaToggle(true)}
+            className="w-full flex items-start gap-3 p-3 rounded-lg border-2 border-slate-200 bg-white text-left hover:border-teal-300 hover:bg-teal-50/50 transition-all"
+          >
+            <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Pin className="w-4 h-4 text-slate-400" />
+            </div>
+            <div>
+              <span className="text-sm font-medium text-slate-600">Tarefa Fixa</span>
+              <p className="text-[11px] text-slate-400 mt-0.5">Aparece todo dia automaticamente, sem acumular atrasos</p>
+            </div>
+          </button>
+        )}
+
         <div className="flex items-center gap-2">
           <Checkbox
             id="recorrencia-ativa"
@@ -359,13 +465,23 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
           </div>
         </div>
 
+        {/* Resumo legível da recorrência */}
+        {value && (
+          <div className="bg-[#aacfd0]/20 border border-[#89bcbe]/50 rounded-md p-3">
+            <p className="text-xs text-[#34495e] font-medium flex items-start gap-2">
+              <Repeat className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[#89bcbe]" />
+              <span>{getRecorrenciaSummary(value)}</span>
+            </p>
+          </div>
+        )}
+
         {/* Info */}
         <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
           <p className="text-xs text-blue-700 flex items-start gap-2">
             <Repeat className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
             <span>
-              As ocorrências serão criadas automaticamente para os próximos 45 dias.
-              Você poderá editar ou excluir ocorrências individuais no calendário.
+              As ocorrências aparecerão automaticamente no calendário.
+              Você poderá editar ou pular ocorrências individuais.
             </span>
           </p>
         </div>

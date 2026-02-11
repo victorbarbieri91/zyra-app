@@ -172,7 +172,7 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
               .eq('contrato_id', processo.contrato_id)
 
             if (valoresCargo) {
-              setValoresPorCargo(valoresCargo.map(v => ({
+              setValoresPorCargo(valoresCargo.map((v: any) => ({
                 cargo_id: v.cargo_id,
                 cargo_nome: v.cargo?.nome_display || 'Cargo',
                 valor_padrao: v.cargo?.valor_hora_padrao || null,
@@ -216,7 +216,7 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
 
         if (error) throw error
 
-        setAlertas((data || []).map(a => ({
+        setAlertas((data || []).map((a: any) => ({
           id: a.id,
           ato_codigo: a.ato_tipo?.codigo || '',
           ato_nome: a.ato_tipo?.nome || '',

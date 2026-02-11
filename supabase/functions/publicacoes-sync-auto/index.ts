@@ -159,33 +159,69 @@ async function sincronizarAASP(supabase: any, escritorioId: string) {
   }
 
   const hoje = new Date()
-  const dataFormatada = `${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`
+  // Buscar últimos 3 dias (hoje + 2 anteriores) para capturar publicações atrasadas
+  const diasParaBuscar = 3
 
   for (const associado of associados) {
     try {
-      const url = `${AASP_API_BASE}/api/Associado/intimacao/json?chave=${associado.aasp_chave}&data=${encodeURIComponent(dataFormatada)}&diferencial=false`
+      for (let i = 0; i < diasParaBuscar; i++) {
+        const data = new Date(hoje)
+        data.setDate(data.getDate() - i)
+        const dataFormatada = `${String(data.getDate()).padStart(2, '0')}/${String(data.getMonth() + 1).padStart(2, '0')}/${data.getFullYear()}`
 
-      const response = await fetch(url, { method: 'GET', headers: requestHeaders })
+        const url = `${AASP_API_BASE}/api/Associado/intimacao/json?chave=${associado.aasp_chave}&data=${encodeURIComponent(dataFormatada)}&diferencial=false`
 
-      if (!response.ok) {
-        console.error(`AASP erro para ${associado.nome}: ${response.status}`)
-        continue
-      }
+        const response = await fetch(url, { method: 'GET', headers: requestHeaders })
 
-      const responseData = await response.json()
+        if (!response.ok) {
+          console.error(`[AASP] Erro para ${associado.nome} em ${dataFormatada}: ${response.status}`)
+          continue
+        }
 
-      if (responseData.erro === true) continue
+        const responseData = await response.json()
 
-      let publicacoes: any[] = []
-      if (Array.isArray(responseData)) {
-        publicacoes = responseData
-      } else if (responseData.intimacoes) {
-        publicacoes = responseData.intimacoes
-      }
+        if (responseData.erro === true) {
+          console.log(`[AASP] ${associado.nome} - ${dataFormatada}: erro explícito na resposta`)
+          continue
+        }
 
-      for (const pub of publicacoes) {
-        const saved = await salvarPublicacaoAASP(supabase, escritorioId, associado.id, pub)
-        if (saved === 'nova') resultado.novas++
+        // Parser completo - a API AASP pode retornar dados em múltiplos formatos
+        let publicacoes: any[] = []
+        if (Array.isArray(responseData)) {
+          publicacoes = responseData
+        } else if (responseData.intimacoes && Array.isArray(responseData.intimacoes)) {
+          publicacoes = responseData.intimacoes
+        } else if (responseData.Intimacoes && Array.isArray(responseData.Intimacoes)) {
+          publicacoes = responseData.Intimacoes
+        } else if (responseData.data && Array.isArray(responseData.data)) {
+          publicacoes = responseData.data
+        } else if (responseData.dados && Array.isArray(responseData.dados)) {
+          publicacoes = responseData.dados
+        } else if (responseData.publicacoes && Array.isArray(responseData.publicacoes)) {
+          publicacoes = responseData.publicacoes
+        } else {
+          // Buscar array em qualquer propriedade do objeto
+          for (const key of Object.keys(responseData)) {
+            const value = responseData[key]
+            if (Array.isArray(value) && value.length > 0) {
+              console.log(`[AASP] ${associado.nome} - ${dataFormatada}: array encontrado em propriedade '${key}' com ${value.length} itens`)
+              publicacoes = value
+              break
+            }
+          }
+          // Verificar se o objeto é uma publicação única
+          if (publicacoes.length === 0 && (responseData.processo || responseData.numeroUnicoProcesso || responseData.textoPublicacao || responseData.codigoRelacionamento)) {
+            publicacoes = [responseData]
+            console.log(`[AASP] ${associado.nome} - ${dataFormatada}: tratando objeto como publicação única`)
+          }
+        }
+
+        console.log(`[AASP] ${associado.nome} - ${dataFormatada}: ${publicacoes.length} publicações encontradas (response keys: ${typeof responseData === 'object' ? Object.keys(responseData).join(', ') : typeof responseData})`)
+
+        for (const pub of publicacoes) {
+          const saved = await salvarPublicacaoAASP(supabase, escritorioId, associado.id, pub)
+          if (saved === 'nova') resultado.novas++
+        }
       }
 
       // Atualizar última sync do associado

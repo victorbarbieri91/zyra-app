@@ -5,6 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { publicationsRateLimit } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 /**
  * POST /api/publicacoes/analisar
@@ -24,6 +26,12 @@ export async function POST(request: NextRequest) {
         { sucesso: false, error: 'Nao autorizado' },
         { status: 401 }
       )
+    }
+
+    // Rate limiting
+    const rateLimitResult = publicationsRateLimit.check(request, session.user.id)
+    if (!rateLimitResult.success) {
+      return publicationsRateLimit.errorResponse(rateLimitResult)
     }
 
     // Parsear body
@@ -48,7 +56,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('[API Analisar] Chamando Edge Function...')
+    logger.debug('Chamando Edge Function', { module: 'publicacoes', action: 'analisar' })
 
     const response = await fetch(`${supabaseUrl}/functions/v1/publicacoes-analisar`, {
       method: 'POST',
@@ -63,7 +71,7 @@ export async function POST(request: NextRequest) {
     const data = await response.json()
 
     if (!response.ok) {
-      console.error('[API Analisar] Erro da Edge Function:', data)
+      logger.error('Erro da Edge Function ao analisar publicacao', { module: 'publicacoes', action: 'analisar', statusCode: response.status })
       return NextResponse.json(
         { sucesso: false, error: data.erro || 'Erro ao analisar publicacao' },
         { status: response.status }
@@ -73,7 +81,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data)
 
   } catch (error) {
-    console.error('[API Analisar] Erro interno:', error)
+    logger.error('Erro interno ao analisar publicacao', { module: 'publicacoes', action: 'analisar' }, error instanceof Error ? error : undefined)
     return NextResponse.json(
       { sucesso: false, error: 'Erro interno ao analisar publicacao' },
       { status: 500 }

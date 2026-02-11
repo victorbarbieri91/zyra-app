@@ -11,6 +11,8 @@ import {
   verificarStatusMonitoramento
 } from '@/lib/escavador/client'
 import { validarFormatoCNJ, formatarNumeroCNJ } from '@/lib/datajud/validators'
+import { integrationRateLimit } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 /**
  * POST /api/escavador/monitoramento
@@ -31,6 +33,12 @@ export async function POST(request: NextRequest) {
         { sucesso: false, error: 'Nao autorizado' },
         { status: 401 }
       )
+    }
+
+    // Rate limiting
+    const rateLimitResult = integrationRateLimit.check(request, user.id)
+    if (!rateLimitResult.success) {
+      return integrationRateLimit.errorResponse(rateLimitResult)
     }
 
     // Parsear body
@@ -63,7 +71,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log('[Escavador Monitoramento] Criando para:', numeroCNJNormalizado)
+    logger.debug('Criando monitoramento', { module: 'escavador', action: 'monitoramento' })
 
     // Criar monitoramento no Escavador
     const resultado = await criarMonitoramento({
@@ -89,7 +97,7 @@ export async function POST(request: NextRequest) {
         .eq('processo_id', processo_id)
 
       if (updateError) {
-        console.error('[Escavador Monitoramento] Erro ao atualizar processo:', updateError)
+        logger.error('Erro ao atualizar processo local', { module: 'escavador', action: 'monitoramento' }, updateError instanceof Error ? updateError : undefined)
         // Nao falha a requisicao, apenas loga
       }
     }
@@ -101,7 +109,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[Escavador Monitoramento] Erro interno:', error)
+    logger.error('Erro interno', { module: 'escavador', action: 'monitoramento-criar' }, error instanceof Error ? error : undefined)
     return NextResponse.json(
       { sucesso: false, error: 'Erro interno ao criar monitoramento' },
       { status: 500 }
@@ -130,6 +138,12 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
+    // Rate limiting
+    const rateLimitResultDel = integrationRateLimit.check(request, user.id)
+    if (!rateLimitResultDel.success) {
+      return integrationRateLimit.errorResponse(rateLimitResultDel)
+    }
+
     // Parsear body
     let body: { monitoramento_id?: number; processo_id?: string }
     try {
@@ -150,7 +164,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    console.log('[Escavador Monitoramento] Removendo:', monitoramento_id)
+    logger.debug('Removendo monitoramento', { module: 'escavador', action: 'monitoramento-remover' })
 
     // Remover monitoramento no Escavador
     const resultado = await removerMonitoramento(monitoramento_id)
@@ -173,14 +187,14 @@ export async function DELETE(request: NextRequest) {
         .eq('processo_id', processo_id)
 
       if (updateError) {
-        console.error('[Escavador Monitoramento] Erro ao atualizar processo:', updateError)
+        logger.error('Erro ao atualizar processo local', { module: 'escavador', action: 'monitoramento-remover' }, updateError instanceof Error ? updateError : undefined)
       }
     }
 
     return NextResponse.json({ sucesso: true })
 
   } catch (error) {
-    console.error('[Escavador Monitoramento] Erro interno:', error)
+    logger.error('Erro interno', { module: 'escavador', action: 'monitoramento-remover' }, error instanceof Error ? error : undefined)
     return NextResponse.json(
       { sucesso: false, error: 'Erro interno ao remover monitoramento' },
       { status: 500 }
@@ -207,6 +221,12 @@ export async function GET(request: NextRequest) {
         { sucesso: false, error: 'Nao autorizado' },
         { status: 401 }
       )
+    }
+
+    // Rate limiting
+    const rateLimitResultGet = integrationRateLimit.check(request, user.id)
+    if (!rateLimitResultGet.success) {
+      return integrationRateLimit.errorResponse(rateLimitResultGet)
     }
 
     const { searchParams } = new URL(request.url)
@@ -259,7 +279,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[Escavador Monitoramento] Erro interno:', error)
+    logger.error('Erro interno', { module: 'escavador', action: 'monitoramento-listar' }, error instanceof Error ? error : undefined)
     return NextResponse.json(
       { sucesso: false, error: 'Erro interno ao listar monitoramentos' },
       { status: 500 }

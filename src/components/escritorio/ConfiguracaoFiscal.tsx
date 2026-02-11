@@ -338,19 +338,19 @@ export function ConfiguracaoFiscal({ value, onChange }: ConfiguracaoFiscalProps)
             </div>
 
             {/* Resultado Calculado */}
-            {config.simples_nacional?.rbt12 > 0 && (
+            {(config.simples_nacional?.rbt12 ?? 0) > 0 && (
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-slate-500">Alíquota Efetiva Calculada</p>
                     <p className="text-lg font-bold text-[#34495e]">
-                      {config.simples_nacional.aliquota_efetiva.toFixed(2)}%
+                      {config.simples_nacional!.aliquota_efetiva.toFixed(2)}%
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-slate-500">Faixa Atual</p>
                     <p className="text-lg font-bold text-emerald-600">
-                      {config.simples_nacional.faixa_atual}ª Faixa
+                      {config.simples_nacional!.faixa_atual}ª Faixa
                     </p>
                   </div>
                 </div>
@@ -449,10 +449,11 @@ function ImpostoRow({
           <span className={`text-sm font-medium ${imposto.ativo ? 'text-[#34495e]' : 'text-slate-400'}`}>
             {label}
           </span>
-          <HelpCircle
-            className="w-3 h-3 text-slate-400 cursor-help"
-            title={tooltip}
-          />
+          <span title={tooltip}>
+            <HelpCircle
+              className="w-3 h-3 text-slate-400 cursor-help"
+            />
+          </span>
         </div>
       </div>
 

@@ -207,7 +207,7 @@ export function ConsultaWizardModal({
 
       if (error) throw error
 
-      const contratosFormatados = (data || []).map(c => ({
+      const contratosFormatados = (data || []).map((c: any) => ({
         id: c.id,
         titulo: c.titulo || `Contrato ${c.forma_cobranca}`,
         forma_cobranca: c.forma_cobranca,

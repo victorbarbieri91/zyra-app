@@ -172,7 +172,7 @@ export function ModalNovoTimer({ onClose }: ModalNovoTimerProps) {
               id: c.id,
               titulo: c.titulo,
               numero: c.numero,
-              cliente_nome: clienteMapConsultas.get(c.cliente_id),
+              cliente_nome: clienteMapConsultas.get(c.cliente_id) as string | undefined,
             }))
           );
         }

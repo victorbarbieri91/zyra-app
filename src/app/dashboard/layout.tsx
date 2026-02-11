@@ -6,6 +6,7 @@ import BottomNav from '@/components/layout/BottomNav'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { EscritorioProvider } from '@/contexts/EscritorioContext'
 import { TimerProvider } from '@/contexts/TimerContext'
+import { QueryProvider } from '@/providers/QueryProvider'
 import { FloatingTimerWidget } from '@/components/timer'
 
 export default function DashboardLayout({
@@ -14,9 +15,10 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <AuthProvider>
-      <EscritorioProvider>
-        <TimerProvider>
+    <QueryProvider>
+      <AuthProvider>
+        <EscritorioProvider>
+          <TimerProvider>
           <div className="flex h-screen overflow-hidden bg-slate-50">
             <Sidebar />
             <div className="flex-1 flex flex-col overflow-hidden">
@@ -28,8 +30,9 @@ export default function DashboardLayout({
             <BottomNav />
             <FloatingTimerWidget />
           </div>
-        </TimerProvider>
-      </EscritorioProvider>
-    </AuthProvider>
+          </TimerProvider>
+        </EscritorioProvider>
+      </AuthProvider>
+    </QueryProvider>
   )
 }

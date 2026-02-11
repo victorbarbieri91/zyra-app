@@ -26,6 +26,12 @@ export interface SyncResult {
   erros?: string[];
 }
 
+export interface DebugResult {
+  sucesso: boolean;
+  mensagem: string;
+  diagnostico?: any;
+}
+
 interface UseAaspSyncReturn {
   sincronizando: boolean;
   ultimaSync: SyncLog | null;
@@ -33,6 +39,7 @@ interface UseAaspSyncReturn {
   carregandoHistorico: boolean;
   sincronizarTodos: () => Promise<SyncResult>;
   sincronizarAssociado: (associadoId: string) => Promise<SyncResult>;
+  diagnosticarAPI: (associadoId: string) => Promise<DebugResult>;
   getHistorico: (limit?: number) => Promise<SyncLog[]>;
 }
 
@@ -173,6 +180,34 @@ export function useAaspSync(escritorioId: string | undefined): UseAaspSyncReturn
     }
   }, [escritorioId, supabase, getHistorico]);
 
+  const diagnosticarAPI = useCallback(async (associadoId: string): Promise<DebugResult> => {
+    if (!escritorioId) {
+      return { sucesso: false, mensagem: 'Escritório não identificado' };
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('aasp-sync', {
+        body: {
+          action: 'debug',
+          escritorio_id: escritorioId,
+          associado_id: associadoId
+        }
+      });
+
+      if (error) {
+        return { sucesso: false, mensagem: error.message || 'Erro no diagnóstico' };
+      }
+
+      return {
+        sucesso: data?.sucesso ?? false,
+        mensagem: data?.mensagem || 'Diagnóstico concluído',
+        diagnostico: data?.diagnostico
+      };
+    } catch (err: any) {
+      return { sucesso: false, mensagem: err.message || 'Erro de conexão' };
+    }
+  }, [escritorioId, supabase]);
+
   // Carregar histórico automaticamente quando escritorioId estiver disponível
   useEffect(() => {
     if (escritorioId) {
@@ -187,6 +222,7 @@ export function useAaspSync(escritorioId: string | undefined): UseAaspSyncReturn
     carregandoHistorico,
     sincronizarTodos,
     sincronizarAssociado,
+    diagnosticarAPI,
     getHistorico,
   };
 }

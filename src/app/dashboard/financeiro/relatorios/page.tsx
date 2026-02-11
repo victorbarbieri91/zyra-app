@@ -97,7 +97,7 @@ export default function RelatoriosFinanceirosPage() {
 
       if (dreError) throw dreError
 
-      const formatted: RelatorioData[] = (data || []).map((d) => ({
+      const formatted: RelatorioData[] = (data || []).map((d: any) => ({
         periodo: d.mes_referencia
           ? format(parseISO(d.mes_referencia), "MMMM 'de' yyyy", { locale: ptBR })
           : '',
@@ -133,8 +133,8 @@ export default function RelatoriosFinanceirosPage() {
       if (despesasError) throw despesasError
 
       // Agregar por categoria
-      const aggregated = (data || []).reduce(
-        (acc, d) => {
+      const aggregated: Record<string, number> = (data || []).reduce(
+        (acc: Record<string, number>, d: any) => {
           const cat = d.categoria || 'outras'
           if (!acc[cat]) acc[cat] = 0
           acc[cat] += Number(d.valor) || 0
@@ -143,10 +143,10 @@ export default function RelatoriosFinanceirosPage() {
         {} as Record<string, number>
       )
 
-      const total = Object.values(aggregated).reduce((a, b) => a + b, 0)
+      const total = Object.values(aggregated).reduce((a: number, b: number) => a + b, 0)
 
       const formatted: CategoriaAgregada[] = Object.entries(aggregated)
-        .map(([categoria, valor]) => ({
+        .map(([categoria, valor]: [string, number]) => ({
           categoria: CATEGORIA_LABELS[categoria] || categoria,
           valor,
           percentual: total > 0 ? (valor / total) * 100 : 0,
@@ -186,8 +186,8 @@ export default function RelatoriosFinanceirosPage() {
       if (honorariosError) throw honorariosError
 
       // Filtrar parcelas pagas no período e agregar por tipo
-      const aggregated = (data || []).reduce(
-        (acc, h) => {
+      const aggregated: Record<string, number> = (data || []).reduce(
+        (acc: Record<string, number>, h: any) => {
           const tipo = h.tipo_lancamento || 'avulso'
           if (!acc[tipo]) acc[tipo] = 0
 
@@ -207,11 +207,11 @@ export default function RelatoriosFinanceirosPage() {
         {} as Record<string, number>
       )
 
-      const total = Object.values(aggregated).reduce((a, b) => a + b, 0)
+      const total = Object.values(aggregated).reduce((a: number, b: number) => a + b, 0)
 
       const formatted: FonteReceita[] = Object.entries(aggregated)
-        .filter(([_, valor]) => valor > 0)
-        .map(([fonte, valor]) => ({
+        .filter(([_, valor]: [string, number]) => valor > 0)
+        .map(([fonte, valor]: [string, number]) => ({
           fonte: FONTE_LABELS[fonte] || fonte,
           valor,
           percentual: total > 0 ? (valor / total) * 100 : 0,
@@ -246,10 +246,10 @@ export default function RelatoriosFinanceirosPage() {
 
       if (parcelasError) throw parcelasError
 
-      const totalPendente = (parcelas || []).reduce((sum, p) => sum + (Number(p.valor) || 0), 0)
+      const totalPendente = (parcelas || []).reduce((sum: number, p: any) => sum + (Number(p.valor) || 0), 0)
       const totalAtrasado = (parcelas || [])
-        .filter((p) => p.status === 'atrasado')
-        .reduce((sum, p) => sum + (Number(p.valor) || 0), 0)
+        .filter((p: any) => p.status === 'atrasado')
+        .reduce((sum: number, p: any) => sum + (Number(p.valor) || 0), 0)
 
       const taxa = totalPendente > 0 ? (totalAtrasado / totalPendente) * 100 : 0
 

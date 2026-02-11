@@ -12,8 +12,8 @@ import {
   minutesToTime,
   formatTimeDisplay,
   calcularHorarioFim,
-  formatHoras,
 } from '../timezone'
+import { formatHoras } from '../utils'
 
 // Importar formatHoras de utils para testar também
 import { formatHoras as formatHorasUtil } from '../utils'

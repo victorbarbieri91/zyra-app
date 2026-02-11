@@ -12,8 +12,7 @@ const nextConfig = {
   reactStrictMode: true,
   turbopack: {},
   typescript: {
-    // TODO: Corrigir erros de tipo e remover esta configuração
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   images: {
     remotePatterns: [
@@ -42,7 +41,9 @@ export default withSentryConfig(
     // Ocultar source maps do browser
     hideSourceMaps: true,
 
-    // Remover logger do bundle de produção
-    disableLogger: true,
+    // Tree-shake debug statements em producao (substitui disableLogger deprecated)
+    bundleSizeOptimizations: {
+      excludeDebugStatements: true,
+    },
   }
 );

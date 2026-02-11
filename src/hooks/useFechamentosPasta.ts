@@ -178,14 +178,14 @@ export function useFechamentosPasta(escritorioIds: string[] | null) {
         .in('escritorio_id', ids)
         .eq('status', 'pendente')
 
-      const pendentes = (fechamentos || []).filter(f => f.status === 'pendente')
-      const aprovados = (fechamentos || []).filter(f => f.status === 'aprovado')
+      const pendentes = (fechamentos || []).filter((f: { status: string; valor_total: number | null }) => f.status === 'pendente')
+      const aprovados = (fechamentos || []).filter((f: { status: string; valor_total: number | null }) => f.status === 'aprovado')
 
       return {
         totalPendentes: pendentes.length,
         totalAprovados: aprovados.length,
-        valorPendente: pendentes.reduce((sum, f) => sum + (f.valor_total || 0), 0),
-        valorAprovado: aprovados.reduce((sum, f) => sum + (f.valor_total || 0), 0),
+        valorPendente: pendentes.reduce((sum: number, f: { status: string; valor_total: number | null }) => sum + (f.valor_total || 0), 0),
+        valorAprovado: aprovados.reduce((sum: number, f: { status: string; valor_total: number | null }) => sum + (f.valor_total || 0), 0),
         alertasLimite: alertasCount || 0,
       }
     } catch (err: any) {

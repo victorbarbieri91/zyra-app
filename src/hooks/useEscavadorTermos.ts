@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { captureOperationError } from '@/lib/logger'
 
 // ============================================
 // TIPOS
@@ -90,7 +91,7 @@ export function useEscavadorTermos(escritorioId?: string) {
       setTermos(data.termos || [])
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido'
-      console.error('[useEscavadorTermos] Erro ao carregar:', message)
+      captureOperationError(err, { module: 'EscavadorTermos', operation: 'buscar', table: 'escavador_termos' })
       setError(message)
     } finally {
       setLoading(false)
@@ -276,6 +277,62 @@ export function useEscavadorTermos(escritorioId?: string) {
   }, [carregarTermos])
 
   /**
+   * Diagnóstico da API Escavador - retorna dados RAW para debug
+   */
+  const diagnosticarAPI = useCallback(async (termoId?: string): Promise<{
+    sucesso: boolean
+    mensagem: string
+    diagnostico: any
+  }> => {
+    try {
+      // 1. Buscar monitoramentos no Escavador (comparação com local)
+      const debugRes = await fetch('/api/escavador/debug')
+      const debugData = await debugRes.json()
+
+      // 2. Se foi passado um termo específico com monitoramento_id, buscar aparições
+      let aparicoes = null
+      if (termoId) {
+        const termo = termos.find(t => t.id === termoId)
+        if (termo?.escavador_monitoramento_id) {
+          const aparRes = await fetch(`/api/escavador/debug/aparicoes?id=${termo.escavador_monitoramento_id}`)
+          aparicoes = await aparRes.json()
+        }
+      }
+
+      // 3. Buscar publicações no banco para comparar
+      const termosInfo = termos.map(t => ({
+        id: t.id,
+        termo: t.termo,
+        escavador_monitoramento_id: t.escavador_monitoramento_id,
+        escavador_status: t.escavador_status,
+        escavador_erro: t.escavador_erro,
+        total_aparicoes: t.total_aparicoes,
+        ultima_sync: t.ultima_sync,
+        ultima_aparicao: t.ultima_aparicao,
+        ativo: t.ativo
+      }))
+
+      return {
+        sucesso: true,
+        mensagem: 'Diagnóstico concluído',
+        diagnostico: {
+          timestamp: new Date().toISOString(),
+          monitoramentos_escavador: debugData,
+          termos_locais: termosInfo,
+          aparicoes_termo: aparicoes
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido'
+      return {
+        sucesso: false,
+        mensagem: message,
+        diagnostico: null
+      }
+    }
+  }, [termos])
+
+  /**
    * Carrega histórico de sincronizações
    */
   const carregarHistoricoSync = useCallback(async () => {
@@ -316,6 +373,7 @@ export function useEscavadorTermos(escritorioId?: string) {
     removerTermo,
     ativarTermo,
     sincronizar,
+    diagnosticarAPI,
     carregarHistoricoSync,
 
     // Computed

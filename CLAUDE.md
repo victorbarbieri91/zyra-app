@@ -569,3 +569,220 @@ format(new Date(dateString), "dd/MM/yyyy")
 **Causa**: Enviando string sem conversão de timezone
 
 **Solução**: Use `formatDateForDB()` ou `formatDateTimeForDB()`
+
+---
+
+## Figma MCP Integration Rules
+
+These rules define how to translate Figma inputs into code for this project and must be followed for every Figma-driven change.
+
+### Required Figma-to-Code Flow (do not skip)
+
+1. Run `get_design_context` first to fetch the structured representation for the exact node(s)
+2. If the response is too large or truncated, run `get_metadata` to get the high-level node map, then re-fetch only the required node(s) with `get_design_context`
+3. Run `get_screenshot` for a visual reference of the node variant being implemented
+4. Only after you have both `get_design_context` and `get_screenshot`, download any assets needed and start implementation
+5. Translate the output (usually React + Tailwind) into this project's conventions, styles, and framework
+6. Validate against Figma for 1:1 look and behavior before marking complete
+
+### Implementation Rules
+
+- Treat the Figma MCP output (React + Tailwind) as a representation of design and behavior, not as final code style
+- IMPORTANT: Reuse existing components from `src/components/ui/` (29 Radix UI-based components) and `src/components/shared/` instead of creating new ones
+- IMPORTANT: Reuse dashboard building blocks (`MetricCard`, `InsightCard`, `TimelineItem`, `QuickActionButton`, `AlertasCard`) from `src/components/dashboard/` for any dashboard-related UI
+- Use the project's design tokens from `src/lib/design-tokens.ts` and semantic system from `src/lib/design-system.ts`
+- Respect existing routing, state management (Zustand), data-fetch patterns (Supabase hooks), and React Hook Form + Zod validation
+- Strive for 1:1 visual parity with the Figma design
+- Validate the final UI against the Figma screenshot for both look and behavior
+
+### Component Organization
+
+- IMPORTANT: Base UI components (Button, Card, Badge, Input, Dialog, etc.) are in `src/components/ui/` — always check here first
+- Shared cross-module components (StatusBadge, EmptyState, LoadingState, PageSkeleton) are in `src/components/shared/`
+- Module-specific components go in `src/components/{module}/` (e.g., `src/components/dashboard/`, `src/components/financeiro/`)
+- Page components go in `src/app/dashboard/{module}/page.tsx`
+- New UI components must accept a `className` prop for composition via `cn()` from `src/lib/utils.ts`
+- Use `React.ReactElement` for return type annotations (NOT `JSX.Element` — React 19 + Next.js 16)
+
+### Component Patterns
+
+- IMPORTANT: All UI components use **CVA (Class Variance Authority)** for variant management:
+
+```typescript
+import { cva, type VariantProps } from 'class-variance-authority'
+import { cn } from '@/lib/utils'
+
+const componentVariants = cva("base-classes", {
+  variants: {
+    variant: { default: "...", secondary: "..." },
+    size: { default: "...", sm: "...", lg: "..." },
+  },
+  defaultVariants: { variant: "default", size: "default" },
+})
+
+interface Props extends VariantProps<typeof componentVariants> {
+  className?: string
+}
+```
+
+- Card components use composition pattern: `<Card>` → `<CardHeader>` → `<CardTitle>` / `<CardDescription>` → `<CardContent>` → `<CardFooter>`
+- Icons use `LucideIcon` type from `lucide-react` for generic icon props
+- Color scheme objects encapsulate related colors: `{ iconBg, iconColor, textColor, borderColor }`
+- Gradient mapping via pre-defined objects: `kpi1` through `kpi4`
+
+### Color System
+
+IMPORTANT: Never hardcode hex colors directly — use the project's token system.
+
+**Primary Palette** (from `src/lib/design-tokens.ts`):
+| Token | Hex | Usage |
+|-------|-----|-------|
+| `colors.primary` | `#34495e` | Titles, dark gradients, primary text |
+| `colors.tertiary` | `#46627f` | Subtitles, secondary text, medium gradients |
+| `colors.secondary` | `#89bcbe` | Icon highlights, special borders (Agenda) |
+| `colors.background.light` | `#aacfd0` | Light backgrounds, light gradients |
+| Accent | `#1E3A8A` | Action buttons, important links |
+
+**Tailwind Custom Colors** (from `tailwind.config.ts`):
+- `teal-50` through `teal-700` — brand teal/aqua scale
+- `slate-50` through `slate-900` — neutral hierarchy
+
+**Pre-defined Gradients**:
+```
+kpi1: from-[#34495e] to-[#46627f]  (dark, white text)
+kpi2: from-[#46627f] to-[#6c757d]  (medium, white text)
+kpi3: from-[#89bcbe] to-[#aacfd0]  (light, dark text)
+kpi4: from-[#aacfd0] to-[#cbe2e2]  (lightest, dark text)
+```
+
+**Status Colors** (from `design-system.ts` `colorVariants`):
+- Success: `emerald` (green-500/600)
+- Warning: `amber` (amber-500/600)
+- Error: `red` (red-50/200/600)
+- Info: `blue` / `teal`
+- Neutral: `slate`
+
+**Financial Backgrounds**: `#f0f9f9`, `#e8f5f5`
+
+### Typography Scale
+
+From `src/lib/design-system.ts`:
+
+| Token | Class | Size | Usage |
+|-------|-------|------|-------|
+| `pageHeader` | `text-2xl font-semibold` | 24px | Page headers, KPI values |
+| `cardTitle` | `text-base font-semibold` | 16px | Main card titles |
+| `cardTitleSmall` | `text-sm font-semibold` | 14px | Secondary card titles |
+| `content` | `text-sm` | 14px | Body text, content |
+| `label` | `text-xs font-medium` | 12px | Labels, trends, subtitles |
+| `description` | `text-[11px]` | 11px | Insight descriptions |
+| `badge` | `text-[10px] font-medium` | 10px | Badges, minimal details |
+
+**Font Weights**: `normal` (400), `medium` (500), `semibold` (600), `bold` (700)
+
+### Icon Size Standards
+
+| Context | Container | Icon | Example |
+|---------|-----------|------|---------|
+| KPI Cards | `w-8 h-8` (32px) | `w-4 h-4` (16px) | MetricCard icon |
+| Timeline | `w-7 h-7` (28px) | `w-3.5 h-3.5` (14px) | TimelineItem icon |
+| Button highlight | — | `w-4 h-4` (16px) | QuickActionButton highlight |
+| Button normal | — | `w-3.5 h-3.5` (14px) | QuickActionButton default |
+
+### Spacing System
+
+| Token | Class | Size | Usage |
+|-------|-------|------|-------|
+| `sectionGap` | `gap-6` | 24px | Between major sections |
+| `cardGap` | `gap-4` | 16px | Between cards in a grid |
+| `buttonGap` | `gap-2.5` | 10px | Between buttons |
+| `button` | `py-2.5 px-3` | — | Standard button padding |
+| Card header | `pb-2 pt-3 px-6` | — | CardHeader padding |
+| Card content | `p-6 pt-0` | — | CardContent padding |
+
+### Border & Shadow Standards
+
+- Default border: `border-slate-200`
+- Highlight border: `border-[#89bcbe]`
+- Border radius: `rounded-lg` (8px)
+- Card shadow: `shadow-sm` (rest) → `shadow-lg` (hover)
+- Highlight shadow: `shadow-xl`
+
+### Grid Layout Patterns
+
+```tsx
+// 12-column dashboard layout (responsive)
+<div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+  <div className="xl:col-span-3">Left panel</div>
+  <div className="xl:col-span-5">Center panel</div>
+  <div className="xl:col-span-4">Right panel</div>
+</div>
+
+// KPI cards 2x2
+<div className="grid grid-cols-2 gap-4">...</div>
+
+// Quick action buttons (8 columns)
+<div className="grid grid-cols-8 gap-2.5">...</div>
+```
+
+### Hover & Interaction Patterns
+
+- Card hover: `shadow-sm` → `shadow-lg` transition
+- Group hover for action reveal: `group hover:bg-slate-50` parent + `opacity-0 group-hover:opacity-100 transition-opacity` child
+- Button hover: Background opacity change or color shift
+- IMPORTANT: Always use `cn()` from `@/lib/utils` for conditional/merged class names
+
+### Formatting Utilities
+
+When translating Figma text that represents formatted data, use existing formatters:
+
+| Data Type | Function | Import |
+|-----------|----------|--------|
+| Currency (BRL) | `formatCurrency(value)` | `@/lib/utils` |
+| Decimal hours | `formatHoras(hours, 'curto')` | `@/lib/utils` |
+| Date (dd/MM/yyyy) | `formatBrazilDate(date)` | `@/lib/timezone` |
+| Date long | `formatBrazilDateLong(date)` | `@/lib/timezone` |
+| DateTime | `formatBrazilDateTime(date)` | `@/lib/timezone` |
+| Time | `formatBrazilTime(date)` | `@/lib/timezone` |
+| Invoice text | `formatDescricaoFatura(text)` | `@/lib/utils` |
+
+### Import Conventions
+
+- IMPORTANT: Use `@/` path alias for all imports (maps to `src/`)
+- Group imports: React → Third-party → Internal components → Hooks → Utils → Types
+- Supabase client: `import { createSupabaseClient } from '@/lib/supabase/client'`
+- IMPORTANT: Never `import { createClient } from '@supabase/supabase-js'` directly
+- Icons: `import { IconName } from 'lucide-react'`
+
+### Asset Handling
+
+- IMPORTANT: If the Figma MCP server returns a localhost source for an image or SVG, use that source directly
+- IMPORTANT: DO NOT install new icon packages — use `lucide-react` (already installed) for all icons
+- IMPORTANT: DO NOT use or create placeholders if a localhost source is provided
+- Store downloaded static assets in `public/` directory
+- SVG icons should be Lucide components when possible, otherwise save as SVG in `public/`
+
+### Accessibility Standards
+
+- All interactive elements must have `aria-label` or visible label text
+- Color is never the sole indicator — always pair with text or icons
+- Keyboard navigation supported for all interactive elements (Radix UI handles this for base components)
+- Use semantic HTML (`button`, `a`, `nav`, `main`, `section`)
+
+### Checklist for Figma Implementation
+
+Before marking a Figma implementation as complete:
+
+- [ ] Ran `get_design_context` + `get_screenshot` from Figma MCP
+- [ ] Reused existing `src/components/ui/` and `src/components/shared/` components
+- [ ] Used design tokens from `src/lib/design-tokens.ts` / `src/lib/design-system.ts`
+- [ ] Applied correct typography scale and font weights
+- [ ] Used correct icon sizes (KPI: 32/16px, Timeline: 28/14px)
+- [ ] Applied correct spacing (gap-6 sections, gap-4 cards, gap-2.5 buttons)
+- [ ] Used `cn()` for class merging, CVA for variants
+- [ ] Hover states and transitions match design
+- [ ] Mobile responsiveness handled (12-column grid with breakpoints)
+- [ ] Visual parity validated against Figma screenshot
+- [ ] No hardcoded hex colors — all from token system
+- [ ] `className` prop accepted for composition
+- [ ] Multitenancy: any data queries filter by `escritorio_id`

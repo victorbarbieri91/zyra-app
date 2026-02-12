@@ -5,12 +5,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
-  buscarAparicoes,
+  buscarTodasAparicoes,
   normalizarAparicao,
-  buscarConteudoAparicao,
-  detectarSnippet
+  buscarConteudoAparicao
 } from '@/lib/escavador/publicacoes'
 import { publicationsRateLimit } from '@/lib/rate-limit'
+import { captureOperationError } from '@/lib/logger'
 
 /**
  * POST /api/escavador/publicacoes/sync
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     const { data: termos, error: termosError } = await query
 
     if (termosError) {
-      console.error('[Sync Escavador] Erro ao buscar termos:', termosError)
+      captureOperationError(termosError, { module: 'API/Escavador', operation: 'buscar', table: 'publicacoes_termos_escavador' })
       return NextResponse.json(
         { sucesso: false, error: 'Erro ao buscar termos' },
         { status: 500 }
@@ -122,8 +122,8 @@ export async function POST(request: NextRequest) {
 
         console.log(`[Sync Escavador] Buscando aparicoes do termo "${termo.termo}" (ID: ${monitoramentoId})`)
 
-        // Buscar aparições no Escavador
-        const resultado = await buscarAparicoes(monitoramentoId)
+        // Buscar TODAS aparições no Escavador (com paginação automática)
+        const resultado = await buscarTodasAparicoes(monitoramentoId)
 
         if (!resultado.sucesso) {
           console.error(`[Sync Escavador] Erro ao buscar aparicoes do termo ${termo.id}:`, resultado.erro)
@@ -189,6 +189,12 @@ export async function POST(request: NextRequest) {
               } catch (enrichError) {
                 console.warn(`[Sync Escavador] Não foi possível enriquecer aparição ${aparicao.id}`)
               }
+            }
+
+            // Descartar snippets - texto truncado não tem valor para análise
+            if (publicacao.is_snippet) {
+              console.log(`[Sync Escavador] Descartando snippet da aparição ${aparicao.id} (texto incompleto)`)
+              continue
             }
 
             // Verificar duplicata por hash_conteudo

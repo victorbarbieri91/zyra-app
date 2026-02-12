@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { captureOperationError } from '@/lib/logger'
 import { parseDBDate } from '@/lib/timezone'
 import { expandirRecorrencias, type RecorrenciaRegra } from '@/lib/recorrencia-utils'
 
@@ -114,12 +115,7 @@ export function useAgendaConsolidada(escritorioId: string | undefined, filters?:
       ])
 
       if (itemsResult.error) {
-        console.error('Erro na query de agenda consolidada:', {
-          message: itemsResult.error.message,
-          details: itemsResult.error.details,
-          hint: itemsResult.error.hint,
-          code: itemsResult.error.code
-        })
+        captureOperationError(itemsResult.error, { module: 'Agenda', operation: 'buscar', table: 'v_agenda_consolidada' })
         throw itemsResult.error
       }
 
@@ -166,13 +162,7 @@ export function useAgendaConsolidada(escritorioId: string | undefined, filters?:
       setItems(itemsFinais)
     } catch (err: any) {
       setError(err as Error)
-      console.error('Erro ao carregar agenda consolidada:', {
-        message: err?.message,
-        details: err?.details,
-        hint: err?.hint,
-        code: err?.code,
-        error: err
-      })
+      captureOperationError(err, { module: 'Agenda', operation: 'buscar', table: 'v_agenda_consolidada' })
     } finally {
       setLoading(false)
     }
@@ -218,7 +208,7 @@ export function useAgendaConsolidada(escritorioId: string | undefined, filters?:
         a.data_inicio.localeCompare(b.data_inicio)
       )
     } catch (err) {
-      console.error('Erro ao carregar items do dia:', err)
+      captureOperationError(err, { module: 'Agenda', operation: 'buscar', table: 'v_agenda_consolidada', details: { context: 'loadItemsDoDia' } })
       throw err
     }
   }
@@ -261,7 +251,7 @@ export function useAgendaConsolidada(escritorioId: string | undefined, filters?:
         a.data_inicio.localeCompare(b.data_inicio)
       )
     } catch (err) {
-      console.error('Erro ao carregar items do intervalo:', err)
+      captureOperationError(err, { module: 'Agenda', operation: 'buscar', table: 'v_agenda_consolidada', details: { context: 'loadItemsIntervalo' } })
       throw err
     }
   }

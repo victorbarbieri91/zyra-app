@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
+import { captureOperationError } from '@/lib/logger'
 import {
   CentroComandoMensagem,
   CentroComandoResponse,
@@ -98,7 +99,7 @@ export function useCentroComando() {
         // Sempre iniciar com nova conversa
         // O usuário pode acessar conversas anteriores pelo histórico
       } catch (err) {
-        console.error('[useCentroComando] Erro ao carregar sessões:', err)
+        captureOperationError(err, { module: 'CentroComando', operation: 'buscar', table: 'centro_comando_sessoes' })
       } finally {
         setCarregandoSessoes(false)
       }
@@ -138,7 +139,7 @@ export function useCentroComando() {
         sessaoId,
       }))
     } catch (err) {
-      console.error('[useCentroComando] Erro ao carregar histórico:', err)
+      captureOperationError(err, { module: 'CentroComando', operation: 'buscar', table: 'centro_comando_historico' })
     }
   }
 
@@ -172,7 +173,7 @@ export function useCentroComando() {
         .single()
 
       if (erroSessao) {
-        console.error('[useCentroComando] Erro ao criar sessão:', erroSessao)
+        captureOperationError(erroSessao, { module: 'CentroComando', operation: 'criar', table: 'centro_comando_sessoes' })
       } else {
         sessaoAtual = novaSessao.id
         setState(prev => ({ ...prev, sessaoId: novaSessao.id }))
@@ -271,7 +272,7 @@ export function useCentroComando() {
       }
 
     } catch (err: any) {
-      console.error('[useCentroComando] Erro:', err)
+      captureOperationError(err, { module: 'CentroComando', operation: 'enviar_mensagem' })
 
       const mensagemErro: CentroComandoMensagem = {
         id: gerarId(),
@@ -399,7 +400,7 @@ export function useCentroComando() {
               }
             }
           } catch (parseError) {
-            console.error('[useCentroComando] Erro ao parsear evento SSE:', parseError, dados)
+            captureOperationError(parseError, { module: 'CentroComando', operation: 'parsear_sse', details: { dados } })
           }
         }
       }
@@ -463,7 +464,7 @@ export function useCentroComando() {
       return response.sucesso
 
     } catch (err: any) {
-      console.error('[useCentroComando] Erro ao confirmar:', err)
+      captureOperationError(err, { module: 'CentroComando', operation: 'confirmar_acao' })
 
       setState(prev => ({
         ...prev,
@@ -574,7 +575,7 @@ export function useCentroComando() {
       }))
 
     } catch (err) {
-      console.error('[useCentroComando] Erro ao carregar histórico:', err)
+      captureOperationError(err, { module: 'CentroComando', operation: 'buscar', table: 'centro_comando_historico' })
     }
   }, [escritorioAtivo, supabase])
 
@@ -613,7 +614,7 @@ export function useCentroComando() {
       return data.id
 
     } catch (err) {
-      console.error('[useCentroComando] Erro ao criar sessão:', err)
+      captureOperationError(err, { module: 'CentroComando', operation: 'criar', table: 'centro_comando_sessoes' })
       return null
     }
   }, [escritorioAtivo, supabase])
@@ -700,7 +701,7 @@ export function useCentroComando() {
 
       return true
     } catch (err) {
-      console.error('[useCentroComando] Erro ao enviar feedback:', err)
+      captureOperationError(err, { module: 'CentroComando', operation: 'criar', table: 'centro_comando_feedback' })
       return false
     } finally {
       setEnviandoFeedback(false)

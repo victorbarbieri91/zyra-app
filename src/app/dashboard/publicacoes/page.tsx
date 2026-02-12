@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -8,9 +8,7 @@ import {
   Search,
   RefreshCw,
   Settings,
-  Eye,
   Archive,
-  AlertTriangle,
   CheckCircle2,
   Clock,
   FileX,
@@ -23,7 +21,9 @@ import {
   ListChecks,
   X,
   ChevronDown,
-  ExternalLink
+  ChevronRight,
+  ExternalLink,
+  Sparkles
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -63,6 +63,8 @@ import ProcessoWizardAutomatico from '@/components/processos/ProcessoWizardAutom
 import { useEventos } from '@/hooks/useEventos'
 import { useAudiencias } from '@/hooks/useAudiencias'
 import type { ProcessoEscavadorNormalizado } from '@/lib/escavador/types'
+import PublicacaoExpandedRow from '@/components/publicacoes/PublicacaoExpandedRow'
+import type { AnaliseIA } from '@/components/publicacoes/PublicacaoAIPanel'
 
 // Tipos
 type StatusPublicacao = 'pendente' | 'em_analise' | 'processada' | 'arquivada'
@@ -76,42 +78,38 @@ interface Publicacao {
   tipo_publicacao: TipoPublicacao
   numero_processo?: string
   processo_id?: string
-  cliente_nome?: string
   status: StatusPublicacao
-  urgente: boolean
-  tem_prazo?: boolean
-  prazo_dias?: number
-  processo_numero_cnj?: string
-  texto_completo?: string
   agendamento_id?: string
   agendamento_tipo?: 'tarefa' | 'compromisso' | 'audiencia'
   hash_conteudo?: string
   duplicata_revisada?: boolean
   is_snippet?: boolean
   updated_at?: string
+  created_at?: string
+  source?: string
+  escritorio_id?: string
 }
 
 interface Stats {
   pendentes: number
   processadasHoje: number
-  urgentes: number
   prazosCriados: number
   comProcesso: number
   semProcesso: number
+  tratadas: number
   arquivadas: number
   total: number
 }
 
-type AbaPublicacoes = 'todas' | 'com_processo' | 'sem_processo' | 'arquivadas'
+type AbaPublicacoes = 'todas' | 'com_processo' | 'sem_processo' | 'tratadas' | 'arquivadas'
 
 // Filtros rápidos pré-definidos
 const FILTROS_RAPIDOS: Array<{
   id: string
   label: string
-  filtro: { status?: string; tipo?: string; apenasUrgentes?: boolean; semPasta?: boolean }
+  filtro: { status?: string; tipo?: string; semPasta?: boolean }
 }> = [
   { id: 'pendentes', label: 'Pendentes', filtro: { status: 'pendente' } },
-  { id: 'urgentes', label: 'Urgentes', filtro: { apenasUrgentes: true } },
   { id: 'intimacoes', label: 'Intimações', filtro: { tipo: 'intimacao' } },
   { id: 'sentencas', label: 'Sentenças', filtro: { tipo: 'sentenca' } },
 ]
@@ -121,7 +119,6 @@ export default function PublicacoesPage() {
     busca: '',
     status: 'todos',
     tipo: 'todos',
-    apenasUrgentes: false,
     semPasta: false
   })
   const [filtroRapidoAtivo, setFiltroRapidoAtivo] = useState<string | null>(null)
@@ -129,10 +126,10 @@ export default function PublicacoesPage() {
   const [stats, setStats] = useState<Stats>({
     pendentes: 0,
     processadasHoje: 0,
-    urgentes: 0,
     prazosCriados: 0,
     comProcesso: 0,
     semProcesso: 0,
+    tratadas: 0,
     arquivadas: 0,
     total: 0
   })
@@ -147,6 +144,10 @@ export default function PublicacoesPage() {
   const [wizardTarefa, setWizardTarefa] = useState<{ open: boolean; pub: Publicacao | null }>({ open: false, pub: null })
   const [wizardEvento, setWizardEvento] = useState<{ open: boolean; pub: Publicacao | null }>({ open: false, pub: null })
   const [wizardAudiencia, setWizardAudiencia] = useState<{ open: boolean; pub: Publicacao | null }>({ open: false, pub: null })
+
+  // Row expandida (single-expansion)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const expandedCacheRef = useRef<Map<string, { texto: string | null; analise: AnaliseIA | null }>>(new Map())
 
   // Estado para criação de processo (fluxo com busca automática)
   const [buscaCNJModal, setBuscaCNJModal] = useState<{ open: boolean; cnj: string }>({ open: false, cnj: '' })
@@ -163,6 +164,16 @@ export default function PublicacoesPage() {
 
   const sincronizando = sincronizandoAasp || sincronizandoEscavador
 
+  // Toggle expand row
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedId(prev => prev === id ? null : id)
+  }, [])
+
+  // Cache callback para lazy-load
+  const handleExpandedDataLoaded = useCallback((id: string, data: { texto: string | null; analise: AnaliseIA | null }) => {
+    expandedCacheRef.current.set(id, data)
+  }, [])
+
   // Carregar publicações do banco
   const carregarPublicacoes = useCallback(async () => {
     if (!escritorioAtivo) return
@@ -171,8 +182,9 @@ export default function PublicacoesPage() {
     try {
       const { data, error } = await supabase
         .from('publicacoes_publicacoes')
-        .select('*')
+        .select('id, data_publicacao, tribunal, vara, tipo_publicacao, numero_processo, processo_id, status, agendamento_id, agendamento_tipo, hash_conteudo, duplicata_revisada, is_snippet, updated_at, created_at, escritorio_id, source')
         .eq('escritorio_id', escritorioAtivo)
+        .neq('status', 'duplicada')
         .order('data_publicacao', { ascending: false })
         .order('created_at', { ascending: false })
 
@@ -193,19 +205,18 @@ export default function PublicacoesPage() {
       const pendentes = ativas.filter(p => p.status === 'pendente').length
       // Tratadas hoje = processadas hoje
       const processadasHoje = publicacoesUnicas.filter(p => p.status === 'processada' && p.updated_at?.startsWith(hoje)).length
-      const urgentes = ativas.filter(p => p.urgente).length
       const comProcesso = ativas.filter(p => p.processo_id).length
       const semProcesso = ativas.filter(p => !p.processo_id && p.numero_processo).length
-      // Histórico = tratadas + arquivadas
-      const arquivadas = publicacoesUnicas.filter(p => p.status === 'arquivada' || p.status === 'processada').length
+      const tratadas = publicacoesUnicas.filter(p => p.status === 'processada').length
+      const arquivadas = publicacoesUnicas.filter(p => p.status === 'arquivada').length
 
       setStats({
         pendentes,
         processadasHoje,
-        urgentes,
         prazosCriados: 0,
         comProcesso,
         semProcesso,
+        tratadas,
         arquivadas,
         total: ativas.length
       })
@@ -313,7 +324,7 @@ export default function PublicacoesPage() {
     if (filtroRapidoAtivo === id) {
       // Desativar filtro
       setFiltroRapidoAtivo(null)
-      setFiltros({ busca: '', status: 'todos', tipo: 'todos', apenasUrgentes: false, semPasta: false })
+      setFiltros({ busca: '', status: 'todos', tipo: 'todos', semPasta: false })
     } else {
       setFiltroRapidoAtivo(id)
       const config = FILTROS_RAPIDOS.find(f => f.id === id)
@@ -322,7 +333,6 @@ export default function PublicacoesPage() {
           busca: '',
           status: config.filtro.status || 'todos',
           tipo: config.filtro.tipo || 'todos',
-          apenasUrgentes: config.filtro.apenasUrgentes || false,
           semPasta: config.filtro.semPasta || false
         })
       }
@@ -332,19 +342,20 @@ export default function PublicacoesPage() {
   // Limpar todos os filtros
   const limparFiltros = () => {
     setFiltroRapidoAtivo(null)
-    setFiltros({ busca: '', status: 'todos', tipo: 'todos', apenasUrgentes: false, semPasta: false })
+    setFiltros({ busca: '', status: 'todos', tipo: 'todos', semPasta: false })
   }
 
   // Filtrar publicações
   const publicacoesFiltradas = useMemo(() => {
     return publicacoes.filter(pub => {
       // Filtro por aba
-      // Aba "Arquivadas" mostra tanto 'processada' (tratada) quanto 'arquivada'
-      if (abaAtiva === 'arquivadas') {
-        if (pub.status !== 'arquivada' && pub.status !== 'processada') return false
+      if (abaAtiva === 'tratadas') {
+        if (pub.status !== 'processada') return false
+      } else if (abaAtiva === 'arquivadas') {
+        if (pub.status !== 'arquivada') return false
       } else {
-        // Nas outras abas, não mostrar arquivadas nem processadas (tratadas)
-        if (pub.status === 'arquivada' || pub.status === 'processada') return false
+        // Nas abas ativas, não mostrar tratadas, arquivadas nem duplicadas
+        if (['processada', 'arquivada', 'duplicada'].includes(pub.status)) return false
 
         if (abaAtiva === 'com_processo' && !pub.processo_id) return false
         if (abaAtiva === 'sem_processo' && pub.processo_id) return false
@@ -356,21 +367,53 @@ export default function PublicacoesPage() {
         const matchBusca =
           pub.numero_processo?.toLowerCase().includes(busca) ||
           pub.tribunal?.toLowerCase().includes(busca) ||
-          pub.texto_completo?.toLowerCase().includes(busca)
+          pub.vara?.toLowerCase().includes(busca)
         if (!matchBusca) return false
       }
-      // Não aplicar filtro de status na aba arquivadas (já filtra por status arquivada/processada)
-      if (abaAtiva !== 'arquivadas' && filtros.status !== 'todos' && pub.status !== filtros.status) return false
+      // Não aplicar filtro de status nas abas de status fixo
+      if (!['tratadas', 'arquivadas'].includes(abaAtiva) && filtros.status !== 'todos' && pub.status !== filtros.status) return false
       if (filtros.tipo !== 'todos' && pub.tipo_publicacao !== filtros.tipo) return false
-      if (filtros.apenasUrgentes && !pub.urgente) return false
       if (filtros.semPasta && pub.processo_id) return false
       if (filtros.semPasta && !pub.numero_processo) return false // Precisa ter número mas não ter pasta
       return true
     })
   }, [publicacoes, filtros, abaAtiva])
 
+  // Keyboard shortcuts para triagem rápida
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Não interferir com inputs/textareas
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      // Não interferir se modal/wizard estiver aberto
+      if (wizardTarefa.open || wizardEvento.open || wizardAudiencia.open || buscaCNJModal.open) return
+
+      if (e.key === 'Escape' && expandedId) {
+        e.preventDefault()
+        setExpandedId(null)
+        return
+      }
+
+      if (expandedId && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+        e.preventDefault()
+        const currentIdx = publicacoesFiltradas.findIndex(p => p.id === expandedId)
+        if (currentIdx === -1) return
+
+        const nextIdx = e.key === 'ArrowDown'
+          ? Math.min(currentIdx + 1, publicacoesFiltradas.length - 1)
+          : Math.max(currentIdx - 1, 0)
+
+        if (nextIdx !== currentIdx) {
+          setExpandedId(publicacoesFiltradas[nextIdx].id)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [expandedId, publicacoesFiltradas, wizardTarefa.open, wizardEvento.open, wizardAudiencia.open, buscaCNJModal.open])
+
   // Verificar se há filtros ativos
-  const temFiltrosAtivos = filtros.busca || filtros.status !== 'todos' || filtros.tipo !== 'todos' || filtros.apenasUrgentes || filtros.semPasta
+  const temFiltrosAtivos = filtros.busca || filtros.status !== 'todos' || filtros.tipo !== 'todos' || filtros.semPasta
 
   // ========================================
   // Seleção em Massa
@@ -448,6 +491,13 @@ export default function PublicacoesPage() {
 
   const arquivarPublicacao = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
+
+    // Capturar próxima publicação pendente ANTES de atualizar
+    const pubAtual = publicacoesFiltradas.findIndex(p => p.id === id)
+    const proximaPendente = publicacoesFiltradas.find((p, i) =>
+      i > pubAtual && p.status !== 'processada' && p.status !== 'arquivada'
+    )
+
     try {
       const { error } = await supabase
         .from('publicacoes_publicacoes')
@@ -456,6 +506,14 @@ export default function PublicacoesPage() {
 
       if (error) throw error
       toast.success('Publicação arquivada')
+
+      // Auto-advance
+      if (expandedId === id && proximaPendente) {
+        setExpandedId(proximaPendente.id)
+      } else if (expandedId === id) {
+        setExpandedId(null)
+      }
+
       await carregarPublicacoes()
     } catch (err) {
       console.error('Erro ao arquivar:', err)
@@ -465,6 +523,13 @@ export default function PublicacoesPage() {
 
   const marcarProcessada = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
+
+    // Capturar próxima publicação pendente ANTES de atualizar
+    const pubAtual = publicacoesFiltradas.findIndex(p => p.id === id)
+    const proximaPendente = publicacoesFiltradas.find((p, i) =>
+      i > pubAtual && p.status !== 'processada' && p.status !== 'arquivada'
+    )
+
     try {
       const { error } = await supabase
         .from('publicacoes_publicacoes')
@@ -473,6 +538,14 @@ export default function PublicacoesPage() {
 
       if (error) throw error
       toast.success('Publicação marcada como tratada')
+
+      // Auto-advance: expandir próxima publicação pendente
+      if (expandedId === id && proximaPendente) {
+        setExpandedId(proximaPendente.id)
+      } else if (expandedId === id) {
+        setExpandedId(null)
+      }
+
       await carregarPublicacoes()
     } catch (err) {
       console.error('Erro ao atualizar:', err)
@@ -514,23 +587,28 @@ export default function PublicacoesPage() {
   }
 
   // Gerar dados iniciais para os wizards baseado na publicação
+  // Buscar texto do cache expandido se disponível
+  const getTextoCache = (pubId: string) => {
+    return expandedCacheRef.current.get(pubId)?.texto?.substring(0, 500) || ''
+  }
+
   const getInitialDataTarefa = (pub: Publicacao) => ({
     titulo: `${getTipoLabel(pub.tipo_publicacao)} - ${pub.numero_processo || 'Publicação'}`,
-    descricao: `Publicação: ${pub.tipo_publicacao?.toUpperCase() || 'PUBLICAÇÃO'}\nData: ${new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}\nTribunal: ${pub.tribunal}\n${pub.numero_processo ? `Processo: ${pub.numero_processo}\n` : ''}\n---\n${pub.texto_completo?.substring(0, 500) || ''}`,
+    descricao: `Publicação: ${pub.tipo_publicacao?.toUpperCase() || 'PUBLICAÇÃO'}\nData: ${new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}\nTribunal: ${pub.tribunal}\n${pub.numero_processo ? `Processo: ${pub.numero_processo}\n` : ''}\n---\n${getTextoCache(pub.id)}`,
     processo_id: pub.processo_id || undefined,
-    tipo: pub.tem_prazo ? 'prazo_processual' as const : 'outro' as const,
-    prioridade: pub.urgente ? 'alta' as const : 'media' as const,
+    tipo: 'outro' as const,
+    prioridade: 'media' as const,
   })
 
   const getInitialDataEvento = (pub: Publicacao) => ({
     titulo: `${getTipoLabel(pub.tipo_publicacao)} - ${pub.numero_processo || 'Publicação'}`,
-    descricao: `Publicação: ${pub.tipo_publicacao?.toUpperCase() || 'PUBLICAÇÃO'}\nData: ${new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}\nTribunal: ${pub.tribunal}\n${pub.numero_processo ? `Processo: ${pub.numero_processo}\n` : ''}\n---\n${pub.texto_completo?.substring(0, 500) || ''}`,
+    descricao: `Publicação: ${pub.tipo_publicacao?.toUpperCase() || 'PUBLICAÇÃO'}\nData: ${new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}\nTribunal: ${pub.tribunal}\n${pub.numero_processo ? `Processo: ${pub.numero_processo}\n` : ''}\n---\n${getTextoCache(pub.id)}`,
     processo_id: pub.processo_id || undefined,
   })
 
   const getInitialDataAudiencia = (pub: Publicacao) => ({
     titulo: `Audiência - ${pub.numero_processo || 'Publicação'}`,
-    observacoes: `Publicação: ${pub.tipo_publicacao?.toUpperCase() || 'PUBLICAÇÃO'}\nData: ${new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}\nTribunal: ${pub.tribunal}\n${pub.numero_processo ? `Processo: ${pub.numero_processo}\n` : ''}\n---\n${pub.texto_completo?.substring(0, 500) || ''}`,
+    observacoes: `Publicação: ${pub.tipo_publicacao?.toUpperCase() || 'PUBLICAÇÃO'}\nData: ${new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}\nTribunal: ${pub.tribunal}\n${pub.numero_processo ? `Processo: ${pub.numero_processo}\n` : ''}\n---\n${getTextoCache(pub.id)}`,
     processo_id: pub.processo_id || undefined,
     local: pub.tribunal || '',
     vara: pub.vara || '',
@@ -651,10 +729,10 @@ export default function PublicacoesPage() {
         />
 
         <MetricCard
-          title="Urgentes"
-          value={stats.urgentes}
-          subtitle="Requerem atenção"
-          icon={AlertTriangle}
+          title="Tratadas"
+          value={stats.tratadas}
+          subtitle="Total processadas"
+          icon={CheckSquare}
           gradient="kpi3"
         />
 
@@ -685,11 +763,6 @@ export default function PublicacoesPage() {
             {filtro.id === 'pendentes' && stats.pendentes > 0 && (
               <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">
                 {stats.pendentes}
-              </Badge>
-            )}
-            {filtro.id === 'urgentes' && stats.urgentes > 0 && (
-              <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px] bg-red-100 text-red-700">
-                {stats.urgentes}
               </Badge>
             )}
           </Button>
@@ -905,6 +978,16 @@ export default function PublicacoesPage() {
                 </Badge>
               </TabsTrigger>
               <TabsTrigger
+                value="tratadas"
+                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
+              >
+                <span className="hidden md:inline">Tratadas</span>
+                <span className="md:hidden">Trat.</span>
+                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-emerald-100/80 text-emerald-600">
+                  {stats.tratadas}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger
                 value="arquivadas"
                 className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
               >
@@ -974,47 +1057,124 @@ export default function PublicacoesPage() {
           </div>
         ) : (
           <>
-          {/* Mobile: Card list */}
+          {/* Mobile: Card list com expansão inline */}
           <div className="md:hidden divide-y divide-slate-100">
             {publicacoesFiltradas.map((pub) => (
-              <div
-                key={pub.id}
-                onClick={() => router.push(`/dashboard/publicacoes/${pub.id}`)}
-                className="p-3.5 active:bg-slate-50 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {getStatusBadge(pub.status)}
-                    {pub.urgente && (
-                      <Badge variant="outline" className="text-[10px] bg-red-50 text-red-700 border-red-200">
-                        Urgente
-                      </Badge>
-                    )}
-                    {pub.is_snippet && (
-                      <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
-                        Trecho
-                      </Badge>
+              <div key={pub.id}>
+                <div
+                  onClick={() => toggleExpand(pub.id)}
+                  className={cn(
+                    'p-3.5 active:bg-slate-50 transition-colors cursor-pointer',
+                    expandedId === pub.id && 'bg-blue-50/40'
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <ChevronRight className={cn(
+                        'w-3.5 h-3.5 text-slate-400 transition-transform duration-200',
+                        expandedId === pub.id && 'rotate-90'
+                      )} />
+                      {getStatusBadge(pub.status)}
+                      {pub.is_snippet && (
+                        <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                          Trecho
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-slate-400">
+                      {new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                  <p className="text-xs font-medium text-slate-700 truncate">{pub.tribunal}</p>
+                  {pub.vara && <p className="text-[11px] text-slate-500">{pub.vara}</p>}
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+                    <span className="text-[11px] text-slate-500">{getTipoLabel(pub.tipo_publicacao)}</span>
+                    {pub.numero_processo ? (
+                      <span className={cn(
+                        'text-[11px] font-mono truncate max-w-[160px]',
+                        pub.processo_id ? 'text-blue-600' : 'text-slate-600'
+                      )}>
+                        {pub.numero_processo}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-slate-400">Sem processo</span>
                     )}
                   </div>
-                  <span className="text-[11px] text-slate-400">
-                    {new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}
-                  </span>
                 </div>
-                <p className="text-xs font-medium text-slate-700 truncate">{pub.tribunal}</p>
-                {pub.vara && <p className="text-[11px] text-slate-500">{pub.vara}</p>}
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
-                  <span className="text-[11px] text-slate-500">{getTipoLabel(pub.tipo_publicacao)}</span>
-                  {pub.numero_processo ? (
-                    <span className={cn(
-                      'text-[11px] font-mono truncate max-w-[160px]',
-                      pub.processo_id ? 'text-blue-600' : 'text-slate-600'
-                    )}>
-                      {pub.numero_processo}
-                    </span>
-                  ) : (
-                    <span className="text-[11px] text-slate-400">Sem processo</span>
-                  )}
-                </div>
+
+                {/* Expansão mobile - single column */}
+                {expandedId === pub.id && (
+                  <div className="border-l-[3px] border-[#1E3A8A] bg-blue-50/30 px-3 pb-3">
+                    <div className="space-y-3">
+                      {/* Botões de ação mobile */}
+                      <div className="flex flex-wrap gap-1.5 pt-2">
+                        {pub.status !== 'processada' && pub.status !== 'arquivada' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs gap-1.5 border-emerald-200 text-emerald-600"
+                            onClick={(e) => marcarProcessada(pub.id, e)}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Tratada
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1.5"
+                          onClick={(e) => abrirWizardTarefa(pub, e)}
+                        >
+                          <CheckSquare className="w-3.5 h-3.5" />
+                          Tarefa
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1.5"
+                          onClick={(e) => abrirWizardEvento(pub, e)}
+                        >
+                          <Calendar className="w-3.5 h-3.5" />
+                          Evento
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1.5"
+                          onClick={(e) => abrirWizardAudiencia(pub, e)}
+                        >
+                          <Gavel className="w-3.5 h-3.5" />
+                          Audiência
+                        </Button>
+                        {pub.status !== 'arquivada' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs gap-1.5 text-slate-400"
+                            onClick={(e) => arquivarPublicacao(pub.id, e)}
+                          >
+                            <Archive className="w-3.5 h-3.5" />
+                            Arquivar
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Componente expandido reutilizado via table wrapper trick */}
+                      <table className="w-full"><tbody>
+                        <PublicacaoExpandedRow
+                          publicacao={pub}
+                          isExpanded={true}
+                          onCriarTarefa={() => abrirWizardTarefa(pub)}
+                          onCriarEvento={() => abrirWizardEvento(pub)}
+                          onCriarAudiencia={() => abrirWizardAudiencia(pub)}
+                          onCriarProcesso={(cnj) => abrirWizardProcesso(cnj)}
+                          cachedData={expandedCacheRef.current.get(pub.id)}
+                          onDataLoaded={handleExpandedDataLoaded}
+                        />
+                      </tbody></table>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -1038,207 +1198,225 @@ export default function PublicacoesPage() {
                   <th className="text-right text-xs font-medium text-slate-600 p-3">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-100">
                 {publicacoesFiltradas.map((pub) => (
-                  <tr
-                    key={pub.id}
-                    className={cn(
-                      'hover:bg-slate-50 transition-colors cursor-pointer',
-                      selecionados.has(pub.id) && 'bg-blue-50 hover:bg-blue-100'
-                    )}
-                    onClick={() => router.push(`/dashboard/publicacoes/${pub.id}`)}
-                  >
-                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={selecionados.has(pub.id)}
-                        onCheckedChange={() => toggleSelecao(pub.id)}
-                      />
-                    </td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {getStatusBadge(pub.status)}
-                        {pub.urgente && (
-                          <Badge variant="outline" className="text-[10px] bg-red-50 text-red-700 border-red-200">
-                            Urgente
-                          </Badge>
-                        )}
-                        {pub.agendamento_tipo && (
-                          <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">
-                            {pub.agendamento_tipo === 'tarefa' && <CheckSquare className="w-3 h-3 mr-1" />}
-                            {pub.agendamento_tipo === 'compromisso' && <Calendar className="w-3 h-3 mr-1" />}
-                            {pub.agendamento_tipo === 'audiencia' && <Gavel className="w-3 h-3 mr-1" />}
-                            Agendado
-                          </Badge>
-                        )}
-                        {pub.is_snippet && (
-                          <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
-                            Trecho
-                          </Badge>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <span className="text-sm text-slate-700">
-                        {new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      <div>
-                        <div className="text-sm font-medium text-slate-700 truncate max-w-[200px]" title={pub.tribunal}>{pub.tribunal}</div>
-                        {pub.vara && <div className="text-xs text-slate-500">{pub.vara}</div>}
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <span className="text-sm text-slate-700">{getTipoLabel(pub.tipo_publicacao)}</span>
-                    </td>
-                    <td className="p-3">
-                      {pub.numero_processo ? (
-                        pub.processo_id ? (
-                          <span
-                            className="inline-flex items-center gap-1.5 text-sm font-mono font-medium text-[#3B82F6] hover:text-[#2563EB] cursor-pointer hover:underline underline-offset-2"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              router.push(`/dashboard/processos/${pub.processo_id}`)
-                            }}
-                          >
-                            {pub.numero_processo}
-                            <ExternalLink className="w-3 h-3 opacity-60" />
-                          </span>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-mono text-slate-700">{pub.numero_processo}</span>
-                            <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
-                              Sem pasta
-                            </Badge>
-                          </div>
-                        )
-                      ) : (
-                        <span className="text-sm text-slate-400">-</span>
+                  <React.Fragment key={pub.id}>
+                    <tr
+                      className={cn(
+                        'hover:bg-slate-50 transition-colors cursor-pointer group',
+                        selecionados.has(pub.id) && 'bg-blue-50 hover:bg-blue-100',
+                        expandedId === pub.id && 'bg-blue-50/40 border-b-0'
                       )}
-                    </td>
-                    <td className="p-3">
-                      <TooltipProvider delayDuration={200}>
-                        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                          {/* Botão Check Verde - Marcar como Tratada */}
-                          {pub.status !== 'processada' && pub.status !== 'arquivada' && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700"
-                                  onClick={(e) => marcarProcessada(pub.id, e)}
-                                >
-                                  <CheckCircle2 className="w-4 h-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Marcar como tratada</p>
-                              </TooltipContent>
-                            </Tooltip>
+                      onClick={() => toggleExpand(pub.id)}
+                    >
+                      <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selecionados.has(pub.id)}
+                          onCheckedChange={() => toggleSelecao(pub.id)}
+                        />
+                      </td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <ChevronRight className={cn(
+                            'w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0',
+                            expandedId === pub.id && 'rotate-90 text-[#1E3A8A]'
+                          )} />
+                          {getStatusBadge(pub.status)}
+                          {pub.agendamento_tipo && (
+                            <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">
+                              {pub.agendamento_tipo === 'tarefa' && <CheckSquare className="w-3 h-3 mr-1" />}
+                              {pub.agendamento_tipo === 'compromisso' && <Calendar className="w-3 h-3 mr-1" />}
+                              {pub.agendamento_tipo === 'audiencia' && <Gavel className="w-3 h-3 mr-1" />}
+                              Agendado
+                            </Badge>
                           )}
-
-                          {/* Botão Calendário Azul - Dropdown para Agendamentos */}
-                          <DropdownMenu>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <DropdownMenuTrigger asChild>
+                          {pub.is_snippet && (
+                            <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                              Trecho
+                            </Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <span className="text-sm text-slate-700">
+                          {new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <div>
+                          <div className="text-sm font-medium text-slate-700 truncate max-w-[200px]" title={pub.tribunal}>{pub.tribunal}</div>
+                          {pub.vara && <div className="text-xs text-slate-500">{pub.vara}</div>}
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <span className="text-sm text-slate-700">{getTipoLabel(pub.tipo_publicacao)}</span>
+                      </td>
+                      <td className="p-3">
+                        {pub.numero_processo ? (
+                          pub.processo_id ? (
+                            <span
+                              className="inline-flex items-center gap-1.5 text-sm font-mono font-medium text-[#3B82F6] hover:text-[#2563EB] cursor-pointer hover:underline underline-offset-2"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                router.push(`/dashboard/processos/${pub.processo_id}`)
+                              }}
+                            >
+                              {pub.numero_processo}
+                              <ExternalLink className="w-3 h-3 opacity-60" />
+                            </span>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-mono text-slate-700">{pub.numero_processo}</span>
+                              <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                                Sem pasta
+                              </Badge>
+                            </div>
+                          )
+                        ) : (
+                          <span className="text-sm text-slate-400">-</span>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        <TooltipProvider delayDuration={200}>
+                          <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                            {/* Botão Check Verde - Marcar como Tratada */}
+                            {pub.status !== 'processada' && pub.status !== 'arquivada' && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-8 w-8 p-0 hover:bg-blue-50 text-blue-600 hover:text-blue-700"
+                                    className="h-8 w-8 p-0 hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700"
+                                    onClick={(e) => marcarProcessada(pub.id, e)}
                                   >
-                                    <CalendarPlus className="w-4 h-4" />
+                                    <CheckCircle2 className="w-4 h-4" />
                                   </Button>
-                                </DropdownMenuTrigger>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Agendar</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            <DropdownMenuContent align="end" className="w-44">
-                              <DropdownMenuItem
-                                className="gap-2 cursor-pointer"
-                                onClick={(e) => abrirWizardTarefa(pub, e as any)}
-                              >
-                                <CheckSquare className="w-4 h-4" />
-                                Criar Tarefa
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="gap-2 cursor-pointer"
-                                onClick={(e) => abrirWizardEvento(pub, e as any)}
-                              >
-                                <Calendar className="w-4 h-4" />
-                                Criar Compromisso
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="gap-2 cursor-pointer"
-                                onClick={(e) => abrirWizardAudiencia(pub, e as any)}
-                              >
-                                <Gavel className="w-4 h-4" />
-                                Criar Audiência
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Marcar como tratada</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
 
-                          {/* Botão Criar Pasta - Só aparece se tem número mas não tem pasta */}
-                          {pub.numero_processo && !pub.processo_id && (
+                            {/* Botão IA - Expandir para análise */}
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-8 w-8 p-0 hover:bg-slate-100 text-slate-500 hover:text-slate-700"
-                                  onClick={(e) => abrirWizardProcesso(pub.numero_processo!, e)}
+                                  className={cn(
+                                    'h-8 w-8 p-0',
+                                    expandedId === pub.id
+                                      ? 'bg-[#34495e]/10 text-[#34495e]'
+                                      : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'
+                                  )}
+                                  onClick={(e) => { e.stopPropagation(); toggleExpand(pub.id) }}
                                 >
-                                  <FolderPlus className="w-4 h-4" />
+                                  <Sparkles className="w-3.5 h-3.5" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Criar pasta do processo</p>
+                                <p>{expandedId === pub.id ? 'Fechar análise' : 'Expandir e analisar'}</p>
                               </TooltipContent>
                             </Tooltip>
-                          )}
 
-                          {/* Botão Arquivar - Não aparece se já está arquivada */}
-                          {pub.status !== 'arquivada' && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 hover:bg-slate-100 text-slate-400 hover:text-slate-600"
-                                  onClick={(e) => arquivarPublicacao(pub.id, e)}
+                            {/* Botão Calendário Azul - Dropdown para Agendamentos */}
+                            <DropdownMenu>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 hover:bg-blue-50 text-blue-600 hover:text-blue-700"
+                                    >
+                                      <CalendarPlus className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Agendar</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <DropdownMenuContent align="end" className="w-44">
+                                <DropdownMenuItem
+                                  className="gap-2 cursor-pointer"
+                                  onClick={(e) => abrirWizardTarefa(pub, e as any)}
                                 >
-                                  <Archive className="w-4 h-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Arquivar</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
+                                  <CheckSquare className="w-4 h-4" />
+                                  Criar Tarefa
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="gap-2 cursor-pointer"
+                                  onClick={(e) => abrirWizardEvento(pub, e as any)}
+                                >
+                                  <Calendar className="w-4 h-4" />
+                                  Criar Compromisso
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="gap-2 cursor-pointer"
+                                  onClick={(e) => abrirWizardAudiencia(pub, e as any)}
+                                >
+                                  <Gavel className="w-4 h-4" />
+                                  Criar Audiência
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
 
-                          {/* Botão Ver Detalhes */}
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                onClick={() => router.push(`/dashboard/publicacoes/${pub.id}`)}
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Ver detalhes</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </TooltipProvider>
-                    </td>
-                  </tr>
+                            {/* Botão Criar Pasta - Só aparece se tem número mas não tem pasta */}
+                            {pub.numero_processo && !pub.processo_id && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 hover:bg-slate-100 text-slate-500 hover:text-slate-700"
+                                    onClick={(e) => abrirWizardProcesso(pub.numero_processo!, e)}
+                                  >
+                                    <FolderPlus className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Criar pasta do processo</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+
+                            {/* Botão Arquivar - Não aparece se já está arquivada */}
+                            {pub.status !== 'arquivada' && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+                                    onClick={(e) => arquivarPublicacao(pub.id, e)}
+                                  >
+                                    <Archive className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Arquivar</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        </TooltipProvider>
+                      </td>
+                    </tr>
+
+                    {/* Row expandida com texto + painel IA */}
+                    <PublicacaoExpandedRow
+                      publicacao={pub}
+                      isExpanded={expandedId === pub.id}
+                      onCriarTarefa={() => abrirWizardTarefa(pub)}
+                      onCriarEvento={() => abrirWizardEvento(pub)}
+                      onCriarAudiencia={() => abrirWizardAudiencia(pub)}
+                      onCriarProcesso={(cnj) => abrirWizardProcesso(cnj)}
+                      cachedData={expandedCacheRef.current.get(pub.id)}
+                      onDataLoaded={handleExpandedDataLoaded}
+                    />
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

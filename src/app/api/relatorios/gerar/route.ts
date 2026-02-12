@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { COLUNAS_DISPONIVEIS } from '@/types/relatorios'
 import { reportRateLimit } from '@/lib/rate-limit'
+import { captureOperationError, logger } from '@/lib/logger'
 
 interface RequestBody {
   escritorio_id: string
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
       .order('numero_pasta', { ascending: false })
 
     if (processosError) {
-      console.error('Erro ao buscar processos:', processosError)
+      captureOperationError(processosError, { module: 'API/Relatorios', operation: 'buscar', table: 'processos_processos' })
       return NextResponse.json({
         sucesso: false,
         erro: 'Erro ao buscar processos'
@@ -181,7 +182,7 @@ export async function POST(request: NextRequest) {
           linhaAtual = 4
         }
       } catch (logoErr) {
-        console.log('Erro ao carregar logo, continuando sem logo:', logoErr)
+        logger.warn('Erro ao carregar logo, continuando sem logo', { module: 'API/Relatorios', action: 'carregar-logo' })
         linhaAtual = 1
       }
     }
@@ -477,7 +478,7 @@ export async function POST(request: NextRequest) {
       })
 
     if (uploadError) {
-      console.error('Erro ao fazer upload:', uploadError)
+      captureOperationError(uploadError, { module: 'API/Relatorios', operation: 'gerar', table: 'storage/relatorios' })
       return NextResponse.json({
         sucesso: false,
         erro: 'Erro ao salvar arquivo'
@@ -510,7 +511,7 @@ export async function POST(request: NextRequest) {
           .insert(andamentosParaInserir)
 
         if (andamentosError) {
-          console.error('Erro ao salvar andamentos:', andamentosError)
+          captureOperationError(andamentosError, { module: 'API/Relatorios', operation: 'criar', table: 'processos_movimentacoes' })
         }
       }
     }
@@ -536,7 +537,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (relatorioError) {
-      console.error('Erro ao salvar historico:', relatorioError)
+      captureOperationError(relatorioError, { module: 'API/Relatorios', operation: 'criar', table: 'relatorios_gerados' })
     }
 
     return NextResponse.json({
@@ -547,7 +548,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro ao gerar relatorio:', error)
+    captureOperationError(error instanceof Error ? error : new Error(String(error)), { module: 'API/Relatorios', operation: 'gerar' })
     return NextResponse.json({
       sucesso: false,
       erro: 'Erro interno ao gerar relatorio'

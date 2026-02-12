@@ -16,7 +16,6 @@ export interface ResumoIA {
     eventos: number
     prazos_urgentes: number
     publicacoes_pendentes: number
-    publicacoes_urgentes: number
     horas_nao_faturadas: number
     valor_nao_faturado: number
     ocupacao_agenda: number
@@ -34,7 +33,6 @@ const defaultResumo: ResumoIA = {
     eventos: 0,
     prazos_urgentes: 0,
     publicacoes_pendentes: 0,
-    publicacoes_urgentes: 0,
     horas_nao_faturadas: 0,
     valor_nao_faturado: 0,
     ocupacao_agenda: 0,

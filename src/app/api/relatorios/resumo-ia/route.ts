@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { aiRateLimit } from '@/lib/rate-limit'
+import { captureOperationError, logger } from '@/lib/logger'
 
 const SYSTEM_PROMPT = `Voce e um assistente juridico que cria resumos de processos para clientes leigos.
 
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
     // Verificar se a chave API esta configurada
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {
-      console.error('ANTHROPIC_API_KEY nao configurada')
+      logger.warn('ANTHROPIC_API_KEY nao configurada', { module: 'API/Relatorios', action: 'resumo-ia' })
       // Gerar mensagem basica sem IA
       return NextResponse.json({
         sucesso: true,
@@ -133,7 +134,7 @@ Escreva um resumo de 2-3 frases para o cliente, explicando a situacao atual do p
     })
 
   } catch (error) {
-    console.error('Erro ao gerar resumo IA:', error)
+    captureOperationError(error instanceof Error ? error : new Error(String(error)), { module: 'API/Relatorios', operation: 'gerar-resumo-ia' })
     // Em caso de erro, tentar gerar algo util
     return NextResponse.json({
       sucesso: false,

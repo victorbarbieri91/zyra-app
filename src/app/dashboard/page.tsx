@@ -252,7 +252,7 @@ export default function DashboardPage() {
   const { metrics, loading: loadingMetrics } = useDashboardMetrics()
   const { items: agendaItems, loading: loadingAgenda, isEmpty: isAgendaEmpty, audienciasHoje, prazosHoje, refresh: refreshAgenda } = useDashboardAgenda()
   const { equipe, totalHorasEquipe, currentUserId, loading: loadingPerformance } = useDashboardPerformance()
-  const { publicacoes, loading: loadingPublicacoes, isEmpty: isPublicacoesEmpty, urgentes: publicacoesUrgentes } = useDashboardPublicacoes()
+  const { publicacoes, loading: loadingPublicacoes, isEmpty: isPublicacoesEmpty } = useDashboardPublicacoes()
   const { resumo, loading: loadingResumo, refresh: refreshResumo, tempoDesdeAtualizacao } = useDashboardResumoIA()
   const { insights, loading: loadingInsights, hasPermission: hasInsightsPermission, refresh: refreshInsights } = useDashboardInsightsIA()
 
@@ -966,9 +966,6 @@ export default function DashboardPage() {
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1.5">
                                       <p className="text-sm font-medium text-[#34495e] truncate group-hover:text-[#1E3A8A] transition-colors">{event.title}</p>
-                                      {event.urgente && (
-                                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
-                                      )}
                                     </div>
                                     {event.subtitle && (
                                       <p className="text-[11px] text-slate-400 truncate">{event.subtitle}</p>
@@ -1290,12 +1287,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-bold text-[#34495e]">Publicações</span>
                       {!loadingPublicacoes && !isPublicacoesEmpty && (
-                        <span className={cn(
-                          'inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-semibold',
-                          (publicacoesUrgentes ?? 0) > 0
-                            ? 'bg-red-100 text-red-600'
-                            : 'bg-slate-100 text-slate-500'
-                        )}>
+                        <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500">
                           {publicacoes.length}
                         </span>
                       )}
@@ -1332,11 +1324,6 @@ export default function DashboardPage() {
                                   <p className="text-xs font-medium text-[#34495e] truncate">{pub.processo}</p>
                                   <p className="text-[11px] text-slate-400 truncate">{pub.conteudo}</p>
                                 </div>
-                                {pub.urgente && (
-                                  <span className="text-[9px] font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded flex-shrink-0">
-                                    Urgente
-                                  </span>
-                                )}
                               </div>
                             </div>
                           </Link>

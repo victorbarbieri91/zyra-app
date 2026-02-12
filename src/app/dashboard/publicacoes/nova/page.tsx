@@ -41,7 +41,6 @@ export default function NovaPublicacaoPage() {
     numero_processo: '',
     cliente_id: '',
     texto_completo: '',
-    urgente: false,
     analisar_ia: true
   })
 
@@ -264,19 +263,6 @@ export default function NovaPublicacaoPage() {
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="urgente"
-                  checked={formData.urgente}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, urgente: checked as boolean })
-                  }
-                />
-                <label htmlFor="urgente" className="text-sm text-slate-700">
-                  Marcar como urgente
-                </label>
-              </div>
-
               <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
                 <Checkbox
                   id="analisar-ia"

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { captureOperationError } from '@/lib/logger'
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns'
 
 export interface DisponibilidadeSlot {
@@ -30,7 +31,7 @@ export function useAgenda() {
 
       setFeriados(data?.map((f: { data: string }) => new Date(f.data)) || [])
     } catch (err) {
-      console.error('Erro ao carregar feriados:', err)
+      captureOperationError(err, { module: 'Agenda', operation: 'buscar', table: 'feriados' })
     } finally {
       setLoading(false)
     }
@@ -54,7 +55,7 @@ export function useAgenda() {
 
       return data || []
     } catch (err) {
-      console.error('Erro ao verificar conflitos:', err)
+      captureOperationError(err, { module: 'Agenda', operation: 'buscar', details: { context: 'check_conflitos' } })
       return []
     }
   }
@@ -79,7 +80,7 @@ export function useAgenda() {
 
       return data || []
     } catch (err) {
-      console.error('Erro ao sugerir horários:', err)
+      captureOperationError(err, { module: 'Agenda', operation: 'buscar', details: { context: 'sugerir_horarios' } })
       return []
     }
   }
@@ -108,7 +109,7 @@ export function useAgenda() {
 
       return data || []
     } catch (err) {
-      console.error('Erro ao buscar disponibilidade da equipe:', err)
+      captureOperationError(err, { module: 'Agenda', operation: 'buscar', table: 'v_disponibilidade_equipe' })
       return []
     }
   }

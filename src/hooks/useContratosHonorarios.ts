@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { captureOperationError } from '@/lib/logger'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 
 // Tipos baseados nas tabelas do banco

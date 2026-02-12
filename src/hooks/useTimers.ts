@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { captureOperationError } from '@/lib/logger';
 import {
   TimerAtivo,
   TimerAtivoComDetalhes,
@@ -65,7 +66,7 @@ export function useTimers(escritorioId: string | null): UseTimersReturn {
 
       setTimers(timersComTempo);
     } catch (err) {
-      console.error('Erro ao carregar timers:', err);
+      captureOperationError(err, { module: 'Timers', operation: 'buscar', table: 'v_timers_ativos' });
       setError(err instanceof Error ? err : new Error('Erro ao carregar timers'));
     } finally {
       setLoading(false);

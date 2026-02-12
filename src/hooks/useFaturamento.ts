@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { captureOperationError } from '@/lib/logger'
 
 export interface ProcessoFechamento {
   id: string
@@ -153,7 +154,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
         .order('created_at', { ascending: false })
 
       if (queryError) {
-        console.error('useFaturamento: Erro ao buscar lançamentos:', queryError)
+        captureOperationError(queryError, { module: 'Faturamento', operation: 'buscar', table: 'v_lancamentos_prontos_faturar' })
         throw queryError
       }
 
@@ -162,7 +163,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
       return (data as LancamentoProntoFaturar[]) || []
     } catch (err: any) {
       setError(err.message)
-      console.error('Erro ao carregar lançamentos:', err)
+      captureOperationError(err, { module: 'Faturamento', operation: 'buscar', table: 'v_lancamentos_prontos_faturar' })
       return []
     } finally {
       setLoading(false)
@@ -234,7 +235,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
       )
     } catch (err: any) {
       setError(err.message)
-      console.error('Erro ao carregar clientes:', err)
+      captureOperationError(err, { module: 'Faturamento', operation: 'buscar', table: 'v_lancamentos_prontos_faturar' })
       return []
     } finally {
       setLoading(false)
@@ -262,7 +263,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
         return (data as LancamentoProntoFaturar[]) || []
       } catch (err: any) {
         setError(err.message)
-        console.error('Erro ao carregar lançamentos do cliente:', err)
+        captureOperationError(err, { module: 'Faturamento', operation: 'buscar', table: 'v_lancamentos_prontos_faturar' })
         return []
       } finally {
         setLoading(false)
@@ -294,7 +295,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
         .order('created_at', { ascending: false })
 
       if (queryError) {
-        console.error('useFaturamento: Erro ao buscar faturas:', queryError)
+        captureOperationError(queryError, { module: 'Faturamento', operation: 'buscar', table: 'v_faturas_geradas' })
         throw queryError
       }
 
@@ -303,7 +304,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
       return (data as FaturaGerada[]) || []
     } catch (err: any) {
       setError(err.message)
-      console.error('Erro ao carregar faturas:', err)
+      captureOperationError(err, { module: 'Faturamento', operation: 'buscar', table: 'v_faturas_geradas' })
       return []
     } finally {
       setLoading(false)
@@ -392,7 +393,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
         return itens
       } catch (err: any) {
         setError(err.message)
-        console.error('Erro ao carregar itens da fatura:', err)
+        captureOperationError(err, { module: 'Faturamento', operation: 'buscar', table: 'financeiro_faturamento_faturas' })
         return []
       } finally {
         setLoading(false)
@@ -455,7 +456,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
         return response?.fatura_id as string
       } catch (err: any) {
         setError(err.message)
-        console.error('Erro ao gerar fatura:', err)
+        captureOperationError(err, { module: 'Faturamento', operation: 'gerar', table: 'financeiro_faturamento_faturas' })
         return null
       } finally {
         setLoading(false)
@@ -490,7 +491,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
         return response?.success === true
       } catch (err: any) {
         setError(err.message)
-        console.error('Erro ao desmontar fatura:', err)
+        captureOperationError(err, { module: 'Faturamento', operation: 'excluir', table: 'financeiro_faturamento_faturas' })
         return false
       } finally {
         setLoading(false)
@@ -536,7 +537,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
         return data as string // Retorna pagamento_id
       } catch (err: any) {
         setError(err.message)
-        console.error('Erro ao pagar fatura:', err)
+        captureOperationError(err, { module: 'Faturamento', operation: 'pagar', table: 'financeiro_faturamento_faturas' })
         return null
       } finally {
         setLoading(false)
@@ -564,7 +565,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
 
       return data || []
     } catch (err: any) {
-      console.error('Erro ao carregar contas bancárias:', err)
+      captureOperationError(err, { module: 'Faturamento', operation: 'buscar', table: 'financeiro_contas_bancarias' })
       return []
     }
   }, [escritorioIds, supabase])

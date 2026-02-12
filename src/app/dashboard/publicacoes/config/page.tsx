@@ -105,6 +105,7 @@ export default function ConfiguracoesPublicacoesPage() {
     removerTermo,
     ativarTermo,
     sincronizar: sincronizarEscavador,
+    diagnosticarAPI: diagnosticarEscavador,
     carregarTermos,
     temErros: temErrosEscavador,
     temPendentes: temTermosPendentes
@@ -180,6 +181,27 @@ export default function ConfiguracoesPublicacoesPage() {
       setTimeout(() => setCopiado(false), 2000)
     } catch {
       toast.error('Erro ao copiar')
+    }
+  }
+
+  const handleDiagnosticarEscavador = async (termo: TermoEscavador) => {
+    setDiagnosticando(true)
+    setDiagnosticoAberto(true)
+    setDiagnosticoResultado(null)
+    setCopiado(false)
+
+    try {
+      const resultado = await diagnosticarEscavador(termo.id)
+      setDiagnosticoResultado(resultado)
+
+      if (!resultado.sucesso) {
+        toast.error(resultado.mensagem)
+      }
+    } catch (error: any) {
+      setDiagnosticoResultado({ sucesso: false, mensagem: error.message })
+      toast.error(`Erro: ${error.message}`)
+    } finally {
+      setDiagnosticando(false)
     }
   }
 
@@ -849,6 +871,15 @@ export default function ConfiguracoesPublicacoesPage() {
                         </div>
 
                         <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDiagnosticarEscavador(termo)}
+                            className="text-slate-500 hover:text-amber-600"
+                            title="Diagnosticar API Escavador"
+                          >
+                            <Bug className="w-4 h-4" />
+                          </Button>
                           {!temMonitoramentoId ? (
                             <Button
                               variant="outline"
@@ -1405,16 +1436,16 @@ export default function ConfiguracoesPublicacoesPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Modal Diagnóstico API AASP */}
+      {/* Modal Diagnóstico API (AASP ou Escavador) */}
       <Dialog open={diagnosticoAberto} onOpenChange={setDiagnosticoAberto}>
         <DialogContent className="sm:max-w-3xl max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Bug className="w-5 h-5 text-amber-600" />
-              Diagnóstico API AASP
+              Diagnóstico API
             </DialogTitle>
             <DialogDescription>
-              Resposta RAW da API AASP sem nenhum processamento
+              Resposta RAW da API sem nenhum processamento
             </DialogDescription>
           </DialogHeader>
 
@@ -1422,7 +1453,7 @@ export default function ConfiguracoesPublicacoesPage() {
             {diagnosticando ? (
               <div className="p-8 flex flex-col items-center justify-center gap-3">
                 <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
-                <p className="text-sm text-slate-500">Consultando API AASP...</p>
+                <p className="text-sm text-slate-500">Consultando API...</p>
               </div>
             ) : diagnosticoResultado ? (
               <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg text-xs overflow-auto max-h-[55vh] whitespace-pre-wrap break-words">

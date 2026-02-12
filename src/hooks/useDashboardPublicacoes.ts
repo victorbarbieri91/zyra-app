@@ -11,7 +11,6 @@ export interface PublicacaoDashboard {
   tipo: string
   conteudo: string
   prazo?: string
-  urgente: boolean
   dataPublicacao: string
 }
 
@@ -28,7 +27,6 @@ async function fetchDashboardPublicacoes(
       numero_processo,
       tipo_publicacao,
       texto_completo,
-      urgente,
       data_publicacao,
       status,
       publicacoes_analises (
@@ -38,7 +36,6 @@ async function fetchDashboardPublicacoes(
     `)
     .eq('escritorio_id', escritorioAtivo)
     .in('status', ['pendente', 'em_analise'])
-    .order('urgente', { ascending: false })
     .order('data_publicacao', { ascending: false })
     .limit(6)
 
@@ -91,7 +88,6 @@ async function fetchDashboardPublicacoes(
       tipo,
       conteudo: conteudo || 'Verificar detalhes da publicação',
       prazo: prazo || undefined,
-      urgente: pub.urgente || false,
       dataPublicacao: pub.data_publicacao,
     }
   })
@@ -121,7 +117,6 @@ export function useDashboardPublicacoes() {
     error: error as Error | null,
     refresh,
     isEmpty: !loading && publicacoes.length === 0,
-    urgentes: publicacoes.filter(p => p.urgente).length,
     total: publicacoes.length,
   }
 }

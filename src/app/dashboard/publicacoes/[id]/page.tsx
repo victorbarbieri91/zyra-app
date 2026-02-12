@@ -10,7 +10,6 @@ import {
   FileText,
   Loader2,
   Sparkles,
-  AlertTriangle,
   CalendarPlus,
   CheckSquare,
   Gavel,
@@ -64,7 +63,6 @@ interface Publicacao {
   numero_processo?: string
   processo_id?: string
   status: StatusPublicacao
-  urgente: boolean
   texto_completo?: string
   is_snippet?: boolean
   created_at: string
@@ -78,7 +76,6 @@ interface AnaliseIA {
   prazo_dias?: number
   prazo_tipo?: 'uteis' | 'corridos'
   data_limite_sugerida?: string
-  urgente: boolean
   acao_sugerida?: string
   fundamentacao_legal?: string
 }
@@ -211,7 +208,7 @@ export default function PublicacaoDetalhePage() {
             descricao: `${publicacao.tribunal || 'Diário Oficial'} - ${publicacao.tipo_publicacao || 'Publicação'}`,
             conteudo_completo: publicacao.texto_completo || '',
             origem: 'publicacao_diario',
-            importante: publicacao.urgente || false,
+            importante: false,
             lida: true,
           })
 
@@ -374,12 +371,6 @@ export default function PublicacaoDetalhePage() {
                   {getTipoLabel(publicacao.tipo_publicacao)}
                 </h1>
                 {getStatusBadge(publicacao.status)}
-                {publicacao.urgente && (
-                  <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
-                    <AlertTriangle className="w-3 h-3 mr-1" />
-                    Urgente
-                  </Badge>
-                )}
               </div>
               <p className="text-sm text-slate-600">
                 {publicacao.tribunal} {publicacao.vara && `- ${publicacao.vara}`}
@@ -584,20 +575,12 @@ export default function PublicacaoDetalhePage() {
 
                     {/* Prazo */}
                     {analise.tem_prazo && (
-                      <div className={cn(
-                        'rounded-lg p-3',
-                        analise.urgente ? 'bg-red-50 border border-red-200' : 'bg-amber-50 border border-amber-200'
-                      )}>
+                      <div className="rounded-lg p-3 bg-amber-50 border border-amber-200">
                         <div className="flex items-center gap-2 mb-2">
-                          <Clock className={cn('w-4 h-4', analise.urgente ? 'text-red-600' : 'text-amber-600')} />
-                          <span className={cn('text-sm font-medium', analise.urgente ? 'text-red-700' : 'text-amber-700')}>
+                          <Clock className="w-4 h-4 text-amber-600" />
+                          <span className="text-sm font-medium text-amber-700">
                             Prazo Identificado
                           </span>
-                          {analise.urgente && (
-                            <Badge variant="outline" className="text-[10px] bg-red-100 text-red-700 border-red-200">
-                              Urgente
-                            </Badge>
-                          )}
                         </div>
                         <div className="space-y-1">
                           <p className="text-sm text-slate-700">
@@ -690,7 +673,7 @@ export default function PublicacaoDetalhePage() {
               titulo: analise?.acao_sugerida || `${getTipoLabel(publicacao.tipo_publicacao)} - ${publicacao.numero_processo || 'Sem processo'}`,
               descricao: gerarDescricao(),
               processo_id: publicacao.processo_id || undefined,
-              prioridade: analise?.urgente ? 'alta' : 'media',
+              prioridade: 'media',
               data_inicio: new Date().toISOString().split('T')[0],
               data_fim: analise?.data_limite_sugerida || undefined,
             }}

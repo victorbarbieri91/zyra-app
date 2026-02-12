@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { captureOperationError } from '@/lib/logger'
 
 export type TipoAgenda = 'tarefa' | 'audiencia' | 'evento'
 
@@ -79,7 +80,7 @@ export function useAgendaResponsaveis(): UseAgendaResponsaveisReturn {
         atribuido_por: undefined,
       }))
     } catch (err: any) {
-      console.error('Erro ao carregar responsáveis:', err)
+      captureOperationError(err, { module: 'Agenda', operation: 'buscar', details: { context: 'getResponsaveis', tipo, itemId } })
       setError(err.message || 'Erro ao carregar responsáveis')
       return []
     } finally {
@@ -133,7 +134,7 @@ export function useAgendaResponsaveis(): UseAgendaResponsaveisReturn {
 
       return true
     } catch (err: any) {
-      console.error('Erro ao adicionar responsável:', err)
+      captureOperationError(err, { module: 'Agenda', operation: 'atualizar', table: TABLE_CONFIG[tipo], details: { context: 'addResponsavel', itemId } })
       setError(err.message || 'Erro ao adicionar responsável')
       return false
     } finally {
@@ -180,7 +181,7 @@ export function useAgendaResponsaveis(): UseAgendaResponsaveisReturn {
 
       return true
     } catch (err: any) {
-      console.error('Erro ao remover responsável:', err)
+      captureOperationError(err, { module: 'Agenda', operation: 'atualizar', table: TABLE_CONFIG[tipo], details: { context: 'removeResponsavel', itemId } })
       setError(err.message || 'Erro ao remover responsável')
       return false
     } finally {
@@ -215,7 +216,7 @@ export function useAgendaResponsaveis(): UseAgendaResponsaveisReturn {
 
       return true
     } catch (err: any) {
-      console.error('Erro ao definir responsáveis:', err)
+      captureOperationError(err, { module: 'Agenda', operation: 'atualizar', table: TABLE_CONFIG[tipo], details: { context: 'setResponsaveis', itemId } })
       setError(err.message || 'Erro ao definir responsáveis')
       return false
     } finally {

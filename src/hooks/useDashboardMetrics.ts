@@ -38,7 +38,6 @@ export interface DashboardMetrics {
 
   // Publicações
   publicacoes_pendentes: number
-  publicacoes_urgentes: number
 }
 
 const defaultMetrics: DashboardMetrics = {
@@ -63,7 +62,6 @@ const defaultMetrics: DashboardMetrics = {
   consultas_trend_qtd: 0,
   horas_trend_valor: 0,
   publicacoes_pendentes: 0,
-  publicacoes_urgentes: 0,
 }
 
 async function fetchDashboardMetrics(
@@ -390,7 +388,6 @@ async function fetchDashboardMetrics(
     consultas_trend_qtd: consultasTrendQtd,
     horas_trend_valor: horasTrend,
     publicacoes_pendentes: publicacoesResult.data?.pendentes || 0,
-    publicacoes_urgentes: publicacoesResult.data?.urgentes_nao_processadas || 0,
   }
 }
 

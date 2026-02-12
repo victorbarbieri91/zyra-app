@@ -22,18 +22,42 @@ export interface EscavadorOrigem {
 
 export interface EscavadorAparicao {
   id: number
-  data_publicacao: string
-  texto: string
-  diario: {
+  // Campos de data (API v1 retorna nestes formatos)
+  data_publicacao?: string
+  data_diario?: { date: string; timezone_type: number; timezone: string }
+  data_diario_formatada?: string // DD/MM/YYYY
+  // Texto (pode estar em vários lugares)
+  texto?: string
+  conteudo_snippet?: string
+  texto_ao_redor?: string
+  // Diário (pode ser objeto aninhado ou campos no topo)
+  diario?: {
     id: number
     nome: string
     sigla: string
     data: string
   }
+  nome_diario?: string
+  sigla_diario?: string
+  nome_caderno?: string
+  // Processo
+  numero_processo?: string
+  // Movimentação (contém o texto completo)
+  movimentacao?: {
+    id: number
+    conteudo?: string
+    snippet?: string
+    secao?: string
+    tipo?: string
+    [key: string]: any
+  }
   pagina?: number
   caderno?: string
   url?: string
   created_at?: string
+  bloqueado?: boolean
+  visualizado?: string
+  [key: string]: any
 }
 
 export interface EscavadorMonitoramentoDiario {
@@ -684,7 +708,36 @@ export function normalizarAparicao(
 } {
   // Usar função que verifica múltiplos campos possíveis
   const { texto: textoCompleto, isSnippet } = extrairTextoAparicao(aparicao)
-  const numeroCNJ = textoCompleto ? extrairNumeroCNJ(textoCompleto) : null
+
+  // Extrair número CNJ do texto OU do campo direto da API
+  const numeroCNJ = aparicao.numero_processo || (textoCompleto ? extrairNumeroCNJ(textoCompleto) : null)
+
+  // Extrair data_publicacao da resposta da API
+  // A API retorna: data_diario_formatada (DD/MM/YYYY), data_diario.date (YYYY-MM-DD HH:mm:ss), ou data_publicacao
+  let dataPublicacao: string = new Date().toISOString().split('T')[0] // fallback: hoje
+
+  if (aparicao.data_publicacao) {
+    // Campo direto (formato esperado: YYYY-MM-DD)
+    dataPublicacao = aparicao.data_publicacao
+  } else if (aparicao.data_diario?.date) {
+    // Extrair YYYY-MM-DD de "2026-02-11 00:00:00"
+    dataPublicacao = aparicao.data_diario.date.split(' ')[0]
+  } else if (aparicao.data_diario_formatada) {
+    // Converter DD/MM/YYYY para YYYY-MM-DD
+    const partes = aparicao.data_diario_formatada.split('/')
+    if (partes.length === 3) {
+      dataPublicacao = `${partes[2]}-${partes[1]}-${partes[0]}`
+    }
+  } else if (aparicao.diario?.data) {
+    dataPublicacao = aparicao.diario.data
+  }
+
+  // Extrair tribunal - campos podem estar no topo ou em objeto diario
+  const tribunal = aparicao.nome_diario
+    || aparicao.sigla_diario
+    || aparicao.diario?.nome
+    || aparicao.diario?.sigla
+    || 'Diário Oficial'
 
   // Detecta urgência por palavras-chave
   const palavrasUrgentes = [
@@ -699,9 +752,9 @@ export function normalizarAparicao(
     source_type: 'escavador_termo',
     escavador_aparicao_id: aparicao.id.toString(),
     escavador_monitoramento_id: monitoramentoId.toString(),
-    data_publicacao: aparicao.data_publicacao || aparicao.diario?.data,
+    data_publicacao: dataPublicacao,
     data_captura: new Date().toISOString(),
-    tribunal: aparicao.diario?.nome || aparicao.diario?.sigla || 'Diário Oficial',
+    tribunal,
     texto_completo: textoCompleto,
     numero_processo: numeroCNJ,
     status: 'pendente',

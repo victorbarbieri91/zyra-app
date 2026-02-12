@@ -208,6 +208,7 @@ export default function CalendarKanbanView({
     const tarefasDoDia = todasTarefas.filter((tarefa) => {
       // Fixa tasks always appear when viewing today (their DB data_inicio is the original creation date)
       if (tarefa.tipo === 'fixa') {
+        if (userId && !tarefa.responsaveis_ids?.includes(userId)) return false
         return isDateInView(hoje)
       }
       const tarefaDate = parseDBDate(tarefa.data_inicio)

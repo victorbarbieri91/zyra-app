@@ -190,10 +190,18 @@ export default function TarefaDetailModal({
     loadAdditionalInfo()
   }, [tarefa])
 
+  // Estado otimista para feedback imediato ao concluir/reabrir
+  const [statusOtimista, setStatusOtimista] = useState<'concluida' | 'pendente' | null>(null)
+
+  // Reset estado otimista quando tarefa muda (ex: refetch do pai)
+  useEffect(() => {
+    setStatusOtimista(null)
+  }, [tarefa.status])
+
   // Determinar tipo
   const isPrazoProcessual = tarefa.tipo === 'prazo_processual'
   const isFixa = tarefa.tipo === 'fixa'
-  const isConcluido = tarefa.status === 'concluida'
+  const isConcluido = statusOtimista ? statusOtimista === 'concluida' : tarefa.status === 'concluida'
 
   // Helper functions
   const getTipoLabel = (tipo: string) => {
@@ -754,28 +762,32 @@ export default function TarefaDetailModal({
           <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {/* Concluir/Reabrir - NÃO aparece para tarefas fixas */}
-                {!isFixa && (
-                  !isConcluido ? (
-                    <Button
-                      size="sm"
-                      onClick={onConcluir}
-                      className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                    >
-                      <Check className="w-3 h-3 mr-1" />
-                      Concluir
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={onReabrir}
-                      className="h-8 text-xs border-slate-200"
-                    >
-                      <RotateCcw className="w-3 h-3 mr-1" />
-                      Reabrir
-                    </Button>
-                  )
+                {/* Concluir/Reabrir com feedback otimista */}
+                {!isConcluido ? (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setStatusOtimista('concluida')
+                      onConcluir?.()
+                    }}
+                    className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    <Check className="w-3 h-3 mr-1" />
+                    {isFixa ? 'Concluir Hoje' : 'Concluir'}
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setStatusOtimista('pendente')
+                      onReabrir?.()
+                    }}
+                    className="h-8 text-xs border-slate-200"
+                  >
+                    <RotateCcw className="w-3 h-3 mr-1" />
+                    Reabrir
+                  </Button>
                 )}
 
                 {/* Botão Lançar Horas - só aparece se tem processo ou consultivo vinculado */}

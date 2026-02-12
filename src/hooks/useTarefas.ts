@@ -14,6 +14,7 @@ export interface Tarefa {
   data_inicio: string
   data_fim?: string
   data_conclusao?: string
+  fixa_status_data?: string // DATE: date when fixa status was last changed (view resets to 'pendente' if != today)
 
   // Planejamento de Horário (usado apenas na visualização dia)
   horario_planejado_dia?: string | null  // time format: '14:30:00'
@@ -309,12 +310,19 @@ export function useTarefas(escritorioId?: string) {
   // Marcar tarefa como concluída
   const concluirTarefa = async (id: string): Promise<void> => {
     try {
+      const tarefa = tarefas.find(t => t.id === id)
+      const updateData: Record<string, unknown> = {
+        status: 'concluida',
+        data_conclusao: formatDateTimeForDB(getNowInBrazil()),
+      }
+      // Fixa tasks: set fixa_status_data to today so view preserves today's status
+      if (tarefa?.tipo === 'fixa') {
+        updateData.fixa_status_data = new Date().toISOString().split('T')[0]
+      }
+
       const { error } = await supabase
         .from('agenda_tarefas')
-        .update({
-          status: 'concluida',
-          data_conclusao: formatDateTimeForDB(getNowInBrazil()),
-        })
+        .update(updateData)
         .eq('id', id)
 
       if (error) throw error
@@ -329,12 +337,19 @@ export function useTarefas(escritorioId?: string) {
   // Reabrir tarefa (voltar para pendente)
   const reabrirTarefa = async (id: string): Promise<void> => {
     try {
+      const tarefa = tarefas.find(t => t.id === id)
+      const updateData: Record<string, unknown> = {
+        status: 'pendente',
+        data_conclusao: null,
+      }
+      // Fixa tasks: set fixa_status_data to today so view shows 'pendente' (not auto-reset)
+      if (tarefa?.tipo === 'fixa') {
+        updateData.fixa_status_data = new Date().toISOString().split('T')[0]
+      }
+
       const { error } = await supabase
         .from('agenda_tarefas')
-        .update({
-          status: 'pendente',
-          data_conclusao: null,
-        })
+        .update(updateData)
         .eq('id', id)
 
       if (error) throw error

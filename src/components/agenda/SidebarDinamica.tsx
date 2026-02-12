@@ -263,12 +263,12 @@ export default function SidebarDinamica({
                       subtipo={evento.subtipo}
                       recorrencia_id={evento.recorrencia_id}
                       onViewDetails={() => onEventClick(evento)}
-                      onComplete={evento.subtipo === 'fixa' ? undefined : () => {
+                      onComplete={() => {
                         if (evento.tipo_entidade === 'tarefa') onCompleteTask?.(evento.id)
                         else if (evento.tipo_entidade === 'audiencia') onCompleteAudiencia?.(evento.id)
                         else if (evento.tipo_entidade === 'evento') onCompleteEvento?.(evento.id)
                       }}
-                      onReopen={evento.subtipo === 'fixa' ? undefined : () => {
+                      onReopen={() => {
                         if (evento.tipo_entidade === 'tarefa') onReopenTask?.(evento.id)
                         else if (evento.tipo_entidade === 'audiencia') onReopenAudiencia?.(evento.id)
                         else if (evento.tipo_entidade === 'evento') onReopenEvento?.(evento.id)

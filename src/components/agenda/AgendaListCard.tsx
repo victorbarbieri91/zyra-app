@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -89,9 +90,15 @@ const isCompletedStatus = (status: string | undefined | null) =>
   ['concluida', 'realizada', 'realizado', 'concluido'].includes(status || '')
 
 export default function AgendaListCard({ item, onClick, onComplete, className }: AgendaListCardProps) {
+  const [statusOtimista, setStatusOtimista] = useState<string | null>(null)
+
+  // Reset estado otimista quando status real muda
+  useEffect(() => { setStatusOtimista(null) }, [item.status])
+
+  const statusEfetivo = statusOtimista || item.status
   const isFixa = item.tipo_entidade === 'tarefa' && item.subtipo === 'fixa'
   const prioridadeInfo = item.prioridade ? prioridadeConfig[item.prioridade] : null
-  const statusInfo = statusConfig[item.status as keyof typeof statusConfig] || statusConfig.pendente
+  const statusInfo = statusConfig[statusEfetivo as keyof typeof statusConfig] || statusConfig.pendente
 
   // Determinar horário de exibição
   let horarioDisplay = ''
@@ -116,7 +123,7 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
       className={cn(
         'border border-slate-200 hover:border-[#89bcbe] transition-all cursor-pointer',
         'bg-white shadow-md hover:shadow-lg',
-        isCompletedStatus(item.status) && 'opacity-60',
+        isCompletedStatus(statusEfetivo) && 'opacity-60',
         'group', // Para hover effects
         className
       )}
@@ -124,11 +131,12 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
       <CardContent className="p-2.5">
         {/* Header com checkbox e título */}
         <div className="flex items-start gap-2 mb-2">
-          {/* Checkbox de Concluir - ESQUERDA (nunca para fixas) */}
-          {onComplete && !isFixa && (
+          {/* Checkbox de Concluir - ESQUERDA */}
+          {onComplete && (
             <button
               onClick={(e) => {
                 e.stopPropagation()
+                setStatusOtimista(isCompletedStatus(statusEfetivo) ? 'pendente' : 'concluida')
                 onComplete()
               }}
               className={cn(
@@ -136,11 +144,11 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
                 'transition-all duration-150 mt-0.5',
                 'border-slate-300 hover:border-emerald-500 hover:bg-emerald-50',
                 'focus:outline-none focus:ring-1 focus:ring-emerald-500',
-                isCompletedStatus(item.status) && 'bg-emerald-500 border-emerald-500'
+                isCompletedStatus(statusEfetivo) && 'bg-emerald-500 border-emerald-500'
               )}
-              title={isCompletedStatus(item.status) ? 'Reabrir' : 'Marcar como concluído'}
+              title={isCompletedStatus(statusEfetivo) ? 'Reabrir' : 'Marcar como concluído'}
             >
-              {isCompletedStatus(item.status) && (
+              {isCompletedStatus(statusEfetivo) && (
                 <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
               )}
             </button>
@@ -152,7 +160,7 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
               <h4
                 className={cn(
                   'text-xs font-bold text-[#34495e] leading-tight line-clamp-2',
-                  isCompletedStatus(item.status) && 'line-through opacity-60'
+                  isCompletedStatus(statusEfetivo) && 'line-through opacity-60'
                 )}
               >
                 {item.titulo}

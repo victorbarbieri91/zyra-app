@@ -120,11 +120,16 @@ export default function CalendarKanbanView({
   // Função para atualizar status da tarefa no banco
   const atualizarStatusTarefa = async (tarefaId: string, novoStatus: string) => {
     try {
+      const tarefa = todasTarefas?.find(t => t.id === tarefaId)
       const updateData: Record<string, unknown> = { status: novoStatus }
       if (novoStatus === 'concluida') {
         updateData.data_conclusao = new Date().toISOString()
       } else {
         updateData.data_conclusao = null
+      }
+      // Fixa tasks: set fixa_status_data to today on every status change
+      if (tarefa?.tipo === 'fixa') {
+        updateData.fixa_status_data = new Date().toISOString().split('T')[0]
       }
 
       const { error } = await supabase
@@ -199,7 +204,12 @@ export default function CalendarKanbanView({
     }
 
     // Filtrar tarefas do dia e do usuário logado
+    const hoje = startOfDay(new Date())
     const tarefasDoDia = todasTarefas.filter((tarefa) => {
+      // Fixa tasks always appear when viewing today (their DB data_inicio is the original creation date)
+      if (tarefa.tipo === 'fixa') {
+        return isDateInView(hoje)
+      }
       const tarefaDate = parseDBDate(tarefa.data_inicio)
       // Filtro 1: dia selecionado ou range
       if (!isDateInView(tarefaDate)) return false
@@ -208,18 +218,27 @@ export default function CalendarKanbanView({
       return true
     })
 
+    // Apply client-side daily reset for fixa tasks (useTarefas reads raw table, not view)
+    const todayStr = hoje.toISOString().split('T')[0]
+    const tarefasComReset = tarefasDoDia.map((tarefa) => {
+      if (tarefa.tipo === 'fixa' && tarefa.fixa_status_data !== todayStr) {
+        return { ...tarefa, status: 'pendente' as const, data_conclusao: undefined }
+      }
+      return tarefa
+    })
+
     // Separar por status
     const pendentes = ordenarPorPrioridade(
-      tarefasDoDia.filter((t) => t.status === 'pendente')
+      tarefasComReset.filter((t) => t.status === 'pendente')
     )
     const emAndamento = ordenarPorPrioridade(
-      tarefasDoDia.filter((t) => t.status === 'em_andamento')
+      tarefasComReset.filter((t) => t.status === 'em_andamento')
     )
     const emPausa = ordenarPorPrioridade(
-      tarefasDoDia.filter((t) => t.status === 'em_pausa')
+      tarefasComReset.filter((t) => t.status === 'em_pausa')
     )
     const concluidas = ordenarPorPrioridade(
-      tarefasDoDia.filter((t) => t.status === 'concluida')
+      tarefasComReset.filter((t) => t.status === 'concluida')
     )
 
     return {
@@ -349,12 +368,6 @@ export default function CalendarKanbanView({
       return
     }
     if (tarefa.status === novoStatus) return // Não mudou
-
-    // Tarefas fixas não podem mudar de status
-    if (tarefa.tipo === 'fixa') {
-      toast.info('Tarefas fixas não podem ser movidas')
-      return
-    }
 
     const timerExistente = getTimerParaTarefa(tarefa.id)
 

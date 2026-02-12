@@ -550,13 +550,6 @@ export default function AgendaPage() {
       // Se foi materializado, usar o ID real daqui em diante
       const effectiveId = realId
 
-      // Verificar se é tarefa fixa (não pode ser concluída)
-      const itemFixaCheck = agendaItems.find(item => item.id === taskId || item.id === effectiveId)
-      if (itemFixaCheck?.subtipo === 'fixa') {
-        toast.info('Tarefas fixas não podem ser concluídas. Use "Lançar Horas" ou exclua se não precisar mais.')
-        return
-      }
-
       // Encontrar a tarefa para verificar o status atual
       let tarefa = tarefas.find(t => t.id === effectiveId)
 

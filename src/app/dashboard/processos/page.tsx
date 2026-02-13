@@ -87,7 +87,6 @@ const DEFAULT_PAGE_SIZE = 20
 export default function ProcessosPage() {
   const searchParams = useSearchParams()
   const viewParam = searchParams.get('view')
-  const qParam = searchParams.get('q')
   const initialView = viewParam === 'sem_contrato'
     ? 'sem_contrato' as const
     : viewParam === 'todos'
@@ -96,8 +95,18 @@ export default function ProcessosPage() {
 
   const [processos, setProcessos] = useState<Processo[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState(qParam || '')
-  const [debouncedSearch, setDebouncedSearch] = useState(qParam || '')
+  const [searchQuery, setSearchQuery] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('processos_search') || ''
+    }
+    return ''
+  })
+  const [debouncedSearch, setDebouncedSearch] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('processos_search') || ''
+    }
+    return ''
+  })
   const [currentView, setCurrentView] = useState<'todos' | 'ativos' | 'criticos' | 'meus' | 'encerrados' | 'sem_contrato'>(initialView)
   const [showFilters, setShowFilters] = useState(false)
 
@@ -194,29 +203,14 @@ export default function ProcessosPage() {
     }
   }, [searchQuery])
 
-  // Sync debouncedSearch to URL ?q= param (using replaceState to avoid Next.js re-renders)
+  // Persist search to sessionStorage
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
     if (debouncedSearch.trim()) {
-      params.set('q', debouncedSearch.trim())
+      sessionStorage.setItem('processos_search', debouncedSearch.trim())
     } else {
-      params.delete('q')
+      sessionStorage.removeItem('processos_search')
     }
-    const newUrl = params.toString()
-      ? `${window.location.pathname}?${params.toString()}`
-      : window.location.pathname
-    window.history.replaceState(null, '', newUrl)
   }, [debouncedSearch])
-
-  // Restore search from URL when navigating back (searchParams updates on popstate)
-  useEffect(() => {
-    const q = searchParams.get('q') || ''
-    if (q !== debouncedSearch) {
-      setSearchQuery(q)
-      setDebouncedSearch(q)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams])
 
   // Load processos when filters change
   useEffect(() => {

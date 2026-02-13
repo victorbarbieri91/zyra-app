@@ -74,8 +74,10 @@ export default function EventoDetailModal({
   onConsultivoClick,
 }: EventoDetailModalProps) {
   // Determinar tipo principal (prazo ou compromisso)
-  const isPrazo = evento.subtipo.includes('prazo')
-  const isCompromisso = evento.subtipo === 'compromisso' || evento.subtipo === 'inicial'
+  // subtipo vem da v_agenda_consolidada; se carregado direto da tabela, usa campo 'tipo'
+  const subtipo = evento.subtipo || (evento as any).tipo || 'compromisso'
+  const isPrazo = subtipo.includes('prazo')
+  const isCompromisso = subtipo === 'compromisso' || subtipo === 'inicial'
 
   // Calcular duração
   const duracao = evento.data_fim && evento.data_inicio && !evento.dia_inteiro
@@ -100,7 +102,7 @@ export default function EventoDetailModal({
     compromisso: 'Compromisso',
   }
 
-  const subtipoLabel = subtipoLabels[evento.subtipo] || evento.subtipo
+  const subtipoLabel = subtipoLabels[subtipo] || subtipo
 
   // Status badge color
   const getStatusColor = () => {

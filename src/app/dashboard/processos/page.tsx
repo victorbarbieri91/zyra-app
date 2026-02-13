@@ -747,25 +747,23 @@ export default function ProcessosPage() {
                         </span>
                       </Link>
                     </td>
-                    <td className="p-0 whitespace-nowrap">
-                      <div className="flex items-center gap-1 p-3">
-                        <Link href={processoHref} className="text-xs text-slate-600">
-                          {processo.numero_cnj}
-                        </Link>
-                        {processo.numero_cnj && (
-                          <button
-                            onClick={(e) => handleCopyCnj(processo.numero_cnj, e)}
-                            className="p-0.5 rounded hover:bg-slate-100 transition-colors"
-                            title="Copiar nº CNJ"
-                          >
-                            {copiedCnj === processo.numero_cnj ? (
-                              <Check className="w-3 h-3 text-emerald-500" />
-                            ) : (
-                              <Copy className="w-3 h-3 text-slate-400" />
-                            )}
-                          </button>
-                        )}
-                      </div>
+                    <td className="p-0 whitespace-nowrap relative">
+                      <Link href={processoHref} className="flex items-center p-3 text-xs text-slate-600">
+                        {processo.numero_cnj}
+                      </Link>
+                      {processo.numero_cnj && (
+                        <button
+                          onClick={(e) => handleCopyCnj(processo.numero_cnj, e)}
+                          className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-slate-100 transition-colors z-10"
+                          title="Copiar nº CNJ"
+                        >
+                          {copiedCnj === processo.numero_cnj ? (
+                            <Check className="w-3 h-3 text-emerald-500" />
+                          ) : (
+                            <Copy className="w-3 h-3 text-slate-400" />
+                          )}
+                        </button>
+                      )}
                     </td>
                     <td className="p-0">
                       <Link href={processoHref} className="block p-3 text-xs text-slate-700 truncate" title={processo.cliente_nome || ''}>

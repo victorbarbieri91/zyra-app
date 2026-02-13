@@ -719,38 +719,39 @@ export default function ProcessosPage() {
                   </tr>
                 )}
 
-                {processos.map((processo) => (
+                {processos.map((processo) => {
+                  const processoHref = `/dashboard/processos/${processo.id}`
+                  return (
                   <tr
                     key={processo.id}
-                    className={`border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer relative ${
+                    className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${
                       selectedIds.has(processo.id) ? 'bg-blue-50 hover:bg-blue-100' : ''
                     }`}
                   >
-                    <td className="p-3 text-center relative z-10">
+                    <td className="p-3 text-center">
                       <Checkbox
                         checked={selectedIds.has(processo.id)}
                         onCheckedChange={() => toggleSelection(processo.id)}
                         className="border-slate-300 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
                       />
                     </td>
-                    <td className="p-3 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5">
+                    <td className="p-0 whitespace-nowrap">
+                      <Link href={processoHref} className="flex items-center gap-1.5 p-3">
                         {processo.escavador_monitoramento_id && (
-                          <span title="Monitorado via Escavador" className="relative z-10">
+                          <span title="Monitorado via Escavador">
                             <Eye className="w-3 h-3 text-emerald-500" />
                           </span>
                         )}
-                        <Link
-                          href={`/dashboard/processos/${processo.id}`}
-                          className="text-xs font-bold text-[#34495e] hover:underline before:absolute before:inset-0 before:content-[''] before:z-0"
-                        >
+                        <span className="text-xs font-bold text-[#34495e]">
                           {processo.numero_pasta}
-                        </Link>
-                      </div>
+                        </span>
+                      </Link>
                     </td>
-                    <td className="p-3 whitespace-nowrap relative z-10">
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-slate-600">{processo.numero_cnj}</span>
+                    <td className="p-0 whitespace-nowrap">
+                      <div className="flex items-center gap-1 p-3">
+                        <Link href={processoHref} className="text-xs text-slate-600">
+                          {processo.numero_cnj}
+                        </Link>
                         {processo.numero_cnj && (
                           <button
                             onClick={(e) => handleCopyCnj(processo.numero_cnj, e)}
@@ -766,37 +767,41 @@ export default function ProcessosPage() {
                         )}
                       </div>
                     </td>
-                    <td className="p-3">
-                      <span className="text-xs text-slate-700 block truncate" title={processo.cliente_nome || ''}>
+                    <td className="p-0">
+                      <Link href={processoHref} className="block p-3 text-xs text-slate-700 truncate" title={processo.cliente_nome || ''}>
                         {processo.cliente_nome || '-'}
-                      </span>
+                      </Link>
                     </td>
-                    <td className="p-3">
-                      <span className="text-xs text-slate-600 block truncate" title={processo.parte_contraria || ''}>
+                    <td className="p-0">
+                      <Link href={processoHref} className="block p-3 text-xs text-slate-600 truncate" title={processo.parte_contraria || ''}>
                         {processo.parte_contraria || '-'}
-                      </span>
+                      </Link>
                     </td>
-                    <td className="p-3 whitespace-nowrap">
-                      <Badge className={`text-[10px] border ${getAreaBadge(processo.area)}`}>
-                        {processo.area}
-                      </Badge>
+                    <td className="p-0 whitespace-nowrap">
+                      <Link href={processoHref} className="block p-3">
+                        <Badge className={`text-[10px] border ${getAreaBadge(processo.area)}`}>
+                          {processo.area}
+                        </Badge>
+                      </Link>
                     </td>
-                    <td className="p-3">
-                      <span className="text-xs text-slate-600 block truncate" title={processo.responsavel_nome || ''}>
+                    <td className="p-0">
+                      <Link href={processoHref} className="block p-3 text-xs text-slate-600 truncate" title={processo.responsavel_nome || ''}>
                         {processo.responsavel_nome || '-'}
-                      </span>
+                      </Link>
                     </td>
-                    <td className="p-3 whitespace-nowrap">
-                      <Badge className={`text-[10px] border ${getStatusBadge(processo.status)}`}>
-                        {processo.status}
-                      </Badge>
+                    <td className="p-0 whitespace-nowrap">
+                      <Link href={processoHref} className="block p-3">
+                        <Badge className={`text-[10px] border ${getStatusBadge(processo.status)}`}>
+                          {processo.status}
+                        </Badge>
+                      </Link>
                     </td>
-                    <td className="p-3 whitespace-nowrap">
-                      <span className="text-xs text-slate-500">
+                    <td className="p-0 whitespace-nowrap">
+                      <Link href={processoHref} className="block p-3 text-xs text-slate-500">
                         {formatTimestamp(processo.ultima_movimentacao)}
-                      </span>
+                      </Link>
                     </td>
-                    <td className="p-3 text-center relative z-10">
+                    <td className="p-3 text-center">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
@@ -882,7 +887,8 @@ export default function ProcessosPage() {
                       </DropdownMenu>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>

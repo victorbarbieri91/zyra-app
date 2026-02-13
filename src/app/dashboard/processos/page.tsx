@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,7 +40,8 @@ import {
   Trash2,
   Eye,
   Copy,
-  Check
+  Check,
+  X
 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { createClient } from '@/lib/supabase/client'
@@ -85,6 +87,7 @@ const DEFAULT_PAGE_SIZE = 20
 export default function ProcessosPage() {
   const searchParams = useSearchParams()
   const viewParam = searchParams.get('view')
+  const qParam = searchParams.get('q')
   const initialView = viewParam === 'sem_contrato'
     ? 'sem_contrato' as const
     : viewParam === 'todos'
@@ -93,8 +96,8 @@ export default function ProcessosPage() {
 
   const [processos, setProcessos] = useState<Processo[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [searchQuery, setSearchQuery] = useState(qParam || '')
+  const [debouncedSearch, setDebouncedSearch] = useState(qParam || '')
   const [currentView, setCurrentView] = useState<'todos' | 'ativos' | 'criticos' | 'meus' | 'encerrados' | 'sem_contrato'>(initialView)
   const [showFilters, setShowFilters] = useState(false)
 
@@ -190,6 +193,20 @@ export default function ProcessosPage() {
       }
     }
   }, [searchQuery])
+
+  // Sync debouncedSearch to URL ?q= param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (debouncedSearch.trim()) {
+      params.set('q', debouncedSearch.trim())
+    } else {
+      params.delete('q')
+    }
+    const newUrl = params.toString()
+      ? `${window.location.pathname}?${params.toString()}`
+      : window.location.pathname
+    router.replace(newUrl, { scroll: false })
+  }, [debouncedSearch, router])
 
   // Load processos when filters change
   useEffect(() => {
@@ -511,6 +528,26 @@ export default function ProcessosPage() {
           </CardContent>
         </Card>
 
+        {/* Active search badge */}
+        {debouncedSearch.trim() && (
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="secondary"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[#aacfd0]/20 text-[#34495e] border border-[#89bcbe]/30"
+            >
+              <Search className="w-3 h-3" />
+              Busca: &quot;{debouncedSearch.trim()}&quot;
+              <button
+                onClick={() => setSearchQuery('')}
+                className="ml-1 rounded-full p-0.5 hover:bg-[#89bcbe]/20 transition-colors"
+                aria-label="Limpar busca"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          </div>
+        )}
+
         {/* Mobile: Card list view */}
         <div className="md:hidden space-y-2">
           {loading && processos.length === 0 && (
@@ -526,10 +563,10 @@ export default function ProcessosPage() {
             </div>
           )}
           {processos.map((processo) => (
-            <div
+            <Link
               key={processo.id}
-              onClick={() => router.push(`/dashboard/processos/${processo.id}`)}
-              className="bg-white rounded-xl border border-slate-200 p-3.5 active:bg-slate-50 transition-colors cursor-pointer shadow-sm"
+              href={`/dashboard/processos/${processo.id}`}
+              className="block bg-white rounded-xl border border-slate-200 p-3.5 active:bg-slate-50 transition-colors cursor-pointer shadow-sm"
             >
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
@@ -546,7 +583,7 @@ export default function ProcessosPage() {
                 <p className="text-xs text-slate-500">{processo.numero_cnj}</p>
                 {processo.numero_cnj && (
                   <button
-                    onClick={(e) => handleCopyCnj(processo.numero_cnj, e)}
+                    onClick={(e) => { e.preventDefault(); handleCopyCnj(processo.numero_cnj, e) }}
                     className="p-0.5 rounded hover:bg-slate-100"
                     title="Copiar nº CNJ"
                   >
@@ -575,7 +612,7 @@ export default function ProcessosPage() {
                   {formatTimestamp(processo.ultima_movimentacao)}
                 </span>
               </div>
-            </div>
+            </Link>
           ))}
 
           {/* Mobile Pagination */}
@@ -694,7 +731,13 @@ export default function ProcessosPage() {
                             <Eye className="w-3 h-3 text-emerald-500" />
                           </span>
                         )}
-                        <span className="text-[14px] font-bold text-[#34495e]">{processo.numero_pasta}</span>
+                        <Link
+                          href={`/dashboard/processos/${processo.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-[14px] font-bold text-[#34495e] hover:underline"
+                        >
+                          {processo.numero_pasta}
+                        </Link>
                       </div>
                     </td>
                     <td className="p-3 whitespace-nowrap">

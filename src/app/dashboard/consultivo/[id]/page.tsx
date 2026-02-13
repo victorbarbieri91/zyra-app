@@ -58,8 +58,6 @@ import ConsultivoFinanceiroCard from '@/components/consultivo/ConsultivoFinancei
 import ProcessoCobrancaFixaCard from '@/components/processos/ProcessoCobrancaFixaCard'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import type { TarefaFormData } from '@/hooks/useTarefas'
-import type { EventoFormData } from '@/hooks/useEventos'
-import type { AudienciaFormData } from '@/hooks/useAudiencias'
 
 interface Consulta {
   id: string
@@ -1282,20 +1280,9 @@ export default function ConsultaDetalhePage() {
             setEditingEvento(false)
             setSelectedEvento(null)
           }}
-          onSubmit={async (data: EventoFormData) => {
-            if (editingEvento && selectedEvento) {
-              const { error } = await supabase
-                .from('agenda_eventos')
-                .update(data)
-                .eq('id', selectedEvento.id)
-              if (error) throw error
-              toast.success('Evento atualizado com sucesso!')
-            } else {
-              const { error } = await supabase.from('agenda_eventos').insert(data)
-              if (error) throw error
-              toast.success('Evento criado com sucesso!')
-            }
-            setShowEventoWizard(false)
+          onSubmit={async () => {
+            // O wizard cria/atualiza o evento diretamente via useEventos
+            // Este callback é apenas para refresh da lista
             await loadAgenda()
           }}
           initialData={editingEvento && selectedEvento ? selectedEvento : { consultivo_id: consulta.id }}
@@ -1310,20 +1297,9 @@ export default function ConsultaDetalhePage() {
             setEditingAudiencia(false)
             setSelectedAudiencia(null)
           }}
-          onSubmit={async (data: AudienciaFormData) => {
-            if (editingAudiencia && selectedAudiencia) {
-              const { error } = await supabase
-                .from('agenda_audiencias')
-                .update(data)
-                .eq('id', selectedAudiencia.id)
-              if (error) throw error
-              toast.success('Audiência atualizada com sucesso!')
-            } else {
-              const { error } = await supabase.from('agenda_audiencias').insert(data)
-              if (error) throw error
-              toast.success('Audiência criada com sucesso!')
-            }
-            setShowAudienciaWizard(false)
+          onSubmit={async () => {
+            // O wizard cria/atualiza a audiência diretamente via useAudiencias
+            // Este callback é apenas para refresh da lista
             await loadAgenda()
           }}
           initialData={editingAudiencia && selectedAudiencia ? selectedAudiencia : { consultivo_id: consulta.id }}

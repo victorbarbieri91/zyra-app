@@ -47,8 +47,6 @@ import AudienciaWizard from '@/components/agenda/AudienciaWizard'
 import ProcessoWizard from '@/components/processos/ProcessoWizard'
 
 // Hooks
-import { useEventos } from '@/hooks/useEventos'
-import { useAudiencias } from '@/hooks/useAudiencias'
 
 // Tipos
 type StatusPublicacao = 'pendente' | 'em_analise' | 'processada' | 'arquivada'
@@ -102,9 +100,6 @@ export default function PublicacaoDetalhePage() {
   const [processoWizardOpen, setProcessoWizardOpen] = useState(false)
 
   // Hooks para criação
-  const { createEvento } = useEventos(publicacao?.escritorio_id || '')
-  const { createAudiencia } = useAudiencias()
-
   // Carregar publicacao
   const carregarPublicacao = useCallback(async () => {
     setCarregando(true)
@@ -685,8 +680,9 @@ export default function PublicacaoDetalhePage() {
           <EventoWizard
             escritorioId={publicacao.escritorio_id}
             onClose={() => setEventoWizardOpen(false)}
-            onSubmit={async (data) => {
-              await createEvento(data)
+            onSubmit={async () => {
+              // O wizard cria o evento diretamente via useEventos
+              // Este callback é apenas para marcar status e refresh
               await handleWizardCreated()
               setEventoWizardOpen(false)
             }}

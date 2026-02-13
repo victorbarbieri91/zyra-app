@@ -54,8 +54,6 @@ import ProcessoCobrancaFixaCard from '@/components/processos/ProcessoCobrancaFix
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import { useRouter } from 'next/navigation'
 import type { TarefaFormData } from '@/hooks/useTarefas'
-import type { EventoFormData } from '@/hooks/useEventos'
-import type { AudienciaFormData } from '@/hooks/useAudiencias'
 
 interface Processo {
   id: string
@@ -1227,24 +1225,9 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           setEditingEvento(false)
           setSelectedEvento(null)
         }}
-        onSubmit={async (data: EventoFormData) => {
-          if (editingEvento && selectedEvento) {
-            // Modo edição - atualiza o evento
-            const { error } = await supabase
-              .from('agenda_eventos')
-              .update(data)
-              .eq('id', selectedEvento.id)
-            if (error) throw error
-            toast.success('Evento atualizado com sucesso!')
-          } else {
-            // Modo criação - insere novo evento
-            const { error } = await supabase
-              .from('agenda_eventos')
-              .insert(data)
-            if (error) throw error
-            toast.success('Evento criado com sucesso!')
-          }
-          setShowEventoWizard(false)
+        onSubmit={async () => {
+          // O wizard cria/atualiza o evento diretamente via useEventos
+          // Este callback é apenas para refresh da lista
           await reloadAgenda()
         }}
         initialData={editingEvento && selectedEvento ? selectedEvento : { processo_id: processo.id }}
@@ -1259,24 +1242,9 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           setEditingAudiencia(false)
           setSelectedAudiencia(null)
         }}
-        onSubmit={async (data: AudienciaFormData) => {
-          if (editingAudiencia && selectedAudiencia) {
-            // Modo edição - atualiza a audiência
-            const { error } = await supabase
-              .from('agenda_audiencias')
-              .update(data)
-              .eq('id', selectedAudiencia.id)
-            if (error) throw error
-            toast.success('Audiência atualizada com sucesso!')
-          } else {
-            // Modo criação - insere nova audiência
-            const { error } = await supabase
-              .from('agenda_audiencias')
-              .insert(data)
-            if (error) throw error
-            toast.success('Audiência criada com sucesso!')
-          }
-          setShowAudienciaWizard(false)
+        onSubmit={async () => {
+          // O wizard cria/atualiza a audiência diretamente via useAudiencias
+          // Este callback é apenas para refresh da lista
           await reloadAgenda()
         }}
         initialData={editingAudiencia && selectedAudiencia ? selectedAudiencia : { processo_id: processo.id }}

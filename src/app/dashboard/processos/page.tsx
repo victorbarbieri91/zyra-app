@@ -58,8 +58,6 @@ import TarefaWizard from '@/components/agenda/TarefaWizard'
 import EventoWizard from '@/components/agenda/EventoWizard'
 import AudienciaWizard from '@/components/agenda/AudienciaWizard'
 import { useTarefas } from '@/hooks/useTarefas'
-import { useEventos } from '@/hooks/useEventos'
-import { useAudiencias } from '@/hooks/useAudiencias'
 
 interface Processo {
   id: string
@@ -162,9 +160,6 @@ export default function ProcessosPage() {
 
   // Hooks de agenda
   const { createTarefa } = useTarefas(escritorioId || '')
-  const { createEvento } = useEventos(escritorioId || '')
-  const { createAudiencia } = useAudiencias(escritorioId || '')
-
   // Carregar escritórioId e userId do usuário logado
   useEffect(() => {
     const loadUserData = async () => {
@@ -1026,8 +1021,9 @@ export default function ProcessosPage() {
             setShowEventoWizard(false)
             setSelectedProcessoId(null)
           }}
-          onSubmit={async (data) => {
-            await createEvento(data)
+          onSubmit={async () => {
+            // O wizard cria/atualiza o evento diretamente via useEventos
+            // Este callback é apenas para refresh da lista
             loadProcessos()
           }}
           initialData={{
@@ -1043,8 +1039,9 @@ export default function ProcessosPage() {
             setShowAudienciaWizard(false)
             setSelectedProcessoId(null)
           }}
-          onSubmit={async (data) => {
-            await createAudiencia(data)
+          onSubmit={async () => {
+            // O wizard cria/atualiza a audiência diretamente via useAudiencias
+            // Este callback é apenas para refresh da lista
             loadProcessos()
           }}
           initialData={{

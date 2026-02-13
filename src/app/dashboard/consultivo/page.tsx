@@ -46,7 +46,6 @@ import EditarConsultivoModal from '@/components/consultivo/EditarConsultivoModal
 import TarefaWizard from '@/components/agenda/TarefaWizard'
 import EventoWizard from '@/components/agenda/EventoWizard'
 import { useTarefas } from '@/hooks/useTarefas'
-import { useEventos } from '@/hooks/useEventos'
 import { BulkActionsToolbarCRM, BulkActionCRM } from '@/components/crm/BulkActionsToolbarCRM'
 import { VincularContratoModal } from '@/components/financeiro/VincularContratoModal'
 import { BulkEditStatusConsultivoModal } from '@/components/consultivo/BulkEditStatusConsultivoModal'
@@ -123,7 +122,6 @@ export default function ConsultivoPage() {
 
   // Hooks de agenda
   const { createTarefa } = useTarefas(escritorioId || '')
-  const { createEvento } = useEventos(escritorioId || '')
 
   // Carregar escritorioId e userId do usuario logado
   useEffect(() => {
@@ -960,8 +958,9 @@ export default function ConsultivoPage() {
             setShowEventoWizard(false)
             setSelectedConsultivoId(null)
           }}
-          onSubmit={async (data) => {
-            await createEvento(data)
+          onSubmit={async () => {
+            // O wizard cria o evento diretamente via useEventos
+            // Este callback é apenas para refresh da lista
             loadConsultas()
           }}
           initialData={{

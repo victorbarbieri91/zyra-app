@@ -60,8 +60,6 @@ import AudienciaWizard from '@/components/agenda/AudienciaWizard'
 import ProcessoWizard from '@/components/processos/ProcessoWizard'
 import { BuscaCNJModal } from '@/components/processos/BuscaCNJModal'
 import ProcessoWizardAutomatico from '@/components/processos/ProcessoWizardAutomatico'
-import { useEventos } from '@/hooks/useEventos'
-import { useAudiencias } from '@/hooks/useAudiencias'
 import type { ProcessoEscavadorNormalizado } from '@/lib/escavador/types'
 import PublicacaoExpandedRow from '@/components/publicacoes/PublicacaoExpandedRow'
 import type { AnaliseIA } from '@/components/publicacoes/PublicacaoAIPanel'
@@ -159,9 +157,6 @@ export default function PublicacoesPage() {
   const { escritorioAtivo } = useEscritorioAtivo()
   const { sincronizarTodos, sincronizando: sincronizandoAasp } = useAaspSync(escritorioAtivo || undefined)
   const { sincronizar: sincronizarEscavador, sincronizando: sincronizandoEscavador, termos: termosEscavador } = useEscavadorTermos(escritorioAtivo || undefined)
-  const { createEvento } = useEventos(escritorioAtivo || undefined)
-  const { createAudiencia } = useAudiencias(escritorioAtivo || undefined)
-
   const sincronizando = sincronizandoAasp || sincronizandoEscavador
 
   // Toggle expand row
@@ -1452,13 +1447,9 @@ export default function PublicacoesPage() {
           escritorioId={escritorioAtivo}
           onClose={() => setWizardEvento({ open: false, pub: null })}
           initialData={getInitialDataEvento(wizardEvento.pub)}
-          onSubmit={async (data) => {
-            // Criar o evento
-            await createEvento({
-              ...data,
-              escritorio_id: escritorioAtivo,
-            })
-            // Marcar publicação como tratada após criar evento
+          onSubmit={async () => {
+            // O wizard cria o evento diretamente via useEventos
+            // Aqui apenas marcamos a publicação como tratada
             if (wizardEvento.pub) {
               await supabase
                 .from('publicacoes_publicacoes')

@@ -12,6 +12,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import {
   Select,
@@ -21,7 +22,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
-  Plus,
   Search,
   Filter,
   FileText,
@@ -194,7 +194,7 @@ export default function ProcessosPage() {
     }
   }, [searchQuery])
 
-  // Sync debouncedSearch to URL ?q= param
+  // Sync debouncedSearch to URL ?q= param (using replaceState to avoid Next.js re-renders)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (debouncedSearch.trim()) {
@@ -205,8 +205,18 @@ export default function ProcessosPage() {
     const newUrl = params.toString()
       ? `${window.location.pathname}?${params.toString()}`
       : window.location.pathname
-    router.replace(newUrl, { scroll: false })
-  }, [debouncedSearch, router])
+    window.history.replaceState(null, '', newUrl)
+  }, [debouncedSearch])
+
+  // Restore search from URL when navigating back (searchParams updates on popstate)
+  useEffect(() => {
+    const q = searchParams.get('q') || ''
+    if (q !== debouncedSearch) {
+      setSearchQuery(q)
+      setDebouncedSearch(q)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   // Load processos when filters change
   useEffect(() => {
@@ -661,15 +671,15 @@ export default function ProcessosPage() {
                       className="border-slate-300 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
                     />
                   </th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Pasta</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-20">Pasta</th>
                   <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-52">CNJ</th>
                   <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-56">Cliente</th>
                   <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-44">Parte Contraria</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-16">Area</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-28">Responsavel</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Area</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-32">Responsavel</th>
                   <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-16">Status</th>
                   <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-20">Ult. Mov.</th>
-                  <th className="text-center p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Acoes</th>
+                  <th className="text-center p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-12">Acoes</th>
                 </tr>
               </thead>
               <tbody className={loading ? 'opacity-50' : ''}>
@@ -712,12 +722,11 @@ export default function ProcessosPage() {
                 {processos.map((processo) => (
                   <tr
                     key={processo.id}
-                    onClick={() => router.push(`/dashboard/processos/${processo.id}`)}
-                    className={`border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer ${
+                    className={`border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer relative ${
                       selectedIds.has(processo.id) ? 'bg-blue-50 hover:bg-blue-100' : ''
                     }`}
                   >
-                    <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                    <td className="p-3 text-center relative z-10">
                       <Checkbox
                         checked={selectedIds.has(processo.id)}
                         onCheckedChange={() => toggleSelection(processo.id)}
@@ -727,26 +736,25 @@ export default function ProcessosPage() {
                     <td className="p-3 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         {processo.escavador_monitoramento_id && (
-                          <span title="Monitorado via Escavador">
+                          <span title="Monitorado via Escavador" className="relative z-10">
                             <Eye className="w-3 h-3 text-emerald-500" />
                           </span>
                         )}
                         <Link
                           href={`/dashboard/processos/${processo.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-[14px] font-bold text-[#34495e] hover:underline"
+                          className="text-xs font-bold text-[#34495e] hover:underline before:absolute before:inset-0 before:content-[''] before:z-0"
                         >
                           {processo.numero_pasta}
                         </Link>
                       </div>
                     </td>
-                    <td className="p-3 whitespace-nowrap">
-                      <div className="flex items-center gap-1 group/cnj">
+                    <td className="p-3 whitespace-nowrap relative z-10">
+                      <div className="flex items-center gap-1">
                         <span className="text-xs text-slate-600">{processo.numero_cnj}</span>
                         {processo.numero_cnj && (
                           <button
                             onClick={(e) => handleCopyCnj(processo.numero_cnj, e)}
-                            className="opacity-0 group-hover/cnj:opacity-100 transition-opacity p-0.5 rounded hover:bg-slate-100"
+                            className="p-0.5 rounded hover:bg-slate-100 transition-colors"
                             title="Copiar nº CNJ"
                           >
                             {copiedCnj === processo.numero_cnj ? (
@@ -788,111 +796,90 @@ export default function ProcessosPage() {
                         {formatTimestamp(processo.ultima_movimentacao)}
                       </span>
                     </td>
-                    <td className="p-3">
-                      <div className="flex items-center justify-center gap-1">
-                        {/* Menu de criar agendamento */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 text-xs hover:bg-[#89bcbe] hover:text-white transition-colors"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                              }}
-                              title="Criar agendamento para este processo"
-                            >
-                              <Plus className="w-3 h-3 mr-1" />
-                              Agenda
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedProcessoId(processo.id)
-                                setShowTarefaWizard(true)
-                              }}
-                            >
-                              <ListTodo className="w-4 h-4 mr-2 text-[#34495e]" />
-                              <span className="text-sm">Nova Tarefa</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedProcessoId(processo.id)
-                                setShowEventoWizard(true)
-                              }}
-                            >
-                              <Calendar className="w-4 h-4 mr-2 text-[#89bcbe]" />
-                              <span className="text-sm">Novo Compromisso</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedProcessoId(processo.id)
-                                setShowAudienciaWizard(true)
-                              }}
-                            >
-                              <Gavel className="w-4 h-4 mr-2 text-emerald-600" />
-                              <span className="text-sm">Nova Audiência</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-
-                        {/* Menu de ações */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            {processo.numero_cnj && (
-                              <>
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setProcessoParaAtualizar({
-                                      id: processo.id,
-                                      numero_cnj: processo.numero_cnj,
-                                      numero_pasta: processo.numero_pasta
-                                    })
-                                    setShowAtualizarCapa(true)
-                                  }}
-                                >
-                                  <RefreshCw className="w-4 h-4 mr-2 text-[#89bcbe]" />
-                                  <span className="text-sm">Atualizar Capa</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setSelectedIds(new Set([processo.id]))
-                                    setShowAndamentosModal(true)
-                                  }}
-                                >
-                                  <FileText className="w-4 h-4 mr-2 text-blue-500" />
-                                  <span className="text-sm">Atualizar Andamentos</span>
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                window.open(`/dashboard/processos/${processo.id}`, '_blank')
-                              }}
-                            >
-                              <ExternalLink className="w-4 h-4 mr-2 text-slate-500" />
-                              <span className="text-sm">Abrir em nova aba</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                    <td className="p-3 text-center relative z-10">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-52">
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedProcessoId(processo.id)
+                              setShowTarefaWizard(true)
+                            }}
+                          >
+                            <ListTodo className="w-4 h-4 mr-2 text-[#34495e]" />
+                            <span className="text-sm">Nova Tarefa</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedProcessoId(processo.id)
+                              setShowEventoWizard(true)
+                            }}
+                          >
+                            <Calendar className="w-4 h-4 mr-2 text-[#89bcbe]" />
+                            <span className="text-sm">Novo Compromisso</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedProcessoId(processo.id)
+                              setShowAudienciaWizard(true)
+                            }}
+                          >
+                            <Gavel className="w-4 h-4 mr-2 text-emerald-600" />
+                            <span className="text-sm">Nova Audiência</span>
+                          </DropdownMenuItem>
+                          {processo.numero_cnj && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setProcessoParaAtualizar({
+                                    id: processo.id,
+                                    numero_cnj: processo.numero_cnj,
+                                    numero_pasta: processo.numero_pasta
+                                  })
+                                  setShowAtualizarCapa(true)
+                                }}
+                              >
+                                <RefreshCw className="w-4 h-4 mr-2 text-[#89bcbe]" />
+                                <span className="text-sm">Atualizar Capa</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedIds(new Set([processo.id]))
+                                  setShowAndamentosModal(true)
+                                }}
+                              >
+                                <FileText className="w-4 h-4 mr-2 text-blue-500" />
+                                <span className="text-sm">Atualizar Andamentos</span>
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              window.open(`/dashboard/processos/${processo.id}`, '_blank')
+                            }}
+                          >
+                            <ExternalLink className="w-4 h-4 mr-2 text-slate-500" />
+                            <span className="text-sm">Abrir em nova aba</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))}

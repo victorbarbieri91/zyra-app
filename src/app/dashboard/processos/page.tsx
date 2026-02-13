@@ -37,7 +37,9 @@ import {
   RefreshCw,
   ExternalLink,
   Trash2,
-  Eye
+  Eye,
+  Copy,
+  Check
 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { createClient } from '@/lib/supabase/client'
@@ -126,6 +128,16 @@ export default function ProcessosPage() {
   const [showAndamentosModal, setShowAndamentosModal] = useState(false)
   const [showVincularContratoModal, setShowVincularContratoModal] = useState(false)
   const [bulkLoading, setBulkLoading] = useState(false)
+
+  // Estado para feedback de cópia do CNJ
+  const [copiedCnj, setCopiedCnj] = useState<string | null>(null)
+
+  const handleCopyCnj = useCallback((cnj: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    navigator.clipboard.writeText(cnj)
+    setCopiedCnj(cnj)
+    setTimeout(() => setCopiedCnj(null), 1500)
+  }, [])
 
   // Debounce timer ref
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -530,7 +542,22 @@ export default function ProcessosPage() {
                   {processo.status}
                 </Badge>
               </div>
-              <p className="text-xs text-slate-500 mb-1">{processo.numero_cnj}</p>
+              <div className="flex items-center gap-1 mb-1">
+                <p className="text-xs text-slate-500">{processo.numero_cnj}</p>
+                {processo.numero_cnj && (
+                  <button
+                    onClick={(e) => handleCopyCnj(processo.numero_cnj, e)}
+                    className="p-0.5 rounded hover:bg-slate-100"
+                    title="Copiar nº CNJ"
+                  >
+                    {copiedCnj === processo.numero_cnj ? (
+                      <Check className="w-3 h-3 text-emerald-500" />
+                    ) : (
+                      <Copy className="w-3 h-3 text-slate-400" />
+                    )}
+                  </button>
+                )}
+              </div>
               <p className="text-xs font-medium text-slate-700 truncate">{processo.cliente_nome || '-'}</p>
               {processo.parte_contraria && (
                 <p className="text-[11px] text-slate-400 truncate">vs {processo.parte_contraria}</p>
@@ -671,7 +698,22 @@ export default function ProcessosPage() {
                       </div>
                     </td>
                     <td className="p-3 whitespace-nowrap">
-                      <span className="text-xs text-slate-600">{processo.numero_cnj}</span>
+                      <div className="flex items-center gap-1 group/cnj">
+                        <span className="text-xs text-slate-600">{processo.numero_cnj}</span>
+                        {processo.numero_cnj && (
+                          <button
+                            onClick={(e) => handleCopyCnj(processo.numero_cnj, e)}
+                            className="opacity-0 group-hover/cnj:opacity-100 transition-opacity p-0.5 rounded hover:bg-slate-100"
+                            title="Copiar nº CNJ"
+                          >
+                            {copiedCnj === processo.numero_cnj ? (
+                              <Check className="w-3 h-3 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-3 h-3 text-slate-400" />
+                            )}
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="p-3">
                       <span className="text-xs text-slate-700 block truncate" title={processo.cliente_nome || ''}>

@@ -69,6 +69,8 @@ export function useTimesheetEntry(escritorioId: string | null): UseTimesheetEntr
         processo_id: dados.processo_id || null,
         consulta_id: dados.consulta_id || null,
         tarefa_id: dados.tarefa_id || null,
+        audiencia_id: dados.audiencia_id || null,
+        evento_id: dados.evento_id || null,
         ato_tipo_id: dados.ato_tipo_id || null, // Para contratos por_ato com modo hora
         data_trabalho: dados.data_trabalho,
         horas: dados.horas,
@@ -127,6 +129,8 @@ export function useTimesheetEntry(escritorioId: string | null): UseTimesheetEntr
       p_tarefa_id: dados.tarefa_id || null,
       p_faturavel: dados.faturavel,
       p_faturavel_manual: dados.faturavel_manual ?? false,
+      p_audiencia_id: dados.audiencia_id || null,
+      p_evento_id: dados.evento_id || null,
     });
 
     if (error) throw error;

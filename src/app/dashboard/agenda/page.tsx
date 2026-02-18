@@ -101,6 +101,8 @@ export default function AgendaPage() {
   const horasRegistradasRef = useRef(false)
   // Flag para diferenciar: lançamento de horas avulso vs conclusão de tarefa
   const [modoLancamentoAvulso, setModoLancamentoAvulso] = useState(false)
+  // Tipo da entidade do item sendo lançado (tarefa, audiencia, evento) - para não passar tarefa_id indevido
+  const [tipoEntidadeLancamento, setTipoEntidadeLancamento] = useState<string | null>(null)
 
   const [tarefaSelecionada, setTarefaSelecionada] = useState<Tarefa | null>(null)
   const [audienciaSelecionada, setAudienciaSelecionada] = useState<Audiencia | null>(null)
@@ -497,11 +499,13 @@ export default function AgendaPage() {
 
     // Buscar a tarefa
     let tarefa = tarefas.find(t => t.id === effectiveId)
+    let tipoEntidade: string = 'tarefa'
 
     // Se não encontrou no hook, buscar na agenda consolidada
     if (!tarefa) {
       const itemCompleto = agendaItems.find(item => item.id === effectiveId || item.id === taskId)
       if (itemCompleto) {
+        tipoEntidade = itemCompleto.tipo_entidade
         tarefa = {
           id: effectiveId,
           escritorio_id: itemCompleto.escritorio_id,
@@ -524,19 +528,20 @@ export default function AgendaPage() {
     }
 
     if (!tarefa) {
-      toast.error('Tarefa não encontrada')
+      toast.error('Compromisso não encontrado')
       return
     }
 
-    // Verificar se a tarefa tem processo ou consulta vinculada
+    // Verificar se tem processo ou consulta vinculada
     if (!tarefa.processo_id && !tarefa.consultivo_id) {
-      toast.error('Esta tarefa não tem processo ou consulta vinculada. Vincule primeiro para lançar horas.')
+      toast.error('Este compromisso não tem processo ou consulta vinculada. Vincule primeiro para lançar horas.')
       return
     }
 
     // Abrir modal de horas em modo avulso (sem concluir depois)
     setModoLancamentoAvulso(true)
     setTarefaParaConcluir(tarefa)
+    setTipoEntidadeLancamento(tipoEntidade)
     setHorasRegistradasComSucesso(false)
     horasRegistradasRef.current = false
     setTimesheetModalOpen(true)
@@ -587,6 +592,7 @@ export default function AgendaPage() {
         // Se tem processo ou consultivo vinculado, abrir modal de horas ANTES de concluir
         setModoLancamentoAvulso(false) // Modo conclusão - vai concluir após registrar horas
         setTarefaParaConcluir({ ...tarefa, id: effectiveId } as Tarefa)
+        setTipoEntidadeLancamento('tarefa') // Conclusão é sempre de tarefa
         setHorasRegistradasComSucesso(false)
         horasRegistradasRef.current = false
         setTimesheetModalOpen(true)
@@ -1574,7 +1580,9 @@ export default function AgendaPage() {
         onOpenChange={handleTimesheetClose}
         processoId={tarefaParaConcluir?.processo_id || undefined}
         consultaId={tarefaParaConcluir?.consultivo_id || undefined}
-        tarefaId={tarefaParaConcluir?.id}
+        tarefaId={tipoEntidadeLancamento === 'tarefa' ? tarefaParaConcluir?.id : undefined}
+        audienciaId={tipoEntidadeLancamento === 'audiencia' ? tarefaParaConcluir?.id : undefined}
+        eventoId={tipoEntidadeLancamento === 'evento' ? tarefaParaConcluir?.id : undefined}
         onSuccess={handleTimesheetSuccess}
       />
 

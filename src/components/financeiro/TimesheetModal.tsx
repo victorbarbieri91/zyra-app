@@ -40,6 +40,8 @@ interface TimesheetModalProps {
   processoId?: string | null
   consultaId?: string | null
   tarefaId?: string | null
+  audienciaId?: string | null
+  eventoId?: string | null
   // Defaults para integração com timer
   defaultModoRegistro?: 'horario' | 'duracao'
   defaultDuracaoHoras?: number
@@ -98,6 +100,8 @@ export default function TimesheetModal({
   processoId,
   consultaId,
   tarefaId,
+  audienciaId,
+  eventoId,
   defaultModoRegistro,
   defaultDuracaoHoras,
   defaultDuracaoMinutos,
@@ -696,6 +700,8 @@ export default function TimesheetModal({
         p_faturavel: faturavelEfetivo,
         p_faturavel_manual: faturavelManual,
         p_ato_tipo_id: atoSelecionado || null,
+        p_audiencia_id: audienciaId || null,
+        p_evento_id: eventoId || null,
       })
 
       if (error) throw error

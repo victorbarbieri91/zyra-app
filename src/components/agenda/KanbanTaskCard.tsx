@@ -65,7 +65,7 @@ export default function KanbanTaskCard({ tarefa, onClick }: KanbanTaskCardProps)
         'border border-slate-200 hover:border-[#89bcbe]/60 transition-all shadow-sm hover:shadow-md',
         'cursor-grab active:cursor-grabbing bg-white group',
         isDragging && 'opacity-50 border-dashed shadow-2xl',
-        tarefa.status === 'concluida' && 'opacity-50'
+        ['concluida', 'concluido', 'realizada', 'realizado'].includes(tarefa.status) && 'opacity-50'
       )}
     >
       <CardContent className="p-2.5">
@@ -74,7 +74,7 @@ export default function KanbanTaskCard({ tarefa, onClick }: KanbanTaskCardProps)
           <h4
             className={cn(
               'flex-1 text-xs font-semibold text-[#34495e] leading-snug line-clamp-2 cursor-pointer',
-              tarefa.status === 'concluida' && 'line-through opacity-60'
+              ['concluida', 'concluido', 'realizada', 'realizado'].includes(tarefa.status) && 'line-through opacity-60'
             )}
             onClick={onClick}
           >

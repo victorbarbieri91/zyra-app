@@ -79,7 +79,7 @@ export default function CalendarEventMiniCard({
   const prazoDate = parsePrazoDate(prazo_data_limite)
   const isPrazoFatalHoje = tiposComPrazoFatal && prazoDate && isToday(prazoDate)
   const isPrazoFatalVencido = tiposComPrazoFatal && prazoDate && isBefore(prazoDate, startOfDay(new Date()))
-  const isConcluido = status === 'concluida' || status === 'concluido'
+  const isConcluido = ['concluida', 'concluido', 'realizada', 'realizado'].includes(status || '')
 
   // Determinar estilo baseado no tipo e urgência do prazo fatal
   let styles = tipoStyles[tipo]
@@ -116,15 +116,15 @@ export default function CalendarEventMiniCard({
             <span className={cn(
               'text-[11px] font-semibold truncate leading-tight',
               styles.text,
-              tipo === 'tarefa' && status === 'concluida' && 'line-through opacity-75'
+              isConcluido && 'line-through opacity-75'
             )}>
               {titulo}
             </span>
           </div>
         </div>
 
-        {/* Status indicator para tarefas concluídas */}
-        {tipo === 'tarefa' && status === 'concluida' && (
+        {/* Status indicator para itens concluídos */}
+        {isConcluido && (
           <div className="flex-shrink-0">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
           </div>

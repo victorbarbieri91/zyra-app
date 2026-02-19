@@ -464,7 +464,7 @@ export default function TimesheetPage() {
   const pendentesCount = timesheets.filter(t => t.status === 'pendente').length
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
+    <div className={cn("space-y-4 p-4 md:p-6", selectedIds.size > 0 && "pb-20")}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -678,69 +678,13 @@ export default function TimesheetPage() {
         </div>
       </div>
 
-      {/* Ações em Lote */}
-      {selectedIds.size > 0 && statusFiltro === 'pendente' && (
-        <Card className="border-emerald-200 bg-emerald-50 shadow-sm">
-          <CardContent className="py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-                  <CheckCircle className="h-4 w-4 text-emerald-700" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-emerald-900">
-                    {selectedIds.size} {selectedIds.size === 1 ? 'registro selecionado' : 'registros selecionados'}
-                  </p>
-                  <p className="text-xs text-emerald-700">
-                    Total: {formatHoras(getTotalHoras())}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={handleApprove}
-                  size="sm"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                >
-                  <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
-                  Aprovar
-                </Button>
-                <Button
-                  onClick={handleDeleteBatch}
-                  size="sm"
-                  variant="outline"
-                  className="border-red-200 text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                  Excluir
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Lista de Timesheets */}
       <Card className="border-slate-200 shadow-sm">
         <CardHeader className="pb-2 pt-3 px-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <CardTitle className="text-sm font-medium text-slate-700">
-                Registros de Horas
-              </CardTitle>
-              {statusFiltro === 'pendente' && timesheets.length > 0 && (
-                <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.size === pendentesCount && pendentesCount > 0}
-                    onChange={(e) => handleSelectAll(e.target.checked)}
-                    className="rounded border-slate-300"
-                  />
-                  Selecionar todos
-                </label>
-              )}
-            </div>
+            <CardTitle className="text-sm font-medium text-slate-700">
+              Registros de Horas
+            </CardTitle>
             <Badge variant="secondary" className="bg-slate-100 text-slate-600">
               {timesheets.length} {timesheets.length === 1 ? 'registro' : 'registros'} - {formatHoras(getTotalHorasLista())}
             </Badge>
@@ -771,8 +715,21 @@ export default function TimesheetPage() {
           ) : (
             <div className="divide-y divide-slate-100">
               {/* Header da tabela */}
-              <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-slate-50 text-[10px] font-medium text-slate-500 uppercase tracking-wider">
-                {statusFiltro === 'pendente' && <div className="col-span-1"></div>}
+              <div className={cn(
+                "grid gap-2 px-4 py-2 bg-slate-50 text-[10px] font-medium text-slate-500 uppercase tracking-wider items-center",
+                statusFiltro === 'pendente'
+                  ? 'grid-cols-[1.5rem_repeat(11,minmax(0,1fr))]'
+                  : 'grid-cols-12'
+              )}>
+                {statusFiltro === 'pendente' && (
+                  <div className="flex items-center">
+                    <Checkbox
+                      checked={pendentesCount > 0 && selectedIds.size === pendentesCount}
+                      onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                      className="border-slate-300 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
+                    />
+                  </div>
+                )}
                 <div className="col-span-1">Data</div>
                 <div className="col-span-2">Colaborador</div>
                 <div className="col-span-2">Pasta</div>
@@ -786,21 +743,30 @@ export default function TimesheetPage() {
               {timesheets.map((ts) => (
                 <div
                   key={ts.id}
+                  onClick={() => {
+                    if (statusFiltro === 'pendente' && editandoId !== ts.id) {
+                      handleSelectOne(ts.id, !selectedIds.has(ts.id))
+                    }
+                  }}
                   className={cn(
-                    'grid grid-cols-12 gap-2 px-4 py-2.5 items-center hover:bg-slate-50 transition-colors',
-                    selectedIds.has(ts.id) && 'bg-blue-50',
+                    'grid gap-2 px-4 py-2.5 items-center transition-colors',
+                    statusFiltro === 'pendente'
+                      ? 'grid-cols-[1.5rem_repeat(11,minmax(0,1fr))]'
+                      : 'grid-cols-12',
+                    statusFiltro === 'pendente' && editandoId !== ts.id && 'cursor-pointer',
+                    selectedIds.has(ts.id) ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-slate-50',
                     editandoId === ts.id && 'bg-amber-50'
                   )}
                 >
                   {/* Checkbox */}
                   {statusFiltro === 'pendente' && (
-                    <div className="col-span-1">
+                    <div className="flex items-center">
                       {editandoId !== ts.id && (
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={selectedIds.has(ts.id)}
-                          onChange={(e) => handleSelectOne(ts.id, e.target.checked)}
-                          className="rounded border-slate-300"
+                          onCheckedChange={(checked) => handleSelectOne(ts.id, !!checked)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="border-slate-300 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
                         />
                       )}
                     </div>
@@ -833,6 +799,7 @@ export default function TimesheetPage() {
                     {ts.processo_id ? (
                       <Link
                         href={`/dashboard/processos/${ts.processo_id}`}
+                        onClick={(e) => e.stopPropagation()}
                         className="flex items-center gap-1 text-[10px] text-[#1E3A8A] hover:text-[#1E3A8A]/80 hover:underline truncate"
                         title={`Abrir pasta ${ts.processo_pasta || ts.numero_processo}`}
                       >
@@ -842,6 +809,7 @@ export default function TimesheetPage() {
                     ) : ts.consulta_id ? (
                       <Link
                         href={`/dashboard/consultivo/${ts.consulta_id}`}
+                        onClick={(e) => e.stopPropagation()}
                         className="flex items-center gap-1 text-[10px] text-[#1E3A8A] hover:text-[#1E3A8A]/80 hover:underline truncate"
                         title={`Abrir consulta ${ts.consulta_titulo}`}
                       >
@@ -854,7 +822,7 @@ export default function TimesheetPage() {
                   </div>
 
                   {/* Atividade */}
-                  <div className="col-span-3">
+                  <div className="col-span-3" onClick={editandoId === ts.id ? (e) => e.stopPropagation() : undefined}>
                     {editandoId === ts.id ? (
                       <Input
                         value={editForm.atividade}
@@ -873,7 +841,7 @@ export default function TimesheetPage() {
                   </div>
 
                   {/* Horas */}
-                  <div className="col-span-1 text-right">
+                  <div className="col-span-1 text-right" onClick={editandoId === ts.id ? (e) => e.stopPropagation() : undefined}>
                     {editandoId === ts.id ? (
                       <Input
                         type="number"
@@ -891,10 +859,10 @@ export default function TimesheetPage() {
                   </div>
 
                   {/* Tipo */}
-                  <div className="col-span-1 text-center">
+                  <div className="col-span-1 text-center" onClick={editandoId === ts.id ? (e) => e.stopPropagation() : undefined}>
                     {editandoId === ts.id ? (
                       <button
-                        onClick={() => setEditForm({ ...editForm, faturavel: !editForm.faturavel })}
+                        onClick={(e) => { e.stopPropagation(); setEditForm({ ...editForm, faturavel: !editForm.faturavel }) }}
                         className={cn(
                           'px-2 py-0.5 rounded text-[10px] font-medium',
                           editForm.faturavel
@@ -920,7 +888,7 @@ export default function TimesheetPage() {
                   </div>
 
                   {/* Ações */}
-                  <div className="col-span-1 flex justify-end gap-0.5">
+                  <div className="col-span-1 flex justify-end gap-0.5" onClick={(e) => e.stopPropagation()}>
                     {statusFiltro === 'pendente' ? (
                       <>
                         {editandoId === ts.id ? (
@@ -1037,6 +1005,56 @@ export default function TimesheetPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Floating Bulk Actions Bar */}
+      {selectedIds.size > 0 && statusFiltro === 'pendente' && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+          <div className="bg-[#34495e] text-white rounded-lg shadow-lg px-4 py-3 flex items-center gap-4">
+            {/* Counter + Clear */}
+            <div className="flex items-center gap-2 pr-4 border-r border-white/20">
+              <span className="text-sm font-medium">
+                {selectedIds.size} {selectedIds.size === 1 ? 'registro' : 'registros'}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedIds(new Set())}
+                className="h-6 w-6 p-0 text-white/70 hover:text-white hover:bg-white/10"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Total hours */}
+            <div className="flex items-center gap-1.5 pr-4 border-r border-white/20">
+              <Clock className="w-3.5 h-3.5 text-white/70" />
+              <span className="text-sm text-white/90">{formatHoras(getTotalHoras())}</span>
+            </div>
+
+            {/* Approve */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-white/10"
+              onClick={handleApprove}
+            >
+              <CheckCircle className="w-4 h-4 mr-1.5" />
+              Aprovar
+            </Button>
+
+            {/* Delete */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-300 hover:text-red-200 hover:bg-red-500/20"
+              onClick={handleDeleteBatch}
+            >
+              <Trash2 className="w-4 h-4 mr-1.5" />
+              Excluir
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Modal Lançar Horas */}
       <TimesheetModal

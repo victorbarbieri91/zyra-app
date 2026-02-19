@@ -42,7 +42,12 @@ interface CalendarKanbanViewProps {
   onClickEvento?: (evento: Evento) => void
   onClickAudiencia?: (audiencia: Audiencia) => void
   onCreateTarefa: (status: 'pendente' | 'em_andamento' | 'em_pausa' | 'concluida') => void
-  onTaskComplete?: (tarefaId: string) => void
+  onTaskComplete?: (tarefaId: string, timerData?: {
+    timerId: string
+    defaultHoras?: number
+    defaultMinutos?: number
+    defaultAtividade: string
+  }) => void
   className?: string
 }
 
@@ -431,20 +436,25 @@ export default function CalendarKanbanView({
     if (novoStatus === 'concluida') {
       // Se tem vínculo com processo/consultivo, sempre abrir modal para confirmar horas
       if (tarefaTemVinculo(tarefa) && onTaskComplete) {
-        // Finalizar timer se existir (as horas serão mostradas no modal)
         if (timerExistente) {
-          try {
-            await finalizarTimer(timerExistente.id, {
-              descricao: `Tarefa concluída: ${tarefa.titulo}`,
-            })
-            toast.success('Timer finalizado e horas registradas')
-          } catch (error) {
-            console.error('Erro ao finalizar timer:', error)
-            toast.error('Erro ao finalizar timer')
-          }
+          // Calcular tempo SEM finalizar (sem criar entry automática no timesheet)
+          // O timer será descartado após o usuário confirmar/cancelar no modal
+          const segundos = timerExistente.tempo_atual
+          const horas = Math.floor(segundos / 3600)
+          const minutos = Math.floor((segundos % 3600) / 60)
+          onTaskComplete(tarefa.id, {
+            timerId: timerExistente.id,
+            defaultHoras: horas,
+            defaultMinutos: minutos,
+            defaultAtividade: tarefa.titulo,
+          })
+        } else {
+          // Sem timer: pré-preencher só a descrição, horas ficam no default do modal
+          onTaskComplete(tarefa.id, {
+            timerId: '',
+            defaultAtividade: tarefa.titulo,
+          })
         }
-        // Chamar callback externo para abrir modal de horas (permite ajustar/adicionar mais horas)
-        onTaskComplete(tarefa.id)
         return // Não atualiza status aqui, o callback externo vai fazer isso
       } else if (timerExistente) {
         // Tarefa sem vínculo mas com timer (raro) - apenas finalizar

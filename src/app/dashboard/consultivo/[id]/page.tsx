@@ -146,6 +146,7 @@ export default function ConsultaDetalhePage() {
 
   // Estados para Financeiro
   const [timesheetModalOpen, setTimesheetModalOpen] = useState(false)
+  const [financeiroRefreshTrigger, setFinanceiroRefreshTrigger] = useState(0)
 
   // Estados para conclusão com modal de horas
   const [tarefaParaConcluirId, setTarefaParaConcluirId] = useState<string | null>(null)
@@ -1233,6 +1234,7 @@ export default function ConsultaDetalhePage() {
                 toast.info('Lancamento de honorarios em desenvolvimento')
               }}
               onContratoVinculado={loadConsulta}
+              refreshTrigger={financeiroRefreshTrigger}
             />
 
             {/* Cobrança Fixa (quando contrato vinculado) */}
@@ -1400,6 +1402,7 @@ export default function ConsultaDetalhePage() {
         onSuccess={async () => {
           horasRegistradasRef.current = true
           setTimesheetModalOpen(false)
+          setFinanceiroRefreshTrigger(prev => prev + 1)
           // Se estava concluindo tarefa, concluir agora
           if (tarefaParaConcluirId) {
             await executeConcluirTarefa(tarefaParaConcluirId)

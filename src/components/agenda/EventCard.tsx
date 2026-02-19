@@ -28,6 +28,8 @@ export interface EventCardProps {
   prazo_perdido?: boolean
   prazo_criticidade?: 'vencido' | 'hoje' | 'critico' | 'urgente' | 'atencao' | 'normal'
   prazo_data_limite?: Date | string  // Para tarefas com prazo fatal
+  // Prioridade (para tarefas)
+  prioridade?: 'alta' | 'media' | 'baixa'
   // Subtipo (ex: fixa, prazo_processual, etc.)
   subtipo?: string
   // Recorrência

@@ -56,6 +56,7 @@ import { useAudiencias, Audiencia, AudienciaFormData } from '@/hooks/useAudienci
 import { useEventos, Evento, EventoFormData } from '@/hooks/useEventos'
 import { useRecorrencias } from '@/hooks/useRecorrencias'
 import { useUserPreferences } from '@/hooks/useUserPreferences'
+import { useTimer } from '@/contexts/TimerContext'
 
 export default function AgendaPage() {
   const searchParams = useSearchParams()
@@ -103,6 +104,13 @@ export default function AgendaPage() {
   const [modoLancamentoAvulso, setModoLancamentoAvulso] = useState(false)
   // Tipo da entidade do item sendo lançado (tarefa, audiencia, evento) - para não passar tarefa_id indevido
   const [tipoEntidadeLancamento, setTipoEntidadeLancamento] = useState<string | null>(null)
+  // Dados do timer para pré-preencher o modal de horas ao concluir via Kanban
+  const [timerDataParaConcluir, setTimerDataParaConcluir] = useState<{
+    timerId: string
+    defaultHoras?: number
+    defaultMinutos?: number
+    defaultAtividade: string
+  } | null>(null)
 
   const [tarefaSelecionada, setTarefaSelecionada] = useState<Tarefa | null>(null)
   const [audienciaSelecionada, setAudienciaSelecionada] = useState<Audiencia | null>(null)
@@ -184,6 +192,9 @@ export default function AgendaPage() {
     }
     return undefined
   }, [userId])
+
+  // Timer context - para descartar timer ao concluir tarefa via Kanban
+  const { descartarTimer } = useTimer()
 
   // Hooks - usar agenda consolidada e hooks específicos
   const { items: agendaItems, loading, refreshItems } = useAgendaConsolidada(escritorioId || undefined, agendaFilters)
@@ -268,6 +279,7 @@ export default function AgendaPage() {
         status: (item.status || 'agendado') as EventCardProps['status'],
         prazo_criticidade: item.prioridade === 'alta' ? 'critico' : item.prioridade === 'media' ? 'atencao' : 'normal',
         prazo_data_limite: item.prazo_data_limite ? parseDBDate(item.prazo_data_limite) : undefined,
+        prioridade: item.prioridade,
         subtipo: item.subtipo,
         recorrencia_id: item.recorrencia_id,
       }))
@@ -548,7 +560,11 @@ export default function AgendaPage() {
   }
 
   // Handler para conclusão rápida de tarefa (toggle)
-  const handleCompleteTask = async (taskId: string) => {
+  // timerData é passado pelo Kanban quando há timer ativo, para pré-preencher o modal
+  const handleCompleteTask = async (
+    taskId: string,
+    timerData?: { timerId: string; defaultHoras?: number; defaultMinutos?: number; defaultAtividade: string }
+  ) => {
     try {
       // Materializar se for instância virtual de recorrência
       const realId = await materializarSeVirtual(taskId)
@@ -595,9 +611,15 @@ export default function AgendaPage() {
         setTipoEntidadeLancamento('tarefa') // Conclusão é sempre de tarefa
         setHorasRegistradasComSucesso(false)
         horasRegistradasRef.current = false
+        // Armazenar dados do timer para pré-preencher o modal
+        setTimerDataParaConcluir(timerData || { timerId: '', defaultAtividade: tarefa?.titulo || '' })
         setTimesheetModalOpen(true)
       } else {
         // Se não tem vínculo, concluir diretamente
+        // Se veio do Kanban com timer, descartar timer sem criar entry
+        if (timerData?.timerId) {
+          try { await descartarTimer(timerData.timerId) } catch {}
+        }
         await concluirTarefa(effectiveId)
         await refreshItems()
         toast.success('Tarefa concluída com sucesso!')
@@ -627,6 +649,10 @@ export default function AgendaPage() {
     } else if (tarefaParaConcluir) {
       // Modo conclusão: registrar horas E concluir
       try {
+        // Descartar timer sem criar entry (o modal já criou via registrar_tempo_retroativo)
+        if (timerDataParaConcluir?.timerId) {
+          await descartarTimer(timerDataParaConcluir.timerId)
+        }
         await concluirTarefa(tarefaParaConcluir.id)
         await refreshItems()
         toast.success('Tarefa concluída!')
@@ -635,6 +661,7 @@ export default function AgendaPage() {
         toast.error('Horas registradas, mas erro ao concluir tarefa')
       }
       setTarefaParaConcluir(null)
+      setTimerDataParaConcluir(null)
     }
     // Nota: O TimesheetModal fecha o modal via onOpenChange(false) após onSuccess
   }
@@ -649,19 +676,23 @@ export default function AgendaPage() {
           setTarefaDetailOpen(true)
         }
         setTarefaParaConcluir(null)
+        setTimerDataParaConcluir(null)
         setModoLancamentoAvulso(false)
       } else if (modoLancamentoAvulso && horasRegistradasRef.current) {
         // Modo avulso com sucesso: handleTimesheetSuccess já reabriu o modal
         // Apenas limpar estado residual
         setTarefaParaConcluir(null)
+        setTimerDataParaConcluir(null)
         setModoLancamentoAvulso(false)
       } else if (tarefaParaConcluir && !horasRegistradasRef.current) {
         // Modo conclusão: modal foi fechado sem registrar horas - perguntar se quer concluir mesmo assim
         // Usa ref para leitura síncrona (evita race condition com state)
+        // NÃO limpar timerData ainda - o dialog "concluir sem horas?" precisa dele
         setConfirmConcluirSemHoras(true)
       } else {
         // Já registrou com sucesso, apenas limpar estado
         setTarefaParaConcluir(null)
+        setTimerDataParaConcluir(null)
       }
     }
     setTimesheetModalOpen(open)
@@ -671,6 +702,10 @@ export default function AgendaPage() {
   const handleConcluirSemHoras = async () => {
     if (tarefaParaConcluir) {
       try {
+        // Descartar timer sem criar entry no timesheet
+        if (timerDataParaConcluir?.timerId) {
+          await descartarTimer(timerDataParaConcluir.timerId)
+        }
         await concluirTarefa(tarefaParaConcluir.id)
         await refreshItems()
         toast.success('Tarefa concluída!')
@@ -680,12 +715,15 @@ export default function AgendaPage() {
       }
     }
     setTarefaParaConcluir(null)
+    setTimerDataParaConcluir(null)
     setConfirmConcluirSemHoras(false)
   }
 
   // Handler para cancelar conclusão
   const handleCancelarConclusao = () => {
+    // Não descartar timer - usuário cancelou, timer permanece ativo
     setTarefaParaConcluir(null)
+    setTimerDataParaConcluir(null)
     setConfirmConcluirSemHoras(false)
   }
 
@@ -1583,6 +1621,10 @@ export default function AgendaPage() {
         tarefaId={tipoEntidadeLancamento === 'tarefa' ? tarefaParaConcluir?.id : undefined}
         audienciaId={tipoEntidadeLancamento === 'audiencia' ? tarefaParaConcluir?.id : undefined}
         eventoId={tipoEntidadeLancamento === 'evento' ? tarefaParaConcluir?.id : undefined}
+        defaultModoRegistro="duracao"
+        defaultDuracaoHoras={timerDataParaConcluir?.defaultHoras}
+        defaultDuracaoMinutos={timerDataParaConcluir?.defaultMinutos}
+        defaultAtividade={timerDataParaConcluir?.defaultAtividade}
         onSuccess={handleTimesheetSuccess}
       />
 

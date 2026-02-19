@@ -34,6 +34,7 @@ interface ConsultivoFinanceiroCardProps {
   onLancarDespesa?: () => void
   onLancarHonorario?: () => void
   onContratoVinculado?: () => void
+  refreshTrigger?: number
 }
 
 const MODALIDADE_LABELS: Record<string, string> = {
@@ -55,6 +56,7 @@ export default function ConsultivoFinanceiroCard({
   onLancarDespesa,
   onLancarHonorario,
   onContratoVinculado,
+  refreshTrigger,
 }: ConsultivoFinanceiroCardProps) {
   const {
     contratoInfo,
@@ -77,7 +79,7 @@ export default function ConsultivoFinanceiroCard({
     if (consultivoId) {
       loadDados()
     }
-  }, [consultivoId, loadDados])
+  }, [consultivoId, loadDados, refreshTrigger])
 
   const openDetalhesModal = (tipo: 'honorarios' | 'timesheet' | 'despesas') => {
     setDetalhesModalTipo(tipo)

@@ -224,10 +224,20 @@ export default function CalendarGridDnD({
   // Prioridade de exibição por tipo: audiência > prazo > tarefa > compromisso
   const tipoPrioridade: Record<string, number> = {
     audiencia: 0,
-    prazo: 1,
-    tarefa: 2,
-    compromisso: 3,
+    compromisso: 1,
+    prazo: 2,
+    tarefa: 3,
   }
+
+  const prioridadeTarefa: Record<string, number> = {
+    alta: 0,
+    media: 1,
+    baixa: 2,
+  }
+
+  // Helper para verificar se item está concluído
+  const isItemConcluido = (evento: EventCardProps): boolean =>
+    ['concluida', 'concluido', 'realizada', 'realizado'].includes(evento.status || '')
 
   // Helper para verificar urgência do prazo fatal
   // Apenas tarefas e prazos têm prazo_data_limite (audiências e compromissos não)
@@ -250,17 +260,27 @@ export default function CalendarGridDnD({
     return eventos
       .filter((evento) => isSameDay(parseDBDate(evento.data_inicio), day))
       .sort((a, b) => {
-        // Primeiro: ordenar por urgência do prazo fatal (vencido/hoje primeiro)
+        // 1. Concluídos vão por último
+        const concA = isItemConcluido(a) ? 1 : 0
+        const concB = isItemConcluido(b) ? 1 : 0
+        if (concA !== concB) return concA - concB
+
+        // 2. Urgência do prazo fatal (vencido/hoje primeiro)
         const urgenciaA = getUrgenciaPrazoFatal(a)
         const urgenciaB = getUrgenciaPrazoFatal(b)
         if (urgenciaA !== urgenciaB) return urgenciaA - urgenciaB
 
-        // Segundo: ordenar por tipo (audiência primeiro)
-        const prioridadeA = tipoPrioridade[a.tipo] ?? 99
-        const prioridadeB = tipoPrioridade[b.tipo] ?? 99
-        if (prioridadeA !== prioridadeB) return prioridadeA - prioridadeB
+        // 3. Tipo (audiência → compromisso → prazo → tarefa)
+        const tipoA = tipoPrioridade[a.tipo] ?? 99
+        const tipoB = tipoPrioridade[b.tipo] ?? 99
+        if (tipoA !== tipoB) return tipoA - tipoB
 
-        // Terceiro: ordenar por horário
+        // 4. Prioridade da tarefa (alta → média → baixa)
+        const prioA = prioridadeTarefa[a.prioridade || ''] ?? 3
+        const prioB = prioridadeTarefa[b.prioridade || ''] ?? 3
+        if (prioA !== prioB) return prioA - prioB
+
+        // 5. Horário
         const dataA = parseDBDate(a.data_inicio)
         const dataB = parseDBDate(b.data_inicio)
         return dataA.getTime() - dataB.getTime()

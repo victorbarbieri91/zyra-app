@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -17,11 +18,13 @@ import {
   Calendar,
   User,
   FileText,
+  ChevronDown,
 } from 'lucide-react'
 import { formatCurrency, formatHoras } from '@/lib/utils'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { formatBrazilDate } from '@/lib/timezone'
 import type { Honorario, Despesa, TimesheetEntry, ResumoFinanceiro, ContratoInfo } from '@/hooks/useProcessoFinanceiro'
+
+const ITEMS_PER_PAGE = 10
 
 interface FinanceiroDetalhesModalProps {
   open: boolean
@@ -69,6 +72,12 @@ export default function FinanceiroDetalhesModal({
   onLancarHoras,
   onLancarDespesa,
 }: FinanceiroDetalhesModalProps) {
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE)
+
+  // Reset ao trocar de aba
+  useEffect(() => {
+    setVisibleCount(ITEMS_PER_PAGE)
+  }, [tipo])
 
   const getTitulo = () => {
     switch (tipo) {
@@ -138,171 +147,222 @@ export default function FinanceiroDetalhesModal({
     return { label: 'Pendente', className: 'bg-slate-100 text-slate-700 border-slate-200' }
   }
 
-  const renderHonorarios = () => (
-    <div className="space-y-3">
-      {honorarios.length === 0 ? (
-        <div className="text-center py-8">
-          <FileText className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-          <p className="text-sm text-slate-500">Nenhum honorário lançado</p>
-        </div>
-      ) : (
-        honorarios.map((hon) => {
-          const statusConfig = HONORARIO_STATUS[hon.status] || HONORARIO_STATUS.pendente
-          return (
-            <div
-              key={hon.id}
-              className="border border-slate-200 rounded-lg p-3 hover:border-[#89bcbe]/50 transition-colors"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <p className="text-xs font-semibold text-[#34495e]">{hon.numero_interno}</p>
-                  <p className="text-sm text-slate-700 mt-0.5">{hon.descricao}</p>
-                </div>
-                <Badge variant="outline" className={`text-[10px] h-5 ${statusConfig.className}`}>
-                  {statusConfig.label}
-                </Badge>
-              </div>
+  const renderHonorarios = () => {
+    const visible = honorarios.slice(0, visibleCount)
+    const hasMore = honorarios.length > visibleCount
+    return (
+      <div className="space-y-3">
+        {honorarios.length === 0 ? (
+          <div className="text-center py-8">
+            <FileText className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+            <p className="text-sm text-slate-500">Nenhum honorário lançado</p>
+          </div>
+        ) : (
+          <>
+            {visible.map((hon) => {
+              const statusConfig = HONORARIO_STATUS[hon.status] || HONORARIO_STATUS.pendente
+              return (
+                <div
+                  key={hon.id}
+                  className="border border-slate-200 rounded-lg p-3 hover:border-[#89bcbe]/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="text-xs font-semibold text-[#34495e]">{hon.numero_interno}</p>
+                      <p className="text-sm text-slate-700 mt-0.5">{hon.descricao}</p>
+                    </div>
+                    <Badge variant="outline" className={`text-[10px] h-5 ${statusConfig.className}`}>
+                      {statusConfig.label}
+                    </Badge>
+                  </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 text-[10px] text-slate-500">
-                  {hon.responsavel_nome && (
-                    <span className="flex items-center gap-1">
-                      <User className="w-3 h-3" />
-                      {hon.responsavel_nome}
-                    </span>
-                  )}
-                  <span className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {format(new Date(hon.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-[10px] text-slate-500">
+                      {hon.responsavel_nome && (
+                        <span className="flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          {hon.responsavel_nome}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {formatBrazilDate(hon.created_at)}
+                      </span>
+                    </div>
+                    <p className="text-sm font-bold text-[#34495e]">
+                      {formatCurrency(hon.valor_total)}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm font-bold text-[#34495e]">
-                  {formatCurrency(hon.valor_total)}
-                </p>
-              </div>
-            </div>
-          )
-        })
-      )}
-    </div>
-  )
+              )
+            })}
+            {hasMore && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs text-slate-500 hover:text-[#34495e]"
+                onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
+              >
+                <ChevronDown className="w-3.5 h-3.5 mr-1.5" />
+                Carregar mais ({honorarios.length - visibleCount} restantes)
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+    )
+  }
 
-  const renderTimesheet = () => (
-    <div className="space-y-3">
-      {timesheet.length === 0 ? (
-        <div className="text-center py-8">
-          <Clock className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-          <p className="text-sm text-slate-500">Nenhuma hora lançada</p>
-        </div>
-      ) : (
-        timesheet.map((entry) => {
-          const statusConfig = getTimesheetStatus(entry)
-          return (
-            <div
-              key={entry.id}
-              className="border border-slate-200 rounded-lg p-3 hover:border-[#89bcbe]/50 transition-colors"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <p className="text-sm text-slate-700">{entry.atividade}</p>
-                </div>
-                <Badge variant="outline" className={`text-[10px] h-5 ${statusConfig.className}`}>
-                  {statusConfig.label}
-                </Badge>
-              </div>
+  const renderTimesheet = () => {
+    const visible = timesheet.slice(0, visibleCount)
+    const hasMore = timesheet.length > visibleCount
+    return (
+      <div className="space-y-3">
+        {timesheet.length === 0 ? (
+          <div className="text-center py-8">
+            <Clock className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+            <p className="text-sm text-slate-500">Nenhuma hora lançada</p>
+          </div>
+        ) : (
+          <>
+            {visible.map((entry) => {
+              const statusConfig = getTimesheetStatus(entry)
+              return (
+                <div
+                  key={entry.id}
+                  className="border border-slate-200 rounded-lg p-3 hover:border-[#89bcbe]/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="text-sm text-slate-700">{entry.atividade}</p>
+                    </div>
+                    <Badge variant="outline" className={`text-[10px] h-5 ${statusConfig.className}`}>
+                      {statusConfig.label}
+                    </Badge>
+                  </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 text-[10px] text-slate-500">
-                  {entry.user_nome && (
-                    <span className="flex items-center gap-1">
-                      <User className="w-3 h-3" />
-                      {entry.user_nome}
-                    </span>
-                  )}
-                  <span className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {format(new Date(entry.data_trabalho), "dd/MM/yyyy", { locale: ptBR })}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-bold text-[#34495e]">
-                    {formatHoras(entry.horas)}
-                  </p>
-                  {contratoInfo?.config?.valor_hora && (
-                    <span className="text-xs text-slate-500">
-                      ({formatCurrency(entry.horas * contratoInfo.config.valor_hora)})
-                    </span>
-                  )}
-                </div>
-              </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-[10px] text-slate-500">
+                      {entry.user_nome && (
+                        <span className="flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          {entry.user_nome}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {formatBrazilDate(entry.data_trabalho)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold text-[#34495e]">
+                        {formatHoras(entry.horas)}
+                      </p>
+                      {contratoInfo?.config?.valor_hora && (
+                        <span className="text-xs text-slate-500">
+                          ({formatCurrency(entry.horas * contratoInfo.config.valor_hora)})
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-              {!entry.faturavel && (
-                <Badge variant="outline" className="text-[9px] h-4 mt-2 bg-slate-50 text-slate-500 border-slate-200">
-                  Não faturável
-                </Badge>
-              )}
-            </div>
-          )
-        })
-      )}
-    </div>
-  )
-
-  const renderDespesas = () => (
-    <div className="space-y-3">
-      {despesas.length === 0 ? (
-        <div className="text-center py-8">
-          <Receipt className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-          <p className="text-sm text-slate-500">Nenhuma despesa lançada</p>
-        </div>
-      ) : (
-        despesas.map((desp) => {
-          const statusConfig = DESPESA_STATUS[desp.status] || DESPESA_STATUS.pendente
-          return (
-            <div
-              key={desp.id}
-              className="border border-slate-200 rounded-lg p-3 hover:border-[#89bcbe]/50 transition-colors"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <p className="text-xs font-semibold text-[#34495e] uppercase">{desp.categoria}</p>
-                  <p className="text-sm text-slate-700 mt-0.5">{desp.descricao}</p>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <Badge variant="outline" className={`text-[10px] h-5 ${statusConfig.className}`}>
-                    {statusConfig.label}
-                  </Badge>
-                  {desp.reembolsavel && (
-                    <Badge variant="outline" className="text-[9px] h-4 bg-blue-50 text-blue-700 border-blue-200">
-                      Reembolsável
+                  {!entry.faturavel && (
+                    <Badge variant="outline" className="text-[9px] h-4 mt-2 bg-slate-50 text-slate-500 border-slate-200">
+                      Não faturável
                     </Badge>
                   )}
                 </div>
-              </div>
+              )
+            })}
+            {hasMore && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs text-slate-500 hover:text-[#34495e]"
+                onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
+              >
+                <ChevronDown className="w-3.5 h-3.5 mr-1.5" />
+                Carregar mais ({timesheet.length - visibleCount} restantes)
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+    )
+  }
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 text-[10px] text-slate-500">
-                  {desp.fornecedor && (
-                    <span className="flex items-center gap-1">
-                      <User className="w-3 h-3" />
-                      {desp.fornecedor}
-                    </span>
-                  )}
-                  <span className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    Venc: {format(new Date(desp.data_vencimento), "dd/MM/yyyy", { locale: ptBR })}
-                  </span>
+  const renderDespesas = () => {
+    const visible = despesas.slice(0, visibleCount)
+    const hasMore = despesas.length > visibleCount
+    return (
+      <div className="space-y-3">
+        {despesas.length === 0 ? (
+          <div className="text-center py-8">
+            <Receipt className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+            <p className="text-sm text-slate-500">Nenhuma despesa lançada</p>
+          </div>
+        ) : (
+          <>
+            {visible.map((desp) => {
+              const statusConfig = DESPESA_STATUS[desp.status] || DESPESA_STATUS.pendente
+              return (
+                <div
+                  key={desp.id}
+                  className="border border-slate-200 rounded-lg p-3 hover:border-[#89bcbe]/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="text-xs font-semibold text-[#34495e] uppercase">{desp.categoria}</p>
+                      <p className="text-sm text-slate-700 mt-0.5">{desp.descricao}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="outline" className={`text-[10px] h-5 ${statusConfig.className}`}>
+                        {statusConfig.label}
+                      </Badge>
+                      {desp.reembolsavel && (
+                        <Badge variant="outline" className="text-[9px] h-4 bg-blue-50 text-blue-700 border-blue-200">
+                          Reembolsável
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-[10px] text-slate-500">
+                      {desp.fornecedor && (
+                        <span className="flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          {desp.fornecedor}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        Venc: {formatBrazilDate(desp.data_vencimento)}
+                      </span>
+                    </div>
+                    <p className="text-sm font-bold text-[#34495e]">
+                      {formatCurrency(desp.valor)}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm font-bold text-[#34495e]">
-                  {formatCurrency(desp.valor)}
-                </p>
-              </div>
-            </div>
-          )
-        })
-      )}
-    </div>
-  )
+              )
+            })}
+            {hasMore && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs text-slate-500 hover:text-[#34495e]"
+                onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
+              >
+                <ChevronDown className="w-3.5 h-3.5 mr-1.5" />
+                Carregar mais ({despesas.length - visibleCount} restantes)
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+    )
+  }
 
   const renderContent = () => {
     switch (tipo) {
@@ -334,7 +394,13 @@ export default function FinanceiroDetalhesModal({
         {/* Footer com total e botão de ação */}
         <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-500">Total</p>
+            <p className="text-xs text-slate-500">
+              Total
+              {(() => {
+                const total = tipo === 'honorarios' ? honorarios.length : tipo === 'timesheet' ? timesheet.length : despesas.length
+                return total > 0 ? ` (${Math.min(visibleCount, total)} de ${total})` : ''
+              })()}
+            </p>
             <p className="text-lg font-bold text-[#34495e]">{getTotal()}</p>
           </div>
 

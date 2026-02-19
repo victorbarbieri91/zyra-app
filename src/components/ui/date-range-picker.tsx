@@ -85,6 +85,16 @@ export function DateRangePicker({
   align = "start",
 }: DateRangePickerProps) {
   const [open, setOpen] = React.useState(false)
+  const [localRange, setLocalRange] = React.useState<DateRange | undefined>(value)
+  const [calendarKey, setCalendarKey] = React.useState(0)
+
+  // Sync local state when popover opens
+  React.useEffect(() => {
+    if (open) {
+      setLocalRange(value)
+      setCalendarKey((k) => k + 1)
+    }
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatDateRange = (range: DateRange | undefined) => {
     if (!range?.from) return placeholder
@@ -100,8 +110,24 @@ export function DateRangePicker({
     return format(range.from, "dd/MM/yyyy", { locale: ptBR })
   }
 
+  // Manual range selection: click 1 = from, click 2 = to, click 3 = new from, etc.
+  const handleDayClick = (date: Date) => {
+    if (!localRange?.from || (localRange.from && localRange.to)) {
+      // No range or complete range → start new selection
+      setLocalRange({ from: date, to: undefined })
+    } else {
+      // Have from but no to → complete the range (ensure from < to)
+      if (date < localRange.from) {
+        setLocalRange({ from: date, to: localRange.from })
+      } else {
+        setLocalRange({ from: localRange.from, to: date })
+      }
+    }
+  }
+
   const handlePresetClick = (preset: typeof presets[number]) => {
     const range = preset.getValue()
+    setLocalRange(range)
     onChange(range)
     setOpen(false)
   }
@@ -145,32 +171,47 @@ export function DateRangePicker({
           {/* Calendário - compacto */}
           <div className="p-1.5">
             <Calendar
+              key={calendarKey}
               mode="range"
-              selected={value}
-              onSelect={onChange}
+              selected={localRange}
+              onSelect={() => {}}
+              onDayClick={handleDayClick}
               numberOfMonths={2}
               locale={ptBR}
-              defaultMonth={value?.from || new Date()}
+              defaultMonth={localRange?.from || new Date()}
               className="[--cell-size:1.75rem]"
             />
-            <div className="flex justify-end gap-2 pt-1.5 border-t border-slate-100 mt-1.5">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => {
-                  onChange(undefined)
-                }}
-              >
-                Limpar
-              </Button>
-              <Button
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => setOpen(false)}
-              >
-                Aplicar
-              </Button>
+            <div className="flex items-center justify-between pt-1.5 border-t border-slate-100 mt-1.5">
+              <p className="text-[10px] text-slate-400 pl-1">
+                {localRange?.from && !localRange?.to
+                  ? "Selecione a data final"
+                  : localRange?.from && localRange?.to
+                    ? "Clique em Aplicar para confirmar"
+                    : "Selecione a data inicial"}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    setLocalRange(undefined)
+                    onChange(undefined)
+                  }}
+                >
+                  Limpar
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    onChange(localRange)
+                    setOpen(false)
+                  }}
+                >
+                  Aplicar
+                </Button>
+              </div>
             </div>
           </div>
         </div>

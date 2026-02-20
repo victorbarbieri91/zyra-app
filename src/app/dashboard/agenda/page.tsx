@@ -147,7 +147,7 @@ export default function AgendaPage() {
     },
     status: {
       agendado: true,
-      realizado: false,
+      realizado: true,
       cancelado: false,
     },
     responsaveis: [] as string[],
@@ -241,6 +241,14 @@ export default function AgendaPage() {
           const isPrazo = item.subtipo === 'prazo_processual'
           if (isPrazo && !filters.tipos.prazo) return false
           if (!isPrazo && !filters.tipos.compromisso) return false
+        }
+
+        // Filtro de status (quando não há filtro de URL ativo)
+        if (!urlFiltroAtivo) {
+          const itemStatus = item.status || 'agendado'
+          const isCompleted = ['concluida', 'concluido', 'realizada', 'realizado'].includes(itemStatus)
+          if (isCompleted && !filters.status.realizado) return false
+          if (!isCompleted && !filters.status.agendado) return false
         }
 
         // Filtro de URL: prazos vencidos ou prazos de hoje

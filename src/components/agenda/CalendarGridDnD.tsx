@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, Move, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -18,6 +18,8 @@ import {
   subMonths,
   startOfWeek,
   endOfWeek,
+  addWeeks,
+  subWeeks,
   isWeekend,
   isBefore,
   startOfDay,
@@ -131,6 +133,7 @@ function DroppableDay({
   isTodayDate,
   isFeriadoDay,
   isWeekendDay,
+  isWeekView,
   children,
   onDateSelect
 }: {
@@ -140,6 +143,7 @@ function DroppableDay({
   isTodayDate: boolean
   isFeriadoDay: boolean
   isWeekendDay: boolean
+  isWeekView?: boolean
   children: React.ReactNode
   onDateSelect?: () => void
 }) {
@@ -153,8 +157,9 @@ function DroppableDay({
       ref={setNodeRef}
       onClick={onDateSelect}
       className={cn(
-        'min-h-[140px] p-2 rounded-lg border transition-all cursor-pointer group',
+        'p-2 rounded-lg border transition-all cursor-pointer group overflow-y-auto',
         'hover:border-[#89bcbe] hover:shadow-sm',
+        !isWeekView && 'min-h-[110px]',
         !isCurrentMonth && 'bg-slate-50/50',
         isCurrentMonth && 'bg-white',
         isSelected && 'border-[#89bcbe] bg-[#f0f9f9]/30',
@@ -181,8 +186,20 @@ export default function CalendarGridDnD({
   onFiltersChange,
   className,
 }: CalendarGridDnDProps) {
-  const [currentMonth, setCurrentMonth] = useState(selectedDate || new Date())
+  const [currentDate, setCurrentDate] = useState(selectedDate || new Date())
+  const [calendarView, setCalendarView] = useState<'month' | 'week'>('month')
+  const [isTransitioning, setIsTransitioning] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
+
+  // Transição suave entre mês e semana
+  const switchView = useCallback((newView: 'month' | 'week') => {
+    if (newView === calendarView) return
+    setIsTransitioning(true)
+    setTimeout(() => {
+      setCalendarView(newView)
+      setTimeout(() => setIsTransitioning(false), 50)
+    }, 200)
+  }, [calendarView])
   const [pendingMove, setPendingMove] = useState<{
     eventId: string
     eventData: EventCardProps
@@ -210,18 +227,46 @@ export default function CalendarGridDnD({
     useSensor(KeyboardSensor)
   )
 
-  const monthStart = startOfMonth(currentMonth)
-  const monthEnd = endOfMonth(currentMonth)
-  const startDate = startOfWeek(monthStart, { locale: ptBR })
-  const endDate = endOfWeek(monthEnd, { locale: ptBR })
+  // === Cálculo de dias (mês e semana) ===
+  const monthStart = startOfMonth(currentDate)
+  const monthEnd = endOfMonth(currentDate)
+  const monthGridStart = startOfWeek(monthStart, { locale: ptBR })
+  const monthGridEnd = endOfWeek(monthEnd, { locale: ptBR })
+  const monthDays = eachDayOfInterval({ start: monthGridStart, end: monthGridEnd })
 
-  const days = eachDayOfInterval({ start: startDate, end: endDate })
+  const weekStart = startOfWeek(currentDate, { locale: ptBR })
+  const weekEnd = endOfWeek(currentDate, { locale: ptBR })
+  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd })
 
-  const previousMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
-  const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
-  const goToToday = () => setCurrentMonth(new Date())
+  const days = calendarView === 'month' ? monthDays : weekDays
+  const isWeekView = calendarView === 'week'
 
-  // Prioridade de exibição por tipo: audiência > prazo > tarefa > compromisso
+  // === Navegação ===
+  const navigateBack = () => {
+    if (calendarView === 'month') {
+      setCurrentDate(subMonths(currentDate, 1))
+    } else {
+      setCurrentDate(subWeeks(currentDate, 1))
+    }
+  }
+
+  const navigateForward = () => {
+    if (calendarView === 'month') {
+      setCurrentDate(addMonths(currentDate, 1))
+    } else {
+      setCurrentDate(addWeeks(currentDate, 1))
+    }
+  }
+
+  // === Título dinâmico ===
+  const headerTitle = calendarView === 'month'
+    ? format(currentDate, 'MMMM yyyy', { locale: ptBR })
+    : `${format(weekStart, 'd', { locale: ptBR })} - ${format(weekEnd, "d 'de' MMM yyyy", { locale: ptBR })}`
+
+  // Máximo de eventos visíveis por cell
+  const maxVisibleEvents = isWeekView ? 15 : 3
+
+  // Prioridade de exibição por tipo: audiência > compromisso > prazo > tarefa
   const tipoPrioridade: Record<string, number> = {
     audiencia: 0,
     compromisso: 1,
@@ -240,20 +285,18 @@ export default function CalendarGridDnD({
     ['concluida', 'concluido', 'realizada', 'realizado'].includes(evento.status || '')
 
   // Helper para verificar urgência do prazo fatal
-  // Apenas tarefas e prazos têm prazo_data_limite (audiências e compromissos não)
   const getUrgenciaPrazoFatal = (evento: EventCardProps): number => {
-    // Só considerar prazo fatal para tarefas e prazos
     if (evento.tipo !== 'tarefa' && evento.tipo !== 'prazo') return 99
-    if (!evento.prazo_data_limite) return 99 // Sem prazo fatal = sem urgência
+    if (!evento.prazo_data_limite) return 99
 
     const prazoDate = evento.prazo_data_limite instanceof Date
       ? evento.prazo_data_limite
       : new Date(evento.prazo_data_limite.toString().split('T')[0].replace(/-/g, '/'))
     const hoje = startOfDay(new Date())
 
-    if (isBefore(prazoDate, hoje)) return 0 // Vencido - máxima prioridade
-    if (isToday(prazoDate)) return 1 // Hoje - alta prioridade
-    return 99 // Futuro - prioridade normal
+    if (isBefore(prazoDate, hoje)) return 0
+    if (isToday(prazoDate)) return 1
+    return 99
   }
 
   const getEventosForDay = (day: Date) => {
@@ -320,7 +363,6 @@ export default function CalendarGridDnD({
           const novaDataSemHora = startOfDay(dropData.date)
           const prazoFatalSemHora = startOfDay(prazoFatal)
 
-          // Se nova data ultrapassa prazo fatal, mostrar aviso
           if (isAfter(novaDataSemHora, prazoFatalSemHora)) {
             const dataInicioAtual = eventData.data_inicio instanceof Date
               ? eventData.data_inicio
@@ -341,7 +383,6 @@ export default function CalendarGridDnD({
           }
         }
 
-        // Armazenar dados do movimento pendente e abrir modal de confirmação normal
         setPendingMove({
           eventId: active.id as string,
           eventData: eventData,
@@ -357,7 +398,6 @@ export default function CalendarGridDnD({
     try {
       let finalDate = pendingMove.newDate
 
-      // Se foi fornecido novo horário, ajustar a data
       if (newTime) {
         const [hours, minutes] = newTime.split(':').map(Number)
         finalDate = new Date(pendingMove.newDate)
@@ -374,12 +414,10 @@ export default function CalendarGridDnD({
     }
   }
 
-  // Handler para confirmar movimento com prazo fatal
   const handleConfirmMoveWithPrazo = async () => {
     if (!pendingMoveWithPrazo || !onEventMoveWithPrazoFatal || !novoPrazoFatalSelecionado) return
 
     try {
-      // Pegar o horário original
       const originalDate = pendingMoveWithPrazo.eventData.data_inicio instanceof Date
         ? pendingMoveWithPrazo.eventData.data_inicio
         : new Date(pendingMoveWithPrazo.eventData.data_inicio)
@@ -389,7 +427,6 @@ export default function CalendarGridDnD({
       finalDate.setMinutes(originalDate.getMinutes())
       finalDate.setSeconds(originalDate.getSeconds())
 
-      // Mover ambos: data de execução e prazo fatal selecionado
       await onEventMoveWithPrazoFatal(pendingMoveWithPrazo.eventId, finalDate, novoPrazoFatalSelecionado)
       toast.success('Tarefa e prazo fatal reagendados!')
 
@@ -419,13 +456,13 @@ export default function CalendarGridDnD({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-semibold text-[#34495e] capitalize">
-              {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
+              {headerTitle}
             </h2>
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={previousMonth}
+                onClick={navigateBack}
                 className="h-8 w-8 p-0 border-slate-200"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -433,33 +470,52 @@ export default function CalendarGridDnD({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={nextMonth}
+                onClick={navigateForward}
                 className="h-8 w-8 p-0 border-slate-200"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
+
+            {/* Toggle Mês / Semana */}
+            <div className="relative flex items-center bg-slate-100 rounded-full p-0.5 h-8">
+              <div
+                className={cn(
+                  'absolute top-0.5 h-7 rounded-full bg-white shadow-sm transition-all duration-300 ease-in-out',
+                  calendarView === 'month'
+                    ? 'left-0.5 w-[48px]'
+                    : 'left-[50px] w-[64px]'
+                )}
+              />
+              <button
+                onClick={() => switchView('month')}
+                className={cn(
+                  'relative z-10 w-[48px] py-1 text-xs font-medium rounded-full transition-colors duration-200 text-center',
+                  calendarView === 'month' ? 'text-[#34495e]' : 'text-slate-400 hover:text-slate-600'
+                )}
+              >
+                Mês
+              </button>
+              <button
+                onClick={() => switchView('week')}
+                className={cn(
+                  'relative z-10 w-[64px] py-1 text-xs font-medium rounded-full transition-colors duration-200 text-center',
+                  calendarView === 'week' ? 'text-[#34495e]' : 'text-slate-400 hover:text-slate-600'
+                )}
+              >
+                Semana
+              </button>
+            </div>
           </div>
 
+          {/* Filtros */}
           <div className="flex items-center gap-3">
-            {/* Filtros */}
             {filters && onFiltersChange && (
               <AgendaFiltersCompact
                 filters={filters}
                 onFiltersChange={onFiltersChange}
-                responsaveisDisponiveis={[]}
               />
             )}
-
-            {/* Botão Hoje */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={goToToday}
-              className="text-xs border-slate-200 hover:border-[#89bcbe] hover:bg-[#f0f9f9]"
-            >
-              Hoje
-            </Button>
           </div>
         </div>
 
@@ -468,20 +524,40 @@ export default function CalendarGridDnD({
           <div className="p-4">
             {/* Cabeçalho - Dias da Semana */}
             <div className="grid grid-cols-7 gap-2 mb-2">
-              {['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map((day) => (
-                <div
-                  key={day}
-                  className="text-center text-xs font-semibold text-[#46627f] py-2"
-                >
-                  {day}
-                </div>
-              ))}
+              {isWeekView
+                ? weekDays.map((day) => (
+                    <div key={day.toISOString()} className="text-center py-2">
+                      <div className="text-[10px] font-medium text-[#46627f] uppercase">
+                        {format(day, 'EEE', { locale: ptBR })}
+                      </div>
+                      <div className={cn(
+                        'text-sm font-semibold mt-0.5',
+                        isToday(day) ? 'text-[#89bcbe]' : 'text-[#34495e]'
+                      )}>
+                        {format(day, 'd')}
+                      </div>
+                    </div>
+                  ))
+                : ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map((day) => (
+                    <div
+                      key={day}
+                      className="text-center text-xs font-semibold text-[#46627f] py-2"
+                    >
+                      {day}
+                    </div>
+                  ))
+              }
             </div>
 
             {/* Grid de Dias */}
-            <div className="grid grid-cols-7 gap-2">
+            <div className={cn(
+              'grid grid-cols-7 gap-2 min-h-[700px]',
+              'transition-[opacity,transform] duration-300 ease-in-out',
+              isWeekView && 'grid-rows-1',
+              isTransitioning ? 'opacity-0 scale-[0.98]' : 'opacity-100 scale-100'
+            )}>
               {days.map((day, i) => {
-                const isCurrentMonth = isSameMonth(day, currentMonth)
+                const isCurrentMonth = isWeekView ? true : isSameMonth(day, currentDate)
                 const isSelected = selectedDate && isSameDay(day, selectedDate)
                 const isTodayDate = isToday(day)
                 const eventosDay = getEventosForDay(day)
@@ -491,13 +567,14 @@ export default function CalendarGridDnD({
 
                 return (
                   <DroppableDay
-                    key={i}
+                    key={format(day, 'yyyy-MM-dd')}
                     day={day}
                     isCurrentMonth={isCurrentMonth}
                     isSelected={!!isSelected}
                     isTodayDate={isTodayDate}
                     isFeriadoDay={isFeriadoDay}
                     isWeekendDay={isWeekendDay}
+                    isWeekView={isWeekView}
                     onDateSelect={() => onDateSelect?.(day)}
                   >
                     {/* Cabeçalho do Dia */}
@@ -516,7 +593,7 @@ export default function CalendarGridDnD({
                             {format(day, 'd')}
                           </span>
                         )}
-                        {!isTodayDate && format(day, 'd')}
+                        {!isTodayDate && !isWeekView && format(day, 'd')}
                       </span>
 
                       {/* Indicador de quantidade de eventos */}
@@ -529,14 +606,14 @@ export default function CalendarGridDnD({
 
                     {/* Lista de eventos do dia com drag and drop */}
                     <div className="space-y-1">
-                      {eventosDay.slice(0, 3).map((evento) => (
+                      {eventosDay.slice(0, maxVisibleEvents).map((evento) => (
                         <DraggableEvent
                           key={evento.id}
                           evento={evento}
                           onClick={() => onEventClick?.(evento)}
                         />
                       ))}
-                      {eventosDay.length > 3 && (
+                      {eventosDay.length > maxVisibleEvents && (
                         <div className="text-center py-0.5">
                           <span
                             className="text-[10px] font-medium text-[#89bcbe] hover:text-[#6ba9ab] cursor-pointer"
@@ -545,7 +622,7 @@ export default function CalendarGridDnD({
                               onDateSelect?.(day)
                             }}
                           >
-                            +{eventosDay.length - 3} mais
+                            +{eventosDay.length - maxVisibleEvents} mais
                           </span>
                         </div>
                       )}
@@ -696,7 +773,6 @@ export default function CalendarGridDnD({
             {/* Footer com opções */}
             <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
               <div className="flex items-center gap-2">
-                {/* Confirmar */}
                 <Button
                   onClick={handleConfirmMoveWithPrazo}
                   className="flex-1 h-9 text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -704,8 +780,6 @@ export default function CalendarGridDnD({
                 >
                   Confirmar e Reagendar
                 </Button>
-
-                {/* Cancelar */}
                 <Button
                   variant="outline"
                   onClick={() => {

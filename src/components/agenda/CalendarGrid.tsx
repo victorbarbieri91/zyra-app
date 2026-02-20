@@ -84,21 +84,44 @@ export default function CalendarGrid({
     return 99 // Futuro - prioridade normal
   }
 
+  // Status que indicam item concluído
+  const completedStatuses = ['concluida', 'concluido', 'realizada', 'realizado']
+
+  // Prioridade de tarefas (alta > media > baixa)
+  const tarefaPrioridade: Record<string, number> = {
+    alta: 0,
+    media: 1,
+    baixa: 2,
+  }
+
   const getEventosForDay = (day: Date) => {
     return eventos
       .filter((evento) => isSameDay(parseDBDate(evento.data_inicio), day))
       .sort((a, b) => {
-        // Primeiro: ordenar por urgência do prazo fatal (vencido/hoje primeiro)
+        // Prioridade 0: Concluídos SEMPRE por último
+        const aCompleted = completedStatuses.includes(a.status || '')
+        const bCompleted = completedStatuses.includes(b.status || '')
+        if (aCompleted && !bCompleted) return 1
+        if (!aCompleted && bCompleted) return -1
+
+        // Prioridade 1: Urgência do prazo fatal (vencido/hoje primeiro)
         const urgenciaA = getUrgenciaPrazoFatal(a)
         const urgenciaB = getUrgenciaPrazoFatal(b)
         if (urgenciaA !== urgenciaB) return urgenciaA - urgenciaB
 
-        // Segundo: ordenar por tipo (audiência primeiro)
+        // Prioridade 2: Tipo (audiência > prazo > tarefa > compromisso)
         const prioridadeA = tipoPrioridade[a.tipo] ?? 99
         const prioridadeB = tipoPrioridade[b.tipo] ?? 99
         if (prioridadeA !== prioridadeB) return prioridadeA - prioridadeB
 
-        // Terceiro: ordenar por horário
+        // Prioridade 3: Para tarefas, ordenar por prioridade (alta > media > baixa)
+        if (a.tipo === 'tarefa' && b.tipo === 'tarefa') {
+          const prioTarefaA = tarefaPrioridade[a.prioridade || ''] ?? 99
+          const prioTarefaB = tarefaPrioridade[b.prioridade || ''] ?? 99
+          if (prioTarefaA !== prioTarefaB) return prioTarefaA - prioTarefaB
+        }
+
+        // Prioridade 4: Horário
         const dataA = parseDBDate(a.data_inicio)
         const dataB = parseDBDate(b.data_inicio)
         return dataA.getTime() - dataB.getTime()

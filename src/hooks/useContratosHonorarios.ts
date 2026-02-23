@@ -338,6 +338,12 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
         let configurado = false
         let formasConfiguradas: FormaCobranca[] = []
 
+        // Pro-bono é sempre considerado configurado (não precisa de valores)
+        if (formasDisponiveis.includes('pro_bono')) {
+          configurado = true
+          formasConfiguradas.push('pro_bono')
+        }
+
         if (configData && Object.keys(configData).length > 0) {
           // Verificar todas as formas configuradas, não só a principal
           const formasParaVerificar = formasDisponiveis.length > 0
@@ -364,6 +370,8 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
                   !!configData.valor_hora ||
                   !!configData.percentual_exito ||
                   (!!configData.etapas_valores && Object.keys(configData.etapas_valores as object).length > 0)
+              case 'pro_bono':
+                return true
               default:
                 return false
             }
@@ -745,7 +753,10 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
 
         // Atualizar contrato com config, formas e grupo JSONB
         const jsonbUpdateData: Record<string, unknown> = {}
-        if (Object.keys(configJsonb).length > 0) {
+        // Se pro_bono é a única forma, limpar config antiga (não precisa de valores)
+        if (formas.length === 1 && formas[0] === 'pro_bono') {
+          jsonbUpdateData.config = {}
+        } else if (Object.keys(configJsonb).length > 0) {
           jsonbUpdateData.config = configJsonb
         }
         if (formasPagamentoJsonb.length > 0) {

@@ -52,6 +52,7 @@ import {
   BarChart3,
   PieChart,
   Activity,
+  Heart,
   Loader2,
   Power,
   PowerOff,
@@ -108,6 +109,11 @@ const getTipoBadge = (forma: ContratoHonorario['forma_cobranca']) => {
       label: 'Misto',
       class: 'bg-amber-100 text-amber-700',
       icon: <PieChart className="w-3 h-3" />,
+    },
+    pro_bono: {
+      label: 'Pró-Bono',
+      class: 'bg-pink-100 text-pink-700',
+      icon: <Heart className="w-3 h-3" />,
     },
   }
   return badges[forma] || badges.fixo

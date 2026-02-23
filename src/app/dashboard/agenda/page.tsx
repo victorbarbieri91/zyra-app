@@ -199,8 +199,8 @@ export default function AgendaPage() {
   // Hooks - usar agenda consolidada e hooks específicos
   const { items: agendaItems, loading, refreshItems } = useAgendaConsolidada(escritorioId || undefined, agendaFilters)
   const { tarefas, createTarefa, updateTarefa, concluirTarefa, reabrirTarefa, refreshTarefas } = useTarefas(escritorioId || undefined)
-  const { audiencias, createAudiencia, updateAudiencia } = useAudiencias(escritorioId || undefined)
-  const { eventos, createEvento, updateEvento } = useEventos(escritorioId || undefined)
+  const { audiencias, createAudiencia, updateAudiencia, refreshAudiencias } = useAudiencias(escritorioId || undefined)
+  const { eventos, createEvento, updateEvento, refreshEventos } = useEventos(escritorioId || undefined)
   const { materializarInstancia, excluirOcorrencia, deactivateRecorrencia } = useRecorrencias(escritorioId || undefined)
 
   /**
@@ -571,9 +571,66 @@ export default function AgendaPage() {
   // timerData é passado pelo Kanban quando há timer ativo, para pré-preencher o modal
   const handleCompleteTask = async (
     taskId: string,
-    timerData?: { timerId: string; defaultHoras?: number; defaultMinutos?: number; defaultAtividade: string }
+    timerData?: { timerId: string; defaultHoras?: number; defaultMinutos?: number; defaultAtividade: string; entityType?: 'tarefa' | 'evento' | 'audiencia' }
   ) => {
     try {
+      const entityType = timerData?.entityType || 'tarefa'
+
+      // Para eventos/audiências vindos do Kanban drag
+      if (entityType === 'evento' || entityType === 'audiencia') {
+        // Buscar dados do evento/audiência para obter processo_id/consultivo_id
+        let processoId: string | undefined
+        let consultivoId: string | undefined
+        let titulo = timerData?.defaultAtividade || ''
+
+        if (entityType === 'evento') {
+          const evento = eventos.find(e => e.id === taskId)
+          processoId = evento?.processo_id || undefined
+          consultivoId = evento?.consultivo_id || undefined
+          titulo = evento?.titulo || titulo
+        } else {
+          const audiencia = audiencias.find(a => a.id === taskId)
+          processoId = audiencia?.processo_id || undefined
+          consultivoId = audiencia?.consultivo_id || undefined
+          titulo = audiencia?.titulo || titulo
+        }
+
+        if (processoId || consultivoId) {
+          // Abrir modal de horas ANTES de concluir
+          setModoLancamentoAvulso(false)
+          setTarefaParaConcluir({
+            id: taskId,
+            processo_id: processoId,
+            consultivo_id: consultivoId,
+            titulo,
+          } as Tarefa)
+          setTipoEntidadeLancamento(entityType)
+          setHorasRegistradasComSucesso(false)
+          horasRegistradasRef.current = false
+          setTimerDataParaConcluir(timerData || { timerId: '', defaultAtividade: titulo })
+          setTimesheetModalOpen(true)
+        } else {
+          // Sem vínculo — descartar timer e concluir direto
+          if (timerData?.timerId) {
+            try { await descartarTimer(timerData.timerId) } catch {}
+          }
+          const { createClient: createSb } = await import('@/lib/supabase/client')
+          const sb = createSb()
+          if (entityType === 'evento') {
+            await sb.from('agenda_eventos').update({ status: 'realizado' }).eq('id', taskId)
+            await refreshEventos()
+            toast.success('Compromisso marcado como realizado!')
+          } else {
+            await sb.from('agenda_audiencias').update({ status: 'realizada' }).eq('id', taskId)
+            await refreshAudiencias()
+            toast.success('Audiência marcada como realizada!')
+          }
+          await refreshItems()
+        }
+        return
+      }
+
+      // Lógica original para tarefas
       // Materializar se for instância virtual de recorrência
       const realId = await materializarSeVirtual(taskId)
       // Se foi materializado, usar o ID real daqui em diante
@@ -616,7 +673,7 @@ export default function AgendaPage() {
         // Se tem processo ou consultivo vinculado, abrir modal de horas ANTES de concluir
         setModoLancamentoAvulso(false) // Modo conclusão - vai concluir após registrar horas
         setTarefaParaConcluir({ ...tarefa, id: effectiveId } as Tarefa)
-        setTipoEntidadeLancamento('tarefa') // Conclusão é sempre de tarefa
+        setTipoEntidadeLancamento('tarefa')
         setHorasRegistradasComSucesso(false)
         horasRegistradasRef.current = false
         // Armazenar dados do timer para pré-preencher o modal
@@ -633,8 +690,8 @@ export default function AgendaPage() {
         toast.success('Tarefa concluída com sucesso!')
       }
     } catch (error) {
-      console.error('Erro ao alterar status da tarefa:', error)
-      toast.error('Erro ao alterar status da tarefa')
+      console.error('Erro ao alterar status:', error)
+      toast.error('Erro ao alterar status')
     }
   }
 
@@ -661,12 +718,26 @@ export default function AgendaPage() {
         if (timerDataParaConcluir?.timerId) {
           await descartarTimer(timerDataParaConcluir.timerId)
         }
-        await concluirTarefa(tarefaParaConcluir.id)
+
+        // Concluir conforme tipo de entidade
+        const { createClient: createSb } = await import('@/lib/supabase/client')
+        const sb = createSb()
+        if (tipoEntidadeLancamento === 'evento') {
+          await sb.from('agenda_eventos').update({ status: 'realizado' }).eq('id', tarefaParaConcluir.id)
+          await refreshEventos()
+          toast.success('Compromisso concluído!')
+        } else if (tipoEntidadeLancamento === 'audiencia') {
+          await sb.from('agenda_audiencias').update({ status: 'realizada' }).eq('id', tarefaParaConcluir.id)
+          await refreshAudiencias()
+          toast.success('Audiência concluída!')
+        } else {
+          await concluirTarefa(tarefaParaConcluir.id)
+          toast.success('Tarefa concluída!')
+        }
         await refreshItems()
-        toast.success('Tarefa concluída!')
       } catch (error) {
-        console.error('Erro ao concluir tarefa após timesheet:', error)
-        toast.error('Horas registradas, mas erro ao concluir tarefa')
+        console.error('Erro ao concluir após timesheet:', error)
+        toast.error('Horas registradas, mas erro ao concluir')
       }
       setTarefaParaConcluir(null)
       setTimerDataParaConcluir(null)

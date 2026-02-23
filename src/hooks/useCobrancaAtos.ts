@@ -48,6 +48,12 @@ export interface AtoDisponivel {
   usou_minimo?: boolean; // true se o valor mínimo foi aplicado
   // Base de cálculo padrão (valor da causa)
   base_calculo_padrao?: number | null;
+  // Tracking de cobrança
+  jaCobrado?: boolean;
+  receitaId?: string;
+  receitaStatus?: string;
+  receitaValor?: number;
+  receitaCriadaEm?: string;
 }
 
 // =====================================================
@@ -323,6 +329,46 @@ export function useCobrancaAtos(escritorioId: string | null): UseCobrancaAtosRet
 
       const valorCausa = processo.valor_causa || 0;
 
+      // Buscar alertas já cobrados para este processo (atos já enviados ao financeiro)
+      const { data: alertasCobrados } = await supabase
+        .from('financeiro_alertas_cobranca')
+        .select('id, ato_tipo_id, receita_id, status, created_at')
+        .eq('processo_id', processoId)
+        .eq('escritorio_id', escritorioId)
+        .eq('status', 'cobrado');
+
+      // Verificar quais receitas vinculadas são válidas (não canceladas)
+      const receitaIds = (alertasCobrados || [])
+        .filter((a: { receita_id: string | null }) => a.receita_id)
+        .map((a: { receita_id: string | null }) => a.receita_id as string);
+
+      const receitasValidas = new Map<string, { id: string; status: string; valor: number; created_at: string }>();
+      if (receitaIds.length > 0) {
+        const { data: receitasData } = await supabase
+          .from('financeiro_receitas')
+          .select('id, status, valor, created_at')
+          .in('id', receitaIds)
+          .neq('status', 'cancelado');
+
+        (receitasData || []).forEach((r: { id: string; status: string; valor: number; created_at: string }) => {
+          receitasValidas.set(r.id, r);
+        });
+      }
+
+      // Montar mapa de ato_tipo_id → info da receita cobrada
+      const atosJaCobrados = new Map<string, { receitaId: string; receitaStatus: string; receitaValor: number; receitaCriadaEm: string }>();
+      (alertasCobrados || []).forEach((alerta: { ato_tipo_id: string | null; receita_id: string | null }) => {
+        if (alerta.ato_tipo_id && alerta.receita_id && receitasValidas.has(alerta.receita_id)) {
+          const recInfo = receitasValidas.get(alerta.receita_id)!;
+          atosJaCobrados.set(alerta.ato_tipo_id, {
+            receitaId: alerta.receita_id,
+            receitaStatus: recInfo.status,
+            receitaValor: recInfo.valor,
+            receitaCriadaEm: recInfo.created_at,
+          });
+        }
+      });
+
       // Mapear apenas atos que estão configurados no contrato
       // Lógica: valorCalculado = MAX(percentual × valor_causa, valor_minimo)
       // O valor_fixo no contrato é tratado como VALOR MÍNIMO, não valor fixo
@@ -344,6 +390,9 @@ export function useCobrancaAtos(escritorioId: string | null): UseCobrancaAtosRet
           valorCalculado = Math.max(valorPercentual, valorMinimo);
         }
 
+        // Verificar se este ato já foi cobrado
+        const cobradoInfo = atosJaCobrados.get(ato.id);
+
         return {
           id: ato.id,
           codigo: ato.codigo,
@@ -359,6 +408,12 @@ export function useCobrancaAtos(escritorioId: string | null): UseCobrancaAtosRet
           usou_minimo: valorMinimo > 0 && valorPercentual < valorMinimo, // Indica se aplicou o mínimo
           // Base de cálculo padrão (valor da causa do processo)
           base_calculo_padrao: valorCausa > 0 ? valorCausa : null,
+          // Tracking de cobrança
+          jaCobrado: !!cobradoInfo,
+          receitaId: cobradoInfo?.receitaId,
+          receitaStatus: cobradoInfo?.receitaStatus,
+          receitaValor: cobradoInfo?.receitaValor,
+          receitaCriadaEm: cobradoInfo?.receitaCriadaEm,
         };
       });
     } catch (err) {

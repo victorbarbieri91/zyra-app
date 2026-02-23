@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Play, AlertCircle, Clock, CheckSquare, Loader2 } from 'lucide-react';
+import { Play, AlertCircle, Clock, CheckSquare, Loader2, Gavel, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEscritorio } from '@/contexts/EscritorioContext';
 import { useTimer } from '@/contexts/TimerContext';
@@ -11,16 +11,18 @@ export function QuickStartPanel() {
   const { escritorioAtivo } = useEscritorio();
   const { iniciarTimer } = useTimer();
   const { tarefas, loading, error, refreshTarefas } = useTarefasDoDia(escritorioAtivo?.id || null);
-  const [loadingTarefaId, setLoadingTarefaId] = useState<string | null>(null);
+  const [loadingItemId, setLoadingItemId] = useState<string | null>(null);
 
-  const handleIniciarTimer = async (tarefa: TarefaDoDia) => {
-    setLoadingTarefaId(tarefa.id);
+  const handleIniciarTimer = async (item: TarefaDoDia) => {
+    setLoadingItemId(item.id);
     try {
       await iniciarTimer({
-        titulo: tarefa.titulo,
-        processo_id: tarefa.processo_id,
-        consulta_id: tarefa.consultivo_id,
-        tarefa_id: tarefa.id,
+        titulo: item.titulo,
+        processo_id: item.processo_id || undefined,
+        consulta_id: item.consultivo_id || undefined,
+        tarefa_id: item.tipo_entidade === 'tarefa' ? item.id : undefined,
+        evento_id: item.tipo_entidade === 'evento' ? item.id : undefined,
+        audiencia_id: item.tipo_entidade === 'audiencia' ? item.id : undefined,
         faturavel: true,
       });
       await refreshTarefas();
@@ -30,11 +32,31 @@ export function QuickStartPanel() {
       toast.error(errorMessage);
       console.error('Erro ao iniciar timer:', err);
     } finally {
-      setLoadingTarefaId(null);
+      setLoadingItemId(null);
     }
   };
 
-  // Indicador de prioridade (apenas bolinha colorida)
+  // Indicador por tipo de entidade
+  const getTipoIndicator = (item: TarefaDoDia) => {
+    switch (item.tipo_entidade) {
+      case 'audiencia':
+        return (
+          <span className="w-4 h-4 rounded flex items-center justify-center bg-emerald-100 flex-shrink-0" title="Audiência">
+            <Gavel className="w-2.5 h-2.5 text-emerald-600" />
+          </span>
+        );
+      case 'evento':
+        return (
+          <span className="w-4 h-4 rounded flex items-center justify-center bg-[#aacfd0]/30 flex-shrink-0" title="Compromisso">
+            <Video className="w-2.5 h-2.5 text-[#46627f]" />
+          </span>
+        );
+      default: // tarefa
+        return getPrioridadeIndicator(item.prioridade);
+    }
+  };
+
+  // Indicador de prioridade (apenas bolinha colorida) - para tarefas
   const getPrioridadeIndicator = (prioridade: string) => {
     switch (prioridade) {
       case 'alta':
@@ -44,6 +66,30 @@ export function QuickStartPanel() {
       default:
         return <span className="w-1.5 h-1.5 rounded-full bg-slate-300 flex-shrink-0" title="Baixa prioridade" />;
     }
+  };
+
+  // Subtítulo contextual do item
+  const getSubtitulo = (item: TarefaDoDia) => {
+    if (item.tipo_entidade === 'evento') {
+      return item.processo_id
+        ? item.numero_pasta || item.caso_titulo || 'Processo'
+        : item.consultivo_id
+        ? item.consultivo_titulo || 'Consulta'
+        : 'Sem vínculo';
+    }
+    if (item.tipo_entidade === 'audiencia') {
+      return item.processo_id
+        ? item.numero_pasta || item.caso_titulo || 'Processo'
+        : item.consultivo_id
+        ? item.consultivo_titulo || 'Consulta'
+        : 'Sem vínculo';
+    }
+    // tarefa
+    return item.processo_id
+      ? item.numero_pasta || item.caso_titulo || item.processo_numero || 'Processo'
+      : item.consultivo_id
+      ? item.consultivo_titulo || 'Consulta'
+      : 'Sem vínculo';
   };
 
   if (loading) {
@@ -74,7 +120,7 @@ export function QuickStartPanel() {
     return (
       <div className="p-4 text-center">
         <CheckSquare className="w-6 h-6 text-slate-300 mx-auto mb-1.5" />
-        <p className="text-xs text-slate-500">Nenhuma tarefa para hoje</p>
+        <p className="text-xs text-slate-500">Nenhum item para hoje</p>
         <p className="text-[10px] text-slate-400 mt-0.5">
           Use &quot;Novo Timer&quot; para iniciar
         </p>
@@ -85,38 +131,34 @@ export function QuickStartPanel() {
   return (
     <div className="p-2.5">
       <p className="text-[10px] text-slate-400 mb-2 px-0.5">
-        Suas tarefas do dia ({tarefas.length})
+        Seus itens do dia ({tarefas.length})
       </p>
 
       <div className="space-y-1">
-        {tarefas.map((tarefa) => (
+        {tarefas.map((item) => (
           <div
-            key={tarefa.id}
+            key={item.id}
             className={`group flex items-center gap-2 px-2 py-1.5 rounded transition-colors ${
-              tarefa.temTimerAtivo
+              item.temTimerAtivo
                 ? 'bg-slate-50 opacity-50'
                 : 'hover:bg-slate-50'
             }`}
           >
-            {/* Indicador de prioridade */}
-            {getPrioridadeIndicator(tarefa.prioridade)}
+            {/* Indicador de tipo */}
+            {getTipoIndicator(item)}
 
             {/* Conteúdo */}
             <div className="flex-1 min-w-0">
               <p className="text-xs text-[#34495e] truncate leading-tight">
-                {tarefa.titulo}
+                {item.titulo}
               </p>
               <p className="text-[10px] text-slate-400 truncate leading-tight">
-                {tarefa.processo_id
-                  ? tarefa.numero_pasta || tarefa.caso_titulo || tarefa.processo_numero || 'Processo'
-                  : tarefa.consultivo_id
-                  ? tarefa.consultivo_titulo || 'Consulta'
-                  : 'Sem vínculo'}
+                {getSubtitulo(item)}
               </p>
             </div>
 
             {/* Timer ativo badge */}
-            {tarefa.temTimerAtivo && (
+            {item.temTimerAtivo && (
               <span className="flex items-center gap-0.5 text-[9px] text-slate-400">
                 <Clock className="w-2.5 h-2.5" />
                 Ativo
@@ -125,22 +167,22 @@ export function QuickStartPanel() {
 
             {/* Botão de iniciar */}
             <button
-              onClick={() => handleIniciarTimer(tarefa)}
-              disabled={tarefa.temTimerAtivo || loadingTarefaId === tarefa.id || (!tarefa.processo_id && !tarefa.consultivo_id)}
+              onClick={() => handleIniciarTimer(item)}
+              disabled={item.temTimerAtivo || loadingItemId === item.id || (!item.processo_id && !item.consultivo_id)}
               className={`flex items-center justify-center w-6 h-6 rounded transition-all ${
-                tarefa.temTimerAtivo || (!tarefa.processo_id && !tarefa.consultivo_id)
+                item.temTimerAtivo || (!item.processo_id && !item.consultivo_id)
                   ? 'text-slate-300 cursor-not-allowed'
                   : 'text-slate-400 hover:text-[#34495e] hover:bg-slate-100'
               }`}
               title={
-                tarefa.temTimerAtivo
+                item.temTimerAtivo
                   ? 'Timer já ativo'
-                  : !tarefa.processo_id && !tarefa.consultivo_id
+                  : !item.processo_id && !item.consultivo_id
                   ? 'Sem vínculo'
                   : 'Iniciar timer'
               }
             >
-              {loadingTarefaId === tarefa.id ? (
+              {loadingItemId === item.id ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <Play className="w-3.5 h-3.5" />

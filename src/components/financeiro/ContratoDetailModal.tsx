@@ -33,6 +33,7 @@ import {
   ChevronDown,
   ChevronUp,
   RefreshCw,
+  Heart,
 } from 'lucide-react'
 import {
   Select,
@@ -92,6 +93,7 @@ const FORMA_LABELS: Record<string, { label: string; icon: React.ElementType }> =
   por_ato: { label: 'Por Ato', icon: Activity },
   por_etapa: { label: 'Por Etapa', icon: Target },
   misto: { label: 'Misto', icon: PieChart },
+  pro_bono: { label: 'Pró-Bono', icon: Heart },
 }
 
 const TIPO_SERVICO_LABELS: Record<string, string> = {

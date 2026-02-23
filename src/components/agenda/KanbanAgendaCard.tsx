@@ -1,5 +1,6 @@
 'use client'
 
+import { useDraggable } from '@dnd-kit/core'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArrowUpRight, Gavel, Video, MapPin } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -30,6 +31,7 @@ export interface AgendaCardItem {
 interface KanbanAgendaCardProps {
   item: AgendaCardItem
   onClick: () => void
+  draggable?: boolean
 }
 
 const tipoAudienciaShortLabels: Record<string, string> = {
@@ -41,7 +43,20 @@ const tipoAudienciaShortLabels: Record<string, string> = {
   outra: 'Outra',
 }
 
-export default function KanbanAgendaCard({ item, onClick }: KanbanAgendaCardProps) {
+export default function KanbanAgendaCard({ item, onClick, draggable = false }: KanbanAgendaCardProps) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: item.id,
+    data: {
+      tipo: item.tipo,
+      item: item,
+    },
+    disabled: !draggable,
+  })
+
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : undefined
+
   const isAudiencia = item.tipo === 'audiencia'
   const tipoLabel = isAudiencia
     ? (tipoAudienciaShortLabels[item.subtipo || ''] || 'Audiência')
@@ -49,11 +64,18 @@ export default function KanbanAgendaCard({ item, onClick }: KanbanAgendaCardProp
 
   return (
     <Card
+      ref={setNodeRef}
+      style={style}
+      {...(draggable ? attributes : {})}
+      {...(draggable ? listeners : {})}
       className={cn(
         'border transition-all shadow-sm hover:shadow-md cursor-pointer group',
+        draggable && 'cursor-grab active:cursor-grabbing',
+        isDragging && 'opacity-50 border-dashed shadow-2xl',
         isAudiencia
           ? 'border-emerald-200/60 hover:border-emerald-400 bg-emerald-50/20'
-          : 'border-[#89bcbe]/30 hover:border-[#89bcbe] bg-[#f0f9f9]/20'
+          : 'border-[#89bcbe]/30 hover:border-[#89bcbe] bg-[#f0f9f9]/20',
+        ['realizado', 'realizada'].includes(item.status) && 'opacity-50'
       )}
       onClick={onClick}
     >
@@ -69,11 +91,17 @@ export default function KanbanAgendaCard({ item, onClick }: KanbanAgendaCardProp
               : <Video className="w-2.5 h-2.5 text-[#46627f]" />
             }
           </div>
-          <h4 className="flex-1 text-xs font-semibold text-[#34495e] leading-snug line-clamp-2">
+          <h4
+            className={cn(
+              'flex-1 text-xs font-semibold text-[#34495e] leading-snug line-clamp-2',
+              ['realizado', 'realizada'].includes(item.status) && 'line-through opacity-60'
+            )}
+          >
             {item.titulo}
           </h4>
           <button
             onClick={(e) => { e.stopPropagation(); onClick() }}
+            onPointerDown={(e) => e.stopPropagation()}
             className={cn(
               'w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0',
               isAudiencia

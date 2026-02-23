@@ -21,6 +21,7 @@ import {
   Loader2,
   DollarSign,
   Check,
+  CheckCircle2,
   Pencil,
   Send,
   ChevronDown,
@@ -172,88 +173,118 @@ export default function ProcessoCobrancaFixaCard({
             {valoresComEstado.map(valor => (
               <div
                 key={valor.id}
-                className="p-3 bg-slate-50 rounded-lg border border-slate-200"
+                className={cn(
+                  "p-3 rounded-lg border",
+                  valor.jaCobrado
+                    ? "bg-slate-100/60 border-slate-200/80"
+                    : "bg-slate-50 border-slate-200"
+                )}
               >
                 {/* Cabeçalho do Valor */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-[#34495e] truncate">
+                    <p className={cn(
+                      "text-xs font-medium truncate",
+                      valor.jaCobrado ? "text-slate-500" : "text-[#34495e]"
+                    )}>
                       {valor.descricao}
                     </p>
 
                     {/* Info do Valor */}
                     <div className="mt-2 space-y-1">
-                      {valor.usandoValorEditado && (
+                      {!valor.jaCobrado && valor.usandoValorEditado && (
                         <p className="text-[10px] text-slate-400 line-through">
                           Valor original: {formatCurrency(valor.valor)}
                         </p>
                       )}
-                      <p className="text-sm font-semibold text-emerald-600">
-                        {formatCurrency(valor.valorFinal)}
+                      <p className={cn(
+                        "text-sm font-semibold",
+                        valor.jaCobrado ? "text-slate-500" : "text-emerald-600"
+                      )}>
+                        {formatCurrency(valor.jaCobrado ? (valor.receitaValor ?? valor.valorFinal) : valor.valorFinal)}
                       </p>
                     </div>
                   </div>
 
-                  {/* Botão Cobrar */}
-                  <Button
-                    size="sm"
-                    onClick={() => handleAbrirConfirmacao(valor)}
-                    className="h-8 px-3 bg-emerald-500 hover:bg-emerald-600 text-white shrink-0"
-                  >
-                    <Send className="w-3.5 h-3.5 mr-1.5" />
-                    Cobrar
-                  </Button>
+                  {valor.jaCobrado ? (
+                    /* Badge de Status */
+                    <div className={cn(
+                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[10px] font-medium shrink-0",
+                      valor.receitaStatus === 'pago'
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : valor.receitaStatus === 'faturado'
+                          ? "bg-blue-50 text-blue-700 border border-blue-200"
+                          : "bg-amber-50 text-amber-700 border border-amber-200"
+                    )}>
+                      <CheckCircle2 className="w-3 h-3" />
+                      {valor.receitaStatus === 'pago' ? 'Pago'
+                        : valor.receitaStatus === 'faturado' ? 'Faturado'
+                        : 'Enviado'}
+                    </div>
+                  ) : (
+                    /* Botão Cobrar */
+                    <Button
+                      size="sm"
+                      onClick={() => handleAbrirConfirmacao(valor)}
+                      className="h-8 px-3 bg-emerald-500 hover:bg-emerald-600 text-white shrink-0"
+                    >
+                      <Send className="w-3.5 h-3.5 mr-1.5" />
+                      Cobrar
+                    </Button>
+                  )}
                 </div>
 
-                {/* Opção de Editar Valor */}
-                <Collapsible
-                  open={valorExpandido === valor.id}
-                  onOpenChange={(open) => setValorExpandido(open ? valor.id : null)}
-                >
-                  <CollapsibleTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="mt-2 h-6 px-2 text-[10px] text-slate-500 hover:text-[#34495e] w-full justify-start"
-                    >
-                      <Pencil className="w-3 h-3 mr-1" />
-                      {valor.usandoValorEditado ? 'Valor alterado' : 'Alterar valor'}
-                      <ChevronDown className={cn(
-                        "w-3 h-3 ml-auto transition-transform",
-                        valorExpandido === valor.id && "rotate-180"
-                      )} />
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-2">
-                    <div className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Label className="text-[10px] text-slate-500 whitespace-nowrap">
-                          Novo valor:
-                        </Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={valor.valorEditado}
-                          onChange={e => handleAlterarValor(valor.id, e.target.value)}
-                          placeholder={formatCurrency(valor.valor)}
-                          className="h-7 text-xs flex-1"
-                        />
+                {/* Opção de Editar Valor - só mostra se NÃO foi cobrado */}
+                {!valor.jaCobrado && (
+                  <Collapsible
+                    open={valorExpandido === valor.id}
+                    onOpenChange={(open) => setValorExpandido(open ? valor.id : null)}
+                  >
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2 h-6 px-2 text-[10px] text-slate-500 hover:text-[#34495e] w-full justify-start"
+                      >
+                        <Pencil className="w-3 h-3 mr-1" />
+                        {valor.usandoValorEditado ? 'Valor alterado' : 'Alterar valor'}
+                        <ChevronDown className={cn(
+                          "w-3 h-3 ml-auto transition-transform",
+                          valorExpandido === valor.id && "rotate-180"
+                        )} />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-2">
+                      <div className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Label className="text-[10px] text-slate-500 whitespace-nowrap">
+                            Novo valor:
+                          </Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={valor.valorEditado}
+                            onChange={e => handleAlterarValor(valor.id, e.target.value)}
+                            placeholder={formatCurrency(valor.valor)}
+                            className="h-7 text-xs flex-1"
+                          />
+                        </div>
+                        {valor.usandoValorEditado && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => resetarValor(valor.id)}
+                            className="h-6 px-2 text-[10px] text-slate-500"
+                          >
+                            <X className="w-3 h-3 mr-1" />
+                            Usar valor original
+                          </Button>
+                        )}
                       </div>
-                      {valor.usandoValorEditado && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => resetarValor(valor.id)}
-                          className="h-6 px-2 text-[10px] text-slate-500"
-                        >
-                          <X className="w-3 h-3 mr-1" />
-                          Usar valor original
-                        </Button>
-                      )}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
               </div>
             ))}
           </div>

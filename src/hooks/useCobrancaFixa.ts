@@ -14,6 +14,12 @@ export interface ValorFixoDisponivel {
   atualizacao_monetaria?: boolean;
   indice?: string;
   valor_atualizado?: number;
+  // Tracking de cobrança
+  jaCobrado?: boolean;
+  receitaId?: string;
+  receitaStatus?: string;
+  receitaValor?: number;
+  receitaCriadaEm?: string;
 }
 
 export interface UseCobrancaFixaReturn {
@@ -129,26 +135,60 @@ export function useCobrancaFixa(escritorioId: string | null): UseCobrancaFixaRet
         }>;
       } | null;
 
+      // Buscar receitas já lançadas para este processo/consultivo + contrato
+      let queryReceitas = supabase
+        .from('financeiro_receitas')
+        .select('id, descricao, valor, status, created_at')
+        .eq('contrato_id', contratoId)
+        .eq('tipo', 'honorario')
+        .eq('categoria', 'honorarios')
+        .neq('status', 'cancelado');
+
+      if (processoId) {
+        queryReceitas = queryReceitas.eq('processo_id', processoId);
+      } else if (consultivoId) {
+        queryReceitas = queryReceitas.eq('consultivo_id', consultivoId);
+      }
+
+      const { data: receitasExistentes } = await queryReceitas;
+      const receitas = (receitasExistentes || []) as Array<{
+        id: string; descricao: string; valor: number; status: string; created_at: string;
+      }>;
+
       const valores: ValorFixoDisponivel[] = [];
 
       // Se tem array de valores_fixos
       if (configData?.valores_fixos && Array.isArray(configData.valores_fixos)) {
         configData.valores_fixos.forEach((item, index) => {
+          const descItem = item.descricao || 'Honorário Fixo';
+          const receitaMatch = receitas.find(r => r.descricao === descItem);
           valores.push({
             id: item.id || `fixo_${index}`,
-            descricao: item.descricao || 'Honorário Fixo',
+            descricao: descItem,
             valor: item.valor || 0,
             atualizacao_monetaria: item.atualizacao_monetaria,
             indice: item.atualizacao_indice,
+            jaCobrado: !!receitaMatch,
+            receitaId: receitaMatch?.id,
+            receitaStatus: receitaMatch?.status,
+            receitaValor: receitaMatch?.valor,
+            receitaCriadaEm: receitaMatch?.created_at,
           });
         });
       }
       // Se tem valor_fixo único
       else if (configData?.valor_fixo) {
+        const descItem = 'Honorário Fixo';
+        const receitaMatch = receitas.find(r => r.descricao === descItem);
         valores.push({
           id: 'default',
-          descricao: 'Honorário Fixo',
+          descricao: descItem,
           valor: configData.valor_fixo,
+          jaCobrado: !!receitaMatch,
+          receitaId: receitaMatch?.id,
+          receitaStatus: receitaMatch?.status,
+          receitaValor: receitaMatch?.valor,
+          receitaCriadaEm: receitaMatch?.created_at,
         });
       }
 

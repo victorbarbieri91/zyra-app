@@ -13,7 +13,7 @@ import { useEventos, Evento } from '@/hooks/useEventos'
 import { useAudiencias, Audiencia } from '@/hooks/useAudiencias'
 import KanbanColumn from './KanbanColumn'
 import KanbanTaskCard from './KanbanTaskCard'
-import { AgendaCardItem } from './KanbanAgendaCard'
+import KanbanAgendaCard, { AgendaCardItem } from './KanbanAgendaCard'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { createClient } from '@/lib/supabase/client'
@@ -42,11 +42,12 @@ interface CalendarKanbanViewProps {
   onClickEvento?: (evento: Evento) => void
   onClickAudiencia?: (audiencia: Audiencia) => void
   onCreateTarefa: (status: 'pendente' | 'em_andamento' | 'em_pausa' | 'concluida') => void
-  onTaskComplete?: (tarefaId: string, timerData?: {
+  onTaskComplete?: (entityId: string, timerData?: {
     timerId: string
     defaultHoras?: number
     defaultMinutos?: number
     defaultAtividade: string
+    entityType?: 'tarefa' | 'evento' | 'audiencia'
   }) => void
   className?: string
 }
@@ -65,9 +66,10 @@ export default function CalendarKanbanView({
 }: CalendarKanbanViewProps) {
   const supabase = createClient()
   const { tarefas: todasTarefas, refreshTarefas: refetchTarefas } = useTarefas(escritorioId)
-  const { eventos: todosEventos } = useEventos(escritorioId)
-  const { audiencias: todasAudiencias } = useAudiencias(escritorioId)
+  const { eventos: todosEventos, refreshEventos } = useEventos(escritorioId)
+  const { audiencias: todasAudiencias, refreshAudiencias } = useAudiencias(escritorioId)
   const [activeTarefa, setActiveTarefa] = useState<Tarefa | null>(null)
+  const [activeAgendaItem, setActiveAgendaItem] = useState<AgendaCardItem | null>(null)
   const [activeFilter, setActiveFilter] = useState<KanbanFilter>('todos')
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const [calendarOpen, setCalendarOpen] = useState(false)
@@ -82,12 +84,13 @@ export default function CalendarKanbanView({
     descartarTimer,
   } = useTimer()
 
-  // Estado para dialog de confirmação ao mover tarefa com timer ativo
+  // Estado para dialog de confirmação ao mover item com timer ativo
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
     tarefa: Tarefa | null
+    agendaItem: AgendaCardItem | null
     timerId: string | null
-  }>({ open: false, tarefa: null, timerId: null })
+  }>({ open: false, tarefa: null, agendaItem: null, timerId: null })
 
   const previousDay = () => { setDateRange(undefined); onDateSelect(subDays(selectedDate, 1)) }
   const nextDay = () => { setDateRange(undefined); onDateSelect(addDays(selectedDate, 1)) }
@@ -118,8 +121,22 @@ export default function CalendarKanbanView({
     return timersAtivos.find((t) => t.tarefa_id === tarefaId)
   }
 
+  const getTimerParaAgendaItem = (item: AgendaCardItem) => {
+    if (item.tipo === 'evento') {
+      return timersAtivos.find((t) => t.evento_id === item.id)
+    }
+    if (item.tipo === 'audiencia') {
+      return timersAtivos.find((t) => t.audiencia_id === item.id)
+    }
+    return undefined
+  }
+
   const tarefaTemVinculo = (tarefa: Tarefa) => {
     return tarefa.processo_id || tarefa.consultivo_id
+  }
+
+  const agendaItemTemVinculo = (item: AgendaCardItem) => {
+    return item.processo_id || item.consultivo_id
   }
 
   // Função para atualizar status da tarefa no banco
@@ -158,32 +175,64 @@ export default function CalendarKanbanView({
     }
   }
 
+  // Função para atualizar status de evento/audiência (só para concluir)
+  const concluirAgendaItem = async (item: AgendaCardItem) => {
+    try {
+      if (item.tipo === 'evento') {
+        const { error } = await supabase
+          .from('agenda_eventos')
+          .update({ status: 'realizado' })
+          .eq('id', item.id)
+        if (error) throw error
+        await refreshEventos()
+        toast.success('Compromisso marcado como realizado')
+      } else if (item.tipo === 'audiencia') {
+        const { error } = await supabase
+          .from('agenda_audiencias')
+          .update({ status: 'realizada' })
+          .eq('id', item.id)
+        if (error) throw error
+        await refreshAudiencias()
+        toast.success('Audiência marcada como realizada')
+      }
+    } catch (error) {
+      console.error('Erro ao concluir item:', error)
+      toast.error('Erro ao concluir item')
+    }
+  }
+
   // Handlers do dialog de confirmação
   const handlePausarEMover = async () => {
-    if (!confirmDialog.tarefa || !confirmDialog.timerId) return
+    if (!confirmDialog.timerId) return
     try {
       await pausarTimer(confirmDialog.timerId)
       toast.info('Timer pausado')
-      await atualizarStatusTarefa(confirmDialog.tarefa.id, 'pendente')
+      if (confirmDialog.tarefa) {
+        await atualizarStatusTarefa(confirmDialog.tarefa.id, 'pendente')
+      }
+      // Para agenda items, não precisa atualizar status no DB (virtual)
     } catch (error) {
       console.error('Erro ao pausar timer:', error)
       toast.error('Erro ao pausar timer')
     } finally {
-      setConfirmDialog({ open: false, tarefa: null, timerId: null })
+      setConfirmDialog({ open: false, tarefa: null, agendaItem: null, timerId: null })
     }
   }
 
   const handleDescartarEMover = async () => {
-    if (!confirmDialog.tarefa || !confirmDialog.timerId) return
+    if (!confirmDialog.timerId) return
     try {
       await descartarTimer(confirmDialog.timerId)
       toast.info('Timer descartado')
-      await atualizarStatusTarefa(confirmDialog.tarefa.id, 'pendente')
+      if (confirmDialog.tarefa) {
+        await atualizarStatusTarefa(confirmDialog.tarefa.id, 'pendente')
+      }
+      // Para agenda items, não precisa atualizar status no DB (virtual)
     } catch (error) {
       console.error('Erro ao descartar timer:', error)
       toast.error('Erro ao descartar timer')
     } finally {
-      setConfirmDialog({ open: false, tarefa: null, timerId: null })
+      setConfirmDialog({ open: false, tarefa: null, agendaItem: null, timerId: null })
     }
   }
 
@@ -315,8 +364,8 @@ export default function CalendarKanbanView({
     subtipo: audiencia.tipo_audiencia,
   })
 
-  // Items de agenda para cada coluna
-  const agendaPendente: AgendaCardItem[] = [
+  // Items de agenda base (todos os pendentes e concluídos)
+  const allAgendaPendente: AgendaCardItem[] = [
     ...eventosPendentes.map(mapEventoToCard),
     ...audienciasPendentes.map(mapAudienciaToCard),
   ]
@@ -325,6 +374,33 @@ export default function CalendarKanbanView({
     ...eventosRealizados.map(mapEventoToCard),
     ...audienciasRealizadas.map(mapAudienciaToCard),
   ]
+
+  // Computar agenda items por coluna baseado no estado do timer
+  const { agendaPendente, agendaEmAndamento, agendaEmPausa } = useMemo(() => {
+    const emAndamento: AgendaCardItem[] = []
+    const emPausa: AgendaCardItem[] = []
+    const pendentes: AgendaCardItem[] = []
+
+    for (const item of allAgendaPendente) {
+      const timer = timersAtivos.find(t =>
+        (item.tipo === 'evento' && t.evento_id === item.id) ||
+        (item.tipo === 'audiencia' && t.audiencia_id === item.id)
+      )
+      if (timer?.status === 'rodando') {
+        emAndamento.push(item)
+      } else if (timer?.status === 'pausado') {
+        emPausa.push(item)
+      } else {
+        pendentes.push(item)
+      }
+    }
+
+    return {
+      agendaPendente: pendentes,
+      agendaEmAndamento: emAndamento,
+      agendaEmPausa: emPausa,
+    }
+  }, [allAgendaPendente, timersAtivos])
 
   // Filtrar items por tipo selecionado
   const filterTarefas = (tarefas: Tarefa[]) => {
@@ -355,140 +431,254 @@ export default function CalendarKanbanView({
 
   // Handlers de Drag-and-Drop
   const handleDragStart = (event: DragStartEvent) => {
-    const tarefa = todasTarefas?.find((t) => t.id === event.active.id)
-    setActiveTarefa(tarefa || null)
+    const dragData = event.active.data.current
+
+    if (dragData?.tipo === 'tarefa') {
+      const tarefa = todasTarefas?.find((t) => t.id === event.active.id)
+      setActiveTarefa(tarefa || null)
+      setActiveAgendaItem(null)
+    } else if (dragData?.tipo === 'evento' || dragData?.tipo === 'audiencia') {
+      setActiveAgendaItem(dragData.item as AgendaCardItem)
+      setActiveTarefa(null)
+    }
   }
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
     setActiveTarefa(null)
+    setActiveAgendaItem(null)
 
     if (!over || active.id === over.id) return
 
-    const tarefaId = active.id as string
+    const dragData = active.data.current
     const novoStatus = over.id as string
-    const tarefa = todasTarefas?.find((t) => t.id === tarefaId)
 
-    // Validações
-    if (!tarefa || !['pendente', 'em_andamento', 'em_pausa', 'concluida'].includes(novoStatus)) {
-      return
-    }
-    if (tarefa.status === novoStatus) return // Não mudou
-
-    const timerExistente = getTimerParaTarefa(tarefa.id)
+    if (!['pendente', 'em_andamento', 'em_pausa', 'concluida'].includes(novoStatus)) return
 
     // ========================================
-    // LÓGICA DE TIMER BASEADA NA TRANSIÇÃO
+    // LÓGICA PARA TAREFAS (existente)
     // ========================================
+    if (dragData?.tipo === 'tarefa') {
+      const tarefaId = active.id as string
+      const tarefa = todasTarefas?.find((t) => t.id === tarefaId)
 
-    // CASO: Movendo para EM_PAUSA — Pausar timer automaticamente (sem dialog)
-    if (novoStatus === 'em_pausa') {
-      if (timerExistente && timerExistente.status === 'rodando') {
-        try {
-          await pausarTimer(timerExistente.id)
-          toast.info('Timer pausado automaticamente')
-        } catch (error) {
-          console.error('Erro ao pausar timer:', error)
-          toast.error('Erro ao pausar timer')
-        }
-      }
-      await atualizarStatusTarefa(tarefaId, 'em_pausa')
-      return
-    }
+      if (!tarefa) return
+      if (tarefa.status === novoStatus) return
 
-    // CASO 1: Movendo para EM_ANDAMENTO - Iniciar ou retomar timer automaticamente
-    if (novoStatus === 'em_andamento') {
-      if (!timerExistente) {
-        // Não tem timer - criar novo se tiver vínculo
-        if (tarefaTemVinculo(tarefa)) {
+      const timerExistente = getTimerParaTarefa(tarefa.id)
+
+      // CASO: Movendo para EM_PAUSA
+      if (novoStatus === 'em_pausa') {
+        if (timerExistente && timerExistente.status === 'rodando') {
           try {
-            await iniciarTimer({
-              titulo: tarefa.titulo,
-              descricao: `Trabalho na tarefa: ${tarefa.titulo}`,
-              processo_id: tarefa.processo_id || undefined,
-              consulta_id: tarefa.consultivo_id || undefined,
-              tarefa_id: tarefa.id,
-              faturavel: true,
-            })
-            toast.success('Timer iniciado automaticamente')
+            await pausarTimer(timerExistente.id)
+            toast.info('Timer pausado automaticamente')
           } catch (error) {
-            console.error('Erro ao iniciar timer:', error)
-            toast.error('Erro ao iniciar timer')
+            console.error('Erro ao pausar timer:', error)
+            toast.error('Erro ao pausar timer')
           }
-        } else {
-          // Tarefa sem vínculo - mostrar aviso informativo
-          toast.info('Tarefa movida (sem timer — vincule a um processo/consulta para habilitar)')
         }
-      } else if (timerExistente.status === 'pausado') {
-        // Timer existe mas está pausado - retomar automaticamente
-        try {
-          await retomarTimer(timerExistente.id)
-          toast.success('Timer retomado automaticamente')
-        } catch (error) {
-          console.error('Erro ao retomar timer:', error)
-          toast.error('Erro ao retomar timer')
+        await atualizarStatusTarefa(tarefaId, 'em_pausa')
+        return
+      }
+
+      // CASO 1: Movendo para EM_ANDAMENTO
+      if (novoStatus === 'em_andamento') {
+        if (!timerExistente) {
+          if (tarefaTemVinculo(tarefa)) {
+            try {
+              await iniciarTimer({
+                titulo: tarefa.titulo,
+                descricao: `Trabalho na tarefa: ${tarefa.titulo}`,
+                processo_id: tarefa.processo_id || undefined,
+                consulta_id: tarefa.consultivo_id || undefined,
+                tarefa_id: tarefa.id,
+                faturavel: true,
+              })
+              toast.success('Timer iniciado automaticamente')
+            } catch (error) {
+              console.error('Erro ao iniciar timer:', error)
+              toast.error('Erro ao iniciar timer')
+            }
+          } else {
+            toast.info('Tarefa movida (sem timer — vincule a um processo/consulta para habilitar)')
+          }
+        } else if (timerExistente.status === 'pausado') {
+          try {
+            await retomarTimer(timerExistente.id)
+            toast.success('Timer retomado automaticamente')
+          } catch (error) {
+            console.error('Erro ao retomar timer:', error)
+            toast.error('Erro ao retomar timer')
+          }
         }
       }
-      // Se timer existe e está rodando, não faz nada (já está ok)
+
+      // CASO 2: Movendo para CONCLUÍDA
+      if (novoStatus === 'concluida') {
+        if (tarefaTemVinculo(tarefa) && onTaskComplete) {
+          if (timerExistente) {
+            const segundos = timerExistente.tempo_atual
+            const horas = Math.floor(segundos / 3600)
+            const minutos = Math.floor((segundos % 3600) / 60)
+            onTaskComplete(tarefa.id, {
+              timerId: timerExistente.id,
+              defaultHoras: horas,
+              defaultMinutos: minutos,
+              defaultAtividade: tarefa.titulo,
+              entityType: 'tarefa',
+            })
+          } else {
+            onTaskComplete(tarefa.id, {
+              timerId: '',
+              defaultAtividade: tarefa.titulo,
+              entityType: 'tarefa',
+            })
+          }
+          return
+        } else if (timerExistente) {
+          try {
+            await finalizarTimer(timerExistente.id, {
+              descricao: `Tarefa concluída: ${tarefa.titulo}`,
+            })
+            toast.success('Timer finalizado e horas registradas')
+          } catch (error) {
+            console.error('Erro ao finalizar timer:', error)
+            toast.error('Erro ao finalizar timer')
+          }
+        }
+      }
+
+      // CASO 3: Movendo de EM_ANDAMENTO para PENDENTE com timer ativo
+      if (novoStatus === 'pendente' && tarefa.status === 'em_andamento' && timerExistente) {
+        setConfirmDialog({
+          open: true,
+          tarefa,
+          agendaItem: null,
+          timerId: timerExistente.id,
+        })
+        return
+      }
+
+      await atualizarStatusTarefa(tarefaId, novoStatus)
+      return
     }
 
-    // CASO 2: Movendo para CONCLUÍDA
-    if (novoStatus === 'concluida') {
-      // Se tem vínculo com processo/consultivo, sempre abrir modal para confirmar horas
-      if (tarefaTemVinculo(tarefa) && onTaskComplete) {
+    // ========================================
+    // LÓGICA PARA EVENTOS/AUDIÊNCIAS
+    // ========================================
+    if (dragData?.tipo === 'evento' || dragData?.tipo === 'audiencia') {
+      const item = dragData.item as AgendaCardItem
+      const timerExistente = getTimerParaAgendaItem(item)
+      const temVinculo = agendaItemTemVinculo(item)
+      const tipoLabel = item.tipo === 'audiencia' ? 'Audiência' : 'Compromisso'
+
+      // CASO: Movendo para EM_ANDAMENTO — Iniciar/retomar timer
+      if (novoStatus === 'em_andamento') {
+        if (!timerExistente) {
+          if (temVinculo) {
+            try {
+              await iniciarTimer({
+                titulo: item.titulo,
+                descricao: `Trabalho: ${item.titulo}`,
+                processo_id: item.processo_id || undefined,
+                consulta_id: item.consultivo_id || undefined,
+                evento_id: item.tipo === 'evento' ? item.id : undefined,
+                audiencia_id: item.tipo === 'audiencia' ? item.id : undefined,
+                faturavel: true,
+              })
+              toast.success('Timer iniciado automaticamente')
+            } catch (error) {
+              console.error('Erro ao iniciar timer:', error)
+              toast.error('Erro ao iniciar timer')
+            }
+          } else {
+            toast.info(`${tipoLabel} sem vínculo — vincule a um processo/consulta para habilitar timer`)
+          }
+        } else if (timerExistente.status === 'pausado') {
+          try {
+            await retomarTimer(timerExistente.id)
+            toast.success('Timer retomado automaticamente')
+          } catch (error) {
+            console.error('Erro ao retomar timer:', error)
+            toast.error('Erro ao retomar timer')
+          }
+        }
+        // Sem mudança de status no DB — a coluna é derivada do timer
+        return
+      }
+
+      // CASO: Movendo para EM_PAUSA — Pausar timer
+      if (novoStatus === 'em_pausa') {
+        if (timerExistente && timerExistente.status === 'rodando') {
+          try {
+            await pausarTimer(timerExistente.id)
+            toast.info('Timer pausado automaticamente')
+          } catch (error) {
+            console.error('Erro ao pausar timer:', error)
+            toast.error('Erro ao pausar timer')
+          }
+        }
+        return
+      }
+
+      // CASO: Movendo para PENDENTE — Pausar/descartar timer
+      if (novoStatus === 'pendente') {
         if (timerExistente) {
-          // Calcular tempo SEM finalizar (sem criar entry automática no timesheet)
-          // O timer será descartado após o usuário confirmar/cancelar no modal
-          const segundos = timerExistente.tempo_atual
-          const horas = Math.floor(segundos / 3600)
-          const minutos = Math.floor((segundos % 3600) / 60)
-          onTaskComplete(tarefa.id, {
+          setConfirmDialog({
+            open: true,
+            tarefa: null,
+            agendaItem: item,
             timerId: timerExistente.id,
-            defaultHoras: horas,
-            defaultMinutos: minutos,
-            defaultAtividade: tarefa.titulo,
           })
-        } else {
-          // Sem timer: pré-preencher só a descrição, horas ficam no default do modal
-          onTaskComplete(tarefa.id, {
-            timerId: '',
-            defaultAtividade: tarefa.titulo,
-          })
+          return
         }
-        return // Não atualiza status aqui, o callback externo vai fazer isso
-      } else if (timerExistente) {
-        // Tarefa sem vínculo mas com timer (raro) - apenas finalizar
-        try {
-          await finalizarTimer(timerExistente.id, {
-            descricao: `Tarefa concluída: ${tarefa.titulo}`,
-          })
-          toast.success('Timer finalizado e horas registradas')
-        } catch (error) {
-          console.error('Erro ao finalizar timer:', error)
-          toast.error('Erro ao finalizar timer')
+        // Sem timer = não faz nada (já está em pendente no DB)
+        return
+      }
+
+      // CASO: Movendo para CONCLUÍDA — Finalizar timer + atualizar status
+      if (novoStatus === 'concluida') {
+        if (temVinculo && onTaskComplete) {
+          if (timerExistente) {
+            const segundos = timerExistente.tempo_atual
+            const horas = Math.floor(segundos / 3600)
+            const minutos = Math.floor((segundos % 3600) / 60)
+            onTaskComplete(item.id, {
+              timerId: timerExistente.id,
+              defaultHoras: horas,
+              defaultMinutos: minutos,
+              defaultAtividade: item.titulo,
+              entityType: item.tipo,
+            })
+          } else {
+            onTaskComplete(item.id, {
+              timerId: '',
+              defaultAtividade: item.titulo,
+              entityType: item.tipo,
+            })
+          }
+          return // Parent vai atualizar status após o modal
+        } else if (timerExistente) {
+          try {
+            await finalizarTimer(timerExistente.id, {
+              descricao: `${tipoLabel} concluído: ${item.titulo}`,
+            })
+            toast.success('Timer finalizado e horas registradas')
+          } catch (error) {
+            console.error('Erro ao finalizar timer:', error)
+            toast.error('Erro ao finalizar timer')
+          }
         }
+
+        await concluirAgendaItem(item)
+        return
       }
     }
-
-    // CASO 3: Movendo de EM_ANDAMENTO para PENDENTE com timer ativo
-    if (novoStatus === 'pendente' && tarefa.status === 'em_andamento' && timerExistente) {
-      // Abrir dialog para decidir o que fazer com o timer
-      setConfirmDialog({
-        open: true,
-        tarefa,
-        timerId: timerExistente.id,
-      })
-      return // Aguardar decisão do usuário antes de mover
-    }
-
-    // ========================================
-    // ATUALIZAR STATUS DA TAREFA
-    // ========================================
-    await atualizarStatusTarefa(tarefaId, novoStatus)
   }
 
   const totalTarefas = pendente.length + em_andamento.length + em_pausa.length + concluida.length
-  const totalAgenda = agendaPendente.length + agendaConcluida.length
+  const totalAgenda = allAgendaPendente.length + agendaConcluida.length
   const totalItems = totalTarefas + totalAgenda
 
   const filterOptions: { key: KanbanFilter; label: string }[] = [
@@ -612,7 +802,7 @@ export default function CalendarKanbanView({
             icone={<PlayCircle className="w-3.5 h-3.5 text-[#89bcbe]" />}
             status="em_andamento"
             tarefas={filterTarefas(em_andamento)}
-            agendaItems={[]}
+            agendaItems={filterAgendaItems(agendaEmAndamento)}
             corBarra="bg-[#89bcbe]"
             corIconeBg="bg-[#f0f9f9]"
             onClickTarefa={onClickTarefa}
@@ -624,7 +814,7 @@ export default function CalendarKanbanView({
             icone={<PauseCircle className="w-3.5 h-3.5 text-amber-500" />}
             status="em_pausa"
             tarefas={filterTarefas(em_pausa)}
-            agendaItems={[]}
+            agendaItems={filterAgendaItems(agendaEmPausa)}
             corBarra="bg-amber-400"
             corIconeBg="bg-amber-50"
             onClickTarefa={onClickTarefa}
@@ -651,15 +841,20 @@ export default function CalendarKanbanView({
               <KanbanTaskCard tarefa={activeTarefa} onClick={() => {}} />
             </div>
           )}
+          {activeAgendaItem && (
+            <div className="rotate-3">
+              <KanbanAgendaCard item={activeAgendaItem} onClick={() => {}} />
+            </div>
+          )}
         </DragOverlay>
       </DndContext>
 
-      {/* Dialog de confirmação ao mover tarefa com timer ativo */}
+      {/* Dialog de confirmação ao mover item com timer ativo */}
       <AlertDialog
         open={confirmDialog.open}
         onOpenChange={(open) => {
           if (!open) {
-            setConfirmDialog({ open: false, tarefa: null, timerId: null })
+            setConfirmDialog({ open: false, tarefa: null, agendaItem: null, timerId: null })
           }
         }}
       >
@@ -667,12 +862,14 @@ export default function CalendarKanbanView({
           <AlertDialogHeader>
             <AlertDialogTitle>Timer Ativo Detectado</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta tarefa tem um timer em execução. O que deseja fazer com o tempo registrado?
+              {confirmDialog.tarefa
+                ? 'Esta tarefa tem um timer em execução. O que deseja fazer com o tempo registrado?'
+                : 'Este item tem um timer em execução. O que deseja fazer com o tempo registrado?'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel
-              onClick={() => setConfirmDialog({ open: false, tarefa: null, timerId: null })}
+              onClick={() => setConfirmDialog({ open: false, tarefa: null, agendaItem: null, timerId: null })}
             >
               Cancelar
             </AlertDialogCancel>

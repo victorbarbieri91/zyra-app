@@ -24,6 +24,7 @@ import {
   Loader2,
   DollarSign,
   Check,
+  CheckCircle2,
   X,
   AlertCircle,
   ChevronDown,
@@ -246,98 +247,130 @@ export default function ProcessoCobrancasCard({
             {atosComEstado.map(ato => (
               <div
                 key={ato.id}
-                className="p-3 bg-slate-50 rounded-lg border border-slate-200"
+                className={cn(
+                  "p-3 rounded-lg border",
+                  ato.jaCobrado
+                    ? "bg-slate-100/60 border-slate-200/80"
+                    : "bg-slate-50 border-slate-200"
+                )}
               >
                 {/* Cabeçalho do Ato */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-[#34495e] truncate">
+                    <p className={cn(
+                      "text-xs font-medium truncate",
+                      ato.jaCobrado ? "text-slate-500" : "text-[#34495e]"
+                    )}>
                       {ato.nome}
                     </p>
 
                     {/* Info do Cálculo */}
                     <div className="mt-2 space-y-1">
-                      <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                        <span>
-                          {ato.percentual_contrato || ato.percentual_padrao}% de{' '}
-                          {formatCurrency(
-                            ato.usandoBaseAlternativa && ato.baseAlternativa
-                              ? parseFloat(ato.baseAlternativa)
-                              : (ato.base_calculo_padrao || valorCausa || 0)
+                      {!ato.jaCobrado && (
+                        <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                          <span>
+                            {ato.percentual_contrato || ato.percentual_padrao}% de{' '}
+                            {formatCurrency(
+                              ato.usandoBaseAlternativa && ato.baseAlternativa
+                                ? parseFloat(ato.baseAlternativa)
+                                : (ato.base_calculo_padrao || valorCausa || 0)
+                            )}
+                          </span>
+                          {ato.calculoAtualizado.usouMinimo && (
+                            <Badge className="text-[8px] px-1 py-0 h-3.5 bg-amber-100 text-amber-700 border-amber-200">
+                              mín. aplicado
+                            </Badge>
                           )}
-                        </span>
-                        {ato.calculoAtualizado.usouMinimo && (
-                          <Badge className="text-[8px] px-1 py-0 h-3.5 bg-amber-100 text-amber-700 border-amber-200">
-                            mín. aplicado
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm font-semibold text-emerald-600">
-                        {formatCurrency(ato.valorFinal)}
+                        </div>
+                      )}
+                      <p className={cn(
+                        "text-sm font-semibold",
+                        ato.jaCobrado ? "text-slate-500" : "text-emerald-600"
+                      )}>
+                        {formatCurrency(ato.jaCobrado ? (ato.receitaValor ?? ato.valorFinal) : ato.valorFinal)}
                       </p>
                     </div>
                   </div>
 
-                  {/* Botão Cobrar */}
-                  <Button
-                    size="sm"
-                    onClick={() => handleAbrirConfirmacao(ato)}
-                    className="h-8 px-3 bg-emerald-500 hover:bg-emerald-600 text-white shrink-0"
-                  >
-                    <Send className="w-3.5 h-3.5 mr-1.5" />
-                    Cobrar
-                  </Button>
+                  {ato.jaCobrado ? (
+                    /* Badge de Status */
+                    <div className={cn(
+                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[10px] font-medium shrink-0",
+                      ato.receitaStatus === 'pago'
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : ato.receitaStatus === 'faturado'
+                          ? "bg-blue-50 text-blue-700 border border-blue-200"
+                          : "bg-amber-50 text-amber-700 border border-amber-200"
+                    )}>
+                      <CheckCircle2 className="w-3 h-3" />
+                      {ato.receitaStatus === 'pago' ? 'Pago'
+                        : ato.receitaStatus === 'faturado' ? 'Faturado'
+                        : 'Enviado'}
+                    </div>
+                  ) : (
+                    /* Botão Cobrar */
+                    <Button
+                      size="sm"
+                      onClick={() => handleAbrirConfirmacao(ato)}
+                      className="h-8 px-3 bg-emerald-500 hover:bg-emerald-600 text-white shrink-0"
+                    >
+                      <Send className="w-3.5 h-3.5 mr-1.5" />
+                      Cobrar
+                    </Button>
+                  )}
                 </div>
 
-                {/* Opção de Alterar Base */}
-                <Collapsible
-                  open={atoExpandido === ato.id}
-                  onOpenChange={(open) => setAtoExpandido(open ? ato.id : null)}
-                >
-                  <CollapsibleTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="mt-2 h-6 px-2 text-[10px] text-slate-500 hover:text-[#34495e] w-full justify-start"
-                    >
-                      <Pencil className="w-3 h-3 mr-1" />
-                      {ato.usandoBaseAlternativa ? 'Usando base alternativa' : 'Alterar base de cálculo'}
-                      <ChevronDown className={cn(
-                        "w-3 h-3 ml-auto transition-transform",
-                        atoExpandido === ato.id && "rotate-180"
-                      )} />
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-2">
-                    <div className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Label className="text-[10px] text-slate-500 whitespace-nowrap">
-                          Base alternativa:
-                        </Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={ato.baseAlternativa}
-                          onChange={e => handleAlterarBase(ato.id, e.target.value)}
-                          placeholder={formatCurrency(ato.base_calculo_padrao || valorCausa || 0)}
-                          className="h-7 text-xs flex-1"
-                        />
+                {/* Opção de Alterar Base - só mostra se NÃO foi cobrado */}
+                {!ato.jaCobrado && (
+                  <Collapsible
+                    open={atoExpandido === ato.id}
+                    onOpenChange={(open) => setAtoExpandido(open ? ato.id : null)}
+                  >
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2 h-6 px-2 text-[10px] text-slate-500 hover:text-[#34495e] w-full justify-start"
+                      >
+                        <Pencil className="w-3 h-3 mr-1" />
+                        {ato.usandoBaseAlternativa ? 'Usando base alternativa' : 'Alterar base de cálculo'}
+                        <ChevronDown className={cn(
+                          "w-3 h-3 ml-auto transition-transform",
+                          atoExpandido === ato.id && "rotate-180"
+                        )} />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-2">
+                      <div className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Label className="text-[10px] text-slate-500 whitespace-nowrap">
+                            Base alternativa:
+                          </Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={ato.baseAlternativa}
+                            onChange={e => handleAlterarBase(ato.id, e.target.value)}
+                            placeholder={formatCurrency(ato.base_calculo_padrao || valorCausa || 0)}
+                            className="h-7 text-xs flex-1"
+                          />
+                        </div>
+                        {ato.usandoBaseAlternativa && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleBaseAlternativa(ato.id)}
+                            className="h-6 px-2 text-[10px] text-slate-500"
+                          >
+                            <X className="w-3 h-3 mr-1" />
+                            Usar valor da causa
+                          </Button>
+                        )}
                       </div>
-                      {ato.usandoBaseAlternativa && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleBaseAlternativa(ato.id)}
-                          className="h-6 px-2 text-[10px] text-slate-500"
-                        >
-                          <X className="w-3 h-3 mr-1" />
-                          Usar valor da causa
-                        </Button>
-                      )}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
               </div>
             ))}
           </div>

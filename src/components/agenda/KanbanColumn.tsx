@@ -68,12 +68,13 @@ export default function KanbanColumn({
           isOver && 'bg-blue-50 border-2 border-dashed border-blue-300 rounded-md'
         )}
       >
-        {/* Agenda items (compromissos/audiências) - não-draggable, aparecem primeiro */}
+        {/* Agenda items (compromissos/audiências) - draggable, aparecem primeiro */}
         {agendaItems.map((item) => (
           <KanbanAgendaCard
             key={item.id}
             item={item}
             onClick={() => onClickAgendaItem?.(item)}
+            draggable
           />
         ))}
 

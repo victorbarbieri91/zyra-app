@@ -87,6 +87,8 @@ export function useTimers(escritorioId: string | null): UseTimersReturn {
       p_processo_id: dados.processo_id || null,
       p_consulta_id: dados.consulta_id || null,
       p_tarefa_id: dados.tarefa_id || null,
+      p_evento_id: dados.evento_id || null,
+      p_audiencia_id: dados.audiencia_id || null,
       p_faturavel: dados.faturavel ?? true,
       p_descricao: dados.descricao || null,
     });

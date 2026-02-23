@@ -15,6 +15,8 @@ export interface TimerAtivo {
   processo_id?: string | null;
   consulta_id?: string | null;
   tarefa_id?: string | null;
+  evento_id?: string | null;
+  audiencia_id?: string | null;
   titulo: string;
   descricao?: string | null;
   hora_inicio: string;
@@ -32,6 +34,8 @@ export interface TimerAtivoComDetalhes extends TimerAtivo {
   processo_numero?: string | null;
   consulta_titulo?: string | null;
   tarefa_titulo?: string | null;
+  evento_titulo?: string | null;
+  audiencia_titulo?: string | null;
   user_nome?: string | null;
   cliente_nome?: string | null;
   // Computed no frontend
@@ -44,6 +48,8 @@ export interface NovoTimerData {
   processo_id?: string;
   consulta_id?: string;
   tarefa_id?: string;
+  evento_id?: string;
+  audiencia_id?: string;
   faturavel?: boolean;
 }
 

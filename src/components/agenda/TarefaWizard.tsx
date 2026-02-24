@@ -95,8 +95,16 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   const [titulo, setTitulo] = useState(initialData?.titulo || '')
   const [descricao, setDescricao] = useState(initialData?.descricao || '')
 
-  const [dataExecucao, setDataExecucao] = useState(initialData?.data_inicio || '')
-  const [prazoFatal, setPrazoFatal] = useState(initialData?.data_fim || '')
+  // Helper para extrair parte da data (yyyy-MM-dd) de ISO datetime
+  const extractDatePart = (dateStr?: string | null) => {
+    if (!dateStr) return ''
+    return dateStr.split('T')[0]
+  }
+
+  const [dataExecucao, setDataExecucao] = useState(extractDatePart(initialData?.data_inicio))
+  const [prazoFatal, setPrazoFatal] = useState(
+    extractDatePart(initialData?.prazo_data_limite) || extractDatePart(initialData?.data_fim)
+  )
   const [prioridade, setPrioridade] = useState<Prioridade>(initialData?.prioridade || 'media')
   const [responsaveisIds, setResponsaveisIds] = useState<string[]>(
     initialData?.responsavel_id ? [initialData.responsavel_id] : (user?.id ? [user.id] : [])

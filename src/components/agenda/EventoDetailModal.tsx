@@ -14,7 +14,9 @@ import {
   MapPin,
   FileText,
   BookOpen,
-  Clock
+  Clock,
+  PlayCircle,
+  PauseCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -24,6 +26,8 @@ import {
   parseDBDate
 } from '@/lib/timezone'
 import { differenceInMinutes, differenceInDays, parseISO, isBefore, startOfDay } from 'date-fns'
+import { useTimer } from '@/contexts/TimerContext'
+import { toast } from 'sonner'
 
 interface EventoDetailModalProps {
   open: boolean
@@ -73,6 +77,34 @@ export default function EventoDetailModal({
   onProcessoClick,
   onConsultivoClick,
 }: EventoDetailModalProps) {
+  // Timer
+  const { timersAtivos, iniciarTimer, pausarTimer, retomarTimer } = useTimer()
+  const timerExistente = timersAtivos.find(t => t.evento_id === evento.id)
+
+  const handleTimerClick = async () => {
+    try {
+      if (timerExistente?.status === 'rodando') {
+        await pausarTimer(timerExistente.id)
+        toast.info('Timer pausado')
+      } else if (timerExistente?.status === 'pausado') {
+        await retomarTimer(timerExistente.id)
+        toast.success('Timer retomado')
+      } else {
+        await iniciarTimer({
+          titulo: evento.titulo,
+          evento_id: evento.id,
+          processo_id: evento.processo_id || undefined,
+          consulta_id: evento.consultivo_id || undefined,
+          faturavel: true,
+        })
+        toast.success('Timer iniciado')
+      }
+    } catch (error) {
+      console.error('Erro ao controlar timer:', error)
+      toast.error('Erro ao controlar timer')
+    }
+  }
+
   // Determinar tipo principal (prazo ou compromisso)
   // subtipo vem da v_agenda_consolidada; se carregado direto da tabela, usa campo 'tipo'
   const subtipo = evento.subtipo || (evento as any).tipo || 'compromisso'
@@ -386,6 +418,27 @@ export default function EventoDetailModal({
                   Reabrir
                 </Button>
               )}
+
+              {/* Botão Timer - sempre visível */}
+              <Button
+                size="sm"
+                variant={timerExistente?.status === 'rodando' ? 'default' : 'outline'}
+                onClick={handleTimerClick}
+                className={cn(
+                  "text-xs h-8",
+                  timerExistente?.status === 'rodando'
+                    ? "bg-amber-500 hover:bg-amber-600 text-white"
+                    : "border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
+                )}
+              >
+                {timerExistente?.status === 'rodando' ? (
+                  <><PauseCircle className="w-3.5 h-3.5 mr-1.5" /> Pausar</>
+                ) : timerExistente?.status === 'pausado' ? (
+                  <><PlayCircle className="w-3.5 h-3.5 mr-1.5" /> Retomar</>
+                ) : (
+                  <><PlayCircle className="w-3.5 h-3.5 mr-1.5" /> Iniciar Timer</>
+                )}
+              </Button>
 
               {onEdit && (
                 <Button

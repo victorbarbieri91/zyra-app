@@ -57,6 +57,8 @@ import AlertasCard from '@/components/dashboard/AlertasCard'
 
 // Modais de ações rápidas
 import TarefaWizard from '@/components/agenda/TarefaWizard'
+import EventoWizard from '@/components/agenda/EventoWizard'
+import AudienciaWizard from '@/components/agenda/AudienciaWizard'
 import { ConsultaWizardModal } from '@/components/consultivo/ConsultaWizardModal'
 import ProcessoWizard from '@/components/processos/ProcessoWizard'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
@@ -64,7 +66,7 @@ import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
 import TarefaDetailModal from '@/components/agenda/TarefaDetailModal'
 import EventoDetailModal from '@/components/agenda/EventoDetailModal'
 import { AudienciaProxima } from '@/hooks/useDashboardAlertas'
-import { Tarefa } from '@/hooks/useTarefas'
+import { Tarefa, TarefaFormData, useTarefas } from '@/hooks/useTarefas'
 import { createClient } from '@/lib/supabase/client'
 
 // Hooks de dados reais
@@ -159,6 +161,10 @@ export default function DashboardPage() {
   const [agendaAudienciaData, setAgendaAudienciaData] = useState<Record<string, unknown> | null>(null)
   const [agendaAudienciaOpen, setAgendaAudienciaOpen] = useState(false)
 
+  // Estados para wizards de edição do dashboard
+  const [dashEventoEditOpen, setDashEventoEditOpen] = useState(false)
+  const [dashAudienciaEditOpen, setDashAudienciaEditOpen] = useState(false)
+
   // Estados para conclusão de tarefas com modal de horas (dashboard)
   const [dashTimesheetOpen, setDashTimesheetOpen] = useState(false)
   const [dashTarefaParaConcluir, setDashTarefaParaConcluir] = useState<Tarefa | null>(null)
@@ -248,6 +254,9 @@ export default function DashboardPage() {
     return `${escritoriosSelecionados.length} escritórios`
   }
 
+  // Hook para updateTarefa (necessário para edição de tarefas via wizard)
+  const { updateTarefa } = useTarefas(escritorioAtivo || undefined)
+
   // Hooks de dados
   const { metrics, loading: loadingMetrics } = useDashboardMetrics()
   const { items: agendaItems, loading: loadingAgenda, isEmpty: isAgendaEmpty, audienciasHoje, prazosHoje, refresh: refreshAgenda } = useDashboardAgenda()
@@ -306,6 +315,25 @@ export default function DashboardPage() {
       setAudienciasProximas(audiencias)
       setAudienciasListOpen(true)
     }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // HANDLERS DE EDIÇÃO DOS AGENDAMENTOS (Dashboard)
+  // ═══════════════════════════════════════════════════════════════
+
+  const handleDashEditTarefa = () => {
+    setTarefaDetailOpen(false)
+    setTarefaModalOpen(true) // Reutiliza o TarefaWizard existente
+  }
+
+  const handleDashEditEvento = () => {
+    setEventoDetailOpen(false)
+    setDashEventoEditOpen(true)
+  }
+
+  const handleDashEditAudiencia = () => {
+    setAgendaAudienciaOpen(false)
+    setDashAudienciaEditOpen(true)
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1437,7 +1465,45 @@ export default function DashboardPage() {
       {tarefaModalOpen && escritorioAtivo && (
         <TarefaWizard
           escritorioId={escritorioAtivo}
-          onClose={() => setTarefaModalOpen(false)}
+          initialData={tarefaDetailData || undefined}
+          onSubmit={tarefaDetailData ? async (data: TarefaFormData) => {
+            await updateTarefa(tarefaDetailData.id, data)
+            toast.success('Tarefa atualizada com sucesso!')
+          } : undefined}
+          onClose={() => {
+            setTarefaModalOpen(false)
+            setTarefaDetailData(null)
+            refreshAgenda()
+          }}
+          onCreated={refreshAgenda}
+        />
+      )}
+
+      {/* Wizard de edição de eventos (dashboard) */}
+      {dashEventoEditOpen && eventoDetailData && escritorioAtivo && (
+        <EventoWizard
+          escritorioId={escritorioAtivo}
+          initialData={eventoDetailData as any}
+          onSubmit={async () => { refreshAgenda() }}
+          onClose={() => {
+            setDashEventoEditOpen(false)
+            setEventoDetailData(null)
+            refreshAgenda()
+          }}
+        />
+      )}
+
+      {/* Wizard de edição de audiências (dashboard) */}
+      {dashAudienciaEditOpen && agendaAudienciaData && escritorioAtivo && (
+        <AudienciaWizard
+          escritorioId={escritorioAtivo}
+          initialData={agendaAudienciaData as any}
+          onSubmit={async () => { refreshAgenda() }}
+          onClose={() => {
+            setDashAudienciaEditOpen(false)
+            setAgendaAudienciaData(null)
+            refreshAgenda()
+          }}
         />
       )}
 
@@ -1496,10 +1562,12 @@ export default function DashboardPage() {
           open={tarefaDetailOpen}
           onOpenChange={(open) => {
             setTarefaDetailOpen(open)
-            if (!open) setTarefaDetailData(null)
+            // Só limpa se NÃO está transitando para edição
+            if (!open && !tarefaModalOpen) setTarefaDetailData(null)
           }}
           tarefa={tarefaDetailData}
           onUpdate={refreshAgenda}
+          onEdit={handleDashEditTarefa}
           onConcluir={() => handleDashCompleteTask(tarefaDetailData.id)}
           onReabrir={() => handleDashReopenTask(tarefaDetailData.id)}
           onLancarHoras={handleDashLancarHoras}
@@ -1513,7 +1581,8 @@ export default function DashboardPage() {
           open={agendaAudienciaOpen}
           onOpenChange={(open) => {
             setAgendaAudienciaOpen(open)
-            if (!open) {
+            // Só limpa se NÃO está transitando para edição
+            if (!open && !dashAudienciaEditOpen) {
               setAgendaAudienciaData(null)
               refreshAgenda()
             }
@@ -1538,6 +1607,7 @@ export default function DashboardPage() {
             promotor_nome: agendaAudienciaData.promotor_nome as string | undefined,
             advogado_contrario: agendaAudienciaData.advogado_contrario as string | undefined,
           }}
+          onEdit={handleDashEditAudiencia}
           onRealizar={() => handleDashRealizarAudiencia(agendaAudienciaData.id as string)}
           onReabrir={() => handleDashReabrirAudiencia(agendaAudienciaData.id as string)}
           onProcessoClick={(processoId) => router.push(`/dashboard/processos/${processoId}`)}
@@ -1549,7 +1619,8 @@ export default function DashboardPage() {
           open={eventoDetailOpen}
           onOpenChange={(open) => {
             setEventoDetailOpen(open)
-            if (!open) {
+            // Só limpa se NÃO está transitando para edição
+            if (!open && !dashEventoEditOpen) {
               setEventoDetailData(null)
               refreshAgenda()
             }
@@ -1567,6 +1638,7 @@ export default function DashboardPage() {
             processo_id: eventoDetailData.processo_id as string | undefined,
             consultivo_id: eventoDetailData.consultivo_id as string | undefined,
           }}
+          onEdit={handleDashEditEvento}
           onMarcarCumprido={() => handleDashMarcarCumprido(eventoDetailData.id as string)}
           onReabrir={() => handleDashReabrirEvento(eventoDetailData.id as string)}
           onProcessoClick={(processoId) => router.push(`/dashboard/processos/${processoId}`)}

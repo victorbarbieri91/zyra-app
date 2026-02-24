@@ -13,6 +13,8 @@ import {
   CalendarDays,
   Timer,
   Copy,
+  PlayCircle,
+  PauseCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatBrazilDate, formatDateTimeForDB, parseDBDate } from '@/lib/timezone'
@@ -31,6 +33,7 @@ import {
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast } from 'sonner'
+import { useTimer } from '@/contexts/TimerContext'
 
 interface TarefaDetailModalProps {
   open: boolean
@@ -85,6 +88,34 @@ export default function TarefaDetailModal({
   onConsultivoClick,
   onUpdate,
 }: TarefaDetailModalProps) {
+  // Timer
+  const { timersAtivos, iniciarTimer, pausarTimer, retomarTimer } = useTimer()
+  const timerExistente = timersAtivos.find(t => t.tarefa_id === tarefa.id)
+
+  const handleTimerClick = async () => {
+    try {
+      if (timerExistente?.status === 'rodando') {
+        await pausarTimer(timerExistente.id)
+        toast.info('Timer pausado')
+      } else if (timerExistente?.status === 'pausado') {
+        await retomarTimer(timerExistente.id)
+        toast.success('Timer retomado')
+      } else {
+        await iniciarTimer({
+          titulo: tarefa.titulo,
+          tarefa_id: tarefa.id,
+          processo_id: tarefa.processo_id || undefined,
+          consulta_id: tarefa.consultivo_id || undefined,
+          faturavel: true,
+        })
+        toast.success('Timer iniciado')
+      }
+    } catch (error) {
+      console.error('Erro ao controlar timer:', error)
+      toast.error('Erro ao controlar timer')
+    }
+  }
+
   const [processoInfo, setProcessoInfo] = useState<ProcessoInfo | null>(null)
   const [consultivoInfo, setConsultivoInfo] = useState<ConsultivoInfo | null>(null)
   const [recorrenciaInfo, setRecorrenciaInfo] = useState<RecorrenciaInfo | null>(null)
@@ -808,6 +839,27 @@ export default function TarefaDetailModal({
                     Lançar Horas
                   </Button>
                 )}
+
+                {/* Botão Timer - sempre visível */}
+                <Button
+                  size="sm"
+                  variant={timerExistente?.status === 'rodando' ? 'default' : 'outline'}
+                  onClick={handleTimerClick}
+                  className={cn(
+                    "h-8 text-xs",
+                    timerExistente?.status === 'rodando'
+                      ? "bg-amber-500 hover:bg-amber-600 text-white"
+                      : "border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
+                  )}
+                >
+                  {timerExistente?.status === 'rodando' ? (
+                    <><PauseCircle className="w-3 h-3 mr-1" /> Pausar</>
+                  ) : timerExistente?.status === 'pausado' ? (
+                    <><PlayCircle className="w-3 h-3 mr-1" /> Retomar</>
+                  ) : (
+                    <><PlayCircle className="w-3 h-3 mr-1" /> Iniciar Timer</>
+                  )}
+                </Button>
 
                 <Button
                   size="sm"

@@ -96,9 +96,26 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
   const [titulo, setTitulo] = useState(initialData?.titulo || '')
   const [descricao, setDescricao] = useState(initialData?.descricao || '')
 
-  const [dataInicio, setDataInicio] = useState(initialData?.data_inicio || '')
-  const [dataFim, setDataFim] = useState(initialData?.data_fim || '')
-  const [diaInteiro, setDiaInteiro] = useState(initialData?.dia_inteiro ?? false)
+  // Helpers para normalizar datas vindas do DB (ISO datetime) para formato dos inputs
+  const extractDatePart = (dateStr?: string | null) => {
+    if (!dateStr) return ''
+    return dateStr.split('T')[0] // '2025-01-20T14:30:00+00:00' → '2025-01-20'
+  }
+  const extractDateTimePart = (dateStr?: string | null) => {
+    if (!dateStr) return ''
+    if (!dateStr.includes('T')) return dateStr
+    const [datePart, timePart] = dateStr.split('T')
+    return `${datePart}T${timePart.substring(0, 5)}` // '2025-01-20T14:30'
+  }
+
+  const isDiaInteiroInit = initialData?.dia_inteiro ?? false
+  const [dataInicio, setDataInicio] = useState(
+    isDiaInteiroInit ? extractDatePart(initialData?.data_inicio) : extractDateTimePart(initialData?.data_inicio)
+  )
+  const [dataFim, setDataFim] = useState(
+    isDiaInteiroInit ? extractDatePart(initialData?.data_fim) : extractDateTimePart(initialData?.data_fim)
+  )
+  const [diaInteiro, setDiaInteiro] = useState(isDiaInteiroInit)
   const [local, setLocal] = useState(initialData?.local || '')
 
   const [processoId, setProcessoId] = useState<string | null>(initialData?.processo_id || null)

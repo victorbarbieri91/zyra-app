@@ -105,7 +105,9 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
   const [consultivoId, setConsultivoId] = useState<string | null>(initialData?.consultivo_id || null)
 
   const [responsaveisIds, setResponsaveisIds] = useState<string[]>(
-    initialData?.responsavel_id ? [initialData.responsavel_id] : (user?.id ? [user.id] : [])
+    initialData?.responsaveis_ids?.length ? initialData.responsaveis_ids
+      : initialData?.responsavel_id ? [initialData.responsavel_id]
+      : (user?.id ? [user.id] : [])
   )
   const [cor, setCor] = useState(initialData?.cor || '#6366F1')
 

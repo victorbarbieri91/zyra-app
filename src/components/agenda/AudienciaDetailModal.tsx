@@ -214,12 +214,7 @@ export default function AudienciaDetailModal({
                   )}
                 </div>
               </div>
-              <button
-                onClick={() => onOpenChange(false)}
-                className="p-1 hover:bg-slate-100 rounded-md transition-colors"
-              >
-                <X className="w-4 h-4 text-slate-400" />
-              </button>
+              {/* X de fechar é o built-in do DialogContent (Radix UI) */}
             </div>
 
             {/* Metadata sutil */}

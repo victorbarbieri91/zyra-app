@@ -147,7 +147,7 @@ export default function AgendaPage() {
     },
     status: {
       agendado: true,
-      realizado: true,
+      realizado: false,
       cancelado: false,
     },
     responsaveis: [] as string[],
@@ -584,12 +584,26 @@ export default function AgendaPage() {
         let titulo = timerData?.defaultAtividade || ''
 
         if (entityType === 'evento') {
-          const evento = eventos.find(e => e.id === taskId)
+          let evento = eventos.find(e => e.id === taskId)
+          if (!evento) {
+            // Fallback: buscar direto do banco caso useEventos não tenha o item
+            const { createClient: createSb } = await import('@/lib/supabase/client')
+            const sb = createSb()
+            const { data } = await sb.from('agenda_eventos').select('id, processo_id, consultivo_id, titulo').eq('id', taskId).single()
+            if (data) evento = data as any
+          }
           processoId = evento?.processo_id || undefined
           consultivoId = evento?.consultivo_id || undefined
           titulo = evento?.titulo || titulo
         } else {
-          const audiencia = audiencias.find(a => a.id === taskId)
+          let audiencia = audiencias.find(a => a.id === taskId)
+          if (!audiencia) {
+            // Fallback: buscar direto do banco caso useAudiencias não tenha o item
+            const { createClient: createSb } = await import('@/lib/supabase/client')
+            const sb = createSb()
+            const { data } = await sb.from('agenda_audiencias').select('id, processo_id, consultivo_id, titulo').eq('id', taskId).single()
+            if (data) audiencia = data as any
+          }
           processoId = audiencia?.processo_id || undefined
           consultivoId = audiencia?.consultivo_id || undefined
           titulo = audiencia?.titulo || titulo
@@ -785,12 +799,28 @@ export default function AgendaPage() {
         if (timerDataParaConcluir?.timerId) {
           await descartarTimer(timerDataParaConcluir.timerId)
         }
-        await concluirTarefa(tarefaParaConcluir.id)
+
+        // Concluir conforme tipo de entidade
+        if (tipoEntidadeLancamento === 'evento') {
+          const { createClient: createSb } = await import('@/lib/supabase/client')
+          const sb = createSb()
+          await sb.from('agenda_eventos').update({ status: 'realizado' }).eq('id', tarefaParaConcluir.id)
+          await refreshEventos()
+          toast.success('Compromisso concluído!')
+        } else if (tipoEntidadeLancamento === 'audiencia') {
+          const { createClient: createSb } = await import('@/lib/supabase/client')
+          const sb = createSb()
+          await sb.from('agenda_audiencias').update({ status: 'realizada' }).eq('id', tarefaParaConcluir.id)
+          await refreshAudiencias()
+          toast.success('Audiência concluída!')
+        } else {
+          await concluirTarefa(tarefaParaConcluir.id)
+          toast.success('Tarefa concluída!')
+        }
         await refreshItems()
-        toast.success('Tarefa concluída!')
       } catch (error) {
-        console.error('Erro ao concluir tarefa:', error)
-        toast.error('Erro ao concluir tarefa')
+        console.error('Erro ao concluir:', error)
+        toast.error('Erro ao concluir')
       }
     }
     setTarefaParaConcluir(null)
@@ -1596,7 +1626,9 @@ export default function AgendaPage() {
           open={audienciaDetailOpen}
           onOpenChange={(open) => {
             setAudienciaDetailOpen(open)
-            if (!open) {
+            // Só limpa a audiência selecionada se o modal de edição NÃO estiver aberto
+            // (evita limpar quando estamos transitando para edição)
+            if (!open && !audienciaModalOpen) {
               setAudienciaSelecionada(null)
             }
           }}
@@ -1621,7 +1653,9 @@ export default function AgendaPage() {
           open={eventoDetailOpen}
           onOpenChange={(open) => {
             setEventoDetailOpen(open)
-            if (!open) {
+            // Só limpa o evento selecionado se o modal de edição NÃO estiver aberto
+            // (evita limpar quando estamos transitando para edição)
+            if (!open && !eventoModalOpen) {
               setEventoSelecionado(null)
             }
           }}
@@ -1714,7 +1748,7 @@ export default function AgendaPage() {
             <AlertDialogTitle>Concluir sem lançar horas?</AlertDialogTitle>
             <AlertDialogDescription>
               Você fechou o modal sem registrar as horas trabalhadas.
-              Deseja concluir a tarefa mesmo assim ou cancelar?
+              Deseja concluir mesmo assim ou cancelar?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

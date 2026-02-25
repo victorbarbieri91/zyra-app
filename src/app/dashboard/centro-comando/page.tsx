@@ -40,6 +40,8 @@ export default function CentroComandoPage() {
     abrirFormularioInput,
     fecharFormularioInput,
     responderCamposNecessarios,
+    enviarFeedback,
+    getFeedbackMensagem,
     messagesEndRef,
   } = useCentroComando()
 
@@ -196,6 +198,10 @@ export default function CentroComandoPage() {
                       mensagem={msg}
                       onNavigate={handleNavigate}
                       onOpenInputDialog={abrirFormularioInput}
+                      mostrarFeedback={msg.role === 'assistant'}
+                      onFeedback={(mensagemId, tipo) => enviarFeedback(mensagemId, tipo)}
+                      onCorrecao={(mensagemId) => enviarFeedback(mensagemId, 'correcao')}
+                      feedbackEnviado={msg.id ? getFeedbackMensagem(msg.id) : null}
                     />
                   ))}
                   {/* Passos do thinking em tempo real */}

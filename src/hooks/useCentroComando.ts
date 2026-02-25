@@ -201,7 +201,7 @@ export function useCentroComando() {
       // Preparar histórico para contexto - INCLUINDO tool_results para memória
       const historicoParaEnviar = state.mensagens
         .filter(m => !m.loading)
-        .slice(-10)
+        .slice(-20)
         .map(m => ({
           role: m.role,
           content: m.content,

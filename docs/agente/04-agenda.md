@@ -79,9 +79,9 @@ Eventos, tarefas e audiências
 - `duracao_planejada_minutos`: Duração estimada em minutos para visualização na grade diária (opcional)
 
 **Constraints**:
-- `tipo`: tipo = ANY (ARRAY['prazo_processual'::text, 'acompanhamento'::text, 'follow_up'::text, 'administrativo'::text, 'outro'::text])
+- `tipo`: tipo = ANY (ARRAY['prazo_processual'::text, 'acompanhamento'::text, 'follow_up'::text, 'administrativo'::text, 'outro'::text, 'fixa'::text])
 - `prioridade`: prioridade = ANY (ARRAY['alta'::text, 'media'::text, 'baixa'::text])
-- `status`: status = ANY (ARRAY['pendente'::text, 'em_andamento'::text, 'concluida'::text, 'cancelada'::text])
+- `status`: status = ANY (ARRAY['pendente'::text, 'em_andamento'::text, 'em_pausa'::text, 'concluida'::text, 'cancelada'::text])
 
 ---
 

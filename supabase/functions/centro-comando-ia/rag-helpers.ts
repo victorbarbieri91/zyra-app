@@ -5,8 +5,7 @@
  * geração de embeddings e extração de fatos das conversas.
  */
 
-import { SupabaseClient } from 'jsr:@supabase/supabase-js@2'
-import { createHash } from 'https://deno.land/std@0.208.0/crypto/mod.ts'
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // ============================================================================
 // TIPOS
@@ -35,7 +34,7 @@ export interface RAGContext {
 }
 
 export interface ExtractedFact {
-  tipo: 'preferencia' | 'contexto' | 'fato' | 'entidade'
+  tipo: 'preferencia' | 'contexto' | 'fato' | 'entidade' | 'correcao'
   entidade?: string
   content: string
   permanente: boolean
@@ -49,7 +48,7 @@ const OPENAI_API_URL = 'https://api.openai.com/v1/embeddings'
 const EMBEDDING_MODEL = 'text-embedding-3-small'
 const EMBEDDING_DIMENSIONS = 1536
 
-const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions'
+const OPENAI_CHAT_URL = 'https://api.openai.com/v1/chat/completions'
 
 // Thresholds
 const KNOWLEDGE_THRESHOLD = 0.65
@@ -62,12 +61,12 @@ const MAX_MEMORY_RESULTS = 8
 // ============================================================================
 
 /**
- * Gera hash MD5 de um texto
+ * Gera hash SHA-256 de um texto (Web Crypto API nativa, sem imports)
  */
-function hashText(text: string): string {
+async function hashText(text: string): Promise<string> {
   const encoder = new TextEncoder()
   const data = encoder.encode(text)
-  const hashBuffer = createHash('md5').update(data).digest()
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
   return Array.from(new Uint8Array(hashBuffer))
     .map(b => b.toString(16).padStart(2, '0'))
     .join('')
@@ -80,7 +79,7 @@ async function getEmbeddingFromCache(
   supabase: SupabaseClient,
   text: string
 ): Promise<number[] | null> {
-  const inputHash = hashText(text)
+  const inputHash = await hashText(text)
 
   const { data, error } = await supabase
     .from('centro_comando_embedding_cache')
@@ -113,7 +112,7 @@ async function saveEmbeddingToCache(
   text: string,
   embedding: number[]
 ): Promise<void> {
-  const inputHash = hashText(text)
+  const inputHash = await hashText(text)
 
   await supabase
     .from('centro_comando_embedding_cache')
@@ -258,11 +257,68 @@ export async function searchMemories(
 }
 
 // ============================================================================
-// CONSTRUIR CONTEXTO RAG
+// BUSCA DE KNOWLEDGE BASE (usada a cada mensagem)
 // ============================================================================
 
 /**
- * Busca contexto relevante na knowledge base e memórias
+ * Busca conhecimento relevante na knowledge base via embedding semântico.
+ * Usada a cada mensagem para complementar o contexto do domínio.
+ */
+export async function searchKnowledge(
+  supabase: SupabaseClient,
+  userMessage: string,
+  openaiApiKey: string
+): Promise<KnowledgeResult[]> {
+  const embedding = await generateEmbedding(supabase, userMessage, openaiApiKey)
+  return searchKnowledgeBase(supabase, embedding)
+}
+
+// ============================================================================
+// CARREGAR MEMÓRIAS CROSS-SESSION (usada apenas na 1ª mensagem da sessão)
+// ============================================================================
+
+/**
+ * Carrega memórias do usuário de sessões anteriores.
+ * Sem busca semântica — carrega as mais relevantes e recentes.
+ * Usada apenas no início de uma nova sessão.
+ */
+export async function loadUserMemories(
+  supabase: SupabaseClient,
+  userId: string,
+  escritorioId: string,
+  limit: number = 10
+): Promise<MemoryResult[]> {
+  const { data, error } = await supabase
+    .from('centro_comando_memories')
+    .select('id, tipo, content, content_resumido, relevancia_score')
+    .eq('escritorio_id', escritorioId)
+    .eq('user_id', userId)
+    .eq('ativo', true)
+    .or('expira_em.is.null,expira_em.gt.now()')
+    .order('relevancia_score', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('Erro ao carregar memórias:', error)
+    return []
+  }
+
+  return (data || []).map((row: Record<string, unknown>) => ({
+    id: row.id as string,
+    tipo: row.tipo as string,
+    content: row.content as string,
+    content_resumido: row.content_resumido as string | null,
+    similarity: row.relevancia_score as number || 1.0,
+  }))
+}
+
+// ============================================================================
+// LEGACY: buildRAGContext e formatRAGContextForPrompt (mantidos para compatibilidade)
+// ============================================================================
+
+/**
+ * @deprecated Use searchKnowledge + loadUserMemories separadamente
  */
 export async function buildRAGContext(
   supabase: SupabaseClient,
@@ -274,10 +330,7 @@ export async function buildRAGContext(
     openaiApiKey: string
   }
 ): Promise<RAGContext> {
-  // Gerar embedding da mensagem do usuário
   const embedding = await generateEmbedding(supabase, userMessage, options.openaiApiKey)
-
-  // Buscar em paralelo
   const [knowledge, memories] = await Promise.all([
     searchKnowledgeBase(supabase, embedding),
     searchMemories(supabase, embedding, {
@@ -286,47 +339,20 @@ export async function buildRAGContext(
       sessaoId: options.sessaoId,
     }),
   ])
-
-  // Estimar tokens (aproximação: 1 token = 4 caracteres)
-  const knowledgeTokens = knowledge.reduce((acc, k) => acc + k.content.length / 4, 0)
-  const memoryTokens = memories.reduce((acc, m) => acc + (m.content_resumido || m.content).length / 4, 0)
-
-  return {
-    knowledge,
-    memories,
-    tokenEstimate: Math.round(knowledgeTokens + memoryTokens),
-  }
+  return { knowledge, memories, tokenEstimate: 0 }
 }
 
-// ============================================================================
-// FORMATAR CONTEXTO PARA PROMPT
-// ============================================================================
-
 /**
- * Formata o contexto RAG para inclusão no system prompt
+ * @deprecated Formatação agora é feita diretamente no index.ts
  */
 export function formatRAGContextForPrompt(context: RAGContext): string {
   let formatted = ''
-
-  // Adicionar conhecimento relevante
   if (context.knowledge.length > 0) {
-    formatted += '\n\n## CONHECIMENTO RELEVANTE DO BANCO DE DADOS\n'
+    formatted += '\n\n## CONHECIMENTO COMPLEMENTAR\n'
     for (const k of context.knowledge) {
       formatted += `\n### ${k.title}\n${k.content}\n`
     }
   }
-
-  // Adicionar memórias relevantes
-  if (context.memories.length > 0) {
-    formatted += '\n\n## MEMÓRIAS E CONTEXTO DO USUÁRIO\n'
-    for (const m of context.memories) {
-      const label = m.tipo === 'correcao' ? '⚠️ CORREÇÃO' :
-                    m.tipo === 'preferencia' ? '💡 PREFERÊNCIA' :
-                    m.tipo === 'fato' ? '📌 FATO' : '📝 CONTEXTO'
-      formatted += `\n${label}: ${m.content_resumido || m.content}\n`
-    }
-  }
-
   return formatted
 }
 
@@ -335,55 +361,46 @@ export function formatRAGContextForPrompt(context: RAGContext): string {
 // ============================================================================
 
 /**
- * Extrai fatos relevantes de uma conversa usando DeepSeek
+ * Extrai fatos relevantes de uma conversa usando OpenAI
  */
 export async function extractFactsFromConversation(
   conversation: { role: string; content: string }[],
-  deepseekApiKey: string
+  openaiApiKey: string,
+  model?: string
 ): Promise<ExtractedFact[]> {
   if (conversation.length < 2) return []
 
-  const systemPrompt = `Você é um extrator de fatos e preferências.
-Analise a conversa e extraia APENAS informações importantes que devem ser lembradas:
+  const systemPrompt = `Extraia APENAS informações que serão úteis em FUTURAS sessões de conversa:
 
-1. PREFERÊNCIAS: Como o usuário prefere receber informações
-2. FATOS: Informações específicas sobre processos, clientes, valores
-3. CORREÇÕES: Se o usuário corrigiu algo que foi dito errado
-4. ENTIDADES: Nomes de clientes, processos, advogados mencionados
+1. PREFERÊNCIAS: Como o usuário prefere receber informações (formato, nível de detalhe, estilo de resposta)
+2. CORREÇÕES: Quando o usuário corrigiu algo errado que a assistente fez ou disse
+3. CONTEXTO PESSOAL: Informações sobre o trabalho do usuário (casos importantes, clientes recorrentes, rotinas)
 
-Responda APENAS com JSON no formato:
-{
-  "facts": [
-    {
-      "tipo": "preferencia|fato|correcao|entidade",
-      "entidade": "nome se for entidade",
-      "content": "descrição clara do fato",
-      "permanente": true/false
-    }
-  ]
-}
+NÃO extraia:
+- Dados retornados por consultas ao banco (valores, quantidades, listas) — são transientes e podem ser consultados novamente
+- Informações que vieram diretamente do sistema (status de tarefas, datas de prazos, etc.)
+- Fatos óbvios ou genéricos que qualquer pessoa saberia
+- Nomes de entidades mencionados apenas de passagem sem contexto relevante
 
-Se não houver fatos relevantes, retorne: {"facts": []}
+Responda APENAS com JSON:
+{"facts": [{"tipo": "preferencia|correcao|contexto", "content": "descrição clara e útil", "permanente": true}]}
 
-IMPORTANTE:
-- NÃO extraia informações genéricas ou óbvias
-- FOQUE em informações que ajudariam em futuras conversas
-- Preferências e correções devem ser permanentes
-- Fatos específicos podem ser temporários`
+Se nada relevante para futuras sessões, retorne: {"facts": []}`
 
   const recentMessages = conversation.slice(-6).map(m =>
     `${m.role === 'user' ? 'Usuário' : 'Assistente'}: ${m.content}`
   ).join('\n')
 
   try {
-    const response = await fetch(DEEPSEEK_API_URL, {
+    const extractionModel = model || 'gpt-4o-mini'
+    const response = await fetch(OPENAI_CHAT_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${deepseekApiKey}`,
+        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: extractionModel,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Extraia fatos desta conversa:\n\n${recentMessages}` },

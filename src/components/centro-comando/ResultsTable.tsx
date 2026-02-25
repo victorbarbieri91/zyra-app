@@ -17,8 +17,23 @@ interface ResultsTableProps {
   maxRows?: number
 }
 
-// Colunas a esconder por padrão
-const HIDDEN_COLUMNS = ['id', 'escritorio_id', 'created_at', 'updated_at', 'created_by']
+// Colunas a esconder por padrão (sistema, FKs/UUIDs, campos internos)
+const HIDDEN_COLUMNS = [
+  // System
+  'id', 'escritorio_id', 'created_at', 'updated_at', 'created_by', 'updated_by', 'deleted_at',
+  // Foreign keys (UUIDs crus — inúteis para o usuário)
+  'responsavel_id', 'responsaveis_ids', 'processo_id', 'cliente_id',
+  'user_id', 'sessao_id', 'contrato_id', 'parcela_id', 'fatura_id',
+  'evento_id', 'tarefa_id', 'audiencia_id', 'consultivo_id',
+  'recorrencia_id', 'recorrencia_original_id', 'parent_id',
+  // Campos internos/técnicos
+  'cor', 'fixa', 'status_data', 'prazo_dias_uteis',
+  'horario_planejado_dia', 'duracao_planejada_minutos',
+  'prazo_data_limite', 'data_conclusao', 'criado_por', 'criado por',
+  'tipo_entidade', 'metadata', 'config',
+  'link_videoconferencia', 'observacoes_internas',
+  'todos_responsaveis', 'escritorio_nome',
+]
 
 // Formatadores por tipo de coluna
 const COLUMN_FORMATTERS: Record<string, (value: any) => string | React.ReactNode> = {
@@ -166,6 +181,11 @@ export function ResultsTable({ data, maxRows = 10 }: ResultsTableProps) {
     // Valores nulos
     if (value === null || value === undefined) {
       return <span className="text-slate-400">-</span>
+    }
+
+    // Detectar UUIDs e mostrar truncado
+    if (typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/.test(value)) {
+      return <span className="text-slate-400 text-[10px]">...{value.slice(-6)}</span>
     }
 
     // Arrays

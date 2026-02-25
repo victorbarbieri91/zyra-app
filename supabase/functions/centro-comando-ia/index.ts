@@ -3,13 +3,15 @@
 // ============================================
 // Interface conversacional que permite ao usuário
 // consultar e modificar dados usando linguagem natural.
-// Utiliza DeepSeek Reasoner com function calling para interpretar
-// comandos e executar queries seguras no banco.
+// Utiliza OpenAI (modelo configurável via AI_MODEL env var)
+// com function calling para interpretar comandos e
+// executar queries seguras no banco.
 //
-// MODO STREAMING: Envia eventos em tempo real mostrando
-// o que a IA está fazendo, como se estivesse "pensando em voz alta".
-// O DeepSeek Reasoner possui chain-of-thought nativo que é
-// exibido como "reasoning" antes da resposta final.
+// MODO STREAMING: Envia eventos SSE em tempo real mostrando
+// o que a IA está fazendo (thinking, step, done, error).
+//
+// RAG: Busca semântica em knowledge base + memórias do usuário
+// usando OpenAI embeddings (text-embedding-3-small).
 //
 // SEGURANÇA:
 // - SELECT: executa direto
@@ -20,11 +22,11 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
-  buildRAGContext,
-  formatRAGContextForPrompt,
+  searchKnowledge,
+  loadUserMemories,
   extractFactsFromConversation,
   saveExtractedFacts,
-  type RAGContext,
+  type KnowledgeResult,
 } from './rag-helpers.ts'
 
 const corsHeaders = {
@@ -106,90 +108,118 @@ const TABELAS_PERMITIDAS = [
 ]
 
 // ============================================
-// SCHEMA PRÉ-CARREGADO DAS TABELAS PRINCIPAIS
+// CONTEXTO DE DOMÍNIO — Schema + Relações + Lógica de Negócio
 // ============================================
-// Isso ELIMINA a necessidade de chamar listar_tabelas e consultar_schema
-// para as operações mais comuns, economizando 2-3 iterações por request.
-const SCHEMA_PRINCIPAIS = `
-### TABELAS DISPONÍVEIS (use diretamente, não precisa listar_tabelas):
+// A IA usa este contexto para RACIOCINAR e montar queries, não para copiar exemplos.
+// Knowledge base (RAG) complementa com detalhes de colunas quando necessário.
+const CONTEXTO_DOMINIO = `
+### TABELAS PRINCIPAIS (campos-chave — detalhes extras disponíveis via knowledge base)
 
-1. **processos_processos** - Processos judiciais
-   Campos: id, numero_cnj, numero_pasta, tipo, area, fase, tribunal, comarca, vara, juiz,
-   data_distribuicao, cliente_id, responsavel_id, status, valor_causa, objeto_acao, autor, reu, tags
-   Filtros comuns: status='ativo', area='trabalhista'/'civel'/'criminal'
+1. **processos_processos** — Processos judiciais
+   id, numero_cnj, numero_pasta, tipo, area, fase, tribunal, comarca, vara, juiz,
+   data_distribuicao, cliente_id→crm_pessoas, responsavel_id→profiles, status, valor_causa, autor, reu, tags
+   status: 'ativo'/'arquivado'/'encerrado' | area: 'trabalhista'/'civel'/'criminal'/etc
 
-2. **crm_pessoas** - Clientes e contatos (NÃO usar para responsável de tarefas!)
-   Campos: id, nome_completo, tipo_pessoa, cpf_cnpj, email, telefone, endereco, tipo_contato (cliente/contato/adverso)
-   Filtros comuns: tipo_contato='cliente'
+2. **crm_pessoas** — Clientes e contatos
+   id, nome_completo, tipo_pessoa, cpf_cnpj, email, telefone, tipo_contato ('cliente'/'contato'/'adverso')
 
-2b. **profiles** - Usuários do sistema (usar para responsavel_id em tarefas/eventos)
-   Campos: id, nome_completo, email, cargo, escritorio_id
-   Use esta tabela para buscar IDs de responsáveis para agenda_tarefas e agenda_eventos
+3. **profiles** — Usuários/advogados do sistema (NÃO confundir com crm_pessoas)
+   id, nome_completo, email, cargo, escritorio_id
+   ⚠️ Para referenciar um usuário por NOME: SELECT id FROM profiles WHERE escritorio_id = '{escritorio_id}' AND nome_completo ILIKE '%nome%'
 
-3. **agenda_tarefas** - Tarefas e afazeres
-   Campos: id, titulo, descricao, tipo (obrigatório: 'prazo_processual'/'acompanhamento'/'follow_up'/'administrativo'/'outro'),
-   prioridade ('alta'/'media'/'baixa'), status ('pendente'/'em_andamento'/'em_pausa'/'concluida'/'cancelada'),
-   data_inicio (timestamptz, obrigatório), data_fim (timestamptz), prazo_data_limite (date),
-   responsavel_id (uuid - DEVE vir de profiles.id, NÃO de crm_pessoas!), processo_id
-   Para INSERT usar: titulo, tipo='administrativo', data_inicio, prioridade, status='pendente'
-   IMPORTANTE: responsavel_id é OPCIONAL. Se não souber o ID correto do profiles, NÃO inclua este campo.
-   Filtros comuns: status='pendente', prazo_data_limite >= CURRENT_DATE
+4. **agenda_tarefas** — Tarefas e prazos
+   id, titulo, descricao,
+   tipo: 'prazo_processual' | 'acompanhamento' | 'follow_up' | 'administrativo' | 'outro' | 'fixa' (CHECK constraint),
+   prioridade: 'alta' | 'media' | 'baixa' (CHECK constraint),
+   status: 'pendente' | 'em_andamento' | 'em_pausa' | 'concluida' | 'cancelada' (CHECK constraint),
+   data_inicio (date — YYYY-MM-DD, NÃO timestamptz), prazo_data_limite (date),
+   responsavel_id→profiles (UUID), responsaveis_ids (uuid[] — default '{}'), processo_id→processos_processos
+   ⚠️ Para INSERT obrigatórios: titulo, tipo, data_inicio, escritorio_id (automático)
+   ⚠️ responsavel_id DEVE ser UUID de profiles.id — NUNCA inventar UUID
 
-4. **agenda_eventos** - Eventos e compromissos
-   Campos: id, titulo, descricao, data_inicio, data_fim, tipo, local, responsavel_id, processo_id
+5. **agenda_eventos** — Compromissos e reuniões
+   id, titulo, data_inicio (timestamptz), data_fim (timestamptz), tipo, local,
+   responsavel_id→profiles, responsaveis_ids (uuid[]), processo_id
 
-5. **agenda_audiencias** - Audiências judiciais
-   Campos: id, data_hora, tipo, local, vara, processo_id, responsavel_id, status
+6. **agenda_audiencias** — Audiências judiciais
+   id, data_hora (timestamptz), tipo, local, vara, processo_id, responsavel_id→profiles, responsaveis_ids (uuid[]), status
 
-6. **financeiro_timesheet** - Registro de horas
-   Campos: id, data, horas, descricao, processo_id, usuario_id, valor_hora, faturado
+7. **financeiro_timesheet** — Horas trabalhadas
+   id, data (date), horas, descricao, processo_id, user_id→profiles, valor_hora, faturado
 
-7. **financeiro_honorarios** - Lançamentos financeiros
-   Campos: id, descricao, valor, data_vencimento, data_pagamento, status, processo_id, cliente_id
+8. **financeiro_honorarios** — Lançamentos financeiros
+   id, descricao, valor, data_vencimento, data_pagamento, status, processo_id, cliente_id→crm_pessoas
 
-8. **v_agenda_consolidada** - View: agenda unificada (LEITURA)
-   Campos: id, tipo_entidade, titulo, descricao, data_inicio, data_fim, status, prioridade, responsavel_nome, processo_numero
+9. **financeiro_contratos_honorarios** — Contratos de cobrança (CORAÇÃO do faturamento)
+   id, titulo, numero_contrato, cliente_id→crm_pessoas, tipo_contrato, forma_cobranca,
+   valor_total, config (jsonb), valores_cargo (jsonb), horas_faturaveis, ativo, data_inicio, data_fim
 
-### REGRA DE OURO: SEMPRE inclua WHERE escritorio_id = '{escritorio_id}'
-`
+10. **v_agenda_consolidada** — View: agenda unificada (SOMENTE LEITURA)
+    id, tipo_entidade, titulo, descricao, data_inicio, data_fim, status, prioridade, responsavel_nome, processo_numero
 
-// ============================================
-// EXEMPLOS DE QUERIES PARA OPERAÇÕES COMUNS
-// ============================================
-const EXEMPLOS_QUERIES = `
-### EXEMPLOS DE QUERIES (copie e adapte):
+### RELAÇÕES (→ = FK, use para JOINs)
+- processo.cliente_id → crm_pessoas.id | processo.responsavel_id → profiles.id
+- tarefa/evento/audiencia.responsavel_id → profiles.id | .responsaveis_ids = uuid[] (múltiplos responsáveis)
+- tarefa/evento/audiencia.processo_id → processos_processos.id
+- timesheet.user_id → profiles.id | timesheet.processo_id → processos_processos.id
+- honorarios.processo_id → processos_processos.id | .cliente_id → crm_pessoas.id
+- contrato.cliente_id → crm_pessoas.id
 
--- Todos os processos ativos
-SELECT id, numero_cnj, tipo, area, fase, tribunal, status, data_distribuicao, autor, reu
-FROM processos_processos
-WHERE escritorio_id = '{escritorio_id}' AND status = 'ativo'
-ORDER BY data_distribuicao DESC;
+### LÓGICA DE NEGÓCIO
+- Contratos de honorários definem como o cliente é cobrado (forma_cobranca + config jsonb)
+- Timesheet registra horas → multiplicadas por valor_hora → gera faturamento
+- Processos conectam tudo: tarefas, audiências, honorários, timesheet, documentos
+- v_agenda_consolidada unifica tarefas + eventos + audiências numa view só (somente SELECT)
+- autor e reu em processos_processos formam o "título" do caso (CONCAT(autor, ' x ', reu))
 
--- Processos trabalhistas
-SELECT * FROM processos_processos
-WHERE escritorio_id = '{escritorio_id}' AND status = 'ativo' AND LOWER(area) = 'trabalhista';
+### ⚠️ WORKFLOWS OBRIGATÓRIOS
 
--- Tarefas pendentes para hoje
-SELECT id, titulo, prazo_data_limite, prioridade, status
-FROM agenda_tarefas
-WHERE escritorio_id = '{escritorio_id}' AND status = 'pendente' AND prazo_data_limite <= CURRENT_DATE;
+**Criar tarefa/evento/audiência com responsável por NOME:**
+1. Primeiro: consultar_dados → SELECT id, nome_completo FROM profiles WHERE escritorio_id = '{escritorio_id}' AND nome_completo ILIKE '%nome%'
+2. Confirmar match com usuário se ambíguo
+3. Depois: preparar_cadastro com o UUID correto no campo responsavel_id
 
--- Tarefas da semana
-SELECT * FROM agenda_tarefas
-WHERE escritorio_id = '{escritorio_id}' AND prazo_data_limite BETWEEN CURRENT_DATE AND CURRENT_DATE + 7;
+**Criar MÚLTIPLAS tarefas:**
+- Chamar preparar_cadastro UMA VEZ para CADA tarefa (não arrays)
+- CADA chamada deve ter valores válidos de tipo/prioridade/status conforme CHECK constraints
 
--- Criar tarefa (INSERT)
--- Campos obrigatórios: titulo, tipo, data_inicio
--- tipo DEVE ser um de: 'prazo_processual', 'acompanhamento', 'follow_up', 'administrativo', 'outro'
--- INSERT via preparar_cadastro: {titulo: "...", tipo: "administrativo", data_inicio: "2026-01-17T10:00:00", prioridade: "alta", status: "pendente"}
+**Reagendar tarefa/evento:**
+1. consultar_dados → buscar o registro pelo título/descrição
+2. preparar_alteracao → alterar data_inicio (date YYYY-MM-DD para tarefas)
 
--- Clientes ativos
-SELECT id, nome, email, telefone FROM crm_pessoas
-WHERE escritorio_id = '{escritorio_id}' AND tipo = 'cliente';
+### PADROES DE QUERY (use como base, adapte)
 
--- Horas do mês
-SELECT SUM(horas) as total_horas FROM financeiro_timesheet
-WHERE escritorio_id = '{escritorio_id}' AND DATE_TRUNC('month', data) = DATE_TRUNC('month', CURRENT_DATE);
+-- Tarefas do dia (com nome do responsavel)
+SELECT t.titulo, t.tipo, t.status, t.prioridade,
+  TO_CHAR(t.prazo_data_limite, 'DD/MM/YYYY') as prazo,
+  p.nome_completo as responsavel
+FROM agenda_tarefas t
+LEFT JOIN profiles p ON p.id = t.responsavel_id
+WHERE t.escritorio_id = '{escritorio_id}'
+  AND t.prazo_data_limite = CURRENT_DATE
+  AND t.status IN ('pendente', 'em_andamento')
+ORDER BY t.prioridade DESC, t.data_inicio
+
+-- Processos ativos (com titulo formatado)
+SELECT pp.numero_cnj, CONCAT(pp.autor, ' x ', pp.reu) as partes,
+  pp.area, pp.fase, pp.status, p.nome_completo as responsavel
+FROM processos_processos pp
+LEFT JOIN profiles p ON p.id = pp.responsavel_id
+WHERE pp.escritorio_id = '{escritorio_id}' AND pp.status = 'ativo'
+ORDER BY pp.updated_at DESC LIMIT 20
+
+-- Agenda consolidada (view pronta)
+SELECT titulo, tipo_entidade as tipo, status, prioridade,
+  TO_CHAR(data_inicio AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') as data,
+  responsavel_nome
+FROM v_agenda_consolidada
+WHERE escritorio_id = '{escritorio_id}'
+  AND data_inicio::date = CURRENT_DATE
+ORDER BY data_inicio LIMIT 20
+
+-- Buscar usuario por nome (para obter UUID)
+SELECT id, nome_completo FROM profiles
+WHERE escritorio_id = '{escritorio_id}' AND nome_completo ILIKE '%nome%'
 `
 
 // ============================================
@@ -342,13 +372,13 @@ const TOOLS = [
     type: "function",
     function: {
       name: "consultar_dados",
-      description: "✅ USE ESTA TOOL para qualquer consulta. Você já conhece o schema - vá direto para a query SQL.",
+      description: "Executa SELECT SQL.\nREGRAS CRÍTICAS:\n1. NUNCA use SELECT * — selecione APENAS colunas relevantes para o usuário.\n2. SEMPRE JOIN profiles para nomes: LEFT JOIN profiles p ON p.id = t.responsavel_id\n3. NUNCA retorne: id, escritorio_id, created_at, updated_at, cor, fixa, status_data, recorrencia_id, responsaveis_ids (UUIDs crus).\n4. Para nomes de múltiplos responsáveis: use v_agenda_consolidada (já tem responsavel_nome).\n5. Datas: TO_CHAR(campo AT TIME ZONE 'America/Sao_Paulo', 'DD/MM/YYYY HH24:MI') as data.\n6. LIMIT 20 por padrão.",
       parameters: {
         type: "object",
         properties: {
           query: {
             type: "string",
-            description: "Query SQL SELECT. SEMPRE inclua WHERE escritorio_id = '{escritorio_id}'."
+            description: "Query SQL SELECT com colunas específicas (NUNCA SELECT *).\n- SEMPRE: WHERE escritorio_id = '{escritorio_id}'\n- Pessoal ('meu/minha/meus'): AND (responsavel_id = '{user_id}' OR '{user_id}' = ANY(responsaveis_ids))\n- SEMPRE JOIN profiles para nome do responsável\n- LIMIT 20"
           },
           explicacao: {
             type: "string",
@@ -462,7 +492,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "pedir_informacao",
-      description: "✅ USE ESTA TOOL para: 1) Coletar dados do usuário 2) CONFIRMAÇÕES (Sim/Não) 3) Escolhas entre opções. NUNCA faça perguntas no texto - use esta tool!",
+      description: "✅ USE APENAS para coletar DADOS FALTANTES do usuário (ex: título, data, responsável). NUNCA use para confirmações Sim/Não — confirmações são feitas automaticamente pelo sistema via preparar_cadastro/preparar_alteracao.",
       parameters: {
         type: "object",
         properties: {
@@ -577,15 +607,13 @@ serve(async (req) => {
       content: mensagem,
     })
 
-    // Buscar chaves de API
-    const deepseekKey = Deno.env.get('DEEPSEEK_API_KEY')
-    if (!deepseekKey) {
-      return errorResponse('Chave DeepSeek não configurada no servidor', 500)
-    }
-
+    // Buscar chave de API OpenAI (obrigatória)
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
-    // OpenAI é opcional - se não tiver, desabilita RAG
-    const ragEnabled = !!openaiApiKey
+    if (!openaiApiKey) {
+      return errorResponse('Chave OpenAI não configurada no servidor', 500)
+    }
+    const aiModel = Deno.env.get('AI_MODEL') || 'gpt-4o-mini'
+    // RAG sempre habilitado com OpenAI (knowledge base + memórias separados)
 
     // Buscar informações do usuário
     const { data: userProfile } = await supabase
@@ -594,141 +622,126 @@ serve(async (req) => {
       .eq('id', user_id)
       .single()
 
-    // Data atual para referência
-    const hoje = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+    // Data atual para referência (timezone Brasília)
+    const agora = new Date()
+    const hoje = agora.toISOString().split('T')[0] // YYYY-MM-DD
     const amanha = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+    const diasSemana = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado']
+    const diaSemana = diasSemana[agora.getDay()]
+    const horaAtual = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
 
     // Construir contexto da sessão baseado no histórico (modo antigo, mantido para fallback)
     const sessionContext = construirContextoSessao(historico_mensagens || [])
 
     // ========================================
-    // RAG: Buscar contexto relevante
+    // KNOWLEDGE BASE: Busca semântica a cada mensagem
     // ========================================
-    let ragContext: RAGContext | null = null
-    let ragSection = ''
+    let knowledgeSection = ''
 
-    if (ragEnabled && openaiApiKey) {
+    if (openaiApiKey) {
       try {
-        console.log('[Centro Comando] Buscando contexto RAG...')
-        ragContext = await buildRAGContext(supabase, mensagem, {
-          escritorioId: escritorio_id,
-          userId: user_id,
-          sessaoId: sessao_id,
-          openaiApiKey,
-        })
-        ragSection = formatRAGContextForPrompt(ragContext)
-        console.log(`[Centro Comando] RAG: ${ragContext.knowledge.length} chunks, ${ragContext.memories.length} memórias (~${ragContext.tokenEstimate} tokens)`)
-      } catch (ragError) {
-        console.error('[Centro Comando] Erro ao buscar RAG:', ragError)
-        // Continua sem RAG
+        console.log('[Centro Comando] Buscando knowledge base...')
+        const knowledge = await searchKnowledge(supabase, mensagem, openaiApiKey)
+        if (knowledge.length > 0) {
+          knowledgeSection = '\n## CONHECIMENTO COMPLEMENTAR\n' +
+            knowledge.map(k => `### ${k.title}\n${k.content}`).join('\n')
+        }
+        console.log(`[Centro Comando] Knowledge: ${knowledge.length} chunks`)
+      } catch (kbError) {
+        console.error('[Centro Comando] Erro knowledge base:', kbError)
       }
     }
 
-    // Construir bloco de memória da sessão (fallback/complemento)
+    // ========================================
+    // MEMÓRIAS CROSS-SESSION: Carregadas apenas na 1ª mensagem
+    // ========================================
+    let memoriasCrossSessao = ''
+    const isFirstMessage = !historico_mensagens || historico_mensagens.length === 0
+
+    if (isFirstMessage && openaiApiKey) {
+      try {
+        const memories = await loadUserMemories(supabase, user_id, escritorio_id)
+        if (memories.length > 0) {
+          memoriasCrossSessao = '\n## O QUE SEI SOBRE VOCÊ (sessões anteriores)\n' +
+            memories.map((m: any) => {
+              const label = m.tipo === 'correcao' ? '⚠️' : m.tipo === 'preferencia' ? '💡' : '📌'
+              return `${label} ${m.content_resumido || m.content}`
+            }).join('\n')
+        }
+        console.log(`[Centro Comando] Memórias cross-session: ${memories.length}`)
+      } catch (memError) {
+        console.error('[Centro Comando] Erro memórias:', memError)
+      }
+    }
+
+    // Construir bloco de memória da sessão (schemas já consultados nesta conversa)
     let memoriaSection = ''
     if (sessionContext.tabelasConhecidas.length > 0 || Object.keys(sessionContext.schemasConsultados).length > 0) {
-      memoriaSection = `
-
-## 🧠 MEMÓRIA DA SESSÃO (Já descobri isso - NÃO preciso buscar de novo!)
-`
-      if (sessionContext.tabelasConhecidas.length > 0) {
-        memoriaSection += `
-### Tabelas que JÁ CONHEÇO:
-${sessionContext.tabelasConhecidas.join(', ')}
-`
-      }
+      memoriaSection = '\n## CACHE DA SESSÃO (já descobri isso)\n'
       if (Object.keys(sessionContext.schemasConsultados).length > 0) {
-        memoriaSection += `
-### Schemas que JÁ CONSULTEI:
-${Object.entries(sessionContext.schemasConsultados).map(([tabela, campos]) =>
-  `- ${tabela}: ${(campos as string[]).slice(0, 8).join(', ')}...`
-).join('\n')}
-`
-      }
-      if (sessionContext.ultimaConsulta) {
-        memoriaSection += `
-### Última consulta:
-- ${sessionContext.ultimaConsulta.descricao}: ${sessionContext.ultimaConsulta.total} registros
-`
+        memoriaSection += Object.entries(sessionContext.schemasConsultados).map(([tabela, campos]) =>
+          `- ${tabela}: ${(campos as string[]).slice(0, 8).join(', ')}...`
+        ).join('\n')
       }
     }
 
-    const systemPrompt = `Você é Zyra, assistente jurídica do Zyra Legal.
-Usuário: ${userProfile?.nome_completo || 'Usuário'} | Escritório: ${escritorio_id}
-Hoje: ${hoje} | Amanhã: ${amanha}
+    const systemPrompt = `Você é Zyra, assistente jurídica inteligente do sistema Zyra Legal.
+Você mantém contexto da conversa e aprende com cada interação.
 
-## REGRAS ABSOLUTAS
+## USUÁRIO
+- Nome: ${userProfile?.nome_completo || 'Usuário'}
+- ID: ${user_id}
+- Cargo: ${userProfile?.role || 'advogado'}
+- Escritório: ${escritorio_id}
+- Agora: ${hoje} (${diaSemana}), ${horaAtual}
 
-1. **SEJA CONCISA**: Máximo 2 frases.
-2. **UMA CONSULTA** por vez.
-3. **DETECTE CONFIRMAÇÕES**: Se o usuário disse "Sim", "confirmar", "aplicar" → EXECUTE a ação!
+## COMPORTAMENTO
+- Respostas concisas (1-3 frases). Dados em tabela, não texto.
+- "Minhas/meus" = filtrar por user_id. "Do escritório/equipe" = apenas escritorio_id.
+- Para INSERT/UPDATE: chame preparar_cadastro/preparar_alteracao DIRETO. O sistema mostra tela de confirmação automaticamente.
+- DELETE = dupla confirmação (via preparar_exclusao).
+- Criar N registros = chamar preparar_cadastro N vezes (um objeto simples por chamada).
+- Usar JOINs quando precisar cruzar informações entre módulos.
 
-## ⚡ DETECTAR RESPOSTA DO USUÁRIO
+## ⚠️ REGRAS ANTI-LOOP
+- NUNCA use pedir_informacao para pedir confirmação Sim/Não. Use preparar_cadastro/preparar_alteracao que já tem confirmação embutida.
+- Se o usuário diz "Sim", "confirmar", "pode fazer", "pode aplicar" ou envia dados via formulário ("Aqui estao as informacoes:...") → EXECUTE a ação imediatamente. NÃO pergunte de novo.
+- Se já tem todos os dados necessários → chame preparar_cadastro/preparar_alteracao DIRETO, sem perguntar.
+- pedir_informacao é APENAS para coletar dados que estão FALTANDO (ex: título da tarefa, data, responsável).
 
-Quando a mensagem contiver:
-- "Sim", "sim, aplicar", "confirmar", "pode aplicar", "seguir" → É CONFIRMAÇÃO! Use preparar_alteracao_em_massa
-- "Não", "cancelar" → Cancelar operação
-
-## TOOLS
-
-| Tool | Quando |
-|------|--------|
-| consultar_dados | Buscar dados |
-| pedir_informacao | Perguntar ao usuário (coleta de dados, confirmação inicial) |
-| preparar_alteracao_em_massa | APÓS usuário confirmar "Sim" - executa UPDATE em múltiplos registros |
-| preparar_cadastro | INSERT de UM registro (para criar 5 tarefas, chame 5 vezes) |
-| preparar_alteracao | UPDATE único (precisa registro_id) |
-| preparar_exclusao | DELETE único |
-
-## ⚠️ CRIAR MÚLTIPLOS REGISTROS
-
-Para criar N registros (ex: 5 tarefas), chame preparar_cadastro N VEZES em paralelo:
-- Cada chamada cria UM registro
-- NÃO use arrays ou "registros" dentro de dados
-- dados deve ser um objeto SIMPLES: {titulo: "...", descricao: "...", ...}
-
-## FLUXO ALTERAÇÃO EM MASSA (CRÍTICO!)
-
-### Etapa 1: Usuário pede alteração
-Usuário: "Remova os prefixos dos autores"
-→ Use consultar_dados para contar registros
-→ Use pedir_informacao para perguntar
-
-### Etapa 2: Usuário confirma "Sim"
-Quando receber "Sim, aplicar" ou similar:
-→ NÃO pergunte de novo!
-→ Use preparar_alteracao_em_massa com a query SQL
-
-Exemplo preparar_alteracao_em_massa:
-\`\`\`json
-{
-  "tabela": "processos_processos",
-  "query_update": "UPDATE processos_processos SET autor = TRIM(REGEXP_REPLACE(autor, '^[^:]+:\\s*', '')) WHERE escritorio_id = '{escritorio_id}' AND autor ~ '^[A-Za-zÀ-ú]+:'",
-  "total_afetados": 158,
-  "explicacao": "Remover prefixos como 'Autor:', 'Reclamante:' do campo autor"
-}
-\`\`\`
-
-## Para coleta de dados:
-\`\`\`json
-{
-  "campos_necessarios": [
-    {"campo": "titulo", "descricao": "Título", "obrigatorio": true, "tipo": "texto"},
-    {"campo": "data", "descricao": "Data", "obrigatorio": true, "tipo": "data"}
-  ],
-  "contexto": "Preciso das informações para criar a tarefa"
-}
-\`\`\`
-
-${ragSection ? ragSection : SCHEMA_PRINCIPAIS + '\n' + EXEMPLOS_QUERIES}
-${memoriaSection}
+## DOMÍNIO
+${CONTEXTO_DOMINIO}
 
 ## SQL
-
 - SEMPRE: WHERE escritorio_id = '${escritorio_id}'
-- Strings: ILIKE ou LOWER()
-- Datas: YYYY-MM-DD
-- Resultados vão para tabela - não liste na resposta`
+- Filtro pessoal: responsavel_id = '{user_id}' OU '{user_id}' = ANY(responsaveis_ids)
+- Timesheet pessoal: user_id = '{user_id}'
+- Strings: ILIKE. Datas: YYYY-MM-DD.
+- NUNCA SELECT * — sempre colunas específicas + JOINs para nomes.
+- Para nomes: LEFT JOIN profiles p ON p.id = tabela.responsavel_id, retornar p.nome_completo as responsavel.
+- Para múltiplos responsáveis: preferir v_agenda_consolidada que já tem responsavel_nome.
+- Formatar datas na query: TO_CHAR(campo AT TIME ZONE 'America/Sao_Paulo', 'DD/MM/YYYY HH24:MI').
+- LIMIT 20 por padrão. Informar total se houver mais.
+
+## FORMATAÇÃO DE RESPOSTAS
+- Respostas conversacionais curtas. Se dados foram consultados, resuma os pontos principais em 1-2 frases, depois mostre tabela markdown.
+- Tabelas Markdown: MÁXIMO 5-6 colunas relevantes. Colunas por contexto:
+  * Agenda: Título, Tipo, Status, Prazo, Responsável
+  * Processos: Número CNJ, Partes (autor x réu), Área, Status, Responsável
+  * Financeiro: Descrição, Valor, Vencimento, Status
+  * CRM: Nome, Tipo, Email/Telefone
+- NUNCA mostrar UUIDs — sempre JOINar com profiles para obter nome_completo.
+- NUNCA incluir campos internos (cor, fixa, status_data, prazo_dias_uteis, horario_planejado_dia, duracao_planejada_minutos, recorrencia_id, etc).
+- Prioridades: use emoji (🔴 urgente, 🟠 alta, 🔵 média, ⚪ baixa).
+- Status: use emoji (✅ concluída, ⏳ pendente, 🔄 em andamento, ❌ cancelada).
+- Datas: formato dd/MM/yyyy ou dd/MM HH:mm. NUNCA formato ISO.
+- Se 0 resultados: responda amigavelmente, sugira alternativas.
+- Tabela Markdown: SEMPRE inclua TODOS os registros retornados (até LIMIT 20). NUNCA omita linhas — o usuário quer ver tudo.
+- Se >20 resultados existirem no banco: mostre os 20 retornados e informe o total.
+
+${knowledgeSection}
+${memoriasCrossSessao}
+${memoriaSection}`
 
     // Montar histórico de mensagens para contexto
     const mensagensParaIA: Array<{role: string, content: string}> = [
@@ -737,7 +750,7 @@ ${memoriaSection}
 
     // Adicionar histórico se fornecido - COM tool_results resumidos
     // OTIMIZAÇÃO RAG: Reduzido de 10 para 3 mensagens quando RAG está ativo
-    const maxHistorico = ragContext ? 3 : 10
+    const maxHistorico = 15 // Janela de conversa = memória de sessão
     if (historico_mensagens && Array.isArray(historico_mensagens)) {
       for (const msg of historico_mensagens.slice(-maxHistorico)) {
         if (msg.role && msg.content) {
@@ -772,12 +785,12 @@ ${memoriaSection}
     if (streaming) {
       return handleStreamingRequest(
         supabase,
-        deepseekKey,
+        openaiApiKey,
+        aiModel,
         mensagensParaIA,
         escritorio_id,
         user_id,
-        sessao_id,
-        openaiApiKey || null
+        sessao_id
       )
     }
 
@@ -786,12 +799,12 @@ ${memoriaSection}
     // ========================================
     return handleNonStreamingRequest(
       supabase,
-      deepseekKey,
+      openaiApiKey,
+      aiModel,
       mensagensParaIA,
       escritorio_id,
       user_id,
-      sessao_id,
-      openaiApiKey || null
+      sessao_id
     )
 
   } catch (error) {
@@ -805,12 +818,12 @@ ${memoriaSection}
 // ============================================
 async function handleStreamingRequest(
   supabase: any,
-  deepseekKey: string,
+  openaiApiKey: string,
+  aiModel: string,
   mensagensParaIA: Array<{role: string, content: string}>,
   escritorioId: string,
   userId: string,
-  sessaoId: string | null,
-  openaiApiKey: string | null
+  sessaoId: string | null
 ) {
   const encoder = new TextEncoder()
 
@@ -842,14 +855,14 @@ async function handleStreamingRequest(
           iteracao++
           console.log(`[Centro Comando SSE] Iteração ${iteracao}/${MAX_ITERACOES}`)
 
-          const response = await fetch('https://api.deepseek.com/chat/completions', {
+          const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${deepseekKey}`,
+              'Authorization': `Bearer ${openaiApiKey}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'deepseek-reasoner',
+              model: aiModel,
               messages: mensagensAtual,
               tools: TOOLS,
               tool_choice: 'auto',
@@ -859,8 +872,8 @@ async function handleStreamingRequest(
 
           if (!response.ok) {
             const errorText = await response.text()
-            console.error('[Centro Comando SSE] Erro DeepSeek:', response.status, errorText)
-            throw new Error(`Erro na API DeepSeek: ${response.status}`)
+            console.error('[Centro Comando SSE] Erro OpenAI:', response.status, errorText)
+            throw new Error(`Erro na API OpenAI: ${response.status}`)
           }
 
           const aiResponse = await response.json()
@@ -870,27 +883,15 @@ async function handleStreamingRequest(
           tokensInput += aiResponse.usage?.prompt_tokens || 0
           tokensOutput += aiResponse.usage?.completion_tokens || 0
 
-          // 📢 Se o DeepSeek retornou reasoning_content (chain-of-thought), mostrar
-          if (choice.message.reasoning_content) {
-            sendEvent('thinking', {
-              message: '💭 ' + choice.message.reasoning_content.substring(0, 200) + '...',
-              reasoning: choice.message.reasoning_content
-            })
-          }
-
           // Se a IA retornou tool_calls, processar com feedback
           if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
             ultimoToolCalls = choice.message.tool_calls
 
             // Adicionar mensagem do assistente com tool_calls ao histórico
-            // IMPORTANTE: Incluir reasoning_content para que o DeepSeek continue o raciocínio
             const assistantMessage: any = {
               role: 'assistant',
               content: choice.message.content || null,
               tool_calls: choice.message.tool_calls,
-            }
-            if (choice.message.reasoning_content) {
-              assistantMessage.reasoning_content = choice.message.reasoning_content
             }
             mensagensAtual.push(assistantMessage)
 
@@ -1035,34 +1036,34 @@ async function handleStreamingRequest(
         })
 
         // ========================================
-        // RAG: Extrair e salvar memórias (async, não bloqueia)
+        // RAG: Extrair e salvar memórias (async, throttled — a cada ~5 turnos)
         // ========================================
-        if (openaiApiKey && sessaoId && respostaTexto) {
+        const totalMensagens = mensagensAtual.filter((m: any) => m.role === 'user').length
+        if (sessaoId && respostaTexto && totalMensagens % 5 === 0) {
           // Executar de forma assíncrona para não atrasar a resposta
-          (async () => {
+          ;(async () => {
             try {
-              // Preparar conversa para extração
+              console.log(`[Memory] Extração throttled (turno ${totalMensagens}) — iniciando...`)
               const conversaParaExtracao = mensagensAtual
-                .filter(m => m.role === 'user' || m.role === 'assistant')
-                .map(m => ({ role: m.role, content: m.content || '' }))
+                .filter((m: any) => m.role === 'user' || m.role === 'assistant')
+                .map((m: any) => ({ role: m.role, content: m.content || '' }))
 
-              // Adicionar resposta atual
               conversaParaExtracao.push({ role: 'assistant', content: respostaTexto })
 
-              // Extrair fatos
-              const facts = await extractFactsFromConversation(conversaParaExtracao, deepseekKey)
+              const facts = await extractFactsFromConversation(conversaParaExtracao, openaiApiKey, aiModel)
+              console.log(`[Memory] ${facts.length} fatos extraídos`)
 
               if (facts.length > 0) {
-                console.log(`[Centro Comando] Extraídos ${facts.length} fatos da conversa`)
                 await saveExtractedFacts(supabase, facts, {
                   escritorioId,
                   userId,
                   sessaoId,
                   openaiApiKey,
                 })
+                console.log(`[Memory] ${facts.length} fatos salvos com sucesso`)
               }
             } catch (memError) {
-              console.error('[Centro Comando] Erro ao extrair memórias:', memError)
+              console.error('[Memory] ERRO na extração de fatos:', memError)
             }
           })()
         }
@@ -1091,12 +1092,12 @@ async function handleStreamingRequest(
 // ============================================
 async function handleNonStreamingRequest(
   supabase: any,
-  deepseekKey: string,
+  openaiApiKey: string,
+  aiModel: string,
   mensagensParaIA: Array<{role: string, content: string}>,
   escritorioId: string,
   userId: string,
-  sessaoId: string | null,
-  openaiApiKey: string | null
+  sessaoId: string | null
 ) {
   const startTime = Date.now()
   const MAX_ITERACOES = 10
@@ -1114,14 +1115,14 @@ async function handleNonStreamingRequest(
     iteracao++
     console.log(`[Centro Comando] Iteração ${iteracao}/${MAX_ITERACOES}`)
 
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${deepseekKey}`,
+        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'deepseek-reasoner',
+        model: aiModel,
         messages: mensagensAtual,
         tools: TOOLS,
         tool_choice: 'auto',
@@ -1131,8 +1132,8 @@ async function handleNonStreamingRequest(
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('[Centro Comando] Erro DeepSeek:', response.status, errorText)
-      throw new Error(`Erro na API DeepSeek: ${response.status}`)
+      console.error('[Centro Comando] Erro OpenAI:', response.status, errorText)
+      throw new Error(`Erro na API OpenAI: ${response.status}`)
     }
 
     const aiResponse = await response.json()
@@ -1158,14 +1159,10 @@ async function handleNonStreamingRequest(
       ultimoToolCalls = choice.message.tool_calls
 
       // Adicionar mensagem do assistente com tool_calls ao histórico
-      // IMPORTANTE: Incluir reasoning_content para que o DeepSeek continue o raciocínio
       const assistantMessage: any = {
         role: 'assistant',
         content: choice.message.content || null,
         tool_calls: choice.message.tool_calls,
-      }
-      if (choice.message.reasoning_content) {
-        assistantMessage.reasoning_content = choice.message.reasoning_content
       }
       mensagensAtual.push(assistantMessage)
 
@@ -1281,31 +1278,33 @@ async function handleNonStreamingRequest(
   })
 
   // ========================================
-  // RAG: Extrair e salvar memórias (async, não bloqueia)
+  // RAG: Extrair e salvar memórias (async, throttled — a cada ~5 turnos)
   // ========================================
-  if (openaiApiKey && sessaoId && respostaTexto) {
-    // Executar de forma assíncrona para não atrasar a resposta
-    (async () => {
+  const totalMensagensNonSSE = mensagensAtual.filter((m: any) => m.role === 'user').length
+  if (sessaoId && respostaTexto && totalMensagensNonSSE % 5 === 0) {
+    ;(async () => {
       try {
+        console.log(`[Memory] Extração throttled (turno ${totalMensagensNonSSE}) — iniciando...`)
         const conversaParaExtracao = mensagensAtual
-          .filter(m => m.role === 'user' || m.role === 'assistant')
-          .map(m => ({ role: m.role, content: m.content || '' }))
+          .filter((m: any) => m.role === 'user' || m.role === 'assistant')
+          .map((m: any) => ({ role: m.role, content: m.content || '' }))
 
         conversaParaExtracao.push({ role: 'assistant', content: respostaTexto })
 
-        const facts = await extractFactsFromConversation(conversaParaExtracao, deepseekKey)
+        const facts = await extractFactsFromConversation(conversaParaExtracao, openaiApiKey, aiModel)
+        console.log(`[Memory] ${facts.length} fatos extraídos`)
 
         if (facts.length > 0) {
-          console.log(`[Centro Comando] Extraídos ${facts.length} fatos da conversa`)
           await saveExtractedFacts(supabase, facts, {
             escritorioId,
             userId,
             sessaoId,
             openaiApiKey,
           })
+          console.log(`[Memory] ${facts.length} fatos salvos com sucesso`)
         }
       } catch (memError) {
-        console.error('[Centro Comando] Erro ao extrair memórias:', memError)
+        console.error('[Memory] ERRO na extração de fatos:', memError)
       }
     })()
   }
@@ -1400,7 +1399,9 @@ async function executarTool(
     }
 
     case 'consultar_dados': {
-      const query = args.query?.replace(/\{escritorio_id\}/g, escritorioId)
+      const query = args.query
+        ?.replace(/\{escritorio_id\}/g, escritorioId)
+        ?.replace(/\{user_id\}/g, userId)
       if (!isQuerySegura(query)) {
         return { tool: name, erro: 'Query contém comandos não permitidos' }
       }
@@ -1542,13 +1543,15 @@ async function executarTool(
         return { tool: name, erro: 'Campos tabela, query_update e total_afetados são obrigatórios.' }
       }
 
-      // Validar que a query tem WHERE escritorio_id
-      if (!args.query_update.toLowerCase().includes('escritorio_id')) {
-        return { tool: name, erro: 'Query DEVE incluir WHERE escritorio_id para segurança.' }
+      // Validar que a query tem WHERE escritorio_id (regex mais rigorosa)
+      if (!/WHERE\s+.*escritorio_id\s*=/i.test(args.query_update)) {
+        return { tool: name, erro: 'Query DEVE incluir WHERE escritorio_id = ... para segurança.' }
       }
 
-      // Substituir placeholder pelo ID real
-      const queryFinal = args.query_update.replace(/\{escritorio_id\}/g, escritorioId)
+      // Substituir placeholders pelos IDs reais
+      const queryFinal = args.query_update
+        .replace(/\{escritorio_id\}/g, escritorioId)
+        .replace(/\{user_id\}/g, userId)
 
       try {
         // Salvar ação pendente
@@ -1651,440 +1654,6 @@ async function executarTool(
     default:
       return { tool: name, erro: 'Ferramenta não reconhecida' }
   }
-}
-
-// ============================================
-// PROCESSAMENTO DE TOOL CALLS (LEGADO)
-// ============================================
-async function processarToolCalls(
-  supabase: any,
-  toolCalls: any[],
-  escritorioId: string,
-  userId: string,
-  sessaoId: string | null
-) {
-  const resultados: any[] = []
-  const acoesPendentes: any[] = []
-  let temDados = false
-
-  for (const call of toolCalls) {
-    const { name, arguments: argsString } = call.function
-    let args: any
-
-    try {
-      args = JSON.parse(argsString)
-    } catch (e) {
-      resultados.push({
-        tool: name,
-        erro: 'Erro ao parsear argumentos da ferramenta',
-      })
-      continue
-    }
-
-    console.log(`[Centro Comando] Tool: ${name}`, args)
-
-    switch (name) {
-      case 'listar_tabelas': {
-        // Retorna lista de tabelas permitidas com descrição
-        const tabelasInfo = [
-          { tabela: 'processos_processos', descricao: 'Processos judiciais e administrativos' },
-          { tabela: 'crm_pessoas', descricao: 'Clientes, contatos e partes' },
-          { tabela: 'profiles', descricao: 'Usuários/advogados do sistema' },
-          { tabela: 'agenda_tarefas', descricao: 'Tarefas e afazeres' },
-          { tabela: 'agenda_eventos', descricao: 'Eventos e compromissos' },
-          { tabela: 'agenda_audiencias', descricao: 'Audiências judiciais' },
-          { tabela: 'financeiro_timesheet', descricao: 'Registro de horas trabalhadas' },
-          { tabela: 'financeiro_honorarios', descricao: 'Lançamentos de honorários' },
-          { tabela: 'financeiro_honorarios_parcelas', descricao: 'Parcelas de honorários' },
-          { tabela: 'v_agenda_consolidada', descricao: 'View: agenda unificada (leitura)' },
-          { tabela: 'v_processos_dashboard', descricao: 'View: métricas de processos (leitura)' },
-        ]
-
-        resultados.push({
-          tool: name,
-          dados: tabelasInfo,
-          total: tabelasInfo.length,
-          explicacao: 'Tabelas disponíveis no sistema'
-        })
-        break
-      }
-
-      case 'consultar_schema': {
-        const tabela = args.tabela
-
-        if (!tabela) {
-          resultados.push({
-            tool: name,
-            erro: 'Campo "tabela" é obrigatório. Use listar_tabelas para ver as opções.',
-          })
-          break
-        }
-
-        if (!TABELAS_PERMITIDAS.includes(tabela)) {
-          resultados.push({
-            tool: name,
-            erro: `Tabela "${tabela}" não permitida. Use listar_tabelas para ver as disponíveis.`,
-          })
-          break
-        }
-
-        try {
-          // Busca schema da tabela usando função dedicada
-          const { data: schema, error } = await supabase.rpc('get_table_schema', {
-            tabela_nome: tabela,
-          })
-
-          if (error) throw error
-
-          resultados.push({
-            tool: name,
-            tabela: tabela,
-            colunas: schema?.colunas || [],
-            total: schema?.colunas?.length || 0,
-            explicacao: `Estrutura da tabela ${tabela}`,
-            dica: schema?.dica || 'Não inclua id, escritorio_id, created_at, updated_at ao inserir.'
-          })
-        } catch (err: any) {
-          resultados.push({
-            tool: name,
-            erro: `Erro ao consultar schema: ${err?.message || String(err) || 'Erro desconhecido'}`,
-          })
-        }
-        break
-      }
-
-      case 'consultar_dados': {
-        const query = args.query?.replace(/\{escritorio_id\}/g, escritorioId)
-
-        // Validar query
-        if (!isQuerySegura(query)) {
-          resultados.push({
-            tool: name,
-            erro: 'Query contém comandos não permitidos',
-            explicacao: args.explicacao,
-          })
-          continue
-        }
-
-        try {
-          console.log('[Centro Comando] Executando query:', query)
-
-          const { data, error } = await supabase.rpc('execute_safe_query', {
-            query_text: query,
-            escritorio_param: escritorioId,
-          })
-
-          if (error) {
-            console.error('[Centro Comando] Erro na query:', error.message, 'Query:', query)
-            throw error
-          }
-
-          temDados = true
-          resultados.push({
-            tool: name,
-            explicacao: args.explicacao,
-            dados: data,
-            total: Array.isArray(data) ? data.length : 0,
-          })
-        } catch (err: any) {
-          console.error('[Centro Comando] Query com erro:', query)
-          resultados.push({
-            tool: name,
-            erro: `Erro ao executar query: ${err?.message || String(err) || 'Erro desconhecido'}`,
-            explicacao: args.explicacao,
-            query_debug: query, // Para debug
-          })
-        }
-        break
-      }
-
-      case 'preparar_cadastro': {
-        // Validar dados obrigatórios
-        if (!args.tabela) {
-          resultados.push({
-            tool: name,
-            erro: 'Campo "tabela" é obrigatório. Use listar_tabelas para ver as opções.',
-          })
-          break
-        }
-
-        if (!args.dados || typeof args.dados !== 'object' || Object.keys(args.dados).length === 0) {
-          resultados.push({
-            tool: name,
-            erro: 'Campo "dados" é obrigatório e deve ser um objeto JSON com os campos a inserir. Use consultar_schema para ver os campos da tabela.',
-          })
-          break
-        }
-
-        if (!TABELAS_PERMITIDAS.includes(args.tabela)) {
-          resultados.push({
-            tool: name,
-            erro: `Tabela "${args.tabela}" não permitida. Use listar_tabelas para ver as disponíveis.`,
-          })
-          break
-        }
-
-        // Criar ação pendente para confirmação
-        const { data: acao, error } = await supabase
-          .from('centro_comando_acoes_pendentes')
-          .insert({
-            sessao_id: sessaoId,
-            user_id: userId,
-            escritorio_id: escritorioId,
-            tipo_acao: 'insert',
-            tabela: args.tabela,
-            dados: args.dados,
-            explicacao: args.explicacao || `Criar registro em ${args.tabela}`,
-          })
-          .select()
-          .single()
-
-        if (error) {
-          resultados.push({
-            tool: name,
-            erro: `Erro ao preparar cadastro: ${error?.message || error?.code || 'Erro desconhecido'}`,
-          })
-        } else {
-          acoesPendentes.push({
-            id: acao.id,
-            tipo: 'insert',
-            tabela: args.tabela,
-            dados: args.dados,
-            explicacao: args.explicacao || `Criar registro em ${args.tabela}`,
-          })
-          resultados.push({
-            tool: name,
-            acao_pendente: true,
-            acao_id: acao.id,
-            explicacao: args.explicacao || `Criar registro em ${args.tabela}`,
-            preview: args.dados,
-          })
-        }
-        break
-      }
-
-      case 'preparar_alteracao': {
-        // Buscar registro atual para preview
-        const { data: registroAtual } = await supabase
-          .from(args.tabela)
-          .select('*')
-          .eq('id', args.registro_id)
-          .eq('escritorio_id', escritorioId)
-          .single()
-
-        if (!registroAtual) {
-          resultados.push({
-            tool: name,
-            erro: 'Registro não encontrado',
-          })
-          continue
-        }
-
-        // Criar ação pendente
-        const { data: acao, error } = await supabase
-          .from('centro_comando_acoes_pendentes')
-          .insert({
-            sessao_id: sessaoId,
-            user_id: userId,
-            escritorio_id: escritorioId,
-            tipo_acao: 'update',
-            tabela: args.tabela,
-            dados: {
-              registro_id: args.registro_id,
-              alteracoes: args.alteracoes,
-              registro_atual: registroAtual,
-            },
-            explicacao: args.explicacao,
-          })
-          .select()
-          .single()
-
-        if (error) {
-          resultados.push({
-            tool: name,
-            erro: error?.message || error?.code || 'Erro ao preparar alteração',
-          })
-        } else {
-          acoesPendentes.push({
-            id: acao.id,
-            tipo: 'update',
-            tabela: args.tabela,
-            registro_id: args.registro_id,
-            antes: registroAtual,
-            depois: { ...registroAtual, ...args.alteracoes },
-            explicacao: args.explicacao,
-          })
-          resultados.push({
-            tool: name,
-            acao_pendente: true,
-            acao_id: acao.id,
-            explicacao: args.explicacao,
-            antes: registroAtual,
-            alteracoes: args.alteracoes,
-          })
-        }
-        break
-      }
-
-      case 'preparar_exclusao': {
-        // Buscar registro para preview
-        const { data: registro } = await supabase
-          .from(args.tabela)
-          .select('*')
-          .eq('id', args.registro_id)
-          .eq('escritorio_id', escritorioId)
-          .single()
-
-        if (!registro) {
-          resultados.push({
-            tool: name,
-            erro: 'Registro não encontrado',
-          })
-          continue
-        }
-
-        // Criar ação pendente
-        const { data: acao, error } = await supabase
-          .from('centro_comando_acoes_pendentes')
-          .insert({
-            sessao_id: sessaoId,
-            user_id: userId,
-            escritorio_id: escritorioId,
-            tipo_acao: 'delete',
-            tabela: args.tabela,
-            dados: {
-              registro_id: args.registro_id,
-              registro: registro,
-            },
-            explicacao: args.explicacao,
-          })
-          .select()
-          .single()
-
-        if (error) {
-          resultados.push({
-            tool: name,
-            erro: error?.message || error?.code || 'Erro ao preparar exclusão',
-          })
-        } else {
-          acoesPendentes.push({
-            id: acao.id,
-            tipo: 'delete',
-            tabela: args.tabela,
-            registro_id: args.registro_id,
-            registro: registro,
-            explicacao: args.explicacao,
-            requer_dupla_confirmacao: true,
-          })
-          resultados.push({
-            tool: name,
-            acao_pendente: true,
-            acao_id: acao.id,
-            explicacao: args.explicacao,
-            registro: registro,
-            aviso: 'ATENÇÃO: Esta ação é irreversível!',
-            requer_dupla_confirmacao: true,
-          })
-        }
-        break
-      }
-
-      case 'preparar_alteracao_em_massa': {
-        if (!args.tabela || !args.query_update || !args.total_afetados) {
-          resultados.push({
-            tool: name,
-            erro: 'Campos tabela, query_update e total_afetados são obrigatórios.',
-          })
-          break
-        }
-
-        // Validar que a query tem WHERE escritorio_id
-        if (!args.query_update.toLowerCase().includes('escritorio_id')) {
-          resultados.push({
-            tool: name,
-            erro: 'Query DEVE incluir WHERE escritorio_id para segurança.',
-          })
-          break
-        }
-
-        // Substituir placeholder pelo ID real
-        const queryFinal = args.query_update.replace(/\{escritorio_id\}/g, escritorioId)
-
-        // Criar ação pendente
-        const { data: acao, error } = await supabase
-          .from('centro_comando_acoes_pendentes')
-          .insert({
-            sessao_id: sessaoId,
-            user_id: userId,
-            escritorio_id: escritorioId,
-            tipo_acao: 'update_em_massa',
-            tabela: args.tabela,
-            dados: {
-              query: queryFinal,
-              total_afetados: args.total_afetados,
-            },
-            explicacao: args.explicacao,
-          })
-          .select()
-          .single()
-
-        if (error) {
-          resultados.push({
-            tool: name,
-            erro: error?.message || error?.code || 'Erro ao preparar alteração em massa',
-          })
-        } else {
-          acoesPendentes.push({
-            id: acao.id,
-            tipo: 'update_em_massa',
-            tabela: args.tabela,
-            total_afetados: args.total_afetados,
-            explicacao: args.explicacao,
-          })
-          resultados.push({
-            tool: name,
-            acao_pendente: true,
-            acao_id: acao.id,
-            tipo: 'update_em_massa',
-            explicacao: args.explicacao,
-            total_afetados: args.total_afetados,
-            preview: `UPDATE em ${args.total_afetados} registros na tabela ${args.tabela}`,
-            aviso: `⚠️ Esta ação alterará ${args.total_afetados} registros!`,
-          })
-        }
-        break
-      }
-
-      case 'pedir_informacao': {
-        resultados.push({
-          tool: name,
-          campos_necessarios: args.campos_necessarios,
-          contexto: args.contexto,
-          aguardando_input: true,
-        })
-        break
-      }
-
-      case 'navegar_pagina': {
-        resultados.push({
-          tool: name,
-          caminho: args.caminho,
-          filtros: args.filtros,
-          explicacao: args.explicacao,
-          tipo: 'navegacao',
-        })
-        break
-      }
-
-      default:
-        resultados.push({
-          tool: name,
-          erro: 'Ferramenta não reconhecida',
-        })
-    }
-  }
-
-  return { resultados, acoesPendentes, temDados }
 }
 
 // ============================================

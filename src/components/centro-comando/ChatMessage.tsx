@@ -3,9 +3,11 @@
 import { cn } from '@/lib/utils'
 import { formatBrazilDateTime } from '@/lib/timezone'
 import { CentroComandoMensagem, ToolResult } from '@/types/centro-comando'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, ChevronDown, Database } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible'
 import { ResultsTable } from './ResultsTable'
+import { MarkdownRenderer } from './MarkdownRenderer'
 import { FormularioPendente } from './FormularioPendente'
 import { FeedbackButtons, TipoFeedback } from './FeedbackButtons'
 
@@ -69,7 +71,7 @@ export function ChatMessage({
   // Mensagem da Zyra ou sistema
   return (
     <div className="flex mb-4">
-      <div className="max-w-[85%]">
+      <div className="max-w-full">
         {/* Header com nome e timestamp */}
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xs font-medium text-[#89bcbe]">
@@ -95,26 +97,34 @@ export function ChatMessage({
             {/* Texto da mensagem */}
             {mensagem.content && (
               <div className={cn(
-                'text-sm text-slate-700 leading-relaxed whitespace-pre-wrap',
                 mensagem.erro && 'text-red-600'
               )}>
-                {mensagem.content}
+                <MarkdownRenderer content={mensagem.content} />
               </div>
             )}
 
             {/* Resultados de ferramentas */}
-            {mensagem.tool_results && mensagem.tool_results.length > 0 && (
-              <div className="mt-3 space-y-3">
-                {filterToolResults(mensagem.tool_results).map((result, index) => (
-                  <ToolResultDisplay
-                    key={index}
-                    result={result}
-                    onNavigate={onNavigate}
-                    onOpenInputDialog={onOpenInputDialog}
-                  />
-                ))}
-              </div>
-            )}
+            {mensagem.tool_results && mensagem.tool_results.length > 0 && (() => {
+              // Se a IA já formatou tabela markdown no texto, não mostrar dados brutos duplicados
+              const temTabelaMarkdown = mensagem.content?.includes('| ---') || mensagem.content?.includes('|---')
+              const filteredResults = filterToolResults(mensagem.tool_results).filter(result => {
+                if (temTabelaMarkdown && result.tool === 'consultar_dados' && result.dados) return false
+                return true
+              })
+              if (filteredResults.length === 0) return null
+              return (
+                <div className="mt-3 space-y-3">
+                  {filteredResults.map((result, index) => (
+                    <ToolResultDisplay
+                      key={index}
+                      result={result}
+                      onNavigate={onNavigate}
+                      onOpenInputDialog={onOpenInputDialog}
+                    />
+                  ))}
+                </div>
+              )
+            })()}
 
             {/* Erro */}
             {mensagem.erro && (
@@ -151,22 +161,32 @@ function ToolResultDisplay({
   onNavigate?: (path: string) => void
   onOpenInputDialog?: (result: ToolResult) => void
 }) {
-  // Consulta com dados
+  // Consulta com dados — collapsible para não poluir a conversa
   if (result.tool === 'consultar_dados' && result.dados) {
     return (
-      <div className="border border-slate-200 rounded-lg overflow-hidden">
-        <div className="px-3 py-2 bg-slate-50 border-b border-slate-100">
-          <span className="text-xs text-slate-500">{result.explicacao}</span>
-          <span className="text-xs text-slate-400 ml-2">• {result.total} registros</span>
-        </div>
-        {result.dados.length > 0 ? (
-          <ResultsTable data={result.dados} />
-        ) : (
-          <div className="p-4 text-center text-sm text-slate-400">
-            Nenhum registro encontrado
+      <Collapsible>
+        <CollapsibleTrigger asChild>
+          <button className="flex items-center justify-between w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors text-left">
+            <div className="flex items-center gap-2">
+              <Database className="w-3 h-3 text-slate-400" />
+              <span className="text-xs text-slate-500">{result.explicacao}</span>
+              <span className="text-[10px] text-slate-400">({result.total} registros)</span>
+            </div>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 [[data-state=open]_&]:rotate-180" />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="mt-1 border border-slate-200 rounded-lg overflow-hidden">
+            {result.dados.length > 0 ? (
+              <ResultsTable data={result.dados} />
+            ) : (
+              <div className="p-4 text-center text-sm text-slate-400">
+                Nenhum registro encontrado
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </CollapsibleContent>
+      </Collapsible>
     )
   }
 

@@ -104,8 +104,14 @@ export default function AudienciaWizard({
 
   const [dataHora, setDataHora] = useState(() => {
     if (!initialData?.data_hora) return ''
-    // Converter ISO do DB (ex: 2025-01-20T17:00:00+00:00) para formato datetime-local (YYYY-MM-DDTHH:MM) em horário de Brasília
-    return formatBrazilDate(initialData.data_hora, "yyyy-MM-dd'T'HH:mm")
+    try {
+      // Converter ISO do DB (ex: 2025-01-20T17:00:00+00:00) para formato datetime-local (YYYY-MM-DDTHH:MM) em horário de Brasília
+      return formatBrazilDate(initialData.data_hora, "yyyy-MM-dd'T'HH:mm")
+    } catch {
+      // Fallback: extrair YYYY-MM-DDTHH:MM diretamente da string ISO
+      const match = String(initialData.data_hora).match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/)
+      return match ? `${match[1]}T${match[2]}` : ''
+    }
   })
   const [duracaoMinutos, setDuracaoMinutos] = useState(initialData?.duracao_minutos || 60)
   const [responsaveisIds, setResponsaveisIds] = useState<string[]>(() => {

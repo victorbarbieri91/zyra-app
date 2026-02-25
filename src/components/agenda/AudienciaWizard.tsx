@@ -20,7 +20,7 @@ import { ptBR } from 'date-fns/locale'
 // useAgendaResponsaveis não mais necessário - responsaveis_ids é passado diretamente no formData
 import { useEscritorioMembros } from '@/hooks/useEscritorioMembros'
 import { createClient } from '@/lib/supabase/client'
-import { formatBrazilDateTime } from '@/lib/timezone'
+import { formatBrazilDateTime, formatBrazilDate } from '@/lib/timezone'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -102,11 +102,22 @@ export default function AudienciaWizard({
   const [titulo, setTitulo] = useState(initialData?.titulo || '')
   const [descricao, setDescricao] = useState(initialData?.descricao || '')
 
-  const [dataHora, setDataHora] = useState(initialData?.data_hora || '')
+  const [dataHora, setDataHora] = useState(() => {
+    if (!initialData?.data_hora) return ''
+    // Converter ISO do DB (ex: 2025-01-20T17:00:00+00:00) para formato datetime-local (YYYY-MM-DDTHH:MM) em horário de Brasília
+    return formatBrazilDate(initialData.data_hora, "yyyy-MM-dd'T'HH:mm")
+  })
   const [duracaoMinutos, setDuracaoMinutos] = useState(initialData?.duracao_minutos || 60)
-  const [responsaveisIds, setResponsaveisIds] = useState<string[]>(
-    initialData?.responsavel_id ? [initialData.responsavel_id] : (user?.id ? [user.id] : [])
-  )
+  const [responsaveisIds, setResponsaveisIds] = useState<string[]>(() => {
+    // Priorizar array de responsáveis, fallback para singular, depois usuário atual
+    if (initialData?.responsaveis_ids && initialData.responsaveis_ids.length > 0) {
+      return initialData.responsaveis_ids
+    }
+    if (initialData?.responsavel_id) {
+      return [initialData.responsavel_id]
+    }
+    return user?.id ? [user.id] : []
+  })
 
   const [modalidade, setModalidade] = useState<Modalidade>(initialData?.modalidade || 'presencial')
 

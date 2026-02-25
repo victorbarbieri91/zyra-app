@@ -393,76 +393,80 @@ export default function EventoDetailModal({
 
           {/* Footer - Botões de Ação */}
           <div className="p-6 pt-4 border-t border-slate-100">
-            <div className="flex items-center justify-end gap-2">
-              {/* Marcar como Cumprido - para prazos e compromissos */}
-              {onMarcarCumprido && evento.status !== 'realizado' && evento.status !== 'cancelado' && (
-                <Button
-                  onClick={onMarcarCumprido}
-                  size="sm"
-                  className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white h-8"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-                  Marcar como Cumprido
-                </Button>
-              )}
-
-              {/* Reabrir - quando já concluído */}
-              {evento.status === 'realizado' && onReabrir && (
-                <Button
-                  onClick={onReabrir}
-                  size="sm"
-                  variant="outline"
-                  className="text-xs h-8"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-                  Reabrir
-                </Button>
-              )}
-
-              {/* Botão Timer - sempre visível */}
-              <Button
-                size="sm"
-                variant={timerExistente?.status === 'rodando' ? 'default' : 'outline'}
-                onClick={handleTimerClick}
-                className={cn(
-                  "text-xs h-8",
-                  timerExistente?.status === 'rodando'
-                    ? "bg-amber-500 hover:bg-amber-600 text-white"
-                    : "border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
+            <div className="flex items-center justify-between flex-wrap gap-y-2">
+              {/* Grupo esquerdo: ações primárias + timer */}
+              <div className="flex items-center gap-2">
+                {onMarcarCumprido && evento.status !== 'realizado' && evento.status !== 'cancelado' && (
+                  <Button
+                    onClick={onMarcarCumprido}
+                    size="sm"
+                    className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white h-8"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+                    Marcar como Cumprido
+                  </Button>
                 )}
-              >
-                {timerExistente?.status === 'rodando' ? (
-                  <><PauseCircle className="w-3.5 h-3.5 mr-1.5" /> Pausar</>
-                ) : timerExistente?.status === 'pausado' ? (
-                  <><PlayCircle className="w-3.5 h-3.5 mr-1.5" /> Retomar</>
-                ) : (
-                  <><PlayCircle className="w-3.5 h-3.5 mr-1.5" /> Iniciar Timer</>
+
+                {evento.status === 'realizado' && onReabrir && (
+                  <Button
+                    onClick={onReabrir}
+                    size="sm"
+                    variant="outline"
+                    className="text-xs h-8"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                    Reabrir
+                  </Button>
                 )}
-              </Button>
 
-              {onEdit && (
+                {/* Botão Timer - sempre visível */}
                 <Button
-                  onClick={onEdit}
                   size="sm"
-                  variant="outline"
-                  className="text-xs h-8"
+                  variant={timerExistente?.status === 'rodando' ? 'default' : 'outline'}
+                  onClick={handleTimerClick}
+                  className={cn(
+                    "text-xs h-8",
+                    timerExistente?.status === 'rodando'
+                      ? "bg-amber-500 hover:bg-amber-600 text-white"
+                      : "border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
+                  )}
                 >
-                  <Edit className="w-3.5 h-3.5 mr-1.5" />
-                  Editar
+                  {timerExistente?.status === 'rodando' ? (
+                    <><PauseCircle className="w-3.5 h-3.5 mr-1.5" /> Pausar</>
+                  ) : timerExistente?.status === 'pausado' ? (
+                    <><PlayCircle className="w-3.5 h-3.5 mr-1.5" /> Retomar</>
+                  ) : (
+                    <><PlayCircle className="w-3.5 h-3.5 mr-1.5" /> Iniciar Timer</>
+                  )}
                 </Button>
-              )}
+              </div>
 
-              {onCancelar && evento.status !== 'cancelado' && (
-                <Button
-                  onClick={onCancelar}
-                  size="sm"
-                  variant="outline"
-                  className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 h-8"
-                >
-                  <X className="w-3.5 h-3.5 mr-1.5" />
-                  Cancelar
-                </Button>
-              )}
+              {/* Grupo direito: editar + cancelar */}
+              <div className="flex items-center gap-2">
+                {onEdit && (
+                  <Button
+                    onClick={onEdit}
+                    size="sm"
+                    variant="outline"
+                    className="text-xs h-8"
+                  >
+                    <Edit className="w-3.5 h-3.5 mr-1.5" />
+                    Editar
+                  </Button>
+                )}
+
+                {onCancelar && evento.status !== 'cancelado' && (
+                  <Button
+                    onClick={onCancelar}
+                    size="sm"
+                    variant="outline"
+                    className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 h-8"
+                  >
+                    <X className="w-3.5 h-3.5 mr-1.5" />
+                    Cancelar
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>

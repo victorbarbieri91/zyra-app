@@ -30,6 +30,8 @@ export function FloatingTimerWidget() {
     processoId?: string | null;
     consultaId?: string | null;
     tarefaId?: string | null;
+    audienciaId?: string | null;
+    eventoId?: string | null;
     duracaoHoras: number;
     duracaoMinutos: number;
     atividade: string;
@@ -136,6 +138,8 @@ export function FloatingTimerWidget() {
       processoId: timer.processo_id,
       consultaId: timer.consulta_id,
       tarefaId: timer.tarefa_id,
+      audienciaId: timer.audiencia_id,
+      eventoId: timer.evento_id,
       duracaoHoras: h,
       duracaoMinutos: m,
       atividade: timer.descricao || timer.titulo,
@@ -363,6 +367,8 @@ export function FloatingTimerWidget() {
         processoId={timerParaSalvar?.processoId}
         consultaId={timerParaSalvar?.consultaId}
         tarefaId={timerParaSalvar?.tarefaId}
+        audienciaId={timerParaSalvar?.audienciaId}
+        eventoId={timerParaSalvar?.eventoId}
         defaultModoRegistro={timerParaSalvar ? 'duracao' : undefined}
         defaultDuracaoHoras={timerParaSalvar?.duracaoHoras}
         defaultDuracaoMinutos={timerParaSalvar?.duracaoMinutos}
@@ -371,12 +377,46 @@ export function FloatingTimerWidget() {
           if (timerParaSalvar) {
             descartarTimer(timerParaSalvar.id);
             setTimerParaSalvar(null);
-            toast.success('Horas registradas com sucesso!');
           } else {
             setShowRetroativo(false);
-            toast.success('Horas registradas com sucesso!');
           }
         }}
+        onSaveAndComplete={timerParaSalvar && (timerParaSalvar.tarefaId || timerParaSalvar.audienciaId || timerParaSalvar.eventoId)
+          ? async () => {
+            if (!timerParaSalvar) return;
+            try {
+              // Descartar o timer (horas já salvas via RPC no modal)
+              await descartarTimer(timerParaSalvar.id);
+
+              // Concluir a entidade vinculada
+              const { createClient } = await import('@/lib/supabase/client');
+              const sb = createClient();
+
+              if (timerParaSalvar.tarefaId) {
+                await sb.from('agenda_tarefas').update({
+                  status: 'concluida',
+                  data_conclusao: new Date().toISOString(),
+                }).eq('id', timerParaSalvar.tarefaId);
+                toast.success('Horas registradas e tarefa concluída!');
+              } else if (timerParaSalvar.audienciaId) {
+                await sb.from('agenda_audiencias').update({
+                  status: 'realizada',
+                }).eq('id', timerParaSalvar.audienciaId);
+                toast.success('Horas registradas e audiência concluída!');
+              } else if (timerParaSalvar.eventoId) {
+                await sb.from('agenda_eventos').update({
+                  status: 'realizado',
+                }).eq('id', timerParaSalvar.eventoId);
+                toast.success('Horas registradas e compromisso concluído!');
+              }
+            } catch (err) {
+              console.error('Erro ao concluir entidade:', err);
+              toast.error('Horas registradas, mas erro ao concluir');
+            }
+            setTimerParaSalvar(null);
+          }
+          : undefined
+        }
       />
 
       {/* Modal Novo Timer */}

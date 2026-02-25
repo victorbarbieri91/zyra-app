@@ -470,86 +470,91 @@ export default function AudienciaDetailModal({
 
           {/* Footer com Ações */}
           <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
-            <div className="flex items-center gap-2">
-              {/* Botão de concluir/reabrir */}
-              {isAgendada && onRealizar && (
-                <Button
-                  onClick={onRealizar}
-                  size="sm"
-                  className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                >
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                  Marcar como Realizada
-                </Button>
-              )}
-
-              {audiencia.status === 'realizada' && onReabrir && (
-                <Button
-                  onClick={onReabrir}
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs border-slate-200"
-                >
-                  <RotateCcw className="w-3 h-3 mr-1" />
-                  Reabrir
-                </Button>
-              )}
-
-              {isAgendada && onReagendar && (
-                <Button
-                  onClick={onReagendar}
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs border-slate-200"
-                >
-                  Reagendar
-                </Button>
-              )}
-
-              {/* Botão Timer - sempre visível */}
-              <Button
-                size="sm"
-                variant={timerExistente?.status === 'rodando' ? 'default' : 'outline'}
-                onClick={handleTimerClick}
-                className={cn(
-                  "h-8 text-xs",
-                  timerExistente?.status === 'rodando'
-                    ? "bg-amber-500 hover:bg-amber-600 text-white"
-                    : "border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
+            <div className="flex items-center justify-between flex-wrap gap-y-2">
+              {/* Grupo esquerdo: ações primárias + timer */}
+              <div className="flex items-center gap-2">
+                {isAgendada && onRealizar && (
+                  <Button
+                    onClick={onRealizar}
+                    size="sm"
+                    className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                    Marcar como Realizada
+                  </Button>
                 )}
-              >
-                {timerExistente?.status === 'rodando' ? (
-                  <><PauseCircle className="w-3 h-3 mr-1" /> Pausar</>
-                ) : timerExistente?.status === 'pausado' ? (
-                  <><PlayCircle className="w-3 h-3 mr-1" /> Retomar</>
-                ) : (
-                  <><PlayCircle className="w-3 h-3 mr-1" /> Iniciar Timer</>
+
+                {audiencia.status === 'realizada' && onReabrir && (
+                  <Button
+                    onClick={onReabrir}
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs border-slate-200"
+                  >
+                    <RotateCcw className="w-3 h-3 mr-1" />
+                    Reabrir
+                  </Button>
                 )}
-              </Button>
 
-              {onEdit && (
-                <Button
-                  onClick={onEdit}
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 text-xs text-slate-600 hover:text-slate-900"
-                >
-                  <Edit className="w-3 h-3 mr-1" />
-                  Editar
-                </Button>
-              )}
+                {isAgendada && onReagendar && (
+                  <Button
+                    onClick={onReagendar}
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs border-slate-200"
+                  >
+                    Reagendar
+                  </Button>
+                )}
 
-              {isAgendada && onCancelar && (
+                {/* Botão Timer - sempre visível */}
                 <Button
-                  onClick={onCancelar}
                   size="sm"
-                  variant="ghost"
-                  className="h-8 text-xs text-red-600 hover:text-red-700"
+                  variant={timerExistente?.status === 'rodando' ? 'default' : 'outline'}
+                  onClick={handleTimerClick}
+                  className={cn(
+                    "h-8 text-xs",
+                    timerExistente?.status === 'rodando'
+                      ? "bg-amber-500 hover:bg-amber-600 text-white"
+                      : "border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
+                  )}
                 >
-                  <X className="w-3 h-3 mr-1" />
-                  Cancelar
+                  {timerExistente?.status === 'rodando' ? (
+                    <><PauseCircle className="w-3 h-3 mr-1" /> Pausar</>
+                  ) : timerExistente?.status === 'pausado' ? (
+                    <><PlayCircle className="w-3 h-3 mr-1" /> Retomar</>
+                  ) : (
+                    <><PlayCircle className="w-3 h-3 mr-1" /> Iniciar Timer</>
+                  )}
                 </Button>
-              )}
+              </div>
+
+              {/* Grupo direito: editar + cancelar */}
+              <div className="flex items-center gap-2">
+                {onEdit && (
+                  <Button
+                    onClick={onEdit}
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 text-xs text-slate-600 hover:text-slate-900"
+                  >
+                    <Edit className="w-3 h-3 mr-1" />
+                    Editar
+                  </Button>
+                )}
+
+                {isAgendada && onCancelar && (
+                  <Button
+                    onClick={onCancelar}
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 text-xs text-red-600 hover:text-red-700"
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    Cancelar
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>

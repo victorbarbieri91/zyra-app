@@ -22,7 +22,8 @@ import {
   X,
   DollarSign,
   Ban,
-  Info
+  Info,
+  CheckCircle2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
@@ -49,6 +50,8 @@ interface TimesheetModalProps {
   defaultAtividade?: string
   // Callbacks
   onSuccess?: () => void
+  // Callback para "Salvar e Concluir" - salva horas E marca entidade como concluída
+  onSaveAndComplete?: () => void
 }
 
 interface ProcessoOption {
@@ -107,6 +110,7 @@ export default function TimesheetModal({
   defaultDuracaoMinutos,
   defaultAtividade,
   onSuccess,
+  onSaveAndComplete,
 }: TimesheetModalProps) {
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
@@ -642,8 +646,8 @@ export default function TimesheetModal({
     setFaturavelManual(true)
   }
 
-  // Submit
-  const handleSubmit = async () => {
+  // Submit - andComplete=true salva horas E marca entidade como concluída
+  const handleSubmit = async (andComplete: boolean = false) => {
     const vinculoId = processoSelecionado?.id || consultaSelecionada?.id
 
     if (!vinculoId) {
@@ -713,10 +717,14 @@ export default function TimesheetModal({
         toast.success('Horas registradas com sucesso!')
       }
 
-      // IMPORTANTE: Chamar onSuccess ANTES de fechar o modal
+      // IMPORTANTE: Chamar callback ANTES de fechar o modal
       // para que o handler possa atualizar o ref de sucesso
       // antes do onOpenChange disparar a verificação
-      onSuccess?.()
+      if (andComplete) {
+        onSaveAndComplete?.()
+      } else {
+        onSuccess?.()
+      }
       onOpenChange(false)
     } catch (err: any) {
       console.error('Erro ao registrar horas:', err)
@@ -1195,23 +1203,66 @@ export default function TimesheetModal({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancelar
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={loading || !hasSelection || !atividade.trim() || calcularHorasDecimalUnificado() <= 0}
-            className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e] text-white"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Salvando...
-              </>
-            ) : (
-              <>
-                <Clock className="w-4 h-4 mr-2" />
-                Registrar Horas
-              </>
-            )}
-          </Button>
+
+          {onSaveAndComplete && (tarefaId || audienciaId || eventoId) ? (
+            <>
+              {/* Modo com duas opções: Salvar (continuar) e Salvar e Concluir */}
+              <Button
+                onClick={() => handleSubmit(false)}
+                disabled={loading || !hasSelection || !atividade.trim() || calcularHorasDecimalUnificado() <= 0}
+                variant="outline"
+                className="border-[#34495e] text-[#34495e] hover:bg-slate-50"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Clock className="w-4 h-4 mr-2" />
+                    Salvar
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={() => handleSubmit(true)}
+                disabled={loading || !hasSelection || !atividade.trim() || calcularHorasDecimalUnificado() <= 0}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Salvar e Concluir
+                  </>
+                )}
+              </Button>
+            </>
+          ) : (
+            /* Modo padrão: apenas Registrar Horas */
+            <Button
+              onClick={() => handleSubmit(false)}
+              disabled={loading || !hasSelection || !atividade.trim() || calcularHorasDecimalUnificado() <= 0}
+              className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e] text-white"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Clock className="w-4 h-4 mr-2" />
+                  Registrar Horas
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

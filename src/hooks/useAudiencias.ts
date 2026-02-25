@@ -163,11 +163,16 @@ export function useAudiencias(escritorioId?: string) {
           link_virtual: data.link_virtual,
           plataforma: data.plataforma,
           // Pessoas/Responsáveis: usa array direto, mantém responsavel_id para compatibilidade
+          juiz: data.juiz,
+          promotor: data.promotor,
+          advogado_contrario: data.advogado_contrario,
           responsaveis_ids: data.responsaveis_ids || [],
           responsavel_id: data.responsaveis_ids?.[0] || data.responsavel_id,
           // Metadados
+          descricao: data.descricao,
           preparativos_checklist: data.preparativos_checklist,
           observacoes: data.observacoes,
+          cor: data.cor,
           status: data.status || 'agendada',
         })
         .select()
@@ -216,6 +221,9 @@ export function useAudiencias(escritorioId?: string) {
           link_virtual: data.link_virtual,
           plataforma: data.plataforma,
           // Pessoas/Responsáveis: usa array direto, mantém responsavel_id para compatibilidade
+          juiz: data.juiz,
+          promotor: data.promotor,
+          advogado_contrario: data.advogado_contrario,
           responsaveis_ids: data.responsaveis_ids,
           responsavel_id: data.responsaveis_ids?.[0] || data.responsavel_id,
           // Status e resultado
@@ -223,8 +231,10 @@ export function useAudiencias(escritorioId?: string) {
           resultado_tipo: data.resultado_tipo,
           resultado_descricao: data.resultado_descricao,
           // Metadados
+          descricao: data.descricao,
           preparativos_checklist: data.preparativos_checklist,
           observacoes: data.observacoes,
+          cor: data.cor,
         })
         .eq('id', id)
 

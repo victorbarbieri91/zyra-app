@@ -443,16 +443,16 @@ export default function AgendaPage() {
           escritorio_id: item.escritorio_id,
           processo_id: item.processo_id,
           titulo: item.titulo,
+          descricao: item.descricao,
           data_hora: item.data_inicio,
           tipo_audiencia: item.subtipo || 'outra',
-          status: item.status || 'agendado',
+          status: item.status || 'agendada',
           responsavel_id: item.responsavel_id,
           responsavel_nome: item.responsavel_nome,
           responsaveis_ids: item.responsaveis_ids || [],
           duracao_minutos: 60,
           modalidade: 'presencial',
           local: item.local,
-          observacoes: item.descricao,
           created_at: item.created_at,
           updated_at: item.updated_at,
         } as unknown as Audiencia
@@ -709,24 +709,34 @@ export default function AgendaPage() {
     }
   }
 
-  // Handler quando o modal de horas é fechado (com sucesso)
-  const handleTimesheetSuccess = async () => {
-    // Atualiza ref imediatamente (leitura síncrona) e state (para re-renders)
+  // Handler "Salvar" - registrar horas sem concluir a entidade
+  const handleTimesheetSaveOnly = async () => {
     horasRegistradasRef.current = true
     setHorasRegistradasComSucesso(true)
 
-    if (modoLancamentoAvulso) {
-      // Modo avulso: apenas registrar horas, não concluir
-      // Reabrir o modal de detalhe da tarefa para continuar trabalhando
-      if (tarefaParaConcluir) {
-        // Garantir que tarefaSelecionada está setada antes de reabrir
-        setTarefaSelecionada(tarefaParaConcluir as Tarefa)
-        setTarefaDetailOpen(true)
-      }
-      setTarefaParaConcluir(null)
-      setModoLancamentoAvulso(false)
-    } else if (tarefaParaConcluir) {
-      // Modo conclusão: registrar horas E concluir
+    // Descartar timer se presente (horas já salvas via RPC no modal)
+    if (timerDataParaConcluir?.timerId) {
+      try { await descartarTimer(timerDataParaConcluir.timerId) } catch {}
+    }
+
+    if (modoLancamentoAvulso && tarefaParaConcluir) {
+      // Modo avulso: reabrir modal de detalhe para continuar trabalhando
+      setTarefaSelecionada(tarefaParaConcluir as Tarefa)
+      setTarefaDetailOpen(true)
+    }
+
+    setTarefaParaConcluir(null)
+    setTimerDataParaConcluir(null)
+    setModoLancamentoAvulso(false)
+    await refreshItems()
+  }
+
+  // Handler "Salvar e Concluir" - registrar horas E concluir a entidade
+  const handleTimesheetSaveAndComplete = async () => {
+    horasRegistradasRef.current = true
+    setHorasRegistradasComSucesso(true)
+
+    if (tarefaParaConcluir) {
       try {
         // Descartar timer sem criar entry (o modal já criou via registrar_tempo_retroativo)
         if (timerDataParaConcluir?.timerId) {
@@ -756,7 +766,6 @@ export default function AgendaPage() {
       setTarefaParaConcluir(null)
       setTimerDataParaConcluir(null)
     }
-    // Nota: O TimesheetModal fecha o modal via onOpenChange(false) após onSuccess
   }
 
   // Handler quando o modal de horas é fechado sem registrar
@@ -772,7 +781,7 @@ export default function AgendaPage() {
         setTimerDataParaConcluir(null)
         setModoLancamentoAvulso(false)
       } else if (modoLancamentoAvulso && horasRegistradasRef.current) {
-        // Modo avulso com sucesso: handleTimesheetSuccess já reabriu o modal
+        // Modo avulso com sucesso: handleTimesheetSaveOnly já reabriu o modal de detalhe
         // Apenas limpar estado residual
         setTarefaParaConcluir(null)
         setTimerDataParaConcluir(null)
@@ -1639,6 +1648,15 @@ export default function AgendaPage() {
             status: audienciaSelecionada.status === 'adiada' ? 'remarcada' : audienciaSelecionada.status,
             juiz_nome: audienciaSelecionada.juiz,
             promotor_nome: audienciaSelecionada.promotor,
+            // Montar campo 'local' combinado a partir dos campos individuais
+            local: [
+              audienciaSelecionada.tribunal,
+              audienciaSelecionada.comarca,
+              audienciaSelecionada.vara,
+              audienciaSelecionada.forum,
+              audienciaSelecionada.sala,
+              audienciaSelecionada.endereco,
+            ].filter(Boolean).join(' - ') || undefined,
           } as any}
           onEdit={handleEditAudiencia}
           onCancelar={() => handleCancelarAudiencia(audienciaSelecionada.id)}
@@ -1738,7 +1756,8 @@ export default function AgendaPage() {
         defaultDuracaoHoras={timerDataParaConcluir?.defaultHoras}
         defaultDuracaoMinutos={timerDataParaConcluir?.defaultMinutos}
         defaultAtividade={timerDataParaConcluir?.defaultAtividade}
-        onSuccess={handleTimesheetSuccess}
+        onSuccess={handleTimesheetSaveOnly}
+        onSaveAndComplete={!modoLancamentoAvulso ? handleTimesheetSaveAndComplete : undefined}
       />
 
       {/* Dialog de Confirmação - Concluir sem Lançar Horas */}

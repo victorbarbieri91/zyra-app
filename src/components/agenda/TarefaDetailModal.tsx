@@ -1,6 +1,12 @@
 'use client'
 
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogTitle,
+  AlertDialogDescription,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Edit2,
@@ -137,6 +143,16 @@ export default function TarefaDetailModal({
   const [prazoFatalCalendarOpen, setPrazoFatalCalendarOpen] = useState(false)
 
   const { getResponsaveis } = useAgendaResponsaveis()
+
+  // Impedir que o Dialog principal feche quando um dialog secundário está aberto
+  // Isso resolve o problema de stacking do Radix UI onde o Dialog principal
+  // recebe onOpenChange(false) ao abrir um dialog filho
+  const handleMainDialogOpenChange = (newOpen: boolean) => {
+    if (!newOpen && (prazoFatalWarningOpen || confirmPrazoFatalOpen || calendarField !== null)) {
+      return // Não fechar enquanto dialogs secundários estiverem abertos
+    }
+    onOpenChange(newOpen)
+  }
 
   // Carregar informações adicionais
   useEffect(() => {
@@ -500,8 +516,21 @@ export default function TarefaDetailModal({
 
   return (
     <>
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl p-0 overflow-hidden border-0">
+    <Dialog open={open} onOpenChange={handleMainDialogOpenChange}>
+      <DialogContent
+        className="max-w-xl p-0 overflow-hidden border-0"
+        onPointerDownOutside={(e) => {
+          // Prevenir fechamento quando dialogs secundários estão abertos
+          if (prazoFatalWarningOpen || confirmPrazoFatalOpen || calendarField !== null) {
+            e.preventDefault()
+          }
+        }}
+        onInteractOutside={(e) => {
+          if (prazoFatalWarningOpen || confirmPrazoFatalOpen || calendarField !== null) {
+            e.preventDefault()
+          }
+        }}
+      >
         <DialogTitle className="sr-only">Detalhes da Tarefa</DialogTitle>
         <div className="bg-white rounded-lg">
 
@@ -791,7 +820,8 @@ export default function TarefaDetailModal({
 
           {/* Footer com Ações */}
           <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-y-2">
+              {/* Grupo esquerdo: ações primárias + timer */}
               <div className="flex items-center gap-2">
                 {/* Concluir/Reabrir com feedback otimista */}
                 {!isConcluido ? (
@@ -860,7 +890,10 @@ export default function TarefaDetailModal({
                     <><PlayCircle className="w-3 h-3 mr-1" /> Iniciar Timer</>
                   )}
                 </Button>
+              </div>
 
+              {/* Grupo direito: editar + excluir */}
+              <div className="flex items-center gap-2">
                 <Button
                   size="sm"
                   variant="ghost"
@@ -908,15 +941,16 @@ export default function TarefaDetailModal({
       </DialogContent>
     </Dialog>
 
-    {/* Modal de Confirmação para Editar Prazo Fatal */}
-    <Dialog open={confirmPrazoFatalOpen} onOpenChange={(open) => {
+    {/* Modal de Confirmação para Editar Prazo Fatal - AlertDialog para stacking correto sobre o Dialog principal */}
+    <AlertDialog open={confirmPrazoFatalOpen} onOpenChange={(open) => {
       setConfirmPrazoFatalOpen(open)
       if (!open) {
         setPendingPrazoFatalDate(null)
       }
     }}>
-      <DialogContent className="max-w-md p-0 overflow-hidden border-0 z-[100]">
-        <DialogTitle className="sr-only">Confirmar Alteração do Prazo Fatal</DialogTitle>
+      <AlertDialogContent className="max-w-md p-0 overflow-hidden border-0 z-[100]">
+        <AlertDialogTitle className="sr-only">Confirmar Alteração do Prazo Fatal</AlertDialogTitle>
+        <AlertDialogDescription className="sr-only">Confirme a alteração da data limite do prazo fatal</AlertDialogDescription>
         <div className="bg-white rounded-lg">
           {/* Header */}
           <div className="px-6 pt-5 pb-4 border-b border-slate-100">
@@ -978,11 +1012,11 @@ export default function TarefaDetailModal({
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </AlertDialogContent>
+    </AlertDialog>
 
-    {/* Modal de Aviso - Reagendamento Ultrapassa Prazo Fatal */}
-    <Dialog open={prazoFatalWarningOpen} onOpenChange={(open) => {
+    {/* Modal de Aviso - Reagendamento Ultrapassa Prazo Fatal - AlertDialog para stacking correto */}
+    <AlertDialog open={prazoFatalWarningOpen} onOpenChange={(open) => {
       setPrazoFatalWarningOpen(open)
       if (!open) {
         setPendingDataInicio(null)
@@ -990,8 +1024,9 @@ export default function TarefaDetailModal({
         setPrazoFatalCalendarOpen(false)
       }
     }}>
-      <DialogContent className="max-w-md p-0 overflow-hidden border-0 z-[100]">
-        <DialogTitle className="sr-only">Reagendar Prazo Fatal</DialogTitle>
+      <AlertDialogContent className="max-w-md p-0 overflow-hidden border-0 z-[100]">
+        <AlertDialogTitle className="sr-only">Reagendar Prazo Fatal</AlertDialogTitle>
+        <AlertDialogDescription className="sr-only">A nova data de execução é posterior ao prazo fatal atual</AlertDialogDescription>
         <div className="bg-white rounded-lg">
           {/* Header */}
           <div className="px-6 pt-5 pb-4 border-b border-slate-100">
@@ -1049,7 +1084,7 @@ export default function TarefaDetailModal({
                     <Calendar className="w-4 h-4 text-[#89bcbe]" />
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="center">
+                <PopoverContent className="w-auto p-0 z-[200]" align="center">
                   <CalendarComponent
                     mode="single"
                     selected={novoPrazoFatalSelecionado || undefined}
@@ -1060,7 +1095,6 @@ export default function TarefaDetailModal({
                       }
                     }}
                     disabled={(date) => pendingDataInicio ? date < pendingDataInicio : false}
-                    initialFocus
                   />
                 </PopoverContent>
               </Popover>
@@ -1096,8 +1130,8 @@ export default function TarefaDetailModal({
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   )
 }

@@ -50,9 +50,8 @@ interface Chunk {
   content: string
   metadata: {
     module: string
-    type: 'table' | 'view' | 'function' | 'description' | 'index'
-    tableName?: string
-    relatedTables?: string[]
+    type: 'workflow' | 'regra' | 'glossario' | 'relacao' | 'query' | 'erro' | 'description'
+    section?: string
   }
   hash: string
 }
@@ -86,100 +85,111 @@ async function generateEmbedding(text: string): Promise<number[]> {
   return data.data[0].embedding
 }
 
-// Função para dividir markdown em chunks
+// Inferir tipo do módulo baseado no nome do arquivo
+function inferModuleType(fileName: string): Chunk['metadata']['type'] {
+  if (fileName.includes('workflow')) return 'workflow'
+  if (fileName.includes('regras')) return 'regra'
+  if (fileName.includes('glossario')) return 'glossario'
+  if (fileName.includes('relacoes')) return 'relacao'
+  if (fileName.includes('views') || fileName.includes('queries')) return 'query'
+  if (fileName.includes('erros')) return 'erro'
+  return 'description'
+}
+
+// Gerar slug seguro para chunkId
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '')
+    .substring(0, 60)
+}
+
+// Função para dividir markdown em chunks por seções ##
 function splitIntoChunks(filePath: string, content: string): Chunk[] {
   const fileName = path.basename(filePath, '.md')
   const moduleName = fileName.replace(/^\d+-/, '').toLowerCase()
+  const moduleType = inferModuleType(moduleName)
   const chunks: Chunk[] = []
 
-  // Extrair título do módulo
-  const titleMatch = content.match(/^# Módulo: (.+)$/m)
-  const moduleTitle = titleMatch ? titleMatch[1] : moduleName
+  // Extrair título do documento (# Título)
+  const titleMatch = content.match(/^# (.+)$/m)
+  const docTitle = titleMatch ? titleMatch[1] : moduleName
 
-  // Extrair descrição
-  const descMatch = content.match(/## Descrição\n(.+?)(?=\n---|\n##)/s)
-  if (descMatch) {
-    chunks.push({
-      source: fileName,
-      chunkId: `${moduleName}_description`,
-      title: `${moduleTitle} - Descrição`,
-      content: descMatch[1].trim(),
-      metadata: {
-        module: moduleName,
-        type: 'description',
-      },
-      hash: generateHash(descMatch[1].trim()),
-    })
-  }
+  // Dividir por seções ## (nível 2)
+  const sections = content.split(/\n(?=## )/)
 
-  // Extrair tabelas
-  const tableRegex = /### (\w+)\n\n\| Coluna[\s\S]*?(?=\n###|\n## |$)/g
-  let tableMatch
-  while ((tableMatch = tableRegex.exec(content)) !== null) {
-    const tableName = tableMatch[1]
-    let tableContent = tableMatch[0]
-
-    // Se o conteúdo for muito grande, dividir
-    if (tableContent.length > MAX_CHUNK_SIZE) {
-      // Tentar dividir por seções (Notas, Constraints)
-      const parts = tableContent.split(/\n\*\*/g)
-      if (parts.length > 1) {
-        // Primeira parte: estrutura da tabela
+  for (const section of sections) {
+    const sectionTitleMatch = section.match(/^## (.+)$/m)
+    if (!sectionTitleMatch) {
+      // Bloco inicial (antes do primeiro ##) — incluir como intro se tiver conteúdo relevante
+      const introContent = section.replace(/^# .+$/m, '').replace(/^>.*$/gm, '').trim()
+      if (introContent.length > 50) {
         chunks.push({
           source: fileName,
-          chunkId: `${moduleName}_${tableName}_structure`,
-          title: `${moduleTitle} - Tabela ${tableName} (Estrutura)`,
-          content: parts[0].trim(),
-          metadata: {
-            module: moduleName,
-            type: 'table',
-            tableName,
-          },
-          hash: generateHash(parts[0].trim()),
-        })
-
-        // Segunda parte: notas e constraints
-        const notesContent = '**' + parts.slice(1).join('\n**')
-        chunks.push({
-          source: fileName,
-          chunkId: `${moduleName}_${tableName}_details`,
-          title: `${moduleTitle} - Tabela ${tableName} (Detalhes)`,
-          content: notesContent.trim(),
-          metadata: {
-            module: moduleName,
-            type: 'table',
-            tableName,
-          },
-          hash: generateHash(notesContent.trim()),
-        })
-      } else {
-        // Não conseguiu dividir, truncar
-        chunks.push({
-          source: fileName,
-          chunkId: `${moduleName}_${tableName}`,
-          title: `${moduleTitle} - Tabela ${tableName}`,
-          content: tableContent.substring(0, MAX_CHUNK_SIZE),
-          metadata: {
-            module: moduleName,
-            type: 'table',
-            tableName,
-          },
-          hash: generateHash(tableContent),
+          chunkId: `${moduleName}_intro`,
+          title: `${docTitle} - Introdução`,
+          content: introContent,
+          metadata: { module: moduleName, type: moduleType },
+          hash: generateHash(introContent),
         })
       }
-    } else {
+      continue
+    }
+
+    const sectionTitle = sectionTitleMatch[1]
+    const sectionContent = section.trim()
+    const sectionSlug = slugify(sectionTitle)
+
+    // Se o conteúdo for menor que MAX_CHUNK_SIZE, inserir como um chunk
+    if (sectionContent.length <= MAX_CHUNK_SIZE) {
       chunks.push({
         source: fileName,
-        chunkId: `${moduleName}_${tableName}`,
-        title: `${moduleTitle} - Tabela ${tableName}`,
-        content: tableContent,
-        metadata: {
-          module: moduleName,
-          type: 'table',
-          tableName,
-        },
-        hash: generateHash(tableContent),
+        chunkId: `${moduleName}_${sectionSlug}`,
+        title: `${docTitle} - ${sectionTitle}`,
+        content: sectionContent,
+        metadata: { module: moduleName, type: moduleType, section: sectionTitle },
+        hash: generateHash(sectionContent),
       })
+    } else {
+      // Se a seção for grande, dividir por subseções ### ou por parágrafos
+      const subSections = sectionContent.split(/\n(?=### )/)
+
+      if (subSections.length > 1) {
+        // Dividir por subseções ###
+        for (let i = 0; i < subSections.length; i++) {
+          const subContent = subSections[i].trim()
+          if (subContent.length < 30) continue
+
+          const subTitleMatch = subContent.match(/^### (.+)$/m)
+          const subTitle = subTitleMatch ? subTitleMatch[1] : `Parte ${i + 1}`
+          const subSlug = slugify(subTitle)
+
+          chunks.push({
+            source: fileName,
+            chunkId: `${moduleName}_${sectionSlug}_${subSlug}`,
+            title: `${docTitle} - ${sectionTitle} - ${subTitle}`,
+            content: subContent.substring(0, MAX_CHUNK_SIZE),
+            metadata: { module: moduleName, type: moduleType, section: `${sectionTitle} > ${subTitle}` },
+            hash: generateHash(subContent),
+          })
+        }
+      } else {
+        // Sem subseções — dividir em partes de MAX_CHUNK_SIZE
+        const parts = Math.ceil(sectionContent.length / MAX_CHUNK_SIZE)
+        for (let i = 0; i < parts; i++) {
+          const partContent = sectionContent.substring(i * MAX_CHUNK_SIZE, (i + 1) * MAX_CHUNK_SIZE)
+          chunks.push({
+            source: fileName,
+            chunkId: `${moduleName}_${sectionSlug}_part${i + 1}`,
+            title: `${docTitle} - ${sectionTitle} (Parte ${i + 1})`,
+            content: partContent,
+            metadata: { module: moduleName, type: moduleType, section: sectionTitle },
+            hash: generateHash(partContent),
+          })
+        }
+      }
     }
   }
 

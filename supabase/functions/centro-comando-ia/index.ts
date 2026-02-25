@@ -42,11 +42,11 @@ const MENSAGENS_TOOL: Record<string, { inicio: string; fim: (resultado: any) => 
     inicio: '🔍 Consultando tabelas disponíveis no sistema...',
     fim: (r) => `📋 Encontrei ${r.total || 0} tabelas disponíveis.`,
   },
-  consultar_schema: {
-    inicio: '📖 Verificando estrutura da tabela...',
+  descobrir_estrutura: {
+    inicio: '🔍 Descobrindo estrutura da tabela...',
     fim: (r) => r.erro
-      ? `❌ Erro ao consultar estrutura: ${r.erro || 'Erro desconhecido'}`
-      : `📝 Tabela ${r.tabela} tem ${r.total || 0} campos.`,
+      ? `❌ Erro: ${r.erro || 'Erro desconhecido'}`
+      : `📝 ${r.tabela}: ${r.total_colunas || 0} colunas, ${r.total_constraints || 0} constraints, ${r.total_fks || 0} FKs.`,
   },
   consultar_dados: {
     inicio: '🔎 Buscando dados no banco...',
@@ -88,145 +88,57 @@ const MENSAGENS_TOOL: Record<string, { inicio: string; fim: (resultado: any) => 
   },
 }
 
-// ============================================
-// TABELAS PERMITIDAS NO SISTEMA
-// ============================================
-const TABELAS_PERMITIDAS = [
-  'processos_processos',
-  'crm_pessoas',
-  'profiles',
-  'agenda_tarefas',
-  'agenda_eventos',
-  'agenda_audiencias',
-  'financeiro_timesheet',
-  'financeiro_honorarios',
-  'financeiro_honorarios_parcelas',
-  'v_agenda_consolidada',
-  'v_processos_dashboard',
-  'v_lancamentos_prontos_faturar',
-  'v_prazos_vencendo',
-]
+// TABELAS_PERMITIDAS removido — validação centralizada na RPC get_tabelas_permitidas() do banco
 
 // ============================================
-// CONTEXTO DE DOMÍNIO — Schema + Relações + Lógica de Negócio
+// CONTEXTO DE DOMÍNIO — Índice de módulos + Regras de negócio
 // ============================================
-// A IA usa este contexto para RACIOCINAR e montar queries, não para copiar exemplos.
-// Knowledge base (RAG) complementa com detalhes de colunas quando necessário.
+// Estrutura detalhada (colunas, constraints, FKs) vem da tool descobrir_estrutura.
+// Este contexto foca no QUE cada módulo faz e nas REGRAS não deriváveis do schema.
 const CONTEXTO_DOMINIO = `
-### TABELAS PRINCIPAIS (campos-chave — detalhes extras disponíveis via knowledge base)
+### MÓDULOS E TABELAS (use descobrir_estrutura para ver colunas e valores válidos)
+- **Processos**: processos_processos (caso judicial), processos_partes, processos_movimentacoes
+- **CRM**: crm_pessoas (clientes/contatos), crm_interacoes, crm_oportunidades
+- **Agenda**: agenda_tarefas, agenda_eventos, agenda_audiencias, agenda_recorrencias
+- **Financeiro**: financeiro_timesheet, financeiro_honorarios, financeiro_honorarios_parcelas, financeiro_contratos_honorarios, financeiro_faturamento_faturas, financeiro_receitas_despesas, financeiro_contas_bancarias
+- **Consultivo**: consultivo_consultas, consultivo_pareceres
+- **Core**: profiles (usuários/advogados), escritorios, escritorios_usuarios
+- **Views (SOMENTE LEITURA)**: v_agenda_consolidada, v_processos_dashboard, v_lancamentos_prontos_faturar, v_prazos_vencendo
 
-1. **processos_processos** — Processos judiciais
-   id, numero_cnj, numero_pasta, tipo, area, fase, tribunal, comarca, vara, juiz,
-   data_distribuicao, cliente_id→crm_pessoas, responsavel_id→profiles, status, valor_causa, autor, reu, tags
-   status: 'ativo'/'arquivado'/'encerrado' | area: 'trabalhista'/'civel'/'criminal'/etc
-
-2. **crm_pessoas** — Clientes e contatos
-   id, nome_completo, tipo_pessoa, cpf_cnpj, email, telefone, tipo_contato ('cliente'/'contato'/'adverso')
-
-3. **profiles** — Usuários/advogados do sistema (NÃO confundir com crm_pessoas)
-   id, nome_completo, email, cargo, escritorio_id
-   ⚠️ Para referenciar um usuário por NOME: SELECT id FROM profiles WHERE escritorio_id = '{escritorio_id}' AND nome_completo ILIKE '%nome%'
-
-4. **agenda_tarefas** — Tarefas e prazos
-   id, titulo, descricao,
-   tipo: 'prazo_processual' | 'acompanhamento' | 'follow_up' | 'administrativo' | 'outro' | 'fixa' (CHECK constraint),
-   prioridade: 'alta' | 'media' | 'baixa' (CHECK constraint),
-   status: 'pendente' | 'em_andamento' | 'em_pausa' | 'concluida' | 'cancelada' (CHECK constraint),
-   data_inicio (date — YYYY-MM-DD, NÃO timestamptz), prazo_data_limite (date),
-   responsavel_id→profiles (UUID), responsaveis_ids (uuid[] — default '{}'), processo_id→processos_processos
-   ⚠️ Para INSERT obrigatórios: titulo, tipo, data_inicio, escritorio_id (automático)
-   ⚠️ responsavel_id DEVE ser UUID de profiles.id — NUNCA inventar UUID
-
-5. **agenda_eventos** — Compromissos e reuniões
-   id, titulo, data_inicio (timestamptz), data_fim (timestamptz), tipo, local,
-   responsavel_id→profiles, responsaveis_ids (uuid[]), processo_id
-
-6. **agenda_audiencias** — Audiências judiciais
-   id, data_hora (timestamptz), tipo, local, vara, processo_id, responsavel_id→profiles, responsaveis_ids (uuid[]), status
-
-7. **financeiro_timesheet** — Horas trabalhadas
-   id, data (date), horas, descricao, processo_id, user_id→profiles, valor_hora, faturado
-
-8. **financeiro_honorarios** — Lançamentos financeiros
-   id, descricao, valor, data_vencimento, data_pagamento, status, processo_id, cliente_id→crm_pessoas
-
-9. **financeiro_contratos_honorarios** — Contratos de cobrança (CORAÇÃO do faturamento)
-   id, titulo, numero_contrato, cliente_id→crm_pessoas, tipo_contrato, forma_cobranca,
-   valor_total, config (jsonb), valores_cargo (jsonb), horas_faturaveis, ativo, data_inicio, data_fim
-
-10. **v_agenda_consolidada** — View: agenda unificada (SOMENTE LEITURA)
-    id, tipo_entidade, titulo, descricao, data_inicio, data_fim, status, prioridade, responsavel_nome, processo_numero
-
-### RELAÇÕES (→ = FK, use para JOINs)
+### RELAÇÕES-CHAVE (para JOINs)
 - processo.cliente_id → crm_pessoas.id | processo.responsavel_id → profiles.id
-- tarefa/evento/audiencia.responsavel_id → profiles.id | .responsaveis_ids = uuid[] (múltiplos responsáveis)
+- tarefa/evento/audiencia.responsavel_id → profiles.id | .responsaveis_ids = uuid[] (múltiplos)
 - tarefa/evento/audiencia.processo_id → processos_processos.id
 - timesheet.user_id → profiles.id | timesheet.processo_id → processos_processos.id
-- honorarios.processo_id → processos_processos.id | .cliente_id → crm_pessoas.id
-- contrato.cliente_id → crm_pessoas.id
+- contrato/honorarios.cliente_id → crm_pessoas.id
+- profiles ≠ crm_pessoas! profiles = advogados do escritório, crm_pessoas = clientes/contatos externos
 
-### LÓGICA DE NEGÓCIO
-- Contratos de honorários definem como o cliente é cobrado (forma_cobranca + config jsonb)
-- Timesheet registra horas → multiplicadas por valor_hora → gera faturamento
-- Processos conectam tudo: tarefas, audiências, honorários, timesheet, documentos
-- v_agenda_consolidada unifica tarefas + eventos + audiências numa view só (somente SELECT)
-- autor e reu em processos_processos formam o "título" do caso (CONCAT(autor, ' x ', reu))
+### REGRAS DE NEGÓCIO (não deriváveis do schema)
+- "Título" do processo = CONCAT(autor, ' x ', reu)
+- v_agenda_consolidada unifica tarefas + eventos + audiências (somente SELECT, já tem responsavel_nome)
+- Contratos definem cobrança (forma_cobranca + config jsonb) → timesheet × valor_hora → faturamento
+- responsavel_id DEVE ser UUID de profiles.id — NUNCA inventar UUID
+- data_inicio em agenda_tarefas é DATE (YYYY-MM-DD), não timestamptz
+- data_inicio/data_fim em agenda_eventos é TIMESTAMPTZ
 
-### ⚠️ WORKFLOWS OBRIGATÓRIOS
+### WORKFLOWS OBRIGATÓRIOS
+1. **Responsável por nome** → consultar_dados(SELECT id, nome_completo FROM profiles WHERE escritorio_id=... AND nome_completo ILIKE '%nome%') → usar UUID retornado
+2. **Criar N registros** → chamar preparar_cadastro N vezes (um por registro)
+3. **Reagendar** → consultar_dados (buscar registro) → preparar_alteracao (alterar data)
 
-**Criar tarefa/evento/audiência com responsável por NOME:**
-1. Primeiro: consultar_dados → SELECT id, nome_completo FROM profiles WHERE escritorio_id = '{escritorio_id}' AND nome_completo ILIKE '%nome%'
-2. Confirmar match com usuário se ambíguo
-3. Depois: preparar_cadastro com o UUID correto no campo responsavel_id
-
-**Criar MÚLTIPLAS tarefas:**
-- Chamar preparar_cadastro UMA VEZ para CADA tarefa (não arrays)
-- CADA chamada deve ter valores válidos de tipo/prioridade/status conforme CHECK constraints
-
-**Reagendar tarefa/evento:**
-1. consultar_dados → buscar o registro pelo título/descrição
-2. preparar_alteracao → alterar data_inicio (date YYYY-MM-DD para tarefas)
-
-### PADROES DE QUERY (use como base, adapte)
-
--- Tarefas do dia (com nome do responsavel)
-SELECT t.titulo, t.tipo, t.status, t.prioridade,
-  TO_CHAR(t.prazo_data_limite, 'DD/MM/YYYY') as prazo,
-  p.nome_completo as responsavel
-FROM agenda_tarefas t
-LEFT JOIN profiles p ON p.id = t.responsavel_id
-WHERE t.escritorio_id = '{escritorio_id}'
-  AND t.prazo_data_limite = CURRENT_DATE
-  AND t.status IN ('pendente', 'em_andamento')
-ORDER BY t.prioridade DESC, t.data_inicio
-
--- Processos ativos (com titulo formatado)
-SELECT pp.numero_cnj, CONCAT(pp.autor, ' x ', pp.reu) as partes,
-  pp.area, pp.fase, pp.status, p.nome_completo as responsavel
-FROM processos_processos pp
-LEFT JOIN profiles p ON p.id = pp.responsavel_id
-WHERE pp.escritorio_id = '{escritorio_id}' AND pp.status = 'ativo'
-ORDER BY pp.updated_at DESC LIMIT 20
-
--- Agenda consolidada (view pronta)
-SELECT titulo, tipo_entidade as tipo, status, prioridade,
-  TO_CHAR(data_inicio AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') as data,
-  responsavel_nome
-FROM v_agenda_consolidada
-WHERE escritorio_id = '{escritorio_id}'
-  AND data_inicio::date = CURRENT_DATE
-ORDER BY data_inicio LIMIT 20
-
--- Buscar usuario por nome (para obter UUID)
-SELECT id, nome_completo FROM profiles
-WHERE escritorio_id = '{escritorio_id}' AND nome_completo ILIKE '%nome%'
+### PADRÕES SQL
+- SEMPRE: WHERE escritorio_id = '{escritorio_id}'
+- Pessoal: AND (responsavel_id = '{user_id}' OR '{user_id}' = ANY(responsaveis_ids))
+- Nomes: LEFT JOIN profiles p ON p.id = t.responsavel_id → p.nome_completo
+- Datas: TO_CHAR(campo AT TIME ZONE 'America/Sao_Paulo', 'DD/MM/YYYY HH24:MI')
+- LIMIT 20 padrão
 `
 
 // ============================================
 // CACHE DE SCHEMA POR SESSÃO (in-memory)
 // ============================================
 const schemaCache = new Map<string, { schema: any; timestamp: number }>()
-const SCHEMA_CACHE_TTL = 5 * 60 * 1000 // 5 minutos
+const SCHEMA_CACHE_TTL = 30 * 60 * 1000 // 30 minutos (efetivamente a sessão inteira)
 
 function getCachedSchema(tabela: string): any | null {
   const cached = schemaCache.get(tabela)
@@ -259,9 +171,9 @@ function resumirToolResult(result: any): string {
     case 'listar_tabelas':
       return `[listar_tabelas] Tabelas disponíveis: ${dados?.map((t: any) => t.tabela).join(', ')}`
 
-    case 'consultar_schema':
-      const camposResumo = colunas?.slice(0, 5).map((c: any) => c.column_name).join(', ')
-      return `[consultar_schema] Tabela ${tabela}: ${total} campos (${camposResumo}...)`
+    case 'descobrir_estrutura':
+      const camposResumo = result.colunas_editaveis?.slice(0, 5).map((c: any) => c.coluna).join(', ')
+      return `[descobrir_estrutura] Tabela ${tabela}: ${result.total_colunas} colunas, ${result.total_constraints} constraints (${camposResumo}...)`
 
     case 'consultar_dados':
       // Resumir dados encontrados (não repetir todos os dados)
@@ -310,8 +222,8 @@ function construirContextoSessao(historico: any[]): SessionContext {
         if (result.tool === 'listar_tabelas' && result.dados) {
           contexto.tabelasConhecidas = result.dados.map((t: any) => t.tabela)
         }
-        if (result.tool === 'consultar_schema' && result.tabela && result.colunas) {
-          contexto.schemasConsultados[result.tabela] = result.colunas.map((c: any) => c.column_name)
+        if (result.tool === 'descobrir_estrutura' && result.tabela && result.colunas_editaveis) {
+          contexto.schemasConsultados[result.tabela] = result.colunas_editaveis.map((c: any) => c.coluna)
         }
         if (result.tool === 'consultar_dados' && result.total !== undefined) {
           contexto.ultimaConsulta = {
@@ -354,14 +266,14 @@ const TOOLS = [
   {
     type: "function",
     function: {
-      name: "consultar_schema",
-      description: "⚠️ RARAMENTE NECESSÁRIO. Os campos das tabelas principais já estão documentados no prompt. Use APENAS para campos não documentados ou tabelas menos comuns.",
+      name: "descobrir_estrutura",
+      description: "Consulta a estrutura REAL de uma tabela: colunas editáveis, tipos, valores válidos (CHECK constraints) e foreign keys. USE ANTES de INSERT em tabela não consultada nesta sessão. USE quando INSERT falhar com erro de constraint. Resultado cacheado por sessão.",
       parameters: {
         type: "object",
         properties: {
           tabela: {
             type: "string",
-            description: "Nome da tabela para consultar o schema"
+            description: "Nome da tabela (ex: agenda_tarefas, processos_processos)"
           }
         },
         required: ["tabela"]
@@ -702,6 +614,12 @@ Você mantém contexto da conversa e aprende com cada interação.
 - DELETE = dupla confirmação (via preparar_exclusao).
 - Criar N registros = chamar preparar_cadastro N vezes (um objeto simples por chamada).
 - Usar JOINs quando precisar cruzar informações entre módulos.
+
+## AUTODESCOBERTA E CORREÇÃO
+- ANTES de INSERT numa tabela não consultada nesta sessão: chame descobrir_estrutura para ver colunas, tipos e valores válidos.
+- Se INSERT falhar com erro de constraint/tipo: chame descobrir_estrutura, veja os valores válidos nos constraints_check, corrija e tente novamente.
+- Schemas descobertos ficam em cache da sessão (não precisa reconsultar a mesma tabela).
+- Nunca assuma valores de memória — verifique via descobrir_estrutura se não tem certeza.
 
 ## ⚠️ REGRAS ANTI-LOOP
 - NUNCA use pedir_informacao para pedir confirmação Sim/Não. Use preparar_cadastro/preparar_alteracao que já tem confirmação embutida.
@@ -1354,47 +1272,55 @@ async function executarTool(
       }
     }
 
-    case 'consultar_schema': {
+    case 'descobrir_estrutura': {
       const tabela = args.tabela
       if (!tabela) {
         return { tool: name, erro: 'Campo "tabela" é obrigatório.' }
-      }
-      if (!TABELAS_PERMITIDAS.includes(tabela)) {
-        return { tool: name, erro: `Tabela "${tabela}" não permitida.` }
       }
 
       // Verificar cache primeiro
       const cachedSchema = getCachedSchema(tabela)
       if (cachedSchema) {
-        console.log(`[Centro Comando] Schema de ${tabela} retornado do cache`)
-        return {
-          tool: name,
-          tabela,
-          colunas: cachedSchema.colunas || [],
-          total: cachedSchema.colunas?.length || 0,
-          explicacao: `Estrutura da tabela ${tabela} (do cache)`,
-          dica: 'Não inclua id, escritorio_id, created_at, updated_at ao inserir.',
-          fromCache: true,
-        }
+        console.log(`[Centro Comando] Estrutura de ${tabela} retornada do cache`)
+        return { ...cachedSchema, fromCache: true }
       }
 
       try {
-        const { data: schema, error } = await supabase.rpc('get_table_schema', { tabela_nome: tabela })
+        const { data: info, error } = await supabase.rpc('get_table_info', { tabela_nome: tabela })
         if (error) throw error
 
-        // Guardar no cache
-        setCachedSchema(tabela, schema)
+        // Filtrar campos auto (id, escritorio_id, etc.) para a IA ver apenas editáveis
+        const todasColunas = info?.colunas || []
+        const colunasEditaveis = todasColunas
+          .filter((c: any) => !c.auto)
+          .map((c: any) => {
+            const constraint = (info?.constraints_check || []).find((cc: any) => cc.coluna === c.coluna)
+            return {
+              coluna: c.coluna,
+              tipo: c.tipo,
+              obrigatorio: c.obrigatorio,
+              default: c.default,
+              valores_validos: constraint?.definicao || null,
+            }
+          })
 
-        return {
+        const resultado = {
           tool: name,
           tabela,
-          colunas: schema?.colunas || [],
-          total: schema?.colunas?.length || 0,
-          explicacao: `Estrutura da tabela ${tabela}`,
-          dica: 'Não inclua id, escritorio_id, created_at, updated_at ao inserir.'
+          total_colunas: todasColunas.length,
+          total_constraints: (info?.constraints_check || []).length,
+          total_fks: (info?.foreign_keys || []).length,
+          colunas_editaveis: colunasEditaveis,
+          foreign_keys: info?.foreign_keys || [],
+          explicacao: `Estrutura da tabela ${tabela}: ${colunasEditaveis.length} campos editáveis, ${(info?.constraints_check || []).length} constraints, ${(info?.foreign_keys || []).length} FKs`,
         }
+
+        // Guardar no cache
+        setCachedSchema(tabela, resultado)
+
+        return resultado
       } catch (err: any) {
-        return { tool: name, erro: `Erro ao consultar schema: ${err?.message || String(err) || 'Erro desconhecido'}` }
+        return { tool: name, erro: `Erro ao descobrir estrutura: ${err?.message || String(err) || 'Erro desconhecido'}` }
       }
     }
 
@@ -1447,9 +1373,6 @@ async function executarTool(
           tool: name,
           erro: `ERRO: Os campos devem ser valores simples (texto, número, data). Campos inválidos: ${camposInvalidos.map(([k]) => k).join(', ')}`
         }
-      }
-      if (!TABELAS_PERMITIDAS.includes(args.tabela)) {
-        return { tool: name, erro: `Tabela "${args.tabela}" não permitida.` }
       }
       try {
         console.log('[preparar_cadastro] Inserindo ação pendente:', { tabela: args.tabela, dados: args.dados })

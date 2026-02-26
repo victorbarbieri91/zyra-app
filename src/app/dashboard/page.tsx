@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible'
+// @/components/ui/collapsible imports removed
 import {
   Briefcase,
   Users,
@@ -54,6 +54,8 @@ import { useRouter } from 'next/navigation'
 import InsightCard from '@/components/dashboard/InsightCard'
 import EmptyState from '@/components/dashboard/EmptyState'
 import AlertasCard from '@/components/dashboard/AlertasCard'
+import MeusLancamentos from '@/components/dashboard/MeusLancamentos'
+import type { TimesheetEntryRecente } from '@/hooks/useTimesheetRecentes'
 
 // Modais de ações rápidas
 import TarefaWizard from '@/components/agenda/TarefaWizard'
@@ -73,7 +75,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics'
 import { useDashboardAgenda, AgendaItemDashboard } from '@/hooks/useDashboardAgenda'
 import { useDashboardPerformance } from '@/hooks/useDashboardPerformance'
-import { useDashboardPublicacoes } from '@/hooks/useDashboardPublicacoes'
+// useDashboardPublicacoes removido - card de publicações removido do dashboard
 import { useDashboardResumoIA } from '@/hooks/useDashboardResumoIA'
 import { useDashboardInsightsIA } from '@/hooks/useDashboardInsightsIA'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
@@ -175,8 +177,9 @@ export default function DashboardPage() {
   // Estado para nome do usuário (saudação local)
   const [nomeUsuario, setNomeUsuario] = useState<string>('')
 
-  // Estado para publicações colapsáveis
-  const [pubExpanded, setPubExpanded] = useState(false)
+  // Estado para edição de timesheet via modal padrão
+  const [editTimesheetEntry, setEditTimesheetEntry] = useState<TimesheetEntryRecente | null>(null)
+  const [editTimesheetModalOpen, setEditTimesheetModalOpen] = useState(false)
 
   // Saudação baseada no horário de Brasília (sempre atualizada, sem depender da IA)
   const saudacao = useMemo(() => {
@@ -261,7 +264,7 @@ export default function DashboardPage() {
   const { metrics, loading: loadingMetrics } = useDashboardMetrics()
   const { items: agendaItems, loading: loadingAgenda, isEmpty: isAgendaEmpty, audienciasHoje, prazosHoje, refresh: refreshAgenda } = useDashboardAgenda()
   const { equipe, totalHorasEquipe, currentUserId, loading: loadingPerformance } = useDashboardPerformance()
-  const { publicacoes, loading: loadingPublicacoes, isEmpty: isPublicacoesEmpty } = useDashboardPublicacoes()
+  // publicações removido do dashboard
   const { resumo, loading: loadingResumo, refresh: refreshResumo, tempoDesdeAtualizacao } = useDashboardResumoIA()
   const { insights, loading: loadingInsights, hasPermission: hasInsightsPermission, refresh: refreshInsights } = useDashboardInsightsIA()
 
@@ -304,6 +307,12 @@ export default function DashboardPage() {
         setEventoDetailOpen(true)
       }
     }
+  }
+
+  // Handler para editar lançamento de timesheet via modal padrão
+  const handleEditTimesheetEntry = (entry: TimesheetEntryRecente) => {
+    setEditTimesheetEntry(entry)
+    setEditTimesheetModalOpen(true)
   }
 
   // Handler para clique nas audiências do card Atenção Imediata
@@ -913,10 +922,11 @@ export default function DashboardPage() {
           MAIN CONTENT
           ═══════════════════════════════════════════════════════════════ */}
       <div className="px-4 md:px-6 pt-4 md:pt-6 pb-8 space-y-4 md:space-y-5">
-        {/* Row 1: Agenda + Meus Números */}
+        {/* Main Grid: Agenda + Performance | Números + Lançamentos + Alertas + Insights */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* ── AGENDA DO DIA (Hero) ── */}
-          <div className="lg:col-span-7">
+          {/* ── LEFT: AGENDA + PERFORMANCE ── */}
+          <div className="lg:col-span-7 space-y-5">
+            {/* ── AGENDA DO DIA (Hero) ── */}
             <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] transition-all duration-300 overflow-hidden">
               {/* Agenda Header */}
               <div className="flex items-center justify-between px-5 pt-5 pb-3">
@@ -1046,102 +1056,8 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* ── MEUS NÚMEROS + ALERTAS ── */}
-          <div className="lg:col-span-5 space-y-5">
-            {/* Meus Números do Mês */}
-            <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] transition-all duration-300 p-5">
-              <h2 className="text-sm font-bold text-[#34495e] mb-4">Meus Números</h2>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* Horas Cobráveis */}
-                <div className="flex items-center gap-3">
-                  <div className="relative flex-shrink-0">
-                    <CircularProgress
-                      value={metrics?.horas_cobraveis_usuario || 0}
-                      max={metrics?.horas_meta || 160}
-                      size={56}
-                      strokeWidth={5}
-                      color="#89bcbe"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-[10px] font-bold text-[#34495e]">{Math.round(progressoHoras)}%</span>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-medium text-slate-500 mb-0.5">Horas Cobráveis</p>
-                    <p className="text-sm font-bold text-[#34495e]">{formatHoras(metrics?.horas_cobraveis_usuario || 0, 'curto')}</p>
-                    <p className="text-[9px] text-slate-400">de {formatHoras(metrics?.horas_meta || 160, 'curto')}</p>
-                    {(metrics?.horas_ja_faturadas_usuario ?? 0) > 0 && (
-                      <p className="text-[9px] text-emerald-500">{formatHoras(metrics?.horas_ja_faturadas_usuario || 0, 'curto')} já faturadas</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Honorários */}
-                <div className="flex items-center gap-3">
-                  <div className="relative flex-shrink-0">
-                    <CircularProgress
-                      value={metrics?.honorarios_mes || 0}
-                      max={metrics?.receita_meta || 40000}
-                      size={56}
-                      strokeWidth={5}
-                      color="#10b981"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-[10px] font-bold text-[#34495e]">{Math.round(progressoReceita)}%</span>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-medium text-slate-500 mb-0.5">Honorários</p>
-                    <p className="text-sm font-bold text-[#34495e]">{formatCurrency(metrics?.honorarios_mes || 0)}</p>
-                    <p className="text-[9px] text-slate-400">Meta: {formatCurrency(metrics?.receita_meta || 40000)}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Horas não cobráveis - compact */}
-              <div className="mt-4 pt-3 border-t border-slate-100">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-slate-300" />
-                    <span className="text-[11px] text-slate-500">Horas não cobráveis</span>
-                  </div>
-                  <span className="text-xs font-semibold text-slate-500">{formatHoras(metrics?.horas_nao_cobraveis || 0, 'curto')}</span>
-                </div>
-                {(metrics?.valor_horas_nao_cobraveis ?? 0) > 0 && (
-                  <p className="text-[9px] text-slate-400 ml-4 mt-0.5">
-                    Oportunidade: {formatCurrency(metrics?.valor_horas_nao_cobraveis || 0)}
-                  </p>
-                )}
-                {(metrics?.horas_trend_valor ?? 0) !== 0 && (
-                  <div className="flex items-center gap-1 ml-4 mt-1">
-                    {(metrics?.horas_trend_valor ?? 0) > 0 ? (
-                      <TrendingUp className="w-3 h-3 text-emerald-500" />
-                    ) : (
-                      <TrendingDown className="w-3 h-3 text-red-500" />
-                    )}
-                    <span className={cn(
-                      "text-[10px] font-medium",
-                      (metrics?.horas_trend_valor ?? 0) > 0 ? "text-emerald-600" : "text-red-500"
-                    )}>
-                      {formatHoras(Math.abs(metrics?.horas_trend_valor || 0), 'curto')} vs mês passado
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Atenção Imediata */}
-            <AlertasCard onAudienciasClick={handleAudienciasClick} />
-          </div>
-        </div>
-
-        {/* Row 2: Performance + Publicações/Insights */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* ── PERFORMANCE DE HORAS ── */}
-          <div className="lg:col-span-7">
+            {/* ── PERFORMANCE DA EQUIPE ── */}
             <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] transition-all duration-300 overflow-hidden">
               <div className="flex items-center justify-between px-5 pt-5 pb-3">
                 <h2 className="text-sm font-bold text-[#34495e]">Performance da Equipe</h2>
@@ -1305,68 +1221,96 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* ── RIGHT: Publications + Insights ── */}
+          {/* ── RIGHT: MEUS NÚMEROS + LANÇAMENTOS + ALERTAS + INSIGHTS ── */}
           <div className="lg:col-span-5 space-y-5">
-            {/* Publicações (Collapsible) */}
-            <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] transition-all duration-300 overflow-hidden">
-              <Collapsible open={pubExpanded} onOpenChange={setPubExpanded}>
-                <CollapsibleTrigger asChild>
-                  <button className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50/50 transition-colors">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-[#34495e]">Publicações</span>
-                      {!loadingPublicacoes && !isPublicacoesEmpty && (
-                        <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500">
-                          {publicacoes.length}
-                        </span>
-                      )}
-                    </div>
-                    <ChevronDown className={cn(
-                      "w-4 h-4 text-slate-300 transition-transform duration-200",
-                      pubExpanded && "rotate-180"
-                    )} />
-                  </button>
-                </CollapsibleTrigger>
+            {/* Meus Números do Mês */}
+            <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] transition-all duration-300 p-5">
+              <h2 className="text-sm font-bold text-[#34495e] mb-4">Meus Números</h2>
 
-                <CollapsibleContent>
-                  <div className="px-5 pb-4 space-y-2">
-                    {loadingPublicacoes ? (
-                      <div className="flex justify-center py-3">
-                        <Loader2 className="w-4 h-4 text-[#89bcbe] animate-spin" />
-                      </div>
-                    ) : isPublicacoesEmpty ? (
-                      <EmptyState
-                        icon={Bell}
-                        title="Nenhuma publicação"
-                        description="Configure a integração AASP"
-                        actionLabel="Configurar"
-                        actionHref="/dashboard/publicacoes/config"
-                        variant="compact"
-                      />
-                    ) : (
-                      <>
-                        {publicacoes.slice(0, 4).map((pub) => (
-                          <Link key={pub.id} href={`/dashboard/publicacoes/${pub.id}`} className="block">
-                            <div className="px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-medium text-[#34495e] truncate">{pub.processo}</p>
-                                  <p className="text-[11px] text-slate-400 truncate">{pub.conteudo}</p>
-                                </div>
-                              </div>
-                            </div>
-                          </Link>
-                        ))}
-                        <Link href="/dashboard/publicacoes" className="block">
-                          <p className="text-center py-1.5 text-[11px] text-slate-400 hover:text-[#89bcbe] transition-colors">
-                            Ver todas →
-                          </p>
-                        </Link>
-                      </>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Horas Cobráveis */}
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-shrink-0">
+                    <CircularProgress
+                      value={metrics?.horas_cobraveis_usuario || 0}
+                      max={metrics?.horas_meta || 160}
+                      size={56}
+                      strokeWidth={5}
+                      color="#89bcbe"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-[#34495e]">{Math.round(progressoHoras)}%</span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium text-slate-500 mb-0.5">Horas Cobráveis</p>
+                    <p className="text-sm font-bold text-[#34495e]">{formatHoras(metrics?.horas_cobraveis_usuario || 0, 'curto')}</p>
+                    <p className="text-[9px] text-slate-400">de {formatHoras(metrics?.horas_meta || 160, 'curto')}</p>
+                    {(metrics?.horas_ja_faturadas_usuario ?? 0) > 0 && (
+                      <p className="text-[9px] text-emerald-500">{formatHoras(metrics?.horas_ja_faturadas_usuario || 0, 'curto')} já faturadas</p>
                     )}
                   </div>
-                </CollapsibleContent>
-              </Collapsible>
+                </div>
+
+                {/* Honorários */}
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-shrink-0">
+                    <CircularProgress
+                      value={metrics?.honorarios_mes || 0}
+                      max={metrics?.receita_meta || 40000}
+                      size={56}
+                      strokeWidth={5}
+                      color="#10b981"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-[#34495e]">{Math.round(progressoReceita)}%</span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium text-slate-500 mb-0.5">Honorários</p>
+                    <p className="text-sm font-bold text-[#34495e]">{formatCurrency(metrics?.honorarios_mes || 0)}</p>
+                    <p className="text-[9px] text-slate-400">Meta: {formatCurrency(metrics?.receita_meta || 40000)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Horas não cobráveis - compact */}
+              <div className="mt-4 pt-3 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-slate-300" />
+                    <span className="text-[11px] text-slate-500">Horas não cobráveis</span>
+                  </div>
+                  <span className="text-xs font-semibold text-slate-500">{formatHoras(metrics?.horas_nao_cobraveis || 0, 'curto')}</span>
+                </div>
+                {(metrics?.valor_horas_nao_cobraveis ?? 0) > 0 && (
+                  <p className="text-[9px] text-slate-400 ml-4 mt-0.5">
+                    Oportunidade: {formatCurrency(metrics?.valor_horas_nao_cobraveis || 0)}
+                  </p>
+                )}
+                {(metrics?.horas_trend_valor ?? 0) !== 0 && (
+                  <div className="flex items-center gap-1 ml-4 mt-1">
+                    {(metrics?.horas_trend_valor ?? 0) > 0 ? (
+                      <TrendingUp className="w-3 h-3 text-emerald-500" />
+                    ) : (
+                      <TrendingDown className="w-3 h-3 text-red-500" />
+                    )}
+                    <span className={cn(
+                      "text-[10px] font-medium",
+                      (metrics?.horas_trend_valor ?? 0) > 0 ? "text-emerald-600" : "text-red-500"
+                    )}>
+                      {formatHoras(Math.abs(metrics?.horas_trend_valor || 0), 'curto')} vs mês passado
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Meus Lançamentos de Horas */}
+            <MeusLancamentos onEditEntry={handleEditTimesheetEntry} />
+
+            {/* Atenção Imediata */}
+            <AlertasCard onAudienciasClick={handleAudienciasClick} />
 
             {/* Insights de Gestão */}
             {hasInsightsPermission && (
@@ -1571,6 +1515,7 @@ export default function DashboardPage() {
           onConcluir={() => handleDashCompleteTask(tarefaDetailData.id)}
           onReabrir={() => handleDashReopenTask(tarefaDetailData.id)}
           onLancarHoras={handleDashLancarHoras}
+          onEditTimesheetEntry={handleEditTimesheetEntry}
           onProcessoClick={(processoId) => router.push(`/dashboard/processos/${processoId}`)}
           onConsultivoClick={(consultivoId) => router.push(`/dashboard/consultivo/${consultivoId}`)}
         />
@@ -1643,6 +1588,29 @@ export default function DashboardPage() {
           onReabrir={() => handleDashReabrirEvento(eventoDetailData.id as string)}
           onProcessoClick={(processoId) => router.push(`/dashboard/processos/${processoId}`)}
           onConsultivoClick={(consultivoId) => router.push(`/dashboard/consultivo/${consultivoId}`)}
+        />
+      )}
+
+      {/* TimesheetModal para edição de lançamentos existentes */}
+      {editTimesheetEntry && (
+        <TimesheetModal
+          open={editTimesheetModalOpen}
+          onOpenChange={(open) => {
+            setEditTimesheetModalOpen(open)
+            if (!open) setEditTimesheetEntry(null)
+          }}
+          editTimesheetId={editTimesheetEntry.id}
+          processoId={editTimesheetEntry.processo_id}
+          consultaId={editTimesheetEntry.consulta_id}
+          defaultModoRegistro="duracao"
+          defaultDuracaoHoras={Math.floor(Number(editTimesheetEntry.horas))}
+          defaultDuracaoMinutos={Math.round((Number(editTimesheetEntry.horas) % 1) * 60)}
+          defaultAtividade={editTimesheetEntry.atividade}
+          defaultDataTrabalho={editTimesheetEntry.data_trabalho}
+          defaultHoraInicio={editTimesheetEntry.hora_inicio || undefined}
+          defaultHoraFim={editTimesheetEntry.hora_fim || undefined}
+          defaultFaturavel={editTimesheetEntry.faturavel}
+          onSuccess={() => setEditTimesheetEntry(null)}
         />
       )}
 

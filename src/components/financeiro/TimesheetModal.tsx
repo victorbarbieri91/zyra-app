@@ -31,6 +31,8 @@ import { useAtosHora, AtoHoraConfig, HorasAcumuladasInfo } from '@/hooks/useAtos
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { formatDateForDB, formatBrazilDate } from '@/lib/timezone'
+import { useTimesheetEntry } from '@/hooks/useTimesheetEntry'
+import { useQueryClient } from '@tanstack/react-query'
 import { AtoHoraProgress } from './AtoHoraProgress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
@@ -48,6 +50,12 @@ interface TimesheetModalProps {
   defaultDuracaoHoras?: number
   defaultDuracaoMinutos?: number
   defaultAtividade?: string
+  // Modo edição: pré-preenche com dados de lançamento existente
+  editTimesheetId?: string | null
+  defaultDataTrabalho?: string | null
+  defaultHoraInicio?: string | null
+  defaultHoraFim?: string | null
+  defaultFaturavel?: boolean | null
   // Callbacks
   onSuccess?: () => void
   // Callback para "Salvar e Concluir" - salva horas E marca entidade como concluída
@@ -109,11 +117,19 @@ export default function TimesheetModal({
   defaultDuracaoHoras,
   defaultDuracaoMinutos,
   defaultAtividade,
+  editTimesheetId,
+  defaultDataTrabalho,
+  defaultHoraInicio,
+  defaultHoraFim,
+  defaultFaturavel,
   onSuccess,
   onSaveAndComplete,
 }: TimesheetModalProps) {
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
+  const { editarTimesheet } = useTimesheetEntry(escritorioAtivo)
+  const queryClient = useQueryClient()
+  const isEditMode = !!editTimesheetId
 
   // Form state
   const [dataTrabalho, setDataTrabalho] = useState(formatDateForInput())
@@ -144,6 +160,9 @@ export default function TimesheetModal({
 
   // Submit state
   const [loading, setLoading] = useState(false)
+
+  // Loading state para vínculo pré-carregado (evita flash da UI de busca)
+  const [loadingVinculo, setLoadingVinculo] = useState(false)
 
   // Ato Hora state (para contratos por_ato com modo hora)
   const [atosHora, setAtosHora] = useState<AtoHoraConfig[]>([])
@@ -214,12 +233,35 @@ export default function TimesheetModal({
   // Reset form quando abrir
   useEffect(() => {
     if (open) {
-      setDataTrabalho(formatDateForInput())
-      setHoraInicio('09:00')
-      setHoraFim('10:00')
+      // Data de trabalho: usar default se disponível (modo edição), senão hoje
+      setDataTrabalho(defaultDataTrabalho || formatDateForInput())
+
+      // Modo horário: pré-preencher se tiver hora_inicio/fim (modo edição)
+      if (defaultHoraInicio && defaultHoraFim) {
+        setModoRegistro('horario')
+        setHoraInicio(defaultHoraInicio)
+        setHoraFim(defaultHoraFim)
+        setDuracaoHoras(defaultDuracaoHoras ?? 1)
+        setDuracaoMinutos(defaultDuracaoMinutos ?? 0)
+      } else {
+        setHoraInicio('09:00')
+        setHoraFim('10:00')
+        setModoRegistro(defaultModoRegistro || 'duracao')
+        setDuracaoHoras(defaultDuracaoHoras ?? 1)
+        setDuracaoMinutos(defaultDuracaoMinutos ?? 0)
+      }
+
       setAtividade(defaultAtividade || '')
-      setFaturavel(null)
-      setFaturavelManual(false)
+
+      // Faturável: pré-preencher se disponível (modo edição)
+      if (defaultFaturavel !== undefined && defaultFaturavel !== null) {
+        setFaturavel(defaultFaturavel)
+        setFaturavelManual(true)
+      } else {
+        setFaturavel(null)
+        setFaturavelManual(false)
+      }
+
       setSearchTerm('')
       setProcessoSelecionado(null)
       setConsultaSelecionada(null)
@@ -227,20 +269,19 @@ export default function TimesheetModal({
       setAtosHora([])
       setAtoSelecionado(null)
       setHorasAcumuladasAto(null)
-      setModoRegistro(defaultModoRegistro || 'duracao')
-      setDuracaoHoras(defaultDuracaoHoras ?? 1)
-      setDuracaoMinutos(defaultDuracaoMinutos ?? 0)
 
-      // Se tem processoId ou consultaId, carregar
+      // Se tem processoId ou consultaId, carregar com loading state
       if (processoId) {
         setVinculoTipo('processo')
-        loadProcessoById(processoId)
+        setLoadingVinculo(true)
+        loadProcessoById(processoId).finally(() => setLoadingVinculo(false))
       } else if (consultaId) {
         setVinculoTipo('consulta')
-        loadConsultaById(consultaId)
+        setLoadingVinculo(true)
+        loadConsultaById(consultaId).finally(() => setLoadingVinculo(false))
       }
     }
-  }, [open, processoId, consultaId, defaultModoRegistro, defaultDuracaoHoras, defaultDuracaoMinutos, defaultAtividade])
+  }, [open, processoId, consultaId, defaultModoRegistro, defaultDuracaoHoras, defaultDuracaoMinutos, defaultAtividade, defaultDataTrabalho, defaultHoraInicio, defaultHoraFim, defaultFaturavel])
 
   // Carregar atos hora quando contrato é por_ato
   useEffect(() => {
@@ -687,6 +728,30 @@ export default function TimesheetModal({
 
     setLoading(true)
     try {
+      // Modo edição: atualizar registro existente
+      if (isEditMode && editTimesheetId) {
+        const horasDecimal = modoRegistro === 'duracao'
+          ? calcularHorasDecimalUnificado()
+          : calcularHorasDecimal()
+
+        await editarTimesheet(editTimesheetId, {
+          horas: horasDecimal,
+          atividade: atividade.trim(),
+          faturavel: faturavelEfetivo,
+        })
+
+        // Invalidar queries para atualizar listas
+        queryClient.invalidateQueries({ queryKey: ['timesheet-recentes'] })
+        queryClient.invalidateQueries({ queryKey: ['timesheet-tarefa'] })
+        queryClient.invalidateQueries({ queryKey: ['dashboard', 'metrics'] })
+
+        toast.success('Lançamento atualizado com sucesso!')
+        onSuccess?.()
+        onOpenChange(false)
+        return
+      }
+
+      // Modo criação: registrar novo
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Usuário não autenticado')
 
@@ -743,13 +808,18 @@ export default function TimesheetModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-[#34495e]">
             <Clock className="w-5 h-5 text-[#89bcbe]" />
-            Lançar Horas
+            {isEditMode ? 'Editar Lançamento' : 'Lançar Horas'}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Vínculo selecionado - Card minimalista com mais info */}
-          {hasSelection ? (
+          {loadingVinculo ? (
+            <div className="rounded-lg border border-slate-200 px-4 py-3 flex items-center gap-3">
+              <Loader2 className="w-4 h-4 animate-spin text-[#89bcbe]" />
+              <span className="text-xs text-slate-500">Carregando vínculo...</span>
+            </div>
+          ) : hasSelection ? (
             <div className="rounded-lg border border-slate-200 overflow-hidden">
               {/* Header com tipo e ação de remover */}
               <div className="flex items-center justify-between px-3 py-1.5 bg-slate-100 border-b border-slate-200">
@@ -1204,7 +1274,7 @@ export default function TimesheetModal({
             Cancelar
           </Button>
 
-          {onSaveAndComplete && (tarefaId || audienciaId || eventoId) ? (
+          {!isEditMode && onSaveAndComplete && (tarefaId || audienciaId || eventoId) ? (
             <>
               {/* Modo com duas opções: Salvar (continuar) e Salvar e Concluir */}
               <Button
@@ -1244,7 +1314,7 @@ export default function TimesheetModal({
               </Button>
             </>
           ) : (
-            /* Modo padrão: apenas Registrar Horas */
+            /* Modo padrão: Registrar Horas ou Salvar (edição) */
             <Button
               onClick={() => handleSubmit(false)}
               disabled={loading || !hasSelection || !atividade.trim() || calcularHorasDecimalUnificado() <= 0}
@@ -1258,7 +1328,7 @@ export default function TimesheetModal({
               ) : (
                 <>
                   <Clock className="w-4 h-4 mr-2" />
-                  Registrar Horas
+                  {isEditMode ? 'Salvar Alterações' : 'Registrar Horas'}
                 </>
               )}
             </Button>

@@ -22,7 +22,7 @@ import {
   PlayCircle,
   PauseCircle,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatHoras } from '@/lib/utils'
 import { formatBrazilDate, formatDateTimeForDB, parseDBDate } from '@/lib/timezone'
 import { Tarefa } from '@/hooks/useTarefas'
 import { useState, useEffect } from 'react'
@@ -40,6 +40,9 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast } from 'sonner'
 import { useTimer } from '@/contexts/TimerContext'
+import { useTimesheetPorTarefa, type TimesheetEntryRecente } from '@/hooks/useTimesheetRecentes'
+import TimesheetListModal from '@/components/agenda/TimesheetListModal'
+import TimesheetModal from '@/components/financeiro/TimesheetModal'
 
 // Extracted outside parent to prevent re-mount on every render (causes dropdown flicker)
 function DateRescheduleButton({
@@ -151,6 +154,7 @@ interface TarefaDetailModalProps {
   onConcluir?: () => void
   onReabrir?: () => void
   onLancarHoras?: () => void
+  onEditTimesheetEntry?: (entry: TimesheetEntryRecente) => void
   onProcessoClick?: (processoId: string) => void
   onConsultivoClick?: (consultivoId: string) => void
   onUpdate?: () => void | Promise<void>
@@ -191,6 +195,7 @@ export default function TarefaDetailModal({
   onConcluir,
   onReabrir,
   onLancarHoras,
+  onEditTimesheetEntry,
   onProcessoClick,
   onConsultivoClick,
   onUpdate,
@@ -198,6 +203,12 @@ export default function TarefaDetailModal({
   // Timer
   const { timersAtivos, iniciarTimer, pausarTimer, retomarTimer } = useTimer()
   const timerExistente = timersAtivos.find(t => t.tarefa_id === tarefa.id)
+
+  // Horas lançadas vinculadas à tarefa
+  const isVirtual = tarefa.id?.startsWith('virtual_')
+  const { data: timesheetEntries } = useTimesheetPorTarefa(open && !isVirtual ? tarefa.id : null)
+  const [timesheetListOpen, setTimesheetListOpen] = useState(false)
+  const [editTimesheetEntry, setEditTimesheetEntry] = useState<TimesheetEntryRecente | null>(null)
 
   const handleTimerClick = async () => {
     try {
@@ -840,6 +851,7 @@ export default function TarefaDetailModal({
                 </p>
               </div>
             )}
+
           </div>
 
           {/* Footer com Ações */}
@@ -891,6 +903,22 @@ export default function TarefaDetailModal({
                   >
                     <Timer className="w-3 h-3 mr-1" />
                     Lançar Horas
+                  </Button>
+                )}
+
+                {/* Botão Ver Horas - só aparece quando há lançamentos */}
+                {timesheetEntries && timesheetEntries.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setTimesheetListOpen(true)}
+                    className="h-8 text-xs border-slate-200 text-[#34495e] hover:bg-slate-50"
+                  >
+                    <Clock className="w-3 h-3 mr-1" />
+                    Ver Horas
+                    <span className="ml-1 px-1.5 py-0.5 rounded-full bg-slate-100 text-[9px] font-semibold text-slate-500">
+                      {timesheetEntries.length}
+                    </span>
                   </Button>
                 )}
 
@@ -1156,6 +1184,44 @@ export default function TarefaDetailModal({
         </div>
       </AlertDialogContent>
     </AlertDialog>
+
+    {/* Modal lista de horas vinculadas */}
+    {timesheetEntries && timesheetEntries.length > 0 && (
+      <TimesheetListModal
+        open={timesheetListOpen}
+        onOpenChange={setTimesheetListOpen}
+        entries={timesheetEntries}
+        onEditEntry={(entry) => {
+          setTimesheetListOpen(false)
+          setEditTimesheetEntry(entry)
+        }}
+      />
+    )}
+
+    {/* Modal padrão de edição de horas */}
+    {editTimesheetEntry && (
+      <TimesheetModal
+        open={!!editTimesheetEntry}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) setEditTimesheetEntry(null)
+        }}
+        processoId={editTimesheetEntry.processo_id}
+        consultaId={editTimesheetEntry.consulta_id}
+        tarefaId={editTimesheetEntry.tarefa_id}
+        editTimesheetId={editTimesheetEntry.id}
+        defaultAtividade={editTimesheetEntry.atividade}
+        defaultDataTrabalho={editTimesheetEntry.data_trabalho}
+        defaultHoraInicio={editTimesheetEntry.hora_inicio}
+        defaultHoraFim={editTimesheetEntry.hora_fim}
+        defaultFaturavel={editTimesheetEntry.faturavel}
+        defaultModoRegistro={editTimesheetEntry.hora_inicio ? 'horario' : 'duracao'}
+        defaultDuracaoHoras={Math.floor(Number(editTimesheetEntry.horas) || 0)}
+        defaultDuracaoMinutos={Math.round(((Number(editTimesheetEntry.horas) || 0) % 1) * 60)}
+        onSuccess={() => {
+          setEditTimesheetEntry(null)
+        }}
+      />
+    )}
     </>
   )
 }

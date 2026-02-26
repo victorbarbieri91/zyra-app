@@ -23,7 +23,7 @@ export default function MeusLancamentos({ className, onEditEntry }: MeusLancamen
     )}>
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-bold text-[#34495e]">Meus Lançamentos</h2>
+        <h2 className="text-sm font-bold text-[#34495e]">Meus Timesheets</h2>
         <Link
           href="/dashboard/financeiro/timesheet"
           className="text-[10px] font-medium text-[#89bcbe] hover:text-[#6ba9ab] transition-colors"

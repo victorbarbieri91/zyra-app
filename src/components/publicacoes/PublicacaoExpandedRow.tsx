@@ -228,13 +228,19 @@ export default function PublicacaoExpandedRow({
                         {copiado ? 'Copiado' : 'Copiar'}
                       </Button>
                     </div>
-                    <ScrollArea className="max-h-[350px]">
-                      <div className="p-3">
-                        <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
-                          {texto || 'Sem texto disponível'}
-                        </p>
-                      </div>
-                    </ScrollArea>
+                    <div className="relative">
+                      <ScrollArea className="max-h-[500px]">
+                        <div className="p-3 pb-6">
+                          <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
+                            {texto || 'Sem texto disponível'}
+                          </p>
+                        </div>
+                      </ScrollArea>
+                      {/* Gradiente fade indicando mais conteúdo */}
+                      {texto && texto.length > 800 && (
+                        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent pointer-events-none rounded-b-lg" />
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

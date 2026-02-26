@@ -1186,7 +1186,18 @@ export default function PublicacoesPage() {
                     />
                   </th>
                   <th className="text-left text-xs font-medium text-slate-600 p-3">Status</th>
-                  <th className="text-left text-xs font-medium text-slate-600 p-3">Data</th>
+                  <th className="text-left text-xs font-medium text-slate-600 p-3">
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-help border-b border-dashed border-slate-400">Disp.</span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Data de Disponibilização</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </th>
                   <th className="text-left text-xs font-medium text-slate-600 p-3">Tribunal</th>
                   <th className="text-left text-xs font-medium text-slate-600 p-3">Tipo</th>
                   <th className="text-left text-xs font-medium text-slate-600 p-3">Processo</th>

@@ -16,7 +16,6 @@ import {
   MessageSquareCode,
   LogOut,
   ChevronRight,
-  Sparkles,
   ChevronLeft,
   Scale,
   UserCircle,
@@ -30,6 +29,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
+import { usePublicacoesPendentesCount } from '@/hooks/usePublicacoesPendentesCount'
 
 interface MenuItem {
   title: string
@@ -105,6 +105,7 @@ export default function Sidebar() {
   const router = useRouter()
   const supabase = createClient()
   const { preferences, loading: preferencesLoading } = useUserPreferences()
+  const publicacoesPendentes = usePublicacoesPendentesCount()
 
   // Aplica a preferência do usuário quando carrega
   useEffect(() => {
@@ -181,6 +182,11 @@ export default function Sidebar() {
           const Icon = item.icon
           const isDisabled = item.disabled || false
 
+          // Badge dinâmico para publicações pendentes
+          const dynamicBadge = item.href === '/dashboard/publicacoes' && publicacoesPendentes > 0
+            ? String(publicacoesPendentes)
+            : item.badge
+
           const linkContent = (
             <Link
               key={item.href}
@@ -199,7 +205,7 @@ export default function Sidebar() {
               )}
             >
               <div className={cn(
-                'flex items-center justify-center transition-all duration-300',
+                'flex items-center justify-center transition-all duration-300 relative',
                 'w-8 h-8',
                 !isActive && !isDisabled && 'group-hover:scale-110'
               )}>
@@ -207,6 +213,16 @@ export default function Sidebar() {
                   'w-[18px] h-[18px] transition-all duration-300 flex-shrink-0',
                   isActive && 'drop-shadow-sm'
                 )} />
+                {collapsed && dynamicBadge && (
+                  <span className={cn(
+                    "absolute -top-1 -right-1 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-bold px-1 leading-none",
+                    isActive
+                      ? "bg-white text-[#34495e]"
+                      : "bg-amber-500 text-white"
+                  )}>
+                    {Number(dynamicBadge) > 99 ? '99+' : dynamicBadge}
+                  </span>
+                )}
               </div>
 
               <AnimatePresence>
@@ -219,15 +235,16 @@ export default function Sidebar() {
                     className="flex items-center gap-2 flex-1 overflow-hidden"
                   >
                     <span className="font-semibold text-sm whitespace-nowrap">{item.title}</span>
-                    {item.badge && (
+                    {dynamicBadge && (
                       <Badge className={cn(
-                        "text-[10px] px-2 py-0.5 h-5 border-0 gap-1 font-medium",
+                        "text-[10px] px-2 py-0.5 h-5 border-0 font-medium ml-auto",
                         isActive
                           ? "bg-white/30 text-white backdrop-blur-sm"
-                          : "bg-gradient-to-r from-[#89bcbe] to-[#6ba9ab] text-white"
+                          : item.href === '/dashboard/publicacoes'
+                            ? "bg-amber-500 text-white"
+                            : "bg-gradient-to-r from-[#89bcbe] to-[#6ba9ab] text-white"
                       )}>
-                        <Sparkles className="w-3 h-3" />
-                        {item.badge}
+                        {dynamicBadge}
                       </Badge>
                     )}
                   </motion.div>

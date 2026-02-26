@@ -41,6 +41,107 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { toast } from 'sonner'
 import { useTimer } from '@/contexts/TimerContext'
 
+// Extracted outside parent to prevent re-mount on every render (causes dropdown flicker)
+function DateRescheduleButton({
+  field,
+  currentDate,
+  dateDropdownOpen,
+  setDateDropdownOpen,
+  updatingDate,
+  setCalendarField,
+  handleUpdateDate,
+  getUrgency,
+}: {
+  field: 'data_inicio' | 'prazo_data_limite'
+  currentDate: string
+  dateDropdownOpen: string | null
+  setDateDropdownOpen: (v: string | null) => void
+  updatingDate: boolean
+  setCalendarField: (v: 'data_inicio' | 'prazo_data_limite' | null) => void
+  handleUpdateDate: (field: 'data_inicio' | 'prazo_data_limite', date: Date) => Promise<void>
+  getUrgency: (date: string) => number
+}) {
+  const handleQuickOption = async (option: 'today' | 'tomorrow' | 'nextMonday' | 'plus7') => {
+    const today = new Date()
+    let newDate: Date
+
+    switch(option) {
+      case 'today':
+        newDate = today
+        break
+      case 'tomorrow':
+        newDate = addDays(today, 1)
+        break
+      case 'nextMonday':
+        newDate = nextMonday(today)
+        break
+      case 'plus7':
+        newDate = addDays(today, 7)
+        break
+    }
+
+    await handleUpdateDate(field, newDate)
+  }
+
+  const handleOpenCustomDate = () => {
+    setDateDropdownOpen(null)
+    setTimeout(() => {
+      setCalendarField(field)
+    }, 100)
+  }
+
+  const hoursRemaining = getUrgency(currentDate)
+  const isOverdue = hoursRemaining < 0
+  const isUrgent = hoursRemaining >= 0 && hoursRemaining <= 48
+
+  return (
+    <DropdownMenu
+      open={dateDropdownOpen === field}
+      onOpenChange={(open) => setDateDropdownOpen(open ? field : null)}
+    >
+      <DropdownMenuTrigger asChild>
+        <button
+          className={cn(
+            "inline-flex items-center gap-1 text-xs transition-all h-5",
+            "cursor-pointer rounded-sm px-1.5",
+            "bg-slate-50 hover:bg-slate-100 border border-slate-200",
+            isOverdue && "text-red-600 bg-red-50 border-red-200 hover:bg-red-100",
+            isUrgent && !isOverdue && "text-amber-600 bg-amber-50 border-amber-200 hover:bg-amber-100",
+            !isOverdue && !isUrgent && "text-slate-700 hover:text-slate-900"
+          )}
+          disabled={updatingDate}
+        >
+          <span className="font-medium">
+            {formatBrazilDate(parseDBDate(currentDate))}
+          </span>
+          <Calendar className="w-3 h-3 ml-0.5 opacity-50" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        <div className="px-2 py-1.5 text-[10px] font-medium text-slate-500">
+          Reagendar para:
+        </div>
+        <DropdownMenuItem onClick={() => handleQuickOption('today')} className="text-xs">
+          Hoje
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleQuickOption('tomorrow')} className="text-xs">
+          Amanhã
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleQuickOption('nextMonday')} className="text-xs">
+          Próxima segunda
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleQuickOption('plus7')} className="text-xs">
+          Daqui a 7 dias
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleOpenCustomDate} className="text-xs">
+          Data personalizada...
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 interface TarefaDetailModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -425,95 +526,6 @@ export default function TarefaDetailModal({
     setCalendarField(null)
   }
 
-  // Date reschedule component
-  const DateReschedule = ({
-    field,
-    currentDate,
-  }: {
-    field: 'data_inicio' | 'prazo_data_limite'
-    currentDate: string
-  }) => {
-    const handleQuickOption = async (option: 'today' | 'tomorrow' | 'nextMonday' | 'plus7') => {
-      const today = new Date()
-      let newDate: Date
-
-      switch(option) {
-        case 'today':
-          newDate = today
-          break
-        case 'tomorrow':
-          newDate = addDays(today, 1)
-          break
-        case 'nextMonday':
-          newDate = nextMonday(today)
-          break
-        case 'plus7':
-          newDate = addDays(today, 7)
-          break
-      }
-
-      await handleUpdateDate(field, newDate)
-    }
-
-    const handleOpenCustomDate = () => {
-      setDateDropdownOpen(null) // Fecha o dropdown primeiro
-      setTimeout(() => {
-        setCalendarField(field) // Abre o calendário após o dropdown fechar
-      }, 100)
-    }
-
-    const hoursRemaining = getUrgency(currentDate)
-    const isOverdue = hoursRemaining < 0
-    const isUrgent = hoursRemaining >= 0 && hoursRemaining <= 48
-
-    return (
-      <DropdownMenu
-        open={dateDropdownOpen === field}
-        onOpenChange={(open) => setDateDropdownOpen(open ? field : null)}
-      >
-        <DropdownMenuTrigger asChild>
-          <button
-            className={cn(
-              "inline-flex items-center gap-1 text-xs transition-all h-5",
-              "cursor-pointer rounded-sm px-1.5",
-              "bg-slate-50 hover:bg-slate-100 border border-slate-200",
-              isOverdue && "text-red-600 bg-red-50 border-red-200 hover:bg-red-100",
-              isUrgent && !isOverdue && "text-amber-600 bg-amber-50 border-amber-200 hover:bg-amber-100",
-              !isOverdue && !isUrgent && "text-slate-700 hover:text-slate-900"
-            )}
-            disabled={updatingDate}
-          >
-            <span className="font-medium">
-              {formatBrazilDate(parseDBDate(currentDate))}
-            </span>
-            <Calendar className="w-3 h-3 ml-0.5 opacity-50" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
-          <div className="px-2 py-1.5 text-[10px] font-medium text-slate-500">
-            Reagendar para:
-          </div>
-          <DropdownMenuItem onClick={() => handleQuickOption('today')} className="text-xs">
-            Hoje
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleQuickOption('tomorrow')} className="text-xs">
-            Amanhã
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleQuickOption('nextMonday')} className="text-xs">
-            Próxima segunda
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleQuickOption('plus7')} className="text-xs">
-            Daqui a 7 dias
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleOpenCustomDate} className="text-xs">
-            Data personalizada...
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    )
-  }
-
   return (
     <>
     <Dialog open={open} onOpenChange={handleMainDialogOpenChange}>
@@ -674,9 +686,15 @@ export default function TarefaDetailModal({
                   {isFixa ? (
                     <span className="text-xs text-teal-600 font-medium">Todo dia (tarefa fixa)</span>
                   ) : (
-                    <DateReschedule
+                    <DateRescheduleButton
                       field="data_inicio"
                       currentDate={tarefa.data_inicio}
+                      dateDropdownOpen={dateDropdownOpen}
+                      setDateDropdownOpen={setDateDropdownOpen}
+                      updatingDate={updatingDate}
+                      setCalendarField={setCalendarField}
+                      handleUpdateDate={handleUpdateDate}
+                      getUrgency={getUrgency}
                     />
                   )}
                 </div>
@@ -699,9 +717,15 @@ export default function TarefaDetailModal({
                     </span>
                   </div>
                   <div className="h-5">
-                    <DateReschedule
+                    <DateRescheduleButton
                       field="prazo_data_limite"
                       currentDate={tarefa.prazo_data_limite}
+                      dateDropdownOpen={dateDropdownOpen}
+                      setDateDropdownOpen={setDateDropdownOpen}
+                      updatingDate={updatingDate}
+                      setCalendarField={setCalendarField}
+                      handleUpdateDate={handleUpdateDate}
+                      getUrgency={getUrgency}
                     />
                   </div>
                 </div>

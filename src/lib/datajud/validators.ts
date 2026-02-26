@@ -12,6 +12,7 @@ import {
   TRIBUNAIS_SUPERIORES,
   AREAS_POR_CLASSE
 } from './constants'
+import { normalizarInstancia } from '@/lib/constants/processo-enums'
 
 /**
  * Regex para validar formato do numero CNJ
@@ -212,18 +213,21 @@ export function inferirArea(classe: string, assuntos?: string[]): string | null 
  * Mapeia o grau do DataJud para instancia do sistema
  */
 export function mapearInstancia(grau: string): string {
+  // Mapeamento de códigos DataJud para valores intermediários legíveis
   const mapa: Record<string, string> = {
-    'G1': '1ª',
-    'G2': '2ª',
-    'JE': '1ª',
-    'TR': '2ª',
-    'SUP': 'STJ',
-    'STJ': 'STJ',
-    'STF': 'STF',
-    'TST': 'TST'
+    'G1': '1',
+    'G2': '2',
+    'JE': '1',
+    'TR': '2',
+    'SUP': 'stj',
+    'STJ': 'stj',
+    'STF': 'stf',
+    'TST': 'tst'
   }
 
-  return mapa[grau] || '1ª'
+  const intermediario = mapa[grau] || grau
+  // Guardrail centralizado: normalizarInstancia sempre retorna valor válido para o banco
+  return normalizarInstancia(intermediario) || '1a'
 }
 
 /**

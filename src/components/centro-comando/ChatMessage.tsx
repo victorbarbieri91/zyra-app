@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { formatBrazilDateTime } from '@/lib/timezone'
 import { CentroComandoMensagem, ToolResult } from '@/types/centro-comando'
@@ -17,8 +18,32 @@ interface ChatMessageProps {
   onOpenInputDialog?: (result: ToolResult) => void
   onFeedback?: (mensagemId: string, tipo: TipoFeedback) => void
   onCorrecao?: (mensagemId: string) => void
+  onNegativoComRetry?: (mensagemId: string, correcao: string) => void
   feedbackEnviado?: TipoFeedback | null
   mostrarFeedback?: boolean
+}
+
+// Sanitizar erros para nunca expor detalhes técnicos ao usuário
+function sanitizarErroFrontend(erro: string): string {
+  if (!erro) return 'Não foi possível completar a operação.'
+  const e = erro.toLowerCase()
+  if (e.includes('tabela') && (e.includes('permitida') || e.includes('nao') || e.includes('não'))) {
+    return 'Esta funcionalidade não está disponível via chat no momento.'
+  }
+  if (e.includes('constraint') || e.includes('violates') || e.includes('check_')) {
+    return 'Os dados informados não são válidos. Tente novamente com valores diferentes.'
+  }
+  if (e.includes('permission') || e.includes('rls') || e.includes('policy')) {
+    return 'Você não tem permissão para esta operação.'
+  }
+  if (e.includes('campo') && e.includes('obrigat')) {
+    return 'Alguns dados necessários não foram preenchidos.'
+  }
+  // Se já é uma mensagem amigável (sem termos técnicos), retornar como está
+  if (!e.includes('error') && !e.includes('exception') && !e.includes('sql') && !e.includes('rpc') && !e.includes('function')) {
+    return erro
+  }
+  return 'Não foi possível completar a operação. Tente novamente.'
 }
 
 // Filtrar resultados de ferramentas:
@@ -48,9 +73,11 @@ export function ChatMessage({
   onOpenInputDialog,
   onFeedback,
   onCorrecao,
+  onNegativoComRetry,
   feedbackEnviado,
   mostrarFeedback = false,
 }: ChatMessageProps) {
+  const [mostrarInlineCorrection, setMostrarInlineCorrection] = useState(false)
   const isUser = mensagem.role === 'user'
   const isSystem = mensagem.role === 'system'
   const isLoading = mensagem.loading
@@ -96,9 +123,7 @@ export function ChatMessage({
           <>
             {/* Texto da mensagem */}
             {mensagem.content && (
-              <div className={cn(
-                mensagem.erro && 'text-red-600'
-              )}>
+              <div>
                 <MarkdownRenderer content={mensagem.content} />
               </div>
             )}
@@ -126,10 +151,10 @@ export function ChatMessage({
               )
             })()}
 
-            {/* Erro */}
+            {/* Erro — sanitizado */}
             {mensagem.erro && (
-              <div className="mt-2 px-3 py-2 bg-red-50 border border-red-100 rounded-lg text-xs text-red-600">
-                {mensagem.erro}
+              <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg text-xs text-amber-700">
+                {sanitizarErroFrontend(mensagem.erro)}
               </div>
             )}
 
@@ -139,7 +164,10 @@ export function ChatMessage({
                 mensagemId={mensagem.id}
                 onFeedback={(tipo) => onFeedback(mensagem.id!, tipo)}
                 onCorrecao={() => onCorrecao(mensagem.id!)}
+                onNegativoComRetry={(correcao) => onNegativoComRetry?.(mensagem.id!, correcao)}
                 feedbackEnviado={feedbackEnviado}
+                mostrarInlineCorrection={mostrarInlineCorrection}
+                onToggleInlineCorrection={() => setMostrarInlineCorrection(prev => !prev)}
               />
             )}
           </>
@@ -190,11 +218,12 @@ function ToolResultDisplay({
     )
   }
 
-  // Erro
+  // Erro — sanitizar mensagem para nunca expor detalhes técnicos
   if (result.erro) {
+    const erroSanitizado = sanitizarErroFrontend(result.erro)
     return (
-      <div className="px-3 py-2 bg-red-50 border border-red-100 rounded-lg">
-        <p className="text-sm text-red-600">{result.erro || 'Erro ao processar solicitação'}</p>
+      <div className="px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg">
+        <p className="text-sm text-amber-700">{erroSanitizado}</p>
       </div>
     )
   }

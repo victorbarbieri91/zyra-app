@@ -38,6 +38,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { normalizarInstancia } from '@/lib/constants/processo-enums'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { formatCurrency } from '@/lib/utils'
@@ -95,7 +96,7 @@ export default function TransformarConsultivoWizard({
   const [vara, setVara] = useState('')
   const [uf, setUf] = useState('')
   const [fase, setFase] = useState('conhecimento')
-  const [instancia, setInstancia] = useState('1ª')
+  const [instancia, setInstancia] = useState('1a')
   const [valorCausa, setValorCausa] = useState('')
 
   // Opções de transformação
@@ -182,7 +183,7 @@ export default function TransformarConsultivoWizard({
     setVara('')
     setUf('')
     setFase('conhecimento')
-    setInstancia('1ª')
+    setInstancia('1a')
     setValorCausa('')
     setManterContrato(true)
     setMigrarAndamentos(true)
@@ -213,7 +214,7 @@ export default function TransformarConsultivoWizard({
         p_vara: vara || null,
         p_uf: uf || null,
         p_fase: fase,
-        p_instancia: instancia,
+        p_instancia: normalizarInstancia(instancia) || '1a',
         p_valor_causa: valorCausa ? parseFloat(valorCausa) : null,
         p_manter_contrato: manterContrato,
         p_migrar_andamentos: migrarAndamentos,
@@ -506,11 +507,13 @@ export default function TransformarConsultivoWizard({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1ª">1ª Instância</SelectItem>
-                      <SelectItem value="2ª">2ª Instância</SelectItem>
-                      <SelectItem value="STJ">STJ</SelectItem>
-                      <SelectItem value="STF">STF</SelectItem>
-                      <SelectItem value="TST">TST</SelectItem>
+                      <SelectItem value="1a">1ª Instância</SelectItem>
+                      <SelectItem value="2a">2ª Instância</SelectItem>
+                      <SelectItem value="3a">3ª Instância</SelectItem>
+                      <SelectItem value="stj">STJ</SelectItem>
+                      <SelectItem value="stf">STF</SelectItem>
+                      <SelectItem value="tst">TST</SelectItem>
+                      <SelectItem value="administrativa">Administrativa</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

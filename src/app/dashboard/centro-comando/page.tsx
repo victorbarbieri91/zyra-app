@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import {
@@ -17,6 +17,7 @@ import { ChatMessage } from '@/components/centro-comando/ChatMessage'
 import { ChatInput } from '@/components/centro-comando/ChatInput'
 import { ConfirmationDialog } from '@/components/centro-comando/ConfirmationDialog'
 import { InformationCollectionDialog } from '@/components/centro-comando/InformationCollectionDialog'
+import { CorrecaoModal } from '@/components/centro-comando/CorrecaoModal'
 import { ThinkingSteps } from '@/components/centro-comando/ThinkingSteps'
 import { formatBrazilDateTime } from '@/lib/timezone'
 
@@ -42,30 +43,36 @@ export default function CentroComandoPage() {
     responderCamposNecessarios,
     enviarFeedback,
     getFeedbackMensagem,
+    reenviarComCorrecao,
     messagesEndRef,
   } = useCentroComando()
 
   const [mostrarHistorico, setMostrarHistorico] = useState(false)
 
-  // Estado para ação sendo confirmada
+  // Estado para acao sendo confirmada
   const [acaoConfirmando, setAcaoConfirmando] = useState<string | null>(null)
 
-  // Encontrar ação atual
+  // Estado para CorrecaoModal
+  const [correcaoModalOpen, setCorrecaoModalOpen] = useState(false)
+  const [correcaoMensagemId, setCorrecaoMensagemId] = useState<string | null>(null)
+  const [enviandoCorrecao, setEnviandoCorrecao] = useState(false)
+
+  // Encontrar acao atual
   const acaoAtual = acoesPendentes.find(a => a.id === acaoConfirmando) || acoesPendentes[0] || null
 
-  // Abrir diálogo de confirmação quando houver ação pendente
+  // Abrir dialogo de confirmacao quando houver acao pendente
   useEffect(() => {
     if (acoesPendentes.length > 0 && !acaoConfirmando) {
       setAcaoConfirmando(acoesPendentes[0].id)
     }
   }, [acoesPendentes, acaoConfirmando])
 
-  // Handler de navegação
+  // Handler de navegacao
   const handleNavigate = (path: string) => {
     router.push(path)
   }
 
-  // Handler de confirmação
+  // Handler de confirmacao
   const handleConfirm = async (duplaConfirmacao?: boolean) => {
     if (!acaoAtual) return
 
@@ -86,6 +93,40 @@ export default function CentroComandoPage() {
     }
     setAcaoConfirmando(null)
   }
+
+  // Handler de correcao via modal (botao ✏️)
+  const handleOpenCorrecaoModal = useCallback((mensagemId: string) => {
+    setCorrecaoMensagemId(mensagemId)
+    setCorrecaoModalOpen(true)
+  }, [])
+
+  // Handler de envio da correcao do modal
+  const handleEnviarCorrecao = useCallback(async (correcao: { comentario: string; respostaEsperada: string }) => {
+    if (!correcaoMensagemId) return
+    setEnviandoCorrecao(true)
+    await enviarFeedback(correcaoMensagemId, 'correcao', {
+      comentario: correcao.comentario,
+      respostaEsperada: correcao.respostaEsperada,
+    })
+    setCorrecaoModalOpen(false)
+    setCorrecaoMensagemId(null)
+    setEnviandoCorrecao(false)
+  }, [correcaoMensagemId, enviarFeedback])
+
+  // Buscar mensagem original e resposta para o CorrecaoModal
+  const correcaoMensagemOriginal = correcaoMensagemId
+    ? (() => {
+        const idx = mensagens.findIndex(m => m.id === correcaoMensagemId)
+        const userMsg = idx > 0
+          ? mensagens.slice(0, idx).reverse().find(m => m.role === 'user')
+          : null
+        return userMsg?.content || ''
+      })()
+    : ''
+
+  const correcaoRespostaOriginal = correcaoMensagemId
+    ? mensagens.find(m => m.id === correcaoMensagemId)?.content || ''
+    : ''
 
   return (
     <div className="h-full flex flex-col bg-slate-50">
@@ -109,7 +150,7 @@ export default function CentroComandoPage() {
               onClick={() => setMostrarHistorico(!mostrarHistorico)}
             >
               <History className="w-3.5 h-3.5 md:mr-1.5" />
-              <span className="hidden md:inline">Histórico</span>
+              <span className="hidden md:inline">Historico</span>
             </Button>
             <Button variant="outline" size="sm" className="text-xs" onClick={limparChat}>
               <Plus className="w-3.5 h-3.5 mr-1.5" />
@@ -119,9 +160,9 @@ export default function CentroComandoPage() {
         </div>
       </div>
 
-      {/* Conteúdo principal */}
+      {/* Conteudo principal */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar de histórico */}
+        {/* Sidebar de historico */}
         {mostrarHistorico && (
           <div className="w-72 border-r border-slate-200 bg-white flex flex-col">
             <div className="p-3 border-b border-slate-100">
@@ -158,7 +199,7 @@ export default function CentroComandoPage() {
                         <MessageCircle className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-slate-700 truncate">
-                            {sessao.titulo || 'Conversa sem título'}
+                            {sessao.titulo || 'Conversa sem titulo'}
                           </p>
                           <p className="text-xs text-slate-400 mt-0.5">
                             {formatBrazilDateTime(new Date(sessao.created_at))}
@@ -178,7 +219,7 @@ export default function CentroComandoPage() {
           </div>
         )}
 
-        {/* Área do chat - Layout condicional */}
+        {/* Area do chat - Layout condicional */}
         <div className="flex-1 flex flex-col">
           {mensagens.length === 0 ? (
             /* Tela inicial - Input centralizado (estilo ChatGPT/Claude) */
@@ -187,7 +228,7 @@ export default function CentroComandoPage() {
               disabled={carregando}
             />
           ) : (
-            /* Conversa ativa - Input no rodapé */
+            /* Conversa ativa - Input no rodape */
             <>
               {/* Mensagens */}
               <div className="flex-1 overflow-y-auto p-4">
@@ -200,7 +241,8 @@ export default function CentroComandoPage() {
                       onOpenInputDialog={abrirFormularioInput}
                       mostrarFeedback={msg.role === 'assistant'}
                       onFeedback={(mensagemId, tipo) => enviarFeedback(mensagemId, tipo)}
-                      onCorrecao={(mensagemId) => enviarFeedback(mensagemId, 'correcao')}
+                      onCorrecao={(mensagemId) => handleOpenCorrecaoModal(mensagemId)}
+                      onNegativoComRetry={(mensagemId, correcao) => reenviarComCorrecao(mensagemId, correcao)}
                       feedbackEnviado={msg.id ? getFeedbackMensagem(msg.id) : null}
                     />
                   ))}
@@ -212,7 +254,7 @@ export default function CentroComandoPage() {
                 </div>
               </div>
 
-              {/* Input no rodapé */}
+              {/* Input no rodape */}
               <div className="flex-shrink-0 p-4 bg-white border-t border-slate-200">
                 <div className="max-w-4xl mx-auto">
                   <ChatInput
@@ -227,7 +269,7 @@ export default function CentroComandoPage() {
         </div>
       </div>
 
-      {/* Diálogo de confirmação */}
+      {/* Dialogo de confirmacao */}
       <ConfirmationDialog
         acao={acaoAtual}
         onConfirm={handleConfirm}
@@ -235,12 +277,22 @@ export default function CentroComandoPage() {
         loading={carregando}
       />
 
-      {/* Diálogo de coleta de informações */}
+      {/* Dialogo de coleta de informacoes */}
       <InformationCollectionDialog
         toolResult={camposPendentes}
         onSubmit={responderCamposNecessarios}
         onCancel={fecharFormularioInput}
         loading={carregando}
+      />
+
+      {/* Modal de correcao detalhada (botao ✏️) */}
+      <CorrecaoModal
+        open={correcaoModalOpen}
+        onOpenChange={setCorrecaoModalOpen}
+        mensagemOriginal={correcaoMensagemOriginal}
+        respostaOriginal={correcaoRespostaOriginal}
+        onEnviar={handleEnviarCorrecao}
+        enviando={enviandoCorrecao}
       />
     </div>
   )
@@ -259,7 +311,7 @@ function WelcomeScreen({ onSend, disabled }: WelcomeScreenProps) {
     <div className="h-full flex flex-col items-center justify-center px-4">
       {/* Container principal centralizado */}
       <div className="w-full max-w-2xl">
-        {/* Logo e saudação */}
+        {/* Logo e saudacao */}
         <div className="text-center mb-8">
           {/* Logo Zyra */}
           <div className="flex justify-center mb-6">
@@ -273,7 +325,7 @@ function WelcomeScreen({ onSend, disabled }: WelcomeScreenProps) {
             />
           </div>
 
-          {/* Saudação única */}
+          {/* Saudacao unica */}
           <h2 className="text-2xl font-semibold text-[#34495e]">
             Como posso ajudar?
           </h2>
@@ -284,7 +336,7 @@ function WelcomeScreen({ onSend, disabled }: WelcomeScreenProps) {
           <ChatInput
             onSend={onSend}
             disabled={disabled}
-            placeholder="Digite sua mensagem ou escolha uma sugestão..."
+            placeholder="Digite sua mensagem ou escolha uma sugestao..."
           />
         </div>
 

@@ -709,6 +709,33 @@ export function useCentroComando() {
   }, [escritorioAtivo, state.sessaoId, state.mensagens, supabase])
 
   // ========================================
+  // REENVIAR COM CORREÇÃO (RETRY INLINE)
+  // ========================================
+  const reenviarComCorrecao = useCallback(async (
+    mensagemId: string,
+    correcao: string
+  ) => {
+    if (!escritorioAtivo || !state.sessaoId) return
+
+    // Encontrar a mensagem original do usuario que precedeu a resposta
+    const idx = state.mensagens.findIndex(m => m.id === mensagemId)
+    if (idx < 0) return
+    const msgUsuario = state.mensagens.slice(0, idx).reverse().find(m => m.role === 'user')
+    if (!msgUsuario) return
+
+    // Salvar feedback negativo com dados de correcao
+    await enviarFeedback(mensagemId, 'negativo', {
+      comentario: correcao,
+      respostaEsperada: correcao,
+    })
+
+    // Re-enviar com contexto de correcao
+    await enviarMensagem(
+      `[CORREÇÃO] Minha pergunta original: "${msgUsuario.content}"\nProblema: ${correcao}\nTente novamente com abordagem diferente.`
+    )
+  }, [escritorioAtivo, state.sessaoId, state.mensagens, enviarMensagem, enviarFeedback])
+
+  // ========================================
   // OBTER FEEDBACK DE UMA MENSAGEM
   // ========================================
   const getFeedbackMensagem = useCallback((mensagemId: string) => {
@@ -749,6 +776,7 @@ export function useCentroComando() {
     enviarFeedback,
     getFeedbackMensagem,
     enviandoFeedback,
+    reenviarComCorrecao,
 
     // Refs
     messagesEndRef,

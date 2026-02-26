@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { normalizarInstancia } from '@/lib/constants/processo-enums'
 import type { ProcessoEscavadorNormalizado } from '@/lib/escavador/types'
 
 interface AtualizarCapaModalProps {
@@ -380,6 +381,16 @@ export default function AtualizarCapaModal({
       for (const campo of camposSelecionados) {
         if (campo.campo === 'valor_causa' && dadosEscavador?.valor_causa) {
           atualizacao[campo.campo] = dadosEscavador.valor_causa
+        } else if (campo.campo === 'instancia') {
+          // Guardrail: normalizar instância para evitar violação de check constraint
+          const instanciaNorm = normalizarInstancia(campo.valorNovo)
+          if (!instanciaNorm) {
+            toast.error(`Valor de instância "${campo.valorNovo}" não reconhecido`)
+            setEtapa('comparando')
+            setSalvando(false)
+            return
+          }
+          atualizacao[campo.campo] = instanciaNorm
         } else {
           atualizacao[campo.campo] = campo.valorNovo
         }

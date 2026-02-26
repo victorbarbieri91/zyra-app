@@ -43,39 +43,39 @@ const MENSAGENS_TOOL: Record<string, { inicio: string; fim: (resultado: any) => 
     fim: (r) => `📋 Encontrei ${r.total || 0} tabelas disponíveis.`,
   },
   descobrir_estrutura: {
-    inicio: '🔍 Descobrindo estrutura da tabela...',
+    inicio: '🔍 Analisando estrutura dos dados...',
     fim: (r) => r.erro
-      ? `❌ Erro: ${r.erro || 'Erro desconhecido'}`
-      : `📝 ${r.tabela}: ${r.total_colunas || 0} colunas, ${r.total_constraints || 0} constraints, ${r.total_fks || 0} FKs.`,
+      ? `⚙️ Verificando abordagem alternativa...`
+      : `📝 Estrutura identificada: ${r.total_colunas || 0} campos disponíveis.`,
   },
   consultar_dados: {
-    inicio: '🔎 Buscando dados no banco...',
+    inicio: '🔎 Buscando informações...',
     fim: (r) => r.erro
-      ? `❌ Erro na consulta: ${r.erro || 'Erro desconhecido'}`
+      ? `⚙️ Ajustando a busca...`
       : `✅ Encontrei ${r.total || 0} ${r.total === 1 ? 'registro' : 'registros'}.`,
   },
   preparar_cadastro: {
     inicio: '✏️ Preparando o cadastro...',
     fim: (r) => r.erro
-      ? `❌ Erro: ${r.erro || 'Erro ao preparar cadastro'}`
+      ? `⚙️ Verificando os dados necessários...`
       : `📋 Cadastro preparado! Aguardando sua confirmação.`,
   },
   preparar_alteracao: {
     inicio: '✏️ Preparando a alteração...',
     fim: (r) => r.erro
-      ? `❌ Erro: ${r.erro || 'Erro ao preparar alteração'}`
+      ? `⚙️ Verificando os dados da alteração...`
       : `📋 Alteração preparada! Revise e confirme.`,
   },
   preparar_alteracao_em_massa: {
     inicio: '⚙️ Preparando alteração em massa...',
     fim: (r) => r.erro
-      ? `❌ Erro: ${r.erro || 'Erro ao preparar alteração em massa'}`
+      ? `⚙️ Verificando dados da alteração em massa...`
       : `📋 Alteração em ${r.total_afetados || 0} registros preparada! Aguardando confirmação.`,
   },
   preparar_exclusao: {
     inicio: '⚠️ Preparando exclusão...',
     fim: (r) => r.erro
-      ? `❌ Erro: ${r.erro || 'Erro ao preparar exclusão'}`
+      ? `⚙️ Verificando dados da exclusão...`
       : `🗑️ Exclusão preparada! Requer dupla confirmação.`,
   },
   pedir_informacao: {
@@ -91,6 +91,37 @@ const MENSAGENS_TOOL: Record<string, { inicio: string; fim: (resultado: any) => 
 // TABELAS_PERMITIDAS removido — validação centralizada na RPC get_tabelas_permitidas() do banco
 
 // ============================================
+// SANITIZAR ERROS — NUNCA expor erros técnicos ao usuário
+// ============================================
+function sanitizarErroParaUsuario(erro: string): string {
+  if (!erro) return 'Não foi possível completar a operação.'
+  const erroLower = erro.toLowerCase()
+  if (erroLower.includes('tabela nao permitida') || erroLower.includes('tabela não permitida')) {
+    return 'Esta funcionalidade não está disponível via chat no momento. Use o menu correspondente do sistema.'
+  }
+  if (erroLower.includes('campo') && erroLower.includes('obrigat')) {
+    return 'Alguns dados necessários não foram preenchidos. Vou solicitar as informações faltantes.'
+  }
+  if (erroLower.includes('constraint') || erroLower.includes('violates') || erroLower.includes('check_')) {
+    return 'Os dados fornecidos não são válidos para esse campo. Vou verificar e tentar novamente.'
+  }
+  if (erroLower.includes('permission denied') || erroLower.includes('rls') || erroLower.includes('policy')) {
+    return 'Você não tem permissão para esta operação.'
+  }
+  if (erroLower.includes('not found') || erroLower.includes('não encontrad')) {
+    return 'Registro não encontrado.'
+  }
+  if (erroLower.includes('duplicate') || erroLower.includes('unique') || erroLower.includes('already exists')) {
+    return 'Já existe um registro com essas informações.'
+  }
+  if (erroLower.includes('foreign key') || erroLower.includes('fk_')) {
+    return 'Um dos dados referenciados não foi encontrado no sistema.'
+  }
+  // Genérico — nunca expor o erro técnico real
+  return 'Não foi possível completar a operação. Tente novamente ou use o menu do sistema.'
+}
+
+// ============================================
 // CONTEXTO DE DOMÍNIO — Índice de módulos + Regras de negócio
 // ============================================
 // Estrutura detalhada (colunas, constraints, FKs) vem da tool descobrir_estrutura.
@@ -100,8 +131,8 @@ const CONTEXTO_DOMINIO = `
 - **Processos**: processos_processos (caso judicial), processos_partes, processos_movimentacoes
 - **CRM**: crm_pessoas (clientes/contatos), crm_interacoes, crm_oportunidades
 - **Agenda**: agenda_tarefas, agenda_eventos, agenda_audiencias, agenda_recorrencias
-- **Financeiro**: financeiro_timesheet, financeiro_honorarios, financeiro_honorarios_parcelas, financeiro_contratos_honorarios, financeiro_faturamento_faturas, financeiro_receitas_despesas, financeiro_contas_bancarias
-- **Consultivo**: consultivo_consultas, consultivo_pareceres
+- **Financeiro**: financeiro_timesheet, financeiro_honorarios, financeiro_honorarios_parcelas, financeiro_contratos_honorarios, financeiro_faturamento_faturas, financeiro_receitas, financeiro_despesas, financeiro_contas_bancarias
+- **Consultivo**: consultivo_consultas (pastas consultivas), consultivo_timeline (andamentos e timeline)
 - **Core**: profiles (usuários/advogados), escritorios, escritorios_usuarios
 - **Views (SOMENTE LEITURA)**: v_agenda_consolidada, v_processos_dashboard, v_lancamentos_prontos_faturar, v_prazos_vencendo
 
@@ -109,22 +140,43 @@ const CONTEXTO_DOMINIO = `
 - processo.cliente_id → crm_pessoas.id | processo.responsavel_id → profiles.id
 - tarefa/evento/audiencia.responsavel_id → profiles.id | .responsaveis_ids = uuid[] (múltiplos)
 - tarefa/evento/audiencia.processo_id → processos_processos.id
+- tarefa/evento/audiencia.consultivo_id → consultivo_consultas.id
 - timesheet.user_id → profiles.id | timesheet.processo_id → processos_processos.id
 - contrato/honorarios.cliente_id → crm_pessoas.id
 - profiles ≠ crm_pessoas! profiles = advogados do escritório, crm_pessoas = clientes/contatos externos
 
+### VOCABULÁRIO JURÍDICO → CAMPOS DO BANCO
+- "Pasta" / "pasta 203" = numero_pasta em processos_processos (formato PROC-0203) OU numero em consultivo_consultas
+- "Título" do processo = CONCAT(autor, ' x ', reu) — NÃO existe campo titulo em processos
+- "Número" / "CNJ" = numero_cnj em processos_processos
+- "Tarefas da pasta X" = agenda_tarefas WHERE processo_id = (ID do processo com numero_pasta ILIKE '%X%')
+- "Consulta X" = consultivo_consultas WHERE numero ILIKE '%X%'
+- "Audiência" / "audiências" = agenda_audiencias (tabela SEPARADA de tarefas e eventos)
+- "Compromissos" / "agenda completa" de um caso = v_agenda_consolidada (unifica tarefas + eventos + audiências)
+
 ### REGRAS DE NEGÓCIO (não deriváveis do schema)
-- "Título" do processo = CONCAT(autor, ' x ', reu)
 - v_agenda_consolidada unifica tarefas + eventos + audiências (somente SELECT, já tem responsavel_nome)
+- agenda_tarefas, agenda_eventos e agenda_audiencias são tabelas SEPARADAS — consultar uma NÃO retorna dados da outra
+- agenda_audiencias tem processo_id NOT NULL (toda audiência DEVE pertencer a um processo)
+- "Tem audiência?" → consultar agenda_audiencias. "Tem tarefa?" → agenda_tarefas. "Tem compromisso/agenda?" → v_agenda_consolidada
 - Contratos definem cobrança (forma_cobranca + config jsonb) → timesheet × valor_hora → faturamento
 - responsavel_id DEVE ser UUID de profiles.id — NUNCA inventar UUID
+- **consultivo_consultas** (criar pasta consultiva): titulo (obrigatório), cliente_id (FK crm_pessoas, obrigatório), area (obrigatório: civel/trabalhista/tributaria/societaria/empresarial/contratual/familia/criminal/previdenciaria/consumidor/ambiental/imobiliario/propriedade_intelectual/compliance/outra), responsavel_id (FK profiles, usar user_id atual se não especificado), status default 'ativo', prioridade default 'media'
+- Para criar consultivo: SEMPRE buscar cliente_id em crm_pessoas primeiro. Se não informar responsável, usar o user_id do usuário atual.
+- "Pasta consultiva" / "abrir pasta consultiva" / "nova consulta" = consultivo_consultas
+- "Andamento" / "timeline consultiva" = consultivo_timeline (vinculado a uma consulta via consulta_id)
 - data_inicio em agenda_tarefas é DATE (YYYY-MM-DD), não timestamptz
 - data_inicio/data_fim em agenda_eventos é TIMESTAMPTZ
+- data_hora em agenda_audiencias é TIMESTAMPTZ
 
 ### WORKFLOWS OBRIGATÓRIOS
 1. **Responsável por nome** → consultar_dados(SELECT id, nome_completo FROM profiles WHERE escritorio_id=... AND nome_completo ILIKE '%nome%') → usar UUID retornado
 2. **Criar N registros** → chamar preparar_cadastro N vezes (um por registro)
 3. **Reagendar** → consultar_dados (buscar registro) → preparar_alteracao (alterar data)
+4. **Buscar por pasta/número** → PRIMEIRO buscar o processo/consulta pelo número → confirmar com o usuário qual é → DEPOIS buscar dados vinculados (tarefas, eventos, etc.)
+5. **Buscar tarefas de um caso** → SEMPRE vincular via processo_id ou consultivo_id (JOIN), NUNCA buscar tarefas "soltas" por texto
+6. **Buscar audiências de um caso** → SEMPRE consultar agenda_audiencias diretamente (WHERE processo_id = ID). NÃO assumir que tarefas incluem audiências — são tabelas SEPARADAS.
+7. **Agenda completa de um caso** → Usar v_agenda_consolidada WHERE processo_id = ID para ver TUDO (tarefas + eventos + audiências).
 
 ### PADRÕES SQL
 - SEMPRE: WHERE escritorio_id = '{escritorio_id}'
@@ -404,7 +456,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "pedir_informacao",
-      description: "✅ USE APENAS para coletar DADOS FALTANTES do usuário (ex: título, data, responsável). NUNCA use para confirmações Sim/Não — confirmações são feitas automaticamente pelo sistema via preparar_cadastro/preparar_alteracao.",
+      description: "✅ USE para: (1) coletar DADOS FALTANTES (ex: título, data, responsável), (2) DESAMBIGUAR consultas quando há múltiplos resultados possíveis (ex: 'pasta 203' encontrou processo E consulta — perguntar qual). NUNCA use para confirmações Sim/Não de INSERT/UPDATE — essas são feitas via preparar_cadastro/preparar_alteracao.",
       parameters: {
         type: "object",
         properties: {
@@ -524,7 +576,7 @@ serve(async (req) => {
     if (!openaiApiKey) {
       return errorResponse('Chave OpenAI não configurada no servidor', 500)
     }
-    const aiModel = Deno.env.get('AI_MODEL') || 'gpt-4o-mini'
+    const aiModel = Deno.env.get('AI_MODEL') || 'gpt-5-mini'
     // RAG sempre habilitado com OpenAI (knowledge base + memórias separados)
 
     // Buscar informações do usuário
@@ -614,6 +666,24 @@ Você mantém contexto da conversa e aprende com cada interação.
 - DELETE = dupla confirmação (via preparar_exclusao).
 - Criar N registros = chamar preparar_cadastro N vezes (um objeto simples por chamada).
 - Usar JOINs quando precisar cruzar informações entre módulos.
+- Se a mensagem contém "[CORREÇÃO]": o usuário está RE-FAZENDO uma pergunta porque a resposta anterior estava errada. Leia a correção atentamente, mude sua abordagem (consulte tabelas diferentes, use JOINs diferentes, filtre por campos diferentes). NÃO repita a mesma query que gerou o erro anterior.
+
+## 📋 COLETA DE DADOS VIA FORMULÁRIO (OBRIGATÓRIO)
+- Quando o usuário pede para CRIAR algo (tarefa, evento, consulta, processo, parecer) mas NÃO forneceu todos os dados obrigatórios:
+  → Use pedir_informacao com campos_necessarios para abrir um FORMULÁRIO MODAL no chat.
+  → NÃO peça dados em texto livre. O formulário é mais profissional e estruturado.
+  → Preencha automaticamente campos que já sabe: responsavel = nome do usuário atual, data = hoje.
+- Exemplo: "agendar duas tarefas" → chamar pedir_informacao com campos: titulo (texto, obrigatório), data_inicio (data, obrigatório), prioridade (selecao: baixa/media/alta/urgente, padrão media).
+- Exemplo: "abrir pasta consultiva" → chamar pedir_informacao com campos: titulo (texto, obrigatório), area (selecao: civel/trabalhista/tributaria/societaria/empresarial/contratual/familia/criminal/previdenciaria/consumidor/ambiental/imobiliario/propriedade_intelectual/compliance/outra, obrigatório), cliente (texto, obrigatório se não informado).
+- Quando o usuário já forneceu TODOS os dados necessários → chamar preparar_cadastro DIRETO, sem formulário.
+- Para criar MÚLTIPLOS registros: colete os dados UMA VEZ via pedir_informacao para CADA registro, depois chame preparar_cadastro para cada um.
+
+## 🔇 TRATAMENTO DE ERROS (INTERNO — NUNCA EXPOR AO USUÁRIO)
+- NUNCA mostre erros técnicos ao usuário (ex: "Tabela nao permitida", "constraint violation", "Campo obrigatório", nomes de tabelas, UUIDs).
+- Se uma tool falhar internamente: tente resolver sozinho (ex: chamar descobrir_estrutura, corrigir campos, usar valores válidos dos constraints, tentar de novo).
+- Se descobrir_estrutura falhar: tente consultar_dados com uma query simples (SELECT column_name FROM information_schema.columns WHERE table_name = 'tabela') como fallback.
+- Se não conseguir resolver após 2 tentativas: responda com mensagem amigável como "Não consegui completar essa ação no momento. Você pode usar o menu correspondente no sistema."
+- NUNCA mencione nomes de tabelas, campos técnicos do banco, UUIDs ou mensagens de erro internas na resposta ao usuário. Fale em linguagem jurídica/profissional.
 
 ## AUTODESCOBERTA E CORREÇÃO
 - ANTES de INSERT numa tabela não consultada nesta sessão: chame descobrir_estrutura para ver colunas, tipos e valores válidos.
@@ -622,10 +692,21 @@ Você mantém contexto da conversa e aprende com cada interação.
 - Nunca assuma valores de memória — verifique via descobrir_estrutura se não tem certeza.
 
 ## ⚠️ REGRAS ANTI-LOOP
-- NUNCA use pedir_informacao para pedir confirmação Sim/Não. Use preparar_cadastro/preparar_alteracao que já tem confirmação embutida.
+- NUNCA use pedir_informacao para pedir confirmação Sim/Não de INSERT/UPDATE. Use preparar_cadastro/preparar_alteracao que já tem confirmação embutida.
 - Se o usuário diz "Sim", "confirmar", "pode fazer", "pode aplicar" ou envia dados via formulário ("Aqui estao as informacoes:...") → EXECUTE a ação imediatamente. NÃO pergunte de novo.
 - Se já tem todos os dados necessários → chame preparar_cadastro/preparar_alteracao DIRETO, sem perguntar.
-- pedir_informacao é APENAS para coletar dados que estão FALTANDO (ex: título da tarefa, data, responsável).
+- pedir_informacao é para: (1) coletar dados FALTANTES (ex: título, data, responsável), (2) DESAMBIGUAR consultas vagas.
+
+## 🔍 REGRAS DE CLARIFICAÇÃO (ANTES DE EXECUTAR CONSULTAS)
+- Se o pedido é AMBÍGUO ou pode ter múltiplas interpretações → use pedir_informacao para DESAMBIGUAR antes de consultar.
+- Exemplos de ambiguidade:
+  * "Pasta 203" → pode ser processo (numero_pasta) ou consultivo (numero). PRIMEIRO busque nos dois, se achar em apenas um, use esse. Se achar em ambos, pergunte qual.
+  * "Tarefas do caso X" → sem saber o ID do caso, PRIMEIRO busque o processo/consulta pelo número/nome, confirme com o usuário, DEPOIS busque tarefas.
+  * "Processos do cliente" → sem saber qual cliente, pergunte.
+- Se encontrar EXATAMENTE 1 resultado na busca inicial → pode prosseguir SEM perguntar, mas INFORMAR qual caso encontrou (ex: "Encontrei o processo PROC-0203 - CNJ 1000152-27... Aqui estão as tarefas:")
+- Se encontrar 0 resultados → informar e sugerir alternativas.
+- Se encontrar múltiplos resultados → listar e pedir para escolher.
+- NUNCA execute queries genéricas que retornam dados NÃO vinculados ao que o usuário pediu.
 
 ## DOMÍNIO
 ${CONTEXTO_DOMINIO}
@@ -911,7 +992,7 @@ async function handleStreamingRequest(
             const resultadoComErro = toolResults.find(r => r.erro)
 
             if (resultadoComErro) {
-              respostaTexto = `Houve um erro ao executar a consulta: ${resultadoComErro.erro}`
+              respostaTexto = sanitizarErroParaUsuario(resultadoComErro.erro)
             } else if (resultadoComDados) {
               if (resultadoComDados.total === 0) {
                 respostaTexto = `Não encontrei nenhum registro com os critérios especificados.`
@@ -1261,6 +1342,12 @@ async function executarTool(
         { tabela: 'financeiro_timesheet', descricao: 'Registro de horas trabalhadas' },
         { tabela: 'financeiro_honorarios', descricao: 'Lançamentos de honorários' },
         { tabela: 'financeiro_honorarios_parcelas', descricao: 'Parcelas de honorários' },
+        { tabela: 'consultivo_consultas', descricao: 'Pastas consultivas e consultas jurídicas' },
+        { tabela: 'consultivo_timeline', descricao: 'Andamentos e timeline das consultas' },
+        { tabela: 'crm_oportunidades', descricao: 'Oportunidades de negócio' },
+        { tabela: 'financeiro_receitas', descricao: 'Receitas financeiras' },
+        { tabela: 'financeiro_despesas', descricao: 'Despesas e custos' },
+        { tabela: 'financeiro_faturamento_faturas', descricao: 'Faturas e faturamento' },
         { tabela: 'v_agenda_consolidada', descricao: 'View: agenda unificada (leitura)' },
         { tabela: 'v_processos_dashboard', descricao: 'View: métricas de processos (leitura)' },
       ]
@@ -1320,7 +1407,9 @@ async function executarTool(
 
         return resultado
       } catch (err: any) {
-        return { tool: name, erro: `Erro ao descobrir estrutura: ${err?.message || String(err) || 'Erro desconhecido'}` }
+        const erroOriginal = err?.message || String(err) || 'Erro desconhecido'
+        console.error(`[descobrir_estrutura] Erro para ${tabela}:`, erroOriginal)
+        return { tool: name, erro: sanitizarErroParaUsuario(erroOriginal) }
       }
     }
 

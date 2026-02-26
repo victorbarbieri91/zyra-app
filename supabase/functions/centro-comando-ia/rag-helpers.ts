@@ -392,7 +392,7 @@ Se nada relevante para futuras sessões, retorne: {"facts": []}`
   ).join('\n')
 
   try {
-    const extractionModel = model || 'gpt-4o-mini'
+    const extractionModel = model || 'gpt-5-mini'
     const response = await fetch(OPENAI_CHAT_URL, {
       method: 'POST',
       headers: {

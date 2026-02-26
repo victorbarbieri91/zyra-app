@@ -7,6 +7,7 @@
  * - data.titulo_polo_ativo / titulo_polo_passivo -> nomes das partes principais
  */
 
+import { normalizarInstancia } from '@/lib/constants/processo-enums'
 import type {
   EscavadorProcessoResponse,
   EscavadorFonte,
@@ -119,9 +120,10 @@ export function normalizarProcessoEscavador(
     : null
   const valorCausaFormatado = capa?.valor_causa?.valor_formatado || null
 
-  // Extrai grau/instancia
+  // Extrai grau/instancia - usa normalizarInstancia centralizada como guardrail
   const grau = fontePrincipal?.grau || 1
-  const instancia = mapearInstancia(grau, fontePrincipal?.grau_formatado)
+  const instanciaRaw = fontePrincipal?.grau_formatado || String(grau)
+  const instancia = normalizarInstancia(instanciaRaw) || '1a'
 
   // Normaliza partes/envolvidos
   const partes = normalizarPartes(envolvidos)
@@ -293,27 +295,6 @@ function extrairTribunalDoCNJ(numeroCNJ: string): string {
   return ''
 }
 
-/**
- * Mapeia o grau para instancia do sistema
- */
-function mapearInstancia(grau?: number, grauFormatado?: string): string {
-  if (grauFormatado) {
-    const formato = grauFormatado.toLowerCase()
-    if (formato.includes('1') || formato.includes('primeiro') || formato.includes('origem')) return '1ª'
-    if (formato.includes('2') || formato.includes('segundo')) return '2ª'
-    if (formato.includes('3') || formato.includes('terceiro')) return '3ª'
-    if (formato.includes('stj') || formato.includes('superior')) return 'STJ'
-    if (formato.includes('stf') || formato.includes('supremo')) return 'STF'
-  }
-
-  if (grau) {
-    if (grau === 1) return '1ª'
-    if (grau === 2) return '2ª'
-    if (grau === 3) return '3ª'
-  }
-
-  return '1ª' // Default
-}
 
 /**
  * Normaliza lista de partes/envolvidos

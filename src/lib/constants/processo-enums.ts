@@ -155,6 +155,39 @@ export const PROCESSO_STATUS_ENCERRADO = [
   'arquivado', 'baixado', 'transito_julgado', 'acordo'
 ] as const
 
+// ==========================================
+// Funções de normalização (guardrails)
+// ==========================================
+// Usar SEMPRE antes de gravar no banco para evitar violação de check constraints.
+// Essas funções aceitam qualquer formato (ex: "1ª", "STJ", "Primeira", "1a")
+// e retornam o valor correto do banco ou null se não reconhecer.
+
+const INSTANCIA_VALIDAS = new Set(Object.values(PROCESSO_INSTANCIA))
+
+/**
+ * Normaliza qualquer representação de instância para o valor aceito pelo banco.
+ * Retorna null se não conseguir mapear (melhor falhar explícito do que violar constraint).
+ */
+export function normalizarInstancia(valor: string | number | null | undefined): ProcessoInstancia | null {
+  if (valor == null || valor === '') return null
+
+  const v = String(valor).toLowerCase().trim()
+
+  // Já é um valor válido do banco
+  if (INSTANCIA_VALIDAS.has(v as ProcessoInstancia)) return v as ProcessoInstancia
+
+  // Mapear variações comuns
+  if (v === '1ª' || v === '1º' || v.includes('primeir') || v.includes('origem') || v === '1') return '1a'
+  if (v === '2ª' || v === '2º' || v.includes('segund') || v === '2') return '2a'
+  if (v === '3ª' || v === '3º' || v.includes('terceir') || v === '3') return '3a'
+  if (v.includes('stj') || v.includes('superior tribunal de justiça')) return 'stj'
+  if (v.includes('stf') || v.includes('supremo')) return 'stf'
+  if (v.includes('tst') || v.includes('tribunal superior do trabalho')) return 'tst'
+  if (v.includes('administ')) return 'administrativa'
+
+  return null
+}
+
 // Types para TypeScript
 export type ProcessoFase = typeof PROCESSO_FASE[keyof typeof PROCESSO_FASE]
 export type ProcessoInstancia = typeof PROCESSO_INSTANCIA[keyof typeof PROCESSO_INSTANCIA]

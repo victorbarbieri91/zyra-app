@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { Clock, DollarSign, ExternalLink, FolderOpen, FileText } from 'lucide-react'
+import { Clock, DollarSign, ExternalLink, FolderOpen, CalendarDays, User } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn, formatHoras, formatDescricaoFatura } from '@/lib/utils'
+import { formatBrazilDate } from '@/lib/timezone'
 import type { LancamentoProntoFaturar } from '@/hooks/useFaturamento'
 
 interface LancamentoSelectableItemProps {
@@ -40,10 +41,11 @@ export function LancamentoSelectableItem({
       )}
       onClick={() => onToggle(lancamento.lancamento_id)}
     >
-      {/* Checkbox */}
+      {/* Checkbox — stopPropagation evita duplo-toggle com o onClick do pai */}
       <Checkbox
         checked={selected}
         onCheckedChange={() => onToggle(lancamento.lancamento_id)}
+        onClick={(e) => e.stopPropagation()}
         className="mt-0.5 h-3.5 w-3.5"
       />
 
@@ -70,22 +72,6 @@ export function LancamentoSelectableItem({
             </p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="text-[10px] text-slate-500">{lancamento.categoria}</span>
-              {/* Link para Consultivo */}
-              {lancamento.consulta_id && !lancamento.processo_id && (
-                <>
-                  <span className="text-[10px] text-slate-400">•</span>
-                  <Link
-                    href={`/dashboard/consultivo/${lancamento.consulta_id}`}
-                    className="text-[10px] text-blue-600 hover:underline inline-flex items-center gap-0.5"
-                    onClick={(e) => e.stopPropagation()}
-                    target="_blank"
-                  >
-                    <FileText className="h-2.5 w-2.5" />
-                    Consulta
-                    <ExternalLink className="h-2 w-2 text-slate-400" />
-                  </Link>
-                </>
-              )}
             </div>
 
             {/* Detalhes do Caso (Processo ou Consultivo) */}
@@ -106,6 +92,25 @@ export function LancamentoSelectableItem({
                   </span>
                   <ExternalLink className="h-2 w-2 text-slate-400 shrink-0" />
                 </Link>
+              </div>
+            )}
+
+            {/* Data e Profissional — apenas para timesheet */}
+            {isTimesheet && lancamento.data_trabalho && (
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5 pt-1 border-t border-slate-100">
+                <span className="text-[10px] text-slate-400 flex items-center gap-0.5">
+                  <CalendarDays className="h-2.5 w-2.5 shrink-0" />
+                  {formatBrazilDate(lancamento.data_trabalho)}
+                </span>
+                {lancamento.profissional_nome && (
+                  <span className="text-[10px] text-slate-400 flex items-center gap-0.5">
+                    <User className="h-2.5 w-2.5 shrink-0" />
+                    {lancamento.profissional_nome}
+                    {lancamento.cargo_nome && (
+                      <span className="text-slate-300 ml-0.5">· {lancamento.cargo_nome}</span>
+                    )}
+                  </span>
+                )}
               </div>
             )}
           </div>

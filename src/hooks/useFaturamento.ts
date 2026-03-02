@@ -33,6 +33,10 @@ export interface LancamentoProntoFaturar {
   valor_unitario: number | null
   processos_lista: ProcessoFechamento[] | null
   competencia: string | null
+  // Campos do profissional (para timesheet) — adicionados à view
+  profissional_nome?: string | null
+  cargo_nome?: string | null
+  data_trabalho?: string | null
 }
 
 export interface ClienteParaFaturar {

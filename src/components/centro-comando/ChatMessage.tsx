@@ -1,12 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { cn } from '@/lib/utils'
 import { formatBrazilDateTime } from '@/lib/timezone'
-import { CentroComandoMensagem, ToolResult } from '@/types/centro-comando'
+import { CentroComandoMensagem, PendingInput, ToolResult } from '@/types/centro-comando'
 import { ArrowRight, ChevronDown, Database } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { ResultsTable } from './ResultsTable'
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { FormularioPendente } from './FormularioPendente'
@@ -15,7 +14,7 @@ import { FeedbackButtons, TipoFeedback } from './FeedbackButtons'
 interface ChatMessageProps {
   mensagem: CentroComandoMensagem
   onNavigate?: (path: string) => void
-  onOpenInputDialog?: (result: ToolResult) => void
+  onOpenInputDialog?: (result: PendingInput | ToolResult) => void
   onFeedback?: (mensagemId: string, tipo: TipoFeedback) => void
   onCorrecao?: (mensagemId: string) => void
   onNegativoComRetry?: (mensagemId: string, correcao: string) => void
@@ -23,173 +22,71 @@ interface ChatMessageProps {
   mostrarFeedback?: boolean
 }
 
-// Sanitizar erros para nunca expor detalhes técnicos ao usuário
 function sanitizarErroFrontend(erro: string): string {
-  if (!erro) return 'Não foi possível completar a operação.'
+  if (!erro) return 'Nao foi possivel completar a operacao.'
   const e = erro.toLowerCase()
-  if (e.includes('tabela') && (e.includes('permitida') || e.includes('nao') || e.includes('não'))) {
-    return 'Esta funcionalidade não está disponível via chat no momento.'
-  }
-  if (e.includes('constraint') || e.includes('violates') || e.includes('check_')) {
-    return 'Os dados informados não são válidos. Tente novamente com valores diferentes.'
-  }
-  if (e.includes('permission') || e.includes('rls') || e.includes('policy')) {
-    return 'Você não tem permissão para esta operação.'
-  }
-  if (e.includes('campo') && e.includes('obrigat')) {
-    return 'Alguns dados necessários não foram preenchidos.'
-  }
-  // Se já é uma mensagem amigável (sem termos técnicos), retornar como está
-  if (!e.includes('error') && !e.includes('exception') && !e.includes('sql') && !e.includes('rpc') && !e.includes('function')) {
-    return erro
-  }
-  return 'Não foi possível completar a operação. Tente novamente.'
+  if (e.includes('permission') || e.includes('rls') || e.includes('policy')) return 'Voce nao tem permissao para esta operacao.'
+  if (e.includes('constraint') || e.includes('violates') || e.includes('check_')) return 'Os dados informados nao sao validos. Tente novamente com valores diferentes.'
+  if (e.includes('campo') && e.includes('obrigat')) return 'Alguns dados necessarios nao foram preenchidos.'
+  if (!e.includes('error') && !e.includes('exception') && !e.includes('sql') && !e.includes('rpc') && !e.includes('function')) return erro
+  return 'Nao foi possivel completar a operacao. Tente novamente.'
 }
 
-// Filtrar resultados de ferramentas:
-// - Se houver resultados com dados bem sucedidos, esconde erros intermediários
-// - Mantém erros apenas se TODOS os resultados falharam
 function filterToolResults(results: ToolResult[]): ToolResult[] {
-  // Verificar se há algum resultado bem sucedido (com dados ou ação pendente)
-  const temSucesso = results.some(r =>
-    (r.dados && r.dados.length >= 0 && !r.erro) ||
-    r.acao_pendente ||
-    r.aguardando_input ||
-    (r.tipo === 'navegacao' && r.caminho)
-  )
-
-  // Se tem sucesso, filtrar apenas os erros (manter os sucessos)
-  if (temSucesso) {
-    return results.filter(r => !r.erro)
-  }
-
-  // Se não tem sucesso, mostrar tudo (incluindo erros)
-  return results
+  const temSucesso = results.some((r) => ((r.dados && !r.erro) || r.acao_pendente || r.aguardando_input || (r.tipo === 'navegacao' && r.caminho)))
+  return temSucesso ? results.filter((r) => !r.erro) : results
 }
 
-export function ChatMessage({
-  mensagem,
-  onNavigate,
-  onOpenInputDialog,
-  onFeedback,
-  onCorrecao,
-  onNegativoComRetry,
-  feedbackEnviado,
-  mostrarFeedback = false,
-}: ChatMessageProps) {
+export function ChatMessage({ mensagem, onNavigate, onOpenInputDialog, onFeedback, onCorrecao, onNegativoComRetry, feedbackEnviado, mostrarFeedback = false }: ChatMessageProps) {
   const [mostrarInlineCorrection, setMostrarInlineCorrection] = useState(false)
   const isUser = mensagem.role === 'user'
   const isSystem = mensagem.role === 'system'
-  const isLoading = mensagem.loading
-
-  // Mensagem do usuário - alinhada à direita
   if (isUser) {
     return (
       <div className="flex justify-end mb-4">
         <div className="max-w-[80%] bg-[#34495e] text-white rounded-2xl rounded-br-md px-4 py-3">
-          <div className="text-sm leading-relaxed whitespace-pre-wrap">
-            {mensagem.content}
-          </div>
+          <div className="text-sm leading-relaxed whitespace-pre-wrap">{mensagem.content}</div>
         </div>
       </div>
     )
   }
-
-  // Mensagem da Zyra ou sistema
   return (
     <div className="flex mb-4">
       <div className="max-w-full">
-        {/* Header com nome e timestamp */}
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-medium text-[#89bcbe]">
-            {isSystem ? 'Sistema' : 'Zyra'}
-          </span>
-          <span className="text-[10px] text-slate-400">
-            {formatBrazilDateTime(mensagem.timestamp)}
-          </span>
+          <span className="text-xs font-medium text-[#89bcbe]">{isSystem ? 'Sistema' : 'Zyra'}</span>
+          <span className="text-[10px] text-slate-400">{formatBrazilDateTime(mensagem.timestamp)}</span>
         </div>
-
-        {/* Conteúdo */}
-        {isLoading ? (
-          <div className="flex items-center gap-2 text-slate-400 py-2">
-            <div className="flex items-center gap-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#89bcbe] animate-pulse" />
-              <div className="w-1.5 h-1.5 rounded-full bg-[#89bcbe] animate-pulse [animation-delay:0.2s]" />
-              <div className="w-1.5 h-1.5 rounded-full bg-[#89bcbe] animate-pulse [animation-delay:0.4s]" />
+        {mensagem.content && <MarkdownRenderer content={mensagem.content} />}
+        {mensagem.pending_input && onOpenInputDialog && <FormularioPendente pendingInput={mensagem.pending_input} onAbrirFormulario={() => onOpenInputDialog(mensagem.pending_input!)} />}
+        {mensagem.tool_results && mensagem.tool_results.length > 0 && (() => {
+          const temTabelaMarkdown = mensagem.content?.includes('| ---') || mensagem.content?.includes('|---')
+          const filteredResults = filterToolResults(mensagem.tool_results).filter((result) => !(temTabelaMarkdown && result.tool === 'consultar_dados' && result.dados))
+          if (filteredResults.length === 0) return null
+          return (
+            <div className="mt-3 space-y-3">
+              {filteredResults.map((result, index) => <ToolResultDisplay key={index} result={result} onNavigate={onNavigate} onOpenInputDialog={onOpenInputDialog} />)}
             </div>
-            <span className="text-xs">Processando...</span>
-          </div>
-        ) : (
-          <>
-            {/* Texto da mensagem */}
-            {mensagem.content && (
-              <div>
-                <MarkdownRenderer content={mensagem.content} />
-              </div>
-            )}
-
-            {/* Resultados de ferramentas */}
-            {mensagem.tool_results && mensagem.tool_results.length > 0 && (() => {
-              // Se a IA já formatou tabela markdown no texto, não mostrar dados brutos duplicados
-              const temTabelaMarkdown = mensagem.content?.includes('| ---') || mensagem.content?.includes('|---')
-              const filteredResults = filterToolResults(mensagem.tool_results).filter(result => {
-                if (temTabelaMarkdown && result.tool === 'consultar_dados' && result.dados) return false
-                return true
-              })
-              if (filteredResults.length === 0) return null
-              return (
-                <div className="mt-3 space-y-3">
-                  {filteredResults.map((result, index) => (
-                    <ToolResultDisplay
-                      key={index}
-                      result={result}
-                      onNavigate={onNavigate}
-                      onOpenInputDialog={onOpenInputDialog}
-                    />
-                  ))}
-                </div>
-              )
-            })()}
-
-            {/* Erro — sanitizado */}
-            {mensagem.erro && (
-              <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg text-xs text-amber-700">
-                {sanitizarErroFrontend(mensagem.erro)}
-              </div>
-            )}
-
-            {/* Feedback Buttons - apenas para mensagens do assistente que nao estao carregando */}
-            {!isUser && !isSystem && mostrarFeedback && onFeedback && onCorrecao && mensagem.id && (
-              <FeedbackButtons
-                mensagemId={mensagem.id}
-                onFeedback={(tipo) => onFeedback(mensagem.id!, tipo)}
-                onCorrecao={() => onCorrecao(mensagem.id!)}
-                onNegativoComRetry={(correcao) => onNegativoComRetry?.(mensagem.id!, correcao)}
-                feedbackEnviado={feedbackEnviado}
-                mostrarInlineCorrection={mostrarInlineCorrection}
-                onToggleInlineCorrection={() => setMostrarInlineCorrection(prev => !prev)}
-              />
-            )}
-          </>
+          )
+        })()}
+        {mensagem.erro && <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg text-xs text-amber-700">{sanitizarErroFrontend(mensagem.erro)}</div>}
+        {!isUser && !isSystem && mostrarFeedback && onFeedback && onCorrecao && mensagem.id && (
+          <FeedbackButtons
+            mensagemId={mensagem.id}
+            onFeedback={(tipo) => onFeedback(mensagem.id!, tipo)}
+            onCorrecao={() => onCorrecao(mensagem.id!)}
+            onNegativoComRetry={(correcao) => onNegativoComRetry?.(mensagem.id!, correcao)}
+            feedbackEnviado={feedbackEnviado}
+            mostrarInlineCorrection={mostrarInlineCorrection}
+            onToggleInlineCorrection={() => setMostrarInlineCorrection((prev) => !prev)}
+          />
         )}
       </div>
     </div>
   )
 }
 
-// ============================================
-// COMPONENTE DE RESULTADO DE FERRAMENTA
-// ============================================
-function ToolResultDisplay({
-  result,
-  onNavigate,
-  onOpenInputDialog,
-}: {
-  result: ToolResult
-  onNavigate?: (path: string) => void
-  onOpenInputDialog?: (result: ToolResult) => void
-}) {
-  // Consulta com dados — collapsible para não poluir a conversa
+function ToolResultDisplay({ result, onNavigate, onOpenInputDialog }: { result: ToolResult; onNavigate?: (path: string) => void; onOpenInputDialog?: (result: PendingInput | ToolResult) => void }) {
   if (result.tool === 'consultar_dados' && result.dados) {
     return (
       <Collapsible>
@@ -205,69 +102,27 @@ function ToolResultDisplay({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="mt-1 border border-slate-200 rounded-lg overflow-hidden">
-            {result.dados.length > 0 ? (
-              <ResultsTable data={result.dados} />
-            ) : (
-              <div className="p-4 text-center text-sm text-slate-400">
-                Nenhum registro encontrado
-              </div>
-            )}
+            {result.dados.length > 0 ? <ResultsTable data={result.dados} /> : <div className="p-4 text-center text-sm text-slate-400">Nenhum registro encontrado</div>}
           </div>
         </CollapsibleContent>
       </Collapsible>
     )
   }
-
-  // Erro — sanitizar mensagem para nunca expor detalhes técnicos
-  if (result.erro) {
-    const erroSanitizado = sanitizarErroFrontend(result.erro)
-    return (
-      <div className="px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg">
-        <p className="text-sm text-amber-700">{erroSanitizado}</p>
-      </div>
-    )
-  }
-
-  // Navegação
+  if (result.erro) return <div className="px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg"><p className="text-sm text-amber-700">{sanitizarErroFrontend(result.erro)}</p></div>
   if (result.tipo === 'navegacao' && result.caminho) {
     return (
       <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
         <p className="text-sm text-slate-600 flex-1">{result.explicacao}</p>
-        <Button
-          size="sm"
-          variant="outline"
-          className="text-slate-600 border-slate-300 text-xs"
-          onClick={() => onNavigate?.(result.caminho!)}
-        >
-          <ArrowRight className="w-3.5 h-3.5 mr-1" />
-          Ir
+        <Button size="sm" variant="outline" className="text-slate-600 border-slate-300 text-xs" onClick={() => onNavigate?.(result.caminho!)}>
+          <ArrowRight className="w-3.5 h-3.5 mr-1" />Ir
         </Button>
       </div>
     )
   }
-
-  // Ação pendente (preview)
-  if (result.acao_pendente) {
-    return (
-      <div className="p-3 bg-amber-50/50 border border-amber-200/50 rounded-lg">
-        <p className="text-sm text-amber-700">{result.explicacao}</p>
-        {result.aviso && (
-          <p className="text-xs text-red-500 mt-2">{result.aviso}</p>
-        )}
-      </div>
-    )
+  if ((result.campos_necessarios || result.aguardando_input) && onOpenInputDialog) {
+    const pendingInput: PendingInput = { id: result.acao_id || `legacy-${Date.now()}`, tipo: 'collection', contexto: result.contexto || 'Preciso de mais informacoes.', schema: { fields: result.campos_necessarios || [] } }
+    return <FormularioPendente pendingInput={pendingInput} onAbrirFormulario={() => onOpenInputDialog(pendingInput)} />
   }
-
-  // Campos necessarios - abre modal de coleta
-  if (result.aguardando_input && result.campos_necessarios) {
-    return (
-      <FormularioPendente
-        contexto={result.contexto}
-        campos={result.campos_necessarios}
-        onAbrirFormulario={() => onOpenInputDialog?.(result)}
-      />
-    )
-  }
-
+  if (result.acao_pendente) return <div className="p-3 bg-amber-50/50 border border-amber-200/50 rounded-lg"><p className="text-sm text-amber-700">{result.explicacao}</p>{result.aviso && <p className="text-xs text-red-500 mt-2">{result.aviso}</p>}</div>
   return null
 }

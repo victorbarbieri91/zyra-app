@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Clock, DollarSign, Eye, Search, ArrowUpDown, ArrowUp, ArrowDown, LayoutGrid, LayoutList, Rows3 } from 'lucide-react'
+import { Eye, Search, ArrowUpDown, ArrowUp, ArrowDown, LayoutGrid, LayoutList, Rows3, Clock } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -15,7 +15,7 @@ import {
 import { cn, formatHoras } from '@/lib/utils'
 import type { ClienteParaFaturar } from '@/hooks/useFaturamento'
 
-type SortField = 'nome' | 'total' | 'horas' | 'honorarios'
+type SortField = 'nome' | 'total' | 'horas' | 'honorarios' | 'pastas'
 type SortDirection = 'asc' | 'desc'
 type Density = 'compact' | 'comfortable' | 'spacious'
 
@@ -73,6 +73,9 @@ export function ClientesTable({
           break
         case 'honorarios':
           compareValue = a.total_honorarios - b.total_honorarios
+          break
+        case 'pastas':
+          compareValue = a.total_pastas - b.total_pastas
           break
       }
 
@@ -155,7 +158,7 @@ export function ClientesTable({
         {/* Header */}
         <div className="bg-slate-50 border-b border-slate-200">
           <div className="grid grid-cols-12 gap-3 px-4 py-2.5">
-            <div className="col-span-5">
+            <div className="col-span-4">
               <button
                 onClick={() => handleSort('nome')}
                 className="flex items-center gap-1.5 text-xs font-medium text-slate-700 hover:text-[#1E3A8A] transition-colors"
@@ -182,7 +185,16 @@ export function ClientesTable({
                 <SortIcon field="honorarios" />
               </button>
             </div>
-            <div className="col-span-2 text-right">
+            <div className="col-span-2 text-center">
+              <button
+                onClick={() => handleSort('pastas')}
+                className="flex items-center gap-1.5 text-xs font-medium text-slate-700 hover:text-[#1E3A8A] transition-colors mx-auto"
+              >
+                PASTAS
+                <SortIcon field="pastas" />
+              </button>
+            </div>
+            <div className="col-span-1 text-right">
               <button
                 onClick={() => handleSort('total')}
                 className="flex items-center gap-1.5 text-xs font-medium text-slate-700 hover:text-[#1E3A8A] transition-colors ml-auto"
@@ -223,7 +235,7 @@ export function ClientesTable({
                 onClick={() => onSelectCliente(cliente)}
               >
                 {/* Nome do Cliente */}
-                <div className="col-span-5 flex items-center">
+                <div className="col-span-4 flex items-center">
                   <p className="text-sm font-medium text-[#34495e] truncate">
                     {cliente.cliente_nome}
                   </p>
@@ -232,18 +244,13 @@ export function ClientesTable({
                 {/* Horas */}
                 <div className="col-span-2 flex items-center justify-center">
                   {cliente.qtd_horas > 0 ? (
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-6 h-6 rounded bg-[#89bcbe]/20 flex items-center justify-center">
-                        <Clock className="h-3 w-3 text-[#34495e]" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-xs font-semibold text-slate-700">
-                          {formatHoras(cliente.soma_horas, 'curto')}
-                        </p>
-                        <p className="text-[10px] text-slate-500">
-                          {formatCurrency(cliente.total_horas)}
-                        </p>
-                      </div>
+                    <div className="text-center">
+                      <p className="text-xs font-semibold text-slate-700">
+                        {formatHoras(cliente.soma_horas, 'curto')}
+                      </p>
+                      <p className="text-[10px] text-slate-500">
+                        {formatCurrency(cliente.total_horas)}
+                      </p>
                     </div>
                   ) : (
                     <span className="text-xs text-slate-400">-</span>
@@ -253,18 +260,29 @@ export function ClientesTable({
                 {/* Honorários */}
                 <div className="col-span-2 flex items-center justify-center">
                   {cliente.qtd_honorarios > 0 ? (
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-6 h-6 rounded bg-[#aacfd0]/30 flex items-center justify-center">
-                        <DollarSign className="h-3 w-3 text-[#34495e]" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-xs font-semibold text-slate-700">
-                          {cliente.qtd_honorarios}
-                        </p>
-                        <p className="text-[10px] text-slate-500">
-                          {formatCurrency(cliente.total_honorarios)}
-                        </p>
-                      </div>
+                    <div className="text-center">
+                      <p className="text-xs font-semibold text-slate-700">
+                        {cliente.qtd_honorarios} item{cliente.qtd_honorarios !== 1 ? 's' : ''}
+                      </p>
+                      <p className="text-[10px] text-slate-500">
+                        {formatCurrency(cliente.total_honorarios)}
+                      </p>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-slate-400">-</span>
+                  )}
+                </div>
+
+                {/* Pastas */}
+                <div className="col-span-2 flex items-center justify-center">
+                  {cliente.qtd_pastas > 0 ? (
+                    <div className="text-center">
+                      <p className="text-xs font-semibold text-slate-700">
+                        {cliente.qtd_processos_pasta} processo{cliente.qtd_processos_pasta !== 1 ? 's' : ''}
+                      </p>
+                      <p className="text-[10px] text-slate-500">
+                        {formatCurrency(cliente.total_pastas)}
+                      </p>
                     </div>
                   ) : (
                     <span className="text-xs text-slate-400">-</span>
@@ -272,7 +290,7 @@ export function ClientesTable({
                 </div>
 
                 {/* Total */}
-                <div className="col-span-2 flex items-center justify-end">
+                <div className="col-span-1 flex items-center justify-end">
                   <p className="text-sm font-bold text-emerald-600">
                     {formatCurrency(cliente.total_faturar)}
                   </p>

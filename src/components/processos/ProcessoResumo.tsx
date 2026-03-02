@@ -1044,7 +1044,10 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
                         .eq('id', item.id)
                         .single()
                       if (audiencia) {
-                        setSelectedAudiencia(audiencia)
+                        setSelectedAudiencia({
+                          ...audiencia,
+                          data_inicio: audiencia.data_hora ?? audiencia.data_inicio,
+                        })
                         setAudienciaDetailOpen(true)
                       }
                     }

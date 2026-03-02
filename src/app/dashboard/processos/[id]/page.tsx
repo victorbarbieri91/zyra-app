@@ -14,6 +14,7 @@ import {
   Archive,
   RotateCcw,
   Info,
+  GitBranch,
 } from 'lucide-react'
 import {
   AlertDialog,
@@ -46,6 +47,8 @@ import ProcessoDepositos from '@/components/processos/ProcessoDepositos'
 import ProcessoHistorico from '@/components/processos/ProcessoHistorico'
 import ProcessoWizard from '@/components/processos/ProcessoWizard'
 import EncerrarProcessoModal from '@/components/processos/EncerrarProcessoModal'
+import ProcessoRelacionados from '@/components/processos/ProcessoRelacionados'
+import { type ProcessoPrincipalData } from '@/components/processos/ProcessoDerivadoWizard'
 
 interface Processo {
   id: string
@@ -125,6 +128,8 @@ interface ProcessoRaw {
   valor_acordo?: number
   valor_condenacao?: number
   provisao_sugerida?: number
+  processo_principal_id?: string
+  tipo_derivado?: 'recurso' | 'incidente'
 }
 
 export default function ProcessoDetalhe() {
@@ -144,6 +149,13 @@ export default function ProcessoDetalhe() {
   const [totalDocumentos, setTotalDocumentos] = useState(0)
   const [versõesEstrategia, setVersoesEstrategia] = useState(0)
   const [totalJurisprudencias, setTotalJurisprudencias] = useState(0)
+
+  // Relacionamentos (recursos e incidentes)
+  const [processoDerived, setProcessoDerived] = useState<{
+    tipo: 'recurso' | 'incidente'
+    principal_id: string
+    principal_cnj: string
+  } | null>(null)
 
   useEffect(() => {
     if (params.id) {
@@ -264,6 +276,23 @@ export default function ProcessoDetalhe() {
       setTotalDocumentos(0) // TODO: buscar da tabela de documentos
       setVersoesEstrategia(0) // TODO: buscar da tabela de estratégias
       setTotalJurisprudencias(0) // TODO: buscar da tabela de jurisprudências
+
+      // Verificar se este processo é derivado de outro (recurso/incidente)
+      if (data.processo_principal_id) {
+        const { data: principal } = await supabase
+          .from('processos_processos')
+          .select('numero_cnj, numero_pasta')
+          .eq('id', data.processo_principal_id)
+          .single()
+        setProcessoDerived({
+          tipo: data.tipo_derivado as 'recurso' | 'incidente',
+          principal_id: data.processo_principal_id,
+          principal_cnj: principal?.numero_cnj ?? principal?.numero_pasta ?? '',
+        })
+      } else {
+        setProcessoDerived(null)
+      }
+
       setLoading(false)
     } catch (error) {
       console.error('Erro ao carregar processo:', error)
@@ -544,6 +573,26 @@ export default function ProcessoDetalhe() {
           </div>
         )}
 
+        {/* Banner: processo derivado (recurso/incidente de outro processo) */}
+        {processoDerived && (
+          <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <GitBranch className="w-4 h-4 text-amber-600 shrink-0" />
+            <p className="text-sm text-amber-800">
+              Este processo é um{' '}
+              <strong>
+                {processoDerived.tipo === 'recurso' ? 'Recurso' : 'Incidente'}
+              </strong>{' '}
+              do processo{' '}
+              <button
+                onClick={() => router.push(`/dashboard/processos/${processoDerived.principal_id}`)}
+                className="font-mono font-semibold underline hover:text-amber-900"
+              >
+                {processoDerived.principal_cnj}
+              </button>
+            </p>
+          </div>
+        )}
+
         {/* Sistema de Abas */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <Card className="border-slate-200 shadow-sm">
@@ -589,6 +638,41 @@ export default function ProcessoDetalhe() {
           {/* Conteúdo das Abas */}
           <TabsContent value="ficha" className="space-y-6">
             <ProcessoResumo processo={processo} />
+            {processoRaw && (() => {
+              const polo = processoRaw.polo_cliente
+              const clienteNome = processo.cliente_nome
+              const parteContraria = processoRaw.parte_contraria ?? ''
+              const autor = polo === 'ativo' ? clienteNome : polo === 'passivo' ? parteContraria : ''
+              const reu = polo === 'ativo' ? parteContraria : polo === 'passivo' ? clienteNome : ''
+              const ppData: ProcessoPrincipalData = {
+                id: processo.id,
+                numero_cnj: processoRaw.numero_cnj,
+                numero_pasta: processo.numero_pasta,
+                cliente_id: processoRaw.cliente_id,
+                cliente_nome: clienteNome,
+                autor,
+                reu,
+                polo_cliente: polo,
+                parte_contraria: parteContraria,
+                area: processoRaw.area,
+                instancia: processoRaw.instancia,
+                comarca: processoRaw.comarca,
+                responsavel_id: processoRaw.responsavel_id,
+                responsavel_nome: processo.responsavel_nome,
+                colaboradores_ids: processoRaw.colaboradores_ids,
+                tags: processoRaw.tags,
+                contrato_id: processoRaw.contrato_id,
+                modalidade_cobranca: processoRaw.modalidade_cobranca,
+                valor_causa: processoRaw.valor_causa,
+                objeto_acao: processoRaw.objeto_acao,
+              }
+              return (
+                <ProcessoRelacionados
+                  processoId={processo.id}
+                  processoPrincipalData={ppData}
+                />
+              )
+            })()}
           </TabsContent>
 
           <TabsContent value="documentos" className="space-y-6">

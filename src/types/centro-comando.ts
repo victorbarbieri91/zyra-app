@@ -2,16 +2,34 @@
 // TIPOS DO CENTRO DE COMANDO
 // ============================================
 
-// Mensagem do chat
-export interface CentroComandoMensagem {
-  id: string
-  role: 'user' | 'assistant' | 'system'
-  content: string
-  timestamp: Date
-  tool_results?: ToolResult[]
-  acoes_pendentes?: AcaoPendente[]
-  loading?: boolean
-  erro?: string
+export type FlowType =
+  | 'read_simple'
+  | 'read_ambiguous'
+  | 'create'
+  | 'update'
+  | 'delete'
+  | 'navigate'
+  | 'unsupported'
+  | 'unknown'
+
+export type TerminationReason =
+  | 'final'
+  | 'error'
+  | 'input_required'
+  | 'action_required'
+  | 'stream_timeout'
+  | 'stream_closed_without_terminal_event'
+  | 'tool_repetition_guard_triggered'
+  | 'max_iterations_reached'
+
+// Campo solicitado pela IA
+export interface CampoNecessario {
+  campo: string
+  descricao: string
+  obrigatorio: boolean
+  tipo: 'texto' | 'data' | 'numero' | 'selecao'
+  opcoes?: string[]
+  valor_padrao?: string | number | null
 }
 
 // Resultado de ferramenta (tool call)
@@ -26,6 +44,7 @@ export interface ToolResult {
   preview?: any
   antes?: any
   alteracoes?: any
+  depois?: any
   registro?: any
   aviso?: string
   requer_dupla_confirmacao?: boolean
@@ -37,30 +56,62 @@ export interface ToolResult {
   tipo?: string
 }
 
-// Campo solicitado pela IA
-export interface CampoNecessario {
-  campo: string
-  descricao: string
-  obrigatorio: boolean
-  tipo: 'texto' | 'data' | 'numero' | 'selecao'
-  opcoes?: string[]
+export interface PendingInputOption {
+  id: string
+  label: string
+  description?: string
+  value?: string
 }
 
-// Ação pendente de confirmação
+export interface PendingInput {
+  id: string
+  tipo: 'collection' | 'disambiguation'
+  contexto: string
+  schema: {
+    fields: CampoNecessario[]
+    options?: PendingInputOption[]
+  }
+  status?: 'pendente' | 'respondido' | 'cancelado' | 'expirado'
+  run_id?: string
+}
+
+// Acao pendente de confirmacao
 export interface AcaoPendente {
   id: string
-  tipo: 'insert' | 'update' | 'delete'
+  operation_name?: string
+  tipo: 'insert' | 'update' | 'delete' | 'update_em_massa'
   tabela: string
+  target_label?: string
   dados?: any
   registro_id?: string
   antes?: any
   depois?: any
   registro?: any
   explicacao: string
+  preview_human?: string
+  resolved_entities?: Record<string, any>
+  validated_payload?: Record<string, any>
+  idempotency_key?: string
   requer_dupla_confirmacao?: boolean
+  requires_double_confirmation?: boolean
+  expires_at?: string
 }
 
-// Sessão do Centro de Comando
+// Mensagem do chat
+export interface CentroComandoMensagem {
+  id: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  timestamp: Date
+  tool_results?: ToolResult[]
+  acoes_pendentes?: AcaoPendente[]
+  pending_input?: PendingInput | null
+  run_id?: string
+  loading?: boolean
+  erro?: string
+}
+
+// Sessao do Centro de Comando
 export interface CentroComandoSessao {
   id: string
   user_id: string
@@ -93,17 +144,35 @@ export interface CentroComandoResponse {
   resposta?: string
   tool_results?: ToolResult[]
   acoes_pendentes?: AcaoPendente[]
+  pending_input?: PendingInput | null
+  flow_type?: FlowType
+  termination_reason?: TerminationReason
+  run_id?: string
   tem_confirmacao_pendente?: boolean
   sessao_id?: string
   tempo_execucao_ms?: number
   erro?: string
 }
 
-// Parâmetros para confirmar ação
+// Parametros para confirmar acao
 export interface ConfirmarAcaoParams {
   acao_id: string
   dupla_confirmacao?: boolean
   dados_adicionais?: Record<string, any>
+}
+
+export interface ResponderInputParams {
+  pending_input_id: string
+  input_values: Record<string, any>
+}
+
+export interface CentroComandoExecutionState {
+  runId: string | null
+  flowType: FlowType
+  terminationReason?: TerminationReason
+  startedAt: Date
+  lastEventAt: Date
+  terminal: boolean
 }
 
 // Estado do hook
@@ -113,13 +182,15 @@ export interface CentroComandoState {
   carregando: boolean
   erro: string | null
   acoesPendentes: AcaoPendente[]
-  passos: PassoThinking[] // Passos do agentic loop em tempo real
+  pendingInput: PendingInput | null
+  execution: CentroComandoExecutionState | null
+  passos: PassoThinking[]
 }
 
-// Passo do "thinking" - o que a IA está fazendo
+// Passo do "thinking"
 export interface PassoThinking {
   id: string
-  type: 'thinking' | 'tool_start' | 'tool_end'
+  type: 'thinking' | 'status' | 'tool_start' | 'tool_end' | 'heartbeat' | 'terminal'
   tool?: string
   message: string
   timestamp: Date
@@ -129,34 +200,37 @@ export interface PassoThinking {
 
 // Eventos SSE recebidos do streaming
 export interface StreamEvent {
-  event: 'thinking' | 'step' | 'done' | 'error'
+  event: 'status' | 'input_required' | 'action_required' | 'final' | 'error' | 'heartbeat'
   data: {
-    type?: 'tool_start' | 'tool_end'
+    type?: 'thinking' | 'tool_start' | 'tool_end' | 'terminal'
     tool?: string
     message?: string
     args?: any
     resultado?: any
-    // Para evento 'done'
+    flow_type?: FlowType
+    run_id?: string
+    sessao_id?: string
+    pending_input?: PendingInput | null
+    acao?: AcaoPendente
     sucesso?: boolean
     resposta?: string
     tool_results?: ToolResult[]
     acoes_pendentes?: AcaoPendente[]
     tem_confirmacao_pendente?: boolean
-    sessao_id?: string
+    termination_reason?: TerminationReason
     tempo_execucao_ms?: number
-    // Para evento 'error'
     erro?: string
   }
 }
 
-// Sugestões de comandos
+// Sugestoes de comandos
 export interface ComandoSugestao {
   texto: string
   descricao: string
   modulo: 'processos' | 'agenda' | 'financeiro' | 'crm' | 'geral'
 }
 
-// Categoria do menu de sugestões
+// Categoria do menu de sugestoes
 export interface CategoriaMenu {
   id: string
   nome: string
@@ -164,7 +238,7 @@ export interface CategoriaMenu {
   comandos: ComandoSugestao[]
 }
 
-// Menu de sugestões organizado por módulos
+// Menu de sugestoes organizado por modulos
 export const MENU_SUGESTOES: CategoriaMenu[] = [
   {
     id: 'processos',
@@ -172,8 +246,8 @@ export const MENU_SUGESTOES: CategoriaMenu[] = [
     icone: 'scale',
     comandos: [
       { texto: 'Mostre meus processos ativos', descricao: 'Lista processos em andamento', modulo: 'processos' },
-      { texto: 'Processos com prazos essa semana', descricao: 'Prazos próximos de vencer', modulo: 'processos' },
-      { texto: 'Movimentações recentes', descricao: 'Últimas atualizações', modulo: 'processos' },
+      { texto: 'Processos com prazos essa semana', descricao: 'Prazos proximos de vencer', modulo: 'processos' },
+      { texto: 'Movimentacoes recentes', descricao: 'Ultimas atualizacoes', modulo: 'processos' },
     ],
   },
   {
@@ -182,8 +256,8 @@ export const MENU_SUGESTOES: CategoriaMenu[] = [
     icone: 'calendar',
     comandos: [
       { texto: 'Quais tarefas tenho para hoje?', descricao: 'Tarefas do dia', modulo: 'agenda' },
-      { texto: 'Meus compromissos da semana', descricao: 'Agenda dos próximos 7 dias', modulo: 'agenda' },
-      { texto: 'Audiências marcadas', descricao: 'Próximas audiências', modulo: 'agenda' },
+      { texto: 'Meus compromissos da semana', descricao: 'Agenda dos proximos 7 dias', modulo: 'agenda' },
+      { texto: 'Audiencias marcadas', descricao: 'Proximas audiencias', modulo: 'agenda' },
     ],
   },
   {
@@ -191,9 +265,9 @@ export const MENU_SUGESTOES: CategoriaMenu[] = [
     nome: 'Financeiro',
     icone: 'dollar-sign',
     comandos: [
-      { texto: 'Quantas horas trabalhei esse mês?', descricao: 'Total de horas registradas', modulo: 'financeiro' },
-      { texto: 'Honorários pendentes de pagamento', descricao: 'Valores a receber', modulo: 'financeiro' },
-      { texto: 'Faturamento do mês', descricao: 'Resumo financeiro', modulo: 'financeiro' },
+      { texto: 'Quantas horas trabalhei esse mes?', descricao: 'Total de horas registradas', modulo: 'financeiro' },
+      { texto: 'Honorarios pendentes de pagamento', descricao: 'Valores a receber', modulo: 'financeiro' },
+      { texto: 'Faturamento do mes', descricao: 'Resumo financeiro', modulo: 'financeiro' },
     ],
   },
   {
@@ -202,21 +276,21 @@ export const MENU_SUGESTOES: CategoriaMenu[] = [
     icone: 'users',
     comandos: [
       { texto: 'Meus clientes ativos', descricao: 'Lista de clientes', modulo: 'crm' },
-      { texto: 'Clientes sem interação há 30 dias', descricao: 'Precisam de atenção', modulo: 'crm' },
+      { texto: 'Clientes sem interacao ha 30 dias', descricao: 'Precisam de atencao', modulo: 'crm' },
       { texto: 'Oportunidades abertas', descricao: 'Pipeline de vendas', modulo: 'crm' },
     ],
   },
   {
     id: 'acoes',
-    nome: 'Ações',
+    nome: 'Acoes',
     icone: 'zap',
     comandos: [
-      { texto: 'Criar tarefa para amanhã', descricao: 'Nova tarefa', modulo: 'geral' },
+      { texto: 'Criar tarefa para amanha', descricao: 'Nova tarefa', modulo: 'geral' },
       { texto: 'Registrar horas trabalhadas', descricao: 'Novo timesheet', modulo: 'geral' },
       { texto: 'Criar novo processo', descricao: 'Novo cadastro', modulo: 'geral' },
     ],
   },
 ]
 
-// Comandos sugeridos padrão (compatibilidade)
+// Comandos sugeridos padrao
 export const COMANDOS_SUGERIDOS: ComandoSugestao[] = MENU_SUGESTOES.flatMap(cat => cat.comandos)

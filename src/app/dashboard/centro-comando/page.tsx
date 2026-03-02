@@ -32,7 +32,7 @@ export default function CentroComandoPage() {
     sessoes,
     carregandoSessoes,
     sessaoId,
-    camposPendentes,
+    pendingInput,
     enviarMensagem,
     confirmarAcao,
     cancelarAcao,
@@ -94,7 +94,7 @@ export default function CentroComandoPage() {
     setAcaoConfirmando(null)
   }
 
-  // Handler de correcao via modal (botao ✏️)
+  // Handler de correcao via modal (botao âœï¸)
   const handleOpenCorrecaoModal = useCallback((mensagemId: string) => {
     setCorrecaoMensagemId(mensagemId)
     setCorrecaoModalOpen(true)
@@ -279,13 +279,13 @@ export default function CentroComandoPage() {
 
       {/* Dialogo de coleta de informacoes */}
       <InformationCollectionDialog
-        toolResult={camposPendentes}
+        pendingInput={pendingInput}
         onSubmit={responderCamposNecessarios}
         onCancel={fecharFormularioInput}
         loading={carregando}
       />
 
-      {/* Modal de correcao detalhada (botao ✏️) */}
+      {/* Modal de correcao detalhada (botao âœï¸) */}
       <CorrecaoModal
         open={correcaoModalOpen}
         onOpenChange={setCorrecaoModalOpen}

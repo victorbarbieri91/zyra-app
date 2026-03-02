@@ -13,6 +13,7 @@ import {
   Building2,
   ChevronDown,
   Check,
+  FolderOpen,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -42,6 +43,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { useFaturamento } from '@/hooks/useFaturamento'
+import { useFechamentosPasta } from '@/hooks/useFechamentosPasta'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 import { PreviewCollapsible } from '@/components/faturamento/PreviewCollapsible'
 import { FaturaGeradaCard } from '@/components/faturamento/FaturaGeradaCard'
@@ -76,6 +78,13 @@ export default function FaturamentoPage() {
     desmontarFatura,
   } = useFaturamento(escritoriosSelecionados)
 
+  const {
+    loading: loadingPasta,
+    removerProcesso: removerProcessoPasta,
+    cancelarFechamento,
+    executarFechamentoManual,
+  } = useFechamentosPasta(escritoriosSelecionados)
+
   const [activeTab, setActiveTab] = useState<'prontos' | 'faturados'>('prontos')
 
   const [clientes, setClientes] = useState<ClienteParaFaturar[]>([])
@@ -97,6 +106,10 @@ export default function FaturamentoPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [dataEmissao, setDataEmissao] = useState('')
   const [dataVencimento, setDataVencimento] = useState('')
+
+  // Modal de execução manual de fechamento de pastas
+  const [showExecutarModal, setShowExecutarModal] = useState(false)
+  const [competenciaManual, setCompetenciaManual] = useState('')
 
   // Carregar escritórios do grupo (com todos selecionados por padrão)
   useEffect(() => {
@@ -162,26 +175,10 @@ export default function FaturamentoPage() {
   }
 
   const handlePreview = async (cliente: ClienteParaFaturar) => {
-    // Se clicar no mesmo cliente, toggle o painel de preview
-    if (selectedCliente?.cliente_id === cliente.cliente_id && showPreview) {
-      setShowPreview(false)
-      setSelectedCliente(null)
-      setLancamentos([])
-      setSelectedLancamentosIds([])
-      return
-    }
-
     setSelectedCliente(cliente)
-    setShowPreview(false)
-
-    // Carregar lançamentos do cliente
     const lancamentosData = await loadLancamentosPorCliente(cliente.cliente_id)
     setLancamentos(lancamentosData)
-
-    // Selecionar todos por padrão
     setSelectedLancamentosIds(lancamentosData.map((l) => l.lancamento_id))
-
-    // Mostrar preview
     setShowPreview(true)
   }
 
@@ -275,6 +272,52 @@ export default function FaturamentoPage() {
     }
   }
 
+  const handleRemoverProcessoPasta = async (fechamentoId: string, processoId: string) => {
+    const success = await removerProcessoPasta(fechamentoId, processoId)
+    if (success) {
+      if (selectedCliente) {
+        const lancamentosData = await loadLancamentosPorCliente(selectedCliente.cliente_id)
+        setLancamentos(lancamentosData)
+      }
+      loadData()
+    }
+  }
+
+  const handleExcluirPasta = async (fechamentoId: string) => {
+    const success = await cancelarFechamento(fechamentoId)
+    if (success) {
+      toast.success('Fechamento excluído')
+      if (selectedCliente) {
+        const lancamentosData = await loadLancamentosPorCliente(selectedCliente.cliente_id)
+        setLancamentos(lancamentosData)
+        setSelectedLancamentosIds((prev) =>
+          prev.filter((id) => lancamentosData.some((l) => l.lancamento_id === id))
+        )
+      }
+      loadData()
+    } else {
+      toast.error('Erro ao excluir fechamento')
+    }
+  }
+
+  const handleExecutarFechamento = async () => {
+    const competencia = competenciaManual ? `${competenciaManual}-01` : undefined
+    const result = await executarFechamentoManual(competencia)
+    if (result.success) {
+      const qtd = result.fechamentos_criados ?? 0
+      toast.success(
+        qtd > 0
+          ? `${qtd} fechamento${qtd !== 1 ? 's' : ''} gerado${qtd !== 1 ? 's' : ''} com sucesso`
+          : 'Nenhum fechamento novo gerado (contratos já processados para este mês)'
+      )
+      setShowExecutarModal(false)
+      setCompetenciaManual('')
+      loadData()
+    } else {
+      toast.error('Erro ao executar fechamento de pastas')
+    }
+  }
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -358,6 +401,19 @@ export default function FaturamentoPage() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => {
+              const hoje = new Date()
+              setCompetenciaManual(`${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`)
+              setShowExecutarModal(true)
+            }}
+            className="border-amber-200 text-amber-700 hover:bg-amber-50"
+          >
+            <FolderOpen className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">Fechamento de Pastas</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={loadData}
             disabled={loading}
             className="border-slate-200"
@@ -392,8 +448,8 @@ export default function FaturamentoPage() {
         {/* Tab: Prontos para Faturar */}
         <TabsContent value="prontos" className="mt-6">
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-            {/* Coluna Esquerda - Lista de Clientes */}
-            <div className={cn(showPreview ? 'xl:col-span-7' : 'xl:col-span-12')}>
+            {/* Lista de Clientes — sempre full-width */}
+            <div className="xl:col-span-12">
               <ClientesTable
                 clientes={clientes}
                 selectedCliente={selectedCliente}
@@ -401,27 +457,31 @@ export default function FaturamentoPage() {
                 loading={loading}
               />
             </div>
-
-            {/* Coluna Direita - Preview da Fatura */}
-            {showPreview && selectedCliente && (
-              <div className="xl:col-span-5">
-                <PreviewCollapsible
-                  clienteNome={selectedCliente.cliente_nome}
-                  lancamentos={lancamentos}
-                  selectedIds={selectedLancamentosIds}
-                  onToggleLancamento={handleToggleLancamento}
-                  onGerarFatura={handleGerarFatura}
-                  onCancelar={() => {
-                    setShowPreview(false)
-                    setSelectedCliente(null)
-                    setSelectedLancamentosIds([])
-                    setLancamentos([])
-                  }}
-                  pastas={selectedCliente.pastas}
-                />
-              </div>
-            )}
           </div>
+
+          {/* Modal de Preview — Dialog fora do grid */}
+          {selectedCliente && (
+            <PreviewCollapsible
+              open={showPreview}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setShowPreview(false)
+                  setSelectedCliente(null)
+                  setSelectedLancamentosIds([])
+                  setLancamentos([])
+                }
+              }}
+              clienteNome={selectedCliente.cliente_nome}
+              lancamentos={lancamentos}
+              selectedIds={selectedLancamentosIds}
+              onToggleLancamento={handleToggleLancamento}
+              onSetSelectedIds={setSelectedLancamentosIds}
+              onGerarFatura={handleGerarFatura}
+              pastas={selectedCliente.pastas}
+              onRemoverProcessoPasta={handleRemoverProcessoPasta}
+              onExcluirPasta={handleExcluirPasta}
+            />
+          )}
         </TabsContent>
 
         {/* Tab: Faturados */}
@@ -636,6 +696,59 @@ export default function FaturamentoPage() {
               className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8"
             >
               {loading ? 'Gerando...' : 'Gerar Fatura'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Executar Fechamento de Pastas */}
+      <Dialog open={showExecutarModal} onOpenChange={setShowExecutarModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FolderOpen className="w-5 h-5 text-amber-600" />
+              Fechamento de Pastas
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-slate-600">
+              Gera fechamentos mensais para todos os contratos por pasta ativos. Se já existe um
+              fechamento ativo para o mês selecionado, ele não será duplicado.
+            </p>
+            <p className="text-xs text-slate-500 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              O sistema executa este processo automaticamente todo dia 1º de cada mês às 3h (horário de Brasília).
+              Use este botão para execução manual quando necessário.
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="competencia-manual" className="text-xs text-slate-600">
+                Mês de Referência (Competência)
+              </Label>
+              <Input
+                id="competencia-manual"
+                type="month"
+                value={competenciaManual}
+                onChange={(e) => setCompetenciaManual(e.target.value)}
+                className="h-9 text-sm"
+              />
+              <p className="text-[10px] text-slate-400">
+                Deixe em branco para usar o mês atual
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowExecutarModal(false)}
+              className="border-slate-200 text-xs h-8"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleExecutarFechamento}
+              disabled={loadingPasta}
+              className="bg-amber-600 hover:bg-amber-700 text-white text-xs h-8"
+            >
+              {loadingPasta ? 'Executando...' : 'Executar Fechamento'}
             </Button>
           </DialogFooter>
         </DialogContent>

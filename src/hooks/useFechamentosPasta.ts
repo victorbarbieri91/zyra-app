@@ -298,7 +298,7 @@ export function useFechamentosPasta(escritorioIds: string[] | null) {
         .from('financeiro_fechamentos_pasta')
         .update({ status: 'cancelado' })
         .eq('id', fechamentoId)
-        .eq('status', 'pendente')
+        .in('status', ['pendente', 'aprovado'])
 
       if (updateError) throw updateError
       return true
@@ -393,8 +393,9 @@ export function useFechamentosPasta(escritorioIds: string[] | null) {
 
       return data || { success: false }
     } catch (err: any) {
-      setError(err.message)
-      console.error('Erro ao executar fechamento:', err)
+      const message = err?.message || err?.details || err?.hint || JSON.stringify(err) || 'Erro desconhecido'
+      setError(message)
+      console.error('Erro ao executar fechamento:', message, err?.code, err)
       return { success: false }
     } finally {
       setLoading(false)

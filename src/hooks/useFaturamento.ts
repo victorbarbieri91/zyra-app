@@ -37,6 +37,10 @@ export interface LancamentoProntoFaturar {
   profissional_nome?: string | null
   cargo_nome?: string | null
   data_trabalho?: string | null
+  // Campos de contrato — para agrupamento por contrato no modal de faturamento
+  contrato_id?: string | null
+  numero_contrato?: string | null
+  contrato_titulo?: string | null
 }
 
 export interface ClienteParaFaturar {

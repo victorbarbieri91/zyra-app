@@ -241,6 +241,9 @@ export default function TarefaDetailModal({
   const [updatingDate, setUpdatingDate] = useState(false)
   const [dateDropdownOpen, setDateDropdownOpen] = useState<string | null>(null)
   const [calendarField, setCalendarField] = useState<'data_inicio' | 'prazo_data_limite' | null>(null)
+  // Local copies of dates so we can update display without closing/reopening the modal
+  const [localDataInicio, setLocalDataInicio] = useState(tarefa.data_inicio)
+  const [localPrazoDataLimite, setLocalPrazoDataLimite] = useState<string | null>(tarefa.prazo_data_limite ?? null)
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>([])
   const [loadingResponsaveis, setLoadingResponsaveis] = useState(false)
   // Modal de confirmação para editar prazo fatal
@@ -255,6 +258,12 @@ export default function TarefaDetailModal({
   const [prazoFatalCalendarOpen, setPrazoFatalCalendarOpen] = useState(false)
 
   const { getResponsaveis } = useAgendaResponsaveis()
+
+  // Sync local date state when tarefa changes (e.g. when a different tarefa is opened)
+  useEffect(() => {
+    setLocalDataInicio(tarefa.data_inicio)
+    setLocalPrazoDataLimite(tarefa.prazo_data_limite ?? null)
+  }, [tarefa.id, tarefa.data_inicio, tarefa.prazo_data_limite])
 
   // Impedir que o Dialog principal feche quando um dialog secundário está aberto
   // Isso resolve o problema de stacking do Radix UI onde o Dialog principal
@@ -410,9 +419,9 @@ export default function TarefaDetailModal({
   // Update date function
   const handleUpdateDate = async (field: 'data_inicio' | 'prazo_data_limite', newDate: Date, skipWarning = false) => {
     // Se estamos atualizando data_inicio e existe prazo_data_limite
-    if (field === 'data_inicio' && tarefa.prazo_data_limite && !skipWarning) {
-      const prazoFatal = parseDBDate(tarefa.prazo_data_limite)
-      const dataInicioAtual = parseDBDate(tarefa.data_inicio)
+    if (field === 'data_inicio' && localPrazoDataLimite && !skipWarning) {
+      const prazoFatal = parseDBDate(localPrazoDataLimite)
+      const dataInicioAtual = parseDBDate(localDataInicio)
 
       // Comparar apenas as datas (sem horário) para evitar problemas de timezone
       const novaDataSemHora = startOfDay(newDate)
@@ -461,17 +470,14 @@ export default function TarefaDetailModal({
 
       toast.success(field === 'prazo_data_limite' ? 'Prazo fatal atualizado' : 'Data atualizada com sucesso')
 
-      // Atualizar localmente
-      tarefa[field] = updateData[field]
+      // Atualizar state local para refletir a nova data sem fechar o modal
+      if (field === 'data_inicio') setLocalDataInicio(updateData[field])
+      else setLocalPrazoDataLimite(updateData[field])
 
       // Atualizar a agenda
       if (onUpdate) {
         await onUpdate()
       }
-
-      // Forçar re-render do modal
-      onOpenChange(false)
-      setTimeout(() => onOpenChange(true), 50)
     } catch (error) {
       console.error('Erro ao atualizar data:', error)
       toast.error('Erro ao atualizar data')
@@ -501,18 +507,14 @@ export default function TarefaDetailModal({
 
       toast.success('Data e prazo fatal atualizados')
 
-      // Atualizar localmente
-      tarefa.data_inicio = updateData.data_inicio
-      tarefa.prazo_data_limite = updateData.prazo_data_limite
+      // Atualizar state local para refletir as novas datas sem fechar o modal
+      setLocalDataInicio(updateData.data_inicio)
+      setLocalPrazoDataLimite(updateData.prazo_data_limite)
 
       // Atualizar a agenda
       if (onUpdate) {
         await onUpdate()
       }
-
-      // Forçar re-render do modal
-      onOpenChange(false)
-      setTimeout(() => onOpenChange(true), 50)
     } catch (error) {
       console.error('Erro ao atualizar datas:', error)
       toast.error('Erro ao atualizar datas')
@@ -555,10 +557,10 @@ export default function TarefaDetailModal({
         }}
       >
         <DialogTitle className="sr-only">Detalhes da Tarefa</DialogTitle>
-        <div className="bg-white rounded-lg">
+        <div className="bg-white rounded-lg flex flex-col max-h-[85vh]">
 
           {/* Header Minimalista */}
-          <div className="p-6 pb-4 border-b border-slate-100">
+          <div className="p-6 pb-4 border-b border-slate-100 flex-shrink-0">
             <div>
               <h2 className="text-lg font-semibold text-slate-900 mb-1">
                 {tarefa.titulo}
@@ -584,7 +586,7 @@ export default function TarefaDetailModal({
           </div>
 
           {/* Conteúdo Principal */}
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 overflow-y-auto flex-1">
 
             {/* DESCRIÇÃO */}
             <div>
@@ -592,7 +594,7 @@ export default function TarefaDetailModal({
                 Descrição
               </div>
               {tarefa.descricao ? (
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs text-slate-600 leading-relaxed max-h-32 overflow-y-auto">
                   {tarefa.descricao}
                 </p>
               ) : (
@@ -699,7 +701,7 @@ export default function TarefaDetailModal({
                   ) : (
                     <DateRescheduleButton
                       field="data_inicio"
-                      currentDate={tarefa.data_inicio}
+                      currentDate={localDataInicio}
                       dateDropdownOpen={dateDropdownOpen}
                       setDateDropdownOpen={setDateDropdownOpen}
                       updatingDate={updatingDate}
@@ -712,7 +714,7 @@ export default function TarefaDetailModal({
               </div>
 
               {/* Prazo Fatal - Para todas as tarefas com prazo_data_limite (nunca para fixas) */}
-              {!isFixa && tarefa.prazo_data_limite && (
+              {!isFixa && localPrazoDataLimite && (
                 <div className="min-w-[140px]">
                   <div className="text-[10px] text-red-600 font-medium mb-1 h-4">
                     <AlertCircle className="w-3 h-3 text-red-500 inline mr-1.5 align-text-bottom" />
@@ -720,8 +722,8 @@ export default function TarefaDetailModal({
                     <span className="text-[10px] text-slate-400 font-normal ml-1">
                       {(() => {
                         const diasEntreDatas = differenceInDays(
-                          parseDBDate(tarefa.prazo_data_limite),
-                          parseDBDate(tarefa.data_inicio)
+                          parseDBDate(localPrazoDataLimite),
+                          parseDBDate(localDataInicio)
                         )
                         return diasEntreDatas > 0 ? `(${diasEntreDatas}d)` : diasEntreDatas === 0 ? '(hoje)' : `(${Math.abs(diasEntreDatas)}d atrás)`
                       })()}
@@ -730,7 +732,7 @@ export default function TarefaDetailModal({
                   <div className="h-5">
                     <DateRescheduleButton
                       field="prazo_data_limite"
-                      currentDate={tarefa.prazo_data_limite}
+                      currentDate={localPrazoDataLimite}
                       dateDropdownOpen={dateDropdownOpen}
                       setDateDropdownOpen={setDateDropdownOpen}
                       updatingDate={updatingDate}
@@ -981,10 +983,10 @@ export default function TarefaDetailModal({
         <CalendarComponent
           mode="single"
           selected={
-            calendarField === 'data_inicio' && tarefa.data_inicio
-              ? parseDBDate(tarefa.data_inicio)
-              : calendarField === 'prazo_data_limite' && tarefa.prazo_data_limite
-              ? parseDBDate(tarefa.prazo_data_limite)
+            calendarField === 'data_inicio' && localDataInicio
+              ? parseDBDate(localDataInicio)
+              : calendarField === 'prazo_data_limite' && localPrazoDataLimite
+              ? parseDBDate(localPrazoDataLimite)
               : undefined
           }
           onSelect={handleCustomDateSelect}
@@ -1109,7 +1111,7 @@ export default function TarefaDetailModal({
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                 <p className="text-[10px] text-slate-500 mb-1">Prazo Fatal Atual</p>
                 <p className="text-sm font-semibold text-[#34495e]">
-                  {tarefa.prazo_data_limite && formatBrazilDate(parseDBDate(tarefa.prazo_data_limite))}
+                  {localPrazoDataLimite && formatBrazilDate(parseDBDate(localPrazoDataLimite))}
                 </p>
               </div>
             </div>

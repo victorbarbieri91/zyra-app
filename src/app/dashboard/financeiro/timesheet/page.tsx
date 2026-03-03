@@ -914,35 +914,17 @@ export default function TimesheetPage() {
                         {editForm.faturavel ? 'Cobrável' : 'N/Cob.'}
                       </button>
                     ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (!ts.faturado) handleToggleFaturavel(ts)
-                        }}
-                        disabled={ts.faturado || togglingFaturavelId === ts.id}
+                      <Badge
+                        variant="secondary"
                         className={cn(
-                          'inline-flex items-center rounded-md px-2.5 py-0.5 text-[10px] font-semibold transition-all',
+                          'text-[10px]',
                           ts.faturavel
                             ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-slate-100 text-slate-600',
-                          !ts.faturado && 'cursor-pointer hover:ring-2 hover:ring-offset-1',
-                          ts.faturavel && !ts.faturado && 'hover:ring-emerald-300',
-                          !ts.faturavel && !ts.faturado && 'hover:ring-slate-300',
-                          ts.faturado && 'opacity-60 cursor-not-allowed',
-                          togglingFaturavelId === ts.id && 'animate-pulse'
+                            : 'bg-slate-100 text-slate-600'
                         )}
-                        title={
-                          ts.faturado
-                            ? 'Não é possível alterar - já faturado'
-                            : ts.faturavel
-                              ? 'Clique para marcar como não cobrável'
-                              : 'Clique para marcar como cobrável'
-                        }
                       >
-                        {togglingFaturavelId === ts.id
-                          ? '...'
-                          : ts.faturavel ? 'Cobrável' : 'N/Cob.'}
-                      </button>
+                        {ts.faturavel ? 'Cobrável' : 'N/Cob.'}
+                      </Badge>
                     )}
                   </div>
 
@@ -989,6 +971,27 @@ export default function TimesheetPage() {
                                   : "text-emerald-500 hover:text-emerald-600"
                               )} />
                             </Button>
+                            {/* Botão de alternar cobrável/não cobrável */}
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className={cn(
+                                "h-7 w-7",
+                                ts.faturavel ? "hover:bg-slate-100" : "hover:bg-emerald-50"
+                              )}
+                              onClick={() => handleToggleFaturavel(ts)}
+                              disabled={togglingFaturavelId === ts.id}
+                              title={ts.faturavel ? 'Marcar como não cobrável' : 'Marcar como cobrável'}
+                            >
+                              <DollarSign className={cn(
+                                "h-3.5 w-3.5",
+                                togglingFaturavelId === ts.id
+                                  ? "text-amber-400 animate-pulse"
+                                  : ts.faturavel
+                                    ? "text-emerald-500 hover:text-slate-600"
+                                    : "text-slate-400 hover:text-emerald-600"
+                              )} />
+                            </Button>
                             {/* Botão de edição */}
                             <Button
                               size="icon"
@@ -1022,6 +1025,27 @@ export default function TimesheetPage() {
                       /* Aba Aprovados - botões de ação */
                       !ts.faturado && (
                         <>
+                          {/* Botão de alternar cobrável/não cobrável */}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className={cn(
+                              "h-7 w-7",
+                              ts.faturavel ? "hover:bg-slate-100" : "hover:bg-emerald-50"
+                            )}
+                            onClick={() => handleToggleFaturavel(ts)}
+                            disabled={togglingFaturavelId === ts.id}
+                            title={ts.faturavel ? 'Marcar como não cobrável' : 'Marcar como cobrável'}
+                          >
+                            <DollarSign className={cn(
+                              "h-3.5 w-3.5",
+                              togglingFaturavelId === ts.id
+                                ? "text-amber-400 animate-pulse"
+                                : ts.faturavel
+                                  ? "text-emerald-500 hover:text-slate-600"
+                                  : "text-slate-400 hover:text-emerald-600"
+                            )} />
+                          </Button>
                           {/* Botão de desaprovar (voltar para pendente) */}
                           <Button
                             size="icon"

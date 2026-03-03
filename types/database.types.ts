@@ -1,1 +1,13656 @@
-{"types":"export type Json =\n  | string\n  | number\n  | boolean\n  | null\n  | { [key: string]: Json | undefined }\n  | Json[]\n\nexport type Database = {\n  // Allows to automatically instantiate createClient with right options\n  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)\n  __InternalSupabase: {\n    PostgrestVersion: \"13.0.5\"\n  }\n  public: {\n    Tables: {\n      agenda_audiencias: {\n        Row: {\n          advogado_contrario: string | null\n          comarca: string | null\n          consultivo_id: string | null\n          cor: string | null\n          created_at: string | null\n          criado_por: string | null\n          data_hora: string\n          descricao: string | null\n          duracao_minutos: number | null\n          endereco: string | null\n          escritorio_id: string\n          forum: string | null\n          id: string\n          juiz: string | null\n          link_virtual: string | null\n          modalidade: string\n          observacoes: string | null\n          plataforma: string | null\n          preparativos_checklist: Json | null\n          processo_id: string | null\n          promotor: string | null\n          responsaveis_ids: string[] | null\n          responsavel_id: string | null\n          resultado_descricao: string | null\n          resultado_tipo: string | null\n          sala: string | null\n          status: string | null\n          tipo_audiencia: string\n          titulo: string\n          tribunal: string | null\n          updated_at: string | null\n          vara: string | null\n        }\n        Insert: {\n          advogado_contrario?: string | null\n          comarca?: string | null\n          consultivo_id?: string | null\n          cor?: string | null\n          created_at?: string | null\n          criado_por?: string | null\n          data_hora: string\n          descricao?: string | null\n          duracao_minutos?: number | null\n          endereco?: string | null\n          escritorio_id: string\n          forum?: string | null\n          id?: string\n          juiz?: string | null\n          link_virtual?: string | null\n          modalidade: string\n          observacoes?: string | null\n          plataforma?: string | null\n          preparativos_checklist?: Json | null\n          processo_id?: string | null\n          promotor?: string | null\n          responsaveis_ids?: string[] | null\n          responsavel_id?: string | null\n          resultado_descricao?: string | null\n          resultado_tipo?: string | null\n          sala?: string | null\n          status?: string | null\n          tipo_audiencia: string\n          titulo: string\n          tribunal?: string | null\n          updated_at?: string | null\n          vara?: string | null\n        }\n        Update: {\n          advogado_contrario?: string | null\n          comarca?: string | null\n          consultivo_id?: string | null\n          cor?: string | null\n          created_at?: string | null\n          criado_por?: string | null\n          data_hora?: string\n          descricao?: string | null\n          duracao_minutos?: number | null\n          endereco?: string | null\n          escritorio_id?: string\n          forum?: string | null\n          id?: string\n          juiz?: string | null\n          link_virtual?: string | null\n          modalidade?: string\n          observacoes?: string | null\n          plataforma?: string | null\n          preparativos_checklist?: Json | null\n          processo_id?: string | null\n          promotor?: string | null\n          responsaveis_ids?: string[] | null\n          responsavel_id?: string | null\n          resultado_descricao?: string | null\n          resultado_tipo?: string | null\n          sala?: string | null\n          status?: string | null\n          tipo_audiencia?: string\n          titulo?: string\n          tribunal?: string | null\n          updated_at?: string | null\n          vara?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"agenda_audiencias_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_audiencias_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_audiencias_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"consultivo_id\"]\n          },\n          {\n            foreignKeyName: \"agenda_audiencias_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_audiencias_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"agenda_audiencias_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_audiencias_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_audiencias_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_audiencias_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_audiencias_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"agenda_audiencias_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_audiencias_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      agenda_eventos: {\n        Row: {\n          cliente_id: string | null\n          consultivo_id: string | null\n          cor: string | null\n          created_at: string | null\n          criado_por: string | null\n          data_fim: string | null\n          data_inicio: string\n          descricao: string | null\n          dia_inteiro: boolean | null\n          escritorio_id: string | null\n          id: string\n          local: string | null\n          processo_id: string | null\n          recorrencia_id: string | null\n          responsaveis_ids: string[] | null\n          responsavel_id: string | null\n          status: string | null\n          tipo: string | null\n          titulo: string\n          updated_at: string | null\n        }\n        Insert: {\n          cliente_id?: string | null\n          consultivo_id?: string | null\n          cor?: string | null\n          created_at?: string | null\n          criado_por?: string | null\n          data_fim?: string | null\n          data_inicio: string\n          descricao?: string | null\n          dia_inteiro?: boolean | null\n          escritorio_id?: string | null\n          id?: string\n          local?: string | null\n          processo_id?: string | null\n          recorrencia_id?: string | null\n          responsaveis_ids?: string[] | null\n          responsavel_id?: string | null\n          status?: string | null\n          tipo?: string | null\n          titulo: string\n          updated_at?: string | null\n        }\n        Update: {\n          cliente_id?: string | null\n          consultivo_id?: string | null\n          cor?: string | null\n          created_at?: string | null\n          criado_por?: string | null\n          data_fim?: string | null\n          data_inicio?: string\n          descricao?: string | null\n          dia_inteiro?: boolean | null\n          escritorio_id?: string | null\n          id?: string\n          local?: string | null\n          processo_id?: string | null\n          recorrencia_id?: string | null\n          responsaveis_ids?: string[] | null\n          responsavel_id?: string | null\n          status?: string | null\n          tipo?: string | null\n          titulo?: string\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"agenda_eventos_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_eventos_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_eventos_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"consultivo_id\"]\n          },\n          {\n            foreignKeyName: \"agenda_eventos_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_eventos_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"agenda_eventos_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_eventos_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"eventos_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"eventos_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"eventos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"fk_eventos_recorrencia\"\n            columns: [\"recorrencia_id\"]\n            isOneToOne: false\n            referencedRelation: \"agenda_recorrencias\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      agenda_recorrencias: {\n        Row: {\n          ativo: boolean | null\n          created_at: string | null\n          criado_por: string | null\n          data_fim: string | null\n          data_inicio: string\n          entidade_tipo: string\n          escritorio_id: string\n          exclusoes: string[] | null\n          id: string\n          max_ocorrencias: number | null\n          proxima_execucao: string | null\n          regra_apenas_uteis: boolean | null\n          regra_dia_mes: number | null\n          regra_dias_semana: number[] | null\n          regra_frequencia: string\n          regra_hora: string | null\n          regra_intervalo: number | null\n          regra_mes: number | null\n          template_dados: Json\n          template_descricao: string | null\n          template_nome: string\n          total_criados: number | null\n          ultima_execucao: string | null\n          updated_at: string | null\n        }\n        Insert: {\n          ativo?: boolean | null\n          created_at?: string | null\n          criado_por?: string | null\n          data_fim?: string | null\n          data_inicio: string\n          entidade_tipo: string\n          escritorio_id: string\n          exclusoes?: string[] | null\n          id?: string\n          max_ocorrencias?: number | null\n          proxima_execucao?: string | null\n          regra_apenas_uteis?: boolean | null\n          regra_dia_mes?: number | null\n          regra_dias_semana?: number[] | null\n          regra_frequencia: string\n          regra_hora?: string | null\n          regra_intervalo?: number | null\n          regra_mes?: number | null\n          template_dados: Json\n          template_descricao?: string | null\n          template_nome: string\n          total_criados?: number | null\n          ultima_execucao?: string | null\n          updated_at?: string | null\n        }\n        Update: {\n          ativo?: boolean | null\n          created_at?: string | null\n          criado_por?: string | null\n          data_fim?: string | null\n          data_inicio?: string\n          entidade_tipo?: string\n          escritorio_id?: string\n          exclusoes?: string[] | null\n          id?: string\n          max_ocorrencias?: number | null\n          proxima_execucao?: string | null\n          regra_apenas_uteis?: boolean | null\n          regra_dia_mes?: number | null\n          regra_dias_semana?: number[] | null\n          regra_frequencia?: string\n          regra_hora?: string | null\n          regra_intervalo?: number | null\n          regra_mes?: number | null\n          template_dados?: Json\n          template_descricao?: string | null\n          template_nome?: string\n          total_criados?: number | null\n          ultima_execucao?: string | null\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"agenda_recorrencias_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_recorrencias_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"agenda_recorrencias_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      agenda_tarefas: {\n        Row: {\n          consultivo_id: string | null\n          cor: string | null\n          created_at: string | null\n          criado_por: string | null\n          data_conclusao: string | null\n          data_fim: string | null\n          data_inicio: string\n          descricao: string | null\n          duracao_planejada_minutos: number | null\n          escritorio_id: string\n          fixa_status_data: string | null\n          horario_planejado_dia: string | null\n          id: string\n          prazo_data_limite: string | null\n          prazo_dias_uteis: boolean | null\n          prioridade: string | null\n          processo_id: string | null\n          recorrencia_id: string | null\n          responsaveis_ids: string[] | null\n          responsavel_id: string | null\n          status: string | null\n          tipo: string\n          titulo: string\n          updated_at: string | null\n        }\n        Insert: {\n          consultivo_id?: string | null\n          cor?: string | null\n          created_at?: string | null\n          criado_por?: string | null\n          data_conclusao?: string | null\n          data_fim?: string | null\n          data_inicio: string\n          descricao?: string | null\n          duracao_planejada_minutos?: number | null\n          escritorio_id: string\n          fixa_status_data?: string | null\n          horario_planejado_dia?: string | null\n          id?: string\n          prazo_data_limite?: string | null\n          prazo_dias_uteis?: boolean | null\n          prioridade?: string | null\n          processo_id?: string | null\n          recorrencia_id?: string | null\n          responsaveis_ids?: string[] | null\n          responsavel_id?: string | null\n          status?: string | null\n          tipo?: string\n          titulo: string\n          updated_at?: string | null\n        }\n        Update: {\n          consultivo_id?: string | null\n          cor?: string | null\n          created_at?: string | null\n          criado_por?: string | null\n          data_conclusao?: string | null\n          data_fim?: string | null\n          data_inicio?: string\n          descricao?: string | null\n          duracao_planejada_minutos?: number | null\n          escritorio_id?: string\n          fixa_status_data?: string | null\n          horario_planejado_dia?: string | null\n          id?: string\n          prazo_data_limite?: string | null\n          prazo_dias_uteis?: boolean | null\n          prioridade?: string | null\n          processo_id?: string | null\n          recorrencia_id?: string | null\n          responsaveis_ids?: string[] | null\n          responsavel_id?: string | null\n          status?: string | null\n          tipo?: string\n          titulo?: string\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"agenda_tarefas_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_tarefas_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_tarefas_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"consultivo_id\"]\n          },\n          {\n            foreignKeyName: \"agenda_tarefas_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_tarefas_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"agenda_tarefas_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_tarefas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_tarefas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_tarefas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_tarefas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"agenda_tarefas_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"agenda_tarefas_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"fk_tarefas_recorrencia\"\n            columns: [\"recorrencia_id\"]\n            isOneToOne: false\n            referencedRelation: \"agenda_recorrencias\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      cartoes_credito: {\n        Row: {\n          ativo: boolean | null\n          banco: string | null\n          bandeira: string | null\n          cor: string | null\n          created_at: string | null\n          dia_vencimento: number\n          dias_antes_fechamento: number\n          escritorio_id: string\n          id: string\n          limite_total: number | null\n          nome: string\n          observacoes: string | null\n          ultimos_digitos: string | null\n          updated_at: string | null\n        }\n        Insert: {\n          ativo?: boolean | null\n          banco?: string | null\n          bandeira?: string | null\n          cor?: string | null\n          created_at?: string | null\n          dia_vencimento: number\n          dias_antes_fechamento?: number\n          escritorio_id: string\n          id?: string\n          limite_total?: number | null\n          nome: string\n          observacoes?: string | null\n          ultimos_digitos?: string | null\n          updated_at?: string | null\n        }\n        Update: {\n          ativo?: boolean | null\n          banco?: string | null\n          bandeira?: string | null\n          cor?: string | null\n          created_at?: string | null\n          dia_vencimento?: number\n          dias_antes_fechamento?: number\n          escritorio_id?: string\n          id?: string\n          limite_total?: number | null\n          nome?: string\n          observacoes?: string | null\n          ultimos_digitos?: string | null\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"cartoes_credito_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      cartoes_credito_categorias: {\n        Row: {\n          ativo: boolean | null\n          created_at: string | null\n          criado_por: string | null\n          escritorio_id: string\n          id: string\n          label: string\n          updated_at: string | null\n          value: string\n        }\n        Insert: {\n          ativo?: boolean | null\n          created_at?: string | null\n          criado_por?: string | null\n          escritorio_id: string\n          id?: string\n          label: string\n          updated_at?: string | null\n          value: string\n        }\n        Update: {\n          ativo?: boolean | null\n          created_at?: string | null\n          criado_por?: string | null\n          escritorio_id?: string\n          id?: string\n          label?: string\n          updated_at?: string | null\n          value?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"cartoes_credito_categorias_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_categorias_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_categorias_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      cartoes_credito_despesas: {\n        Row: {\n          cartao_id: string\n          categoria: string\n          comprovante_url: string | null\n          created_at: string | null\n          data_compra: string\n          descricao: string\n          documento_fiscal: string | null\n          escritorio_id: string\n          fornecedor: string | null\n          hash_transacao: string | null\n          id: string\n          importado_de_fatura: boolean | null\n          numero_parcelas: number\n          processo_id: string | null\n          updated_at: string | null\n          valor_parcela: number\n          valor_total: number\n        }\n        Insert: {\n          cartao_id: string\n          categoria: string\n          comprovante_url?: string | null\n          created_at?: string | null\n          data_compra: string\n          descricao: string\n          documento_fiscal?: string | null\n          escritorio_id: string\n          fornecedor?: string | null\n          hash_transacao?: string | null\n          id?: string\n          importado_de_fatura?: boolean | null\n          numero_parcelas?: number\n          processo_id?: string | null\n          updated_at?: string | null\n          valor_parcela: number\n          valor_total: number\n        }\n        Update: {\n          cartao_id?: string\n          categoria?: string\n          comprovante_url?: string | null\n          created_at?: string | null\n          data_compra?: string\n          descricao?: string\n          documento_fiscal?: string | null\n          escritorio_id?: string\n          fornecedor?: string | null\n          hash_transacao?: string | null\n          id?: string\n          importado_de_fatura?: boolean | null\n          numero_parcelas?: number\n          processo_id?: string | null\n          updated_at?: string | null\n          valor_parcela?: number\n          valor_total?: number\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"cartoes_credito_despesas_cartao_id_fkey\"\n            columns: [\"cartao_id\"]\n            isOneToOne: false\n            referencedRelation: \"cartoes_credito\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_despesas_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_despesas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_despesas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_despesas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_despesas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n        ]\n      }\n      cartoes_credito_faturas: {\n        Row: {\n          cartao_id: string\n          created_at: string | null\n          data_fechamento: string\n          data_pagamento: string | null\n          data_vencimento: string\n          despesa_id: string | null\n          escritorio_id: string\n          forma_pagamento: string | null\n          id: string\n          mes_referencia: string\n          pdf_url: string | null\n          status: string\n          updated_at: string | null\n          valor_total: number | null\n        }\n        Insert: {\n          cartao_id: string\n          created_at?: string | null\n          data_fechamento: string\n          data_pagamento?: string | null\n          data_vencimento: string\n          despesa_id?: string | null\n          escritorio_id: string\n          forma_pagamento?: string | null\n          id?: string\n          mes_referencia: string\n          pdf_url?: string | null\n          status?: string\n          updated_at?: string | null\n          valor_total?: number | null\n        }\n        Update: {\n          cartao_id?: string\n          created_at?: string | null\n          data_fechamento?: string\n          data_pagamento?: string | null\n          data_vencimento?: string\n          despesa_id?: string | null\n          escritorio_id?: string\n          forma_pagamento?: string | null\n          id?: string\n          mes_referencia?: string\n          pdf_url?: string | null\n          status?: string\n          updated_at?: string | null\n          valor_total?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"cartoes_credito_faturas_cartao_id_fkey\"\n            columns: [\"cartao_id\"]\n            isOneToOne: false\n            referencedRelation: \"cartoes_credito\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_faturas_despesa_id_fkey\"\n            columns: [\"despesa_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_despesas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_faturas_despesa_id_fkey\"\n            columns: [\"despesa_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_despesas_reembolsaveis_pendentes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_faturas_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      cartoes_credito_importacoes: {\n        Row: {\n          arquivo_nome: string\n          arquivo_url: string\n          cartao_id: string\n          confianca_media: number | null\n          created_at: string | null\n          dados_extraidos: Json | null\n          erro_mensagem: string | null\n          escritorio_id: string\n          fatura_id: string | null\n          id: string\n          modelo_ia: string | null\n          processado_em: string | null\n          status: string\n          transacoes_duplicadas: number | null\n          transacoes_encontradas: number | null\n          transacoes_importadas: number | null\n        }\n        Insert: {\n          arquivo_nome: string\n          arquivo_url: string\n          cartao_id: string\n          confianca_media?: number | null\n          created_at?: string | null\n          dados_extraidos?: Json | null\n          erro_mensagem?: string | null\n          escritorio_id: string\n          fatura_id?: string | null\n          id?: string\n          modelo_ia?: string | null\n          processado_em?: string | null\n          status?: string\n          transacoes_duplicadas?: number | null\n          transacoes_encontradas?: number | null\n          transacoes_importadas?: number | null\n        }\n        Update: {\n          arquivo_nome?: string\n          arquivo_url?: string\n          cartao_id?: string\n          confianca_media?: number | null\n          created_at?: string | null\n          dados_extraidos?: Json | null\n          erro_mensagem?: string | null\n          escritorio_id?: string\n          fatura_id?: string | null\n          id?: string\n          modelo_ia?: string | null\n          processado_em?: string | null\n          status?: string\n          transacoes_duplicadas?: number | null\n          transacoes_encontradas?: number | null\n          transacoes_importadas?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"cartoes_credito_importacoes_cartao_id_fkey\"\n            columns: [\"cartao_id\"]\n            isOneToOne: false\n            referencedRelation: \"cartoes_credito\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_importacoes_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_importacoes_fatura_id_fkey\"\n            columns: [\"fatura_id\"]\n            isOneToOne: false\n            referencedRelation: \"cartoes_credito_faturas\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      cartoes_credito_lancamentos: {\n        Row: {\n          cartao_id: string\n          categoria: string\n          compra_id: string\n          comprovante_url: string | null\n          created_at: string | null\n          data_compra: string\n          descricao: string\n          documento_fiscal: string | null\n          escritorio_id: string\n          fatura_id: string | null\n          faturado: boolean | null\n          fornecedor: string | null\n          hash_transacao: string | null\n          id: string\n          importado_de_fatura: boolean | null\n          mes_referencia: string\n          observacoes: string | null\n          parcela_numero: number\n          parcela_total: number\n          processo_id: string | null\n          recorrente_ativo: boolean | null\n          recorrente_data_fim: string | null\n          tipo: string\n          updated_at: string | null\n          valor: number\n        }\n        Insert: {\n          cartao_id: string\n          categoria: string\n          compra_id: string\n          comprovante_url?: string | null\n          created_at?: string | null\n          data_compra: string\n          descricao: string\n          documento_fiscal?: string | null\n          escritorio_id: string\n          fatura_id?: string | null\n          faturado?: boolean | null\n          fornecedor?: string | null\n          hash_transacao?: string | null\n          id?: string\n          importado_de_fatura?: boolean | null\n          mes_referencia: string\n          observacoes?: string | null\n          parcela_numero?: number\n          parcela_total?: number\n          processo_id?: string | null\n          recorrente_ativo?: boolean | null\n          recorrente_data_fim?: string | null\n          tipo: string\n          updated_at?: string | null\n          valor: number\n        }\n        Update: {\n          cartao_id?: string\n          categoria?: string\n          compra_id?: string\n          comprovante_url?: string | null\n          created_at?: string | null\n          data_compra?: string\n          descricao?: string\n          documento_fiscal?: string | null\n          escritorio_id?: string\n          fatura_id?: string | null\n          faturado?: boolean | null\n          fornecedor?: string | null\n          hash_transacao?: string | null\n          id?: string\n          importado_de_fatura?: boolean | null\n          mes_referencia?: string\n          observacoes?: string | null\n          parcela_numero?: number\n          parcela_total?: number\n          processo_id?: string | null\n          recorrente_ativo?: boolean | null\n          recorrente_data_fim?: string | null\n          tipo?: string\n          updated_at?: string | null\n          valor?: number\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"cartoes_credito_lancamentos_cartao_id_fkey\"\n            columns: [\"cartao_id\"]\n            isOneToOne: false\n            referencedRelation: \"cartoes_credito\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_lancamentos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_lancamentos_fatura_id_fkey\"\n            columns: [\"fatura_id\"]\n            isOneToOne: false\n            referencedRelation: \"cartoes_credito_faturas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_lancamentos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_lancamentos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_lancamentos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"cartoes_credito_lancamentos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n        ]\n      }\n      cartoes_credito_parcelas: {\n        Row: {\n          created_at: string | null\n          despesa_id: string\n          fatura_id: string | null\n          faturada: boolean | null\n          id: string\n          mes_referencia: string\n          numero_parcela: number\n          valor: number\n        }\n        Insert: {\n          created_at?: string | null\n          despesa_id: string\n          fatura_id?: string | null\n          faturada?: boolean | null\n          id?: string\n          mes_referencia: string\n          numero_parcela: number\n          valor: number\n        }\n        Update: {\n          created_at?: string | null\n          despesa_id?: string\n          fatura_id?: string | null\n          faturada?: boolean | null\n          id?: string\n          mes_referencia?: string\n          numero_parcela?: number\n          valor?: number\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"cartoes_credito_parcelas_despesa_id_fkey\"\n            columns: [\"despesa_id\"]\n            isOneToOne: false\n            referencedRelation: \"cartoes_credito_despesas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"fk_parcela_fatura\"\n            columns: [\"fatura_id\"]\n            isOneToOne: false\n            referencedRelation: \"cartoes_credito_faturas\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      centro_comando_acoes_pendentes: {\n        Row: {\n          confirmado: boolean | null\n          confirmado_em: string | null\n          created_at: string | null\n          dados: Json\n          erro: string | null\n          escritorio_id: string\n          executado: boolean | null\n          executado_em: string | null\n          expira_em: string | null\n          explicacao: string | null\n          id: string\n          idempotency_key: string | null\n          operation_name: string | null\n          preview_human: string | null\n          resolved_entities: Json | null\n          resultado: Json | null\n          run_id: string | null\n          sessao_id: string | null\n          tabela: string\n          target_label: string | null\n          tipo_acao: string\n          user_id: string\n          validated_payload: Json | null\n        }\n        Insert: {\n          confirmado?: boolean | null\n          confirmado_em?: string | null\n          created_at?: string | null\n          dados: Json\n          erro?: string | null\n          escritorio_id: string\n          executado?: boolean | null\n          executado_em?: string | null\n          expira_em?: string | null\n          explicacao?: string | null\n          id?: string\n          idempotency_key?: string | null\n          operation_name?: string | null\n          preview_human?: string | null\n          resolved_entities?: Json | null\n          resultado?: Json | null\n          run_id?: string | null\n          sessao_id?: string | null\n          tabela: string\n          target_label?: string | null\n          tipo_acao: string\n          user_id: string\n          validated_payload?: Json | null\n        }\n        Update: {\n          confirmado?: boolean | null\n          confirmado_em?: string | null\n          created_at?: string | null\n          dados?: Json\n          erro?: string | null\n          escritorio_id?: string\n          executado?: boolean | null\n          executado_em?: string | null\n          expira_em?: string | null\n          explicacao?: string | null\n          id?: string\n          idempotency_key?: string | null\n          operation_name?: string | null\n          preview_human?: string | null\n          resolved_entities?: Json | null\n          resultado?: Json | null\n          run_id?: string | null\n          sessao_id?: string | null\n          tabela?: string\n          target_label?: string | null\n          tipo_acao?: string\n          user_id?: string\n          validated_payload?: Json | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"centro_comando_acoes_pendentes_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"centro_comando_acoes_pendentes_sessao_id_fkey\"\n            columns: [\"sessao_id\"]\n            isOneToOne: false\n            referencedRelation: \"centro_comando_sessoes\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      centro_comando_embedding_cache: {\n        Row: {\n          created_at: string | null\n          embedding: string | null\n          id: string\n          input_hash: string\n          input_text: string\n          modelo: string | null\n          ultimo_uso: string | null\n          uso_count: number | null\n        }\n        Insert: {\n          created_at?: string | null\n          embedding?: string | null\n          id?: string\n          input_hash: string\n          input_text: string\n          modelo?: string | null\n          ultimo_uso?: string | null\n          uso_count?: number | null\n        }\n        Update: {\n          created_at?: string | null\n          embedding?: string | null\n          id?: string\n          input_hash?: string\n          input_text?: string\n          modelo?: string | null\n          ultimo_uso?: string | null\n          uso_count?: number | null\n        }\n        Relationships: []\n      }\n      centro_comando_execucoes: {\n        Row: {\n          created_at: string\n          error_code: string | null\n          error_message: string | null\n          escritorio_id: string\n          finished_at: string | null\n          flow_type: string\n          had_confirmation_modal: boolean\n          had_error: boolean\n          had_input_modal: boolean\n          had_write: boolean\n          id: string\n          iteration_count: number\n          run_id: string\n          sessao_id: string | null\n          started_at: string\n          stream_mode: string\n          tempo_execucao_ms: number | null\n          termination_reason: string\n          tokens_input: number | null\n          tokens_output: number | null\n          tool_repetition_count: number\n          user_id: string\n        }\n        Insert: {\n          created_at?: string\n          error_code?: string | null\n          error_message?: string | null\n          escritorio_id: string\n          finished_at?: string | null\n          flow_type?: string\n          had_confirmation_modal?: boolean\n          had_error?: boolean\n          had_input_modal?: boolean\n          had_write?: boolean\n          id?: string\n          iteration_count?: number\n          run_id: string\n          sessao_id?: string | null\n          started_at?: string\n          stream_mode?: string\n          tempo_execucao_ms?: number | null\n          termination_reason?: string\n          tokens_input?: number | null\n          tokens_output?: number | null\n          tool_repetition_count?: number\n          user_id: string\n        }\n        Update: {\n          created_at?: string\n          error_code?: string | null\n          error_message?: string | null\n          escritorio_id?: string\n          finished_at?: string | null\n          flow_type?: string\n          had_confirmation_modal?: boolean\n          had_error?: boolean\n          had_input_modal?: boolean\n          had_write?: boolean\n          id?: string\n          iteration_count?: number\n          run_id?: string\n          sessao_id?: string | null\n          started_at?: string\n          stream_mode?: string\n          tempo_execucao_ms?: number | null\n          termination_reason?: string\n          tokens_input?: number | null\n          tokens_output?: number | null\n          tool_repetition_count?: number\n          user_id?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"centro_comando_execucoes_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"centro_comando_execucoes_sessao_id_fkey\"\n            columns: [\"sessao_id\"]\n            isOneToOne: false\n            referencedRelation: \"centro_comando_sessoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"centro_comando_execucoes_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"centro_comando_execucoes_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      centro_comando_favoritos: {\n        Row: {\n          categoria: string | null\n          comando: string\n          compartilhado_equipe: boolean | null\n          created_at: string | null\n          descricao: string | null\n          escritorio_id: string\n          icone: string | null\n          id: string\n          nome: string\n          ordem: number | null\n          ultimo_uso: string | null\n          updated_at: string | null\n          user_id: string\n          uso_count: number | null\n        }\n        Insert: {\n          categoria?: string | null\n          comando: string\n          compartilhado_equipe?: boolean | null\n          created_at?: string | null\n          descricao?: string | null\n          escritorio_id: string\n          icone?: string | null\n          id?: string\n          nome: string\n          ordem?: number | null\n          ultimo_uso?: string | null\n          updated_at?: string | null\n          user_id: string\n          uso_count?: number | null\n        }\n        Update: {\n          categoria?: string | null\n          comando?: string\n          compartilhado_equipe?: boolean | null\n          created_at?: string | null\n          descricao?: string | null\n          escritorio_id?: string\n          icone?: string | null\n          id?: string\n          nome?: string\n          ordem?: number | null\n          ultimo_uso?: string | null\n          updated_at?: string | null\n          user_id?: string\n          uso_count?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"centro_comando_favoritos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      centro_comando_feedback: {\n        Row: {\n          assistant_response: string | null\n          comentario: string | null\n          correcao_aplicada: boolean | null\n          created_at: string | null\n          embedding: string | null\n          escritorio_id: string\n          id: string\n          incorporado_conhecimento: boolean | null\n          incorporado_em: string | null\n          mensagem_id: string | null\n          query_executada: string | null\n          rating: number | null\n          resposta_esperada: string | null\n          sessao_id: string | null\n          tipo_feedback: string\n          tool_calls: Json | null\n          user_id: string\n          user_message: string | null\n        }\n        Insert: {\n          assistant_response?: string | null\n          comentario?: string | null\n          correcao_aplicada?: boolean | null\n          created_at?: string | null\n          embedding?: string | null\n          escritorio_id: string\n          id?: string\n          incorporado_conhecimento?: boolean | null\n          incorporado_em?: string | null\n          mensagem_id?: string | null\n          query_executada?: string | null\n          rating?: number | null\n          resposta_esperada?: string | null\n          sessao_id?: string | null\n          tipo_feedback: string\n          tool_calls?: Json | null\n          user_id: string\n          user_message?: string | null\n        }\n        Update: {\n          assistant_response?: string | null\n          comentario?: string | null\n          correcao_aplicada?: boolean | null\n          created_at?: string | null\n          embedding?: string | null\n          escritorio_id?: string\n          id?: string\n          incorporado_conhecimento?: boolean | null\n          incorporado_em?: string | null\n          mensagem_id?: string | null\n          query_executada?: string | null\n          rating?: number | null\n          resposta_esperada?: string | null\n          sessao_id?: string | null\n          tipo_feedback?: string\n          tool_calls?: Json | null\n          user_id?: string\n          user_message?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"centro_comando_feedback_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"centro_comando_feedback_sessao_id_fkey\"\n            columns: [\"sessao_id\"]\n            isOneToOne: false\n            referencedRelation: \"centro_comando_sessoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"centro_comando_feedback_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"centro_comando_feedback_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      centro_comando_historico: {\n        Row: {\n          content: string\n          created_at: string | null\n          erro: string | null\n          escritorio_id: string\n          flow_type: string | null\n          had_confirmation_modal: boolean\n          had_error: boolean\n          had_input_modal: boolean\n          had_write: boolean\n          id: string\n          iteration_count: number\n          role: string\n          run_id: string | null\n          sessao_id: string | null\n          stream_mode: string | null\n          tempo_execucao_ms: number | null\n          termination_reason: string | null\n          tokens_input: number | null\n          tokens_output: number | null\n          tool_calls: Json | null\n          tool_results: Json | null\n          user_id: string\n        }\n        Insert: {\n          content: string\n          created_at?: string | null\n          erro?: string | null\n          escritorio_id: string\n          flow_type?: string | null\n          had_confirmation_modal?: boolean\n          had_error?: boolean\n          had_input_modal?: boolean\n          had_write?: boolean\n          id?: string\n          iteration_count?: number\n          role: string\n          run_id?: string | null\n          sessao_id?: string | null\n          stream_mode?: string | null\n          tempo_execucao_ms?: number | null\n          termination_reason?: string | null\n          tokens_input?: number | null\n          tokens_output?: number | null\n          tool_calls?: Json | null\n          tool_results?: Json | null\n          user_id: string\n        }\n        Update: {\n          content?: string\n          created_at?: string | null\n          erro?: string | null\n          escritorio_id?: string\n          flow_type?: string | null\n          had_confirmation_modal?: boolean\n          had_error?: boolean\n          had_input_modal?: boolean\n          had_write?: boolean\n          id?: string\n          iteration_count?: number\n          role?: string\n          run_id?: string | null\n          sessao_id?: string | null\n          stream_mode?: string | null\n          tempo_execucao_ms?: number | null\n          termination_reason?: string | null\n          tokens_input?: number | null\n          tokens_output?: number | null\n          tool_calls?: Json | null\n          tool_results?: Json | null\n          user_id?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"centro_comando_historico_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"centro_comando_historico_sessao_id_fkey\"\n            columns: [\"sessao_id\"]\n            isOneToOne: false\n            referencedRelation: \"centro_comando_sessoes\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      centro_comando_inputs_pendentes: {\n        Row: {\n          contexto: string\n          created_at: string\n          escritorio_id: string\n          expira_em: string | null\n          id: string\n          respondido_em: string | null\n          run_id: string\n          schema: Json\n          sessao_id: string\n          status: string\n          tipo: string\n          user_id: string\n          values: Json | null\n        }\n        Insert: {\n          contexto: string\n          created_at?: string\n          escritorio_id: string\n          expira_em?: string | null\n          id?: string\n          respondido_em?: string | null\n          run_id: string\n          schema: Json\n          sessao_id: string\n          status?: string\n          tipo: string\n          user_id: string\n          values?: Json | null\n        }\n        Update: {\n          contexto?: string\n          created_at?: string\n          escritorio_id?: string\n          expira_em?: string | null\n          id?: string\n          respondido_em?: string | null\n          run_id?: string\n          schema?: Json\n          sessao_id?: string\n          status?: string\n          tipo?: string\n          user_id?: string\n          values?: Json | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"centro_comando_inputs_pendentes_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"centro_comando_inputs_pendentes_sessao_id_fkey\"\n            columns: [\"sessao_id\"]\n            isOneToOne: false\n            referencedRelation: \"centro_comando_sessoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"centro_comando_inputs_pendentes_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"centro_comando_inputs_pendentes_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      centro_comando_knowledge_base: {\n        Row: {\n          chunk_id: string\n          content: string\n          created_at: string | null\n          embedding: string | null\n          hash: string | null\n          id: string\n          metadata: Json | null\n          source: string\n          source_path: string | null\n          title: string\n          updated_at: string | null\n          version: number | null\n        }\n        Insert: {\n          chunk_id: string\n          content: string\n          created_at?: string | null\n          embedding?: string | null\n          hash?: string | null\n          id?: string\n          metadata?: Json | null\n          source: string\n          source_path?: string | null\n          title: string\n          updated_at?: string | null\n          version?: number | null\n        }\n        Update: {\n          chunk_id?: string\n          content?: string\n          created_at?: string | null\n          embedding?: string | null\n          hash?: string | null\n          id?: string\n          metadata?: Json | null\n          source?: string\n          source_path?: string | null\n          title?: string\n          updated_at?: string | null\n          version?: number | null\n        }\n        Relationships: []\n      }\n      centro_comando_memories: {\n        Row: {\n          ativo: boolean | null\n          content: string\n          content_resumido: string | null\n          created_at: string | null\n          embedding: string | null\n          entidade: string | null\n          entidade_id: string | null\n          escritorio_id: string\n          expira_em: string | null\n          id: string\n          mensagem_origem_id: string | null\n          permanente: boolean | null\n          relevancia_score: number | null\n          sessao_id: string | null\n          tipo: string\n          ultimo_uso: string | null\n          updated_at: string | null\n          user_id: string\n          uso_count: number | null\n        }\n        Insert: {\n          ativo?: boolean | null\n          content: string\n          content_resumido?: string | null\n          created_at?: string | null\n          embedding?: string | null\n          entidade?: string | null\n          entidade_id?: string | null\n          escritorio_id: string\n          expira_em?: string | null\n          id?: string\n          mensagem_origem_id?: string | null\n          permanente?: boolean | null\n          relevancia_score?: number | null\n          sessao_id?: string | null\n          tipo: string\n          ultimo_uso?: string | null\n          updated_at?: string | null\n          user_id: string\n          uso_count?: number | null\n        }\n        Update: {\n          ativo?: boolean | null\n          content?: string\n          content_resumido?: string | null\n          created_at?: string | null\n          embedding?: string | null\n          entidade?: string | null\n          entidade_id?: string | null\n          escritorio_id?: string\n          expira_em?: string | null\n          id?: string\n          mensagem_origem_id?: string | null\n          permanente?: boolean | null\n          relevancia_score?: number | null\n          sessao_id?: string | null\n          tipo?: string\n          ultimo_uso?: string | null\n          updated_at?: string | null\n          user_id?: string\n          uso_count?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"centro_comando_memories_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"centro_comando_memories_sessao_id_fkey\"\n            columns: [\"sessao_id\"]\n            isOneToOne: false\n            referencedRelation: \"centro_comando_sessoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"centro_comando_memories_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"centro_comando_memories_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      centro_comando_sessoes: {\n        Row: {\n          ativo: boolean | null\n          contexto: Json | null\n          created_at: string | null\n          escritorio_id: string\n          fim: string | null\n          id: string\n          inicio: string | null\n          mensagens_count: number | null\n          titulo: string | null\n          updated_at: string | null\n          user_id: string\n        }\n        Insert: {\n          ativo?: boolean | null\n          contexto?: Json | null\n          created_at?: string | null\n          escritorio_id: string\n          fim?: string | null\n          id?: string\n          inicio?: string | null\n          mensagens_count?: number | null\n          titulo?: string | null\n          updated_at?: string | null\n          user_id: string\n        }\n        Update: {\n          ativo?: boolean | null\n          contexto?: Json | null\n          created_at?: string | null\n          escritorio_id?: string\n          fim?: string | null\n          id?: string\n          inicio?: string | null\n          mensagens_count?: number | null\n          titulo?: string | null\n          updated_at?: string | null\n          user_id?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"centro_comando_sessoes_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      consultivo_consultas: {\n        Row: {\n          andamentos: Json | null\n          anexos: Json | null\n          area: string\n          cliente_id: string\n          contrato_id: string | null\n          created_at: string | null\n          created_by: string | null\n          descricao: string | null\n          escritorio_id: string\n          id: string\n          numero: string | null\n          prazo: string | null\n          prioridade: string\n          responsavel_id: string\n          status: Database[\"public\"][\"Enums\"][\"status_consultivo\"]\n          titulo: string\n          updated_at: string | null\n        }\n        Insert: {\n          andamentos?: Json | null\n          anexos?: Json | null\n          area: string\n          cliente_id: string\n          contrato_id?: string | null\n          created_at?: string | null\n          created_by?: string | null\n          descricao?: string | null\n          escritorio_id: string\n          id?: string\n          numero?: string | null\n          prazo?: string | null\n          prioridade?: string\n          responsavel_id: string\n          status?: Database[\"public\"][\"Enums\"][\"status_consultivo\"]\n          titulo: string\n          updated_at?: string | null\n        }\n        Update: {\n          andamentos?: Json | null\n          anexos?: Json | null\n          area?: string\n          cliente_id?: string\n          contrato_id?: string | null\n          created_at?: string | null\n          created_by?: string | null\n          descricao?: string | null\n          escritorio_id?: string\n          id?: string\n          numero?: string | null\n          prazo?: string | null\n          prioridade?: string\n          responsavel_id?: string\n          status?: Database[\"public\"][\"Enums\"][\"status_consultivo\"]\n          titulo?: string\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"consultivo_consultas_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_consultas_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_consultas_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_contratos_honorarios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_consultas_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_receitas_por_contrato\"\n            referencedColumns: [\"contrato_id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_consultas_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_consultas_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_consultas_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_consultas_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_consultas_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      consultivo_timeline: {\n        Row: {\n          consulta_id: string\n          created_at: string | null\n          descricao: string | null\n          escritorio_id: string | null\n          id: string\n          metadata: Json | null\n          tipo_acao: string\n          user_id: string | null\n        }\n        Insert: {\n          consulta_id: string\n          created_at?: string | null\n          descricao?: string | null\n          escritorio_id?: string | null\n          id?: string\n          metadata?: Json | null\n          tipo_acao: string\n          user_id?: string | null\n        }\n        Update: {\n          consulta_id?: string\n          created_at?: string | null\n          descricao?: string | null\n          escritorio_id?: string | null\n          id?: string\n          metadata?: Json | null\n          tipo_acao?: string\n          user_id?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"consultivo_timeline_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_timeline_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_timeline_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"consultivo_id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_timeline_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_timeline_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_timeline_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      crm_oportunidades: {\n        Row: {\n          area_juridica:\n            | Database[\"public\"][\"Enums\"][\"area_juridica_enum\"]\n            | null\n          created_at: string\n          data_abertura: string\n          data_fechamento: string | null\n          data_prevista_fechamento: string | null\n          descricao: string | null\n          escritorio_id: string\n          etapa: Database[\"public\"][\"Enums\"][\"etapa_oportunidade_enum\"]\n          id: string\n          indicado_por: string | null\n          interacoes: Json | null\n          motivo_perda: Database[\"public\"][\"Enums\"][\"motivo_perda_enum\"] | null\n          origem: Database[\"public\"][\"Enums\"][\"origem_crm_enum\"] | null\n          pessoa_id: string\n          probabilidade: number | null\n          responsavel_id: string\n          tags: string[] | null\n          titulo: string\n          updated_at: string\n          valor_estimado: number | null\n          valor_fechado: number | null\n        }\n        Insert: {\n          area_juridica?:\n            | Database[\"public\"][\"Enums\"][\"area_juridica_enum\"]\n            | null\n          created_at?: string\n          data_abertura?: string\n          data_fechamento?: string | null\n          data_prevista_fechamento?: string | null\n          descricao?: string | null\n          escritorio_id: string\n          etapa?: Database[\"public\"][\"Enums\"][\"etapa_oportunidade_enum\"]\n          id?: string\n          indicado_por?: string | null\n          interacoes?: Json | null\n          motivo_perda?: Database[\"public\"][\"Enums\"][\"motivo_perda_enum\"] | null\n          origem?: Database[\"public\"][\"Enums\"][\"origem_crm_enum\"] | null\n          pessoa_id: string\n          probabilidade?: number | null\n          responsavel_id: string\n          tags?: string[] | null\n          titulo: string\n          updated_at?: string\n          valor_estimado?: number | null\n          valor_fechado?: number | null\n        }\n        Update: {\n          area_juridica?:\n            | Database[\"public\"][\"Enums\"][\"area_juridica_enum\"]\n            | null\n          created_at?: string\n          data_abertura?: string\n          data_fechamento?: string | null\n          data_prevista_fechamento?: string | null\n          descricao?: string | null\n          escritorio_id?: string\n          etapa?: Database[\"public\"][\"Enums\"][\"etapa_oportunidade_enum\"]\n          id?: string\n          indicado_por?: string | null\n          interacoes?: Json | null\n          motivo_perda?: Database[\"public\"][\"Enums\"][\"motivo_perda_enum\"] | null\n          origem?: Database[\"public\"][\"Enums\"][\"origem_crm_enum\"] | null\n          pessoa_id?: string\n          probabilidade?: number | null\n          responsavel_id?: string\n          tags?: string[] | null\n          titulo?: string\n          updated_at?: string\n          valor_estimado?: number | null\n          valor_fechado?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"crm_oportunidades_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"crm_oportunidades_indicado_por_fkey\"\n            columns: [\"indicado_por\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"crm_oportunidades_indicado_por_fkey\"\n            columns: [\"indicado_por\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"crm_oportunidades_pessoa_id_fkey\"\n            columns: [\"pessoa_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"crm_oportunidades_pessoa_id_fkey\"\n            columns: [\"pessoa_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"crm_oportunidades_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"crm_oportunidades_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      crm_pessoas: {\n        Row: {\n          bairro: string | null\n          cep: string | null\n          cidade: string | null\n          complemento: string | null\n          cpf_cnpj: string | null\n          created_at: string | null\n          email: string | null\n          escritorio_id: string\n          id: string\n          indicado_por: string | null\n          logradouro: string | null\n          nome_completo: string\n          nome_fantasia: string | null\n          numero: string | null\n          observacoes: string | null\n          origem: Database[\"public\"][\"Enums\"][\"origem_crm_enum\"] | null\n          status: Database[\"public\"][\"Enums\"][\"status_pessoa_enum\"]\n          tags: string[] | null\n          telefone: string | null\n          tipo_cadastro: Database[\"public\"][\"Enums\"][\"tipo_cadastro_enum\"]\n          tipo_pessoa: Database[\"public\"][\"Enums\"][\"tipo_pessoa_enum\"]\n          uf: Database[\"public\"][\"Enums\"][\"uf_enum\"] | null\n          updated_at: string | null\n        }\n        Insert: {\n          bairro?: string | null\n          cep?: string | null\n          cidade?: string | null\n          complemento?: string | null\n          cpf_cnpj?: string | null\n          created_at?: string | null\n          email?: string | null\n          escritorio_id: string\n          id?: string\n          indicado_por?: string | null\n          logradouro?: string | null\n          nome_completo: string\n          nome_fantasia?: string | null\n          numero?: string | null\n          observacoes?: string | null\n          origem?: Database[\"public\"][\"Enums\"][\"origem_crm_enum\"] | null\n          status?: Database[\"public\"][\"Enums\"][\"status_pessoa_enum\"]\n          tags?: string[] | null\n          telefone?: string | null\n          tipo_cadastro?: Database[\"public\"][\"Enums\"][\"tipo_cadastro_enum\"]\n          tipo_pessoa?: Database[\"public\"][\"Enums\"][\"tipo_pessoa_enum\"]\n          uf?: Database[\"public\"][\"Enums\"][\"uf_enum\"] | null\n          updated_at?: string | null\n        }\n        Update: {\n          bairro?: string | null\n          cep?: string | null\n          cidade?: string | null\n          complemento?: string | null\n          cpf_cnpj?: string | null\n          created_at?: string | null\n          email?: string | null\n          escritorio_id?: string\n          id?: string\n          indicado_por?: string | null\n          logradouro?: string | null\n          nome_completo?: string\n          nome_fantasia?: string | null\n          numero?: string | null\n          observacoes?: string | null\n          origem?: Database[\"public\"][\"Enums\"][\"origem_crm_enum\"] | null\n          status?: Database[\"public\"][\"Enums\"][\"status_pessoa_enum\"]\n          tags?: string[] | null\n          telefone?: string | null\n          tipo_cadastro?: Database[\"public\"][\"Enums\"][\"tipo_cadastro_enum\"]\n          tipo_pessoa?: Database[\"public\"][\"Enums\"][\"tipo_pessoa_enum\"]\n          uf?: Database[\"public\"][\"Enums\"][\"uf_enum\"] | null\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"clientes_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"clientes_indicado_por_fkey\"\n            columns: [\"indicado_por\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"clientes_indicado_por_fkey\"\n            columns: [\"indicado_por\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      cron_job_run_details: {\n        Row: {\n          end_time: string | null\n          error_message: string | null\n          id: string\n          job_name: string\n          result: Json | null\n          start_time: string\n          status: string | null\n        }\n        Insert: {\n          end_time?: string | null\n          error_message?: string | null\n          id?: string\n          job_name: string\n          result?: Json | null\n          start_time?: string\n          status?: string | null\n        }\n        Update: {\n          end_time?: string | null\n          error_message?: string | null\n          id?: string\n          job_name?: string\n          result?: Json | null\n          start_time?: string\n          status?: string | null\n        }\n        Relationships: []\n      }\n      dashboard_resumo_cache: {\n        Row: {\n          created_at: string | null\n          dados: Json\n          data_referencia: string\n          escritorio_id: string\n          gerado_em: string | null\n          gerado_por_ia: boolean | null\n          id: string\n          mensagem: string\n          periodo_geracao: string\n          saudacao: string\n          updated_at: string | null\n          user_id: string\n        }\n        Insert: {\n          created_at?: string | null\n          dados?: Json\n          data_referencia: string\n          escritorio_id: string\n          gerado_em?: string | null\n          gerado_por_ia?: boolean | null\n          id?: string\n          mensagem: string\n          periodo_geracao: string\n          saudacao: string\n          updated_at?: string | null\n          user_id: string\n        }\n        Update: {\n          created_at?: string | null\n          dados?: Json\n          data_referencia?: string\n          escritorio_id?: string\n          gerado_em?: string | null\n          gerado_por_ia?: boolean | null\n          id?: string\n          mensagem?: string\n          periodo_geracao?: string\n          saudacao?: string\n          updated_at?: string | null\n          user_id?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"dashboard_resumo_cache_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      datajud_consultas: {\n        Row: {\n          consultado_em: string\n          created_at: string | null\n          dados_normalizados: Json\n          expira_em: string\n          id: string\n          numero_cnj: string\n          tribunal: string | null\n          user_id: string | null\n        }\n        Insert: {\n          consultado_em?: string\n          created_at?: string | null\n          dados_normalizados: Json\n          expira_em: string\n          id?: string\n          numero_cnj: string\n          tribunal?: string | null\n          user_id?: string | null\n        }\n        Update: {\n          consultado_em?: string\n          created_at?: string | null\n          dados_normalizados?: Json\n          expira_em?: string\n          id?: string\n          numero_cnj?: string\n          tribunal?: string | null\n          user_id?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"datajud_consultas_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"datajud_consultas_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      documentos: {\n        Row: {\n          categoria: string | null\n          consulta_id: string | null\n          created_at: string | null\n          created_by: string | null\n          descricao: string | null\n          escritorio_id: string\n          id: string\n          mime_type: string | null\n          nome: string\n          processo_id: string | null\n          storage_path: string | null\n          tags: string[] | null\n          tamanho: number | null\n          tipo: string | null\n          updated_at: string | null\n          versao: number | null\n          versao_anterior_id: string | null\n        }\n        Insert: {\n          categoria?: string | null\n          consulta_id?: string | null\n          created_at?: string | null\n          created_by?: string | null\n          descricao?: string | null\n          escritorio_id: string\n          id?: string\n          mime_type?: string | null\n          nome: string\n          processo_id?: string | null\n          storage_path?: string | null\n          tags?: string[] | null\n          tamanho?: number | null\n          tipo?: string | null\n          updated_at?: string | null\n          versao?: number | null\n          versao_anterior_id?: string | null\n        }\n        Update: {\n          categoria?: string | null\n          consulta_id?: string | null\n          created_at?: string | null\n          created_by?: string | null\n          descricao?: string | null\n          escritorio_id?: string\n          id?: string\n          mime_type?: string | null\n          nome?: string\n          processo_id?: string | null\n          storage_path?: string | null\n          tags?: string[] | null\n          tamanho?: number | null\n          tipo?: string | null\n          updated_at?: string | null\n          versao?: number | null\n          versao_anterior_id?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"documentos_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"documentos_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"documentos_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"consultivo_id\"]\n          },\n          {\n            foreignKeyName: \"documentos_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"documentos_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"documentos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"documentos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"documentos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"documentos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"documentos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"documentos_versao_anterior_id_fkey\"\n            columns: [\"versao_anterior_id\"]\n            isOneToOne: false\n            referencedRelation: \"documentos\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      documentos_tags: {\n        Row: {\n          created_at: string | null\n          created_by: string | null\n          documento_id: string\n          id: string\n          tag_id: string\n        }\n        Insert: {\n          created_at?: string | null\n          created_by?: string | null\n          documento_id: string\n          id?: string\n          tag_id: string\n        }\n        Update: {\n          created_at?: string | null\n          created_by?: string | null\n          documento_id?: string\n          id?: string\n          tag_id?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"documentos_tags_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"documentos_tags_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"documentos_tags_tag_id_fkey\"\n            columns: [\"tag_id\"]\n            isOneToOne: false\n            referencedRelation: \"tags_master\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      escavador_cache: {\n        Row: {\n          consultado_em: string | null\n          dados_capa: Json\n          dados_movimentacoes: Json | null\n          dados_partes: Json | null\n          expira_em: string | null\n          id: string\n          numero_cnj: string\n        }\n        Insert: {\n          consultado_em?: string | null\n          dados_capa: Json\n          dados_movimentacoes?: Json | null\n          dados_partes?: Json | null\n          expira_em?: string | null\n          id?: string\n          numero_cnj: string\n        }\n        Update: {\n          consultado_em?: string | null\n          dados_capa?: Json\n          dados_movimentacoes?: Json | null\n          dados_partes?: Json | null\n          expira_em?: string | null\n          id?: string\n          numero_cnj?: string\n        }\n        Relationships: []\n      }\n      escavador_config: {\n        Row: {\n          callback_token: string | null\n          callback_url: string | null\n          created_at: string | null\n          creditos_usados_mes: number | null\n          escritorio_id: string\n          id: string\n          monitoramento_ativo: boolean | null\n          ultimo_reset_creditos: string | null\n          updated_at: string | null\n        }\n        Insert: {\n          callback_token?: string | null\n          callback_url?: string | null\n          created_at?: string | null\n          creditos_usados_mes?: number | null\n          escritorio_id: string\n          id?: string\n          monitoramento_ativo?: boolean | null\n          ultimo_reset_creditos?: string | null\n          updated_at?: string | null\n        }\n        Update: {\n          callback_token?: string | null\n          callback_url?: string | null\n          created_at?: string | null\n          creditos_usados_mes?: number | null\n          escritorio_id?: string\n          id?: string\n          monitoramento_ativo?: boolean | null\n          ultimo_reset_creditos?: string | null\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"escavador_config_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: true\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      escritorios: {\n        Row: {\n          ativo: boolean | null\n          cnpj: string | null\n          config: Json | null\n          created_at: string | null\n          descricao: string | null\n          email: string | null\n          endereco: Json | null\n          grupo_id: string\n          id: string\n          logo_url: string | null\n          max_usuarios: number | null\n          nome: string\n          owner_id: string | null\n          plano: string | null\n          setup_completado_em: string | null\n          setup_completo: boolean | null\n          setup_etapa_atual: string | null\n          site: string | null\n          telefone: string | null\n          updated_at: string | null\n        }\n        Insert: {\n          ativo?: boolean | null\n          cnpj?: string | null\n          config?: Json | null\n          created_at?: string | null\n          descricao?: string | null\n          email?: string | null\n          endereco?: Json | null\n          grupo_id: string\n          id?: string\n          logo_url?: string | null\n          max_usuarios?: number | null\n          nome: string\n          owner_id?: string | null\n          plano?: string | null\n          setup_completado_em?: string | null\n          setup_completo?: boolean | null\n          setup_etapa_atual?: string | null\n          site?: string | null\n          telefone?: string | null\n          updated_at?: string | null\n        }\n        Update: {\n          ativo?: boolean | null\n          cnpj?: string | null\n          config?: Json | null\n          created_at?: string | null\n          descricao?: string | null\n          email?: string | null\n          endereco?: Json | null\n          grupo_id?: string\n          id?: string\n          logo_url?: string | null\n          max_usuarios?: number | null\n          nome?: string\n          owner_id?: string | null\n          plano?: string | null\n          setup_completado_em?: string | null\n          setup_completo?: boolean | null\n          setup_etapa_atual?: string | null\n          site?: string | null\n          telefone?: string | null\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"escritorios_grupo_id_fkey\"\n            columns: [\"grupo_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"escritorios_owner_id_fkey\"\n            columns: [\"owner_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"escritorios_owner_id_fkey\"\n            columns: [\"owner_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      escritorios_cargos: {\n        Row: {\n          ativo: boolean | null\n          cor: string | null\n          created_at: string | null\n          descricao: string | null\n          escritorio_id: string\n          id: string\n          nivel: number\n          nome: string\n          nome_display: string\n          updated_at: string | null\n          valor_hora_padrao: number | null\n        }\n        Insert: {\n          ativo?: boolean | null\n          cor?: string | null\n          created_at?: string | null\n          descricao?: string | null\n          escritorio_id: string\n          id?: string\n          nivel: number\n          nome: string\n          nome_display: string\n          updated_at?: string | null\n          valor_hora_padrao?: number | null\n        }\n        Update: {\n          ativo?: boolean | null\n          cor?: string | null\n          created_at?: string | null\n          descricao?: string | null\n          escritorio_id?: string\n          id?: string\n          nivel?: number\n          nome?: string\n          nome_display?: string\n          updated_at?: string | null\n          valor_hora_padrao?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"escritorios_cargos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      escritorios_cargos_permissoes: {\n        Row: {\n          cargo_id: string\n          created_at: string | null\n          id: string\n          modulo: string\n          pode_criar: boolean | null\n          pode_editar: boolean | null\n          pode_excluir: boolean | null\n          pode_exportar: boolean | null\n          pode_visualizar: boolean | null\n          updated_at: string | null\n        }\n        Insert: {\n          cargo_id: string\n          created_at?: string | null\n          id?: string\n          modulo: string\n          pode_criar?: boolean | null\n          pode_editar?: boolean | null\n          pode_excluir?: boolean | null\n          pode_exportar?: boolean | null\n          pode_visualizar?: boolean | null\n          updated_at?: string | null\n        }\n        Update: {\n          cargo_id?: string\n          created_at?: string | null\n          id?: string\n          modulo?: string\n          pode_criar?: boolean | null\n          pode_editar?: boolean | null\n          pode_excluir?: boolean | null\n          pode_exportar?: boolean | null\n          pode_visualizar?: boolean | null\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"escritorios_cargos_permissoes_cargo_id_fkey\"\n            columns: [\"cargo_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios_cargos\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      escritorios_convites: {\n        Row: {\n          aceito: boolean | null\n          aceito_em: string | null\n          aceito_por: string | null\n          cargo_id: string | null\n          convidado_por: string\n          created_at: string | null\n          email: string\n          escritorio_id: string\n          expira_em: string | null\n          id: string\n          role: string\n          token: string | null\n        }\n        Insert: {\n          aceito?: boolean | null\n          aceito_em?: string | null\n          aceito_por?: string | null\n          cargo_id?: string | null\n          convidado_por: string\n          created_at?: string | null\n          email: string\n          escritorio_id: string\n          expira_em?: string | null\n          id?: string\n          role: string\n          token?: string | null\n        }\n        Update: {\n          aceito?: boolean | null\n          aceito_em?: string | null\n          aceito_por?: string | null\n          cargo_id?: string | null\n          convidado_por?: string\n          created_at?: string | null\n          email?: string\n          escritorio_id?: string\n          expira_em?: string | null\n          id?: string\n          role?: string\n          token?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"escritorios_convites_aceito_por_fkey\"\n            columns: [\"aceito_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"escritorios_convites_aceito_por_fkey\"\n            columns: [\"aceito_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"escritorios_convites_cargo_id_fkey\"\n            columns: [\"cargo_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios_cargos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"escritorios_convites_convidado_por_fkey\"\n            columns: [\"convidado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"escritorios_convites_convidado_por_fkey\"\n            columns: [\"convidado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"escritorios_convites_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      escritorios_permissoes: {\n        Row: {\n          created_at: string | null\n          id: string\n          modulo: string\n          permissoes: string[] | null\n          usuario_escritorio_id: string\n        }\n        Insert: {\n          created_at?: string | null\n          id?: string\n          modulo: string\n          permissoes?: string[] | null\n          usuario_escritorio_id: string\n        }\n        Update: {\n          created_at?: string | null\n          id?: string\n          modulo?: string\n          permissoes?: string[] | null\n          usuario_escritorio_id?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"escritorios_permissoes_usuario_escritorio_id_fkey\"\n            columns: [\"usuario_escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios_usuarios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      escritorios_usuarios: {\n        Row: {\n          ativo: boolean | null\n          cargo_id: string | null\n          convidado_em: string | null\n          convidado_por: string | null\n          created_at: string | null\n          escritorio_id: string\n          id: string\n          is_owner: boolean | null\n          meta_horas_mensal: number | null\n          percentual_comissao: number | null\n          role: string\n          salario_base: number | null\n          ultimo_acesso: string | null\n          user_id: string\n          valor_hora: number | null\n        }\n        Insert: {\n          ativo?: boolean | null\n          cargo_id?: string | null\n          convidado_em?: string | null\n          convidado_por?: string | null\n          created_at?: string | null\n          escritorio_id: string\n          id?: string\n          is_owner?: boolean | null\n          meta_horas_mensal?: number | null\n          percentual_comissao?: number | null\n          role: string\n          salario_base?: number | null\n          ultimo_acesso?: string | null\n          user_id: string\n          valor_hora?: number | null\n        }\n        Update: {\n          ativo?: boolean | null\n          cargo_id?: string | null\n          convidado_em?: string | null\n          convidado_por?: string | null\n          created_at?: string | null\n          escritorio_id?: string\n          id?: string\n          is_owner?: boolean | null\n          meta_horas_mensal?: number | null\n          percentual_comissao?: number | null\n          role?: string\n          salario_base?: number | null\n          ultimo_acesso?: string | null\n          user_id?: string\n          valor_hora?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"escritorios_usuarios_cargo_id_fkey\"\n            columns: [\"cargo_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios_cargos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"usuarios_escritorios_convidado_por_fkey\"\n            columns: [\"convidado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"usuarios_escritorios_convidado_por_fkey\"\n            columns: [\"convidado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"usuarios_escritorios_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"usuarios_escritorios_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"usuarios_escritorios_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      escritorios_usuarios_ativo: {\n        Row: {\n          escritorio_id: string\n          updated_at: string | null\n          user_id: string\n        }\n        Insert: {\n          escritorio_id: string\n          updated_at?: string | null\n          user_id: string\n        }\n        Update: {\n          escritorio_id?: string\n          updated_at?: string | null\n          user_id?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"usuarios_escritorio_ativo_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"usuarios_escritorio_ativo_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: true\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"usuarios_escritorio_ativo_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: true\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      financeiro_alertas_cobranca: {\n        Row: {\n          ato_tipo_id: string | null\n          created_at: string | null\n          descricao: string | null\n          escritorio_id: string\n          id: string\n          justificativa_ignorado: string | null\n          movimentacao_id: string | null\n          processo_id: string\n          receita_id: string | null\n          resolvido_em: string | null\n          resolvido_por: string | null\n          status: string\n          tipo_alerta: string\n          titulo: string\n          updated_at: string | null\n          valor_sugerido: number | null\n        }\n        Insert: {\n          ato_tipo_id?: string | null\n          created_at?: string | null\n          descricao?: string | null\n          escritorio_id: string\n          id?: string\n          justificativa_ignorado?: string | null\n          movimentacao_id?: string | null\n          processo_id: string\n          receita_id?: string | null\n          resolvido_em?: string | null\n          resolvido_por?: string | null\n          status?: string\n          tipo_alerta?: string\n          titulo: string\n          updated_at?: string | null\n          valor_sugerido?: number | null\n        }\n        Update: {\n          ato_tipo_id?: string | null\n          created_at?: string | null\n          descricao?: string | null\n          escritorio_id?: string\n          id?: string\n          justificativa_ignorado?: string | null\n          movimentacao_id?: string | null\n          processo_id?: string\n          receita_id?: string | null\n          resolvido_em?: string | null\n          resolvido_por?: string | null\n          status?: string\n          tipo_alerta?: string\n          titulo?: string\n          updated_at?: string | null\n          valor_sugerido?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"financeiro_alertas_cobranca_ato_tipo_id_fkey\"\n            columns: [\"ato_tipo_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_atos_processuais_tipos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_cobranca_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_cobranca_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_cobranca_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_cobranca_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_cobranca_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_cobranca_receita_id_fkey\"\n            columns: [\"receita_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_receitas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_cobranca_receita_id_fkey\"\n            columns: [\"receita_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_historico_cobrancas_processo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_cobranca_resolvido_por_fkey\"\n            columns: [\"resolvido_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_cobranca_resolvido_por_fkey\"\n            columns: [\"resolvido_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      financeiro_alertas_limite_contrato: {\n        Row: {\n          cliente_id: string\n          contrato_id: string\n          created_at: string | null\n          escritorio_id: string\n          id: string\n          limite_meses: number\n          mensagem: string\n          meses_cobrados: number\n          resolvido_em: string | null\n          resolvido_por: string | null\n          status: string\n          titulo: string\n        }\n        Insert: {\n          cliente_id: string\n          contrato_id: string\n          created_at?: string | null\n          escritorio_id: string\n          id?: string\n          limite_meses: number\n          mensagem: string\n          meses_cobrados: number\n          resolvido_em?: string | null\n          resolvido_por?: string | null\n          status?: string\n          titulo: string\n        }\n        Update: {\n          cliente_id?: string\n          contrato_id?: string\n          created_at?: string | null\n          escritorio_id?: string\n          id?: string\n          limite_meses?: number\n          mensagem?: string\n          meses_cobrados?: number\n          resolvido_em?: string | null\n          resolvido_por?: string | null\n          status?: string\n          titulo?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"financeiro_alertas_limite_contrato_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_limite_contrato_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_limite_contrato_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_contratos_honorarios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_limite_contrato_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_receitas_por_contrato\"\n            referencedColumns: [\"contrato_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_limite_contrato_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_limite_contrato_resolvido_por_fkey\"\n            columns: [\"resolvido_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_limite_contrato_resolvido_por_fkey\"\n            columns: [\"resolvido_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      financeiro_atos_processuais_tipos: {\n        Row: {\n          area_juridica: string\n          ativo: boolean | null\n          codigo: string\n          created_at: string | null\n          descricao: string | null\n          escritorio_id: string\n          id: string\n          nome: string\n          ordem: number | null\n          percentual_padrao: number | null\n          updated_at: string | null\n          valor_fixo_padrao: number | null\n        }\n        Insert: {\n          area_juridica: string\n          ativo?: boolean | null\n          codigo: string\n          created_at?: string | null\n          descricao?: string | null\n          escritorio_id: string\n          id?: string\n          nome: string\n          ordem?: number | null\n          percentual_padrao?: number | null\n          updated_at?: string | null\n          valor_fixo_padrao?: number | null\n        }\n        Update: {\n          area_juridica?: string\n          ativo?: boolean | null\n          codigo?: string\n          created_at?: string | null\n          descricao?: string | null\n          escritorio_id?: string\n          id?: string\n          nome?: string\n          ordem?: number | null\n          percentual_padrao?: number | null\n          updated_at?: string | null\n          valor_fixo_padrao?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"financeiro_atos_processuais_tipos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      financeiro_contas_bancarias: {\n        Row: {\n          agencia: string | null\n          ativa: boolean | null\n          banco: string\n          conta_principal: boolean | null\n          created_at: string | null\n          data_abertura: string | null\n          escritorio_id: string\n          id: string\n          numero_conta: string | null\n          saldo_atual: number\n          saldo_inicial: number\n          tipo_conta: string\n          titular: string | null\n          updated_at: string | null\n        }\n        Insert: {\n          agencia?: string | null\n          ativa?: boolean | null\n          banco: string\n          conta_principal?: boolean | null\n          created_at?: string | null\n          data_abertura?: string | null\n          escritorio_id: string\n          id?: string\n          numero_conta?: string | null\n          saldo_atual?: number\n          saldo_inicial?: number\n          tipo_conta: string\n          titular?: string | null\n          updated_at?: string | null\n        }\n        Update: {\n          agencia?: string | null\n          ativa?: boolean | null\n          banco?: string\n          conta_principal?: boolean | null\n          created_at?: string | null\n          data_abertura?: string | null\n          escritorio_id?: string\n          id?: string\n          numero_conta?: string | null\n          saldo_atual?: number\n          saldo_inicial?: number\n          tipo_conta?: string\n          titular?: string | null\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"contas_bancarias_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      financeiro_contratos_honorarios: {\n        Row: {\n          ativo: boolean | null\n          atos: Json | null\n          clausulas: string | null\n          cliente_id: string\n          config: Json | null\n          created_at: string | null\n          data_fim: string | null\n          data_inicio: string\n          data_ultimo_reajuste: string | null\n          descricao: string | null\n          escritorio_cobranca_id: string | null\n          escritorio_id: string\n          forma_cobranca: string | null\n          formas_pagamento: Json | null\n          grupo_clientes: Json | null\n          horas_faturaveis: boolean | null\n          id: string\n          indice_reajuste: string | null\n          numero_contrato: string\n          reajuste_ativo: boolean | null\n          tipo_contrato: string\n          titulo: string | null\n          updated_at: string | null\n          valor_atualizado: number | null\n          valor_total: number | null\n          valores_cargo: Json | null\n        }\n        Insert: {\n          ativo?: boolean | null\n          atos?: Json | null\n          clausulas?: string | null\n          cliente_id: string\n          config?: Json | null\n          created_at?: string | null\n          data_fim?: string | null\n          data_inicio: string\n          data_ultimo_reajuste?: string | null\n          descricao?: string | null\n          escritorio_cobranca_id?: string | null\n          escritorio_id: string\n          forma_cobranca?: string | null\n          formas_pagamento?: Json | null\n          grupo_clientes?: Json | null\n          horas_faturaveis?: boolean | null\n          id?: string\n          indice_reajuste?: string | null\n          numero_contrato: string\n          reajuste_ativo?: boolean | null\n          tipo_contrato: string\n          titulo?: string | null\n          updated_at?: string | null\n          valor_atualizado?: number | null\n          valor_total?: number | null\n          valores_cargo?: Json | null\n        }\n        Update: {\n          ativo?: boolean | null\n          atos?: Json | null\n          clausulas?: string | null\n          cliente_id?: string\n          config?: Json | null\n          created_at?: string | null\n          data_fim?: string | null\n          data_inicio?: string\n          data_ultimo_reajuste?: string | null\n          descricao?: string | null\n          escritorio_cobranca_id?: string | null\n          escritorio_id?: string\n          forma_cobranca?: string | null\n          formas_pagamento?: Json | null\n          grupo_clientes?: Json | null\n          horas_faturaveis?: boolean | null\n          id?: string\n          indice_reajuste?: string | null\n          numero_contrato?: string\n          reajuste_ativo?: boolean | null\n          tipo_contrato?: string\n          titulo?: string | null\n          updated_at?: string | null\n          valor_atualizado?: number | null\n          valor_total?: number | null\n          valores_cargo?: Json | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"contratos_honorarios_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"contratos_honorarios_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"contratos_honorarios_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_contratos_honorarios_escritorio_cobranca_id_fkey\"\n            columns: [\"escritorio_cobranca_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      financeiro_despesas: {\n        Row: {\n          advogado_id: string | null\n          categoria: Database[\"public\"][\"Enums\"][\"despesa_categoria_enum\"]\n          cliente_id: string | null\n          comprovante_url: string | null\n          config_recorrencia: Json | null\n          consulta_id: string | null\n          consultivo_id: string | null\n          conta_bancaria_id: string | null\n          created_at: string | null\n          data_pagamento: string | null\n          data_vencimento: string\n          descricao: string\n          despesa_pai_id: string | null\n          documento_fiscal: string | null\n          escritorio_id: string\n          fatura_id: string | null\n          faturado: boolean | null\n          forma_pagamento:\n            | Database[\"public\"][\"Enums\"][\"forma_pagamento_enum\"]\n            | null\n          fornecedor: string | null\n          honorario_reembolso_id: string | null\n          id: string\n          numero_parcela: number | null\n          numero_parcelas: number | null\n          parcelado: boolean | null\n          processo_id: string | null\n          recorrente: boolean | null\n          reembolsado: boolean | null\n          reembolsavel: boolean | null\n          reembolso_fatura_id: string | null\n          reembolso_status: string | null\n          status: Database[\"public\"][\"Enums\"][\"despesa_status_enum\"]\n          updated_at: string | null\n          valor: number\n        }\n        Insert: {\n          advogado_id?: string | null\n          categoria: Database[\"public\"][\"Enums\"][\"despesa_categoria_enum\"]\n          cliente_id?: string | null\n          comprovante_url?: string | null\n          config_recorrencia?: Json | null\n          consulta_id?: string | null\n          consultivo_id?: string | null\n          conta_bancaria_id?: string | null\n          created_at?: string | null\n          data_pagamento?: string | null\n          data_vencimento: string\n          descricao: string\n          despesa_pai_id?: string | null\n          documento_fiscal?: string | null\n          escritorio_id: string\n          fatura_id?: string | null\n          faturado?: boolean | null\n          forma_pagamento?:\n            | Database[\"public\"][\"Enums\"][\"forma_pagamento_enum\"]\n            | null\n          fornecedor?: string | null\n          honorario_reembolso_id?: string | null\n          id?: string\n          numero_parcela?: number | null\n          numero_parcelas?: number | null\n          parcelado?: boolean | null\n          processo_id?: string | null\n          recorrente?: boolean | null\n          reembolsado?: boolean | null\n          reembolsavel?: boolean | null\n          reembolso_fatura_id?: string | null\n          reembolso_status?: string | null\n          status?: Database[\"public\"][\"Enums\"][\"despesa_status_enum\"]\n          updated_at?: string | null\n          valor: number\n        }\n        Update: {\n          advogado_id?: string | null\n          categoria?: Database[\"public\"][\"Enums\"][\"despesa_categoria_enum\"]\n          cliente_id?: string | null\n          comprovante_url?: string | null\n          config_recorrencia?: Json | null\n          consulta_id?: string | null\n          consultivo_id?: string | null\n          conta_bancaria_id?: string | null\n          created_at?: string | null\n          data_pagamento?: string | null\n          data_vencimento?: string\n          descricao?: string\n          despesa_pai_id?: string | null\n          documento_fiscal?: string | null\n          escritorio_id?: string\n          fatura_id?: string | null\n          faturado?: boolean | null\n          forma_pagamento?:\n            | Database[\"public\"][\"Enums\"][\"forma_pagamento_enum\"]\n            | null\n          fornecedor?: string | null\n          honorario_reembolso_id?: string | null\n          id?: string\n          numero_parcela?: number | null\n          numero_parcelas?: number | null\n          parcelado?: boolean | null\n          processo_id?: string | null\n          recorrente?: boolean | null\n          reembolsado?: boolean | null\n          reembolsavel?: boolean | null\n          reembolso_fatura_id?: string | null\n          reembolso_status?: string | null\n          status?: Database[\"public\"][\"Enums\"][\"despesa_status_enum\"]\n          updated_at?: string | null\n          valor?: number\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"despesas_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_advogado_id_fkey\"\n            columns: [\"advogado_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_advogado_id_fkey\"\n            columns: [\"advogado_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"consultivo_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"consultivo_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_despesa_pai_id_fkey\"\n            columns: [\"despesa_pai_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_despesas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_despesa_pai_id_fkey\"\n            columns: [\"despesa_pai_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_despesas_reembolsaveis_pendentes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_fatura_id_fkey\"\n            columns: [\"fatura_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_faturamento_faturas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_fatura_id_fkey\"\n            columns: [\"fatura_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_faturas_geradas\"\n            referencedColumns: [\"fatura_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_honorario_reembolso_id_fkey\"\n            columns: [\"honorario_reembolso_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_receitas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_honorario_reembolso_id_fkey\"\n            columns: [\"honorario_reembolso_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_historico_cobrancas_processo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_reembolso_fatura_id_fkey\"\n            columns: [\"reembolso_fatura_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_faturamento_faturas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_reembolso_fatura_id_fkey\"\n            columns: [\"reembolso_fatura_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_faturas_geradas\"\n            referencedColumns: [\"fatura_id\"]\n          },\n          {\n            foreignKeyName: \"fk_despesas_conta_bancaria\"\n            columns: [\"conta_bancaria_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_contas_bancarias\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"fk_despesas_conta_bancaria\"\n            columns: [\"conta_bancaria_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_contas_bancarias_saldo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"fk_despesas_conta_bancaria\"\n            columns: [\"conta_bancaria_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_saldos_contas_bancarias\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      financeiro_extrato_bancario: {\n        Row: {\n          categoria: string | null\n          comprovante_url: string | null\n          conciliado: boolean | null\n          conciliado_em: string | null\n          conta_bancaria_id: string\n          created_at: string | null\n          data_lancamento: string\n          descricao: string\n          escritorio_id: string\n          id: string\n          observacoes: string | null\n          origem_id: string | null\n          origem_tipo: string\n          saldo_apos_lancamento: number\n          tipo: string\n          transferencia_id: string | null\n          updated_at: string | null\n          valor: number\n        }\n        Insert: {\n          categoria?: string | null\n          comprovante_url?: string | null\n          conciliado?: boolean | null\n          conciliado_em?: string | null\n          conta_bancaria_id: string\n          created_at?: string | null\n          data_lancamento?: string\n          descricao: string\n          escritorio_id: string\n          id?: string\n          observacoes?: string | null\n          origem_id?: string | null\n          origem_tipo: string\n          saldo_apos_lancamento: number\n          tipo: string\n          transferencia_id?: string | null\n          updated_at?: string | null\n          valor: number\n        }\n        Update: {\n          categoria?: string | null\n          comprovante_url?: string | null\n          conciliado?: boolean | null\n          conciliado_em?: string | null\n          conta_bancaria_id?: string\n          created_at?: string | null\n          data_lancamento?: string\n          descricao?: string\n          escritorio_id?: string\n          id?: string\n          observacoes?: string | null\n          origem_id?: string | null\n          origem_tipo?: string\n          saldo_apos_lancamento?: number\n          tipo?: string\n          transferencia_id?: string | null\n          updated_at?: string | null\n          valor?: number\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"conta_bancaria_lancamentos_conta_bancaria_id_fkey\"\n            columns: [\"conta_bancaria_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_contas_bancarias\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"conta_bancaria_lancamentos_conta_bancaria_id_fkey\"\n            columns: [\"conta_bancaria_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_contas_bancarias_saldo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"conta_bancaria_lancamentos_conta_bancaria_id_fkey\"\n            columns: [\"conta_bancaria_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_saldos_contas_bancarias\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_contas_lancamentos_transferencia_id_fkey\"\n            columns: [\"transferencia_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_extrato_bancario\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"fk_financeiro_contas_lancamentos_escritorio\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      financeiro_faturamento_faturas: {\n        Row: {\n          cancelada_em: string | null\n          cancelada_por: string | null\n          cliente_id: string\n          cobrancas: Json | null\n          config_agendamento: Json | null\n          created_at: string | null\n          data_emissao: string\n          data_vencimento: string\n          descricao: string | null\n          enviada_em: string | null\n          escritorio_cobranca_id: string | null\n          escritorio_id: string\n          forma_pagamento_preferencial: string | null\n          gerada_automaticamente: boolean | null\n          id: string\n          itens: Json | null\n          motivo_cancelamento: string | null\n          numero_fatura: string\n          numero_parcelas: number | null\n          observacoes: string | null\n          paga_em: string | null\n          parcelado: boolean | null\n          pdf_url: string | null\n          status: string\n          updated_at: string | null\n          valor_total: number\n        }\n        Insert: {\n          cancelada_em?: string | null\n          cancelada_por?: string | null\n          cliente_id: string\n          cobrancas?: Json | null\n          config_agendamento?: Json | null\n          created_at?: string | null\n          data_emissao?: string\n          data_vencimento: string\n          descricao?: string | null\n          enviada_em?: string | null\n          escritorio_cobranca_id?: string | null\n          escritorio_id: string\n          forma_pagamento_preferencial?: string | null\n          gerada_automaticamente?: boolean | null\n          id?: string\n          itens?: Json | null\n          motivo_cancelamento?: string | null\n          numero_fatura: string\n          numero_parcelas?: number | null\n          observacoes?: string | null\n          paga_em?: string | null\n          parcelado?: boolean | null\n          pdf_url?: string | null\n          status?: string\n          updated_at?: string | null\n          valor_total?: number\n        }\n        Update: {\n          cancelada_em?: string | null\n          cancelada_por?: string | null\n          cliente_id?: string\n          cobrancas?: Json | null\n          config_agendamento?: Json | null\n          created_at?: string | null\n          data_emissao?: string\n          data_vencimento?: string\n          descricao?: string | null\n          enviada_em?: string | null\n          escritorio_cobranca_id?: string | null\n          escritorio_id?: string\n          forma_pagamento_preferencial?: string | null\n          gerada_automaticamente?: boolean | null\n          id?: string\n          itens?: Json | null\n          motivo_cancelamento?: string | null\n          numero_fatura?: string\n          numero_parcelas?: number | null\n          observacoes?: string | null\n          paga_em?: string | null\n          parcelado?: boolean | null\n          pdf_url?: string | null\n          status?: string\n          updated_at?: string | null\n          valor_total?: number\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"faturas_cancelada_por_fkey\"\n            columns: [\"cancelada_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"faturas_cancelada_por_fkey\"\n            columns: [\"cancelada_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"faturas_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"faturas_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"faturas_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_faturamento_faturas_escritorio_cobranca_id_fkey\"\n            columns: [\"escritorio_cobranca_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      financeiro_fechamentos_pasta: {\n        Row: {\n          aprovado_em: string | null\n          aprovado_por: string | null\n          cliente_id: string\n          competencia: string\n          contrato_id: string\n          created_at: string | null\n          escritorio_id: string\n          fatura_id: string | null\n          faturado_em: string | null\n          id: string\n          processos: Json\n          qtd_processos: number\n          status: string\n          updated_at: string | null\n          valor_total: number\n          valor_unitario: number\n        }\n        Insert: {\n          aprovado_em?: string | null\n          aprovado_por?: string | null\n          cliente_id: string\n          competencia: string\n          contrato_id: string\n          created_at?: string | null\n          escritorio_id: string\n          fatura_id?: string | null\n          faturado_em?: string | null\n          id?: string\n          processos?: Json\n          qtd_processos?: number\n          status?: string\n          updated_at?: string | null\n          valor_total: number\n          valor_unitario: number\n        }\n        Update: {\n          aprovado_em?: string | null\n          aprovado_por?: string | null\n          cliente_id?: string\n          competencia?: string\n          contrato_id?: string\n          created_at?: string | null\n          escritorio_id?: string\n          fatura_id?: string | null\n          faturado_em?: string | null\n          id?: string\n          processos?: Json\n          qtd_processos?: number\n          status?: string\n          updated_at?: string | null\n          valor_total?: number\n          valor_unitario?: number\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"financeiro_fechamentos_pasta_aprovado_por_fkey\"\n            columns: [\"aprovado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_fechamentos_pasta_aprovado_por_fkey\"\n            columns: [\"aprovado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_fechamentos_pasta_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_fechamentos_pasta_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_fechamentos_pasta_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_contratos_honorarios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_fechamentos_pasta_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_receitas_por_contrato\"\n            referencedColumns: [\"contrato_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_fechamentos_pasta_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_fechamentos_pasta_fatura_id_fkey\"\n            columns: [\"fatura_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_faturamento_faturas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_fechamentos_pasta_fatura_id_fkey\"\n            columns: [\"fatura_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_faturas_geradas\"\n            referencedColumns: [\"fatura_id\"]\n          },\n        ]\n      }\n      financeiro_horas_acumuladas_ato: {\n        Row: {\n          ato_tipo_id: string\n          contrato_id: string\n          created_at: string | null\n          escritorio_id: string\n          finalizado_em: string | null\n          horas_excedentes: number\n          horas_faturaveis: number\n          horas_totais: number\n          id: string\n          processo_id: string\n          receita_id: string | null\n          status: string\n          updated_at: string | null\n        }\n        Insert: {\n          ato_tipo_id: string\n          contrato_id: string\n          created_at?: string | null\n          escritorio_id: string\n          finalizado_em?: string | null\n          horas_excedentes?: number\n          horas_faturaveis?: number\n          horas_totais?: number\n          id?: string\n          processo_id: string\n          receita_id?: string | null\n          status?: string\n          updated_at?: string | null\n        }\n        Update: {\n          ato_tipo_id?: string\n          contrato_id?: string\n          created_at?: string | null\n          escritorio_id?: string\n          finalizado_em?: string | null\n          horas_excedentes?: number\n          horas_faturaveis?: number\n          horas_totais?: number\n          id?: string\n          processo_id?: string\n          receita_id?: string | null\n          status?: string\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_ato_tipo_id_fkey\"\n            columns: [\"ato_tipo_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_atos_processuais_tipos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_contratos_honorarios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_receitas_por_contrato\"\n            referencedColumns: [\"contrato_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_receita_id_fkey\"\n            columns: [\"receita_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_receitas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_receita_id_fkey\"\n            columns: [\"receita_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_historico_cobrancas_processo\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      financeiro_mapeamento_atos_movimentacao: {\n        Row: {\n          ativo: boolean | null\n          ato_tipo_id: string\n          created_at: string | null\n          escritorio_id: string\n          id: string\n          palavras_chave: string[]\n          updated_at: string | null\n        }\n        Insert: {\n          ativo?: boolean | null\n          ato_tipo_id: string\n          created_at?: string | null\n          escritorio_id: string\n          id?: string\n          palavras_chave?: string[]\n          updated_at?: string | null\n        }\n        Update: {\n          ativo?: boolean | null\n          ato_tipo_id?: string\n          created_at?: string | null\n          escritorio_id?: string\n          id?: string\n          palavras_chave?: string[]\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"financeiro_mapeamento_atos_movimentacao_ato_tipo_id_fkey\"\n            columns: [\"ato_tipo_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_atos_processuais_tipos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_mapeamento_atos_movimentacao_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      financeiro_metas: {\n        Row: {\n          ativa: boolean | null\n          created_at: string | null\n          data_fim: string\n          data_inicio: string\n          descricao: string\n          escritorio_id: string\n          id: string\n          percentual_atingido: number | null\n          tipo_meta: string\n          updated_at: string | null\n          valor_meta: number\n          valor_realizado: number | null\n        }\n        Insert: {\n          ativa?: boolean | null\n          created_at?: string | null\n          data_fim: string\n          data_inicio: string\n          descricao: string\n          escritorio_id: string\n          id?: string\n          percentual_atingido?: number | null\n          tipo_meta: string\n          updated_at?: string | null\n          valor_meta: number\n          valor_realizado?: number | null\n        }\n        Update: {\n          ativa?: boolean | null\n          created_at?: string | null\n          data_fim?: string\n          data_inicio?: string\n          descricao?: string\n          escritorio_id?: string\n          id?: string\n          percentual_atingido?: number | null\n          tipo_meta?: string\n          updated_at?: string | null\n          valor_meta?: number\n          valor_realizado?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"metas_financeiras_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      financeiro_provisoes: {\n        Row: {\n          ativa: boolean | null\n          created_at: string | null\n          data_inicio: string\n          data_prevista_pagamento: string | null\n          descricao: string\n          escritorio_id: string\n          id: string\n          tipo: string\n          updated_at: string | null\n          valor_acumulado: number | null\n          valor_mensal: number\n        }\n        Insert: {\n          ativa?: boolean | null\n          created_at?: string | null\n          data_inicio: string\n          data_prevista_pagamento?: string | null\n          descricao: string\n          escritorio_id: string\n          id?: string\n          tipo: string\n          updated_at?: string | null\n          valor_acumulado?: number | null\n          valor_mensal: number\n        }\n        Update: {\n          ativa?: boolean | null\n          created_at?: string | null\n          data_inicio?: string\n          data_prevista_pagamento?: string | null\n          descricao?: string\n          escritorio_id?: string\n          id?: string\n          tipo?: string\n          updated_at?: string | null\n          valor_acumulado?: number | null\n          valor_mensal?: number\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"provisoes_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      financeiro_receitas: {\n        Row: {\n          categoria: Database[\"public\"][\"Enums\"][\"receita_categoria_enum\"]\n          cliente_id: string | null\n          config_recorrencia: Json | null\n          consulta_id: string | null\n          consultivo_id: string | null\n          conta_bancaria_id: string | null\n          contrato_id: string | null\n          created_at: string | null\n          created_by: string | null\n          data_competencia: string\n          data_pagamento: string | null\n          data_vencimento: string\n          descricao: string\n          dias_atraso: number | null\n          escritorio_id: string\n          fatura_id: string | null\n          forma_pagamento:\n            | Database[\"public\"][\"Enums\"][\"forma_pagamento_enum\"]\n            | null\n          id: string\n          juros_aplicados: number | null\n          numero_parcela: number | null\n          numero_parcelas: number | null\n          observacoes: string | null\n          parcelado: boolean | null\n          processo_id: string | null\n          receita_origem_id: string | null\n          receita_pai_id: string | null\n          recorrente: boolean | null\n          responsavel_id: string | null\n          status: Database[\"public\"][\"Enums\"][\"receita_status_enum\"]\n          tipo: Database[\"public\"][\"Enums\"][\"receita_tipo_enum\"]\n          updated_at: string | null\n          updated_by: string | null\n          valor: number\n          valor_pago: number | null\n        }\n        Insert: {\n          categoria: Database[\"public\"][\"Enums\"][\"receita_categoria_enum\"]\n          cliente_id?: string | null\n          config_recorrencia?: Json | null\n          consulta_id?: string | null\n          consultivo_id?: string | null\n          conta_bancaria_id?: string | null\n          contrato_id?: string | null\n          created_at?: string | null\n          created_by?: string | null\n          data_competencia: string\n          data_pagamento?: string | null\n          data_vencimento: string\n          descricao: string\n          dias_atraso?: number | null\n          escritorio_id: string\n          fatura_id?: string | null\n          forma_pagamento?:\n            | Database[\"public\"][\"Enums\"][\"forma_pagamento_enum\"]\n            | null\n          id?: string\n          juros_aplicados?: number | null\n          numero_parcela?: number | null\n          numero_parcelas?: number | null\n          observacoes?: string | null\n          parcelado?: boolean | null\n          processo_id?: string | null\n          receita_origem_id?: string | null\n          receita_pai_id?: string | null\n          recorrente?: boolean | null\n          responsavel_id?: string | null\n          status?: Database[\"public\"][\"Enums\"][\"receita_status_enum\"]\n          tipo: Database[\"public\"][\"Enums\"][\"receita_tipo_enum\"]\n          updated_at?: string | null\n          updated_by?: string | null\n          valor: number\n          valor_pago?: number | null\n        }\n        Update: {\n          categoria?: Database[\"public\"][\"Enums\"][\"receita_categoria_enum\"]\n          cliente_id?: string | null\n          config_recorrencia?: Json | null\n          consulta_id?: string | null\n          consultivo_id?: string | null\n          conta_bancaria_id?: string | null\n          contrato_id?: string | null\n          created_at?: string | null\n          created_by?: string | null\n          data_competencia?: string\n          data_pagamento?: string | null\n          data_vencimento?: string\n          descricao?: string\n          dias_atraso?: number | null\n          escritorio_id?: string\n          fatura_id?: string | null\n          forma_pagamento?:\n            | Database[\"public\"][\"Enums\"][\"forma_pagamento_enum\"]\n            | null\n          id?: string\n          juros_aplicados?: number | null\n          numero_parcela?: number | null\n          numero_parcelas?: number | null\n          observacoes?: string | null\n          parcelado?: boolean | null\n          processo_id?: string | null\n          receita_origem_id?: string | null\n          receita_pai_id?: string | null\n          recorrente?: boolean | null\n          responsavel_id?: string | null\n          status?: Database[\"public\"][\"Enums\"][\"receita_status_enum\"]\n          tipo?: Database[\"public\"][\"Enums\"][\"receita_tipo_enum\"]\n          updated_at?: string | null\n          updated_by?: string | null\n          valor?: number\n          valor_pago?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"financeiro_receitas_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"consultivo_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"consultivo_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_conta_bancaria_id_fkey\"\n            columns: [\"conta_bancaria_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_contas_bancarias\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_conta_bancaria_id_fkey\"\n            columns: [\"conta_bancaria_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_contas_bancarias_saldo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_conta_bancaria_id_fkey\"\n            columns: [\"conta_bancaria_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_saldos_contas_bancarias\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_contratos_honorarios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_receitas_por_contrato\"\n            referencedColumns: [\"contrato_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_fatura_id_fkey\"\n            columns: [\"fatura_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_faturamento_faturas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_fatura_id_fkey\"\n            columns: [\"fatura_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_faturas_geradas\"\n            referencedColumns: [\"fatura_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_receita_origem_id_fkey\"\n            columns: [\"receita_origem_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_receitas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_receita_origem_id_fkey\"\n            columns: [\"receita_origem_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_historico_cobrancas_processo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_receita_pai_id_fkey\"\n            columns: [\"receita_pai_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_receitas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_receita_pai_id_fkey\"\n            columns: [\"receita_pai_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_historico_cobrancas_processo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"fk_financeiro_receitas_created_by\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"fk_financeiro_receitas_created_by\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"fk_financeiro_receitas_responsavel_id\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"fk_financeiro_receitas_responsavel_id\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"fk_financeiro_receitas_updated_by\"\n            columns: [\"updated_by\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"fk_financeiro_receitas_updated_by\"\n            columns: [\"updated_by\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      financeiro_reconciliacao: {\n        Row: {\n          conciliado_em: string | null\n          conciliado_por: string | null\n          conta_bancaria_id: string\n          created_at: string | null\n          diferenca: number | null\n          escritorio_id: string\n          id: string\n          importacoes: Json | null\n          mes_referencia: string\n          observacoes: string | null\n          saldo_calculado: number | null\n          saldo_final_banco: number | null\n          saldo_inicial_banco: number | null\n          status: string\n          updated_at: string | null\n        }\n        Insert: {\n          conciliado_em?: string | null\n          conciliado_por?: string | null\n          conta_bancaria_id: string\n          created_at?: string | null\n          diferenca?: number | null\n          escritorio_id: string\n          id?: string\n          importacoes?: Json | null\n          mes_referencia: string\n          observacoes?: string | null\n          saldo_calculado?: number | null\n          saldo_final_banco?: number | null\n          saldo_inicial_banco?: number | null\n          status?: string\n          updated_at?: string | null\n        }\n        Update: {\n          conciliado_em?: string | null\n          conciliado_por?: string | null\n          conta_bancaria_id?: string\n          created_at?: string | null\n          diferenca?: number | null\n          escritorio_id?: string\n          id?: string\n          importacoes?: Json | null\n          mes_referencia?: string\n          observacoes?: string | null\n          saldo_calculado?: number | null\n          saldo_final_banco?: number | null\n          saldo_inicial_banco?: number | null\n          status?: string\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"financeiro_reconciliacao_conta_bancaria_id_fkey\"\n            columns: [\"conta_bancaria_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_contas_bancarias\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_reconciliacao_conta_bancaria_id_fkey\"\n            columns: [\"conta_bancaria_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_contas_bancarias_saldo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_reconciliacao_conta_bancaria_id_fkey\"\n            columns: [\"conta_bancaria_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_saldos_contas_bancarias\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_reconciliacao_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      financeiro_reconciliacao_itens: {\n        Row: {\n          checknum: string | null\n          created_at: string | null\n          data_transacao: string\n          descricao_banco: string\n          despesa_id: string | null\n          fitid: string | null\n          hash_transacao: string | null\n          id: string\n          memo: string | null\n          observacoes: string | null\n          receita_id: string | null\n          reconciliacao_id: string\n          status: string\n          tipo: string\n          valor: number\n        }\n        Insert: {\n          checknum?: string | null\n          created_at?: string | null\n          data_transacao: string\n          descricao_banco: string\n          despesa_id?: string | null\n          fitid?: string | null\n          hash_transacao?: string | null\n          id?: string\n          memo?: string | null\n          observacoes?: string | null\n          receita_id?: string | null\n          reconciliacao_id: string\n          status?: string\n          tipo: string\n          valor: number\n        }\n        Update: {\n          checknum?: string | null\n          created_at?: string | null\n          data_transacao?: string\n          descricao_banco?: string\n          despesa_id?: string | null\n          fitid?: string | null\n          hash_transacao?: string | null\n          id?: string\n          memo?: string | null\n          observacoes?: string | null\n          receita_id?: string | null\n          reconciliacao_id?: string\n          status?: string\n          tipo?: string\n          valor?: number\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"financeiro_reconciliacao_itens_despesa_id_fkey\"\n            columns: [\"despesa_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_despesas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_reconciliacao_itens_despesa_id_fkey\"\n            columns: [\"despesa_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_despesas_reembolsaveis_pendentes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_reconciliacao_itens_receita_id_fkey\"\n            columns: [\"receita_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_receitas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_reconciliacao_itens_receita_id_fkey\"\n            columns: [\"receita_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_historico_cobrancas_processo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_reconciliacao_itens_reconciliacao_id_fkey\"\n            columns: [\"reconciliacao_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_reconciliacao\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      financeiro_timesheet: {\n        Row: {\n          aprovado: boolean | null\n          aprovado_em: string | null\n          aprovado_por: string | null\n          atividade: string\n          ato_tipo_id: string | null\n          audiencia_id: string | null\n          consulta_id: string | null\n          consultivo_id: string | null\n          created_at: string | null\n          data_trabalho: string\n          editado: boolean | null\n          editado_em: string | null\n          editado_por: string | null\n          escritorio_id: string\n          evento_id: string | null\n          fatura_id: string | null\n          faturado: boolean | null\n          faturado_em: string | null\n          faturavel: boolean | null\n          faturavel_auto: boolean | null\n          faturavel_manual: boolean | null\n          hora_fim: string | null\n          hora_inicio: string | null\n          horas: number\n          id: string\n          justificativa_reprovacao: string | null\n          origem: string | null\n          processo_id: string | null\n          reprovado: boolean | null\n          reprovado_em: string | null\n          reprovado_por: string | null\n          tarefa_id: string | null\n          updated_at: string | null\n          user_id: string\n        }\n        Insert: {\n          aprovado?: boolean | null\n          aprovado_em?: string | null\n          aprovado_por?: string | null\n          atividade: string\n          ato_tipo_id?: string | null\n          audiencia_id?: string | null\n          consulta_id?: string | null\n          consultivo_id?: string | null\n          created_at?: string | null\n          data_trabalho: string\n          editado?: boolean | null\n          editado_em?: string | null\n          editado_por?: string | null\n          escritorio_id: string\n          evento_id?: string | null\n          fatura_id?: string | null\n          faturado?: boolean | null\n          faturado_em?: string | null\n          faturavel?: boolean | null\n          faturavel_auto?: boolean | null\n          faturavel_manual?: boolean | null\n          hora_fim?: string | null\n          hora_inicio?: string | null\n          horas: number\n          id?: string\n          justificativa_reprovacao?: string | null\n          origem?: string | null\n          processo_id?: string | null\n          reprovado?: boolean | null\n          reprovado_em?: string | null\n          reprovado_por?: string | null\n          tarefa_id?: string | null\n          updated_at?: string | null\n          user_id: string\n        }\n        Update: {\n          aprovado?: boolean | null\n          aprovado_em?: string | null\n          aprovado_por?: string | null\n          atividade?: string\n          ato_tipo_id?: string | null\n          audiencia_id?: string | null\n          consulta_id?: string | null\n          consultivo_id?: string | null\n          created_at?: string | null\n          data_trabalho?: string\n          editado?: boolean | null\n          editado_em?: string | null\n          editado_por?: string | null\n          escritorio_id?: string\n          evento_id?: string | null\n          fatura_id?: string | null\n          faturado?: boolean | null\n          faturado_em?: string | null\n          faturavel?: boolean | null\n          faturavel_auto?: boolean | null\n          faturavel_manual?: boolean | null\n          hora_fim?: string | null\n          hora_inicio?: string | null\n          horas?: number\n          id?: string\n          justificativa_reprovacao?: string | null\n          origem?: string | null\n          processo_id?: string | null\n          reprovado?: boolean | null\n          reprovado_em?: string | null\n          reprovado_por?: string | null\n          tarefa_id?: string | null\n          updated_at?: string | null\n          user_id?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"financeiro_timesheet_ato_tipo_id_fkey\"\n            columns: [\"ato_tipo_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_atos_processuais_tipos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_audiencia_id_fkey\"\n            columns: [\"audiencia_id\"]\n            isOneToOne: false\n            referencedRelation: \"agenda_audiencias\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"consultivo_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_consultivo_id_fkey\"\n            columns: [\"consultivo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"consultivo_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_editado_por_fkey\"\n            columns: [\"editado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_editado_por_fkey\"\n            columns: [\"editado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_evento_id_fkey\"\n            columns: [\"evento_id\"]\n            isOneToOne: false\n            referencedRelation: \"agenda_eventos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_tarefa_id_fkey\"\n            columns: [\"tarefa_id\"]\n            isOneToOne: false\n            referencedRelation: \"agenda_tarefas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"fk_timesheet_fatura\"\n            columns: [\"fatura_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_faturamento_faturas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"fk_timesheet_fatura\"\n            columns: [\"fatura_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_faturas_geradas\"\n            referencedColumns: [\"fatura_id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_aprovado_por_fkey\"\n            columns: [\"aprovado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_aprovado_por_fkey\"\n            columns: [\"aprovado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_reprovado_por_fkey\"\n            columns: [\"reprovado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_reprovado_por_fkey\"\n            columns: [\"reprovado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      financeiro_transferencias: {\n        Row: {\n          conta_destino_id: string\n          conta_origem_id: string\n          created_at: string | null\n          created_by: string | null\n          data_transferencia: string\n          descricao: string | null\n          escritorio_id: string\n          id: string\n          valor: number\n        }\n        Insert: {\n          conta_destino_id: string\n          conta_origem_id: string\n          created_at?: string | null\n          created_by?: string | null\n          data_transferencia?: string\n          descricao?: string | null\n          escritorio_id: string\n          id?: string\n          valor: number\n        }\n        Update: {\n          conta_destino_id?: string\n          conta_origem_id?: string\n          created_at?: string | null\n          created_by?: string | null\n          data_transferencia?: string\n          descricao?: string | null\n          escritorio_id?: string\n          id?: string\n          valor?: number\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"financeiro_transferencias_conta_destino_id_fkey\"\n            columns: [\"conta_destino_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_contas_bancarias\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_transferencias_conta_destino_id_fkey\"\n            columns: [\"conta_destino_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_contas_bancarias_saldo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_transferencias_conta_destino_id_fkey\"\n            columns: [\"conta_destino_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_saldos_contas_bancarias\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_transferencias_conta_origem_id_fkey\"\n            columns: [\"conta_origem_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_contas_bancarias\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_transferencias_conta_origem_id_fkey\"\n            columns: [\"conta_origem_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_contas_bancarias_saldo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_transferencias_conta_origem_id_fkey\"\n            columns: [\"conta_origem_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_saldos_contas_bancarias\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_transferencias_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_transferencias_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_transferencias_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      indices_economicos: {\n        Row: {\n          codigo_bcb: number\n          competencia: string\n          created_at: string | null\n          escritorio_id: string | null\n          fonte: string | null\n          id: string\n          nome: string\n          updated_at: string | null\n          valor: number\n          variacao_mensal: number | null\n        }\n        Insert: {\n          codigo_bcb: number\n          competencia: string\n          created_at?: string | null\n          escritorio_id?: string | null\n          fonte?: string | null\n          id?: string\n          nome: string\n          updated_at?: string | null\n          valor: number\n          variacao_mensal?: number | null\n        }\n        Update: {\n          codigo_bcb?: number\n          competencia?: string\n          created_at?: string | null\n          escritorio_id?: string | null\n          fonte?: string | null\n          id?: string\n          nome?: string\n          updated_at?: string | null\n          valor?: number\n          variacao_mensal?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"indices_economicos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      indices_economicos_config: {\n        Row: {\n          ativo: boolean | null\n          codigo_bcb: number\n          created_at: string | null\n          descricao: string | null\n          id: string\n          nome: string\n          ordem: number | null\n        }\n        Insert: {\n          ativo?: boolean | null\n          codigo_bcb: number\n          created_at?: string | null\n          descricao?: string | null\n          id?: string\n          nome: string\n          ordem?: number | null\n        }\n        Update: {\n          ativo?: boolean | null\n          codigo_bcb?: number\n          created_at?: string | null\n          descricao?: string | null\n          id?: string\n          nome?: string\n          ordem?: number | null\n        }\n        Relationships: []\n      }\n      migracao_historico: {\n        Row: {\n          arquivo_nome: string\n          detalhes: Json | null\n          escritorio_id: string\n          executado_em: string | null\n          executado_por: string | null\n          id: string\n          job_id: string | null\n          modulo: string\n          total_duplicatas: number | null\n          total_erros: number | null\n          total_importados: number\n        }\n        Insert: {\n          arquivo_nome: string\n          detalhes?: Json | null\n          escritorio_id: string\n          executado_em?: string | null\n          executado_por?: string | null\n          id?: string\n          job_id?: string | null\n          modulo: string\n          total_duplicatas?: number | null\n          total_erros?: number | null\n          total_importados?: number\n        }\n        Update: {\n          arquivo_nome?: string\n          detalhes?: Json | null\n          escritorio_id?: string\n          executado_em?: string | null\n          executado_por?: string | null\n          id?: string\n          job_id?: string | null\n          modulo?: string\n          total_duplicatas?: number | null\n          total_erros?: number | null\n          total_importados?: number\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"migracao_historico_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"migracao_historico_executado_por_fkey\"\n            columns: [\"executado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"migracao_historico_executado_por_fkey\"\n            columns: [\"executado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"migracao_historico_job_id_fkey\"\n            columns: [\"job_id\"]\n            isOneToOne: false\n            referencedRelation: \"migracao_jobs\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      migracao_jobs: {\n        Row: {\n          arquivo_nome: string\n          arquivo_storage_path: string\n          campos_extras: Json | null\n          concluido_em: string | null\n          config: Json | null\n          correcoes_usuario: Json | null\n          created_at: string | null\n          criado_por: string | null\n          decisoes_pendencias: Json | null\n          duplicatas: Json | null\n          erros: Json | null\n          escritorio_id: string\n          etapa_atual: string | null\n          id: string\n          iniciado_em: string | null\n          linhas_com_erro: number | null\n          linhas_duplicadas: number | null\n          linhas_importadas: number | null\n          linhas_processadas: number | null\n          linhas_validas: number | null\n          mapeamento: Json\n          modulo: string\n          pendencias: Json | null\n          resultado_final: Json | null\n          status: string\n          total_linhas: number | null\n          updated_at: string | null\n        }\n        Insert: {\n          arquivo_nome: string\n          arquivo_storage_path: string\n          campos_extras?: Json | null\n          concluido_em?: string | null\n          config?: Json | null\n          correcoes_usuario?: Json | null\n          created_at?: string | null\n          criado_por?: string | null\n          decisoes_pendencias?: Json | null\n          duplicatas?: Json | null\n          erros?: Json | null\n          escritorio_id: string\n          etapa_atual?: string | null\n          id?: string\n          iniciado_em?: string | null\n          linhas_com_erro?: number | null\n          linhas_duplicadas?: number | null\n          linhas_importadas?: number | null\n          linhas_processadas?: number | null\n          linhas_validas?: number | null\n          mapeamento?: Json\n          modulo: string\n          pendencias?: Json | null\n          resultado_final?: Json | null\n          status?: string\n          total_linhas?: number | null\n          updated_at?: string | null\n        }\n        Update: {\n          arquivo_nome?: string\n          arquivo_storage_path?: string\n          campos_extras?: Json | null\n          concluido_em?: string | null\n          config?: Json | null\n          correcoes_usuario?: Json | null\n          created_at?: string | null\n          criado_por?: string | null\n          decisoes_pendencias?: Json | null\n          duplicatas?: Json | null\n          erros?: Json | null\n          escritorio_id?: string\n          etapa_atual?: string | null\n          id?: string\n          iniciado_em?: string | null\n          linhas_com_erro?: number | null\n          linhas_duplicadas?: number | null\n          linhas_importadas?: number | null\n          linhas_processadas?: number | null\n          linhas_validas?: number | null\n          mapeamento?: Json\n          modulo?: string\n          pendencias?: Json | null\n          resultado_final?: Json | null\n          status?: string\n          total_linhas?: number | null\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"migracao_jobs_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"migracao_jobs_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"migracao_jobs_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      numeracao_modulos: {\n        Row: {\n          created_at: string | null\n          escritorio_id: string\n          id: string\n          modulo: string\n          prefixo: string\n          ultimo_numero: number\n          updated_at: string | null\n        }\n        Insert: {\n          created_at?: string | null\n          escritorio_id: string\n          id?: string\n          modulo: string\n          prefixo: string\n          ultimo_numero?: number\n          updated_at?: string | null\n        }\n        Update: {\n          created_at?: string | null\n          escritorio_id?: string\n          id?: string\n          modulo?: string\n          prefixo?: string\n          ultimo_numero?: number\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"numeracao_modulos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      numeracao_sequencial: {\n        Row: {\n          created_at: string | null\n          escritorio_id: string\n          id: string\n          ultimo_numero: number\n          updated_at: string | null\n        }\n        Insert: {\n          created_at?: string | null\n          escritorio_id: string\n          id?: string\n          ultimo_numero?: number\n          updated_at?: string | null\n        }\n        Update: {\n          created_at?: string | null\n          escritorio_id?: string\n          id?: string\n          ultimo_numero?: number\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"numeracao_sequencial_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: true\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      onboarding_steps: {\n        Row: {\n          completada: boolean | null\n          completada_em: string | null\n          created_at: string | null\n          dados_etapa: Json | null\n          escritorio_id: string\n          etapa: string\n          id: string\n          pulada: boolean | null\n          pulada_em: string | null\n          tempo_gasto_segundos: number | null\n          updated_at: string | null\n          user_id: string\n        }\n        Insert: {\n          completada?: boolean | null\n          completada_em?: string | null\n          created_at?: string | null\n          dados_etapa?: Json | null\n          escritorio_id: string\n          etapa: string\n          id?: string\n          pulada?: boolean | null\n          pulada_em?: string | null\n          tempo_gasto_segundos?: number | null\n          updated_at?: string | null\n          user_id: string\n        }\n        Update: {\n          completada?: boolean | null\n          completada_em?: string | null\n          created_at?: string | null\n          dados_etapa?: Json | null\n          escritorio_id?: string\n          etapa?: string\n          id?: string\n          pulada?: boolean | null\n          pulada_em?: string | null\n          tempo_gasto_segundos?: number | null\n          updated_at?: string | null\n          user_id?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"onboarding_steps_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"onboarding_steps_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"onboarding_steps_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      pecas_jurisprudencias: {\n        Row: {\n          adicionado_por: string | null\n          created_at: string | null\n          data_julgamento: string | null\n          data_publicacao: string | null\n          ementa: string | null\n          escritorio_id: string\n          id: string\n          link_consulta: string | null\n          link_inteiro_teor: string | null\n          numero_acordao: string | null\n          numero_processo: string | null\n          orgao_julgador: string | null\n          relator: string | null\n          tags: string[] | null\n          temas: string[] | null\n          texto_completo: string | null\n          tipo: string\n          tribunal: string\n        }\n        Insert: {\n          adicionado_por?: string | null\n          created_at?: string | null\n          data_julgamento?: string | null\n          data_publicacao?: string | null\n          ementa?: string | null\n          escritorio_id: string\n          id?: string\n          link_consulta?: string | null\n          link_inteiro_teor?: string | null\n          numero_acordao?: string | null\n          numero_processo?: string | null\n          orgao_julgador?: string | null\n          relator?: string | null\n          tags?: string[] | null\n          temas?: string[] | null\n          texto_completo?: string | null\n          tipo: string\n          tribunal: string\n        }\n        Update: {\n          adicionado_por?: string | null\n          created_at?: string | null\n          data_julgamento?: string | null\n          data_publicacao?: string | null\n          ementa?: string | null\n          escritorio_id?: string\n          id?: string\n          link_consulta?: string | null\n          link_inteiro_teor?: string | null\n          numero_acordao?: string | null\n          numero_processo?: string | null\n          orgao_julgador?: string | null\n          relator?: string | null\n          tags?: string[] | null\n          temas?: string[] | null\n          texto_completo?: string | null\n          tipo?: string\n          tribunal?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"pecas_teses_jurisprudencias_adicionado_por_fkey\"\n            columns: [\"adicionado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_jurisprudencias_adicionado_por_fkey\"\n            columns: [\"adicionado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_jurisprudencias_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      pecas_pecas: {\n        Row: {\n          arquivo_url: string | null\n          conteudo: string | null\n          created_at: string | null\n          criado_por: string | null\n          data_protocolo: string | null\n          escritorio_id: string\n          id: string\n          numero_protocolo: string | null\n          processo_id: string | null\n          status: string | null\n          template_id: string | null\n          tipo_peca: string\n          titulo: string\n          updated_at: string | null\n          versao: number | null\n          versao_anterior_id: string | null\n        }\n        Insert: {\n          arquivo_url?: string | null\n          conteudo?: string | null\n          created_at?: string | null\n          criado_por?: string | null\n          data_protocolo?: string | null\n          escritorio_id: string\n          id?: string\n          numero_protocolo?: string | null\n          processo_id?: string | null\n          status?: string | null\n          template_id?: string | null\n          tipo_peca: string\n          titulo: string\n          updated_at?: string | null\n          versao?: number | null\n          versao_anterior_id?: string | null\n        }\n        Update: {\n          arquivo_url?: string | null\n          conteudo?: string | null\n          created_at?: string | null\n          criado_por?: string | null\n          data_protocolo?: string | null\n          escritorio_id?: string\n          id?: string\n          numero_protocolo?: string | null\n          processo_id?: string | null\n          status?: string | null\n          template_id?: string | null\n          tipo_peca?: string\n          titulo?: string\n          updated_at?: string | null\n          versao?: number | null\n          versao_anterior_id?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"pecas_teses_pecas_geradas_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_pecas_geradas_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_pecas_geradas_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_pecas_geradas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_pecas_geradas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_pecas_geradas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_pecas_geradas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_pecas_geradas_template_id_fkey\"\n            columns: [\"template_id\"]\n            isOneToOne: false\n            referencedRelation: \"pecas_templates\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_pecas_geradas_template_id_fkey\"\n            columns: [\"template_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_pecas_templates_ativos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_pecas_geradas_template_id_fkey\"\n            columns: [\"template_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_pecas_templates_completos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_pecas_geradas_versao_anterior_id_fkey\"\n            columns: [\"versao_anterior_id\"]\n            isOneToOne: false\n            referencedRelation: \"pecas_pecas\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      pecas_relacoes: {\n        Row: {\n          created_at: string | null\n          escritorio_id: string\n          id: string\n          jurisprudencia_id: string | null\n          peca_id: string\n          tese_id: string | null\n          tipo_relacao: string\n        }\n        Insert: {\n          created_at?: string | null\n          escritorio_id: string\n          id?: string\n          jurisprudencia_id?: string | null\n          peca_id: string\n          tese_id?: string | null\n          tipo_relacao: string\n        }\n        Update: {\n          created_at?: string | null\n          escritorio_id?: string\n          id?: string\n          jurisprudencia_id?: string | null\n          peca_id?: string\n          tese_id?: string | null\n          tipo_relacao?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"fk_pecas_relacoes_escritorio\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_relacoes_jurisprudencia_id_fkey\"\n            columns: [\"jurisprudencia_id\"]\n            isOneToOne: false\n            referencedRelation: \"pecas_jurisprudencias\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_relacoes_peca_id_fkey\"\n            columns: [\"peca_id\"]\n            isOneToOne: false\n            referencedRelation: \"pecas_pecas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_relacoes_tese_id_fkey\"\n            columns: [\"tese_id\"]\n            isOneToOne: false\n            referencedRelation: \"pecas_teses\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_relacoes_tese_id_fkey\"\n            columns: [\"tese_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_pecas_teses_ativas\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      pecas_templates: {\n        Row: {\n          area: string\n          ativo: boolean | null\n          categoria: string\n          conteudo_template: string | null\n          created_at: string | null\n          criado_por: string | null\n          escritorio_id: string\n          estrutura: Json | null\n          id: string\n          nome: string\n          tipo_processo: string | null\n          updated_at: string | null\n          uso_count: number | null\n          variaveis: Json | null\n        }\n        Insert: {\n          area: string\n          ativo?: boolean | null\n          categoria: string\n          conteudo_template?: string | null\n          created_at?: string | null\n          criado_por?: string | null\n          escritorio_id: string\n          estrutura?: Json | null\n          id?: string\n          nome: string\n          tipo_processo?: string | null\n          updated_at?: string | null\n          uso_count?: number | null\n          variaveis?: Json | null\n        }\n        Update: {\n          area?: string\n          ativo?: boolean | null\n          categoria?: string\n          conteudo_template?: string | null\n          created_at?: string | null\n          criado_por?: string | null\n          escritorio_id?: string\n          estrutura?: Json | null\n          id?: string\n          nome?: string\n          tipo_processo?: string | null\n          updated_at?: string | null\n          uso_count?: number | null\n          variaveis?: Json | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"pecas_teses_templates_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_templates_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_templates_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      pecas_templates_jurisprudencias: {\n        Row: {\n          created_at: string | null\n          escritorio_id: string\n          id: string\n          jurisprudencia_id: string\n          ordem: number | null\n          template_id: string\n        }\n        Insert: {\n          created_at?: string | null\n          escritorio_id: string\n          id?: string\n          jurisprudencia_id: string\n          ordem?: number | null\n          template_id: string\n        }\n        Update: {\n          created_at?: string | null\n          escritorio_id?: string\n          id?: string\n          jurisprudencia_id?: string\n          ordem?: number | null\n          template_id?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"fk_pecas_templates_jurisprudencias_escritorio\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_templates_jurisprudencias_jurisprudencia_id_fkey\"\n            columns: [\"jurisprudencia_id\"]\n            isOneToOne: false\n            referencedRelation: \"pecas_jurisprudencias\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_templates_jurisprudencias_template_id_fkey\"\n            columns: [\"template_id\"]\n            isOneToOne: false\n            referencedRelation: \"pecas_templates\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_templates_jurisprudencias_template_id_fkey\"\n            columns: [\"template_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_pecas_templates_ativos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_templates_jurisprudencias_template_id_fkey\"\n            columns: [\"template_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_pecas_templates_completos\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      pecas_templates_teses: {\n        Row: {\n          created_at: string | null\n          escritorio_id: string\n          id: string\n          ordem: number | null\n          template_id: string\n          tese_id: string\n        }\n        Insert: {\n          created_at?: string | null\n          escritorio_id: string\n          id?: string\n          ordem?: number | null\n          template_id: string\n          tese_id: string\n        }\n        Update: {\n          created_at?: string | null\n          escritorio_id?: string\n          id?: string\n          ordem?: number | null\n          template_id?: string\n          tese_id?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"fk_pecas_templates_teses_escritorio\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_templates_teses_template_id_fkey\"\n            columns: [\"template_id\"]\n            isOneToOne: false\n            referencedRelation: \"pecas_templates\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_templates_teses_template_id_fkey\"\n            columns: [\"template_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_pecas_templates_ativos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_templates_teses_template_id_fkey\"\n            columns: [\"template_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_pecas_templates_completos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_templates_teses_tese_id_fkey\"\n            columns: [\"tese_id\"]\n            isOneToOne: false\n            referencedRelation: \"pecas_teses\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_templates_teses_tese_id_fkey\"\n            columns: [\"tese_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_pecas_teses_ativas\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      pecas_teses: {\n        Row: {\n          area: string\n          ativa: boolean | null\n          atualizado_por: string | null\n          created_at: string | null\n          criado_por: string | null\n          escritorio_id: string\n          fundamentacao: string | null\n          id: string\n          resumo: string | null\n          subtema: string | null\n          tags: string[] | null\n          texto_completo: string | null\n          titulo: string\n          updated_at: string | null\n          uso_count: number | null\n        }\n        Insert: {\n          area: string\n          ativa?: boolean | null\n          atualizado_por?: string | null\n          created_at?: string | null\n          criado_por?: string | null\n          escritorio_id: string\n          fundamentacao?: string | null\n          id?: string\n          resumo?: string | null\n          subtema?: string | null\n          tags?: string[] | null\n          texto_completo?: string | null\n          titulo: string\n          updated_at?: string | null\n          uso_count?: number | null\n        }\n        Update: {\n          area?: string\n          ativa?: boolean | null\n          atualizado_por?: string | null\n          created_at?: string | null\n          criado_por?: string | null\n          escritorio_id?: string\n          fundamentacao?: string | null\n          id?: string\n          resumo?: string | null\n          subtema?: string | null\n          tags?: string[] | null\n          texto_completo?: string | null\n          titulo?: string\n          updated_at?: string | null\n          uso_count?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"pecas_teses_teses_atualizado_por_fkey\"\n            columns: [\"atualizado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_teses_atualizado_por_fkey\"\n            columns: [\"atualizado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_teses_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_teses_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_teses_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      portfolio_metricas: {\n        Row: {\n          ano: number | null\n          calculado_em: string\n          duracao_maxima_dias: number | null\n          duracao_media_dias: number | null\n          duracao_minima_dias: number | null\n          escritorio_id: string\n          execucoes_canceladas: number | null\n          execucoes_concluidas: number | null\n          execucoes_em_andamento: number | null\n          id: string\n          mes: number | null\n          periodo: string\n          produto_id: string | null\n          receita_media: number | null\n          receita_total: number | null\n          taxa_sucesso: number | null\n          total_aprendizados: number | null\n          total_execucoes: number | null\n        }\n        Insert: {\n          ano?: number | null\n          calculado_em?: string\n          duracao_maxima_dias?: number | null\n          duracao_media_dias?: number | null\n          duracao_minima_dias?: number | null\n          escritorio_id: string\n          execucoes_canceladas?: number | null\n          execucoes_concluidas?: number | null\n          execucoes_em_andamento?: number | null\n          id?: string\n          mes?: number | null\n          periodo: string\n          produto_id?: string | null\n          receita_media?: number | null\n          receita_total?: number | null\n          taxa_sucesso?: number | null\n          total_aprendizados?: number | null\n          total_execucoes?: number | null\n        }\n        Update: {\n          ano?: number | null\n          calculado_em?: string\n          duracao_maxima_dias?: number | null\n          duracao_media_dias?: number | null\n          duracao_minima_dias?: number | null\n          escritorio_id?: string\n          execucoes_canceladas?: number | null\n          execucoes_concluidas?: number | null\n          execucoes_em_andamento?: number | null\n          id?: string\n          mes?: number | null\n          periodo?: string\n          produto_id?: string | null\n          receita_media?: number | null\n          receita_total?: number | null\n          taxa_sucesso?: number | null\n          total_aprendizados?: number | null\n          total_execucoes?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"portfolio_metricas_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_metricas_produto_id_fkey\"\n            columns: [\"produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_produtos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_metricas_produto_id_fkey\"\n            columns: [\"produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_portfolio_produtos_catalogo\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      portfolio_produtos: {\n        Row: {\n          area_juridica: string\n          categoria: string | null\n          codigo: string\n          complexidade: string | null\n          cor: string | null\n          created_at: string\n          created_by: string | null\n          descricao: string | null\n          descricao_comercial: string | null\n          duracao_estimada_dias: number | null\n          escritorio_id: string\n          icone: string | null\n          id: string\n          imagem_url: string | null\n          nome: string\n          status: string\n          tags: string[] | null\n          updated_at: string\n          versao_atual: number | null\n          visivel_catalogo: boolean | null\n        }\n        Insert: {\n          area_juridica: string\n          categoria?: string | null\n          codigo: string\n          complexidade?: string | null\n          cor?: string | null\n          created_at?: string\n          created_by?: string | null\n          descricao?: string | null\n          descricao_comercial?: string | null\n          duracao_estimada_dias?: number | null\n          escritorio_id: string\n          icone?: string | null\n          id?: string\n          imagem_url?: string | null\n          nome: string\n          status?: string\n          tags?: string[] | null\n          updated_at?: string\n          versao_atual?: number | null\n          visivel_catalogo?: boolean | null\n        }\n        Update: {\n          area_juridica?: string\n          categoria?: string | null\n          codigo?: string\n          complexidade?: string | null\n          cor?: string | null\n          created_at?: string\n          created_by?: string | null\n          descricao?: string | null\n          descricao_comercial?: string | null\n          duracao_estimada_dias?: number | null\n          escritorio_id?: string\n          icone?: string | null\n          id?: string\n          imagem_url?: string | null\n          nome?: string\n          status?: string\n          tags?: string[] | null\n          updated_at?: string\n          versao_atual?: number | null\n          visivel_catalogo?: boolean | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"portfolio_produtos_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_produtos_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_produtos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      portfolio_produtos_checklist: {\n        Row: {\n          created_at: string\n          criar_tarefa: boolean | null\n          fase_id: string\n          id: string\n          item: string\n          obrigatorio: boolean | null\n          ordem: number\n          tarefa_prazo_dias: number | null\n        }\n        Insert: {\n          created_at?: string\n          criar_tarefa?: boolean | null\n          fase_id: string\n          id?: string\n          item: string\n          obrigatorio?: boolean | null\n          ordem: number\n          tarefa_prazo_dias?: number | null\n        }\n        Update: {\n          created_at?: string\n          criar_tarefa?: boolean | null\n          fase_id?: string\n          id?: string\n          item?: string\n          obrigatorio?: boolean | null\n          ordem?: number\n          tarefa_prazo_dias?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"portfolio_produtos_checklist_fase_id_fkey\"\n            columns: [\"fase_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_produtos_fases\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      portfolio_produtos_equipe_papeis: {\n        Row: {\n          created_at: string\n          descricao: string | null\n          habilidades_requeridas: string[] | null\n          id: string\n          nome: string\n          obrigatorio: boolean | null\n          produto_id: string\n          quantidade_minima: number | null\n        }\n        Insert: {\n          created_at?: string\n          descricao?: string | null\n          habilidades_requeridas?: string[] | null\n          id?: string\n          nome: string\n          obrigatorio?: boolean | null\n          produto_id: string\n          quantidade_minima?: number | null\n        }\n        Update: {\n          created_at?: string\n          descricao?: string | null\n          habilidades_requeridas?: string[] | null\n          id?: string\n          nome?: string\n          obrigatorio?: boolean | null\n          produto_id?: string\n          quantidade_minima?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"portfolio_produtos_equipe_papeis_produto_id_fkey\"\n            columns: [\"produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_produtos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_produtos_equipe_papeis_produto_id_fkey\"\n            columns: [\"produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_portfolio_produtos_catalogo\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      portfolio_produtos_fases: {\n        Row: {\n          cor: string | null\n          created_at: string\n          criar_evento_agenda: boolean | null\n          descricao: string | null\n          duracao_estimada_dias: number | null\n          evento_descricao_template: string | null\n          evento_titulo_template: string | null\n          fase_dependencia_id: string | null\n          icone: string | null\n          id: string\n          nome: string\n          ordem: number\n          prazo_tipo: string | null\n          produto_id: string\n        }\n        Insert: {\n          cor?: string | null\n          created_at?: string\n          criar_evento_agenda?: boolean | null\n          descricao?: string | null\n          duracao_estimada_dias?: number | null\n          evento_descricao_template?: string | null\n          evento_titulo_template?: string | null\n          fase_dependencia_id?: string | null\n          icone?: string | null\n          id?: string\n          nome: string\n          ordem: number\n          prazo_tipo?: string | null\n          produto_id: string\n        }\n        Update: {\n          cor?: string | null\n          created_at?: string\n          criar_evento_agenda?: boolean | null\n          descricao?: string | null\n          duracao_estimada_dias?: number | null\n          evento_descricao_template?: string | null\n          evento_titulo_template?: string | null\n          fase_dependencia_id?: string | null\n          icone?: string | null\n          id?: string\n          nome?: string\n          ordem?: number\n          prazo_tipo?: string | null\n          produto_id?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"portfolio_produtos_fases_fase_dependencia_id_fkey\"\n            columns: [\"fase_dependencia_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_produtos_fases\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_produtos_fases_produto_id_fkey\"\n            columns: [\"produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_produtos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_produtos_fases_produto_id_fkey\"\n            columns: [\"produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_portfolio_produtos_catalogo\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      portfolio_produtos_precos: {\n        Row: {\n          ativo: boolean | null\n          created_at: string\n          descricao: string | null\n          horas_estimadas: number | null\n          id: string\n          nome_opcao: string | null\n          padrao: boolean | null\n          percentual_exito: number | null\n          produto_id: string\n          tipo: string\n          valor_fixo: number | null\n          valor_hora: number | null\n          valor_maximo: number | null\n          valor_minimo: number | null\n          valores_por_fase: Json | null\n        }\n        Insert: {\n          ativo?: boolean | null\n          created_at?: string\n          descricao?: string | null\n          horas_estimadas?: number | null\n          id?: string\n          nome_opcao?: string | null\n          padrao?: boolean | null\n          percentual_exito?: number | null\n          produto_id: string\n          tipo: string\n          valor_fixo?: number | null\n          valor_hora?: number | null\n          valor_maximo?: number | null\n          valor_minimo?: number | null\n          valores_por_fase?: Json | null\n        }\n        Update: {\n          ativo?: boolean | null\n          created_at?: string\n          descricao?: string | null\n          horas_estimadas?: number | null\n          id?: string\n          nome_opcao?: string | null\n          padrao?: boolean | null\n          percentual_exito?: number | null\n          produto_id?: string\n          tipo?: string\n          valor_fixo?: number | null\n          valor_hora?: number | null\n          valor_maximo?: number | null\n          valor_minimo?: number | null\n          valores_por_fase?: Json | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"portfolio_produtos_precos_produto_id_fkey\"\n            columns: [\"produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_produtos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_produtos_precos_produto_id_fkey\"\n            columns: [\"produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_portfolio_produtos_catalogo\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      portfolio_produtos_recursos: {\n        Row: {\n          arquivo_nome: string | null\n          arquivo_tipo: string | null\n          arquivo_url: string | null\n          created_at: string\n          descricao: string | null\n          fase_id: string | null\n          id: string\n          nome: string\n          produto_id: string\n          tipo: string\n        }\n        Insert: {\n          arquivo_nome?: string | null\n          arquivo_tipo?: string | null\n          arquivo_url?: string | null\n          created_at?: string\n          descricao?: string | null\n          fase_id?: string | null\n          id?: string\n          nome: string\n          produto_id: string\n          tipo: string\n        }\n        Update: {\n          arquivo_nome?: string | null\n          arquivo_tipo?: string | null\n          arquivo_url?: string | null\n          created_at?: string\n          descricao?: string | null\n          fase_id?: string | null\n          id?: string\n          nome?: string\n          produto_id?: string\n          tipo?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"portfolio_produtos_recursos_fase_id_fkey\"\n            columns: [\"fase_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_produtos_fases\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_produtos_recursos_produto_id_fkey\"\n            columns: [\"produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_produtos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_produtos_recursos_produto_id_fkey\"\n            columns: [\"produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_portfolio_produtos_catalogo\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      portfolio_produtos_versoes: {\n        Row: {\n          alteracoes: string | null\n          created_at: string\n          created_by: string | null\n          id: string\n          motivo: string | null\n          produto_id: string\n          snapshot: Json\n          versao: number\n        }\n        Insert: {\n          alteracoes?: string | null\n          created_at?: string\n          created_by?: string | null\n          id?: string\n          motivo?: string | null\n          produto_id: string\n          snapshot: Json\n          versao: number\n        }\n        Update: {\n          alteracoes?: string | null\n          created_at?: string\n          created_by?: string | null\n          id?: string\n          motivo?: string | null\n          produto_id?: string\n          snapshot?: Json\n          versao?: number\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"portfolio_produtos_versoes_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_produtos_versoes_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_produtos_versoes_produto_id_fkey\"\n            columns: [\"produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_produtos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_produtos_versoes_produto_id_fkey\"\n            columns: [\"produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_portfolio_produtos_catalogo\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      portfolio_projetos: {\n        Row: {\n          cliente_id: string\n          codigo: string\n          contrato_id: string | null\n          created_at: string\n          created_by: string | null\n          data_conclusao: string | null\n          data_inicio: string | null\n          data_prevista_conclusao: string | null\n          escritorio_id: string\n          id: string\n          nome: string\n          observacoes: string | null\n          observacoes_resultado: string | null\n          preco_selecionado_id: string | null\n          processo_id: string | null\n          produto_id: string\n          produto_versao: number\n          progresso_percentual: number | null\n          responsavel_id: string\n          resultado: string | null\n          status: string\n          tags: string[] | null\n          updated_at: string\n          valor_negociado: number | null\n        }\n        Insert: {\n          cliente_id: string\n          codigo: string\n          contrato_id?: string | null\n          created_at?: string\n          created_by?: string | null\n          data_conclusao?: string | null\n          data_inicio?: string | null\n          data_prevista_conclusao?: string | null\n          escritorio_id: string\n          id?: string\n          nome: string\n          observacoes?: string | null\n          observacoes_resultado?: string | null\n          preco_selecionado_id?: string | null\n          processo_id?: string | null\n          produto_id: string\n          produto_versao: number\n          progresso_percentual?: number | null\n          responsavel_id: string\n          resultado?: string | null\n          status?: string\n          tags?: string[] | null\n          updated_at?: string\n          valor_negociado?: number | null\n        }\n        Update: {\n          cliente_id?: string\n          codigo?: string\n          contrato_id?: string | null\n          created_at?: string\n          created_by?: string | null\n          data_conclusao?: string | null\n          data_inicio?: string | null\n          data_prevista_conclusao?: string | null\n          escritorio_id?: string\n          id?: string\n          nome?: string\n          observacoes?: string | null\n          observacoes_resultado?: string | null\n          preco_selecionado_id?: string | null\n          processo_id?: string | null\n          produto_id?: string\n          produto_versao?: number\n          progresso_percentual?: number | null\n          responsavel_id?: string\n          resultado?: string | null\n          status?: string\n          tags?: string[] | null\n          updated_at?: string\n          valor_negociado?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"portfolio_projetos_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_preco_selecionado_id_fkey\"\n            columns: [\"preco_selecionado_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_produtos_precos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_produto_id_fkey\"\n            columns: [\"produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_produtos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_produto_id_fkey\"\n            columns: [\"produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_portfolio_produtos_catalogo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      portfolio_projetos_aprendizados: {\n        Row: {\n          aplicado_ao_produto: boolean | null\n          aplicado_em: string | null\n          aplicar_ao_produto: boolean | null\n          categoria: string | null\n          conteudo: string\n          created_at: string\n          created_by: string | null\n          fase_projeto_id: string | null\n          id: string\n          impacto: string | null\n          projeto_id: string\n          tags: string[] | null\n          tipo: string\n          titulo: string\n        }\n        Insert: {\n          aplicado_ao_produto?: boolean | null\n          aplicado_em?: string | null\n          aplicar_ao_produto?: boolean | null\n          categoria?: string | null\n          conteudo: string\n          created_at?: string\n          created_by?: string | null\n          fase_projeto_id?: string | null\n          id?: string\n          impacto?: string | null\n          projeto_id: string\n          tags?: string[] | null\n          tipo: string\n          titulo: string\n        }\n        Update: {\n          aplicado_ao_produto?: boolean | null\n          aplicado_em?: string | null\n          aplicar_ao_produto?: boolean | null\n          categoria?: string | null\n          conteudo?: string\n          created_at?: string\n          created_by?: string | null\n          fase_projeto_id?: string | null\n          id?: string\n          impacto?: string | null\n          projeto_id?: string\n          tags?: string[] | null\n          tipo?: string\n          titulo?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"portfolio_projetos_aprendizados_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_aprendizados_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_aprendizados_fase_projeto_id_fkey\"\n            columns: [\"fase_projeto_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_projetos_fases\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_aprendizados_projeto_id_fkey\"\n            columns: [\"projeto_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_projetos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_aprendizados_projeto_id_fkey\"\n            columns: [\"projeto_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_portfolio_projetos_completos\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      portfolio_projetos_equipe: {\n        Row: {\n          created_at: string\n          id: string\n          papel_id: string | null\n          papel_nome: string\n          pode_editar: boolean | null\n          projeto_id: string\n          recebe_notificacoes: boolean | null\n          user_id: string\n        }\n        Insert: {\n          created_at?: string\n          id?: string\n          papel_id?: string | null\n          papel_nome: string\n          pode_editar?: boolean | null\n          projeto_id: string\n          recebe_notificacoes?: boolean | null\n          user_id: string\n        }\n        Update: {\n          created_at?: string\n          id?: string\n          papel_id?: string | null\n          papel_nome?: string\n          pode_editar?: boolean | null\n          projeto_id?: string\n          recebe_notificacoes?: boolean | null\n          user_id?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"portfolio_projetos_equipe_papel_id_fkey\"\n            columns: [\"papel_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_produtos_equipe_papeis\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_equipe_projeto_id_fkey\"\n            columns: [\"projeto_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_projetos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_equipe_projeto_id_fkey\"\n            columns: [\"projeto_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_portfolio_projetos_completos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_equipe_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_equipe_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      portfolio_projetos_fases: {\n        Row: {\n          created_at: string\n          data_fim_prevista: string | null\n          data_fim_real: string | null\n          data_inicio_prevista: string | null\n          data_inicio_real: string | null\n          descricao: string | null\n          evento_agenda_id: string | null\n          fase_produto_id: string | null\n          id: string\n          nome: string\n          observacoes: string | null\n          ordem: number\n          progresso_percentual: number | null\n          projeto_id: string\n          status: string\n          updated_at: string\n        }\n        Insert: {\n          created_at?: string\n          data_fim_prevista?: string | null\n          data_fim_real?: string | null\n          data_inicio_prevista?: string | null\n          data_inicio_real?: string | null\n          descricao?: string | null\n          evento_agenda_id?: string | null\n          fase_produto_id?: string | null\n          id?: string\n          nome: string\n          observacoes?: string | null\n          ordem: number\n          progresso_percentual?: number | null\n          projeto_id: string\n          status?: string\n          updated_at?: string\n        }\n        Update: {\n          created_at?: string\n          data_fim_prevista?: string | null\n          data_fim_real?: string | null\n          data_inicio_prevista?: string | null\n          data_inicio_real?: string | null\n          descricao?: string | null\n          evento_agenda_id?: string | null\n          fase_produto_id?: string | null\n          id?: string\n          nome?: string\n          observacoes?: string | null\n          ordem?: number\n          progresso_percentual?: number | null\n          projeto_id?: string\n          status?: string\n          updated_at?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"portfolio_projetos_fases_fase_produto_id_fkey\"\n            columns: [\"fase_produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_produtos_fases\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_fases_projeto_id_fkey\"\n            columns: [\"projeto_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_projetos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_fases_projeto_id_fkey\"\n            columns: [\"projeto_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_portfolio_projetos_completos\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      portfolio_projetos_fases_checklist: {\n        Row: {\n          checklist_produto_id: string | null\n          concluido: boolean | null\n          concluido_em: string | null\n          concluido_por: string | null\n          created_at: string\n          fase_projeto_id: string\n          id: string\n          item: string\n          obrigatorio: boolean | null\n          ordem: number\n          tarefa_id: string | null\n        }\n        Insert: {\n          checklist_produto_id?: string | null\n          concluido?: boolean | null\n          concluido_em?: string | null\n          concluido_por?: string | null\n          created_at?: string\n          fase_projeto_id: string\n          id?: string\n          item: string\n          obrigatorio?: boolean | null\n          ordem: number\n          tarefa_id?: string | null\n        }\n        Update: {\n          checklist_produto_id?: string | null\n          concluido?: boolean | null\n          concluido_em?: string | null\n          concluido_por?: string | null\n          created_at?: string\n          fase_projeto_id?: string\n          id?: string\n          item?: string\n          obrigatorio?: boolean | null\n          ordem?: number\n          tarefa_id?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"portfolio_projetos_fases_checklist_checklist_produto_id_fkey\"\n            columns: [\"checklist_produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_produtos_checklist\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_fases_checklist_concluido_por_fkey\"\n            columns: [\"concluido_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_fases_checklist_concluido_por_fkey\"\n            columns: [\"concluido_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_fases_checklist_fase_projeto_id_fkey\"\n            columns: [\"fase_projeto_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_projetos_fases\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      processos_depositos: {\n        Row: {\n          agencia: string | null\n          banco: string | null\n          conta: string | null\n          created_at: string | null\n          created_by: string | null\n          data_deposito: string\n          data_levantamento: string | null\n          descricao: string | null\n          escritorio_id: string\n          id: string\n          numero_guia: string | null\n          observacoes: string | null\n          processo_id: string\n          status: string\n          tipo: string\n          updated_at: string | null\n          valor: number\n          valor_levantado: number | null\n        }\n        Insert: {\n          agencia?: string | null\n          banco?: string | null\n          conta?: string | null\n          created_at?: string | null\n          created_by?: string | null\n          data_deposito: string\n          data_levantamento?: string | null\n          descricao?: string | null\n          escritorio_id: string\n          id?: string\n          numero_guia?: string | null\n          observacoes?: string | null\n          processo_id: string\n          status?: string\n          tipo: string\n          updated_at?: string | null\n          valor: number\n          valor_levantado?: number | null\n        }\n        Update: {\n          agencia?: string | null\n          banco?: string | null\n          conta?: string | null\n          created_at?: string | null\n          created_by?: string | null\n          data_deposito?: string\n          data_levantamento?: string | null\n          descricao?: string | null\n          escritorio_id?: string\n          id?: string\n          numero_guia?: string | null\n          observacoes?: string | null\n          processo_id?: string\n          status?: string\n          tipo?: string\n          updated_at?: string | null\n          valor?: number\n          valor_levantado?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"processos_depositos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_depositos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_depositos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_depositos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_depositos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n        ]\n      }\n      processos_equipe: {\n        Row: {\n          adicionado_em: string | null\n          adicionado_por: string | null\n          escritorio_id: string\n          id: string\n          papel: string\n          pode_editar: boolean | null\n          pode_visualizar: boolean | null\n          processo_id: string\n          recebe_notificacoes: boolean | null\n          user_id: string\n        }\n        Insert: {\n          adicionado_em?: string | null\n          adicionado_por?: string | null\n          escritorio_id: string\n          id?: string\n          papel: string\n          pode_editar?: boolean | null\n          pode_visualizar?: boolean | null\n          processo_id: string\n          recebe_notificacoes?: boolean | null\n          user_id: string\n        }\n        Update: {\n          adicionado_em?: string | null\n          adicionado_por?: string | null\n          escritorio_id?: string\n          id?: string\n          papel?: string\n          pode_editar?: boolean | null\n          pode_visualizar?: boolean | null\n          processo_id?: string\n          recebe_notificacoes?: boolean | null\n          user_id?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"processos_equipe_adicionado_por_fkey\"\n            columns: [\"adicionado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_equipe_adicionado_por_fkey\"\n            columns: [\"adicionado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"processos_equipe_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_equipe_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_equipe_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_equipe_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_equipe_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"processos_equipe_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_equipe_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      processos_estrategia: {\n        Row: {\n          ameacas: Json | null\n          aprovado: boolean | null\n          created_at: string | null\n          data_aprovacao: string | null\n          data_revisao: string | null\n          documentos_necessarios: Json | null\n          elaborado_por: string | null\n          escritorio_id: string\n          estrategia_texto: string | null\n          fundamentos_legais: string[] | null\n          id: string\n          is_versao_atual: boolean | null\n          objetivo_principal: string | null\n          oportunidades: Json | null\n          parametros_acordo: Json | null\n          plano_contingencia: string | null\n          pontos_fortes: Json | null\n          pontos_fracos: Json | null\n          possibilidade_acordo: boolean | null\n          processo_id: string\n          provas_a_produzir: Json | null\n          proximos_passos: Json | null\n          resumo_caso: string | null\n          revisado_por: string | null\n          riscos_identificados: Json | null\n          teses_principais: string[] | null\n          teses_subsidiarias: string[] | null\n          updated_at: string | null\n          versao: number | null\n          versao_anterior_id: string | null\n        }\n        Insert: {\n          ameacas?: Json | null\n          aprovado?: boolean | null\n          created_at?: string | null\n          data_aprovacao?: string | null\n          data_revisao?: string | null\n          documentos_necessarios?: Json | null\n          elaborado_por?: string | null\n          escritorio_id: string\n          estrategia_texto?: string | null\n          fundamentos_legais?: string[] | null\n          id?: string\n          is_versao_atual?: boolean | null\n          objetivo_principal?: string | null\n          oportunidades?: Json | null\n          parametros_acordo?: Json | null\n          plano_contingencia?: string | null\n          pontos_fortes?: Json | null\n          pontos_fracos?: Json | null\n          possibilidade_acordo?: boolean | null\n          processo_id: string\n          provas_a_produzir?: Json | null\n          proximos_passos?: Json | null\n          resumo_caso?: string | null\n          revisado_por?: string | null\n          riscos_identificados?: Json | null\n          teses_principais?: string[] | null\n          teses_subsidiarias?: string[] | null\n          updated_at?: string | null\n          versao?: number | null\n          versao_anterior_id?: string | null\n        }\n        Update: {\n          ameacas?: Json | null\n          aprovado?: boolean | null\n          created_at?: string | null\n          data_aprovacao?: string | null\n          data_revisao?: string | null\n          documentos_necessarios?: Json | null\n          elaborado_por?: string | null\n          escritorio_id?: string\n          estrategia_texto?: string | null\n          fundamentos_legais?: string[] | null\n          id?: string\n          is_versao_atual?: boolean | null\n          objetivo_principal?: string | null\n          oportunidades?: Json | null\n          parametros_acordo?: Json | null\n          plano_contingencia?: string | null\n          pontos_fortes?: Json | null\n          pontos_fracos?: Json | null\n          possibilidade_acordo?: boolean | null\n          processo_id?: string\n          provas_a_produzir?: Json | null\n          proximos_passos?: Json | null\n          resumo_caso?: string | null\n          revisado_por?: string | null\n          riscos_identificados?: Json | null\n          teses_principais?: string[] | null\n          teses_subsidiarias?: string[] | null\n          updated_at?: string | null\n          versao?: number | null\n          versao_anterior_id?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"processos_estrategia_elaborado_por_fkey\"\n            columns: [\"elaborado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_estrategia_elaborado_por_fkey\"\n            columns: [\"elaborado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"processos_estrategia_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_estrategia_revisado_por_fkey\"\n            columns: [\"revisado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_estrategia_revisado_por_fkey\"\n            columns: [\"revisado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"processos_estrategia_versao_anterior_id_fkey\"\n            columns: [\"versao_anterior_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_estrategia\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      processos_historico: {\n        Row: {\n          acao: string\n          campo_alterado: string | null\n          created_at: string | null\n          descricao: string\n          escritorio_id: string\n          id: string\n          processo_id: string\n          user_id: string | null\n          user_nome: string | null\n          valor_anterior: string | null\n          valor_novo: string | null\n        }\n        Insert: {\n          acao: string\n          campo_alterado?: string | null\n          created_at?: string | null\n          descricao: string\n          escritorio_id: string\n          id?: string\n          processo_id: string\n          user_id?: string | null\n          user_nome?: string | null\n          valor_anterior?: string | null\n          valor_novo?: string | null\n        }\n        Update: {\n          acao?: string\n          campo_alterado?: string | null\n          created_at?: string | null\n          descricao?: string\n          escritorio_id?: string\n          id?: string\n          processo_id?: string\n          user_id?: string | null\n          user_nome?: string | null\n          valor_anterior?: string | null\n          valor_novo?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"fk_processos_historico_escritorio\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_historico_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_historico_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_historico_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_historico_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"processos_historico_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_historico_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      processos_jurisprudencias: {\n        Row: {\n          adicionado_por: string | null\n          aplicada_em_peca: boolean | null\n          citada_em_analise: boolean | null\n          created_at: string | null\n          data_julgamento: string | null\n          data_publicacao: string | null\n          decisao: string | null\n          ementa: string\n          escritorio_id: string\n          fonte: string | null\n          id: string\n          link_consulta: string | null\n          link_inteiro_teor: string | null\n          metadata: Json | null\n          numero_acordao: string | null\n          numero_processo: string | null\n          observacoes: string | null\n          orgao_julgador: string | null\n          peca_id: string | null\n          processo_id: string\n          relator: string | null\n          relevancia: string | null\n          resultado: string | null\n          similaridade_score: number | null\n          tags: string[] | null\n          temas_relacionados: string[] | null\n          teses_aplicadas: string[] | null\n          texto_completo: string | null\n          tipo: string | null\n          tribunal: string\n        }\n        Insert: {\n          adicionado_por?: string | null\n          aplicada_em_peca?: boolean | null\n          citada_em_analise?: boolean | null\n          created_at?: string | null\n          data_julgamento?: string | null\n          data_publicacao?: string | null\n          decisao?: string | null\n          ementa: string\n          escritorio_id: string\n          fonte?: string | null\n          id?: string\n          link_consulta?: string | null\n          link_inteiro_teor?: string | null\n          metadata?: Json | null\n          numero_acordao?: string | null\n          numero_processo?: string | null\n          observacoes?: string | null\n          orgao_julgador?: string | null\n          peca_id?: string | null\n          processo_id: string\n          relator?: string | null\n          relevancia?: string | null\n          resultado?: string | null\n          similaridade_score?: number | null\n          tags?: string[] | null\n          temas_relacionados?: string[] | null\n          teses_aplicadas?: string[] | null\n          texto_completo?: string | null\n          tipo?: string | null\n          tribunal: string\n        }\n        Update: {\n          adicionado_por?: string | null\n          aplicada_em_peca?: boolean | null\n          citada_em_analise?: boolean | null\n          created_at?: string | null\n          data_julgamento?: string | null\n          data_publicacao?: string | null\n          decisao?: string | null\n          ementa?: string\n          escritorio_id?: string\n          fonte?: string | null\n          id?: string\n          link_consulta?: string | null\n          link_inteiro_teor?: string | null\n          metadata?: Json | null\n          numero_acordao?: string | null\n          numero_processo?: string | null\n          observacoes?: string | null\n          orgao_julgador?: string | null\n          peca_id?: string | null\n          processo_id?: string\n          relator?: string | null\n          relevancia?: string | null\n          resultado?: string | null\n          similaridade_score?: number | null\n          tags?: string[] | null\n          temas_relacionados?: string[] | null\n          teses_aplicadas?: string[] | null\n          texto_completo?: string | null\n          tipo?: string | null\n          tribunal?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"processos_jurisprudencias_adicionado_por_fkey\"\n            columns: [\"adicionado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_jurisprudencias_adicionado_por_fkey\"\n            columns: [\"adicionado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"processos_jurisprudencias_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      processos_movimentacoes: {\n        Row: {\n          comentarios: string | null\n          conteudo_completo: string | null\n          created_at: string | null\n          data_movimento: string\n          descricao: string\n          escritorio_id: string\n          id: string\n          importante: boolean | null\n          lida: boolean | null\n          lida_em: string | null\n          lida_por: string | null\n          origem: string\n          processo_id: string\n          tipo_codigo: string | null\n          tipo_descricao: string | null\n        }\n        Insert: {\n          comentarios?: string | null\n          conteudo_completo?: string | null\n          created_at?: string | null\n          data_movimento: string\n          descricao: string\n          escritorio_id: string\n          id?: string\n          importante?: boolean | null\n          lida?: boolean | null\n          lida_em?: string | null\n          lida_por?: string | null\n          origem?: string\n          processo_id: string\n          tipo_codigo?: string | null\n          tipo_descricao?: string | null\n        }\n        Update: {\n          comentarios?: string | null\n          conteudo_completo?: string | null\n          created_at?: string | null\n          data_movimento?: string\n          descricao?: string\n          escritorio_id?: string\n          id?: string\n          importante?: boolean | null\n          lida?: boolean | null\n          lida_em?: string | null\n          lida_por?: string | null\n          origem?: string\n          processo_id?: string\n          tipo_codigo?: string | null\n          tipo_descricao?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"processos_movimentacoes_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_movimentacoes_lida_por_fkey\"\n            columns: [\"lida_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_movimentacoes_lida_por_fkey\"\n            columns: [\"lida_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"processos_movimentacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_movimentacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_movimentacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_movimentacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n        ]\n      }\n      processos_processos: {\n        Row: {\n          area: Database[\"public\"][\"Enums\"][\"area_juridica_enum\"]\n          autor: string | null\n          cliente_id: string\n          colaboradores_ids: string[] | null\n          comarca: string | null\n          consultivo_origem_id: string | null\n          contrato_id: string | null\n          created_at: string | null\n          created_by: string | null\n          data_arquivamento: string | null\n          data_distribuicao: string\n          data_encerramento: string | null\n          data_transito_julgado: string | null\n          data_ultima_atualizacao_monetaria: string | null\n          encerrado_em: string | null\n          encerrado_por: string | null\n          escavador_monitoramento_id: number | null\n          escritorio_id: string\n          fase: string | null\n          id: string\n          indice_correcao: string | null\n          instancia: string | null\n          link_tribunal: string | null\n          modalidade_cobranca: string | null\n          numero_cnj: string | null\n          numero_pasta: string | null\n          objeto_acao: string | null\n          observacoes: string | null\n          outros_numeros: Json | null\n          parte_contraria: string | null\n          polo_cliente: string\n          processo_principal_id: string | null\n          provisao_perda: string | null\n          provisao_sugerida: number | null\n          responsavel_id: string\n          resultado: string | null\n          resumo_encerramento: string | null\n          reu: string | null\n          rito: string | null\n          status: string\n          tags: string[] | null\n          tipo: string\n          tipo_derivado: string | null\n          tribunal: string | null\n          uf: string | null\n          updated_at: string | null\n          valor_acordo: number | null\n          valor_atualizado: number | null\n          valor_causa: number | null\n          valor_condenacao: number | null\n          vara: string | null\n        }\n        Insert: {\n          area: Database[\"public\"][\"Enums\"][\"area_juridica_enum\"]\n          autor?: string | null\n          cliente_id: string\n          colaboradores_ids?: string[] | null\n          comarca?: string | null\n          consultivo_origem_id?: string | null\n          contrato_id?: string | null\n          created_at?: string | null\n          created_by?: string | null\n          data_arquivamento?: string | null\n          data_distribuicao: string\n          data_encerramento?: string | null\n          data_transito_julgado?: string | null\n          data_ultima_atualizacao_monetaria?: string | null\n          encerrado_em?: string | null\n          encerrado_por?: string | null\n          escavador_monitoramento_id?: number | null\n          escritorio_id: string\n          fase?: string | null\n          id?: string\n          indice_correcao?: string | null\n          instancia?: string | null\n          link_tribunal?: string | null\n          modalidade_cobranca?: string | null\n          numero_cnj?: string | null\n          numero_pasta?: string | null\n          objeto_acao?: string | null\n          observacoes?: string | null\n          outros_numeros?: Json | null\n          parte_contraria?: string | null\n          polo_cliente: string\n          processo_principal_id?: string | null\n          provisao_perda?: string | null\n          provisao_sugerida?: number | null\n          responsavel_id: string\n          resultado?: string | null\n          resumo_encerramento?: string | null\n          reu?: string | null\n          rito?: string | null\n          status?: string\n          tags?: string[] | null\n          tipo: string\n          tipo_derivado?: string | null\n          tribunal?: string | null\n          uf?: string | null\n          updated_at?: string | null\n          valor_acordo?: number | null\n          valor_atualizado?: number | null\n          valor_causa?: number | null\n          valor_condenacao?: number | null\n          vara?: string | null\n        }\n        Update: {\n          area?: Database[\"public\"][\"Enums\"][\"area_juridica_enum\"]\n          autor?: string | null\n          cliente_id?: string\n          colaboradores_ids?: string[] | null\n          comarca?: string | null\n          consultivo_origem_id?: string | null\n          contrato_id?: string | null\n          created_at?: string | null\n          created_by?: string | null\n          data_arquivamento?: string | null\n          data_distribuicao?: string\n          data_encerramento?: string | null\n          data_transito_julgado?: string | null\n          data_ultima_atualizacao_monetaria?: string | null\n          encerrado_em?: string | null\n          encerrado_por?: string | null\n          escavador_monitoramento_id?: number | null\n          escritorio_id?: string\n          fase?: string | null\n          id?: string\n          indice_correcao?: string | null\n          instancia?: string | null\n          link_tribunal?: string | null\n          modalidade_cobranca?: string | null\n          numero_cnj?: string | null\n          numero_pasta?: string | null\n          objeto_acao?: string | null\n          observacoes?: string | null\n          outros_numeros?: Json | null\n          parte_contraria?: string | null\n          polo_cliente?: string\n          processo_principal_id?: string | null\n          provisao_perda?: string | null\n          provisao_sugerida?: number | null\n          responsavel_id?: string\n          resultado?: string | null\n          resumo_encerramento?: string | null\n          reu?: string | null\n          rito?: string | null\n          status?: string\n          tags?: string[] | null\n          tipo?: string\n          tipo_derivado?: string | null\n          tribunal?: string | null\n          uf?: string | null\n          updated_at?: string | null\n          valor_acordo?: number | null\n          valor_atualizado?: number | null\n          valor_causa?: number | null\n          valor_condenacao?: number | null\n          vara?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"processos_processos_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_consultivo_origem_id_fkey\"\n            columns: [\"consultivo_origem_id\"]\n            isOneToOne: false\n            referencedRelation: \"consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_consultivo_origem_id_fkey\"\n            columns: [\"consultivo_origem_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_consultivo_origem_id_fkey\"\n            columns: [\"consultivo_origem_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"consultivo_id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_contratos_honorarios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_receitas_por_contrato\"\n            referencedColumns: [\"contrato_id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_encerrado_por_fkey\"\n            columns: [\"encerrado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_encerrado_por_fkey\"\n            columns: [\"encerrado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_processo_principal_id_fkey\"\n            columns: [\"processo_principal_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_processo_principal_id_fkey\"\n            columns: [\"processo_principal_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_processo_principal_id_fkey\"\n            columns: [\"processo_principal_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_processo_principal_id_fkey\"\n            columns: [\"processo_principal_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      profiles: {\n        Row: {\n          avatar_url: string | null\n          cpf: string | null\n          created_at: string | null\n          email: string | null\n          escritorio_id: string | null\n          id: string\n          nome_completo: string\n          oab_numero: string | null\n          oab_uf: string | null\n          onboarding_completado_em: string | null\n          onboarding_completo: boolean | null\n          onboarding_etapa_atual: string | null\n          preferencias: Json | null\n          primeiro_acesso: boolean | null\n          role: string | null\n          telefone: string | null\n          ultimo_escritorio_ativo: string | null\n          updated_at: string | null\n        }\n        Insert: {\n          avatar_url?: string | null\n          cpf?: string | null\n          created_at?: string | null\n          email?: string | null\n          escritorio_id?: string | null\n          id: string\n          nome_completo: string\n          oab_numero?: string | null\n          oab_uf?: string | null\n          onboarding_completado_em?: string | null\n          onboarding_completo?: boolean | null\n          onboarding_etapa_atual?: string | null\n          preferencias?: Json | null\n          primeiro_acesso?: boolean | null\n          role?: string | null\n          telefone?: string | null\n          ultimo_escritorio_ativo?: string | null\n          updated_at?: string | null\n        }\n        Update: {\n          avatar_url?: string | null\n          cpf?: string | null\n          created_at?: string | null\n          email?: string | null\n          escritorio_id?: string | null\n          id?: string\n          nome_completo?: string\n          oab_numero?: string | null\n          oab_uf?: string | null\n          onboarding_completado_em?: string | null\n          onboarding_completo?: boolean | null\n          onboarding_etapa_atual?: string | null\n          preferencias?: Json | null\n          primeiro_acesso?: boolean | null\n          role?: string | null\n          telefone?: string | null\n          ultimo_escritorio_ativo?: string | null\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"profiles_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"profiles_ultimo_escritorio_ativo_fkey\"\n            columns: [\"ultimo_escritorio_ativo\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      publicacoes_analises: {\n        Row: {\n          acoes_sugeridas: Json | null\n          confianca_analise: number | null\n          data_intimacao: string | null\n          data_limite: string | null\n          determinacoes: Json | null\n          escritorio_id: string\n          fundamentacao_legal: string | null\n          id: string\n          metadados_extras: Json | null\n          modelo: string | null\n          pontos_principais: Json | null\n          prazo_dias: number | null\n          prazo_tipo_dias: string | null\n          processado_em: string | null\n          publicacao_id: string\n          requer_manifestacao: boolean | null\n          resultado: Json | null\n          resumo_executivo: string | null\n          sentimento: string | null\n          tem_determinacao: boolean | null\n          tem_prazo: boolean | null\n          template_sugerido: string | null\n          tipo_decisao: string | null\n          tipo_prazo: string | null\n          tokens_usados: number | null\n        }\n        Insert: {\n          acoes_sugeridas?: Json | null\n          confianca_analise?: number | null\n          data_intimacao?: string | null\n          data_limite?: string | null\n          determinacoes?: Json | null\n          escritorio_id: string\n          fundamentacao_legal?: string | null\n          id?: string\n          metadados_extras?: Json | null\n          modelo?: string | null\n          pontos_principais?: Json | null\n          prazo_dias?: number | null\n          prazo_tipo_dias?: string | null\n          processado_em?: string | null\n          publicacao_id: string\n          requer_manifestacao?: boolean | null\n          resultado?: Json | null\n          resumo_executivo?: string | null\n          sentimento?: string | null\n          tem_determinacao?: boolean | null\n          tem_prazo?: boolean | null\n          template_sugerido?: string | null\n          tipo_decisao?: string | null\n          tipo_prazo?: string | null\n          tokens_usados?: number | null\n        }\n        Update: {\n          acoes_sugeridas?: Json | null\n          confianca_analise?: number | null\n          data_intimacao?: string | null\n          data_limite?: string | null\n          determinacoes?: Json | null\n          escritorio_id?: string\n          fundamentacao_legal?: string | null\n          id?: string\n          metadados_extras?: Json | null\n          modelo?: string | null\n          pontos_principais?: Json | null\n          prazo_dias?: number | null\n          prazo_tipo_dias?: string | null\n          processado_em?: string | null\n          publicacao_id?: string\n          requer_manifestacao?: boolean | null\n          resultado?: Json | null\n          resumo_executivo?: string | null\n          sentimento?: string | null\n          tem_determinacao?: boolean | null\n          tem_prazo?: boolean | null\n          template_sugerido?: string | null\n          tipo_decisao?: string | null\n          tipo_prazo?: string | null\n          tokens_usados?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"fk_publicacoes_analises_escritorio\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_analises_publicacao_id_fkey\"\n            columns: [\"publicacao_id\"]\n            isOneToOne: true\n            referencedRelation: \"publicacoes_publicacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_analises_publicacao_id_fkey\"\n            columns: [\"publicacao_id\"]\n            isOneToOne: true\n            referencedRelation: \"v_publicacoes_completas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_analises_publicacao_id_fkey\"\n            columns: [\"publicacao_id\"]\n            isOneToOne: true\n            referencedRelation: \"v_publicacoes_pendentes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_analises_publicacao_id_fkey\"\n            columns: [\"publicacao_id\"]\n            isOneToOne: true\n            referencedRelation: \"v_publicacoes_urgentes\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      publicacoes_associados: {\n        Row: {\n          aasp_chave: string\n          ativo: boolean | null\n          created_at: string | null\n          escritorio_id: string\n          id: string\n          nome: string\n          oab_numero: string\n          oab_uf: string\n          publicacoes_sync_count: number | null\n          ultima_sync: string | null\n          updated_at: string | null\n        }\n        Insert: {\n          aasp_chave: string\n          ativo?: boolean | null\n          created_at?: string | null\n          escritorio_id: string\n          id?: string\n          nome: string\n          oab_numero: string\n          oab_uf?: string\n          publicacoes_sync_count?: number | null\n          ultima_sync?: string | null\n          updated_at?: string | null\n        }\n        Update: {\n          aasp_chave?: string\n          ativo?: boolean | null\n          created_at?: string | null\n          escritorio_id?: string\n          id?: string\n          nome?: string\n          oab_numero?: string\n          oab_uf?: string\n          publicacoes_sync_count?: number | null\n          ultima_sync?: string | null\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"publicacoes_associados_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      publicacoes_config: {\n        Row: {\n          api_token: string | null\n          api_url: string | null\n          ativo: boolean | null\n          auto_vincular_por_cliente: boolean | null\n          auto_vincular_por_numero: boolean | null\n          created_at: string | null\n          escritorio_id: string\n          id: string\n          notificar_apenas_urgentes: boolean | null\n          notificar_users: string[] | null\n          palavras_chave_urgencia: string[] | null\n          prazo_minimo_urgencia: number | null\n          proxima_sincronizacao: string | null\n          resumo_diario: boolean | null\n          sync_frequencia_horas: number | null\n          tipos_alerta_imediato: string[] | null\n          ultima_sincronizacao: string | null\n          updated_at: string | null\n          webhook_secret: string | null\n          webhook_url: string | null\n        }\n        Insert: {\n          api_token?: string | null\n          api_url?: string | null\n          ativo?: boolean | null\n          auto_vincular_por_cliente?: boolean | null\n          auto_vincular_por_numero?: boolean | null\n          created_at?: string | null\n          escritorio_id: string\n          id?: string\n          notificar_apenas_urgentes?: boolean | null\n          notificar_users?: string[] | null\n          palavras_chave_urgencia?: string[] | null\n          prazo_minimo_urgencia?: number | null\n          proxima_sincronizacao?: string | null\n          resumo_diario?: boolean | null\n          sync_frequencia_horas?: number | null\n          tipos_alerta_imediato?: string[] | null\n          ultima_sincronizacao?: string | null\n          updated_at?: string | null\n          webhook_secret?: string | null\n          webhook_url?: string | null\n        }\n        Update: {\n          api_token?: string | null\n          api_url?: string | null\n          ativo?: boolean | null\n          auto_vincular_por_cliente?: boolean | null\n          auto_vincular_por_numero?: boolean | null\n          created_at?: string | null\n          escritorio_id?: string\n          id?: string\n          notificar_apenas_urgentes?: boolean | null\n          notificar_users?: string[] | null\n          palavras_chave_urgencia?: string[] | null\n          prazo_minimo_urgencia?: number | null\n          proxima_sincronizacao?: string | null\n          resumo_diario?: boolean | null\n          sync_frequencia_horas?: number | null\n          tipos_alerta_imediato?: string[] | null\n          ultima_sincronizacao?: string | null\n          updated_at?: string | null\n          webhook_secret?: string | null\n          webhook_url?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"publicacoes_config_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: true\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      publicacoes_historico: {\n        Row: {\n          acao: string\n          created_at: string | null\n          detalhes: Json | null\n          escritorio_id: string\n          id: string\n          publicacao_id: string\n          user_id: string | null\n        }\n        Insert: {\n          acao: string\n          created_at?: string | null\n          detalhes?: Json | null\n          escritorio_id: string\n          id?: string\n          publicacao_id: string\n          user_id?: string | null\n        }\n        Update: {\n          acao?: string\n          created_at?: string | null\n          detalhes?: Json | null\n          escritorio_id?: string\n          id?: string\n          publicacao_id?: string\n          user_id?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"fk_publicacoes_historico_escritorio\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_historico_publicacao_id_fkey\"\n            columns: [\"publicacao_id\"]\n            isOneToOne: false\n            referencedRelation: \"publicacoes_publicacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_historico_publicacao_id_fkey\"\n            columns: [\"publicacao_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_publicacoes_completas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_historico_publicacao_id_fkey\"\n            columns: [\"publicacao_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_publicacoes_pendentes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_historico_publicacao_id_fkey\"\n            columns: [\"publicacao_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_publicacoes_urgentes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_historico_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_historico_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      publicacoes_notificacoes: {\n        Row: {\n          created_at: string | null\n          enviado: boolean | null\n          enviado_em: string | null\n          escritorio_id: string\n          id: string\n          lido: boolean | null\n          lido_em: string | null\n          metodo: string\n          publicacao_id: string\n          user_id: string\n        }\n        Insert: {\n          created_at?: string | null\n          enviado?: boolean | null\n          enviado_em?: string | null\n          escritorio_id: string\n          id?: string\n          lido?: boolean | null\n          lido_em?: string | null\n          metodo: string\n          publicacao_id: string\n          user_id: string\n        }\n        Update: {\n          created_at?: string | null\n          enviado?: boolean | null\n          enviado_em?: string | null\n          escritorio_id?: string\n          id?: string\n          lido?: boolean | null\n          lido_em?: string | null\n          metodo?: string\n          publicacao_id?: string\n          user_id?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"fk_publicacoes_notificacoes_escritorio\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_notificacoes_publicacao_id_fkey\"\n            columns: [\"publicacao_id\"]\n            isOneToOne: false\n            referencedRelation: \"publicacoes_publicacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_notificacoes_publicacao_id_fkey\"\n            columns: [\"publicacao_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_publicacoes_completas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_notificacoes_publicacao_id_fkey\"\n            columns: [\"publicacao_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_publicacoes_pendentes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_notificacoes_publicacao_id_fkey\"\n            columns: [\"publicacao_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_publicacoes_urgentes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_notificacoes_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_notificacoes_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      publicacoes_publicacoes: {\n        Row: {\n          aasp_id: string | null\n          agendamento_id: string | null\n          agendamento_tipo: string | null\n          associado_id: string | null\n          cliente_id: string | null\n          confianca_vinculacao: number | null\n          created_at: string | null\n          data_captura: string | null\n          data_publicacao: string\n          duplicata_revisada: boolean | null\n          escavador_aparicao_id: string | null\n          escavador_monitoramento_id: string | null\n          escritorio_id: string\n          hash_conteudo: string | null\n          id: string\n          is_snippet: boolean | null\n          numero_processo: string | null\n          partes: string[] | null\n          pdf_url: string | null\n          processo_id: string | null\n          source: string | null\n          source_type: string | null\n          status: string | null\n          texto_completo: string\n          tipo_publicacao: string\n          tribunal: string\n          updated_at: string | null\n          urgente: boolean | null\n          vara: string | null\n        }\n        Insert: {\n          aasp_id?: string | null\n          agendamento_id?: string | null\n          agendamento_tipo?: string | null\n          associado_id?: string | null\n          cliente_id?: string | null\n          confianca_vinculacao?: number | null\n          created_at?: string | null\n          data_captura?: string | null\n          data_publicacao: string\n          duplicata_revisada?: boolean | null\n          escavador_aparicao_id?: string | null\n          escavador_monitoramento_id?: string | null\n          escritorio_id: string\n          hash_conteudo?: string | null\n          id?: string\n          is_snippet?: boolean | null\n          numero_processo?: string | null\n          partes?: string[] | null\n          pdf_url?: string | null\n          processo_id?: string | null\n          source?: string | null\n          source_type?: string | null\n          status?: string | null\n          texto_completo: string\n          tipo_publicacao: string\n          tribunal: string\n          updated_at?: string | null\n          urgente?: boolean | null\n          vara?: string | null\n        }\n        Update: {\n          aasp_id?: string | null\n          agendamento_id?: string | null\n          agendamento_tipo?: string | null\n          associado_id?: string | null\n          cliente_id?: string | null\n          confianca_vinculacao?: number | null\n          created_at?: string | null\n          data_captura?: string | null\n          data_publicacao?: string\n          duplicata_revisada?: boolean | null\n          escavador_aparicao_id?: string | null\n          escavador_monitoramento_id?: string | null\n          escritorio_id?: string\n          hash_conteudo?: string | null\n          id?: string\n          is_snippet?: boolean | null\n          numero_processo?: string | null\n          partes?: string[] | null\n          pdf_url?: string | null\n          processo_id?: string | null\n          source?: string | null\n          source_type?: string | null\n          status?: string | null\n          texto_completo?: string\n          tipo_publicacao?: string\n          tribunal?: string\n          updated_at?: string | null\n          urgente?: boolean | null\n          vara?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"publicacoes_publicacoes_associado_id_fkey\"\n            columns: [\"associado_id\"]\n            isOneToOne: false\n            referencedRelation: \"publicacoes_associados\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n        ]\n      }\n      publicacoes_sincronizacoes: {\n        Row: {\n          associado_id: string | null\n          created_at: string | null\n          data_fim: string | null\n          data_inicio: string | null\n          erro_mensagem: string | null\n          escritorio_id: string\n          id: string\n          publicacoes_atualizadas: number | null\n          publicacoes_novas: number | null\n          sucesso: boolean | null\n          tipo: string\n          triggered_by: string | null\n        }\n        Insert: {\n          associado_id?: string | null\n          created_at?: string | null\n          data_fim?: string | null\n          data_inicio?: string | null\n          erro_mensagem?: string | null\n          escritorio_id: string\n          id?: string\n          publicacoes_atualizadas?: number | null\n          publicacoes_novas?: number | null\n          sucesso?: boolean | null\n          tipo: string\n          triggered_by?: string | null\n        }\n        Update: {\n          associado_id?: string | null\n          created_at?: string | null\n          data_fim?: string | null\n          data_inicio?: string | null\n          erro_mensagem?: string | null\n          escritorio_id?: string\n          id?: string\n          publicacoes_atualizadas?: number | null\n          publicacoes_novas?: number | null\n          sucesso?: boolean | null\n          tipo?: string\n          triggered_by?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"publicacoes_sincronizacoes_associado_id_fkey\"\n            columns: [\"associado_id\"]\n            isOneToOne: false\n            referencedRelation: \"publicacoes_associados\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_sincronizacoes_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_sincronizacoes_triggered_by_fkey\"\n            columns: [\"triggered_by\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_sincronizacoes_triggered_by_fkey\"\n            columns: [\"triggered_by\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      publicacoes_sync_escavador: {\n        Row: {\n          created_at: string | null\n          data_fim: string | null\n          data_inicio: string\n          erro_mensagem: string | null\n          escritorio_id: string\n          id: string\n          publicacoes_duplicadas: number | null\n          publicacoes_novas: number | null\n          publicacoes_vinculadas: number | null\n          sucesso: boolean | null\n          termo_id: string | null\n          tipo: string\n        }\n        Insert: {\n          created_at?: string | null\n          data_fim?: string | null\n          data_inicio?: string\n          erro_mensagem?: string | null\n          escritorio_id: string\n          id?: string\n          publicacoes_duplicadas?: number | null\n          publicacoes_novas?: number | null\n          publicacoes_vinculadas?: number | null\n          sucesso?: boolean | null\n          termo_id?: string | null\n          tipo: string\n        }\n        Update: {\n          created_at?: string | null\n          data_fim?: string | null\n          data_inicio?: string\n          erro_mensagem?: string | null\n          escritorio_id?: string\n          id?: string\n          publicacoes_duplicadas?: number | null\n          publicacoes_novas?: number | null\n          publicacoes_vinculadas?: number | null\n          sucesso?: boolean | null\n          termo_id?: string | null\n          tipo?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"publicacoes_sync_escavador_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_sync_escavador_termo_id_fkey\"\n            columns: [\"termo_id\"]\n            isOneToOne: false\n            referencedRelation: \"publicacoes_termos_escavador\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      publicacoes_termos_escavador: {\n        Row: {\n          ativo: boolean | null\n          created_at: string | null\n          descricao: string | null\n          escavador_erro: string | null\n          escavador_monitoramento_id: string | null\n          escavador_status: string | null\n          escritorio_id: string\n          id: string\n          origens_ids: number[] | null\n          termo: string\n          termos_auxiliares: Json | null\n          total_aparicoes: number | null\n          ultima_aparicao: string | null\n          ultima_sync: string | null\n          updated_at: string | null\n          variacoes: string[] | null\n        }\n        Insert: {\n          ativo?: boolean | null\n          created_at?: string | null\n          descricao?: string | null\n          escavador_erro?: string | null\n          escavador_monitoramento_id?: string | null\n          escavador_status?: string | null\n          escritorio_id: string\n          id?: string\n          origens_ids?: number[] | null\n          termo: string\n          termos_auxiliares?: Json | null\n          total_aparicoes?: number | null\n          ultima_aparicao?: string | null\n          ultima_sync?: string | null\n          updated_at?: string | null\n          variacoes?: string[] | null\n        }\n        Update: {\n          ativo?: boolean | null\n          created_at?: string | null\n          descricao?: string | null\n          escavador_erro?: string | null\n          escavador_monitoramento_id?: string | null\n          escavador_status?: string | null\n          escritorio_id?: string\n          id?: string\n          origens_ids?: number[] | null\n          termo?: string\n          termos_auxiliares?: Json | null\n          total_aparicoes?: number | null\n          ultima_aparicao?: string | null\n          ultima_sync?: string | null\n          updated_at?: string | null\n          variacoes?: string[] | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"publicacoes_termos_escavador_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      publicacoes_tratamentos: {\n        Row: {\n          acao_tomada: string\n          editou_sugestao: boolean | null\n          escritorio_id: string\n          evento_id: string | null\n          id: string\n          observacoes: string | null\n          processado_em: string | null\n          processado_por: string\n          publicacao_id: string\n          tempo_processamento_segundos: number | null\n        }\n        Insert: {\n          acao_tomada: string\n          editou_sugestao?: boolean | null\n          escritorio_id: string\n          evento_id?: string | null\n          id?: string\n          observacoes?: string | null\n          processado_em?: string | null\n          processado_por: string\n          publicacao_id: string\n          tempo_processamento_segundos?: number | null\n        }\n        Update: {\n          acao_tomada?: string\n          editou_sugestao?: boolean | null\n          escritorio_id?: string\n          evento_id?: string | null\n          id?: string\n          observacoes?: string | null\n          processado_em?: string | null\n          processado_por?: string\n          publicacao_id?: string\n          tempo_processamento_segundos?: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"fk_publicacoes_tratamentos_escritorio\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_tratamentos_evento_id_fkey\"\n            columns: [\"evento_id\"]\n            isOneToOne: false\n            referencedRelation: \"agenda_eventos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_tratamentos_processado_por_fkey\"\n            columns: [\"processado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_tratamentos_processado_por_fkey\"\n            columns: [\"processado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_tratamentos_publicacao_id_fkey\"\n            columns: [\"publicacao_id\"]\n            isOneToOne: false\n            referencedRelation: \"publicacoes_publicacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_tratamentos_publicacao_id_fkey\"\n            columns: [\"publicacao_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_publicacoes_completas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_tratamentos_publicacao_id_fkey\"\n            columns: [\"publicacao_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_publicacoes_pendentes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_tratamentos_publicacao_id_fkey\"\n            columns: [\"publicacao_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_publicacoes_urgentes\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      relatorios_gerados: {\n        Row: {\n          andamentos_salvos: boolean\n          arquivo_nome: string | null\n          arquivo_url: string | null\n          clientes_ids: string[]\n          colunas_usadas: string[] | null\n          created_at: string\n          erro_mensagem: string | null\n          escritorio_id: string\n          gerado_por: string | null\n          id: string\n          processos_ids: string[] | null\n          resumos_ia: Json | null\n          status: string\n          template_id: string | null\n          titulo: string\n        }\n        Insert: {\n          andamentos_salvos?: boolean\n          arquivo_nome?: string | null\n          arquivo_url?: string | null\n          clientes_ids?: string[]\n          colunas_usadas?: string[] | null\n          created_at?: string\n          erro_mensagem?: string | null\n          escritorio_id: string\n          gerado_por?: string | null\n          id?: string\n          processos_ids?: string[] | null\n          resumos_ia?: Json | null\n          status?: string\n          template_id?: string | null\n          titulo: string\n        }\n        Update: {\n          andamentos_salvos?: boolean\n          arquivo_nome?: string | null\n          arquivo_url?: string | null\n          clientes_ids?: string[]\n          colunas_usadas?: string[] | null\n          created_at?: string\n          erro_mensagem?: string | null\n          escritorio_id?: string\n          gerado_por?: string | null\n          id?: string\n          processos_ids?: string[] | null\n          resumos_ia?: Json | null\n          status?: string\n          template_id?: string | null\n          titulo?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"relatorios_gerados_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"relatorios_gerados_gerado_por_fkey\"\n            columns: [\"gerado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"relatorios_gerados_gerado_por_fkey\"\n            columns: [\"gerado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"relatorios_gerados_template_id_fkey\"\n            columns: [\"template_id\"]\n            isOneToOne: false\n            referencedRelation: \"relatorios_templates\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      relatorios_templates: {\n        Row: {\n          ativo: boolean\n          colunas: string[]\n          created_at: string\n          criado_por: string | null\n          descricao: string | null\n          escritorio_id: string\n          id: string\n          incluir_logo: boolean\n          nome: string\n          updated_at: string\n        }\n        Insert: {\n          ativo?: boolean\n          colunas?: string[]\n          created_at?: string\n          criado_por?: string | null\n          descricao?: string | null\n          escritorio_id: string\n          id?: string\n          incluir_logo?: boolean\n          nome: string\n          updated_at?: string\n        }\n        Update: {\n          ativo?: boolean\n          colunas?: string[]\n          created_at?: string\n          criado_por?: string | null\n          descricao?: string | null\n          escritorio_id?: string\n          id?: string\n          incluir_logo?: boolean\n          nome?: string\n          updated_at?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"relatorios_templates_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"relatorios_templates_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"relatorios_templates_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      sistema_indices_economicos: {\n        Row: {\n          acumulado_12m: number | null\n          acumulado_ano: number | null\n          codigo_bcb: number\n          created_at: string | null\n          fonte: string | null\n          id: string\n          indice: string\n          mes_referencia: string\n          updated_at: string | null\n          valor: number\n        }\n        Insert: {\n          acumulado_12m?: number | null\n          acumulado_ano?: number | null\n          codigo_bcb: number\n          created_at?: string | null\n          fonte?: string | null\n          id?: string\n          indice: string\n          mes_referencia: string\n          updated_at?: string | null\n          valor: number\n        }\n        Update: {\n          acumulado_12m?: number | null\n          acumulado_ano?: number | null\n          codigo_bcb?: number\n          created_at?: string | null\n          fonte?: string | null\n          id?: string\n          indice?: string\n          mes_referencia?: string\n          updated_at?: string | null\n          valor?: number\n        }\n        Relationships: []\n      }\n      system_settings: {\n        Row: {\n          created_at: string | null\n          description: string | null\n          encrypted: boolean | null\n          key: string\n          updated_at: string | null\n          value: string\n        }\n        Insert: {\n          created_at?: string | null\n          description?: string | null\n          encrypted?: boolean | null\n          key: string\n          updated_at?: string | null\n          value: string\n        }\n        Update: {\n          created_at?: string | null\n          description?: string | null\n          encrypted?: boolean | null\n          key?: string\n          updated_at?: string | null\n          value?: string\n        }\n        Relationships: []\n      }\n      tags_master: {\n        Row: {\n          ativa: boolean | null\n          contexto: string\n          cor: string\n          created_at: string | null\n          created_by: string | null\n          descricao: string | null\n          escritorio_id: string\n          icone: string | null\n          id: string\n          is_predefinida: boolean | null\n          nome: string\n          ordem: number | null\n          updated_at: string | null\n          updated_by: string | null\n        }\n        Insert: {\n          ativa?: boolean | null\n          contexto: string\n          cor: string\n          created_at?: string | null\n          created_by?: string | null\n          descricao?: string | null\n          escritorio_id: string\n          icone?: string | null\n          id?: string\n          is_predefinida?: boolean | null\n          nome: string\n          ordem?: number | null\n          updated_at?: string | null\n          updated_by?: string | null\n        }\n        Update: {\n          ativa?: boolean | null\n          contexto?: string\n          cor?: string\n          created_at?: string | null\n          created_by?: string | null\n          descricao?: string | null\n          escritorio_id?: string\n          icone?: string | null\n          id?: string\n          is_predefinida?: boolean | null\n          nome?: string\n          ordem?: number | null\n          updated_at?: string | null\n          updated_by?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"tags_master_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"tags_master_created_by_fkey\"\n            columns: [\"created_by\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"tags_master_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"tags_master_updated_by_fkey\"\n            columns: [\"updated_by\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"tags_master_updated_by_fkey\"\n            columns: [\"updated_by\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      timers_ativos: {\n        Row: {\n          audiencia_id: string | null\n          consulta_id: string | null\n          cor: string | null\n          created_at: string | null\n          descricao: string | null\n          escritorio_id: string\n          evento_id: string | null\n          faturavel: boolean | null\n          hora_inicio: string\n          hora_pausa: string | null\n          id: string\n          processo_id: string | null\n          segundos_acumulados: number | null\n          status: string\n          tarefa_id: string | null\n          titulo: string\n          updated_at: string | null\n          user_id: string\n        }\n        Insert: {\n          audiencia_id?: string | null\n          consulta_id?: string | null\n          cor?: string | null\n          created_at?: string | null\n          descricao?: string | null\n          escritorio_id: string\n          evento_id?: string | null\n          faturavel?: boolean | null\n          hora_inicio?: string\n          hora_pausa?: string | null\n          id?: string\n          processo_id?: string | null\n          segundos_acumulados?: number | null\n          status?: string\n          tarefa_id?: string | null\n          titulo: string\n          updated_at?: string | null\n          user_id: string\n        }\n        Update: {\n          audiencia_id?: string | null\n          consulta_id?: string | null\n          cor?: string | null\n          created_at?: string | null\n          descricao?: string | null\n          escritorio_id?: string\n          evento_id?: string | null\n          faturavel?: boolean | null\n          hora_inicio?: string\n          hora_pausa?: string | null\n          id?: string\n          processo_id?: string | null\n          segundos_acumulados?: number | null\n          status?: string\n          tarefa_id?: string | null\n          titulo?: string\n          updated_at?: string | null\n          user_id?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"timers_ativos_audiencia_id_fkey\"\n            columns: [\"audiencia_id\"]\n            isOneToOne: false\n            referencedRelation: \"agenda_audiencias\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"consultivo_id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_evento_id_fkey\"\n            columns: [\"evento_id\"]\n            isOneToOne: false\n            referencedRelation: \"agenda_eventos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_tarefa_id_fkey\"\n            columns: [\"tarefa_id\"]\n            isOneToOne: false\n            referencedRelation: \"agenda_tarefas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      user_escritorios_roles: {\n        Row: {\n          created_at: string | null\n          escritorio_id: string\n          id: string\n          percentual_comissao: number | null\n          pode_aprovar_horas: boolean | null\n          pode_faturar: boolean | null\n          role: string\n          updated_at: string | null\n          user_id: string\n        }\n        Insert: {\n          created_at?: string | null\n          escritorio_id: string\n          id?: string\n          percentual_comissao?: number | null\n          pode_aprovar_horas?: boolean | null\n          pode_faturar?: boolean | null\n          role: string\n          updated_at?: string | null\n          user_id: string\n        }\n        Update: {\n          created_at?: string | null\n          escritorio_id?: string\n          id?: string\n          percentual_comissao?: number | null\n          pode_aprovar_horas?: boolean | null\n          pode_faturar?: boolean | null\n          role?: string\n          updated_at?: string | null\n          user_id?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"user_escritorios_roles_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"user_escritorios_roles_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"user_escritorios_roles_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n    }\n    Views: {\n      onboarding_progress: {\n        Row: {\n          escritorio_id: string | null\n          etapas_completas: number | null\n          etapas_puladas: number | null\n          onboarding_completo: boolean | null\n          primeiro_acesso: boolean | null\n          progresso_percentual: number | null\n          setup_completo: boolean | null\n          total_etapas: number | null\n          user_id: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"onboarding_steps_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"onboarding_steps_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"onboarding_steps_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      usuarios_escritorio_ativo: {\n        Row: {\n          escritorio_id: string | null\n          user_id: string | null\n        }\n        Insert: {\n          escritorio_id?: never\n          user_id?: string | null\n        }\n        Update: {\n          escritorio_id?: never\n          user_id?: string | null\n        }\n        Relationships: []\n      }\n      v_agenda_consolidada: {\n        Row: {\n          caso_titulo: string | null\n          consultivo_id: string | null\n          consultivo_titulo: string | null\n          cor: string | null\n          created_at: string | null\n          data_fim: string | null\n          data_inicio: string | null\n          descricao: string | null\n          dia_inteiro: boolean | null\n          escritorio_id: string | null\n          id: string | null\n          local: string | null\n          prazo_cumprido: boolean | null\n          prazo_data_limite: string | null\n          prazo_tipo: string | null\n          prioridade: string | null\n          processo_id: string | null\n          processo_numero: string | null\n          recorrencia_id: string | null\n          responsaveis_ids: string[] | null\n          responsavel_id: string | null\n          responsavel_nome: string | null\n          status: string | null\n          subtipo: string | null\n          tipo_entidade: string | null\n          titulo: string | null\n          todos_responsaveis: string | null\n          updated_at: string | null\n        }\n        Relationships: []\n      }\n      v_alertas_cobranca_pendentes: {\n        Row: {\n          ato_codigo: string | null\n          ato_nome: string | null\n          ato_tipo_id: string | null\n          cliente_id: string | null\n          cliente_nome: string | null\n          created_at: string | null\n          descricao: string | null\n          escritorio_id: string | null\n          id: string | null\n          movimentacao_data: string | null\n          movimentacao_descricao: string | null\n          movimentacao_id: string | null\n          movimentacao_tipo: string | null\n          processo_area:\n            | Database[\"public\"][\"Enums\"][\"area_juridica_enum\"]\n            | null\n          processo_id: string | null\n          processo_numero: string | null\n          processo_pasta: string | null\n          status: string | null\n          tipo_alerta: string | null\n          titulo: string | null\n          valor_sugerido: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"financeiro_alertas_cobranca_ato_tipo_id_fkey\"\n            columns: [\"ato_tipo_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_atos_processuais_tipos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_cobranca_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_cobranca_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_cobranca_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_cobranca_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_alertas_cobranca_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      v_atos_hora_processo: {\n        Row: {\n          atingiu_maximo: boolean | null\n          ato_codigo: string | null\n          ato_nome: string | null\n          ato_tipo_id: string | null\n          cliente_nome: string | null\n          contrato_id: string | null\n          created_at: string | null\n          escritorio_id: string | null\n          finalizado_em: string | null\n          horas_disponiveis: number | null\n          horas_excedentes: number | null\n          horas_faturaveis: number | null\n          horas_maximas: number | null\n          horas_minimas: number | null\n          horas_totais: number | null\n          id: string | null\n          processo_id: string | null\n          processo_numero: string | null\n          processo_pasta: string | null\n          receita_id: string | null\n          status: string | null\n          updated_at: string | null\n          valor_atual: number | null\n          valor_hora: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_ato_tipo_id_fkey\"\n            columns: [\"ato_tipo_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_atos_processuais_tipos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_contratos_honorarios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_receitas_por_contrato\"\n            referencedColumns: [\"contrato_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_receita_id_fkey\"\n            columns: [\"receita_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_receitas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_horas_acumuladas_ato_receita_id_fkey\"\n            columns: [\"receita_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_historico_cobrancas_processo\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      v_consultivo_consultas: {\n        Row: {\n          andamentos: Json | null\n          anexos: Json | null\n          area: string | null\n          cliente_id: string | null\n          cliente_nome: string | null\n          contrato_id: string | null\n          created_at: string | null\n          descricao: string | null\n          escritorio_id: string | null\n          id: string | null\n          numero: string | null\n          prazo: string | null\n          prioridade: string | null\n          responsavel_id: string | null\n          responsavel_nome: string | null\n          status: Database[\"public\"][\"Enums\"][\"status_consultivo\"] | null\n          titulo: string | null\n          updated_at: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"consultivo_consultas_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_consultas_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_consultas_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_contratos_honorarios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_consultas_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_receitas_por_contrato\"\n            referencedColumns: [\"contrato_id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_consultas_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_consultas_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"consultivo_consultas_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      v_contas_bancarias_saldo: {\n        Row: {\n          agencia: string | null\n          ativa: boolean | null\n          banco: string | null\n          conta_principal: boolean | null\n          created_at: string | null\n          data_abertura: string | null\n          escritorio_id: string | null\n          id: string | null\n          numero_conta: string | null\n          saldo_atual: number | null\n          saldo_calculado: number | null\n          saldo_inicial: number | null\n          tipo_conta: string | null\n          titular: string | null\n          updated_at: string | null\n        }\n        Insert: {\n          agencia?: string | null\n          ativa?: boolean | null\n          banco?: string | null\n          conta_principal?: boolean | null\n          created_at?: string | null\n          data_abertura?: string | null\n          escritorio_id?: string | null\n          id?: string | null\n          numero_conta?: string | null\n          saldo_atual?: number | null\n          saldo_calculado?: never\n          saldo_inicial?: number | null\n          tipo_conta?: string | null\n          titular?: string | null\n          updated_at?: string | null\n        }\n        Update: {\n          agencia?: string | null\n          ativa?: boolean | null\n          banco?: string | null\n          conta_principal?: boolean | null\n          created_at?: string | null\n          data_abertura?: string | null\n          escritorio_id?: string | null\n          id?: string | null\n          numero_conta?: string | null\n          saldo_atual?: number | null\n          saldo_calculado?: never\n          saldo_inicial?: number | null\n          tipo_conta?: string | null\n          titular?: string | null\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"contas_bancarias_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      v_contas_receber_pagar: {\n        Row: {\n          categoria: string | null\n          cliente_fornecedor: string | null\n          cliente_id: string | null\n          data_vencimento: string | null\n          descricao: string | null\n          dias_atraso: number | null\n          escritorio_id: string | null\n          fornecedor_id: string | null\n          id: string | null\n          processo_id: string | null\n          status: string | null\n          tipo_conta: string | null\n          valor: number | null\n        }\n        Relationships: []\n      }\n      v_crm_pessoas_resumo: {\n        Row: {\n          cidade: string | null\n          cpf_cnpj: string | null\n          created_at: string | null\n          email: string | null\n          escritorio_id: string | null\n          id: string | null\n          nome_completo: string | null\n          nome_fantasia: string | null\n          oportunidades_ativas: number | null\n          origem: Database[\"public\"][\"Enums\"][\"origem_crm_enum\"] | null\n          status: Database[\"public\"][\"Enums\"][\"status_pessoa_enum\"] | null\n          tags: string[] | null\n          telefone: string | null\n          tipo_cadastro:\n            | Database[\"public\"][\"Enums\"][\"tipo_cadastro_enum\"]\n            | null\n          tipo_pessoa: Database[\"public\"][\"Enums\"][\"tipo_pessoa_enum\"] | null\n          uf: Database[\"public\"][\"Enums\"][\"uf_enum\"] | null\n          updated_at: string | null\n        }\n        Insert: {\n          cidade?: string | null\n          cpf_cnpj?: string | null\n          created_at?: string | null\n          email?: string | null\n          escritorio_id?: string | null\n          id?: string | null\n          nome_completo?: string | null\n          nome_fantasia?: string | null\n          oportunidades_ativas?: never\n          origem?: Database[\"public\"][\"Enums\"][\"origem_crm_enum\"] | null\n          status?: Database[\"public\"][\"Enums\"][\"status_pessoa_enum\"] | null\n          tags?: string[] | null\n          telefone?: string | null\n          tipo_cadastro?:\n            | Database[\"public\"][\"Enums\"][\"tipo_cadastro_enum\"]\n            | null\n          tipo_pessoa?: Database[\"public\"][\"Enums\"][\"tipo_pessoa_enum\"] | null\n          uf?: Database[\"public\"][\"Enums\"][\"uf_enum\"] | null\n          updated_at?: string | null\n        }\n        Update: {\n          cidade?: string | null\n          cpf_cnpj?: string | null\n          created_at?: string | null\n          email?: string | null\n          escritorio_id?: string | null\n          id?: string | null\n          nome_completo?: string | null\n          nome_fantasia?: string | null\n          oportunidades_ativas?: never\n          origem?: Database[\"public\"][\"Enums\"][\"origem_crm_enum\"] | null\n          status?: Database[\"public\"][\"Enums\"][\"status_pessoa_enum\"] | null\n          tags?: string[] | null\n          telefone?: string | null\n          tipo_cadastro?:\n            | Database[\"public\"][\"Enums\"][\"tipo_cadastro_enum\"]\n            | null\n          tipo_pessoa?: Database[\"public\"][\"Enums\"][\"tipo_pessoa_enum\"] | null\n          uf?: Database[\"public\"][\"Enums\"][\"uf_enum\"] | null\n          updated_at?: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"clientes_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      v_dashboard_financeiro_metricas: {\n        Row: {\n          atrasado: number | null\n          despesas_mes: number | null\n          escritorio_id: string | null\n          pendente_receber: number | null\n          qtd_atrasados: number | null\n          qtd_pendentes: number | null\n          receita_mes: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"financeiro_receitas_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      v_despesas_reembolsaveis_pendentes: {\n        Row: {\n          categoria: string | null\n          cliente_id: string | null\n          cliente_nome: string | null\n          created_at: string | null\n          data_pagamento: string | null\n          data_vencimento: string | null\n          descricao: string | null\n          escritorio_id: string | null\n          fornecedor: string | null\n          id: string | null\n          processo_id: string | null\n          processo_numero: string | null\n          valor: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"despesas_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_despesas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n        ]\n      }\n      v_extrato_financeiro: {\n        Row: {\n          categoria: string | null\n          cliente_id: string | null\n          conta_bancaria_id: string | null\n          conta_bancaria_nome: string | null\n          data_efetivacao: string | null\n          data_referencia: string | null\n          data_vencimento: string | null\n          descricao: string | null\n          entidade: string | null\n          escritorio_id: string | null\n          id: string | null\n          origem: string | null\n          origem_id: string | null\n          processo_id: string | null\n          status: string | null\n          tipo_movimento: string | null\n          valor: number | null\n          valor_pago: number | null\n        }\n        Relationships: []\n      }\n      v_faturas_geradas: {\n        Row: {\n          categoria_status: string | null\n          cliente_email: string | null\n          cliente_id: string | null\n          cliente_nome: string | null\n          created_at: string | null\n          data_emissao: string | null\n          data_vencimento: string | null\n          dias_ate_vencimento: number | null\n          enviada_em: string | null\n          escritorio_id: string | null\n          fatura_id: string | null\n          gerada_automaticamente: boolean | null\n          numero_fatura: string | null\n          numero_parcelas: number | null\n          observacoes: string | null\n          paga_em: string | null\n          parcelado: boolean | null\n          pdf_url: string | null\n          qtd_honorarios: number | null\n          qtd_horas: number | null\n          soma_horas: number | null\n          status: string | null\n          total_honorarios: number | null\n          total_horas: number | null\n          updated_at: string | null\n          valor_total: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"faturas_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"faturas_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"faturas_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      v_financeiro_enums: {\n        Row: {\n          descricao: string | null\n          enum_name: string | null\n          tabelas_uso: string[] | null\n          valores: string[] | null\n        }\n        Relationships: []\n      }\n      v_historico_cobrancas_processo: {\n        Row: {\n          categoria: string | null\n          cliente_id: string | null\n          cliente_nome: string | null\n          created_at: string | null\n          data_pagamento: string | null\n          data_vencimento: string | null\n          descricao: string | null\n          escritorio_id: string | null\n          id: string | null\n          processo_id: string | null\n          processo_numero: string | null\n          processo_pasta: string | null\n          status: string | null\n          tipo: string | null\n          valor: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"financeiro_receitas_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_receitas_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n        ]\n      }\n      v_indices_economicos_atual: {\n        Row: {\n          acumulado_12m: number | null\n          acumulado_ano: number | null\n          codigo_bcb: number | null\n          indice: string | null\n          mes_referencia: string | null\n          updated_at: string | null\n          valor_mes: number | null\n        }\n        Relationships: []\n      }\n      v_lancamentos_prontos_faturar: {\n        Row: {\n          cargo_nome: string | null\n          categoria: string | null\n          cliente_email: string | null\n          cliente_id: string | null\n          cliente_nome: string | null\n          competencia: string | null\n          consulta_id: string | null\n          contrato_id: string | null\n          contrato_titulo: string | null\n          created_at: string | null\n          data_trabalho: string | null\n          data_vencimento: string | null\n          descricao: string | null\n          escritorio_id: string | null\n          fechamento_id: string | null\n          horas: number | null\n          lancamento_id: string | null\n          numero_contrato: string | null\n          partes_resumo: string | null\n          processo_id: string | null\n          processo_numero: string | null\n          processo_pasta: string | null\n          processos_lista: Json | null\n          profissional_nome: string | null\n          qtd_processos: number | null\n          subtipo: string | null\n          tipo_lancamento: string | null\n          valor: number | null\n          valor_unitario: number | null\n        }\n        Relationships: []\n      }\n      v_pecas_templates_ativos: {\n        Row: {\n          area: string | null\n          ativo: boolean | null\n          categoria: string | null\n          conteudo_template: string | null\n          created_at: string | null\n          criado_por: string | null\n          criador_nome: string | null\n          escritorio_id: string | null\n          estrutura: Json | null\n          id: string | null\n          nome: string | null\n          tipo_processo: string | null\n          updated_at: string | null\n          uso_count: number | null\n          variaveis: Json | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"pecas_teses_templates_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_templates_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_templates_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      v_pecas_templates_completos: {\n        Row: {\n          area: string | null\n          ativo: boolean | null\n          categoria: string | null\n          conteudo_template: string | null\n          created_at: string | null\n          criado_por: string | null\n          criador_nome: string | null\n          escritorio_id: string | null\n          estrutura: Json | null\n          id: string | null\n          nome: string | null\n          tipo_processo: string | null\n          total_juris_vinculadas: number | null\n          total_teses_vinculadas: number | null\n          updated_at: string | null\n          uso_count: number | null\n          variaveis: Json | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"pecas_teses_templates_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_templates_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_templates_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      v_pecas_teses_ativas: {\n        Row: {\n          area: string | null\n          ativa: boolean | null\n          atualizado_por: string | null\n          created_at: string | null\n          criado_por: string | null\n          criador_nome: string | null\n          escritorio_id: string | null\n          fundamentacao: string | null\n          id: string | null\n          resumo: string | null\n          subtema: string | null\n          tags: string[] | null\n          texto_completo: string | null\n          titulo: string | null\n          updated_at: string | null\n          uso_count: number | null\n          vezes_usada_em_pecas: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"pecas_teses_teses_atualizado_por_fkey\"\n            columns: [\"atualizado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_teses_atualizado_por_fkey\"\n            columns: [\"atualizado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_teses_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_teses_criado_por_fkey\"\n            columns: [\"criado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"pecas_teses_teses_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      v_portfolio_metricas_area: {\n        Row: {\n          area_juridica: string | null\n          duracao_media_dias: number | null\n          escritorio_id: string | null\n          produtos_ativos: number | null\n          projetos_concluidos: number | null\n          projetos_em_andamento: number | null\n          receita_total: number | null\n          total_produtos: number | null\n          total_projetos: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"portfolio_produtos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      v_portfolio_produtos_catalogo: {\n        Row: {\n          area_juridica: string | null\n          categoria: string | null\n          codigo: string | null\n          complexidade: string | null\n          cor: string | null\n          created_at: string | null\n          descricao: string | null\n          descricao_comercial: string | null\n          duracao_estimada_dias: number | null\n          duracao_media_real: number | null\n          escritorio_id: string | null\n          execucoes_concluidas: number | null\n          icone: string | null\n          id: string | null\n          nome: string | null\n          preco_base: number | null\n          status: string | null\n          tags: string[] | null\n          taxa_sucesso: number | null\n          total_execucoes: number | null\n          total_fases: number | null\n          total_papeis: number | null\n          total_precos: number | null\n          updated_at: string | null\n          versao_atual: number | null\n          visivel_catalogo: boolean | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"portfolio_produtos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      v_portfolio_projetos_completos: {\n        Row: {\n          area_juridica: string | null\n          cliente_id: string | null\n          cliente_nome: string | null\n          cliente_tipo: string | null\n          codigo: string | null\n          created_at: string | null\n          data_conclusao: string | null\n          data_inicio: string | null\n          data_prevista_conclusao: string | null\n          escritorio_id: string | null\n          fases_concluidas: number | null\n          id: string | null\n          nome: string | null\n          processo_id: string | null\n          produto_codigo: string | null\n          produto_cor: string | null\n          produto_icone: string | null\n          produto_id: string | null\n          produto_nome: string | null\n          produto_versao: number | null\n          progresso_percentual: number | null\n          responsavel_id: string | null\n          responsavel_nome: string | null\n          resultado: string | null\n          status: string | null\n          total_aprendizados: number | null\n          total_equipe: number | null\n          total_fases: number | null\n          updated_at: string | null\n          valor_negociado: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"portfolio_projetos_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_produto_id_fkey\"\n            columns: [\"produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"portfolio_produtos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_produto_id_fkey\"\n            columns: [\"produto_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_portfolio_produtos_catalogo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"portfolio_projetos_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      v_processos_com_movimentacoes: {\n        Row: {\n          area: Database[\"public\"][\"Enums\"][\"area_juridica_enum\"] | null\n          cliente_id: string | null\n          cliente_nome: string | null\n          contrato_id: string | null\n          escavador_monitoramento_id: number | null\n          escritorio_id: string | null\n          fase: string | null\n          id: string | null\n          instancia: string | null\n          movimentacoes_nao_lidas: number | null\n          numero_cnj: string | null\n          numero_pasta: string | null\n          parte_contraria: string | null\n          responsavel_id: string | null\n          responsavel_nome: string | null\n          status: string | null\n          ultima_movimentacao: string | null\n          updated_at: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"processos_processos_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_contratos_honorarios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_contrato_id_fkey\"\n            columns: [\"contrato_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_receitas_por_contrato\"\n            referencedColumns: [\"contrato_id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      v_processos_criticos: {\n        Row: {\n          area: Database[\"public\"][\"Enums\"][\"area_juridica_enum\"] | null\n          cliente_id: string | null\n          cliente_nome: string | null\n          escritorio_id: string | null\n          fase: string | null\n          id: string | null\n          movimentacoes_nao_lidas: number | null\n          numero_cnj: string | null\n          numero_pasta: string | null\n          responsavel_id: string | null\n          responsavel_nome: string | null\n          status: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"processos_processos_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_processos_responsavel_id_fkey\"\n            columns: [\"responsavel_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      v_processos_dashboard: {\n        Row: {\n          escritorio_id: string | null\n          provisao_total: number | null\n          total_arquivados: number | null\n          total_ativos: number | null\n          total_civel: number | null\n          total_suspensos: number | null\n          total_trabalhista: number | null\n          total_tributaria: number | null\n          valor_causa_total: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"processos_processos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      v_publicacoes_completas: {\n        Row: {\n          aasp_id: string | null\n          acao_tomada: string | null\n          acoes_sugeridas: Json | null\n          analise_processada_em: string | null\n          cliente_email: string | null\n          cliente_id: string | null\n          cliente_nome: string | null\n          cliente_telefone: string | null\n          cliente_tipo: string | null\n          confianca_analise: number | null\n          created_at: string | null\n          data_captura: string | null\n          data_intimacao: string | null\n          data_limite: string | null\n          data_publicacao: string | null\n          determinacoes: Json | null\n          editou_sugestao: boolean | null\n          escritorio_id: string | null\n          evento_data_inicio: string | null\n          evento_id: string | null\n          evento_tipo: string | null\n          evento_titulo: string | null\n          fundamentacao_legal: string | null\n          hash_conteudo: string | null\n          id: string | null\n          metadados_extras: Json | null\n          numero_processo: string | null\n          partes: string[] | null\n          pdf_url: string | null\n          pontos_principais: Json | null\n          prazo_dias: number | null\n          prazo_tipo_dias: string | null\n          processado_por: string | null\n          processado_por_email: string | null\n          processado_por_nome: string | null\n          processo_area:\n            | Database[\"public\"][\"Enums\"][\"area_juridica_enum\"]\n            | null\n          processo_id: string | null\n          processo_numero_cnj: string | null\n          processo_numero_pasta: string | null\n          processo_objeto: string | null\n          processo_status: string | null\n          processo_tipo: string | null\n          requer_manifestacao: boolean | null\n          resumo_executivo: string | null\n          sentimento: string | null\n          source: string | null\n          status: string | null\n          tem_determinacao: boolean | null\n          tem_prazo: boolean | null\n          template_sugerido: string | null\n          tempo_processamento_segundos: number | null\n          texto_completo: string | null\n          tipo_decisao: string | null\n          tipo_prazo: string | null\n          tipo_publicacao: string | null\n          tratamento_observacoes: string | null\n          tratamento_processado_em: string | null\n          tribunal: string | null\n          updated_at: string | null\n          urgente: boolean | null\n          vara: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"publicacoes_publicacoes_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_tratamentos_evento_id_fkey\"\n            columns: [\"evento_id\"]\n            isOneToOne: false\n            referencedRelation: \"agenda_eventos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_tratamentos_processado_por_fkey\"\n            columns: [\"processado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_tratamentos_processado_por_fkey\"\n            columns: [\"processado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      v_publicacoes_dashboard: {\n        Row: {\n          arquivadas: number | null\n          em_analise: number | null\n          escritorio_id: string | null\n          pendentes: number | null\n          processadas: number | null\n          processadas_hoje: number | null\n          total_pendentes: number | null\n          total_publicacoes: number | null\n          ultima_atualizacao: string | null\n          urgentes_nao_processadas: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"publicacoes_publicacoes_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      v_publicacoes_pendentes: {\n        Row: {\n          aasp_id: string | null\n          acoes_sugeridas: Json | null\n          cliente_id: string | null\n          cliente_nome: string | null\n          confianca_analise: number | null\n          created_at: string | null\n          data_captura: string | null\n          data_intimacao: string | null\n          data_limite: string | null\n          data_publicacao: string | null\n          escritorio_id: string | null\n          fundamentacao_legal: string | null\n          id: string | null\n          numero_processo: string | null\n          partes: string[] | null\n          pdf_url: string | null\n          pontos_principais: Json | null\n          prazo_dias: number | null\n          prazo_tipo_dias: string | null\n          processo_id: string | null\n          processo_numero_cnj: string | null\n          processo_objeto: string | null\n          processo_status: string | null\n          resumo_executivo: string | null\n          sentimento: string | null\n          status: string | null\n          tem_prazo: boolean | null\n          texto_completo: string | null\n          tipo_decisao: string | null\n          tipo_prazo: string | null\n          tipo_publicacao: string | null\n          tribunal: string | null\n          updated_at: string | null\n          urgente: boolean | null\n          vara: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"publicacoes_publicacoes_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n        ]\n      }\n      v_publicacoes_urgentes: {\n        Row: {\n          aasp_id: string | null\n          cliente_id: string | null\n          cliente_nome: string | null\n          created_at: string | null\n          data_limite: string | null\n          data_publicacao: string | null\n          dias_restantes: number | null\n          escritorio_id: string | null\n          id: string | null\n          numero_processo: string | null\n          prazo_dias: number | null\n          processo_id: string | null\n          processo_numero_cnj: string | null\n          processo_objeto: string | null\n          status: string | null\n          tem_prazo: boolean | null\n          tipo_prazo: string | null\n          tipo_publicacao: string | null\n          tribunal: string | null\n          urgente: boolean | null\n          vara: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"publicacoes_publicacoes_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"publicacoes_publicacoes_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n        ]\n      }\n      v_receitas_por_contrato: {\n        Row: {\n          cliente_id: string | null\n          contrato_id: string | null\n          escritorio_id: string | null\n          inadimplente: boolean | null\n          maior_atraso: number | null\n          numero_contrato: string | null\n          parcelas_pagas: number | null\n          proxima_parcela: string | null\n          total_parcelas: number | null\n          valor_pendente: number | null\n          valor_recebido: number | null\n          valor_total: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"contratos_honorarios_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"crm_pessoas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"contratos_honorarios_cliente_id_fkey\"\n            columns: [\"cliente_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_crm_pessoas_resumo\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"contratos_honorarios_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      v_saldos_contas_bancarias: {\n        Row: {\n          agencia: string | null\n          ativa: boolean | null\n          banco: string | null\n          conta_principal: boolean | null\n          created_at: string | null\n          data_abertura: string | null\n          entradas_dia: number | null\n          entradas_mes: number | null\n          escritorio_id: string | null\n          id: string | null\n          nome_escritorio: string | null\n          numero_conta: string | null\n          saidas_dia: number | null\n          saidas_mes: number | null\n          saldo_atual: number | null\n          saldo_inicial: number | null\n          tipo_conta: string | null\n          ultima_movimentacao: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"contas_bancarias_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      v_timers_ativos: {\n        Row: {\n          audiencia_id: string | null\n          audiencia_titulo: string | null\n          cliente_nome: string | null\n          consulta_id: string | null\n          consulta_titulo: string | null\n          cor: string | null\n          created_at: string | null\n          descricao: string | null\n          escritorio_id: string | null\n          evento_id: string | null\n          evento_titulo: string | null\n          faturavel: boolean | null\n          hora_inicio: string | null\n          hora_pausa: string | null\n          id: string | null\n          processo_id: string | null\n          processo_numero: string | null\n          segundos_acumulados: number | null\n          status: string | null\n          tarefa_id: string | null\n          tarefa_titulo: string | null\n          titulo: string | null\n          updated_at: string | null\n          user_id: string | null\n          user_nome: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"timers_ativos_audiencia_id_fkey\"\n            columns: [\"audiencia_id\"]\n            isOneToOne: false\n            referencedRelation: \"agenda_audiencias\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"consultivo_id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_evento_id_fkey\"\n            columns: [\"evento_id\"]\n            isOneToOne: false\n            referencedRelation: \"agenda_eventos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_tarefa_id_fkey\"\n            columns: [\"tarefa_id\"]\n            isOneToOne: false\n            referencedRelation: \"agenda_tarefas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timers_ativos_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      v_timesheet_aprovacao: {\n        Row: {\n          aprovado: boolean | null\n          aprovado_em: string | null\n          aprovado_por: string | null\n          atividade: string | null\n          cliente_nome: string | null\n          colaborador_nome: string | null\n          consulta_id: string | null\n          consulta_titulo: string | null\n          contrato_id: string | null\n          created_at: string | null\n          data_trabalho: string | null\n          editado: boolean | null\n          editado_em: string | null\n          editado_por: string | null\n          escritorio_id: string | null\n          fatura_id: string | null\n          faturado: boolean | null\n          faturavel: boolean | null\n          faturavel_auto: boolean | null\n          forma_cobranca_contrato: string | null\n          hora_fim: string | null\n          hora_inicio: string | null\n          horas: number | null\n          id: string | null\n          justificativa_reprovacao: string | null\n          nome_escritorio: string | null\n          numero_processo: string | null\n          origem: string | null\n          processo_id: string | null\n          processo_pasta: string | null\n          processo_titulo: string | null\n          reprovado: boolean | null\n          reprovado_em: string | null\n          reprovado_por: string | null\n          status: string | null\n          tarefa_id: string | null\n          updated_at: string | null\n          user_id: string | null\n          valor_hora_calculado: number | null\n          valor_total_estimado: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"financeiro_timesheet_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"consultivo_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_editado_por_fkey\"\n            columns: [\"editado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_editado_por_fkey\"\n            columns: [\"editado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_tarefa_id_fkey\"\n            columns: [\"tarefa_id\"]\n            isOneToOne: false\n            referencedRelation: \"agenda_tarefas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"fk_timesheet_fatura\"\n            columns: [\"fatura_id\"]\n            isOneToOne: false\n            referencedRelation: \"financeiro_faturamento_faturas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"fk_timesheet_fatura\"\n            columns: [\"fatura_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_faturas_geradas\"\n            referencedColumns: [\"fatura_id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_aprovado_por_fkey\"\n            columns: [\"aprovado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_aprovado_por_fkey\"\n            columns: [\"aprovado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_reprovado_por_fkey\"\n            columns: [\"reprovado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_reprovado_por_fkey\"\n            columns: [\"reprovado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_user_id_fkey\"\n            columns: [\"user_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      v_timesheet_pendente_aprovacao: {\n        Row: {\n          aprovado: boolean | null\n          aprovado_em: string | null\n          aprovado_por: string | null\n          atividade: string | null\n          cliente_nome: string | null\n          colaborador_id: string | null\n          colaborador_nome: string | null\n          consulta_id: string | null\n          created_at: string | null\n          data_trabalho: string | null\n          escritorio_id: string | null\n          faturado: boolean | null\n          faturavel: boolean | null\n          hora_fim: string | null\n          hora_inicio: string | null\n          horas: number | null\n          id: string | null\n          justificativa_reprovacao: string | null\n          numero_processo: string | null\n          origem: string | null\n          processo_id: string | null\n          reprovado: boolean | null\n          reprovado_em: string | null\n          reprovado_por: string | null\n          status: string | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"financeiro_timesheet_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_consultivo_consultas\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_consulta_id_fkey\"\n            columns: [\"consulta_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"consultivo_id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"financeiro_timesheet_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_aprovado_por_fkey\"\n            columns: [\"aprovado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_aprovado_por_fkey\"\n            columns: [\"aprovado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_reprovado_por_fkey\"\n            columns: [\"reprovado_por\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_reprovado_por_fkey\"\n            columns: [\"reprovado_por\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_user_id_fkey\"\n            columns: [\"colaborador_id\"]\n            isOneToOne: false\n            referencedRelation: \"profiles\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"timesheet_user_id_fkey\"\n            columns: [\"colaborador_id\"]\n            isOneToOne: false\n            referencedRelation: \"usuarios_escritorio_ativo\"\n            referencedColumns: [\"user_id\"]\n          },\n        ]\n      }\n      vw_consultivo_processos_convertidos: {\n        Row: {\n          cliente_nome: string | null\n          consultivo_area: string | null\n          consultivo_criado_em: string | null\n          consultivo_id: string | null\n          consultivo_numero: string | null\n          consultivo_status:\n            | Database[\"public\"][\"Enums\"][\"status_consultivo\"]\n            | null\n          consultivo_titulo: string | null\n          escritorio_id: string | null\n          processo_cnj: string | null\n          processo_criado_em: string | null\n          processo_id: string | null\n          processo_numero: string | null\n          processo_status: string | null\n          responsavel_nome: string | null\n          tempo_conversao: unknown\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"consultivo_consultas_escritorio_id_fkey\"\n            columns: [\"escritorio_id\"]\n            isOneToOne: false\n            referencedRelation: \"escritorios\"\n            referencedColumns: [\"id\"]\n          },\n        ]\n      }\n      vw_depositos_resumo: {\n        Row: {\n          processo_id: string | null\n          total_ativos: number | null\n          total_convertidos: number | null\n          total_levantados: number | null\n          total_perdidos: number | null\n          valor_ativo: number | null\n          valor_convertido: number | null\n          valor_levantado: number | null\n          valor_perdido: number | null\n        }\n        Relationships: [\n          {\n            foreignKeyName: \"processos_depositos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"processos_processos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_depositos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_com_movimentacoes\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_depositos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"v_processos_criticos\"\n            referencedColumns: [\"id\"]\n          },\n          {\n            foreignKeyName: \"processos_depositos_processo_id_fkey\"\n            columns: [\"processo_id\"]\n            isOneToOne: false\n            referencedRelation: \"vw_consultivo_processos_convertidos\"\n            referencedColumns: [\"processo_id\"]\n          },\n        ]\n      }\n    }\n    Functions: {\n      add_movimentacao: {\n        Args: { p_dados: Json; p_processo_id: string }\n        Returns: string\n      }\n      ajustar_horarios_timesheet: {\n        Args: {\n          p_editado_por: string\n          p_hora_fim: string\n          p_hora_inicio: string\n          p_timesheet_id: string\n        }\n        Returns: boolean\n      }\n      aplicar_limites_mensais: {\n        Args: { p_contrato_id: string; p_valor_calculado: number }\n        Returns: number\n      }\n      aplicar_reajuste_contrato: {\n        Args: { p_contrato_id: string; p_indice?: string }\n        Returns: Json\n      }\n      aprovar_fechamento_pasta: {\n        Args: { p_fechamento_id: string; p_user_id: string }\n        Returns: boolean\n      }\n      aprovar_timesheet: {\n        Args: { p_aprovado_por: string; p_timesheet_ids: string[] }\n        Returns: number\n      }\n      atualizar_receitas_atrasadas: { Args: never; Returns: number }\n      atualizar_status_parcelas: { Args: never; Returns: number }\n      atualizar_valor_processo: {\n        Args: { p_processo_id: string }\n        Returns: Json\n      }\n      atualizar_valores_processos_escritorio: {\n        Args: { p_escritorio_id: string }\n        Returns: Json\n      }\n      auto_match_reconciliacao: {\n        Args: { p_reconciliacao_id: string }\n        Returns: number\n      }\n      cache_embedding: {\n        Args: {\n          p_embedding: string\n          p_input_hash: string\n          p_input_text: string\n        }\n        Returns: undefined\n      }\n      calcular_atualizacao_monetaria: {\n        Args: {\n          p_data_atualizacao: string\n          p_data_base: string\n          p_indice?: string\n          p_valor: number\n        }\n        Returns: {\n          fator_correcao: number\n          meses_periodo: number\n          valor_atualizado: number\n          valor_original: number\n          variacao_percentual: number\n        }[]\n      }\n      calcular_correcao_monetaria: {\n        Args: {\n          p_data_final: string\n          p_data_inicial: string\n          p_indice?: string\n          p_valor_original: number\n        }\n        Returns: {\n          competencia_final: string\n          competencia_inicial: string\n          fator_correcao: number\n          indice_final: number\n          indice_inicial: number\n          valor_corrigido: number\n        }[]\n      }\n      calcular_data_fechamento_cartao: {\n        Args: {\n          p_dia_vencimento: number\n          p_dias_antes: number\n          p_mes_referencia: string\n        }\n        Returns: string\n      }\n      calcular_data_limite_prazo: {\n        Args: {\n          p_data_intimacao: string\n          p_dias_uteis?: boolean\n          p_escritorio_id?: string\n          p_quantidade_dias: number\n        }\n        Returns: string\n      }\n      calcular_data_prazo:\n        | {\n            Args: {\n              p_data_base: string\n              p_dias_uteis?: boolean\n              p_quantidade_dias: number\n            }\n            Returns: string\n          }\n        | {\n            Args: {\n              p_data_inicio: string\n              p_prazo_dias: number\n              p_tipo_dias?: string\n            }\n            Returns: string\n          }\n      calcular_faturabilidade_ato_hora: {\n        Args: {\n          p_ato_tipo_id: string\n          p_horas_novas: number\n          p_processo_id: string\n        }\n        Returns: {\n          atingiu_maximo: boolean\n          horas_acumuladas_antes: number\n          horas_acumuladas_depois: number\n          horas_excedentes: number\n          horas_faturaveis: number\n          horas_maximas: number\n          valor_hora: number\n        }[]\n      }\n      calcular_faturavel_timesheet: {\n        Args: { p_consulta_id?: string; p_processo_id?: string }\n        Returns: boolean\n      }\n      calcular_hash_extrato: {\n        Args: {\n          p_data: string\n          p_descricao: string\n          p_fitid?: string\n          p_tipo: string\n          p_valor: number\n        }\n        Returns: string\n      }\n      calcular_metricas_produto: {\n        Args: { p_produto_id: string }\n        Returns: undefined\n      }\n      calcular_proxima_execucao_recorrencia: {\n        Args: {\n          p_data_base: string\n          p_dia_mes: number\n          p_dias_semana: number[]\n          p_frequencia: string\n          p_intervalo: number\n          p_mes: number\n        }\n        Returns: string\n      }\n      calcular_proximo_vencimento: {\n        Args: {\n          p_dia_vencimento?: number\n          p_frequencia: string\n          p_ultima_data: string\n        }\n        Returns: string\n      }\n      calcular_saldo_conta: { Args: { p_conta_id: string }; Returns: number }\n      calcular_saldo_reconciliacao: {\n        Args: { p_reconciliacao_id: string }\n        Returns: number\n      }\n      calcular_valor_horas_faturar: {\n        Args: { p_escritorio_id: string }\n        Returns: number\n      }\n      calcular_valor_timesheet_mensal: {\n        Args: { p_contrato_id: string; p_mes: string }\n        Returns: {\n          aplicou_maximo: boolean\n          aplicou_minimo: boolean\n          total_horas: number\n          valor_bruto: number\n          valor_final: number\n          valor_hora_usado: number\n        }[]\n      }\n      cancelar_lancamento_recorrente: {\n        Args: { p_compra_id: string; p_data_fim?: string }\n        Returns: boolean\n      }\n      check_my_permission: {\n        Args: { p_escritorio_id: string; p_modulo: string; p_permissao: string }\n        Returns: boolean\n      }\n      cleanup_expired_memories: { Args: never; Returns: number }\n      clonar_produto_para_projeto: {\n        Args: {\n          p_cliente_id: string\n          p_data_inicio?: string\n          p_nome: string\n          p_processo_id?: string\n          p_produto_id: string\n          p_responsavel_id: string\n          p_valor_negociado?: number\n        }\n        Returns: string\n      }\n      complete_profile_onboarding: {\n        Args: {\n          p_avatar_url?: string\n          p_oab_numero?: string\n          p_oab_uf?: string\n          p_telefone?: string\n        }\n        Returns: Json\n      }\n      consultivo_buscar_precedentes_similares: {\n        Args: {\n          p_area: string\n          p_escritorio_id: string\n          p_limit?: number\n          p_palavras_chave: string[]\n        }\n        Returns: {\n          id: string\n          relevancia: number\n          resumo: string\n          titulo: string\n        }[]\n      }\n      converter_alerta_em_receita: {\n        Args: {\n          p_alerta_id: string\n          p_descricao: string\n          p_user_id: string\n          p_valor: number\n        }\n        Returns: string\n      }\n      converter_oportunidade_cliente: {\n        Args: {\n          p_etapa_ganho_id: string\n          p_oportunidade_id: string\n          p_user_id: string\n          p_valor_fechado: number\n        }\n        Returns: boolean\n      }\n      create_atos_padrao_escritorio: {\n        Args: { p_escritorio_id: string }\n        Returns: undefined\n      }\n      create_escritorio_onboarding: {\n        Args: {\n          p_cnpj?: string\n          p_email?: string\n          p_endereco?: Json\n          p_nome: string\n          p_telefone?: string\n        }\n        Returns: Json\n      }\n      create_pessoa: {\n        Args: {\n          p_cpf_cnpj?: string\n          p_dados?: Json\n          p_escritorio_id: string\n          p_nome_completo: string\n          p_tipo_contato: string\n          p_tipo_pessoa: string\n        }\n        Returns: string\n      }\n      create_processo: { Args: { p_dados: Json }; Returns: Json }\n      criar_alerta_cobranca: {\n        Args: {\n          p_ato_tipo_id: string\n          p_processo_id: string\n          p_tipo_alerta?: string\n          p_valor_sugerido?: number\n        }\n        Returns: string\n      }\n      criar_alerta_cobranca_manual: {\n        Args: {\n          p_ato_tipo_id: string\n          p_descricao?: string\n          p_processo_id: string\n          p_titulo?: string\n          p_valor_sugerido?: number\n        }\n        Returns: string\n      }\n      criar_despesa_cartao: {\n        Args: {\n          p_cartao_id: string\n          p_categoria: string\n          p_comprovante_url?: string\n          p_data_compra: string\n          p_descricao: string\n          p_documento_fiscal?: string\n          p_escritorio_id: string\n          p_fornecedor?: string\n          p_hash?: string\n          p_importado?: boolean\n          p_numero_parcelas: number\n          p_processo_id?: string\n          p_valor_total: number\n        }\n        Returns: string\n      }\n      criar_escritorio: {\n        Args: { p_cnpj?: string; p_nome: string }\n        Returns: string\n      }\n      criar_honorario: {\n        Args: {\n          p_cliente_id: string\n          p_consulta_id?: string\n          p_data_vencimento_primeira?: string\n          p_descricao: string\n          p_escritorio_id: string\n          p_etapas?: Json\n          p_numero_parcelas?: number\n          p_parcelado?: boolean\n          p_processo_id?: string\n          p_responsavel_id: string\n          p_tipo_honorario: string\n          p_valor_total: number\n        }\n        Returns: string\n      }\n      criar_lancamento_cartao:\n        | {\n            Args: {\n              p_cartao_id: string\n              p_categoria: string\n              p_data_compra?: string\n              p_descricao: string\n              p_documento_fiscal?: string\n              p_fornecedor?: string\n              p_importado_de_fatura?: boolean\n              p_mes_referencia?: string\n              p_observacoes?: string\n              p_parcelas?: number\n              p_processo_id?: string\n              p_tipo?: string\n              p_valor?: number\n            }\n            Returns: string\n          }\n        | {\n            Args: {\n              p_cartao_id: string\n              p_categoria: string\n              p_data_compra?: string\n              p_descricao: string\n              p_documento_fiscal?: string\n              p_fornecedor?: string\n              p_importado_de_fatura?: boolean\n              p_observacoes?: string\n              p_parcelas?: number\n              p_processo_id?: string\n              p_tipo?: string\n              p_valor?: number\n            }\n            Returns: string\n          }\n      criar_prazo_de_publicacao: {\n        Args: { p_dados: Json; p_publicacao_id: string }\n        Returns: string\n      }\n      criar_receita:\n        | {\n            Args: {\n              p_categoria?: string\n              p_cliente_id: string\n              p_contrato_id?: string\n              p_created_by?: string\n              p_data_vencimento: string\n              p_descricao: string\n              p_escritorio_id: string\n              p_numero_parcelas?: number\n              p_parcelado?: boolean\n              p_processo_id?: string\n              p_valor: number\n            }\n            Returns: string\n          }\n        | {\n            Args: {\n              p_categoria: Database[\"public\"][\"Enums\"][\"receita_categoria_enum\"]\n              p_cliente_id: string\n              p_contrato_id: string\n              p_created_by?: string\n              p_data_vencimento: string\n              p_descricao: string\n              p_escritorio_id: string\n              p_numero_parcelas?: number\n              p_parcelado?: boolean\n              p_processo_id: string\n              p_valor: number\n            }\n            Returns: string\n          }\n      criar_versao_produto: {\n        Args: { p_alteracoes?: string; p_motivo?: string; p_produto_id: string }\n        Returns: number\n      }\n      decay_memory_relevance: { Args: never; Returns: number }\n      desaprovar_timesheet: {\n        Args: { p_desaprovado_por?: string; p_timesheet_ids: string[] }\n        Returns: undefined\n      }\n      descartar_publicacao: {\n        Args: { p_motivo: string; p_publicacao_id: string }\n        Returns: boolean\n      }\n      descartar_timer: { Args: { p_timer_id: string }; Returns: boolean }\n      desmanchar_fatura: {\n        Args: { p_fatura_id: string; p_user_id?: string }\n        Returns: boolean\n      }\n      dividir_timesheet: {\n        Args: { p_divisoes: Json; p_timesheet_id: string }\n        Returns: string[]\n      }\n      editar_timesheet: {\n        Args: {\n          p_atividade: string\n          p_editado_por: string\n          p_faturavel: boolean\n          p_horas: number\n          p_timesheet_id: string\n        }\n        Returns: undefined\n      }\n      encerrar_contrato_limite: {\n        Args: { p_contrato_id: string; p_user_id: string }\n        Returns: boolean\n      }\n      escritorios_mesmo_grupo: {\n        Args: { p_escritorio_id_1: string; p_escritorio_id_2: string }\n        Returns: boolean\n      }\n      excluir_lancamento_cartao: {\n        Args: { p_lancamento_id: string }\n        Returns: boolean\n      }\n      executar_fechamento_mensal_pasta: {\n        Args: { p_competencia?: string }\n        Returns: Json\n      }\n      execute_raw_sql: { Args: { sql_query: string }; Returns: Json }\n      execute_safe_delete: {\n        Args: {\n          confirmacao_dupla?: boolean\n          escritorio_param: string\n          registro_id: string\n          tabela: string\n        }\n        Returns: Json\n      }\n      execute_safe_insert: {\n        Args: { dados: Json; escritorio_param: string; tabela: string }\n        Returns: Json\n      }\n      execute_safe_query: {\n        Args: { escritorio_param: string; query_text: string }\n        Returns: Json\n      }\n      execute_safe_update: {\n        Args: {\n          alteracoes: Json\n          escritorio_param: string\n          registro_id: string\n          tabela: string\n        }\n        Returns: Json\n      }\n      extrair_numero_cnj: { Args: { texto: string }; Returns: string }\n      fechar_fatura_cartao:\n        | {\n            Args: { p_cartao_id: string; p_mes_referencia: string }\n            Returns: string\n          }\n        | { Args: { p_fatura_id: string }; Returns: string }\n      finalizar_ato_hora: {\n        Args: {\n          p_ato_tipo_id: string\n          p_processo_id: string\n          p_user_id?: string\n        }\n        Returns: {\n          aplicou_minimo: boolean\n          horas_cobradas: number\n          horas_trabalhadas: number\n          mensagem: string\n          receita_id: string\n          valor_total: number\n        }[]\n      }\n      finalizar_timer: {\n        Args: {\n          p_ajuste_minutos?: number\n          p_descricao?: string\n          p_timer_id: string\n        }\n        Returns: string\n      }\n      find_cliente_id: {\n        Args: { p_escritorio_id: string; p_nome: string }\n        Returns: string\n      }\n      finish_onboarding: { Args: never; Returns: Json }\n      gerar_codigo_portfolio: {\n        Args: { p_area?: string; p_escritorio_id: string; p_tipo: string }\n        Returns: string\n      }\n      gerar_fatura_v2: {\n        Args: {\n          p_cliente_id: string\n          p_data_emissao?: string\n          p_data_vencimento?: string\n          p_escritorio_id: string\n          p_honorarios_ids?: string[]\n          p_observacoes?: string\n          p_timesheet_ids?: string[]\n          p_user_id?: string\n        }\n        Returns: string\n      }\n      gerar_fatura_v3:\n        | {\n            Args: {\n              p_cliente_id: string\n              p_data_emissao: string\n              p_data_vencimento?: string\n              p_escritorio_id: string\n              p_fechamentos_ids?: string[]\n              p_honorarios_ids?: string[]\n              p_observacoes?: string\n              p_timesheet_ids?: string[]\n              p_user_id?: string\n            }\n            Returns: string\n          }\n        | {\n            Args: {\n              p_cliente_id: string\n              p_data_emissao?: string\n              p_data_vencimento?: string\n              p_escritorio_id: string\n              p_fechamentos_ids?: string[]\n              p_honorarios_ids?: string[]\n              p_observacoes?: string\n              p_timesheet_ids?: string[]\n              p_user_id?: string\n            }\n            Returns: string\n          }\n      gerar_lancamentos_recorrentes:\n        | { Args: never; Returns: number }\n        | {\n            Args: { p_cartao_id: string; p_mes_referencia: string }\n            Returns: number\n          }\n      gerar_numero_modulo: {\n        Args: { p_escritorio_id: string; p_modulo: string; p_prefixo: string }\n        Returns: string\n      }\n      gerar_numero_pasta_unificado: {\n        Args: { p_escritorio_id: string }\n        Returns: string\n      }\n      get_agenda_consultivo: {\n        Args: { p_consultivo_id: string }\n        Returns: {\n          consultivo_id: string\n          consultivo_titulo: string\n          cor: string\n          created_at: string\n          data_fim: string\n          data_inicio: string\n          descricao: string\n          dia_inteiro: boolean\n          escritorio_id: string\n          id: string\n          local: string\n          prazo_cumprido: boolean\n          prazo_data_limite: string\n          prazo_tipo: string\n          prioridade: string\n          processo_id: string\n          processo_numero: string\n          recorrencia_id: string\n          responsavel_id: string\n          responsavel_nome: string\n          status: string\n          subtipo: string\n          tipo_entidade: string\n          titulo: string\n          updated_at: string\n        }[]\n      }\n      get_agenda_processo: {\n        Args: { p_processo_id: string }\n        Returns: {\n          consultivo_id: string\n          consultivo_titulo: string\n          cor: string\n          created_at: string\n          data_fim: string\n          data_inicio: string\n          descricao: string\n          dia_inteiro: boolean\n          escritorio_id: string\n          id: string\n          local: string\n          prazo_cumprido: boolean\n          prazo_data_limite: string\n          prazo_tipo: string\n          prioridade: string\n          processo_id: string\n          processo_numero: string\n          recorrencia_id: string\n          responsaveis_nomes: string[]\n          responsavel_id: string\n          responsavel_nome: string\n          status: string\n          subtipo: string\n          tipo_entidade: string\n          titulo: string\n          updated_at: string\n        }[]\n      }\n      get_ato_config_hora: {\n        Args: { p_ato_tipo_id: string; p_contrato_id: string }\n        Returns: Json\n      }\n      get_audiencia_escritorio_id: {\n        Args: { p_audiencia_id: string }\n        Returns: string\n      }\n      get_audiencia_responsaveis_nomes: {\n        Args: { p_audiencia_id: string }\n        Returns: string\n      }\n      get_cached_embedding: { Args: { p_input_hash: string }; Returns: string }\n      get_colleague_user_ids: { Args: never; Returns: string[] }\n      get_enum_values: { Args: { tipo_nome: string }; Returns: Json }\n      get_escritorio_ativo: { Args: { user_uuid: string }; Returns: string }\n      get_escritorios_do_grupo: {\n        Args: { p_escritorio_id: string }\n        Returns: {\n          ativo: boolean\n          cnpj: string\n          grupo_id: string\n          id: string\n          logo_url: string\n          nome: string\n          plano: string\n        }[]\n      }\n      get_estatisticas_conversao_consultivo: {\n        Args: {\n          p_escritorio_id: string\n          p_periodo_fim?: string\n          p_periodo_inicio?: string\n        }\n        Returns: Json\n      }\n      get_evento_criado_por: { Args: { p_evento_id: string }; Returns: string }\n      get_evento_escritorio_id: {\n        Args: { p_evento_id: string }\n        Returns: string\n      }\n      get_evento_responsaveis_nomes: {\n        Args: { p_evento_id: string }\n        Returns: string\n      }\n      get_extrato_com_recorrentes: {\n        Args: {\n          p_data_fim: string\n          p_data_inicio: string\n          p_escritorio_ids: string[]\n        }\n        Returns: {\n          categoria: string\n          cliente_id: string\n          conta_bancaria_id: string\n          conta_bancaria_nome: string\n          data_efetivacao: string\n          data_referencia: string\n          data_vencimento: string\n          descricao: string\n          entidade: string\n          escritorio_id: string\n          id: string\n          origem: string\n          origem_id: string\n          origem_pai_id: string\n          processo_id: string\n          status: string\n          tipo_movimento: string\n          valor: number\n          valor_pago: number\n          virtual: boolean\n        }[]\n      }\n      get_faturas_geradas: {\n        Args: { p_escritorio_id: string }\n        Returns: {\n          categoria_status: string\n          cliente_email: string\n          cliente_id: string\n          cliente_nome: string\n          created_at: string\n          data_emissao: string\n          data_vencimento: string\n          dias_ate_vencimento: number\n          enviada_em: string\n          escritorio_id: string\n          fatura_id: string\n          gerada_automaticamente: boolean\n          numero_fatura: string\n          numero_parcelas: number\n          observacoes: string\n          paga_em: string\n          parcelado: boolean\n          pdf_url: string\n          qtd_honorarios: number\n          qtd_horas: number\n          soma_horas: number\n          status: string\n          total_honorarios: number\n          total_horas: number\n          updated_at: string\n          valor_total: number\n        }[]\n      }\n      get_grupo_id_ativo: { Args: never; Returns: string }\n      get_horas_acumuladas_ato: {\n        Args: { p_ato_tipo_id: string; p_processo_id: string }\n        Returns: {\n          atingiu_maximo: boolean\n          horas_disponiveis: number\n          horas_excedentes: number\n          horas_faturaveis: number\n          horas_totais: number\n          percentual_usado: number\n          status: string\n          valor_atual: number\n          valor_maximo: number\n          valor_minimo: number\n        }[]\n      }\n      get_lancamentos_prontos_faturar: {\n        Args: { p_escritorio_id: string }\n        Returns: {\n          categoria: string\n          cliente_id: string\n          cliente_nome: string\n          consulta_id: string\n          created_at: string\n          descricao: string\n          escritorio_id: string\n          horas: number\n          lancamento_id: string\n          processo_id: string\n          tipo_lancamento: string\n          valor: number\n        }[]\n      }\n      get_my_permissions: {\n        Args: { p_escritorio_id: string }\n        Returns: {\n          modulo: string\n          pode_criar: boolean\n          pode_editar: boolean\n          pode_excluir: boolean\n          pode_exportar: boolean\n          pode_visualizar: boolean\n        }[]\n      }\n      get_portfolio_dashboard_metricas: {\n        Args: { p_escritorio_id: string }\n        Returns: {\n          projetos_atrasados: number\n          receita_mes_anterior: number\n          receita_mes_atual: number\n          taxa_sucesso_geral: number\n          total_produtos_ativos: number\n          total_projetos_ativos: number\n        }[]\n      }\n      get_publicacao_completa: {\n        Args: { p_publicacao_id: string }\n        Returns: Json\n      }\n      get_responsaveis_nomes_from_array: {\n        Args: { p_ids: string[] }\n        Returns: string\n      }\n      get_tabelas_permitidas: { Args: never; Returns: string[] }\n      get_table_info: { Args: { tabela_nome: string }; Returns: Json }\n      get_table_schema: { Args: { tabela_nome: string }; Returns: Json }\n      get_tarefa_escritorio_id: {\n        Args: { p_tarefa_id: string }\n        Returns: string\n      }\n      get_tarefa_faturavel: { Args: { p_tarefa_id: string }; Returns: boolean }\n      get_tarefa_responsaveis_nomes: {\n        Args: { p_tarefa_id: string }\n        Returns: string\n      }\n      get_tempo_na_etapa: {\n        Args: { oportunidade_id: string }\n        Returns: unknown\n      }\n      get_ultima_interacao: {\n        Args: { p_pessoa_id: string }\n        Returns: {\n          assunto: string\n          data_hora: string\n          tipo: string\n          user_nome: string\n        }[]\n      }\n      get_user_escritorios: {\n        Args: { user_uuid: string }\n        Returns: {\n          escritorio_id: string\n          escritorio_nome: string\n          is_owner: boolean\n          role: string\n          ultimo_acesso: string\n        }[]\n      }\n      get_user_grupo_ids: { Args: never; Returns: string[] }\n      get_valor_hora_contrato: {\n        Args: { p_contrato_id: string }\n        Returns: number\n      }\n      get_valor_hora_efetivo: {\n        Args: { p_contrato_id: string; p_user_id: string }\n        Returns: number\n      }\n      has_permission: {\n        Args: {\n          p_escritorio_id: string\n          p_modulo: string\n          p_permissao: string\n          p_user_id: string\n        }\n        Returns: boolean\n      }\n      ignorar_alerta_cobranca: {\n        Args: {\n          p_alerta_id: string\n          p_justificativa?: string\n          p_user_id?: string\n        }\n        Returns: boolean\n      }\n      importar_indice_bcb: {\n        Args: {\n          p_codigo_bcb: number\n          p_competencia: string\n          p_nome: string\n          p_valor: number\n          p_variacao_mensal?: number\n        }\n        Returns: Json\n      }\n      iniciar_timer:\n        | {\n            Args: {\n              p_audiencia_id?: string\n              p_consulta_id?: string\n              p_descricao?: string\n              p_escritorio_id: string\n              p_evento_id?: string\n              p_faturavel?: boolean\n              p_processo_id?: string\n              p_tarefa_id?: string\n              p_titulo: string\n              p_user_id: string\n            }\n            Returns: string\n          }\n        | {\n            Args: {\n              p_consulta_id?: string\n              p_descricao?: string\n              p_escritorio_id: string\n              p_faturavel?: boolean\n              p_processo_id?: string\n              p_tarefa_id?: string\n              p_titulo: string\n              p_user_id: string\n            }\n            Returns: string\n          }\n      is_dono_or_socio: { Args: { p_escritorio_id: string }; Returns: boolean }\n      is_dono_or_socio_direct: {\n        Args: { p_escritorio_id: string }\n        Returns: boolean\n      }\n      limpar_cache_datajud_expirado: { Args: never; Returns: number }\n      limpar_escavador_cache_expirado: { Args: never; Returns: number }\n      limpar_faturas_storage_antigas: {\n        Args: never\n        Returns: {\n          arquivos_removidos: number\n          registros_atualizados: number\n        }[]\n      }\n      limpar_migracao_temp: { Args: never; Returns: undefined }\n      marcar_alerta_cobrado: {\n        Args: { p_alerta_id: string; p_honorario_id?: string }\n        Returns: boolean\n      }\n      marcar_fechamento_faturado: {\n        Args: { p_fatura_id: string; p_fechamento_id: string }\n        Returns: boolean\n      }\n      mover_oportunidade_etapa: {\n        Args: {\n          p_nova_etapa_id: string\n          p_observacao?: string\n          p_oportunidade_id: string\n          p_user_id: string\n        }\n        Returns: boolean\n      }\n      obter_codigo_bcb: { Args: { p_nome_indice: string }; Returns: number }\n      obter_dashboard_mes: {\n        Args: { p_ano: number; p_mes: number; p_user_id: string }\n        Returns: Json\n      }\n      obter_fatura_atual_cartao: {\n        Args: { p_cartao_id: string }\n        Returns: {\n          data_fechamento: string\n          data_vencimento: string\n          dias_para_fechamento: number\n          dias_para_vencimento: number\n          fatura_id: string\n          mes_referencia: string\n          status: string\n          total_lancamentos: number\n          valor_total: number\n        }[]\n      }\n      obter_indice_padrao_processo: {\n        Args: { p_area: string }\n        Returns: string\n      }\n      obter_lancamentos_mes: {\n        Args: { p_cartao_id: string; p_mes_referencia: string }\n        Returns: {\n          categoria: string\n          compra_id: string\n          data_compra: string\n          descricao: string\n          fatura_id: string\n          faturado: boolean\n          fornecedor: string\n          id: string\n          mes_referencia: string\n          parcela_numero: number\n          parcela_total: number\n          recorrente_ativo: boolean\n          recorrente_data_fim: string\n          tipo: string\n          valor: number\n        }[]\n      }\n      obter_ou_criar_fatura_cartao: {\n        Args: { p_cartao_id: string; p_mes_referencia: string }\n        Returns: string\n      }\n      pagar_fatura: {\n        Args: {\n          p_comprovante_url?: string\n          p_conta_bancaria_id?: string\n          p_data_pagamento: string\n          p_fatura_id: string\n          p_forma_pagamento: string\n          p_observacoes?: string\n          p_user_id?: string\n          p_valor_pago: number\n        }\n        Returns: string\n      }\n      pausar_timer: { Args: { p_timer_id: string }; Returns: boolean }\n      pecas_gerar_numero_interno: {\n        Args: { p_escritorio_id: string }\n        Returns: string\n      }\n      processar_recorrencias_diarias: { Args: never; Returns: number }\n      reativar_lancamento_recorrente: {\n        Args: { p_compra_id: string }\n        Returns: boolean\n      }\n      receber_receita: {\n        Args: {\n          p_conta_bancaria_id?: string\n          p_data_pagamento?: string\n          p_forma_pagamento?: Database[\"public\"][\"Enums\"][\"forma_pagamento_enum\"]\n          p_receita_id: string\n          p_valor_pago?: number\n        }\n        Returns: boolean\n      }\n      receber_receita_parcial: {\n        Args: {\n          p_conta_bancaria_id: string\n          p_forma_pagamento: Database[\"public\"][\"Enums\"][\"forma_pagamento_enum\"]\n          p_nova_data_vencimento: string\n          p_receita_id: string\n          p_valor_pago: number\n        }\n        Returns: string\n      }\n      registrar_andamento_publicacao: {\n        Args: {\n          p_notificar_cliente?: boolean\n          p_publicacao_id: string\n          p_resumo: string\n        }\n        Returns: string\n      }\n      registrar_interacao: {\n        Args: {\n          p_assunto: string\n          p_dados?: Json\n          p_descricao: string\n          p_pessoa_id: string\n          p_tipo: string\n          p_user_id: string\n        }\n        Returns: string\n      }\n      registrar_tempo_retroativo: {\n        Args: {\n          p_atividade?: string\n          p_ato_tipo_id?: string\n          p_audiencia_id?: string\n          p_consulta_id?: string\n          p_data_trabalho: string\n          p_escritorio_id: string\n          p_evento_id?: string\n          p_faturavel?: boolean\n          p_faturavel_manual?: boolean\n          p_hora_fim?: string\n          p_hora_inicio?: string\n          p_horas?: number\n          p_processo_id?: string\n          p_tarefa_id?: string\n          p_user_id: string\n        }\n        Returns: string\n      }\n      remover_processo_fechamento: {\n        Args: { p_fechamento_id: string; p_processo_id: string }\n        Returns: boolean\n      }\n      renovar_contrato_pasta: {\n        Args: {\n          p_contrato_id: string\n          p_novo_limite?: number\n          p_user_id: string\n        }\n        Returns: boolean\n      }\n      reprovar_timesheet: {\n        Args: {\n          p_justificativa: string\n          p_reprovado_por: string\n          p_timesheet_ids: string[]\n        }\n        Returns: number\n      }\n      resetar_creditos_escavador: { Args: never; Returns: number }\n      retomar_timer: { Args: { p_timer_id: string }; Returns: boolean }\n      sanitize_name: { Args: { input_text: string }; Returns: string }\n      search_knowledge_base: {\n        Args: {\n          match_count?: number\n          match_threshold?: number\n          query_embedding: string\n        }\n        Returns: {\n          chunk_id: string\n          content: string\n          id: string\n          metadata: Json\n          similarity: number\n          source: string\n          title: string\n        }[]\n      }\n      search_memories: {\n        Args: {\n          match_count?: number\n          match_threshold?: number\n          p_escritorio_id: string\n          p_sessao_id?: string\n          p_user_id: string\n          query_embedding: string\n        }\n        Returns: {\n          content: string\n          content_resumido: string\n          entidade: string\n          id: string\n          relevancia_score: number\n          similarity: number\n          tipo: string\n        }[]\n      }\n      search_similar_feedback: {\n        Args: {\n          match_count?: number\n          match_threshold?: number\n          p_escritorio_id: string\n          query_embedding: string\n        }\n        Returns: {\n          created_at: string\n          id: string\n          similarity: number\n          tipo_feedback: string\n          user_message: string\n        }[]\n      }\n      seed_cargo_permissoes: {\n        Args: { p_cargo_id: string; p_cargo_nome: string }\n        Returns: undefined\n      }\n      seed_cargos_for_escritorio: {\n        Args: { p_escritorio_id: string }\n        Returns: undefined\n      }\n      seed_default_cargos: {\n        Args: { p_escritorio_id: string }\n        Returns: undefined\n      }\n      seed_default_tags_for_escritorio: {\n        Args: { p_escritorio_id: string }\n        Returns: undefined\n      }\n      set_escritorio_ativo: {\n        Args: { escritorio_uuid: string; user_uuid: string }\n        Returns: boolean\n      }\n      title_case_smart: { Args: { input_text: string }; Returns: string }\n      toggle_faturavel_timesheet: {\n        Args: {\n          p_alterado_por: string\n          p_faturavel: boolean\n          p_timesheet_ids: string[]\n        }\n        Returns: number\n      }\n      transformar_consultivo_em_processo: {\n        Args: {\n          p_arquivar_consultivo?: boolean\n          p_comarca?: string\n          p_consultivo_id: string\n          p_data_distribuicao?: string\n          p_fase?: string\n          p_instancia?: string\n          p_manter_contrato?: boolean\n          p_migrar_andamentos?: boolean\n          p_numero_cnj?: string\n          p_parte_contraria?: string\n          p_polo_cliente?: string\n          p_tipo?: string\n          p_tribunal?: string\n          p_uf?: string\n          p_valor_causa?: number\n          p_vara?: string\n        }\n        Returns: Json\n      }\n      trigger_publicacoes_sync_auto: { Args: never; Returns: undefined }\n      update_embedding_cache_usage: {\n        Args: { p_input_hash: string }\n        Returns: undefined\n      }\n      update_memory_usage: {\n        Args: { memory_ids: string[] }\n        Returns: undefined\n      }\n      user_belongs_to_escritorio:\n        | { Args: { p_escritorio_id: string }; Returns: boolean }\n        | {\n            Args: { escritorio_uuid: string; user_uuid: string }\n            Returns: boolean\n          }\n      user_can_access_alerta: { Args: { alerta_id: string }; Returns: boolean }\n      user_has_access_to_conta_bancaria: {\n        Args: { p_conta_id: string }\n        Returns: boolean\n      }\n      user_has_access_to_escritorio: {\n        Args: { p_escritorio_id: string }\n        Returns: boolean\n      }\n      user_has_access_to_escritorio_relatorios: {\n        Args: { p_escritorio_id: string }\n        Returns: boolean\n      }\n      user_has_access_to_grupo: {\n        Args: { p_escritorio_id: string }\n        Returns: boolean\n      }\n      user_has_access_to_peca: { Args: { p_peca_id: string }; Returns: boolean }\n      user_has_access_to_publicacao: {\n        Args: { p_publicacao_id: string }\n        Returns: boolean\n      }\n      user_has_access_to_template: {\n        Args: { p_template_id: string }\n        Returns: boolean\n      }\n      user_in_escritorio: {\n        Args: { p_escritorio_id: string }\n        Returns: boolean\n      }\n      user_pode_editar_processo: {\n        Args: { p_processo_id: string }\n        Returns: boolean\n      }\n      user_pode_gerenciar_financeiro: {\n        Args: { p_escritorio_id: string }\n        Returns: boolean\n      }\n      user_tem_acesso_documento: {\n        Args: { p_escritorio_id: string }\n        Returns: boolean\n      }\n      user_tem_acesso_escritorio: {\n        Args: { p_escritorio_id: string }\n        Returns: boolean\n      }\n      user_tem_acesso_escritorio_portfolio: {\n        Args: { p_escritorio_id: string }\n        Returns: boolean\n      }\n      user_tem_acesso_movimentacao: {\n        Args: { p_processo_id: string }\n        Returns: boolean\n      }\n      user_tem_acesso_permissao: {\n        Args: { p_usuario_escritorio_id: string }\n        Returns: boolean\n      }\n      user_tem_acesso_processo: {\n        Args: { p_processo_id: string }\n        Returns: boolean\n      }\n      user_tem_acesso_processo_direto: {\n        Args: { p_escritorio_id: string }\n        Returns: boolean\n      }\n      verificar_limites_contratos_pasta: { Args: never; Returns: Json }\n      vincular_processo_auto: {\n        Args: { p_publicacao_id: string }\n        Returns: string\n      }\n    }\n    Enums: {\n      area_juridica_enum:\n        | \"civel\"\n        | \"trabalhista\"\n        | \"criminal\"\n        | \"tributario\"\n        | \"empresarial\"\n        | \"familia\"\n        | \"consumidor\"\n        | \"previdenciario\"\n        | \"administrativo\"\n        | \"outros\"\n        | \"ambiental\"\n      despesa_categoria_enum:\n        | \"custas\"\n        | \"cartorio\"\n        | \"oficial_justica\"\n        | \"correios\"\n        | \"copia\"\n        | \"publicacao\"\n        | \"certidao\"\n        | \"protesto\"\n        | \"honorarios_perito\"\n        | \"fornecedor\"\n        | \"material\"\n        | \"tecnologia\"\n        | \"assinatura\"\n        | \"aluguel\"\n        | \"telefonia\"\n        | \"folha\"\n        | \"prolabore\"\n        | \"retirada_socios\"\n        | \"beneficios\"\n        | \"impostos\"\n        | \"taxas_bancarias\"\n        | \"combustivel\"\n        | \"deslocamento\"\n        | \"estacionamento\"\n        | \"hospedagem\"\n        | \"viagem\"\n        | \"alimentacao\"\n        | \"marketing\"\n        | \"capacitacao\"\n        | \"associacoes\"\n        | \"emprestimos\"\n        | \"juros\"\n        | \"cartao_credito\"\n        | \"comissao\"\n        | \"outra\"\n        | \"outros\"\n      despesa_status_enum: \"pendente\" | \"pago\" | \"cancelado\"\n      etapa_oportunidade_enum:\n        | \"lead\"\n        | \"contato_feito\"\n        | \"proposta_enviada\"\n        | \"negociacao\"\n        | \"ganho\"\n        | \"perdido\"\n      forma_pagamento_enum:\n        | \"dinheiro\"\n        | \"pix\"\n        | \"ted\"\n        | \"boleto\"\n        | \"cartao_credito\"\n        | \"cartao_debito\"\n        | \"cheque\"\n        | \"deposito\"\n      motivo_perda_enum:\n        | \"preco\"\n        | \"concorrencia\"\n        | \"desistencia\"\n        | \"sem_resposta\"\n        | \"fora_escopo\"\n        | \"outros\"\n      nivel_prioridade: \"baixa\" | \"media\" | \"alta\" | \"urgente\"\n      origem_crm_enum:\n        | \"indicacao\"\n        | \"site\"\n        | \"google\"\n        | \"redes_sociais\"\n        | \"evento\"\n        | \"parceria\"\n        | \"outros\"\n      receita_categoria_enum:\n        | \"honorarios\"\n        | \"custas_reembolsadas\"\n        | \"exito\"\n        | \"consultoria\"\n        | \"outros\"\n      receita_status_enum:\n        | \"pendente\"\n        | \"pago\"\n        | \"parcial\"\n        | \"atrasado\"\n        | \"cancelado\"\n        | \"faturado\"\n      receita_tipo_enum:\n        | \"honorario\"\n        | \"parcela\"\n        | \"avulso\"\n        | \"saldo\"\n        | \"reembolso\"\n      status_consultivo: \"ativo\" | \"arquivado\"\n      status_pessoa_enum: \"ativo\" | \"inativo\" | \"arquivado\"\n      status_projeto:\n        | \"planejamento\"\n        | \"ativo\"\n        | \"pausado\"\n        | \"revisao\"\n        | \"concluido\"\n      status_tarefa: \"backlog\" | \"em_andamento\" | \"revisao\" | \"concluida\"\n      tipo_cadastro_enum:\n        | \"cliente\"\n        | \"prospecto\"\n        | \"parte_contraria\"\n        | \"correspondente\"\n        | \"testemunha\"\n        | \"perito\"\n        | \"juiz\"\n        | \"promotor\"\n        | \"outros\"\n      tipo_pessoa_enum: \"pf\" | \"pj\"\n      uf_enum:\n        | \"AC\"\n        | \"AL\"\n        | \"AM\"\n        | \"AP\"\n        | \"BA\"\n        | \"CE\"\n        | \"DF\"\n        | \"ES\"\n        | \"GO\"\n        | \"MA\"\n        | \"MG\"\n        | \"MS\"\n        | \"MT\"\n        | \"PA\"\n        | \"PB\"\n        | \"PE\"\n        | \"PI\"\n        | \"PR\"\n        | \"RJ\"\n        | \"RN\"\n        | \"RO\"\n        | \"RR\"\n        | \"RS\"\n        | \"SC\"\n        | \"SE\"\n        | \"SP\"\n        | \"TO\"\n    }\n    CompositeTypes: {\n      [_ in never]: never\n    }\n  }\n}\n\ntype DatabaseWithoutInternals = Omit<Database, \"__InternalSupabase\">\n\ntype DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, \"public\">]\n\nexport type Tables<\n  DefaultSchemaTableNameOrOptions extends\n    | keyof (DefaultSchema[\"Tables\"] & DefaultSchema[\"Views\"])\n    | { schema: keyof DatabaseWithoutInternals },\n  TableName extends DefaultSchemaTableNameOrOptions extends {\n    schema: keyof DatabaseWithoutInternals\n  }\n    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions[\"schema\"]][\"Tables\"] &\n        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions[\"schema\"]][\"Views\"])\n    : never = never,\n> = DefaultSchemaTableNameOrOptions extends {\n  schema: keyof DatabaseWithoutInternals\n}\n  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions[\"schema\"]][\"Tables\"] &\n      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions[\"schema\"]][\"Views\"])[TableName] extends {\n      Row: infer R\n    }\n    ? R\n    : never\n  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema[\"Tables\"] &\n        DefaultSchema[\"Views\"])\n    ? (DefaultSchema[\"Tables\"] &\n        DefaultSchema[\"Views\"])[DefaultSchemaTableNameOrOptions] extends {\n        Row: infer R\n      }\n      ? R\n      : never\n    : never\n\nexport type TablesInsert<\n  DefaultSchemaTableNameOrOptions extends\n    | keyof DefaultSchema[\"Tables\"]\n    | { schema: keyof DatabaseWithoutInternals },\n  TableName extends DefaultSchemaTableNameOrOptions extends {\n    schema: keyof DatabaseWithoutInternals\n  }\n    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions[\"schema\"]][\"Tables\"]\n    : never = never,\n> = DefaultSchemaTableNameOrOptions extends {\n  schema: keyof DatabaseWithoutInternals\n}\n  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions[\"schema\"]][\"Tables\"][TableName] extends {\n      Insert: infer I\n    }\n    ? I\n    : never\n  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema[\"Tables\"]\n    ? DefaultSchema[\"Tables\"][DefaultSchemaTableNameOrOptions] extends {\n        Insert: infer I\n      }\n      ? I\n      : never\n    : never\n\nexport type TablesUpdate<\n  DefaultSchemaTableNameOrOptions extends\n    | keyof DefaultSchema[\"Tables\"]\n    | { schema: keyof DatabaseWithoutInternals },\n  TableName extends DefaultSchemaTableNameOrOptions extends {\n    schema: keyof DatabaseWithoutInternals\n  }\n    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions[\"schema\"]][\"Tables\"]\n    : never = never,\n> = DefaultSchemaTableNameOrOptions extends {\n  schema: keyof DatabaseWithoutInternals\n}\n  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions[\"schema\"]][\"Tables\"][TableName] extends {\n      Update: infer U\n    }\n    ? U\n    : never\n  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema[\"Tables\"]\n    ? DefaultSchema[\"Tables\"][DefaultSchemaTableNameOrOptions] extends {\n        Update: infer U\n      }\n      ? U\n      : never\n    : never\n\nexport type Enums<\n  DefaultSchemaEnumNameOrOptions extends\n    | keyof DefaultSchema[\"Enums\"]\n    | { schema: keyof DatabaseWithoutInternals },\n  EnumName extends DefaultSchemaEnumNameOrOptions extends {\n    schema: keyof DatabaseWithoutInternals\n  }\n    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions[\"schema\"]][\"Enums\"]\n    : never = never,\n> = DefaultSchemaEnumNameOrOptions extends {\n  schema: keyof DatabaseWithoutInternals\n}\n  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions[\"schema\"]][\"Enums\"][EnumName]\n  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema[\"Enums\"]\n    ? DefaultSchema[\"Enums\"][DefaultSchemaEnumNameOrOptions]\n    : never\n\nexport type CompositeTypes<\n  PublicCompositeTypeNameOrOptions extends\n    | keyof DefaultSchema[\"CompositeTypes\"]\n    | { schema: keyof DatabaseWithoutInternals },\n  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {\n    schema: keyof DatabaseWithoutInternals\n  }\n    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions[\"schema\"]][\"CompositeTypes\"]\n    : never = never,\n> = PublicCompositeTypeNameOrOptions extends {\n  schema: keyof DatabaseWithoutInternals\n}\n  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions[\"schema\"]][\"CompositeTypes\"][CompositeTypeName]\n  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema[\"CompositeTypes\"]\n    ? DefaultSchema[\"CompositeTypes\"][PublicCompositeTypeNameOrOptions]\n    : never\n\nexport const Constants = {\n  public: {\n    Enums: {\n      area_juridica_enum: [\n        \"civel\",\n        \"trabalhista\",\n        \"criminal\",\n        \"tributario\",\n        \"empresarial\",\n        \"familia\",\n        \"consumidor\",\n        \"previdenciario\",\n        \"administrativo\",\n        \"outros\",\n        \"ambiental\",\n      ],\n      despesa_categoria_enum: [\n        \"custas\",\n        \"cartorio\",\n        \"oficial_justica\",\n        \"correios\",\n        \"copia\",\n        \"publicacao\",\n        \"certidao\",\n        \"protesto\",\n        \"honorarios_perito\",\n        \"fornecedor\",\n        \"material\",\n        \"tecnologia\",\n        \"assinatura\",\n        \"aluguel\",\n        \"telefonia\",\n        \"folha\",\n        \"prolabore\",\n        \"retirada_socios\",\n        \"beneficios\",\n        \"impostos\",\n        \"taxas_bancarias\",\n        \"combustivel\",\n        \"deslocamento\",\n        \"estacionamento\",\n        \"hospedagem\",\n        \"viagem\",\n        \"alimentacao\",\n        \"marketing\",\n        \"capacitacao\",\n        \"associacoes\",\n        \"emprestimos\",\n        \"juros\",\n        \"cartao_credito\",\n        \"comissao\",\n        \"outra\",\n        \"outros\",\n      ],\n      despesa_status_enum: [\"pendente\", \"pago\", \"cancelado\"],\n      etapa_oportunidade_enum: [\n        \"lead\",\n        \"contato_feito\",\n        \"proposta_enviada\",\n        \"negociacao\",\n        \"ganho\",\n        \"perdido\",\n      ],\n      forma_pagamento_enum: [\n        \"dinheiro\",\n        \"pix\",\n        \"ted\",\n        \"boleto\",\n        \"cartao_credito\",\n        \"cartao_debito\",\n        \"cheque\",\n        \"deposito\",\n      ],\n      motivo_perda_enum: [\n        \"preco\",\n        \"concorrencia\",\n        \"desistencia\",\n        \"sem_resposta\",\n        \"fora_escopo\",\n        \"outros\",\n      ],\n      nivel_prioridade: [\"baixa\", \"media\", \"alta\", \"urgente\"],\n      origem_crm_enum: [\n        \"indicacao\",\n        \"site\",\n        \"google\",\n        \"redes_sociais\",\n        \"evento\",\n        \"parceria\",\n        \"outros\",\n      ],\n      receita_categoria_enum: [\n        \"honorarios\",\n        \"custas_reembolsadas\",\n        \"exito\",\n        \"consultoria\",\n        \"outros\",\n      ],\n      receita_status_enum: [\n        \"pendente\",\n        \"pago\",\n        \"parcial\",\n        \"atrasado\",\n        \"cancelado\",\n        \"faturado\",\n      ],\n      receita_tipo_enum: [\n        \"honorario\",\n        \"parcela\",\n        \"avulso\",\n        \"saldo\",\n        \"reembolso\",\n      ],\n      status_consultivo: [\"ativo\", \"arquivado\"],\n      status_pessoa_enum: [\"ativo\", \"inativo\", \"arquivado\"],\n      status_projeto: [\n        \"planejamento\",\n        \"ativo\",\n        \"pausado\",\n        \"revisao\",\n        \"concluido\",\n      ],\n      status_tarefa: [\"backlog\", \"em_andamento\", \"revisao\", \"concluida\"],\n      tipo_cadastro_enum: [\n        \"cliente\",\n        \"prospecto\",\n        \"parte_contraria\",\n        \"correspondente\",\n        \"testemunha\",\n        \"perito\",\n        \"juiz\",\n        \"promotor\",\n        \"outros\",\n      ],\n      tipo_pessoa_enum: [\"pf\", \"pj\"],\n      uf_enum: [\n        \"AC\",\n        \"AL\",\n        \"AM\",\n        \"AP\",\n        \"BA\",\n        \"CE\",\n        \"DF\",\n        \"ES\",\n        \"GO\",\n        \"MA\",\n        \"MG\",\n        \"MS\",\n        \"MT\",\n        \"PA\",\n        \"PB\",\n        \"PE\",\n        \"PI\",\n        \"PR\",\n        \"RJ\",\n        \"RN\",\n        \"RO\",\n        \"RR\",\n        \"RS\",\n        \"SC\",\n        \"SE\",\n        \"SP\",\n        \"TO\",\n      ],\n    },\n  },\n} as const\n"}
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.5"
+  }
+  public: {
+    Tables: {
+      agenda_audiencias: {
+        Row: {
+          advogado_contrario: string | null
+          comarca: string | null
+          consultivo_id: string | null
+          cor: string | null
+          created_at: string | null
+          criado_por: string | null
+          data_hora: string
+          descricao: string | null
+          duracao_minutos: number | null
+          endereco: string | null
+          escritorio_id: string
+          forum: string | null
+          id: string
+          juiz: string | null
+          link_virtual: string | null
+          modalidade: string
+          observacoes: string | null
+          plataforma: string | null
+          preparativos_checklist: Json | null
+          processo_id: string | null
+          promotor: string | null
+          responsaveis_ids: string[] | null
+          responsavel_id: string | null
+          resultado_descricao: string | null
+          resultado_tipo: string | null
+          sala: string | null
+          status: string | null
+          tipo_audiencia: string
+          titulo: string
+          tribunal: string | null
+          updated_at: string | null
+          vara: string | null
+        }
+        Insert: {
+          advogado_contrario?: string | null
+          comarca?: string | null
+          consultivo_id?: string | null
+          cor?: string | null
+          created_at?: string | null
+          criado_por?: string | null
+          data_hora: string
+          descricao?: string | null
+          duracao_minutos?: number | null
+          endereco?: string | null
+          escritorio_id: string
+          forum?: string | null
+          id?: string
+          juiz?: string | null
+          link_virtual?: string | null
+          modalidade: string
+          observacoes?: string | null
+          plataforma?: string | null
+          preparativos_checklist?: Json | null
+          processo_id?: string | null
+          promotor?: string | null
+          responsaveis_ids?: string[] | null
+          responsavel_id?: string | null
+          resultado_descricao?: string | null
+          resultado_tipo?: string | null
+          sala?: string | null
+          status?: string | null
+          tipo_audiencia: string
+          titulo: string
+          tribunal?: string | null
+          updated_at?: string | null
+          vara?: string | null
+        }
+        Update: {
+          advogado_contrario?: string | null
+          comarca?: string | null
+          consultivo_id?: string | null
+          cor?: string | null
+          created_at?: string | null
+          criado_por?: string | null
+          data_hora?: string
+          descricao?: string | null
+          duracao_minutos?: number | null
+          endereco?: string | null
+          escritorio_id?: string
+          forum?: string | null
+          id?: string
+          juiz?: string | null
+          link_virtual?: string | null
+          modalidade?: string
+          observacoes?: string | null
+          plataforma?: string | null
+          preparativos_checklist?: Json | null
+          processo_id?: string | null
+          promotor?: string | null
+          responsaveis_ids?: string[] | null
+          responsavel_id?: string | null
+          resultado_descricao?: string | null
+          resultado_tipo?: string | null
+          sala?: string | null
+          status?: string | null
+          tipo_audiencia?: string
+          titulo?: string
+          tribunal?: string | null
+          updated_at?: string | null
+          vara?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_audiencias_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_audiencias_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "v_consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_audiencias_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["consultivo_id"]
+          },
+          {
+            foreignKeyName: "agenda_audiencias_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_audiencias_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "agenda_audiencias_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_audiencias_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_audiencias_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_audiencias_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_audiencias_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "agenda_audiencias_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_audiencias_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      agenda_eventos: {
+        Row: {
+          cliente_id: string | null
+          consultivo_id: string | null
+          cor: string | null
+          created_at: string | null
+          criado_por: string | null
+          data_fim: string | null
+          data_inicio: string
+          descricao: string | null
+          dia_inteiro: boolean | null
+          escritorio_id: string | null
+          id: string
+          local: string | null
+          processo_id: string | null
+          recorrencia_id: string | null
+          responsaveis_ids: string[] | null
+          responsavel_id: string | null
+          status: string | null
+          tipo: string | null
+          titulo: string
+          updated_at: string | null
+        }
+        Insert: {
+          cliente_id?: string | null
+          consultivo_id?: string | null
+          cor?: string | null
+          created_at?: string | null
+          criado_por?: string | null
+          data_fim?: string | null
+          data_inicio: string
+          descricao?: string | null
+          dia_inteiro?: boolean | null
+          escritorio_id?: string | null
+          id?: string
+          local?: string | null
+          processo_id?: string | null
+          recorrencia_id?: string | null
+          responsaveis_ids?: string[] | null
+          responsavel_id?: string | null
+          status?: string | null
+          tipo?: string | null
+          titulo: string
+          updated_at?: string | null
+        }
+        Update: {
+          cliente_id?: string | null
+          consultivo_id?: string | null
+          cor?: string | null
+          created_at?: string | null
+          criado_por?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          descricao?: string | null
+          dia_inteiro?: boolean | null
+          escritorio_id?: string | null
+          id?: string
+          local?: string | null
+          processo_id?: string | null
+          recorrencia_id?: string | null
+          responsaveis_ids?: string[] | null
+          responsavel_id?: string | null
+          status?: string | null
+          tipo?: string | null
+          titulo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_eventos_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_eventos_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "v_consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_eventos_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["consultivo_id"]
+          },
+          {
+            foreignKeyName: "agenda_eventos_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_eventos_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "agenda_eventos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_eventos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "eventos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_eventos_recorrencia"
+            columns: ["recorrencia_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_recorrencias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agenda_recorrencias: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          criado_por: string | null
+          data_fim: string | null
+          data_inicio: string
+          entidade_tipo: string
+          escritorio_id: string
+          exclusoes: string[] | null
+          id: string
+          max_ocorrencias: number | null
+          proxima_execucao: string | null
+          regra_apenas_uteis: boolean | null
+          regra_dia_mes: number | null
+          regra_dias_semana: number[] | null
+          regra_frequencia: string
+          regra_hora: string | null
+          regra_intervalo: number | null
+          regra_mes: number | null
+          template_dados: Json
+          template_descricao: string | null
+          template_nome: string
+          total_criados: number | null
+          ultima_execucao: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          criado_por?: string | null
+          data_fim?: string | null
+          data_inicio: string
+          entidade_tipo: string
+          escritorio_id: string
+          exclusoes?: string[] | null
+          id?: string
+          max_ocorrencias?: number | null
+          proxima_execucao?: string | null
+          regra_apenas_uteis?: boolean | null
+          regra_dia_mes?: number | null
+          regra_dias_semana?: number[] | null
+          regra_frequencia: string
+          regra_hora?: string | null
+          regra_intervalo?: number | null
+          regra_mes?: number | null
+          template_dados: Json
+          template_descricao?: string | null
+          template_nome: string
+          total_criados?: number | null
+          ultima_execucao?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          criado_por?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          entidade_tipo?: string
+          escritorio_id?: string
+          exclusoes?: string[] | null
+          id?: string
+          max_ocorrencias?: number | null
+          proxima_execucao?: string | null
+          regra_apenas_uteis?: boolean | null
+          regra_dia_mes?: number | null
+          regra_dias_semana?: number[] | null
+          regra_frequencia?: string
+          regra_hora?: string | null
+          regra_intervalo?: number | null
+          regra_mes?: number | null
+          template_dados?: Json
+          template_descricao?: string | null
+          template_nome?: string
+          total_criados?: number | null
+          ultima_execucao?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_recorrencias_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_recorrencias_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "agenda_recorrencias_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agenda_tarefas: {
+        Row: {
+          consultivo_id: string | null
+          cor: string | null
+          created_at: string | null
+          criado_por: string | null
+          data_conclusao: string | null
+          data_fim: string | null
+          data_inicio: string
+          descricao: string | null
+          duracao_planejada_minutos: number | null
+          escritorio_id: string
+          fixa_status_data: string | null
+          horario_planejado_dia: string | null
+          id: string
+          prazo_data_limite: string | null
+          prazo_dias_uteis: boolean | null
+          prioridade: string | null
+          processo_id: string | null
+          recorrencia_id: string | null
+          responsaveis_ids: string[] | null
+          responsavel_id: string | null
+          status: string | null
+          tipo: string
+          titulo: string
+          updated_at: string | null
+        }
+        Insert: {
+          consultivo_id?: string | null
+          cor?: string | null
+          created_at?: string | null
+          criado_por?: string | null
+          data_conclusao?: string | null
+          data_fim?: string | null
+          data_inicio: string
+          descricao?: string | null
+          duracao_planejada_minutos?: number | null
+          escritorio_id: string
+          fixa_status_data?: string | null
+          horario_planejado_dia?: string | null
+          id?: string
+          prazo_data_limite?: string | null
+          prazo_dias_uteis?: boolean | null
+          prioridade?: string | null
+          processo_id?: string | null
+          recorrencia_id?: string | null
+          responsaveis_ids?: string[] | null
+          responsavel_id?: string | null
+          status?: string | null
+          tipo?: string
+          titulo: string
+          updated_at?: string | null
+        }
+        Update: {
+          consultivo_id?: string | null
+          cor?: string | null
+          created_at?: string | null
+          criado_por?: string | null
+          data_conclusao?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          descricao?: string | null
+          duracao_planejada_minutos?: number | null
+          escritorio_id?: string
+          fixa_status_data?: string | null
+          horario_planejado_dia?: string | null
+          id?: string
+          prazo_data_limite?: string | null
+          prazo_dias_uteis?: boolean | null
+          prioridade?: string | null
+          processo_id?: string | null
+          recorrencia_id?: string | null
+          responsaveis_ids?: string[] | null
+          responsavel_id?: string | null
+          status?: string | null
+          tipo?: string
+          titulo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_tarefas_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_tarefas_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "v_consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_tarefas_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["consultivo_id"]
+          },
+          {
+            foreignKeyName: "agenda_tarefas_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_tarefas_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "agenda_tarefas_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_tarefas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_tarefas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_tarefas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_tarefas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "agenda_tarefas_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_tarefas_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_tarefas_recorrencia"
+            columns: ["recorrencia_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_recorrencias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cartoes_credito: {
+        Row: {
+          ativo: boolean | null
+          banco: string | null
+          bandeira: string | null
+          cor: string | null
+          created_at: string | null
+          dia_vencimento: number
+          dias_antes_fechamento: number
+          escritorio_id: string
+          id: string
+          limite_total: number | null
+          nome: string
+          observacoes: string | null
+          ultimos_digitos: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          banco?: string | null
+          bandeira?: string | null
+          cor?: string | null
+          created_at?: string | null
+          dia_vencimento: number
+          dias_antes_fechamento?: number
+          escritorio_id: string
+          id?: string
+          limite_total?: number | null
+          nome: string
+          observacoes?: string | null
+          ultimos_digitos?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          banco?: string | null
+          bandeira?: string | null
+          cor?: string | null
+          created_at?: string | null
+          dia_vencimento?: number
+          dias_antes_fechamento?: number
+          escritorio_id?: string
+          id?: string
+          limite_total?: number | null
+          nome?: string
+          observacoes?: string | null
+          ultimos_digitos?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cartoes_credito_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cartoes_credito_categorias: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          criado_por: string | null
+          escritorio_id: string
+          id: string
+          label: string
+          updated_at: string | null
+          value: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          criado_por?: string | null
+          escritorio_id: string
+          id?: string
+          label: string
+          updated_at?: string | null
+          value: string
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          criado_por?: string | null
+          escritorio_id?: string
+          id?: string
+          label?: string
+          updated_at?: string | null
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cartoes_credito_categorias_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_categorias_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_categorias_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cartoes_credito_despesas: {
+        Row: {
+          cartao_id: string
+          categoria: string
+          comprovante_url: string | null
+          created_at: string | null
+          data_compra: string
+          descricao: string
+          documento_fiscal: string | null
+          escritorio_id: string
+          fornecedor: string | null
+          hash_transacao: string | null
+          id: string
+          importado_de_fatura: boolean | null
+          numero_parcelas: number
+          processo_id: string | null
+          updated_at: string | null
+          valor_parcela: number
+          valor_total: number
+        }
+        Insert: {
+          cartao_id: string
+          categoria: string
+          comprovante_url?: string | null
+          created_at?: string | null
+          data_compra: string
+          descricao: string
+          documento_fiscal?: string | null
+          escritorio_id: string
+          fornecedor?: string | null
+          hash_transacao?: string | null
+          id?: string
+          importado_de_fatura?: boolean | null
+          numero_parcelas?: number
+          processo_id?: string | null
+          updated_at?: string | null
+          valor_parcela: number
+          valor_total: number
+        }
+        Update: {
+          cartao_id?: string
+          categoria?: string
+          comprovante_url?: string | null
+          created_at?: string | null
+          data_compra?: string
+          descricao?: string
+          documento_fiscal?: string | null
+          escritorio_id?: string
+          fornecedor?: string | null
+          hash_transacao?: string | null
+          id?: string
+          importado_de_fatura?: boolean | null
+          numero_parcelas?: number
+          processo_id?: string | null
+          updated_at?: string | null
+          valor_parcela?: number
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cartoes_credito_despesas_cartao_id_fkey"
+            columns: ["cartao_id"]
+            isOneToOne: false
+            referencedRelation: "cartoes_credito"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_despesas_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_despesas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_despesas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_despesas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_despesas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+        ]
+      }
+      cartoes_credito_faturas: {
+        Row: {
+          cartao_id: string
+          created_at: string | null
+          data_fechamento: string
+          data_pagamento: string | null
+          data_vencimento: string
+          despesa_id: string | null
+          escritorio_id: string
+          forma_pagamento: string | null
+          id: string
+          mes_referencia: string
+          pdf_url: string | null
+          status: string
+          updated_at: string | null
+          valor_total: number | null
+        }
+        Insert: {
+          cartao_id: string
+          created_at?: string | null
+          data_fechamento: string
+          data_pagamento?: string | null
+          data_vencimento: string
+          despesa_id?: string | null
+          escritorio_id: string
+          forma_pagamento?: string | null
+          id?: string
+          mes_referencia: string
+          pdf_url?: string | null
+          status?: string
+          updated_at?: string | null
+          valor_total?: number | null
+        }
+        Update: {
+          cartao_id?: string
+          created_at?: string | null
+          data_fechamento?: string
+          data_pagamento?: string | null
+          data_vencimento?: string
+          despesa_id?: string | null
+          escritorio_id?: string
+          forma_pagamento?: string | null
+          id?: string
+          mes_referencia?: string
+          pdf_url?: string | null
+          status?: string
+          updated_at?: string | null
+          valor_total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cartoes_credito_faturas_cartao_id_fkey"
+            columns: ["cartao_id"]
+            isOneToOne: false
+            referencedRelation: "cartoes_credito"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_faturas_despesa_id_fkey"
+            columns: ["despesa_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_despesas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_faturas_despesa_id_fkey"
+            columns: ["despesa_id"]
+            isOneToOne: false
+            referencedRelation: "v_despesas_reembolsaveis_pendentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_faturas_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cartoes_credito_importacoes: {
+        Row: {
+          arquivo_nome: string
+          arquivo_url: string
+          cartao_id: string
+          confianca_media: number | null
+          created_at: string | null
+          dados_extraidos: Json | null
+          erro_mensagem: string | null
+          escritorio_id: string
+          fatura_id: string | null
+          id: string
+          modelo_ia: string | null
+          processado_em: string | null
+          status: string
+          transacoes_duplicadas: number | null
+          transacoes_encontradas: number | null
+          transacoes_importadas: number | null
+        }
+        Insert: {
+          arquivo_nome: string
+          arquivo_url: string
+          cartao_id: string
+          confianca_media?: number | null
+          created_at?: string | null
+          dados_extraidos?: Json | null
+          erro_mensagem?: string | null
+          escritorio_id: string
+          fatura_id?: string | null
+          id?: string
+          modelo_ia?: string | null
+          processado_em?: string | null
+          status?: string
+          transacoes_duplicadas?: number | null
+          transacoes_encontradas?: number | null
+          transacoes_importadas?: number | null
+        }
+        Update: {
+          arquivo_nome?: string
+          arquivo_url?: string
+          cartao_id?: string
+          confianca_media?: number | null
+          created_at?: string | null
+          dados_extraidos?: Json | null
+          erro_mensagem?: string | null
+          escritorio_id?: string
+          fatura_id?: string | null
+          id?: string
+          modelo_ia?: string | null
+          processado_em?: string | null
+          status?: string
+          transacoes_duplicadas?: number | null
+          transacoes_encontradas?: number | null
+          transacoes_importadas?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cartoes_credito_importacoes_cartao_id_fkey"
+            columns: ["cartao_id"]
+            isOneToOne: false
+            referencedRelation: "cartoes_credito"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_importacoes_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_importacoes_fatura_id_fkey"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "cartoes_credito_faturas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cartoes_credito_lancamentos: {
+        Row: {
+          cartao_id: string
+          categoria: string
+          compra_id: string
+          comprovante_url: string | null
+          created_at: string | null
+          data_compra: string
+          descricao: string
+          documento_fiscal: string | null
+          escritorio_id: string
+          fatura_id: string | null
+          faturado: boolean | null
+          fornecedor: string | null
+          hash_transacao: string | null
+          id: string
+          importado_de_fatura: boolean | null
+          mes_referencia: string
+          observacoes: string | null
+          parcela_numero: number
+          parcela_total: number
+          processo_id: string | null
+          recorrente_ativo: boolean | null
+          recorrente_data_fim: string | null
+          tipo: string
+          updated_at: string | null
+          valor: number
+        }
+        Insert: {
+          cartao_id: string
+          categoria: string
+          compra_id: string
+          comprovante_url?: string | null
+          created_at?: string | null
+          data_compra: string
+          descricao: string
+          documento_fiscal?: string | null
+          escritorio_id: string
+          fatura_id?: string | null
+          faturado?: boolean | null
+          fornecedor?: string | null
+          hash_transacao?: string | null
+          id?: string
+          importado_de_fatura?: boolean | null
+          mes_referencia: string
+          observacoes?: string | null
+          parcela_numero?: number
+          parcela_total?: number
+          processo_id?: string | null
+          recorrente_ativo?: boolean | null
+          recorrente_data_fim?: string | null
+          tipo: string
+          updated_at?: string | null
+          valor: number
+        }
+        Update: {
+          cartao_id?: string
+          categoria?: string
+          compra_id?: string
+          comprovante_url?: string | null
+          created_at?: string | null
+          data_compra?: string
+          descricao?: string
+          documento_fiscal?: string | null
+          escritorio_id?: string
+          fatura_id?: string | null
+          faturado?: boolean | null
+          fornecedor?: string | null
+          hash_transacao?: string | null
+          id?: string
+          importado_de_fatura?: boolean | null
+          mes_referencia?: string
+          observacoes?: string | null
+          parcela_numero?: number
+          parcela_total?: number
+          processo_id?: string | null
+          recorrente_ativo?: boolean | null
+          recorrente_data_fim?: string | null
+          tipo?: string
+          updated_at?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cartoes_credito_lancamentos_cartao_id_fkey"
+            columns: ["cartao_id"]
+            isOneToOne: false
+            referencedRelation: "cartoes_credito"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_lancamentos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_lancamentos_fatura_id_fkey"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "cartoes_credito_faturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_lancamentos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_lancamentos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_lancamentos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartoes_credito_lancamentos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+        ]
+      }
+      cartoes_credito_parcelas: {
+        Row: {
+          created_at: string | null
+          despesa_id: string
+          fatura_id: string | null
+          faturada: boolean | null
+          id: string
+          mes_referencia: string
+          numero_parcela: number
+          valor: number
+        }
+        Insert: {
+          created_at?: string | null
+          despesa_id: string
+          fatura_id?: string | null
+          faturada?: boolean | null
+          id?: string
+          mes_referencia: string
+          numero_parcela: number
+          valor: number
+        }
+        Update: {
+          created_at?: string | null
+          despesa_id?: string
+          fatura_id?: string | null
+          faturada?: boolean | null
+          id?: string
+          mes_referencia?: string
+          numero_parcela?: number
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cartoes_credito_parcelas_despesa_id_fkey"
+            columns: ["despesa_id"]
+            isOneToOne: false
+            referencedRelation: "cartoes_credito_despesas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_parcela_fatura"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "cartoes_credito_faturas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      centro_comando_acoes_pendentes: {
+        Row: {
+          confirmado: boolean | null
+          confirmado_em: string | null
+          created_at: string | null
+          dados: Json
+          erro: string | null
+          escritorio_id: string
+          executado: boolean | null
+          executado_em: string | null
+          expira_em: string | null
+          explicacao: string | null
+          id: string
+          idempotency_key: string | null
+          operation_name: string | null
+          preview_human: string | null
+          resolved_entities: Json | null
+          resultado: Json | null
+          run_id: string | null
+          sessao_id: string | null
+          tabela: string
+          target_label: string | null
+          tipo_acao: string
+          user_id: string
+          validated_payload: Json | null
+        }
+        Insert: {
+          confirmado?: boolean | null
+          confirmado_em?: string | null
+          created_at?: string | null
+          dados: Json
+          erro?: string | null
+          escritorio_id: string
+          executado?: boolean | null
+          executado_em?: string | null
+          expira_em?: string | null
+          explicacao?: string | null
+          id?: string
+          idempotency_key?: string | null
+          operation_name?: string | null
+          preview_human?: string | null
+          resolved_entities?: Json | null
+          resultado?: Json | null
+          run_id?: string | null
+          sessao_id?: string | null
+          tabela: string
+          target_label?: string | null
+          tipo_acao: string
+          user_id: string
+          validated_payload?: Json | null
+        }
+        Update: {
+          confirmado?: boolean | null
+          confirmado_em?: string | null
+          created_at?: string | null
+          dados?: Json
+          erro?: string | null
+          escritorio_id?: string
+          executado?: boolean | null
+          executado_em?: string | null
+          expira_em?: string | null
+          explicacao?: string | null
+          id?: string
+          idempotency_key?: string | null
+          operation_name?: string | null
+          preview_human?: string | null
+          resolved_entities?: Json | null
+          resultado?: Json | null
+          run_id?: string | null
+          sessao_id?: string | null
+          tabela?: string
+          target_label?: string | null
+          tipo_acao?: string
+          user_id?: string
+          validated_payload?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centro_comando_acoes_pendentes_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centro_comando_acoes_pendentes_sessao_id_fkey"
+            columns: ["sessao_id"]
+            isOneToOne: false
+            referencedRelation: "centro_comando_sessoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      centro_comando_embedding_cache: {
+        Row: {
+          created_at: string | null
+          embedding: string | null
+          id: string
+          input_hash: string
+          input_text: string
+          modelo: string | null
+          ultimo_uso: string | null
+          uso_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          input_hash: string
+          input_text: string
+          modelo?: string | null
+          ultimo_uso?: string | null
+          uso_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          input_hash?: string
+          input_text?: string
+          modelo?: string | null
+          ultimo_uso?: string | null
+          uso_count?: number | null
+        }
+        Relationships: []
+      }
+      centro_comando_execucoes: {
+        Row: {
+          created_at: string
+          error_code: string | null
+          error_message: string | null
+          escritorio_id: string
+          finished_at: string | null
+          flow_type: string
+          had_confirmation_modal: boolean
+          had_error: boolean
+          had_input_modal: boolean
+          had_write: boolean
+          id: string
+          iteration_count: number
+          run_id: string
+          sessao_id: string | null
+          started_at: string
+          stream_mode: string
+          tempo_execucao_ms: number | null
+          termination_reason: string
+          tokens_input: number | null
+          tokens_output: number | null
+          tool_repetition_count: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          escritorio_id: string
+          finished_at?: string | null
+          flow_type?: string
+          had_confirmation_modal?: boolean
+          had_error?: boolean
+          had_input_modal?: boolean
+          had_write?: boolean
+          id?: string
+          iteration_count?: number
+          run_id: string
+          sessao_id?: string | null
+          started_at?: string
+          stream_mode?: string
+          tempo_execucao_ms?: number | null
+          termination_reason?: string
+          tokens_input?: number | null
+          tokens_output?: number | null
+          tool_repetition_count?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          escritorio_id?: string
+          finished_at?: string | null
+          flow_type?: string
+          had_confirmation_modal?: boolean
+          had_error?: boolean
+          had_input_modal?: boolean
+          had_write?: boolean
+          id?: string
+          iteration_count?: number
+          run_id?: string
+          sessao_id?: string | null
+          started_at?: string
+          stream_mode?: string
+          tempo_execucao_ms?: number | null
+          termination_reason?: string
+          tokens_input?: number | null
+          tokens_output?: number | null
+          tool_repetition_count?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centro_comando_execucoes_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centro_comando_execucoes_sessao_id_fkey"
+            columns: ["sessao_id"]
+            isOneToOne: false
+            referencedRelation: "centro_comando_sessoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centro_comando_execucoes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centro_comando_execucoes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      centro_comando_favoritos: {
+        Row: {
+          categoria: string | null
+          comando: string
+          compartilhado_equipe: boolean | null
+          created_at: string | null
+          descricao: string | null
+          escritorio_id: string
+          icone: string | null
+          id: string
+          nome: string
+          ordem: number | null
+          ultimo_uso: string | null
+          updated_at: string | null
+          user_id: string
+          uso_count: number | null
+        }
+        Insert: {
+          categoria?: string | null
+          comando: string
+          compartilhado_equipe?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          escritorio_id: string
+          icone?: string | null
+          id?: string
+          nome: string
+          ordem?: number | null
+          ultimo_uso?: string | null
+          updated_at?: string | null
+          user_id: string
+          uso_count?: number | null
+        }
+        Update: {
+          categoria?: string | null
+          comando?: string
+          compartilhado_equipe?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          escritorio_id?: string
+          icone?: string | null
+          id?: string
+          nome?: string
+          ordem?: number | null
+          ultimo_uso?: string | null
+          updated_at?: string | null
+          user_id?: string
+          uso_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centro_comando_favoritos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      centro_comando_feedback: {
+        Row: {
+          assistant_response: string | null
+          comentario: string | null
+          correcao_aplicada: boolean | null
+          created_at: string | null
+          embedding: string | null
+          escritorio_id: string
+          id: string
+          incorporado_conhecimento: boolean | null
+          incorporado_em: string | null
+          mensagem_id: string | null
+          query_executada: string | null
+          rating: number | null
+          resposta_esperada: string | null
+          sessao_id: string | null
+          tipo_feedback: string
+          tool_calls: Json | null
+          user_id: string
+          user_message: string | null
+        }
+        Insert: {
+          assistant_response?: string | null
+          comentario?: string | null
+          correcao_aplicada?: boolean | null
+          created_at?: string | null
+          embedding?: string | null
+          escritorio_id: string
+          id?: string
+          incorporado_conhecimento?: boolean | null
+          incorporado_em?: string | null
+          mensagem_id?: string | null
+          query_executada?: string | null
+          rating?: number | null
+          resposta_esperada?: string | null
+          sessao_id?: string | null
+          tipo_feedback: string
+          tool_calls?: Json | null
+          user_id: string
+          user_message?: string | null
+        }
+        Update: {
+          assistant_response?: string | null
+          comentario?: string | null
+          correcao_aplicada?: boolean | null
+          created_at?: string | null
+          embedding?: string | null
+          escritorio_id?: string
+          id?: string
+          incorporado_conhecimento?: boolean | null
+          incorporado_em?: string | null
+          mensagem_id?: string | null
+          query_executada?: string | null
+          rating?: number | null
+          resposta_esperada?: string | null
+          sessao_id?: string | null
+          tipo_feedback?: string
+          tool_calls?: Json | null
+          user_id?: string
+          user_message?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centro_comando_feedback_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centro_comando_feedback_sessao_id_fkey"
+            columns: ["sessao_id"]
+            isOneToOne: false
+            referencedRelation: "centro_comando_sessoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centro_comando_feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centro_comando_feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      centro_comando_historico: {
+        Row: {
+          content: string
+          created_at: string | null
+          erro: string | null
+          escritorio_id: string
+          flow_type: string | null
+          had_confirmation_modal: boolean
+          had_error: boolean
+          had_input_modal: boolean
+          had_write: boolean
+          id: string
+          iteration_count: number
+          role: string
+          run_id: string | null
+          sessao_id: string | null
+          stream_mode: string | null
+          tempo_execucao_ms: number | null
+          termination_reason: string | null
+          tokens_input: number | null
+          tokens_output: number | null
+          tool_calls: Json | null
+          tool_results: Json | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          erro?: string | null
+          escritorio_id: string
+          flow_type?: string | null
+          had_confirmation_modal?: boolean
+          had_error?: boolean
+          had_input_modal?: boolean
+          had_write?: boolean
+          id?: string
+          iteration_count?: number
+          role: string
+          run_id?: string | null
+          sessao_id?: string | null
+          stream_mode?: string | null
+          tempo_execucao_ms?: number | null
+          termination_reason?: string | null
+          tokens_input?: number | null
+          tokens_output?: number | null
+          tool_calls?: Json | null
+          tool_results?: Json | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          erro?: string | null
+          escritorio_id?: string
+          flow_type?: string | null
+          had_confirmation_modal?: boolean
+          had_error?: boolean
+          had_input_modal?: boolean
+          had_write?: boolean
+          id?: string
+          iteration_count?: number
+          role?: string
+          run_id?: string | null
+          sessao_id?: string | null
+          stream_mode?: string | null
+          tempo_execucao_ms?: number | null
+          termination_reason?: string | null
+          tokens_input?: number | null
+          tokens_output?: number | null
+          tool_calls?: Json | null
+          tool_results?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centro_comando_historico_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centro_comando_historico_sessao_id_fkey"
+            columns: ["sessao_id"]
+            isOneToOne: false
+            referencedRelation: "centro_comando_sessoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      centro_comando_inputs_pendentes: {
+        Row: {
+          contexto: string
+          created_at: string
+          escritorio_id: string
+          expira_em: string | null
+          id: string
+          respondido_em: string | null
+          run_id: string
+          schema: Json
+          sessao_id: string
+          status: string
+          tipo: string
+          user_id: string
+          values: Json | null
+        }
+        Insert: {
+          contexto: string
+          created_at?: string
+          escritorio_id: string
+          expira_em?: string | null
+          id?: string
+          respondido_em?: string | null
+          run_id: string
+          schema: Json
+          sessao_id: string
+          status?: string
+          tipo: string
+          user_id: string
+          values?: Json | null
+        }
+        Update: {
+          contexto?: string
+          created_at?: string
+          escritorio_id?: string
+          expira_em?: string | null
+          id?: string
+          respondido_em?: string | null
+          run_id?: string
+          schema?: Json
+          sessao_id?: string
+          status?: string
+          tipo?: string
+          user_id?: string
+          values?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centro_comando_inputs_pendentes_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centro_comando_inputs_pendentes_sessao_id_fkey"
+            columns: ["sessao_id"]
+            isOneToOne: false
+            referencedRelation: "centro_comando_sessoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centro_comando_inputs_pendentes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centro_comando_inputs_pendentes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      centro_comando_knowledge_base: {
+        Row: {
+          chunk_id: string
+          content: string
+          created_at: string | null
+          embedding: string | null
+          hash: string | null
+          id: string
+          metadata: Json | null
+          source: string
+          source_path: string | null
+          title: string
+          updated_at: string | null
+          version: number | null
+        }
+        Insert: {
+          chunk_id: string
+          content: string
+          created_at?: string | null
+          embedding?: string | null
+          hash?: string | null
+          id?: string
+          metadata?: Json | null
+          source: string
+          source_path?: string | null
+          title: string
+          updated_at?: string | null
+          version?: number | null
+        }
+        Update: {
+          chunk_id?: string
+          content?: string
+          created_at?: string | null
+          embedding?: string | null
+          hash?: string | null
+          id?: string
+          metadata?: Json | null
+          source?: string
+          source_path?: string | null
+          title?: string
+          updated_at?: string | null
+          version?: number | null
+        }
+        Relationships: []
+      }
+      centro_comando_memories: {
+        Row: {
+          ativo: boolean | null
+          content: string
+          content_resumido: string | null
+          created_at: string | null
+          embedding: string | null
+          entidade: string | null
+          entidade_id: string | null
+          escritorio_id: string
+          expira_em: string | null
+          id: string
+          mensagem_origem_id: string | null
+          permanente: boolean | null
+          relevancia_score: number | null
+          sessao_id: string | null
+          tipo: string
+          ultimo_uso: string | null
+          updated_at: string | null
+          user_id: string
+          uso_count: number | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          content: string
+          content_resumido?: string | null
+          created_at?: string | null
+          embedding?: string | null
+          entidade?: string | null
+          entidade_id?: string | null
+          escritorio_id: string
+          expira_em?: string | null
+          id?: string
+          mensagem_origem_id?: string | null
+          permanente?: boolean | null
+          relevancia_score?: number | null
+          sessao_id?: string | null
+          tipo: string
+          ultimo_uso?: string | null
+          updated_at?: string | null
+          user_id: string
+          uso_count?: number | null
+        }
+        Update: {
+          ativo?: boolean | null
+          content?: string
+          content_resumido?: string | null
+          created_at?: string | null
+          embedding?: string | null
+          entidade?: string | null
+          entidade_id?: string | null
+          escritorio_id?: string
+          expira_em?: string | null
+          id?: string
+          mensagem_origem_id?: string | null
+          permanente?: boolean | null
+          relevancia_score?: number | null
+          sessao_id?: string | null
+          tipo?: string
+          ultimo_uso?: string | null
+          updated_at?: string | null
+          user_id?: string
+          uso_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centro_comando_memories_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centro_comando_memories_sessao_id_fkey"
+            columns: ["sessao_id"]
+            isOneToOne: false
+            referencedRelation: "centro_comando_sessoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centro_comando_memories_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centro_comando_memories_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      centro_comando_sessoes: {
+        Row: {
+          ativo: boolean | null
+          contexto: Json | null
+          created_at: string | null
+          escritorio_id: string
+          fim: string | null
+          id: string
+          inicio: string | null
+          mensagens_count: number | null
+          titulo: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          contexto?: Json | null
+          created_at?: string | null
+          escritorio_id: string
+          fim?: string | null
+          id?: string
+          inicio?: string | null
+          mensagens_count?: number | null
+          titulo?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean | null
+          contexto?: Json | null
+          created_at?: string | null
+          escritorio_id?: string
+          fim?: string | null
+          id?: string
+          inicio?: string | null
+          mensagens_count?: number | null
+          titulo?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centro_comando_sessoes_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultivo_consultas: {
+        Row: {
+          andamentos: Json | null
+          anexos: Json | null
+          area: string
+          cliente_id: string
+          contrato_id: string | null
+          created_at: string | null
+          created_by: string | null
+          descricao: string | null
+          escritorio_id: string
+          id: string
+          numero: string | null
+          prazo: string | null
+          prioridade: string
+          responsavel_id: string
+          status: Database["public"]["Enums"]["status_consultivo"]
+          titulo: string
+          updated_at: string | null
+        }
+        Insert: {
+          andamentos?: Json | null
+          anexos?: Json | null
+          area: string
+          cliente_id: string
+          contrato_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          escritorio_id: string
+          id?: string
+          numero?: string | null
+          prazo?: string | null
+          prioridade?: string
+          responsavel_id: string
+          status?: Database["public"]["Enums"]["status_consultivo"]
+          titulo: string
+          updated_at?: string | null
+        }
+        Update: {
+          andamentos?: Json | null
+          anexos?: Json | null
+          area?: string
+          cliente_id?: string
+          contrato_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          escritorio_id?: string
+          id?: string
+          numero?: string | null
+          prazo?: string | null
+          prioridade?: string
+          responsavel_id?: string
+          status?: Database["public"]["Enums"]["status_consultivo"]
+          titulo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultivo_consultas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_consultas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_consultas_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_contratos_honorarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_consultas_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "v_receitas_por_contrato"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "consultivo_consultas_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_consultas_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "consultivo_consultas_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_consultas_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_consultas_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      consultivo_timeline: {
+        Row: {
+          consulta_id: string
+          created_at: string | null
+          descricao: string | null
+          escritorio_id: string | null
+          id: string
+          metadata: Json | null
+          tipo_acao: string
+          user_id: string | null
+        }
+        Insert: {
+          consulta_id: string
+          created_at?: string | null
+          descricao?: string | null
+          escritorio_id?: string | null
+          id?: string
+          metadata?: Json | null
+          tipo_acao: string
+          user_id?: string | null
+        }
+        Update: {
+          consulta_id?: string
+          created_at?: string | null
+          descricao?: string | null
+          escritorio_id?: string | null
+          id?: string
+          metadata?: Json | null
+          tipo_acao?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultivo_timeline_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_timeline_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "v_consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_timeline_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["consultivo_id"]
+          },
+          {
+            foreignKeyName: "consultivo_timeline_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_timeline_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_timeline_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      crm_oportunidades: {
+        Row: {
+          area_juridica:
+            | Database["public"]["Enums"]["area_juridica_enum"]
+            | null
+          created_at: string
+          data_abertura: string
+          data_fechamento: string | null
+          data_prevista_fechamento: string | null
+          descricao: string | null
+          escritorio_id: string
+          etapa: Database["public"]["Enums"]["etapa_oportunidade_enum"]
+          id: string
+          indicado_por: string | null
+          interacoes: Json | null
+          motivo_perda: Database["public"]["Enums"]["motivo_perda_enum"] | null
+          origem: Database["public"]["Enums"]["origem_crm_enum"] | null
+          pessoa_id: string
+          probabilidade: number | null
+          responsavel_id: string
+          tags: string[] | null
+          titulo: string
+          updated_at: string
+          valor_estimado: number | null
+          valor_fechado: number | null
+        }
+        Insert: {
+          area_juridica?:
+            | Database["public"]["Enums"]["area_juridica_enum"]
+            | null
+          created_at?: string
+          data_abertura?: string
+          data_fechamento?: string | null
+          data_prevista_fechamento?: string | null
+          descricao?: string | null
+          escritorio_id: string
+          etapa?: Database["public"]["Enums"]["etapa_oportunidade_enum"]
+          id?: string
+          indicado_por?: string | null
+          interacoes?: Json | null
+          motivo_perda?: Database["public"]["Enums"]["motivo_perda_enum"] | null
+          origem?: Database["public"]["Enums"]["origem_crm_enum"] | null
+          pessoa_id: string
+          probabilidade?: number | null
+          responsavel_id: string
+          tags?: string[] | null
+          titulo: string
+          updated_at?: string
+          valor_estimado?: number | null
+          valor_fechado?: number | null
+        }
+        Update: {
+          area_juridica?:
+            | Database["public"]["Enums"]["area_juridica_enum"]
+            | null
+          created_at?: string
+          data_abertura?: string
+          data_fechamento?: string | null
+          data_prevista_fechamento?: string | null
+          descricao?: string | null
+          escritorio_id?: string
+          etapa?: Database["public"]["Enums"]["etapa_oportunidade_enum"]
+          id?: string
+          indicado_por?: string | null
+          interacoes?: Json | null
+          motivo_perda?: Database["public"]["Enums"]["motivo_perda_enum"] | null
+          origem?: Database["public"]["Enums"]["origem_crm_enum"] | null
+          pessoa_id?: string
+          probabilidade?: number | null
+          responsavel_id?: string
+          tags?: string[] | null
+          titulo?: string
+          updated_at?: string
+          valor_estimado?: number | null
+          valor_fechado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_oportunidades_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_oportunidades_indicado_por_fkey"
+            columns: ["indicado_por"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_oportunidades_indicado_por_fkey"
+            columns: ["indicado_por"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_oportunidades_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_oportunidades_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_oportunidades_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_oportunidades_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      crm_pessoas: {
+        Row: {
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
+          complemento: string | null
+          cpf_cnpj: string | null
+          created_at: string | null
+          email: string | null
+          escritorio_id: string
+          id: string
+          indicado_por: string | null
+          logradouro: string | null
+          nome_completo: string
+          nome_fantasia: string | null
+          numero: string | null
+          observacoes: string | null
+          origem: Database["public"]["Enums"]["origem_crm_enum"] | null
+          status: Database["public"]["Enums"]["status_pessoa_enum"]
+          tags: string[] | null
+          telefone: string | null
+          tipo_cadastro: Database["public"]["Enums"]["tipo_cadastro_enum"]
+          tipo_pessoa: Database["public"]["Enums"]["tipo_pessoa_enum"]
+          uf: Database["public"]["Enums"]["uf_enum"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
+          cpf_cnpj?: string | null
+          created_at?: string | null
+          email?: string | null
+          escritorio_id: string
+          id?: string
+          indicado_por?: string | null
+          logradouro?: string | null
+          nome_completo: string
+          nome_fantasia?: string | null
+          numero?: string | null
+          observacoes?: string | null
+          origem?: Database["public"]["Enums"]["origem_crm_enum"] | null
+          status?: Database["public"]["Enums"]["status_pessoa_enum"]
+          tags?: string[] | null
+          telefone?: string | null
+          tipo_cadastro?: Database["public"]["Enums"]["tipo_cadastro_enum"]
+          tipo_pessoa?: Database["public"]["Enums"]["tipo_pessoa_enum"]
+          uf?: Database["public"]["Enums"]["uf_enum"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
+          cpf_cnpj?: string | null
+          created_at?: string | null
+          email?: string | null
+          escritorio_id?: string
+          id?: string
+          indicado_por?: string | null
+          logradouro?: string | null
+          nome_completo?: string
+          nome_fantasia?: string | null
+          numero?: string | null
+          observacoes?: string | null
+          origem?: Database["public"]["Enums"]["origem_crm_enum"] | null
+          status?: Database["public"]["Enums"]["status_pessoa_enum"]
+          tags?: string[] | null
+          telefone?: string | null
+          tipo_cadastro?: Database["public"]["Enums"]["tipo_cadastro_enum"]
+          tipo_pessoa?: Database["public"]["Enums"]["tipo_pessoa_enum"]
+          uf?: Database["public"]["Enums"]["uf_enum"] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_indicado_por_fkey"
+            columns: ["indicado_por"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_indicado_por_fkey"
+            columns: ["indicado_por"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cron_job_run_details: {
+        Row: {
+          end_time: string | null
+          error_message: string | null
+          id: string
+          job_name: string
+          result: Json | null
+          start_time: string
+          status: string | null
+        }
+        Insert: {
+          end_time?: string | null
+          error_message?: string | null
+          id?: string
+          job_name: string
+          result?: Json | null
+          start_time?: string
+          status?: string | null
+        }
+        Update: {
+          end_time?: string | null
+          error_message?: string | null
+          id?: string
+          job_name?: string
+          result?: Json | null
+          start_time?: string
+          status?: string | null
+        }
+        Relationships: []
+      }
+      dashboard_resumo_cache: {
+        Row: {
+          created_at: string | null
+          dados: Json
+          data_referencia: string
+          escritorio_id: string
+          gerado_em: string | null
+          gerado_por_ia: boolean | null
+          id: string
+          mensagem: string
+          periodo_geracao: string
+          saudacao: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dados?: Json
+          data_referencia: string
+          escritorio_id: string
+          gerado_em?: string | null
+          gerado_por_ia?: boolean | null
+          id?: string
+          mensagem: string
+          periodo_geracao: string
+          saudacao: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dados?: Json
+          data_referencia?: string
+          escritorio_id?: string
+          gerado_em?: string | null
+          gerado_por_ia?: boolean | null
+          id?: string
+          mensagem?: string
+          periodo_geracao?: string
+          saudacao?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_resumo_cache_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      datajud_consultas: {
+        Row: {
+          consultado_em: string
+          created_at: string | null
+          dados_normalizados: Json
+          expira_em: string
+          id: string
+          numero_cnj: string
+          tribunal: string | null
+          user_id: string | null
+        }
+        Insert: {
+          consultado_em?: string
+          created_at?: string | null
+          dados_normalizados: Json
+          expira_em: string
+          id?: string
+          numero_cnj: string
+          tribunal?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          consultado_em?: string
+          created_at?: string | null
+          dados_normalizados?: Json
+          expira_em?: string
+          id?: string
+          numero_cnj?: string
+          tribunal?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "datajud_consultas_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "datajud_consultas_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      documentos: {
+        Row: {
+          categoria: string | null
+          consulta_id: string | null
+          created_at: string | null
+          created_by: string | null
+          descricao: string | null
+          escritorio_id: string
+          id: string
+          mime_type: string | null
+          nome: string
+          processo_id: string | null
+          storage_path: string | null
+          tags: string[] | null
+          tamanho: number | null
+          tipo: string | null
+          updated_at: string | null
+          versao: number | null
+          versao_anterior_id: string | null
+        }
+        Insert: {
+          categoria?: string | null
+          consulta_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          escritorio_id: string
+          id?: string
+          mime_type?: string | null
+          nome: string
+          processo_id?: string | null
+          storage_path?: string | null
+          tags?: string[] | null
+          tamanho?: number | null
+          tipo?: string | null
+          updated_at?: string | null
+          versao?: number | null
+          versao_anterior_id?: string | null
+        }
+        Update: {
+          categoria?: string | null
+          consulta_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          escritorio_id?: string
+          id?: string
+          mime_type?: string | null
+          nome?: string
+          processo_id?: string | null
+          storage_path?: string | null
+          tags?: string[] | null
+          tamanho?: number | null
+          tipo?: string | null
+          updated_at?: string | null
+          versao?: number | null
+          versao_anterior_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "v_consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["consultivo_id"]
+          },
+          {
+            foreignKeyName: "documentos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "documentos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "documentos_versao_anterior_id_fkey"
+            columns: ["versao_anterior_id"]
+            isOneToOne: false
+            referencedRelation: "documentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentos_tags: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          documento_id: string
+          id: string
+          tag_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          documento_id: string
+          id?: string
+          tag_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          documento_id?: string
+          id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_tags_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_tags_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "documentos_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags_master"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escavador_cache: {
+        Row: {
+          consultado_em: string | null
+          dados_capa: Json
+          dados_movimentacoes: Json | null
+          dados_partes: Json | null
+          expira_em: string | null
+          id: string
+          numero_cnj: string
+        }
+        Insert: {
+          consultado_em?: string | null
+          dados_capa: Json
+          dados_movimentacoes?: Json | null
+          dados_partes?: Json | null
+          expira_em?: string | null
+          id?: string
+          numero_cnj: string
+        }
+        Update: {
+          consultado_em?: string | null
+          dados_capa?: Json
+          dados_movimentacoes?: Json | null
+          dados_partes?: Json | null
+          expira_em?: string | null
+          id?: string
+          numero_cnj?: string
+        }
+        Relationships: []
+      }
+      escavador_config: {
+        Row: {
+          callback_token: string | null
+          callback_url: string | null
+          created_at: string | null
+          creditos_usados_mes: number | null
+          escritorio_id: string
+          id: string
+          monitoramento_ativo: boolean | null
+          ultimo_reset_creditos: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          callback_token?: string | null
+          callback_url?: string | null
+          created_at?: string | null
+          creditos_usados_mes?: number | null
+          escritorio_id: string
+          id?: string
+          monitoramento_ativo?: boolean | null
+          ultimo_reset_creditos?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          callback_token?: string | null
+          callback_url?: string | null
+          created_at?: string | null
+          creditos_usados_mes?: number | null
+          escritorio_id?: string
+          id?: string
+          monitoramento_ativo?: boolean | null
+          ultimo_reset_creditos?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escavador_config_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: true
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escritorios: {
+        Row: {
+          ativo: boolean | null
+          cnpj: string | null
+          config: Json | null
+          created_at: string | null
+          descricao: string | null
+          email: string | null
+          endereco: Json | null
+          grupo_id: string
+          id: string
+          logo_url: string | null
+          max_usuarios: number | null
+          nome: string
+          owner_id: string | null
+          plano: string | null
+          setup_completado_em: string | null
+          setup_completo: boolean | null
+          setup_etapa_atual: string | null
+          site: string | null
+          telefone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cnpj?: string | null
+          config?: Json | null
+          created_at?: string | null
+          descricao?: string | null
+          email?: string | null
+          endereco?: Json | null
+          grupo_id: string
+          id?: string
+          logo_url?: string | null
+          max_usuarios?: number | null
+          nome: string
+          owner_id?: string | null
+          plano?: string | null
+          setup_completado_em?: string | null
+          setup_completo?: boolean | null
+          setup_etapa_atual?: string | null
+          site?: string | null
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cnpj?: string | null
+          config?: Json | null
+          created_at?: string | null
+          descricao?: string | null
+          email?: string | null
+          endereco?: Json | null
+          grupo_id?: string
+          id?: string
+          logo_url?: string | null
+          max_usuarios?: number | null
+          nome?: string
+          owner_id?: string | null
+          plano?: string | null
+          setup_completado_em?: string | null
+          setup_completo?: boolean | null
+          setup_etapa_atual?: string | null
+          site?: string | null
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escritorios_grupo_id_fkey"
+            columns: ["grupo_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritorios_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritorios_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      escritorios_cargos: {
+        Row: {
+          ativo: boolean | null
+          cor: string | null
+          created_at: string | null
+          descricao: string | null
+          escritorio_id: string
+          id: string
+          nivel: number
+          nome: string
+          nome_display: string
+          updated_at: string | null
+          valor_hora_padrao: number | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cor?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          escritorio_id: string
+          id?: string
+          nivel: number
+          nome: string
+          nome_display: string
+          updated_at?: string | null
+          valor_hora_padrao?: number | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cor?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          escritorio_id?: string
+          id?: string
+          nivel?: number
+          nome?: string
+          nome_display?: string
+          updated_at?: string | null
+          valor_hora_padrao?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escritorios_cargos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escritorios_cargos_permissoes: {
+        Row: {
+          cargo_id: string
+          created_at: string | null
+          id: string
+          modulo: string
+          pode_criar: boolean | null
+          pode_editar: boolean | null
+          pode_excluir: boolean | null
+          pode_exportar: boolean | null
+          pode_visualizar: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          cargo_id: string
+          created_at?: string | null
+          id?: string
+          modulo: string
+          pode_criar?: boolean | null
+          pode_editar?: boolean | null
+          pode_excluir?: boolean | null
+          pode_exportar?: boolean | null
+          pode_visualizar?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          cargo_id?: string
+          created_at?: string | null
+          id?: string
+          modulo?: string
+          pode_criar?: boolean | null
+          pode_editar?: boolean | null
+          pode_excluir?: boolean | null
+          pode_exportar?: boolean | null
+          pode_visualizar?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escritorios_cargos_permissoes_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios_cargos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escritorios_convites: {
+        Row: {
+          aceito: boolean | null
+          aceito_em: string | null
+          aceito_por: string | null
+          cargo_id: string | null
+          convidado_por: string
+          created_at: string | null
+          email: string
+          escritorio_id: string
+          expira_em: string | null
+          id: string
+          role: string
+          token: string | null
+        }
+        Insert: {
+          aceito?: boolean | null
+          aceito_em?: string | null
+          aceito_por?: string | null
+          cargo_id?: string | null
+          convidado_por: string
+          created_at?: string | null
+          email: string
+          escritorio_id: string
+          expira_em?: string | null
+          id?: string
+          role: string
+          token?: string | null
+        }
+        Update: {
+          aceito?: boolean | null
+          aceito_em?: string | null
+          aceito_por?: string | null
+          cargo_id?: string | null
+          convidado_por?: string
+          created_at?: string | null
+          email?: string
+          escritorio_id?: string
+          expira_em?: string | null
+          id?: string
+          role?: string
+          token?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escritorios_convites_aceito_por_fkey"
+            columns: ["aceito_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritorios_convites_aceito_por_fkey"
+            columns: ["aceito_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "escritorios_convites_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios_cargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritorios_convites_convidado_por_fkey"
+            columns: ["convidado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritorios_convites_convidado_por_fkey"
+            columns: ["convidado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "escritorios_convites_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escritorios_permissoes: {
+        Row: {
+          created_at: string | null
+          id: string
+          modulo: string
+          permissoes: string[] | null
+          usuario_escritorio_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          modulo: string
+          permissoes?: string[] | null
+          usuario_escritorio_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          modulo?: string
+          permissoes?: string[] | null
+          usuario_escritorio_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escritorios_permissoes_usuario_escritorio_id_fkey"
+            columns: ["usuario_escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios_usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escritorios_usuarios: {
+        Row: {
+          ativo: boolean | null
+          cargo_id: string | null
+          convidado_em: string | null
+          convidado_por: string | null
+          created_at: string | null
+          escritorio_id: string
+          id: string
+          is_owner: boolean | null
+          meta_horas_mensal: number | null
+          percentual_comissao: number | null
+          role: string
+          salario_base: number | null
+          ultimo_acesso: string | null
+          user_id: string
+          valor_hora: number | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cargo_id?: string | null
+          convidado_em?: string | null
+          convidado_por?: string | null
+          created_at?: string | null
+          escritorio_id: string
+          id?: string
+          is_owner?: boolean | null
+          meta_horas_mensal?: number | null
+          percentual_comissao?: number | null
+          role: string
+          salario_base?: number | null
+          ultimo_acesso?: string | null
+          user_id: string
+          valor_hora?: number | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cargo_id?: string | null
+          convidado_em?: string | null
+          convidado_por?: string | null
+          created_at?: string | null
+          escritorio_id?: string
+          id?: string
+          is_owner?: boolean | null
+          meta_horas_mensal?: number | null
+          percentual_comissao?: number | null
+          role?: string
+          salario_base?: number | null
+          ultimo_acesso?: string | null
+          user_id?: string
+          valor_hora?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escritorios_usuarios_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios_cargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuarios_escritorios_convidado_por_fkey"
+            columns: ["convidado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuarios_escritorios_convidado_por_fkey"
+            columns: ["convidado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "usuarios_escritorios_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuarios_escritorios_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuarios_escritorios_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      escritorios_usuarios_ativo: {
+        Row: {
+          escritorio_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          escritorio_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          escritorio_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usuarios_escritorio_ativo_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuarios_escritorio_ativo_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuarios_escritorio_ativo_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      financeiro_alertas_cobranca: {
+        Row: {
+          ato_tipo_id: string | null
+          created_at: string | null
+          descricao: string | null
+          escritorio_id: string
+          id: string
+          justificativa_ignorado: string | null
+          movimentacao_id: string | null
+          processo_id: string
+          receita_id: string | null
+          resolvido_em: string | null
+          resolvido_por: string | null
+          status: string
+          tipo_alerta: string
+          titulo: string
+          updated_at: string | null
+          valor_sugerido: number | null
+        }
+        Insert: {
+          ato_tipo_id?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          escritorio_id: string
+          id?: string
+          justificativa_ignorado?: string | null
+          movimentacao_id?: string | null
+          processo_id: string
+          receita_id?: string | null
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          status?: string
+          tipo_alerta?: string
+          titulo: string
+          updated_at?: string | null
+          valor_sugerido?: number | null
+        }
+        Update: {
+          ato_tipo_id?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          escritorio_id?: string
+          id?: string
+          justificativa_ignorado?: string | null
+          movimentacao_id?: string | null
+          processo_id?: string
+          receita_id?: string | null
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          status?: string
+          tipo_alerta?: string
+          titulo?: string
+          updated_at?: string | null
+          valor_sugerido?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_alertas_cobranca_ato_tipo_id_fkey"
+            columns: ["ato_tipo_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_atos_processuais_tipos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_cobranca_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_cobranca_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_cobranca_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_cobranca_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_cobranca_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_cobranca_receita_id_fkey"
+            columns: ["receita_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_receitas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_cobranca_receita_id_fkey"
+            columns: ["receita_id"]
+            isOneToOne: false
+            referencedRelation: "v_historico_cobrancas_processo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_cobranca_resolvido_por_fkey"
+            columns: ["resolvido_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_cobranca_resolvido_por_fkey"
+            columns: ["resolvido_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      financeiro_alertas_limite_contrato: {
+        Row: {
+          cliente_id: string
+          contrato_id: string
+          created_at: string | null
+          escritorio_id: string
+          id: string
+          limite_meses: number
+          mensagem: string
+          meses_cobrados: number
+          resolvido_em: string | null
+          resolvido_por: string | null
+          status: string
+          titulo: string
+        }
+        Insert: {
+          cliente_id: string
+          contrato_id: string
+          created_at?: string | null
+          escritorio_id: string
+          id?: string
+          limite_meses: number
+          mensagem: string
+          meses_cobrados: number
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          status?: string
+          titulo: string
+        }
+        Update: {
+          cliente_id?: string
+          contrato_id?: string
+          created_at?: string | null
+          escritorio_id?: string
+          id?: string
+          limite_meses?: number
+          mensagem?: string
+          meses_cobrados?: number
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          status?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_alertas_limite_contrato_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_limite_contrato_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_limite_contrato_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_contratos_honorarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_limite_contrato_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "v_receitas_por_contrato"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_limite_contrato_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_limite_contrato_resolvido_por_fkey"
+            columns: ["resolvido_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_limite_contrato_resolvido_por_fkey"
+            columns: ["resolvido_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      financeiro_atos_processuais_tipos: {
+        Row: {
+          area_juridica: string
+          ativo: boolean | null
+          codigo: string
+          created_at: string | null
+          descricao: string | null
+          escritorio_id: string
+          id: string
+          nome: string
+          ordem: number | null
+          percentual_padrao: number | null
+          updated_at: string | null
+          valor_fixo_padrao: number | null
+        }
+        Insert: {
+          area_juridica: string
+          ativo?: boolean | null
+          codigo: string
+          created_at?: string | null
+          descricao?: string | null
+          escritorio_id: string
+          id?: string
+          nome: string
+          ordem?: number | null
+          percentual_padrao?: number | null
+          updated_at?: string | null
+          valor_fixo_padrao?: number | null
+        }
+        Update: {
+          area_juridica?: string
+          ativo?: boolean | null
+          codigo?: string
+          created_at?: string | null
+          descricao?: string | null
+          escritorio_id?: string
+          id?: string
+          nome?: string
+          ordem?: number | null
+          percentual_padrao?: number | null
+          updated_at?: string | null
+          valor_fixo_padrao?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_atos_processuais_tipos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financeiro_contas_bancarias: {
+        Row: {
+          agencia: string | null
+          ativa: boolean | null
+          banco: string
+          conta_principal: boolean | null
+          created_at: string | null
+          data_abertura: string | null
+          escritorio_id: string
+          id: string
+          numero_conta: string | null
+          saldo_atual: number
+          saldo_inicial: number
+          tipo_conta: string
+          titular: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agencia?: string | null
+          ativa?: boolean | null
+          banco: string
+          conta_principal?: boolean | null
+          created_at?: string | null
+          data_abertura?: string | null
+          escritorio_id: string
+          id?: string
+          numero_conta?: string | null
+          saldo_atual?: number
+          saldo_inicial?: number
+          tipo_conta: string
+          titular?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          agencia?: string | null
+          ativa?: boolean | null
+          banco?: string
+          conta_principal?: boolean | null
+          created_at?: string | null
+          data_abertura?: string | null
+          escritorio_id?: string
+          id?: string
+          numero_conta?: string | null
+          saldo_atual?: number
+          saldo_inicial?: number
+          tipo_conta?: string
+          titular?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_bancarias_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financeiro_contratos_honorarios: {
+        Row: {
+          ativo: boolean | null
+          atos: Json | null
+          clausulas: string | null
+          cliente_id: string
+          config: Json | null
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string
+          data_ultimo_reajuste: string | null
+          descricao: string | null
+          escritorio_cobranca_id: string | null
+          escritorio_id: string
+          forma_cobranca: string | null
+          formas_pagamento: Json | null
+          grupo_clientes: Json | null
+          horas_faturaveis: boolean | null
+          id: string
+          indice_reajuste: string | null
+          numero_contrato: string
+          reajuste_ativo: boolean | null
+          tipo_contrato: string
+          titulo: string | null
+          updated_at: string | null
+          valor_atualizado: number | null
+          valor_total: number | null
+          valores_cargo: Json | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          atos?: Json | null
+          clausulas?: string | null
+          cliente_id: string
+          config?: Json | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio: string
+          data_ultimo_reajuste?: string | null
+          descricao?: string | null
+          escritorio_cobranca_id?: string | null
+          escritorio_id: string
+          forma_cobranca?: string | null
+          formas_pagamento?: Json | null
+          grupo_clientes?: Json | null
+          horas_faturaveis?: boolean | null
+          id?: string
+          indice_reajuste?: string | null
+          numero_contrato: string
+          reajuste_ativo?: boolean | null
+          tipo_contrato: string
+          titulo?: string | null
+          updated_at?: string | null
+          valor_atualizado?: number | null
+          valor_total?: number | null
+          valores_cargo?: Json | null
+        }
+        Update: {
+          ativo?: boolean | null
+          atos?: Json | null
+          clausulas?: string | null
+          cliente_id?: string
+          config?: Json | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          data_ultimo_reajuste?: string | null
+          descricao?: string | null
+          escritorio_cobranca_id?: string | null
+          escritorio_id?: string
+          forma_cobranca?: string | null
+          formas_pagamento?: Json | null
+          grupo_clientes?: Json | null
+          horas_faturaveis?: boolean | null
+          id?: string
+          indice_reajuste?: string | null
+          numero_contrato?: string
+          reajuste_ativo?: boolean | null
+          tipo_contrato?: string
+          titulo?: string | null
+          updated_at?: string | null
+          valor_atualizado?: number | null
+          valor_total?: number | null
+          valores_cargo?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contratos_honorarios_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_honorarios_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_honorarios_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_contratos_honorarios_escritorio_cobranca_id_fkey"
+            columns: ["escritorio_cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financeiro_despesas: {
+        Row: {
+          advogado_id: string | null
+          categoria: Database["public"]["Enums"]["despesa_categoria_enum"]
+          cliente_id: string | null
+          comprovante_url: string | null
+          config_recorrencia: Json | null
+          consulta_id: string | null
+          consultivo_id: string | null
+          conta_bancaria_id: string | null
+          created_at: string | null
+          data_pagamento: string | null
+          data_vencimento: string
+          descricao: string
+          despesa_pai_id: string | null
+          documento_fiscal: string | null
+          escritorio_id: string
+          fatura_id: string | null
+          faturado: boolean | null
+          forma_pagamento:
+            | Database["public"]["Enums"]["forma_pagamento_enum"]
+            | null
+          fornecedor: string | null
+          honorario_reembolso_id: string | null
+          id: string
+          numero_parcela: number | null
+          numero_parcelas: number | null
+          parcelado: boolean | null
+          processo_id: string | null
+          recorrente: boolean | null
+          reembolsado: boolean | null
+          reembolsavel: boolean | null
+          reembolso_fatura_id: string | null
+          reembolso_status: string | null
+          status: Database["public"]["Enums"]["despesa_status_enum"]
+          updated_at: string | null
+          valor: number
+        }
+        Insert: {
+          advogado_id?: string | null
+          categoria: Database["public"]["Enums"]["despesa_categoria_enum"]
+          cliente_id?: string | null
+          comprovante_url?: string | null
+          config_recorrencia?: Json | null
+          consulta_id?: string | null
+          consultivo_id?: string | null
+          conta_bancaria_id?: string | null
+          created_at?: string | null
+          data_pagamento?: string | null
+          data_vencimento: string
+          descricao: string
+          despesa_pai_id?: string | null
+          documento_fiscal?: string | null
+          escritorio_id: string
+          fatura_id?: string | null
+          faturado?: boolean | null
+          forma_pagamento?:
+            | Database["public"]["Enums"]["forma_pagamento_enum"]
+            | null
+          fornecedor?: string | null
+          honorario_reembolso_id?: string | null
+          id?: string
+          numero_parcela?: number | null
+          numero_parcelas?: number | null
+          parcelado?: boolean | null
+          processo_id?: string | null
+          recorrente?: boolean | null
+          reembolsado?: boolean | null
+          reembolsavel?: boolean | null
+          reembolso_fatura_id?: string | null
+          reembolso_status?: string | null
+          status?: Database["public"]["Enums"]["despesa_status_enum"]
+          updated_at?: string | null
+          valor: number
+        }
+        Update: {
+          advogado_id?: string | null
+          categoria?: Database["public"]["Enums"]["despesa_categoria_enum"]
+          cliente_id?: string | null
+          comprovante_url?: string | null
+          config_recorrencia?: Json | null
+          consulta_id?: string | null
+          consultivo_id?: string | null
+          conta_bancaria_id?: string | null
+          created_at?: string | null
+          data_pagamento?: string | null
+          data_vencimento?: string
+          descricao?: string
+          despesa_pai_id?: string | null
+          documento_fiscal?: string | null
+          escritorio_id?: string
+          fatura_id?: string | null
+          faturado?: boolean | null
+          forma_pagamento?:
+            | Database["public"]["Enums"]["forma_pagamento_enum"]
+            | null
+          fornecedor?: string | null
+          honorario_reembolso_id?: string | null
+          id?: string
+          numero_parcela?: number | null
+          numero_parcelas?: number | null
+          parcelado?: boolean | null
+          processo_id?: string | null
+          recorrente?: boolean | null
+          reembolsado?: boolean | null
+          reembolsavel?: boolean | null
+          reembolso_fatura_id?: string | null
+          reembolso_status?: string | null
+          status?: Database["public"]["Enums"]["despesa_status_enum"]
+          updated_at?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "despesas_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_advogado_id_fkey"
+            columns: ["advogado_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_advogado_id_fkey"
+            columns: ["advogado_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "v_consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["consultivo_id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "v_consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["consultivo_id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_despesa_pai_id_fkey"
+            columns: ["despesa_pai_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_despesas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_despesa_pai_id_fkey"
+            columns: ["despesa_pai_id"]
+            isOneToOne: false
+            referencedRelation: "v_despesas_reembolsaveis_pendentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_fatura_id_fkey"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_faturamento_faturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_fatura_id_fkey"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "v_faturas_geradas"
+            referencedColumns: ["fatura_id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_honorario_reembolso_id_fkey"
+            columns: ["honorario_reembolso_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_receitas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_honorario_reembolso_id_fkey"
+            columns: ["honorario_reembolso_id"]
+            isOneToOne: false
+            referencedRelation: "v_historico_cobrancas_processo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_reembolso_fatura_id_fkey"
+            columns: ["reembolso_fatura_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_faturamento_faturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_reembolso_fatura_id_fkey"
+            columns: ["reembolso_fatura_id"]
+            isOneToOne: false
+            referencedRelation: "v_faturas_geradas"
+            referencedColumns: ["fatura_id"]
+          },
+          {
+            foreignKeyName: "fk_despesas_conta_bancaria"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_despesas_conta_bancaria"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "v_contas_bancarias_saldo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_despesas_conta_bancaria"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldos_contas_bancarias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financeiro_extrato_bancario: {
+        Row: {
+          categoria: string | null
+          comprovante_url: string | null
+          conciliado: boolean | null
+          conciliado_em: string | null
+          conta_bancaria_id: string
+          created_at: string | null
+          data_lancamento: string
+          descricao: string
+          escritorio_id: string
+          id: string
+          observacoes: string | null
+          origem_id: string | null
+          origem_tipo: string
+          saldo_apos_lancamento: number
+          tipo: string
+          transferencia_id: string | null
+          updated_at: string | null
+          valor: number
+        }
+        Insert: {
+          categoria?: string | null
+          comprovante_url?: string | null
+          conciliado?: boolean | null
+          conciliado_em?: string | null
+          conta_bancaria_id: string
+          created_at?: string | null
+          data_lancamento?: string
+          descricao: string
+          escritorio_id: string
+          id?: string
+          observacoes?: string | null
+          origem_id?: string | null
+          origem_tipo: string
+          saldo_apos_lancamento: number
+          tipo: string
+          transferencia_id?: string | null
+          updated_at?: string | null
+          valor: number
+        }
+        Update: {
+          categoria?: string | null
+          comprovante_url?: string | null
+          conciliado?: boolean | null
+          conciliado_em?: string | null
+          conta_bancaria_id?: string
+          created_at?: string | null
+          data_lancamento?: string
+          descricao?: string
+          escritorio_id?: string
+          id?: string
+          observacoes?: string | null
+          origem_id?: string | null
+          origem_tipo?: string
+          saldo_apos_lancamento?: number
+          tipo?: string
+          transferencia_id?: string | null
+          updated_at?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conta_bancaria_lancamentos_conta_bancaria_id_fkey"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conta_bancaria_lancamentos_conta_bancaria_id_fkey"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "v_contas_bancarias_saldo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conta_bancaria_lancamentos_conta_bancaria_id_fkey"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldos_contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_contas_lancamentos_transferencia_id_fkey"
+            columns: ["transferencia_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_extrato_bancario"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_financeiro_contas_lancamentos_escritorio"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financeiro_faturamento_faturas: {
+        Row: {
+          cancelada_em: string | null
+          cancelada_por: string | null
+          cliente_id: string
+          cobrancas: Json | null
+          config_agendamento: Json | null
+          created_at: string | null
+          data_emissao: string
+          data_vencimento: string
+          descricao: string | null
+          enviada_em: string | null
+          escritorio_cobranca_id: string | null
+          escritorio_id: string
+          forma_pagamento_preferencial: string | null
+          gerada_automaticamente: boolean | null
+          id: string
+          itens: Json | null
+          motivo_cancelamento: string | null
+          numero_fatura: string
+          numero_parcelas: number | null
+          observacoes: string | null
+          paga_em: string | null
+          parcelado: boolean | null
+          pdf_url: string | null
+          status: string
+          updated_at: string | null
+          valor_total: number
+        }
+        Insert: {
+          cancelada_em?: string | null
+          cancelada_por?: string | null
+          cliente_id: string
+          cobrancas?: Json | null
+          config_agendamento?: Json | null
+          created_at?: string | null
+          data_emissao?: string
+          data_vencimento: string
+          descricao?: string | null
+          enviada_em?: string | null
+          escritorio_cobranca_id?: string | null
+          escritorio_id: string
+          forma_pagamento_preferencial?: string | null
+          gerada_automaticamente?: boolean | null
+          id?: string
+          itens?: Json | null
+          motivo_cancelamento?: string | null
+          numero_fatura: string
+          numero_parcelas?: number | null
+          observacoes?: string | null
+          paga_em?: string | null
+          parcelado?: boolean | null
+          pdf_url?: string | null
+          status?: string
+          updated_at?: string | null
+          valor_total?: number
+        }
+        Update: {
+          cancelada_em?: string | null
+          cancelada_por?: string | null
+          cliente_id?: string
+          cobrancas?: Json | null
+          config_agendamento?: Json | null
+          created_at?: string | null
+          data_emissao?: string
+          data_vencimento?: string
+          descricao?: string | null
+          enviada_em?: string | null
+          escritorio_cobranca_id?: string | null
+          escritorio_id?: string
+          forma_pagamento_preferencial?: string | null
+          gerada_automaticamente?: boolean | null
+          id?: string
+          itens?: Json | null
+          motivo_cancelamento?: string | null
+          numero_fatura?: string
+          numero_parcelas?: number | null
+          observacoes?: string | null
+          paga_em?: string | null
+          parcelado?: boolean | null
+          pdf_url?: string | null
+          status?: string
+          updated_at?: string | null
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faturas_cancelada_por_fkey"
+            columns: ["cancelada_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faturas_cancelada_por_fkey"
+            columns: ["cancelada_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "faturas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faturas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faturas_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_faturamento_faturas_escritorio_cobranca_id_fkey"
+            columns: ["escritorio_cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financeiro_fechamentos_pasta: {
+        Row: {
+          aprovado_em: string | null
+          aprovado_por: string | null
+          cliente_id: string
+          competencia: string
+          contrato_id: string
+          created_at: string | null
+          escritorio_id: string
+          fatura_id: string | null
+          faturado_em: string | null
+          id: string
+          processos: Json
+          qtd_processos: number
+          status: string
+          updated_at: string | null
+          valor_total: number
+          valor_unitario: number
+        }
+        Insert: {
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          cliente_id: string
+          competencia: string
+          contrato_id: string
+          created_at?: string | null
+          escritorio_id: string
+          fatura_id?: string | null
+          faturado_em?: string | null
+          id?: string
+          processos?: Json
+          qtd_processos?: number
+          status?: string
+          updated_at?: string | null
+          valor_total: number
+          valor_unitario: number
+        }
+        Update: {
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          cliente_id?: string
+          competencia?: string
+          contrato_id?: string
+          created_at?: string | null
+          escritorio_id?: string
+          fatura_id?: string | null
+          faturado_em?: string | null
+          id?: string
+          processos?: Json
+          qtd_processos?: number
+          status?: string
+          updated_at?: string | null
+          valor_total?: number
+          valor_unitario?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_fechamentos_pasta_aprovado_por_fkey"
+            columns: ["aprovado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_fechamentos_pasta_aprovado_por_fkey"
+            columns: ["aprovado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "financeiro_fechamentos_pasta_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_fechamentos_pasta_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_fechamentos_pasta_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_contratos_honorarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_fechamentos_pasta_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "v_receitas_por_contrato"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "financeiro_fechamentos_pasta_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_fechamentos_pasta_fatura_id_fkey"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_faturamento_faturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_fechamentos_pasta_fatura_id_fkey"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "v_faturas_geradas"
+            referencedColumns: ["fatura_id"]
+          },
+        ]
+      }
+      financeiro_horas_acumuladas_ato: {
+        Row: {
+          ato_tipo_id: string
+          contrato_id: string
+          created_at: string | null
+          escritorio_id: string
+          finalizado_em: string | null
+          horas_excedentes: number
+          horas_faturaveis: number
+          horas_totais: number
+          id: string
+          processo_id: string
+          receita_id: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          ato_tipo_id: string
+          contrato_id: string
+          created_at?: string | null
+          escritorio_id: string
+          finalizado_em?: string | null
+          horas_excedentes?: number
+          horas_faturaveis?: number
+          horas_totais?: number
+          id?: string
+          processo_id: string
+          receita_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          ato_tipo_id?: string
+          contrato_id?: string
+          created_at?: string | null
+          escritorio_id?: string
+          finalizado_em?: string | null
+          horas_excedentes?: number
+          horas_faturaveis?: number
+          horas_totais?: number
+          id?: string
+          processo_id?: string
+          receita_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_ato_tipo_id_fkey"
+            columns: ["ato_tipo_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_atos_processuais_tipos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_contratos_honorarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "v_receitas_por_contrato"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_receita_id_fkey"
+            columns: ["receita_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_receitas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_receita_id_fkey"
+            columns: ["receita_id"]
+            isOneToOne: false
+            referencedRelation: "v_historico_cobrancas_processo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financeiro_mapeamento_atos_movimentacao: {
+        Row: {
+          ativo: boolean | null
+          ato_tipo_id: string
+          created_at: string | null
+          escritorio_id: string
+          id: string
+          palavras_chave: string[]
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          ato_tipo_id: string
+          created_at?: string | null
+          escritorio_id: string
+          id?: string
+          palavras_chave?: string[]
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          ato_tipo_id?: string
+          created_at?: string | null
+          escritorio_id?: string
+          id?: string
+          palavras_chave?: string[]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_mapeamento_atos_movimentacao_ato_tipo_id_fkey"
+            columns: ["ato_tipo_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_atos_processuais_tipos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_mapeamento_atos_movimentacao_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financeiro_metas: {
+        Row: {
+          ativa: boolean | null
+          created_at: string | null
+          data_fim: string
+          data_inicio: string
+          descricao: string
+          escritorio_id: string
+          id: string
+          percentual_atingido: number | null
+          tipo_meta: string
+          updated_at: string | null
+          valor_meta: number
+          valor_realizado: number | null
+        }
+        Insert: {
+          ativa?: boolean | null
+          created_at?: string | null
+          data_fim: string
+          data_inicio: string
+          descricao: string
+          escritorio_id: string
+          id?: string
+          percentual_atingido?: number | null
+          tipo_meta: string
+          updated_at?: string | null
+          valor_meta: number
+          valor_realizado?: number | null
+        }
+        Update: {
+          ativa?: boolean | null
+          created_at?: string | null
+          data_fim?: string
+          data_inicio?: string
+          descricao?: string
+          escritorio_id?: string
+          id?: string
+          percentual_atingido?: number | null
+          tipo_meta?: string
+          updated_at?: string | null
+          valor_meta?: number
+          valor_realizado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metas_financeiras_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financeiro_provisoes: {
+        Row: {
+          ativa: boolean | null
+          created_at: string | null
+          data_inicio: string
+          data_prevista_pagamento: string | null
+          descricao: string
+          escritorio_id: string
+          id: string
+          tipo: string
+          updated_at: string | null
+          valor_acumulado: number | null
+          valor_mensal: number
+        }
+        Insert: {
+          ativa?: boolean | null
+          created_at?: string | null
+          data_inicio: string
+          data_prevista_pagamento?: string | null
+          descricao: string
+          escritorio_id: string
+          id?: string
+          tipo: string
+          updated_at?: string | null
+          valor_acumulado?: number | null
+          valor_mensal: number
+        }
+        Update: {
+          ativa?: boolean | null
+          created_at?: string | null
+          data_inicio?: string
+          data_prevista_pagamento?: string | null
+          descricao?: string
+          escritorio_id?: string
+          id?: string
+          tipo?: string
+          updated_at?: string | null
+          valor_acumulado?: number | null
+          valor_mensal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provisoes_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financeiro_receitas: {
+        Row: {
+          categoria: Database["public"]["Enums"]["receita_categoria_enum"]
+          cliente_id: string | null
+          config_recorrencia: Json | null
+          consulta_id: string | null
+          consultivo_id: string | null
+          conta_bancaria_id: string | null
+          contrato_id: string | null
+          created_at: string | null
+          created_by: string | null
+          data_competencia: string
+          data_pagamento: string | null
+          data_vencimento: string
+          descricao: string
+          dias_atraso: number | null
+          escritorio_id: string
+          fatura_id: string | null
+          forma_pagamento:
+            | Database["public"]["Enums"]["forma_pagamento_enum"]
+            | null
+          id: string
+          juros_aplicados: number | null
+          numero_parcela: number | null
+          numero_parcelas: number | null
+          observacoes: string | null
+          parcelado: boolean | null
+          processo_id: string | null
+          receita_origem_id: string | null
+          receita_pai_id: string | null
+          recorrente: boolean | null
+          responsavel_id: string | null
+          status: Database["public"]["Enums"]["receita_status_enum"]
+          tipo: Database["public"]["Enums"]["receita_tipo_enum"]
+          updated_at: string | null
+          updated_by: string | null
+          valor: number
+          valor_pago: number | null
+        }
+        Insert: {
+          categoria: Database["public"]["Enums"]["receita_categoria_enum"]
+          cliente_id?: string | null
+          config_recorrencia?: Json | null
+          consulta_id?: string | null
+          consultivo_id?: string | null
+          conta_bancaria_id?: string | null
+          contrato_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_competencia: string
+          data_pagamento?: string | null
+          data_vencimento: string
+          descricao: string
+          dias_atraso?: number | null
+          escritorio_id: string
+          fatura_id?: string | null
+          forma_pagamento?:
+            | Database["public"]["Enums"]["forma_pagamento_enum"]
+            | null
+          id?: string
+          juros_aplicados?: number | null
+          numero_parcela?: number | null
+          numero_parcelas?: number | null
+          observacoes?: string | null
+          parcelado?: boolean | null
+          processo_id?: string | null
+          receita_origem_id?: string | null
+          receita_pai_id?: string | null
+          recorrente?: boolean | null
+          responsavel_id?: string | null
+          status?: Database["public"]["Enums"]["receita_status_enum"]
+          tipo: Database["public"]["Enums"]["receita_tipo_enum"]
+          updated_at?: string | null
+          updated_by?: string | null
+          valor: number
+          valor_pago?: number | null
+        }
+        Update: {
+          categoria?: Database["public"]["Enums"]["receita_categoria_enum"]
+          cliente_id?: string | null
+          config_recorrencia?: Json | null
+          consulta_id?: string | null
+          consultivo_id?: string | null
+          conta_bancaria_id?: string | null
+          contrato_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_competencia?: string
+          data_pagamento?: string | null
+          data_vencimento?: string
+          descricao?: string
+          dias_atraso?: number | null
+          escritorio_id?: string
+          fatura_id?: string | null
+          forma_pagamento?:
+            | Database["public"]["Enums"]["forma_pagamento_enum"]
+            | null
+          id?: string
+          juros_aplicados?: number | null
+          numero_parcela?: number | null
+          numero_parcelas?: number | null
+          observacoes?: string | null
+          parcelado?: boolean | null
+          processo_id?: string | null
+          receita_origem_id?: string | null
+          receita_pai_id?: string | null
+          recorrente?: boolean | null
+          responsavel_id?: string | null
+          status?: Database["public"]["Enums"]["receita_status_enum"]
+          tipo?: Database["public"]["Enums"]["receita_tipo_enum"]
+          updated_at?: string | null
+          updated_by?: string | null
+          valor?: number
+          valor_pago?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_receitas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "v_consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["consultivo_id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "v_consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["consultivo_id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_conta_bancaria_id_fkey"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_conta_bancaria_id_fkey"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "v_contas_bancarias_saldo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_conta_bancaria_id_fkey"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldos_contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_contratos_honorarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "v_receitas_por_contrato"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_fatura_id_fkey"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_faturamento_faturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_fatura_id_fkey"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "v_faturas_geradas"
+            referencedColumns: ["fatura_id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_receita_origem_id_fkey"
+            columns: ["receita_origem_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_receitas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_receita_origem_id_fkey"
+            columns: ["receita_origem_id"]
+            isOneToOne: false
+            referencedRelation: "v_historico_cobrancas_processo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_receita_pai_id_fkey"
+            columns: ["receita_pai_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_receitas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_receita_pai_id_fkey"
+            columns: ["receita_pai_id"]
+            isOneToOne: false
+            referencedRelation: "v_historico_cobrancas_processo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_financeiro_receitas_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_financeiro_receitas_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_financeiro_receitas_responsavel_id"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_financeiro_receitas_responsavel_id"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_financeiro_receitas_updated_by"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_financeiro_receitas_updated_by"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      financeiro_reconciliacao: {
+        Row: {
+          conciliado_em: string | null
+          conciliado_por: string | null
+          conta_bancaria_id: string
+          created_at: string | null
+          diferenca: number | null
+          escritorio_id: string
+          id: string
+          importacoes: Json | null
+          mes_referencia: string
+          observacoes: string | null
+          saldo_calculado: number | null
+          saldo_final_banco: number | null
+          saldo_inicial_banco: number | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          conciliado_em?: string | null
+          conciliado_por?: string | null
+          conta_bancaria_id: string
+          created_at?: string | null
+          diferenca?: number | null
+          escritorio_id: string
+          id?: string
+          importacoes?: Json | null
+          mes_referencia: string
+          observacoes?: string | null
+          saldo_calculado?: number | null
+          saldo_final_banco?: number | null
+          saldo_inicial_banco?: number | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          conciliado_em?: string | null
+          conciliado_por?: string | null
+          conta_bancaria_id?: string
+          created_at?: string | null
+          diferenca?: number | null
+          escritorio_id?: string
+          id?: string
+          importacoes?: Json | null
+          mes_referencia?: string
+          observacoes?: string | null
+          saldo_calculado?: number | null
+          saldo_final_banco?: number | null
+          saldo_inicial_banco?: number | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_reconciliacao_conta_bancaria_id_fkey"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_reconciliacao_conta_bancaria_id_fkey"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "v_contas_bancarias_saldo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_reconciliacao_conta_bancaria_id_fkey"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldos_contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_reconciliacao_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financeiro_reconciliacao_itens: {
+        Row: {
+          checknum: string | null
+          created_at: string | null
+          data_transacao: string
+          descricao_banco: string
+          despesa_id: string | null
+          fitid: string | null
+          hash_transacao: string | null
+          id: string
+          memo: string | null
+          observacoes: string | null
+          receita_id: string | null
+          reconciliacao_id: string
+          status: string
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          checknum?: string | null
+          created_at?: string | null
+          data_transacao: string
+          descricao_banco: string
+          despesa_id?: string | null
+          fitid?: string | null
+          hash_transacao?: string | null
+          id?: string
+          memo?: string | null
+          observacoes?: string | null
+          receita_id?: string | null
+          reconciliacao_id: string
+          status?: string
+          tipo: string
+          valor: number
+        }
+        Update: {
+          checknum?: string | null
+          created_at?: string | null
+          data_transacao?: string
+          descricao_banco?: string
+          despesa_id?: string | null
+          fitid?: string | null
+          hash_transacao?: string | null
+          id?: string
+          memo?: string | null
+          observacoes?: string | null
+          receita_id?: string | null
+          reconciliacao_id?: string
+          status?: string
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_reconciliacao_itens_despesa_id_fkey"
+            columns: ["despesa_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_despesas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_reconciliacao_itens_despesa_id_fkey"
+            columns: ["despesa_id"]
+            isOneToOne: false
+            referencedRelation: "v_despesas_reembolsaveis_pendentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_reconciliacao_itens_receita_id_fkey"
+            columns: ["receita_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_receitas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_reconciliacao_itens_receita_id_fkey"
+            columns: ["receita_id"]
+            isOneToOne: false
+            referencedRelation: "v_historico_cobrancas_processo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_reconciliacao_itens_reconciliacao_id_fkey"
+            columns: ["reconciliacao_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_reconciliacao"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financeiro_timesheet: {
+        Row: {
+          aprovado: boolean | null
+          aprovado_em: string | null
+          aprovado_por: string | null
+          atividade: string
+          ato_tipo_id: string | null
+          audiencia_id: string | null
+          consulta_id: string | null
+          consultivo_id: string | null
+          created_at: string | null
+          data_trabalho: string
+          editado: boolean | null
+          editado_em: string | null
+          editado_por: string | null
+          escritorio_id: string
+          evento_id: string | null
+          fatura_id: string | null
+          faturado: boolean | null
+          faturado_em: string | null
+          faturavel: boolean | null
+          faturavel_auto: boolean | null
+          faturavel_manual: boolean | null
+          hora_fim: string | null
+          hora_inicio: string | null
+          horas: number
+          id: string
+          justificativa_reprovacao: string | null
+          origem: string | null
+          processo_id: string | null
+          reprovado: boolean | null
+          reprovado_em: string | null
+          reprovado_por: string | null
+          tarefa_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          aprovado?: boolean | null
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          atividade: string
+          ato_tipo_id?: string | null
+          audiencia_id?: string | null
+          consulta_id?: string | null
+          consultivo_id?: string | null
+          created_at?: string | null
+          data_trabalho: string
+          editado?: boolean | null
+          editado_em?: string | null
+          editado_por?: string | null
+          escritorio_id: string
+          evento_id?: string | null
+          fatura_id?: string | null
+          faturado?: boolean | null
+          faturado_em?: string | null
+          faturavel?: boolean | null
+          faturavel_auto?: boolean | null
+          faturavel_manual?: boolean | null
+          hora_fim?: string | null
+          hora_inicio?: string | null
+          horas: number
+          id?: string
+          justificativa_reprovacao?: string | null
+          origem?: string | null
+          processo_id?: string | null
+          reprovado?: boolean | null
+          reprovado_em?: string | null
+          reprovado_por?: string | null
+          tarefa_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          aprovado?: boolean | null
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          atividade?: string
+          ato_tipo_id?: string | null
+          audiencia_id?: string | null
+          consulta_id?: string | null
+          consultivo_id?: string | null
+          created_at?: string | null
+          data_trabalho?: string
+          editado?: boolean | null
+          editado_em?: string | null
+          editado_por?: string | null
+          escritorio_id?: string
+          evento_id?: string | null
+          fatura_id?: string | null
+          faturado?: boolean | null
+          faturado_em?: string | null
+          faturavel?: boolean | null
+          faturavel_auto?: boolean | null
+          faturavel_manual?: boolean | null
+          hora_fim?: string | null
+          hora_inicio?: string | null
+          horas?: number
+          id?: string
+          justificativa_reprovacao?: string | null
+          origem?: string | null
+          processo_id?: string | null
+          reprovado?: boolean | null
+          reprovado_em?: string | null
+          reprovado_por?: string | null
+          tarefa_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_timesheet_ato_tipo_id_fkey"
+            columns: ["ato_tipo_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_atos_processuais_tipos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_audiencia_id_fkey"
+            columns: ["audiencia_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_audiencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "v_consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["consultivo_id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "v_consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_consultivo_id_fkey"
+            columns: ["consultivo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["consultivo_id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_editado_por_fkey"
+            columns: ["editado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_editado_por_fkey"
+            columns: ["editado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_eventos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_tarefas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_timesheet_fatura"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_faturamento_faturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_timesheet_fatura"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "v_faturas_geradas"
+            referencedColumns: ["fatura_id"]
+          },
+          {
+            foreignKeyName: "timesheet_aprovado_por_fkey"
+            columns: ["aprovado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_aprovado_por_fkey"
+            columns: ["aprovado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "timesheet_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_reprovado_por_fkey"
+            columns: ["reprovado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_reprovado_por_fkey"
+            columns: ["reprovado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "timesheet_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      financeiro_transferencias: {
+        Row: {
+          conta_destino_id: string
+          conta_origem_id: string
+          created_at: string | null
+          created_by: string | null
+          data_transferencia: string
+          descricao: string | null
+          escritorio_id: string
+          id: string
+          valor: number
+        }
+        Insert: {
+          conta_destino_id: string
+          conta_origem_id: string
+          created_at?: string | null
+          created_by?: string | null
+          data_transferencia?: string
+          descricao?: string | null
+          escritorio_id: string
+          id?: string
+          valor: number
+        }
+        Update: {
+          conta_destino_id?: string
+          conta_origem_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          data_transferencia?: string
+          descricao?: string | null
+          escritorio_id?: string
+          id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_transferencias_conta_destino_id_fkey"
+            columns: ["conta_destino_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_transferencias_conta_destino_id_fkey"
+            columns: ["conta_destino_id"]
+            isOneToOne: false
+            referencedRelation: "v_contas_bancarias_saldo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_transferencias_conta_destino_id_fkey"
+            columns: ["conta_destino_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldos_contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_transferencias_conta_origem_id_fkey"
+            columns: ["conta_origem_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_transferencias_conta_origem_id_fkey"
+            columns: ["conta_origem_id"]
+            isOneToOne: false
+            referencedRelation: "v_contas_bancarias_saldo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_transferencias_conta_origem_id_fkey"
+            columns: ["conta_origem_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldos_contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_transferencias_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_transferencias_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "financeiro_transferencias_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      indices_economicos: {
+        Row: {
+          codigo_bcb: number
+          competencia: string
+          created_at: string | null
+          escritorio_id: string | null
+          fonte: string | null
+          id: string
+          nome: string
+          updated_at: string | null
+          valor: number
+          variacao_mensal: number | null
+        }
+        Insert: {
+          codigo_bcb: number
+          competencia: string
+          created_at?: string | null
+          escritorio_id?: string | null
+          fonte?: string | null
+          id?: string
+          nome: string
+          updated_at?: string | null
+          valor: number
+          variacao_mensal?: number | null
+        }
+        Update: {
+          codigo_bcb?: number
+          competencia?: string
+          created_at?: string | null
+          escritorio_id?: string | null
+          fonte?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string | null
+          valor?: number
+          variacao_mensal?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indices_economicos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      indices_economicos_config: {
+        Row: {
+          ativo: boolean | null
+          codigo_bcb: number
+          created_at: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          ordem: number | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          codigo_bcb: number
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          ordem?: number | null
+        }
+        Update: {
+          ativo?: boolean | null
+          codigo_bcb?: number
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          ordem?: number | null
+        }
+        Relationships: []
+      }
+      migracao_historico: {
+        Row: {
+          arquivo_nome: string
+          detalhes: Json | null
+          escritorio_id: string
+          executado_em: string | null
+          executado_por: string | null
+          id: string
+          job_id: string | null
+          modulo: string
+          total_duplicatas: number | null
+          total_erros: number | null
+          total_importados: number
+        }
+        Insert: {
+          arquivo_nome: string
+          detalhes?: Json | null
+          escritorio_id: string
+          executado_em?: string | null
+          executado_por?: string | null
+          id?: string
+          job_id?: string | null
+          modulo: string
+          total_duplicatas?: number | null
+          total_erros?: number | null
+          total_importados?: number
+        }
+        Update: {
+          arquivo_nome?: string
+          detalhes?: Json | null
+          escritorio_id?: string
+          executado_em?: string | null
+          executado_por?: string | null
+          id?: string
+          job_id?: string | null
+          modulo?: string
+          total_duplicatas?: number | null
+          total_erros?: number | null
+          total_importados?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "migracao_historico_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "migracao_historico_executado_por_fkey"
+            columns: ["executado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "migracao_historico_executado_por_fkey"
+            columns: ["executado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "migracao_historico_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "migracao_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      migracao_jobs: {
+        Row: {
+          arquivo_nome: string
+          arquivo_storage_path: string
+          campos_extras: Json | null
+          concluido_em: string | null
+          config: Json | null
+          correcoes_usuario: Json | null
+          created_at: string | null
+          criado_por: string | null
+          decisoes_pendencias: Json | null
+          duplicatas: Json | null
+          erros: Json | null
+          escritorio_id: string
+          etapa_atual: string | null
+          id: string
+          iniciado_em: string | null
+          linhas_com_erro: number | null
+          linhas_duplicadas: number | null
+          linhas_importadas: number | null
+          linhas_processadas: number | null
+          linhas_validas: number | null
+          mapeamento: Json
+          modulo: string
+          pendencias: Json | null
+          resultado_final: Json | null
+          status: string
+          total_linhas: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          arquivo_nome: string
+          arquivo_storage_path: string
+          campos_extras?: Json | null
+          concluido_em?: string | null
+          config?: Json | null
+          correcoes_usuario?: Json | null
+          created_at?: string | null
+          criado_por?: string | null
+          decisoes_pendencias?: Json | null
+          duplicatas?: Json | null
+          erros?: Json | null
+          escritorio_id: string
+          etapa_atual?: string | null
+          id?: string
+          iniciado_em?: string | null
+          linhas_com_erro?: number | null
+          linhas_duplicadas?: number | null
+          linhas_importadas?: number | null
+          linhas_processadas?: number | null
+          linhas_validas?: number | null
+          mapeamento?: Json
+          modulo: string
+          pendencias?: Json | null
+          resultado_final?: Json | null
+          status?: string
+          total_linhas?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          arquivo_nome?: string
+          arquivo_storage_path?: string
+          campos_extras?: Json | null
+          concluido_em?: string | null
+          config?: Json | null
+          correcoes_usuario?: Json | null
+          created_at?: string | null
+          criado_por?: string | null
+          decisoes_pendencias?: Json | null
+          duplicatas?: Json | null
+          erros?: Json | null
+          escritorio_id?: string
+          etapa_atual?: string | null
+          id?: string
+          iniciado_em?: string | null
+          linhas_com_erro?: number | null
+          linhas_duplicadas?: number | null
+          linhas_importadas?: number | null
+          linhas_processadas?: number | null
+          linhas_validas?: number | null
+          mapeamento?: Json
+          modulo?: string
+          pendencias?: Json | null
+          resultado_final?: Json | null
+          status?: string
+          total_linhas?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "migracao_jobs_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "migracao_jobs_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "migracao_jobs_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      numeracao_modulos: {
+        Row: {
+          created_at: string | null
+          escritorio_id: string
+          id: string
+          modulo: string
+          prefixo: string
+          ultimo_numero: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          escritorio_id: string
+          id?: string
+          modulo: string
+          prefixo: string
+          ultimo_numero?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          escritorio_id?: string
+          id?: string
+          modulo?: string
+          prefixo?: string
+          ultimo_numero?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "numeracao_modulos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      numeracao_sequencial: {
+        Row: {
+          created_at: string | null
+          escritorio_id: string
+          id: string
+          ultimo_numero: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          escritorio_id: string
+          id?: string
+          ultimo_numero?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          escritorio_id?: string
+          id?: string
+          ultimo_numero?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "numeracao_sequencial_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: true
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_steps: {
+        Row: {
+          completada: boolean | null
+          completada_em: string | null
+          created_at: string | null
+          dados_etapa: Json | null
+          escritorio_id: string
+          etapa: string
+          id: string
+          pulada: boolean | null
+          pulada_em: string | null
+          tempo_gasto_segundos: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completada?: boolean | null
+          completada_em?: string | null
+          created_at?: string | null
+          dados_etapa?: Json | null
+          escritorio_id: string
+          etapa: string
+          id?: string
+          pulada?: boolean | null
+          pulada_em?: string | null
+          tempo_gasto_segundos?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completada?: boolean | null
+          completada_em?: string | null
+          created_at?: string | null
+          dados_etapa?: Json | null
+          escritorio_id?: string
+          etapa?: string
+          id?: string
+          pulada?: boolean | null
+          pulada_em?: string | null
+          tempo_gasto_segundos?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_steps_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_steps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_steps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      pecas_jurisprudencias: {
+        Row: {
+          adicionado_por: string | null
+          created_at: string | null
+          data_julgamento: string | null
+          data_publicacao: string | null
+          ementa: string | null
+          escritorio_id: string
+          id: string
+          link_consulta: string | null
+          link_inteiro_teor: string | null
+          numero_acordao: string | null
+          numero_processo: string | null
+          orgao_julgador: string | null
+          relator: string | null
+          tags: string[] | null
+          temas: string[] | null
+          texto_completo: string | null
+          tipo: string
+          tribunal: string
+        }
+        Insert: {
+          adicionado_por?: string | null
+          created_at?: string | null
+          data_julgamento?: string | null
+          data_publicacao?: string | null
+          ementa?: string | null
+          escritorio_id: string
+          id?: string
+          link_consulta?: string | null
+          link_inteiro_teor?: string | null
+          numero_acordao?: string | null
+          numero_processo?: string | null
+          orgao_julgador?: string | null
+          relator?: string | null
+          tags?: string[] | null
+          temas?: string[] | null
+          texto_completo?: string | null
+          tipo: string
+          tribunal: string
+        }
+        Update: {
+          adicionado_por?: string | null
+          created_at?: string | null
+          data_julgamento?: string | null
+          data_publicacao?: string | null
+          ementa?: string | null
+          escritorio_id?: string
+          id?: string
+          link_consulta?: string | null
+          link_inteiro_teor?: string | null
+          numero_acordao?: string | null
+          numero_processo?: string | null
+          orgao_julgador?: string | null
+          relator?: string | null
+          tags?: string[] | null
+          temas?: string[] | null
+          texto_completo?: string | null
+          tipo?: string
+          tribunal?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pecas_teses_jurisprudencias_adicionado_por_fkey"
+            columns: ["adicionado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_jurisprudencias_adicionado_por_fkey"
+            columns: ["adicionado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_jurisprudencias_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pecas_pecas: {
+        Row: {
+          arquivo_url: string | null
+          conteudo: string | null
+          created_at: string | null
+          criado_por: string | null
+          data_protocolo: string | null
+          escritorio_id: string
+          id: string
+          numero_protocolo: string | null
+          processo_id: string | null
+          status: string | null
+          template_id: string | null
+          tipo_peca: string
+          titulo: string
+          updated_at: string | null
+          versao: number | null
+          versao_anterior_id: string | null
+        }
+        Insert: {
+          arquivo_url?: string | null
+          conteudo?: string | null
+          created_at?: string | null
+          criado_por?: string | null
+          data_protocolo?: string | null
+          escritorio_id: string
+          id?: string
+          numero_protocolo?: string | null
+          processo_id?: string | null
+          status?: string | null
+          template_id?: string | null
+          tipo_peca: string
+          titulo: string
+          updated_at?: string | null
+          versao?: number | null
+          versao_anterior_id?: string | null
+        }
+        Update: {
+          arquivo_url?: string | null
+          conteudo?: string | null
+          created_at?: string | null
+          criado_por?: string | null
+          data_protocolo?: string | null
+          escritorio_id?: string
+          id?: string
+          numero_protocolo?: string | null
+          processo_id?: string | null
+          status?: string | null
+          template_id?: string | null
+          tipo_peca?: string
+          titulo?: string
+          updated_at?: string | null
+          versao?: number | null
+          versao_anterior_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pecas_teses_pecas_geradas_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_pecas_geradas_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_pecas_geradas_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_pecas_geradas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_pecas_geradas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_pecas_geradas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_pecas_geradas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_pecas_geradas_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "pecas_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_pecas_geradas_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "v_pecas_templates_ativos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_pecas_geradas_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "v_pecas_templates_completos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_pecas_geradas_versao_anterior_id_fkey"
+            columns: ["versao_anterior_id"]
+            isOneToOne: false
+            referencedRelation: "pecas_pecas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pecas_relacoes: {
+        Row: {
+          created_at: string | null
+          escritorio_id: string
+          id: string
+          jurisprudencia_id: string | null
+          peca_id: string
+          tese_id: string | null
+          tipo_relacao: string
+        }
+        Insert: {
+          created_at?: string | null
+          escritorio_id: string
+          id?: string
+          jurisprudencia_id?: string | null
+          peca_id: string
+          tese_id?: string | null
+          tipo_relacao: string
+        }
+        Update: {
+          created_at?: string | null
+          escritorio_id?: string
+          id?: string
+          jurisprudencia_id?: string | null
+          peca_id?: string
+          tese_id?: string | null
+          tipo_relacao?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_pecas_relacoes_escritorio"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_relacoes_jurisprudencia_id_fkey"
+            columns: ["jurisprudencia_id"]
+            isOneToOne: false
+            referencedRelation: "pecas_jurisprudencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_relacoes_peca_id_fkey"
+            columns: ["peca_id"]
+            isOneToOne: false
+            referencedRelation: "pecas_pecas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_relacoes_tese_id_fkey"
+            columns: ["tese_id"]
+            isOneToOne: false
+            referencedRelation: "pecas_teses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_relacoes_tese_id_fkey"
+            columns: ["tese_id"]
+            isOneToOne: false
+            referencedRelation: "v_pecas_teses_ativas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pecas_templates: {
+        Row: {
+          area: string
+          ativo: boolean | null
+          categoria: string
+          conteudo_template: string | null
+          created_at: string | null
+          criado_por: string | null
+          escritorio_id: string
+          estrutura: Json | null
+          id: string
+          nome: string
+          tipo_processo: string | null
+          updated_at: string | null
+          uso_count: number | null
+          variaveis: Json | null
+        }
+        Insert: {
+          area: string
+          ativo?: boolean | null
+          categoria: string
+          conteudo_template?: string | null
+          created_at?: string | null
+          criado_por?: string | null
+          escritorio_id: string
+          estrutura?: Json | null
+          id?: string
+          nome: string
+          tipo_processo?: string | null
+          updated_at?: string | null
+          uso_count?: number | null
+          variaveis?: Json | null
+        }
+        Update: {
+          area?: string
+          ativo?: boolean | null
+          categoria?: string
+          conteudo_template?: string | null
+          created_at?: string | null
+          criado_por?: string | null
+          escritorio_id?: string
+          estrutura?: Json | null
+          id?: string
+          nome?: string
+          tipo_processo?: string | null
+          updated_at?: string | null
+          uso_count?: number | null
+          variaveis?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pecas_teses_templates_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_templates_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_templates_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pecas_templates_jurisprudencias: {
+        Row: {
+          created_at: string | null
+          escritorio_id: string
+          id: string
+          jurisprudencia_id: string
+          ordem: number | null
+          template_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          escritorio_id: string
+          id?: string
+          jurisprudencia_id: string
+          ordem?: number | null
+          template_id: string
+        }
+        Update: {
+          created_at?: string | null
+          escritorio_id?: string
+          id?: string
+          jurisprudencia_id?: string
+          ordem?: number | null
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_pecas_templates_jurisprudencias_escritorio"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_templates_jurisprudencias_jurisprudencia_id_fkey"
+            columns: ["jurisprudencia_id"]
+            isOneToOne: false
+            referencedRelation: "pecas_jurisprudencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_templates_jurisprudencias_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "pecas_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_templates_jurisprudencias_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "v_pecas_templates_ativos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_templates_jurisprudencias_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "v_pecas_templates_completos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pecas_templates_teses: {
+        Row: {
+          created_at: string | null
+          escritorio_id: string
+          id: string
+          ordem: number | null
+          template_id: string
+          tese_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          escritorio_id: string
+          id?: string
+          ordem?: number | null
+          template_id: string
+          tese_id: string
+        }
+        Update: {
+          created_at?: string | null
+          escritorio_id?: string
+          id?: string
+          ordem?: number | null
+          template_id?: string
+          tese_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_pecas_templates_teses_escritorio"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_templates_teses_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "pecas_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_templates_teses_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "v_pecas_templates_ativos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_templates_teses_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "v_pecas_templates_completos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_templates_teses_tese_id_fkey"
+            columns: ["tese_id"]
+            isOneToOne: false
+            referencedRelation: "pecas_teses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_templates_teses_tese_id_fkey"
+            columns: ["tese_id"]
+            isOneToOne: false
+            referencedRelation: "v_pecas_teses_ativas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pecas_teses: {
+        Row: {
+          area: string
+          ativa: boolean | null
+          atualizado_por: string | null
+          created_at: string | null
+          criado_por: string | null
+          escritorio_id: string
+          fundamentacao: string | null
+          id: string
+          resumo: string | null
+          subtema: string | null
+          tags: string[] | null
+          texto_completo: string | null
+          titulo: string
+          updated_at: string | null
+          uso_count: number | null
+        }
+        Insert: {
+          area: string
+          ativa?: boolean | null
+          atualizado_por?: string | null
+          created_at?: string | null
+          criado_por?: string | null
+          escritorio_id: string
+          fundamentacao?: string | null
+          id?: string
+          resumo?: string | null
+          subtema?: string | null
+          tags?: string[] | null
+          texto_completo?: string | null
+          titulo: string
+          updated_at?: string | null
+          uso_count?: number | null
+        }
+        Update: {
+          area?: string
+          ativa?: boolean | null
+          atualizado_por?: string | null
+          created_at?: string | null
+          criado_por?: string | null
+          escritorio_id?: string
+          fundamentacao?: string | null
+          id?: string
+          resumo?: string | null
+          subtema?: string | null
+          tags?: string[] | null
+          texto_completo?: string | null
+          titulo?: string
+          updated_at?: string | null
+          uso_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pecas_teses_teses_atualizado_por_fkey"
+            columns: ["atualizado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_teses_atualizado_por_fkey"
+            columns: ["atualizado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_teses_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_teses_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_teses_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_metricas: {
+        Row: {
+          ano: number | null
+          calculado_em: string
+          duracao_maxima_dias: number | null
+          duracao_media_dias: number | null
+          duracao_minima_dias: number | null
+          escritorio_id: string
+          execucoes_canceladas: number | null
+          execucoes_concluidas: number | null
+          execucoes_em_andamento: number | null
+          id: string
+          mes: number | null
+          periodo: string
+          produto_id: string | null
+          receita_media: number | null
+          receita_total: number | null
+          taxa_sucesso: number | null
+          total_aprendizados: number | null
+          total_execucoes: number | null
+        }
+        Insert: {
+          ano?: number | null
+          calculado_em?: string
+          duracao_maxima_dias?: number | null
+          duracao_media_dias?: number | null
+          duracao_minima_dias?: number | null
+          escritorio_id: string
+          execucoes_canceladas?: number | null
+          execucoes_concluidas?: number | null
+          execucoes_em_andamento?: number | null
+          id?: string
+          mes?: number | null
+          periodo: string
+          produto_id?: string | null
+          receita_media?: number | null
+          receita_total?: number | null
+          taxa_sucesso?: number | null
+          total_aprendizados?: number | null
+          total_execucoes?: number | null
+        }
+        Update: {
+          ano?: number | null
+          calculado_em?: string
+          duracao_maxima_dias?: number | null
+          duracao_media_dias?: number | null
+          duracao_minima_dias?: number | null
+          escritorio_id?: string
+          execucoes_canceladas?: number | null
+          execucoes_concluidas?: number | null
+          execucoes_em_andamento?: number | null
+          id?: string
+          mes?: number | null
+          periodo?: string
+          produto_id?: string | null
+          receita_media?: number | null
+          receita_total?: number | null
+          taxa_sucesso?: number | null
+          total_aprendizados?: number | null
+          total_execucoes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_metricas_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_metricas_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_metricas_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_portfolio_produtos_catalogo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_produtos: {
+        Row: {
+          area_juridica: string
+          categoria: string | null
+          codigo: string
+          complexidade: string | null
+          cor: string | null
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          descricao_comercial: string | null
+          duracao_estimada_dias: number | null
+          escritorio_id: string
+          icone: string | null
+          id: string
+          imagem_url: string | null
+          nome: string
+          status: string
+          tags: string[] | null
+          updated_at: string
+          versao_atual: number | null
+          visivel_catalogo: boolean | null
+        }
+        Insert: {
+          area_juridica: string
+          categoria?: string | null
+          codigo: string
+          complexidade?: string | null
+          cor?: string | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          descricao_comercial?: string | null
+          duracao_estimada_dias?: number | null
+          escritorio_id: string
+          icone?: string | null
+          id?: string
+          imagem_url?: string | null
+          nome: string
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+          versao_atual?: number | null
+          visivel_catalogo?: boolean | null
+        }
+        Update: {
+          area_juridica?: string
+          categoria?: string | null
+          codigo?: string
+          complexidade?: string | null
+          cor?: string | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          descricao_comercial?: string | null
+          duracao_estimada_dias?: number | null
+          escritorio_id?: string
+          icone?: string | null
+          id?: string
+          imagem_url?: string | null
+          nome?: string
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+          versao_atual?: number | null
+          visivel_catalogo?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_produtos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_produtos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "portfolio_produtos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_produtos_checklist: {
+        Row: {
+          created_at: string
+          criar_tarefa: boolean | null
+          fase_id: string
+          id: string
+          item: string
+          obrigatorio: boolean | null
+          ordem: number
+          tarefa_prazo_dias: number | null
+        }
+        Insert: {
+          created_at?: string
+          criar_tarefa?: boolean | null
+          fase_id: string
+          id?: string
+          item: string
+          obrigatorio?: boolean | null
+          ordem: number
+          tarefa_prazo_dias?: number | null
+        }
+        Update: {
+          created_at?: string
+          criar_tarefa?: boolean | null
+          fase_id?: string
+          id?: string
+          item?: string
+          obrigatorio?: boolean | null
+          ordem?: number
+          tarefa_prazo_dias?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_produtos_checklist_fase_id_fkey"
+            columns: ["fase_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_produtos_fases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_produtos_equipe_papeis: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          habilidades_requeridas: string[] | null
+          id: string
+          nome: string
+          obrigatorio: boolean | null
+          produto_id: string
+          quantidade_minima: number | null
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          habilidades_requeridas?: string[] | null
+          id?: string
+          nome: string
+          obrigatorio?: boolean | null
+          produto_id: string
+          quantidade_minima?: number | null
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          habilidades_requeridas?: string[] | null
+          id?: string
+          nome?: string
+          obrigatorio?: boolean | null
+          produto_id?: string
+          quantidade_minima?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_produtos_equipe_papeis_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_produtos_equipe_papeis_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_portfolio_produtos_catalogo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_produtos_fases: {
+        Row: {
+          cor: string | null
+          created_at: string
+          criar_evento_agenda: boolean | null
+          descricao: string | null
+          duracao_estimada_dias: number | null
+          evento_descricao_template: string | null
+          evento_titulo_template: string | null
+          fase_dependencia_id: string | null
+          icone: string | null
+          id: string
+          nome: string
+          ordem: number
+          prazo_tipo: string | null
+          produto_id: string
+        }
+        Insert: {
+          cor?: string | null
+          created_at?: string
+          criar_evento_agenda?: boolean | null
+          descricao?: string | null
+          duracao_estimada_dias?: number | null
+          evento_descricao_template?: string | null
+          evento_titulo_template?: string | null
+          fase_dependencia_id?: string | null
+          icone?: string | null
+          id?: string
+          nome: string
+          ordem: number
+          prazo_tipo?: string | null
+          produto_id: string
+        }
+        Update: {
+          cor?: string | null
+          created_at?: string
+          criar_evento_agenda?: boolean | null
+          descricao?: string | null
+          duracao_estimada_dias?: number | null
+          evento_descricao_template?: string | null
+          evento_titulo_template?: string | null
+          fase_dependencia_id?: string | null
+          icone?: string | null
+          id?: string
+          nome?: string
+          ordem?: number
+          prazo_tipo?: string | null
+          produto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_produtos_fases_fase_dependencia_id_fkey"
+            columns: ["fase_dependencia_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_produtos_fases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_produtos_fases_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_produtos_fases_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_portfolio_produtos_catalogo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_produtos_precos: {
+        Row: {
+          ativo: boolean | null
+          created_at: string
+          descricao: string | null
+          horas_estimadas: number | null
+          id: string
+          nome_opcao: string | null
+          padrao: boolean | null
+          percentual_exito: number | null
+          produto_id: string
+          tipo: string
+          valor_fixo: number | null
+          valor_hora: number | null
+          valor_maximo: number | null
+          valor_minimo: number | null
+          valores_por_fase: Json | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string
+          descricao?: string | null
+          horas_estimadas?: number | null
+          id?: string
+          nome_opcao?: string | null
+          padrao?: boolean | null
+          percentual_exito?: number | null
+          produto_id: string
+          tipo: string
+          valor_fixo?: number | null
+          valor_hora?: number | null
+          valor_maximo?: number | null
+          valor_minimo?: number | null
+          valores_por_fase?: Json | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string
+          descricao?: string | null
+          horas_estimadas?: number | null
+          id?: string
+          nome_opcao?: string | null
+          padrao?: boolean | null
+          percentual_exito?: number | null
+          produto_id?: string
+          tipo?: string
+          valor_fixo?: number | null
+          valor_hora?: number | null
+          valor_maximo?: number | null
+          valor_minimo?: number | null
+          valores_por_fase?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_produtos_precos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_produtos_precos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_portfolio_produtos_catalogo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_produtos_recursos: {
+        Row: {
+          arquivo_nome: string | null
+          arquivo_tipo: string | null
+          arquivo_url: string | null
+          created_at: string
+          descricao: string | null
+          fase_id: string | null
+          id: string
+          nome: string
+          produto_id: string
+          tipo: string
+        }
+        Insert: {
+          arquivo_nome?: string | null
+          arquivo_tipo?: string | null
+          arquivo_url?: string | null
+          created_at?: string
+          descricao?: string | null
+          fase_id?: string | null
+          id?: string
+          nome: string
+          produto_id: string
+          tipo: string
+        }
+        Update: {
+          arquivo_nome?: string | null
+          arquivo_tipo?: string | null
+          arquivo_url?: string | null
+          created_at?: string
+          descricao?: string | null
+          fase_id?: string | null
+          id?: string
+          nome?: string
+          produto_id?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_produtos_recursos_fase_id_fkey"
+            columns: ["fase_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_produtos_fases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_produtos_recursos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_produtos_recursos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_portfolio_produtos_catalogo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_produtos_versoes: {
+        Row: {
+          alteracoes: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          motivo: string | null
+          produto_id: string
+          snapshot: Json
+          versao: number
+        }
+        Insert: {
+          alteracoes?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          motivo?: string | null
+          produto_id: string
+          snapshot: Json
+          versao: number
+        }
+        Update: {
+          alteracoes?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          motivo?: string | null
+          produto_id?: string
+          snapshot?: Json
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_produtos_versoes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_produtos_versoes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "portfolio_produtos_versoes_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_produtos_versoes_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_portfolio_produtos_catalogo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_projetos: {
+        Row: {
+          cliente_id: string
+          codigo: string
+          contrato_id: string | null
+          created_at: string
+          created_by: string | null
+          data_conclusao: string | null
+          data_inicio: string | null
+          data_prevista_conclusao: string | null
+          escritorio_id: string
+          id: string
+          nome: string
+          observacoes: string | null
+          observacoes_resultado: string | null
+          preco_selecionado_id: string | null
+          processo_id: string | null
+          produto_id: string
+          produto_versao: number
+          progresso_percentual: number | null
+          responsavel_id: string
+          resultado: string | null
+          status: string
+          tags: string[] | null
+          updated_at: string
+          valor_negociado: number | null
+        }
+        Insert: {
+          cliente_id: string
+          codigo: string
+          contrato_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_conclusao?: string | null
+          data_inicio?: string | null
+          data_prevista_conclusao?: string | null
+          escritorio_id: string
+          id?: string
+          nome: string
+          observacoes?: string | null
+          observacoes_resultado?: string | null
+          preco_selecionado_id?: string | null
+          processo_id?: string | null
+          produto_id: string
+          produto_versao: number
+          progresso_percentual?: number | null
+          responsavel_id: string
+          resultado?: string | null
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+          valor_negociado?: number | null
+        }
+        Update: {
+          cliente_id?: string
+          codigo?: string
+          contrato_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_conclusao?: string | null
+          data_inicio?: string | null
+          data_prevista_conclusao?: string | null
+          escritorio_id?: string
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          observacoes_resultado?: string | null
+          preco_selecionado_id?: string | null
+          processo_id?: string | null
+          produto_id?: string
+          produto_versao?: number
+          progresso_percentual?: number | null
+          responsavel_id?: string
+          resultado?: string | null
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+          valor_negociado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_projetos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_preco_selecionado_id_fkey"
+            columns: ["preco_selecionado_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_produtos_precos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_portfolio_produtos_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      portfolio_projetos_aprendizados: {
+        Row: {
+          aplicado_ao_produto: boolean | null
+          aplicado_em: string | null
+          aplicar_ao_produto: boolean | null
+          categoria: string | null
+          conteudo: string
+          created_at: string
+          created_by: string | null
+          fase_projeto_id: string | null
+          id: string
+          impacto: string | null
+          projeto_id: string
+          tags: string[] | null
+          tipo: string
+          titulo: string
+        }
+        Insert: {
+          aplicado_ao_produto?: boolean | null
+          aplicado_em?: string | null
+          aplicar_ao_produto?: boolean | null
+          categoria?: string | null
+          conteudo: string
+          created_at?: string
+          created_by?: string | null
+          fase_projeto_id?: string | null
+          id?: string
+          impacto?: string | null
+          projeto_id: string
+          tags?: string[] | null
+          tipo: string
+          titulo: string
+        }
+        Update: {
+          aplicado_ao_produto?: boolean | null
+          aplicado_em?: string | null
+          aplicar_ao_produto?: boolean | null
+          categoria?: string | null
+          conteudo?: string
+          created_at?: string
+          created_by?: string | null
+          fase_projeto_id?: string | null
+          id?: string
+          impacto?: string | null
+          projeto_id?: string
+          tags?: string[] | null
+          tipo?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_projetos_aprendizados_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_aprendizados_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_aprendizados_fase_projeto_id_fkey"
+            columns: ["fase_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_projetos_fases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_aprendizados_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_aprendizados_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_portfolio_projetos_completos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_projetos_equipe: {
+        Row: {
+          created_at: string
+          id: string
+          papel_id: string | null
+          papel_nome: string
+          pode_editar: boolean | null
+          projeto_id: string
+          recebe_notificacoes: boolean | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          papel_id?: string | null
+          papel_nome: string
+          pode_editar?: boolean | null
+          projeto_id: string
+          recebe_notificacoes?: boolean | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          papel_id?: string | null
+          papel_nome?: string
+          pode_editar?: boolean | null
+          projeto_id?: string
+          recebe_notificacoes?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_projetos_equipe_papel_id_fkey"
+            columns: ["papel_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_produtos_equipe_papeis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_equipe_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_equipe_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_portfolio_projetos_completos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_equipe_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_equipe_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      portfolio_projetos_fases: {
+        Row: {
+          created_at: string
+          data_fim_prevista: string | null
+          data_fim_real: string | null
+          data_inicio_prevista: string | null
+          data_inicio_real: string | null
+          descricao: string | null
+          evento_agenda_id: string | null
+          fase_produto_id: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          ordem: number
+          progresso_percentual: number | null
+          projeto_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_fim_prevista?: string | null
+          data_fim_real?: string | null
+          data_inicio_prevista?: string | null
+          data_inicio_real?: string | null
+          descricao?: string | null
+          evento_agenda_id?: string | null
+          fase_produto_id?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          ordem: number
+          progresso_percentual?: number | null
+          projeto_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_fim_prevista?: string | null
+          data_fim_real?: string | null
+          data_inicio_prevista?: string | null
+          data_inicio_real?: string | null
+          descricao?: string | null
+          evento_agenda_id?: string | null
+          fase_produto_id?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          ordem?: number
+          progresso_percentual?: number | null
+          projeto_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_projetos_fases_fase_produto_id_fkey"
+            columns: ["fase_produto_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_produtos_fases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_fases_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_fases_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "v_portfolio_projetos_completos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_projetos_fases_checklist: {
+        Row: {
+          checklist_produto_id: string | null
+          concluido: boolean | null
+          concluido_em: string | null
+          concluido_por: string | null
+          created_at: string
+          fase_projeto_id: string
+          id: string
+          item: string
+          obrigatorio: boolean | null
+          ordem: number
+          tarefa_id: string | null
+        }
+        Insert: {
+          checklist_produto_id?: string | null
+          concluido?: boolean | null
+          concluido_em?: string | null
+          concluido_por?: string | null
+          created_at?: string
+          fase_projeto_id: string
+          id?: string
+          item: string
+          obrigatorio?: boolean | null
+          ordem: number
+          tarefa_id?: string | null
+        }
+        Update: {
+          checklist_produto_id?: string | null
+          concluido?: boolean | null
+          concluido_em?: string | null
+          concluido_por?: string | null
+          created_at?: string
+          fase_projeto_id?: string
+          id?: string
+          item?: string
+          obrigatorio?: boolean | null
+          ordem?: number
+          tarefa_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_projetos_fases_checklist_checklist_produto_id_fkey"
+            columns: ["checklist_produto_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_produtos_checklist"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_fases_checklist_concluido_por_fkey"
+            columns: ["concluido_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_fases_checklist_concluido_por_fkey"
+            columns: ["concluido_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_fases_checklist_fase_projeto_id_fkey"
+            columns: ["fase_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_projetos_fases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      processos_depositos: {
+        Row: {
+          agencia: string | null
+          banco: string | null
+          conta: string | null
+          created_at: string | null
+          created_by: string | null
+          data_deposito: string
+          data_levantamento: string | null
+          descricao: string | null
+          escritorio_id: string
+          id: string
+          numero_guia: string | null
+          observacoes: string | null
+          processo_id: string
+          status: string
+          tipo: string
+          updated_at: string | null
+          valor: number
+          valor_levantado: number | null
+        }
+        Insert: {
+          agencia?: string | null
+          banco?: string | null
+          conta?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_deposito: string
+          data_levantamento?: string | null
+          descricao?: string | null
+          escritorio_id: string
+          id?: string
+          numero_guia?: string | null
+          observacoes?: string | null
+          processo_id: string
+          status?: string
+          tipo: string
+          updated_at?: string | null
+          valor: number
+          valor_levantado?: number | null
+        }
+        Update: {
+          agencia?: string | null
+          banco?: string | null
+          conta?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_deposito?: string
+          data_levantamento?: string | null
+          descricao?: string | null
+          escritorio_id?: string
+          id?: string
+          numero_guia?: string | null
+          observacoes?: string | null
+          processo_id?: string
+          status?: string
+          tipo?: string
+          updated_at?: string | null
+          valor?: number
+          valor_levantado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processos_depositos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_depositos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_depositos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_depositos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_depositos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+        ]
+      }
+      processos_equipe: {
+        Row: {
+          adicionado_em: string | null
+          adicionado_por: string | null
+          escritorio_id: string
+          id: string
+          papel: string
+          pode_editar: boolean | null
+          pode_visualizar: boolean | null
+          processo_id: string
+          recebe_notificacoes: boolean | null
+          user_id: string
+        }
+        Insert: {
+          adicionado_em?: string | null
+          adicionado_por?: string | null
+          escritorio_id: string
+          id?: string
+          papel: string
+          pode_editar?: boolean | null
+          pode_visualizar?: boolean | null
+          processo_id: string
+          recebe_notificacoes?: boolean | null
+          user_id: string
+        }
+        Update: {
+          adicionado_em?: string | null
+          adicionado_por?: string | null
+          escritorio_id?: string
+          id?: string
+          papel?: string
+          pode_editar?: boolean | null
+          pode_visualizar?: boolean | null
+          processo_id?: string
+          recebe_notificacoes?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processos_equipe_adicionado_por_fkey"
+            columns: ["adicionado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_equipe_adicionado_por_fkey"
+            columns: ["adicionado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "processos_equipe_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_equipe_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_equipe_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_equipe_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_equipe_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "processos_equipe_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_equipe_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      processos_estrategia: {
+        Row: {
+          ameacas: Json | null
+          aprovado: boolean | null
+          created_at: string | null
+          data_aprovacao: string | null
+          data_revisao: string | null
+          documentos_necessarios: Json | null
+          elaborado_por: string | null
+          escritorio_id: string
+          estrategia_texto: string | null
+          fundamentos_legais: string[] | null
+          id: string
+          is_versao_atual: boolean | null
+          objetivo_principal: string | null
+          oportunidades: Json | null
+          parametros_acordo: Json | null
+          plano_contingencia: string | null
+          pontos_fortes: Json | null
+          pontos_fracos: Json | null
+          possibilidade_acordo: boolean | null
+          processo_id: string
+          provas_a_produzir: Json | null
+          proximos_passos: Json | null
+          resumo_caso: string | null
+          revisado_por: string | null
+          riscos_identificados: Json | null
+          teses_principais: string[] | null
+          teses_subsidiarias: string[] | null
+          updated_at: string | null
+          versao: number | null
+          versao_anterior_id: string | null
+        }
+        Insert: {
+          ameacas?: Json | null
+          aprovado?: boolean | null
+          created_at?: string | null
+          data_aprovacao?: string | null
+          data_revisao?: string | null
+          documentos_necessarios?: Json | null
+          elaborado_por?: string | null
+          escritorio_id: string
+          estrategia_texto?: string | null
+          fundamentos_legais?: string[] | null
+          id?: string
+          is_versao_atual?: boolean | null
+          objetivo_principal?: string | null
+          oportunidades?: Json | null
+          parametros_acordo?: Json | null
+          plano_contingencia?: string | null
+          pontos_fortes?: Json | null
+          pontos_fracos?: Json | null
+          possibilidade_acordo?: boolean | null
+          processo_id: string
+          provas_a_produzir?: Json | null
+          proximos_passos?: Json | null
+          resumo_caso?: string | null
+          revisado_por?: string | null
+          riscos_identificados?: Json | null
+          teses_principais?: string[] | null
+          teses_subsidiarias?: string[] | null
+          updated_at?: string | null
+          versao?: number | null
+          versao_anterior_id?: string | null
+        }
+        Update: {
+          ameacas?: Json | null
+          aprovado?: boolean | null
+          created_at?: string | null
+          data_aprovacao?: string | null
+          data_revisao?: string | null
+          documentos_necessarios?: Json | null
+          elaborado_por?: string | null
+          escritorio_id?: string
+          estrategia_texto?: string | null
+          fundamentos_legais?: string[] | null
+          id?: string
+          is_versao_atual?: boolean | null
+          objetivo_principal?: string | null
+          oportunidades?: Json | null
+          parametros_acordo?: Json | null
+          plano_contingencia?: string | null
+          pontos_fortes?: Json | null
+          pontos_fracos?: Json | null
+          possibilidade_acordo?: boolean | null
+          processo_id?: string
+          provas_a_produzir?: Json | null
+          proximos_passos?: Json | null
+          resumo_caso?: string | null
+          revisado_por?: string | null
+          riscos_identificados?: Json | null
+          teses_principais?: string[] | null
+          teses_subsidiarias?: string[] | null
+          updated_at?: string | null
+          versao?: number | null
+          versao_anterior_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processos_estrategia_elaborado_por_fkey"
+            columns: ["elaborado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_estrategia_elaborado_por_fkey"
+            columns: ["elaborado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "processos_estrategia_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_estrategia_revisado_por_fkey"
+            columns: ["revisado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_estrategia_revisado_por_fkey"
+            columns: ["revisado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "processos_estrategia_versao_anterior_id_fkey"
+            columns: ["versao_anterior_id"]
+            isOneToOne: false
+            referencedRelation: "processos_estrategia"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      processos_historico: {
+        Row: {
+          acao: string
+          campo_alterado: string | null
+          created_at: string | null
+          descricao: string
+          escritorio_id: string
+          id: string
+          processo_id: string
+          user_id: string | null
+          user_nome: string | null
+          valor_anterior: string | null
+          valor_novo: string | null
+        }
+        Insert: {
+          acao: string
+          campo_alterado?: string | null
+          created_at?: string | null
+          descricao: string
+          escritorio_id: string
+          id?: string
+          processo_id: string
+          user_id?: string | null
+          user_nome?: string | null
+          valor_anterior?: string | null
+          valor_novo?: string | null
+        }
+        Update: {
+          acao?: string
+          campo_alterado?: string | null
+          created_at?: string | null
+          descricao?: string
+          escritorio_id?: string
+          id?: string
+          processo_id?: string
+          user_id?: string | null
+          user_nome?: string | null
+          valor_anterior?: string | null
+          valor_novo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_processos_historico_escritorio"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_historico_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_historico_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_historico_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_historico_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "processos_historico_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_historico_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      processos_jurisprudencias: {
+        Row: {
+          adicionado_por: string | null
+          aplicada_em_peca: boolean | null
+          citada_em_analise: boolean | null
+          created_at: string | null
+          data_julgamento: string | null
+          data_publicacao: string | null
+          decisao: string | null
+          ementa: string
+          escritorio_id: string
+          fonte: string | null
+          id: string
+          link_consulta: string | null
+          link_inteiro_teor: string | null
+          metadata: Json | null
+          numero_acordao: string | null
+          numero_processo: string | null
+          observacoes: string | null
+          orgao_julgador: string | null
+          peca_id: string | null
+          processo_id: string
+          relator: string | null
+          relevancia: string | null
+          resultado: string | null
+          similaridade_score: number | null
+          tags: string[] | null
+          temas_relacionados: string[] | null
+          teses_aplicadas: string[] | null
+          texto_completo: string | null
+          tipo: string | null
+          tribunal: string
+        }
+        Insert: {
+          adicionado_por?: string | null
+          aplicada_em_peca?: boolean | null
+          citada_em_analise?: boolean | null
+          created_at?: string | null
+          data_julgamento?: string | null
+          data_publicacao?: string | null
+          decisao?: string | null
+          ementa: string
+          escritorio_id: string
+          fonte?: string | null
+          id?: string
+          link_consulta?: string | null
+          link_inteiro_teor?: string | null
+          metadata?: Json | null
+          numero_acordao?: string | null
+          numero_processo?: string | null
+          observacoes?: string | null
+          orgao_julgador?: string | null
+          peca_id?: string | null
+          processo_id: string
+          relator?: string | null
+          relevancia?: string | null
+          resultado?: string | null
+          similaridade_score?: number | null
+          tags?: string[] | null
+          temas_relacionados?: string[] | null
+          teses_aplicadas?: string[] | null
+          texto_completo?: string | null
+          tipo?: string | null
+          tribunal: string
+        }
+        Update: {
+          adicionado_por?: string | null
+          aplicada_em_peca?: boolean | null
+          citada_em_analise?: boolean | null
+          created_at?: string | null
+          data_julgamento?: string | null
+          data_publicacao?: string | null
+          decisao?: string | null
+          ementa?: string
+          escritorio_id?: string
+          fonte?: string | null
+          id?: string
+          link_consulta?: string | null
+          link_inteiro_teor?: string | null
+          metadata?: Json | null
+          numero_acordao?: string | null
+          numero_processo?: string | null
+          observacoes?: string | null
+          orgao_julgador?: string | null
+          peca_id?: string | null
+          processo_id?: string
+          relator?: string | null
+          relevancia?: string | null
+          resultado?: string | null
+          similaridade_score?: number | null
+          tags?: string[] | null
+          temas_relacionados?: string[] | null
+          teses_aplicadas?: string[] | null
+          texto_completo?: string | null
+          tipo?: string | null
+          tribunal?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processos_jurisprudencias_adicionado_por_fkey"
+            columns: ["adicionado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_jurisprudencias_adicionado_por_fkey"
+            columns: ["adicionado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "processos_jurisprudencias_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      processos_movimentacoes: {
+        Row: {
+          comentarios: string | null
+          conteudo_completo: string | null
+          created_at: string | null
+          data_movimento: string
+          descricao: string
+          escritorio_id: string
+          id: string
+          importante: boolean | null
+          lida: boolean | null
+          lida_em: string | null
+          lida_por: string | null
+          origem: string
+          processo_id: string
+          tipo_codigo: string | null
+          tipo_descricao: string | null
+        }
+        Insert: {
+          comentarios?: string | null
+          conteudo_completo?: string | null
+          created_at?: string | null
+          data_movimento: string
+          descricao: string
+          escritorio_id: string
+          id?: string
+          importante?: boolean | null
+          lida?: boolean | null
+          lida_em?: string | null
+          lida_por?: string | null
+          origem?: string
+          processo_id: string
+          tipo_codigo?: string | null
+          tipo_descricao?: string | null
+        }
+        Update: {
+          comentarios?: string | null
+          conteudo_completo?: string | null
+          created_at?: string | null
+          data_movimento?: string
+          descricao?: string
+          escritorio_id?: string
+          id?: string
+          importante?: boolean | null
+          lida?: boolean | null
+          lida_em?: string | null
+          lida_por?: string | null
+          origem?: string
+          processo_id?: string
+          tipo_codigo?: string | null
+          tipo_descricao?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processos_movimentacoes_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_movimentacoes_lida_por_fkey"
+            columns: ["lida_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_movimentacoes_lida_por_fkey"
+            columns: ["lida_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "processos_movimentacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_movimentacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_movimentacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_movimentacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+        ]
+      }
+      processos_processos: {
+        Row: {
+          area: Database["public"]["Enums"]["area_juridica_enum"]
+          autor: string | null
+          cliente_id: string
+          colaboradores_ids: string[] | null
+          comarca: string | null
+          consultivo_origem_id: string | null
+          contrato_id: string | null
+          created_at: string | null
+          created_by: string | null
+          data_arquivamento: string | null
+          data_distribuicao: string
+          data_encerramento: string | null
+          data_transito_julgado: string | null
+          data_ultima_atualizacao_monetaria: string | null
+          encerrado_em: string | null
+          encerrado_por: string | null
+          escavador_monitoramento_id: number | null
+          escritorio_id: string
+          fase: string | null
+          id: string
+          indice_correcao: string | null
+          instancia: string | null
+          link_tribunal: string | null
+          modalidade_cobranca: string | null
+          numero_cnj: string | null
+          numero_pasta: string | null
+          objeto_acao: string | null
+          observacoes: string | null
+          outros_numeros: Json | null
+          parte_contraria: string | null
+          polo_cliente: string
+          processo_principal_id: string | null
+          provisao_perda: string | null
+          provisao_sugerida: number | null
+          responsavel_id: string
+          resultado: string | null
+          resumo_encerramento: string | null
+          reu: string | null
+          rito: string | null
+          status: string
+          tags: string[] | null
+          tipo: string
+          tipo_derivado: string | null
+          tribunal: string | null
+          uf: string | null
+          updated_at: string | null
+          valor_acordo: number | null
+          valor_atualizado: number | null
+          valor_causa: number | null
+          valor_condenacao: number | null
+          vara: string | null
+        }
+        Insert: {
+          area: Database["public"]["Enums"]["area_juridica_enum"]
+          autor?: string | null
+          cliente_id: string
+          colaboradores_ids?: string[] | null
+          comarca?: string | null
+          consultivo_origem_id?: string | null
+          contrato_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_arquivamento?: string | null
+          data_distribuicao: string
+          data_encerramento?: string | null
+          data_transito_julgado?: string | null
+          data_ultima_atualizacao_monetaria?: string | null
+          encerrado_em?: string | null
+          encerrado_por?: string | null
+          escavador_monitoramento_id?: number | null
+          escritorio_id: string
+          fase?: string | null
+          id?: string
+          indice_correcao?: string | null
+          instancia?: string | null
+          link_tribunal?: string | null
+          modalidade_cobranca?: string | null
+          numero_cnj?: string | null
+          numero_pasta?: string | null
+          objeto_acao?: string | null
+          observacoes?: string | null
+          outros_numeros?: Json | null
+          parte_contraria?: string | null
+          polo_cliente: string
+          processo_principal_id?: string | null
+          provisao_perda?: string | null
+          provisao_sugerida?: number | null
+          responsavel_id: string
+          resultado?: string | null
+          resumo_encerramento?: string | null
+          reu?: string | null
+          rito?: string | null
+          status?: string
+          tags?: string[] | null
+          tipo: string
+          tipo_derivado?: string | null
+          tribunal?: string | null
+          uf?: string | null
+          updated_at?: string | null
+          valor_acordo?: number | null
+          valor_atualizado?: number | null
+          valor_causa?: number | null
+          valor_condenacao?: number | null
+          vara?: string | null
+        }
+        Update: {
+          area?: Database["public"]["Enums"]["area_juridica_enum"]
+          autor?: string | null
+          cliente_id?: string
+          colaboradores_ids?: string[] | null
+          comarca?: string | null
+          consultivo_origem_id?: string | null
+          contrato_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_arquivamento?: string | null
+          data_distribuicao?: string
+          data_encerramento?: string | null
+          data_transito_julgado?: string | null
+          data_ultima_atualizacao_monetaria?: string | null
+          encerrado_em?: string | null
+          encerrado_por?: string | null
+          escavador_monitoramento_id?: number | null
+          escritorio_id?: string
+          fase?: string | null
+          id?: string
+          indice_correcao?: string | null
+          instancia?: string | null
+          link_tribunal?: string | null
+          modalidade_cobranca?: string | null
+          numero_cnj?: string | null
+          numero_pasta?: string | null
+          objeto_acao?: string | null
+          observacoes?: string | null
+          outros_numeros?: Json | null
+          parte_contraria?: string | null
+          polo_cliente?: string
+          processo_principal_id?: string | null
+          provisao_perda?: string | null
+          provisao_sugerida?: number | null
+          responsavel_id?: string
+          resultado?: string | null
+          resumo_encerramento?: string | null
+          reu?: string | null
+          rito?: string | null
+          status?: string
+          tags?: string[] | null
+          tipo?: string
+          tipo_derivado?: string | null
+          tribunal?: string | null
+          uf?: string | null
+          updated_at?: string | null
+          valor_acordo?: number | null
+          valor_atualizado?: number | null
+          valor_causa?: number | null
+          valor_condenacao?: number | null
+          vara?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processos_processos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_consultivo_origem_id_fkey"
+            columns: ["consultivo_origem_id"]
+            isOneToOne: false
+            referencedRelation: "consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_consultivo_origem_id_fkey"
+            columns: ["consultivo_origem_id"]
+            isOneToOne: false
+            referencedRelation: "v_consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_consultivo_origem_id_fkey"
+            columns: ["consultivo_origem_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["consultivo_id"]
+          },
+          {
+            foreignKeyName: "processos_processos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_contratos_honorarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "v_receitas_por_contrato"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "processos_processos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "processos_processos_encerrado_por_fkey"
+            columns: ["encerrado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_encerrado_por_fkey"
+            columns: ["encerrado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "processos_processos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_processo_principal_id_fkey"
+            columns: ["processo_principal_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_processo_principal_id_fkey"
+            columns: ["processo_principal_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_processo_principal_id_fkey"
+            columns: ["processo_principal_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_processo_principal_id_fkey"
+            columns: ["processo_principal_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "processos_processos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          cpf: string | null
+          created_at: string | null
+          email: string | null
+          escritorio_id: string | null
+          id: string
+          nome_completo: string
+          oab_numero: string | null
+          oab_uf: string | null
+          onboarding_completado_em: string | null
+          onboarding_completo: boolean | null
+          onboarding_etapa_atual: string | null
+          preferencias: Json | null
+          primeiro_acesso: boolean | null
+          role: string | null
+          telefone: string | null
+          ultimo_escritorio_ativo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          email?: string | null
+          escritorio_id?: string | null
+          id: string
+          nome_completo: string
+          oab_numero?: string | null
+          oab_uf?: string | null
+          onboarding_completado_em?: string | null
+          onboarding_completo?: boolean | null
+          onboarding_etapa_atual?: string | null
+          preferencias?: Json | null
+          primeiro_acesso?: boolean | null
+          role?: string | null
+          telefone?: string | null
+          ultimo_escritorio_ativo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          email?: string | null
+          escritorio_id?: string | null
+          id?: string
+          nome_completo?: string
+          oab_numero?: string | null
+          oab_uf?: string | null
+          onboarding_completado_em?: string | null
+          onboarding_completo?: boolean | null
+          onboarding_etapa_atual?: string | null
+          preferencias?: Json | null
+          primeiro_acesso?: boolean | null
+          role?: string | null
+          telefone?: string | null
+          ultimo_escritorio_ativo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_ultimo_escritorio_ativo_fkey"
+            columns: ["ultimo_escritorio_ativo"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      publicacoes_analises: {
+        Row: {
+          acoes_sugeridas: Json | null
+          confianca_analise: number | null
+          data_intimacao: string | null
+          data_limite: string | null
+          determinacoes: Json | null
+          escritorio_id: string
+          fundamentacao_legal: string | null
+          id: string
+          metadados_extras: Json | null
+          modelo: string | null
+          pontos_principais: Json | null
+          prazo_dias: number | null
+          prazo_tipo_dias: string | null
+          processado_em: string | null
+          publicacao_id: string
+          requer_manifestacao: boolean | null
+          resultado: Json | null
+          resumo_executivo: string | null
+          sentimento: string | null
+          tem_determinacao: boolean | null
+          tem_prazo: boolean | null
+          template_sugerido: string | null
+          tipo_decisao: string | null
+          tipo_prazo: string | null
+          tokens_usados: number | null
+        }
+        Insert: {
+          acoes_sugeridas?: Json | null
+          confianca_analise?: number | null
+          data_intimacao?: string | null
+          data_limite?: string | null
+          determinacoes?: Json | null
+          escritorio_id: string
+          fundamentacao_legal?: string | null
+          id?: string
+          metadados_extras?: Json | null
+          modelo?: string | null
+          pontos_principais?: Json | null
+          prazo_dias?: number | null
+          prazo_tipo_dias?: string | null
+          processado_em?: string | null
+          publicacao_id: string
+          requer_manifestacao?: boolean | null
+          resultado?: Json | null
+          resumo_executivo?: string | null
+          sentimento?: string | null
+          tem_determinacao?: boolean | null
+          tem_prazo?: boolean | null
+          template_sugerido?: string | null
+          tipo_decisao?: string | null
+          tipo_prazo?: string | null
+          tokens_usados?: number | null
+        }
+        Update: {
+          acoes_sugeridas?: Json | null
+          confianca_analise?: number | null
+          data_intimacao?: string | null
+          data_limite?: string | null
+          determinacoes?: Json | null
+          escritorio_id?: string
+          fundamentacao_legal?: string | null
+          id?: string
+          metadados_extras?: Json | null
+          modelo?: string | null
+          pontos_principais?: Json | null
+          prazo_dias?: number | null
+          prazo_tipo_dias?: string | null
+          processado_em?: string | null
+          publicacao_id?: string
+          requer_manifestacao?: boolean | null
+          resultado?: Json | null
+          resumo_executivo?: string | null
+          sentimento?: string | null
+          tem_determinacao?: boolean | null
+          tem_prazo?: boolean | null
+          template_sugerido?: string | null
+          tipo_decisao?: string | null
+          tipo_prazo?: string | null
+          tokens_usados?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_publicacoes_analises_escritorio"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_analises_publicacao_id_fkey"
+            columns: ["publicacao_id"]
+            isOneToOne: true
+            referencedRelation: "publicacoes_publicacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_analises_publicacao_id_fkey"
+            columns: ["publicacao_id"]
+            isOneToOne: true
+            referencedRelation: "v_publicacoes_completas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_analises_publicacao_id_fkey"
+            columns: ["publicacao_id"]
+            isOneToOne: true
+            referencedRelation: "v_publicacoes_pendentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_analises_publicacao_id_fkey"
+            columns: ["publicacao_id"]
+            isOneToOne: true
+            referencedRelation: "v_publicacoes_urgentes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      publicacoes_associados: {
+        Row: {
+          aasp_chave: string
+          ativo: boolean | null
+          created_at: string | null
+          escritorio_id: string
+          id: string
+          nome: string
+          oab_numero: string
+          oab_uf: string
+          publicacoes_sync_count: number | null
+          ultima_sync: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          aasp_chave: string
+          ativo?: boolean | null
+          created_at?: string | null
+          escritorio_id: string
+          id?: string
+          nome: string
+          oab_numero: string
+          oab_uf?: string
+          publicacoes_sync_count?: number | null
+          ultima_sync?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          aasp_chave?: string
+          ativo?: boolean | null
+          created_at?: string | null
+          escritorio_id?: string
+          id?: string
+          nome?: string
+          oab_numero?: string
+          oab_uf?: string
+          publicacoes_sync_count?: number | null
+          ultima_sync?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publicacoes_associados_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      publicacoes_config: {
+        Row: {
+          api_token: string | null
+          api_url: string | null
+          ativo: boolean | null
+          auto_vincular_por_cliente: boolean | null
+          auto_vincular_por_numero: boolean | null
+          created_at: string | null
+          escritorio_id: string
+          id: string
+          notificar_apenas_urgentes: boolean | null
+          notificar_users: string[] | null
+          palavras_chave_urgencia: string[] | null
+          prazo_minimo_urgencia: number | null
+          proxima_sincronizacao: string | null
+          resumo_diario: boolean | null
+          sync_frequencia_horas: number | null
+          tipos_alerta_imediato: string[] | null
+          ultima_sincronizacao: string | null
+          updated_at: string | null
+          webhook_secret: string | null
+          webhook_url: string | null
+        }
+        Insert: {
+          api_token?: string | null
+          api_url?: string | null
+          ativo?: boolean | null
+          auto_vincular_por_cliente?: boolean | null
+          auto_vincular_por_numero?: boolean | null
+          created_at?: string | null
+          escritorio_id: string
+          id?: string
+          notificar_apenas_urgentes?: boolean | null
+          notificar_users?: string[] | null
+          palavras_chave_urgencia?: string[] | null
+          prazo_minimo_urgencia?: number | null
+          proxima_sincronizacao?: string | null
+          resumo_diario?: boolean | null
+          sync_frequencia_horas?: number | null
+          tipos_alerta_imediato?: string[] | null
+          ultima_sincronizacao?: string | null
+          updated_at?: string | null
+          webhook_secret?: string | null
+          webhook_url?: string | null
+        }
+        Update: {
+          api_token?: string | null
+          api_url?: string | null
+          ativo?: boolean | null
+          auto_vincular_por_cliente?: boolean | null
+          auto_vincular_por_numero?: boolean | null
+          created_at?: string | null
+          escritorio_id?: string
+          id?: string
+          notificar_apenas_urgentes?: boolean | null
+          notificar_users?: string[] | null
+          palavras_chave_urgencia?: string[] | null
+          prazo_minimo_urgencia?: number | null
+          proxima_sincronizacao?: string | null
+          resumo_diario?: boolean | null
+          sync_frequencia_horas?: number | null
+          tipos_alerta_imediato?: string[] | null
+          ultima_sincronizacao?: string | null
+          updated_at?: string | null
+          webhook_secret?: string | null
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publicacoes_config_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: true
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      publicacoes_historico: {
+        Row: {
+          acao: string
+          created_at: string | null
+          detalhes: Json | null
+          escritorio_id: string
+          id: string
+          publicacao_id: string
+          user_id: string | null
+        }
+        Insert: {
+          acao: string
+          created_at?: string | null
+          detalhes?: Json | null
+          escritorio_id: string
+          id?: string
+          publicacao_id: string
+          user_id?: string | null
+        }
+        Update: {
+          acao?: string
+          created_at?: string | null
+          detalhes?: Json | null
+          escritorio_id?: string
+          id?: string
+          publicacao_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_publicacoes_historico_escritorio"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_historico_publicacao_id_fkey"
+            columns: ["publicacao_id"]
+            isOneToOne: false
+            referencedRelation: "publicacoes_publicacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_historico_publicacao_id_fkey"
+            columns: ["publicacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_publicacoes_completas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_historico_publicacao_id_fkey"
+            columns: ["publicacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_publicacoes_pendentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_historico_publicacao_id_fkey"
+            columns: ["publicacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_publicacoes_urgentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_historico_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_historico_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      publicacoes_notificacoes: {
+        Row: {
+          created_at: string | null
+          enviado: boolean | null
+          enviado_em: string | null
+          escritorio_id: string
+          id: string
+          lido: boolean | null
+          lido_em: string | null
+          metodo: string
+          publicacao_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          enviado?: boolean | null
+          enviado_em?: string | null
+          escritorio_id: string
+          id?: string
+          lido?: boolean | null
+          lido_em?: string | null
+          metodo: string
+          publicacao_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          enviado?: boolean | null
+          enviado_em?: string | null
+          escritorio_id?: string
+          id?: string
+          lido?: boolean | null
+          lido_em?: string | null
+          metodo?: string
+          publicacao_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_publicacoes_notificacoes_escritorio"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_notificacoes_publicacao_id_fkey"
+            columns: ["publicacao_id"]
+            isOneToOne: false
+            referencedRelation: "publicacoes_publicacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_notificacoes_publicacao_id_fkey"
+            columns: ["publicacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_publicacoes_completas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_notificacoes_publicacao_id_fkey"
+            columns: ["publicacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_publicacoes_pendentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_notificacoes_publicacao_id_fkey"
+            columns: ["publicacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_publicacoes_urgentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_notificacoes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_notificacoes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      publicacoes_publicacoes: {
+        Row: {
+          aasp_id: string | null
+          agendamento_id: string | null
+          agendamento_tipo: string | null
+          associado_id: string | null
+          cliente_id: string | null
+          confianca_vinculacao: number | null
+          created_at: string | null
+          data_captura: string | null
+          data_publicacao: string
+          duplicata_revisada: boolean | null
+          escavador_aparicao_id: string | null
+          escavador_monitoramento_id: string | null
+          escritorio_id: string
+          hash_conteudo: string | null
+          id: string
+          is_snippet: boolean | null
+          numero_processo: string | null
+          partes: string[] | null
+          pdf_url: string | null
+          processo_id: string | null
+          source: string | null
+          source_type: string | null
+          status: string | null
+          texto_completo: string
+          tipo_publicacao: string
+          tribunal: string
+          updated_at: string | null
+          urgente: boolean | null
+          vara: string | null
+        }
+        Insert: {
+          aasp_id?: string | null
+          agendamento_id?: string | null
+          agendamento_tipo?: string | null
+          associado_id?: string | null
+          cliente_id?: string | null
+          confianca_vinculacao?: number | null
+          created_at?: string | null
+          data_captura?: string | null
+          data_publicacao: string
+          duplicata_revisada?: boolean | null
+          escavador_aparicao_id?: string | null
+          escavador_monitoramento_id?: string | null
+          escritorio_id: string
+          hash_conteudo?: string | null
+          id?: string
+          is_snippet?: boolean | null
+          numero_processo?: string | null
+          partes?: string[] | null
+          pdf_url?: string | null
+          processo_id?: string | null
+          source?: string | null
+          source_type?: string | null
+          status?: string | null
+          texto_completo: string
+          tipo_publicacao: string
+          tribunal: string
+          updated_at?: string | null
+          urgente?: boolean | null
+          vara?: string | null
+        }
+        Update: {
+          aasp_id?: string | null
+          agendamento_id?: string | null
+          agendamento_tipo?: string | null
+          associado_id?: string | null
+          cliente_id?: string | null
+          confianca_vinculacao?: number | null
+          created_at?: string | null
+          data_captura?: string | null
+          data_publicacao?: string
+          duplicata_revisada?: boolean | null
+          escavador_aparicao_id?: string | null
+          escavador_monitoramento_id?: string | null
+          escritorio_id?: string
+          hash_conteudo?: string | null
+          id?: string
+          is_snippet?: boolean | null
+          numero_processo?: string | null
+          partes?: string[] | null
+          pdf_url?: string | null
+          processo_id?: string | null
+          source?: string | null
+          source_type?: string | null
+          status?: string | null
+          texto_completo?: string
+          tipo_publicacao?: string
+          tribunal?: string
+          updated_at?: string | null
+          urgente?: boolean | null
+          vara?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publicacoes_publicacoes_associado_id_fkey"
+            columns: ["associado_id"]
+            isOneToOne: false
+            referencedRelation: "publicacoes_associados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+        ]
+      }
+      publicacoes_sincronizacoes: {
+        Row: {
+          associado_id: string | null
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string | null
+          erro_mensagem: string | null
+          escritorio_id: string
+          id: string
+          publicacoes_atualizadas: number | null
+          publicacoes_novas: number | null
+          sucesso: boolean | null
+          tipo: string
+          triggered_by: string | null
+        }
+        Insert: {
+          associado_id?: string | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          erro_mensagem?: string | null
+          escritorio_id: string
+          id?: string
+          publicacoes_atualizadas?: number | null
+          publicacoes_novas?: number | null
+          sucesso?: boolean | null
+          tipo: string
+          triggered_by?: string | null
+        }
+        Update: {
+          associado_id?: string | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          erro_mensagem?: string | null
+          escritorio_id?: string
+          id?: string
+          publicacoes_atualizadas?: number | null
+          publicacoes_novas?: number | null
+          sucesso?: boolean | null
+          tipo?: string
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publicacoes_sincronizacoes_associado_id_fkey"
+            columns: ["associado_id"]
+            isOneToOne: false
+            referencedRelation: "publicacoes_associados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_sincronizacoes_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_sincronizacoes_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_sincronizacoes_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      publicacoes_sync_escavador: {
+        Row: {
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string
+          erro_mensagem: string | null
+          escritorio_id: string
+          id: string
+          publicacoes_duplicadas: number | null
+          publicacoes_novas: number | null
+          publicacoes_vinculadas: number | null
+          sucesso: boolean | null
+          termo_id: string | null
+          tipo: string
+        }
+        Insert: {
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          erro_mensagem?: string | null
+          escritorio_id: string
+          id?: string
+          publicacoes_duplicadas?: number | null
+          publicacoes_novas?: number | null
+          publicacoes_vinculadas?: number | null
+          sucesso?: boolean | null
+          termo_id?: string | null
+          tipo: string
+        }
+        Update: {
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          erro_mensagem?: string | null
+          escritorio_id?: string
+          id?: string
+          publicacoes_duplicadas?: number | null
+          publicacoes_novas?: number | null
+          publicacoes_vinculadas?: number | null
+          sucesso?: boolean | null
+          termo_id?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publicacoes_sync_escavador_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_sync_escavador_termo_id_fkey"
+            columns: ["termo_id"]
+            isOneToOne: false
+            referencedRelation: "publicacoes_termos_escavador"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      publicacoes_termos_escavador: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          descricao: string | null
+          escavador_erro: string | null
+          escavador_monitoramento_id: string | null
+          escavador_status: string | null
+          escritorio_id: string
+          id: string
+          origens_ids: number[] | null
+          termo: string
+          termos_auxiliares: Json | null
+          total_aparicoes: number | null
+          ultima_aparicao: string | null
+          ultima_sync: string | null
+          updated_at: string | null
+          variacoes: string[] | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          escavador_erro?: string | null
+          escavador_monitoramento_id?: string | null
+          escavador_status?: string | null
+          escritorio_id: string
+          id?: string
+          origens_ids?: number[] | null
+          termo: string
+          termos_auxiliares?: Json | null
+          total_aparicoes?: number | null
+          ultima_aparicao?: string | null
+          ultima_sync?: string | null
+          updated_at?: string | null
+          variacoes?: string[] | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          escavador_erro?: string | null
+          escavador_monitoramento_id?: string | null
+          escavador_status?: string | null
+          escritorio_id?: string
+          id?: string
+          origens_ids?: number[] | null
+          termo?: string
+          termos_auxiliares?: Json | null
+          total_aparicoes?: number | null
+          ultima_aparicao?: string | null
+          ultima_sync?: string | null
+          updated_at?: string | null
+          variacoes?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publicacoes_termos_escavador_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      publicacoes_tratamentos: {
+        Row: {
+          acao_tomada: string
+          editou_sugestao: boolean | null
+          escritorio_id: string
+          evento_id: string | null
+          id: string
+          observacoes: string | null
+          processado_em: string | null
+          processado_por: string
+          publicacao_id: string
+          tempo_processamento_segundos: number | null
+        }
+        Insert: {
+          acao_tomada: string
+          editou_sugestao?: boolean | null
+          escritorio_id: string
+          evento_id?: string | null
+          id?: string
+          observacoes?: string | null
+          processado_em?: string | null
+          processado_por: string
+          publicacao_id: string
+          tempo_processamento_segundos?: number | null
+        }
+        Update: {
+          acao_tomada?: string
+          editou_sugestao?: boolean | null
+          escritorio_id?: string
+          evento_id?: string | null
+          id?: string
+          observacoes?: string | null
+          processado_em?: string | null
+          processado_por?: string
+          publicacao_id?: string
+          tempo_processamento_segundos?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_publicacoes_tratamentos_escritorio"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_tratamentos_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_eventos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_tratamentos_processado_por_fkey"
+            columns: ["processado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_tratamentos_processado_por_fkey"
+            columns: ["processado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "publicacoes_tratamentos_publicacao_id_fkey"
+            columns: ["publicacao_id"]
+            isOneToOne: false
+            referencedRelation: "publicacoes_publicacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_tratamentos_publicacao_id_fkey"
+            columns: ["publicacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_publicacoes_completas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_tratamentos_publicacao_id_fkey"
+            columns: ["publicacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_publicacoes_pendentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_tratamentos_publicacao_id_fkey"
+            columns: ["publicacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_publicacoes_urgentes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relatorios_gerados: {
+        Row: {
+          andamentos_salvos: boolean
+          arquivo_nome: string | null
+          arquivo_url: string | null
+          clientes_ids: string[]
+          colunas_usadas: string[] | null
+          created_at: string
+          erro_mensagem: string | null
+          escritorio_id: string
+          gerado_por: string | null
+          id: string
+          processos_ids: string[] | null
+          resumos_ia: Json | null
+          status: string
+          template_id: string | null
+          titulo: string
+        }
+        Insert: {
+          andamentos_salvos?: boolean
+          arquivo_nome?: string | null
+          arquivo_url?: string | null
+          clientes_ids?: string[]
+          colunas_usadas?: string[] | null
+          created_at?: string
+          erro_mensagem?: string | null
+          escritorio_id: string
+          gerado_por?: string | null
+          id?: string
+          processos_ids?: string[] | null
+          resumos_ia?: Json | null
+          status?: string
+          template_id?: string | null
+          titulo: string
+        }
+        Update: {
+          andamentos_salvos?: boolean
+          arquivo_nome?: string | null
+          arquivo_url?: string | null
+          clientes_ids?: string[]
+          colunas_usadas?: string[] | null
+          created_at?: string
+          erro_mensagem?: string | null
+          escritorio_id?: string
+          gerado_por?: string | null
+          id?: string
+          processos_ids?: string[] | null
+          resumos_ia?: Json | null
+          status?: string
+          template_id?: string | null
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relatorios_gerados_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorios_gerados_gerado_por_fkey"
+            columns: ["gerado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorios_gerados_gerado_por_fkey"
+            columns: ["gerado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "relatorios_gerados_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "relatorios_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relatorios_templates: {
+        Row: {
+          ativo: boolean
+          colunas: string[]
+          created_at: string
+          criado_por: string | null
+          descricao: string | null
+          escritorio_id: string
+          id: string
+          incluir_logo: boolean
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          colunas?: string[]
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          escritorio_id: string
+          id?: string
+          incluir_logo?: boolean
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          colunas?: string[]
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          escritorio_id?: string
+          id?: string
+          incluir_logo?: boolean
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relatorios_templates_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorios_templates_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "relatorios_templates_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sistema_indices_economicos: {
+        Row: {
+          acumulado_12m: number | null
+          acumulado_ano: number | null
+          codigo_bcb: number
+          created_at: string | null
+          fonte: string | null
+          id: string
+          indice: string
+          mes_referencia: string
+          updated_at: string | null
+          valor: number
+        }
+        Insert: {
+          acumulado_12m?: number | null
+          acumulado_ano?: number | null
+          codigo_bcb: number
+          created_at?: string | null
+          fonte?: string | null
+          id?: string
+          indice: string
+          mes_referencia: string
+          updated_at?: string | null
+          valor: number
+        }
+        Update: {
+          acumulado_12m?: number | null
+          acumulado_ano?: number | null
+          codigo_bcb?: number
+          created_at?: string | null
+          fonte?: string | null
+          id?: string
+          indice?: string
+          mes_referencia?: string
+          updated_at?: string | null
+          valor?: number
+        }
+        Relationships: []
+      }
+      system_settings: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          encrypted: boolean | null
+          key: string
+          updated_at: string | null
+          value: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          encrypted?: boolean | null
+          key: string
+          updated_at?: string | null
+          value: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          encrypted?: boolean | null
+          key?: string
+          updated_at?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
+      tags_master: {
+        Row: {
+          ativa: boolean | null
+          contexto: string
+          cor: string
+          created_at: string | null
+          created_by: string | null
+          descricao: string | null
+          escritorio_id: string
+          icone: string | null
+          id: string
+          is_predefinida: boolean | null
+          nome: string
+          ordem: number | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          ativa?: boolean | null
+          contexto: string
+          cor: string
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          escritorio_id: string
+          icone?: string | null
+          id?: string
+          is_predefinida?: boolean | null
+          nome: string
+          ordem?: number | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          ativa?: boolean | null
+          contexto?: string
+          cor?: string
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          escritorio_id?: string
+          icone?: string | null
+          id?: string
+          is_predefinida?: boolean | null
+          nome?: string
+          ordem?: number | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tags_master_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tags_master_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "tags_master_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tags_master_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tags_master_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      timers_ativos: {
+        Row: {
+          audiencia_id: string | null
+          consulta_id: string | null
+          cor: string | null
+          created_at: string | null
+          descricao: string | null
+          escritorio_id: string
+          evento_id: string | null
+          faturavel: boolean | null
+          hora_inicio: string
+          hora_pausa: string | null
+          id: string
+          processo_id: string | null
+          segundos_acumulados: number | null
+          status: string
+          tarefa_id: string | null
+          titulo: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          audiencia_id?: string | null
+          consulta_id?: string | null
+          cor?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          escritorio_id: string
+          evento_id?: string | null
+          faturavel?: boolean | null
+          hora_inicio?: string
+          hora_pausa?: string | null
+          id?: string
+          processo_id?: string | null
+          segundos_acumulados?: number | null
+          status?: string
+          tarefa_id?: string | null
+          titulo: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          audiencia_id?: string | null
+          consulta_id?: string | null
+          cor?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          escritorio_id?: string
+          evento_id?: string | null
+          faturavel?: boolean | null
+          hora_inicio?: string
+          hora_pausa?: string | null
+          id?: string
+          processo_id?: string | null
+          segundos_acumulados?: number | null
+          status?: string
+          tarefa_id?: string | null
+          titulo?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timers_ativos_audiencia_id_fkey"
+            columns: ["audiencia_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_audiencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "v_consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["consultivo_id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_eventos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_tarefas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      user_escritorios_roles: {
+        Row: {
+          created_at: string | null
+          escritorio_id: string
+          id: string
+          percentual_comissao: number | null
+          pode_aprovar_horas: boolean | null
+          pode_faturar: boolean | null
+          role: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          escritorio_id: string
+          id?: string
+          percentual_comissao?: number | null
+          pode_aprovar_horas?: boolean | null
+          pode_faturar?: boolean | null
+          role: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          escritorio_id?: string
+          id?: string
+          percentual_comissao?: number | null
+          pode_aprovar_horas?: boolean | null
+          pode_faturar?: boolean | null
+          role?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_escritorios_roles_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_escritorios_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_escritorios_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      onboarding_progress: {
+        Row: {
+          escritorio_id: string | null
+          etapas_completas: number | null
+          etapas_puladas: number | null
+          onboarding_completo: boolean | null
+          primeiro_acesso: boolean | null
+          progresso_percentual: number | null
+          setup_completo: boolean | null
+          total_etapas: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_steps_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_steps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_steps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      usuarios_escritorio_ativo: {
+        Row: {
+          escritorio_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          escritorio_id?: never
+          user_id?: string | null
+        }
+        Update: {
+          escritorio_id?: never
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      v_agenda_consolidada: {
+        Row: {
+          caso_titulo: string | null
+          consultivo_id: string | null
+          consultivo_titulo: string | null
+          cor: string | null
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string | null
+          descricao: string | null
+          dia_inteiro: boolean | null
+          escritorio_id: string | null
+          id: string | null
+          local: string | null
+          prazo_cumprido: boolean | null
+          prazo_data_limite: string | null
+          prazo_tipo: string | null
+          prioridade: string | null
+          processo_id: string | null
+          processo_numero: string | null
+          recorrencia_id: string | null
+          responsaveis_ids: string[] | null
+          responsavel_id: string | null
+          responsavel_nome: string | null
+          status: string | null
+          subtipo: string | null
+          tipo_entidade: string | null
+          titulo: string | null
+          todos_responsaveis: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
+      v_alertas_cobranca_pendentes: {
+        Row: {
+          ato_codigo: string | null
+          ato_nome: string | null
+          ato_tipo_id: string | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          created_at: string | null
+          descricao: string | null
+          escritorio_id: string | null
+          id: string | null
+          movimentacao_data: string | null
+          movimentacao_descricao: string | null
+          movimentacao_id: string | null
+          movimentacao_tipo: string | null
+          processo_area:
+            | Database["public"]["Enums"]["area_juridica_enum"]
+            | null
+          processo_id: string | null
+          processo_numero: string | null
+          processo_pasta: string | null
+          status: string | null
+          tipo_alerta: string | null
+          titulo: string | null
+          valor_sugerido: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_alertas_cobranca_ato_tipo_id_fkey"
+            columns: ["ato_tipo_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_atos_processuais_tipos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_cobranca_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_cobranca_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_cobranca_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_cobranca_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_alertas_cobranca_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "processos_processos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_atos_hora_processo: {
+        Row: {
+          atingiu_maximo: boolean | null
+          ato_codigo: string | null
+          ato_nome: string | null
+          ato_tipo_id: string | null
+          cliente_nome: string | null
+          contrato_id: string | null
+          created_at: string | null
+          escritorio_id: string | null
+          finalizado_em: string | null
+          horas_disponiveis: number | null
+          horas_excedentes: number | null
+          horas_faturaveis: number | null
+          horas_maximas: number | null
+          horas_minimas: number | null
+          horas_totais: number | null
+          id: string | null
+          processo_id: string | null
+          processo_numero: string | null
+          processo_pasta: string | null
+          receita_id: string | null
+          status: string | null
+          updated_at: string | null
+          valor_atual: number | null
+          valor_hora: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_ato_tipo_id_fkey"
+            columns: ["ato_tipo_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_atos_processuais_tipos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_contratos_honorarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "v_receitas_por_contrato"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_receita_id_fkey"
+            columns: ["receita_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_receitas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_horas_acumuladas_ato_receita_id_fkey"
+            columns: ["receita_id"]
+            isOneToOne: false
+            referencedRelation: "v_historico_cobrancas_processo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_consultivo_consultas: {
+        Row: {
+          andamentos: Json | null
+          anexos: Json | null
+          area: string | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          contrato_id: string | null
+          created_at: string | null
+          descricao: string | null
+          escritorio_id: string | null
+          id: string | null
+          numero: string | null
+          prazo: string | null
+          prioridade: string | null
+          responsavel_id: string | null
+          responsavel_nome: string | null
+          status: Database["public"]["Enums"]["status_consultivo"] | null
+          titulo: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultivo_consultas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_consultas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_consultas_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_contratos_honorarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_consultas_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "v_receitas_por_contrato"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "consultivo_consultas_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_consultas_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_consultas_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      v_contas_bancarias_saldo: {
+        Row: {
+          agencia: string | null
+          ativa: boolean | null
+          banco: string | null
+          conta_principal: boolean | null
+          created_at: string | null
+          data_abertura: string | null
+          escritorio_id: string | null
+          id: string | null
+          numero_conta: string | null
+          saldo_atual: number | null
+          saldo_calculado: number | null
+          saldo_inicial: number | null
+          tipo_conta: string | null
+          titular: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agencia?: string | null
+          ativa?: boolean | null
+          banco?: string | null
+          conta_principal?: boolean | null
+          created_at?: string | null
+          data_abertura?: string | null
+          escritorio_id?: string | null
+          id?: string | null
+          numero_conta?: string | null
+          saldo_atual?: number | null
+          saldo_calculado?: never
+          saldo_inicial?: number | null
+          tipo_conta?: string | null
+          titular?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          agencia?: string | null
+          ativa?: boolean | null
+          banco?: string | null
+          conta_principal?: boolean | null
+          created_at?: string | null
+          data_abertura?: string | null
+          escritorio_id?: string | null
+          id?: string | null
+          numero_conta?: string | null
+          saldo_atual?: number | null
+          saldo_calculado?: never
+          saldo_inicial?: number | null
+          tipo_conta?: string | null
+          titular?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_bancarias_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_contas_receber_pagar: {
+        Row: {
+          categoria: string | null
+          cliente_fornecedor: string | null
+          cliente_id: string | null
+          data_vencimento: string | null
+          descricao: string | null
+          dias_atraso: number | null
+          escritorio_id: string | null
+          fornecedor_id: string | null
+          id: string | null
+          processo_id: string | null
+          status: string | null
+          tipo_conta: string | null
+          valor: number | null
+        }
+        Relationships: []
+      }
+      v_crm_pessoas_resumo: {
+        Row: {
+          cidade: string | null
+          cpf_cnpj: string | null
+          created_at: string | null
+          email: string | null
+          escritorio_id: string | null
+          id: string | null
+          nome_completo: string | null
+          nome_fantasia: string | null
+          oportunidades_ativas: number | null
+          origem: Database["public"]["Enums"]["origem_crm_enum"] | null
+          status: Database["public"]["Enums"]["status_pessoa_enum"] | null
+          tags: string[] | null
+          telefone: string | null
+          tipo_cadastro:
+            | Database["public"]["Enums"]["tipo_cadastro_enum"]
+            | null
+          tipo_pessoa: Database["public"]["Enums"]["tipo_pessoa_enum"] | null
+          uf: Database["public"]["Enums"]["uf_enum"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          cidade?: string | null
+          cpf_cnpj?: string | null
+          created_at?: string | null
+          email?: string | null
+          escritorio_id?: string | null
+          id?: string | null
+          nome_completo?: string | null
+          nome_fantasia?: string | null
+          oportunidades_ativas?: never
+          origem?: Database["public"]["Enums"]["origem_crm_enum"] | null
+          status?: Database["public"]["Enums"]["status_pessoa_enum"] | null
+          tags?: string[] | null
+          telefone?: string | null
+          tipo_cadastro?:
+            | Database["public"]["Enums"]["tipo_cadastro_enum"]
+            | null
+          tipo_pessoa?: Database["public"]["Enums"]["tipo_pessoa_enum"] | null
+          uf?: Database["public"]["Enums"]["uf_enum"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          cidade?: string | null
+          cpf_cnpj?: string | null
+          created_at?: string | null
+          email?: string | null
+          escritorio_id?: string | null
+          id?: string | null
+          nome_completo?: string | null
+          nome_fantasia?: string | null
+          oportunidades_ativas?: never
+          origem?: Database["public"]["Enums"]["origem_crm_enum"] | null
+          status?: Database["public"]["Enums"]["status_pessoa_enum"] | null
+          tags?: string[] | null
+          telefone?: string | null
+          tipo_cadastro?:
+            | Database["public"]["Enums"]["tipo_cadastro_enum"]
+            | null
+          tipo_pessoa?: Database["public"]["Enums"]["tipo_pessoa_enum"] | null
+          uf?: Database["public"]["Enums"]["uf_enum"] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_dashboard_financeiro_metricas: {
+        Row: {
+          atrasado: number | null
+          despesas_mes: number | null
+          escritorio_id: string | null
+          pendente_receber: number | null
+          qtd_atrasados: number | null
+          qtd_pendentes: number | null
+          receita_mes: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_receitas_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_despesas_reembolsaveis_pendentes: {
+        Row: {
+          categoria: string | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          created_at: string | null
+          data_pagamento: string | null
+          data_vencimento: string | null
+          descricao: string | null
+          escritorio_id: string | null
+          fornecedor: string | null
+          id: string | null
+          processo_id: string | null
+          processo_numero: string | null
+          valor: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "despesas_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_despesas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+        ]
+      }
+      v_extrato_financeiro: {
+        Row: {
+          categoria: string | null
+          cliente_id: string | null
+          conta_bancaria_id: string | null
+          conta_bancaria_nome: string | null
+          data_efetivacao: string | null
+          data_referencia: string | null
+          data_vencimento: string | null
+          descricao: string | null
+          entidade: string | null
+          escritorio_id: string | null
+          id: string | null
+          origem: string | null
+          origem_id: string | null
+          processo_id: string | null
+          status: string | null
+          tipo_movimento: string | null
+          valor: number | null
+          valor_pago: number | null
+        }
+        Relationships: []
+      }
+      v_faturas_geradas: {
+        Row: {
+          categoria_status: string | null
+          cliente_email: string | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          created_at: string | null
+          data_emissao: string | null
+          data_vencimento: string | null
+          dias_ate_vencimento: number | null
+          enviada_em: string | null
+          escritorio_id: string | null
+          fatura_id: string | null
+          gerada_automaticamente: boolean | null
+          numero_fatura: string | null
+          numero_parcelas: number | null
+          observacoes: string | null
+          paga_em: string | null
+          parcelado: boolean | null
+          pdf_url: string | null
+          qtd_honorarios: number | null
+          qtd_horas: number | null
+          soma_horas: number | null
+          status: string | null
+          total_honorarios: number | null
+          total_horas: number | null
+          updated_at: string | null
+          valor_total: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faturas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faturas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faturas_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_financeiro_enums: {
+        Row: {
+          descricao: string | null
+          enum_name: string | null
+          tabelas_uso: string[] | null
+          valores: string[] | null
+        }
+        Relationships: []
+      }
+      v_historico_cobrancas_processo: {
+        Row: {
+          categoria: string | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          created_at: string | null
+          data_pagamento: string | null
+          data_vencimento: string | null
+          descricao: string | null
+          escritorio_id: string | null
+          id: string | null
+          processo_id: string | null
+          processo_numero: string | null
+          processo_pasta: string | null
+          status: string | null
+          tipo: string | null
+          valor: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_receitas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_receitas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+        ]
+      }
+      v_indices_economicos_atual: {
+        Row: {
+          acumulado_12m: number | null
+          acumulado_ano: number | null
+          codigo_bcb: number | null
+          indice: string | null
+          mes_referencia: string | null
+          updated_at: string | null
+          valor_mes: number | null
+        }
+        Relationships: []
+      }
+      v_lancamentos_prontos_faturar: {
+        Row: {
+          cargo_nome: string | null
+          categoria: string | null
+          cliente_email: string | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          competencia: string | null
+          consulta_id: string | null
+          contrato_id: string | null
+          contrato_titulo: string | null
+          created_at: string | null
+          data_trabalho: string | null
+          data_vencimento: string | null
+          descricao: string | null
+          escritorio_id: string | null
+          fechamento_id: string | null
+          horas: number | null
+          lancamento_id: string | null
+          numero_contrato: string | null
+          partes_resumo: string | null
+          processo_id: string | null
+          processo_numero: string | null
+          processo_pasta: string | null
+          processos_lista: Json | null
+          profissional_nome: string | null
+          qtd_processos: number | null
+          subtipo: string | null
+          tipo_lancamento: string | null
+          valor: number | null
+          valor_unitario: number | null
+        }
+        Relationships: []
+      }
+      v_pecas_templates_ativos: {
+        Row: {
+          area: string | null
+          ativo: boolean | null
+          categoria: string | null
+          conteudo_template: string | null
+          created_at: string | null
+          criado_por: string | null
+          criador_nome: string | null
+          escritorio_id: string | null
+          estrutura: Json | null
+          id: string | null
+          nome: string | null
+          tipo_processo: string | null
+          updated_at: string | null
+          uso_count: number | null
+          variaveis: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pecas_teses_templates_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_templates_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_templates_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_pecas_templates_completos: {
+        Row: {
+          area: string | null
+          ativo: boolean | null
+          categoria: string | null
+          conteudo_template: string | null
+          created_at: string | null
+          criado_por: string | null
+          criador_nome: string | null
+          escritorio_id: string | null
+          estrutura: Json | null
+          id: string | null
+          nome: string | null
+          tipo_processo: string | null
+          total_juris_vinculadas: number | null
+          total_teses_vinculadas: number | null
+          updated_at: string | null
+          uso_count: number | null
+          variaveis: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pecas_teses_templates_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_templates_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_templates_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_pecas_teses_ativas: {
+        Row: {
+          area: string | null
+          ativa: boolean | null
+          atualizado_por: string | null
+          created_at: string | null
+          criado_por: string | null
+          criador_nome: string | null
+          escritorio_id: string | null
+          fundamentacao: string | null
+          id: string | null
+          resumo: string | null
+          subtema: string | null
+          tags: string[] | null
+          texto_completo: string | null
+          titulo: string | null
+          updated_at: string | null
+          uso_count: number | null
+          vezes_usada_em_pecas: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pecas_teses_teses_atualizado_por_fkey"
+            columns: ["atualizado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_teses_atualizado_por_fkey"
+            columns: ["atualizado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_teses_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_teses_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pecas_teses_teses_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_portfolio_metricas_area: {
+        Row: {
+          area_juridica: string | null
+          duracao_media_dias: number | null
+          escritorio_id: string | null
+          produtos_ativos: number | null
+          projetos_concluidos: number | null
+          projetos_em_andamento: number | null
+          receita_total: number | null
+          total_produtos: number | null
+          total_projetos: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_produtos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_portfolio_produtos_catalogo: {
+        Row: {
+          area_juridica: string | null
+          categoria: string | null
+          codigo: string | null
+          complexidade: string | null
+          cor: string | null
+          created_at: string | null
+          descricao: string | null
+          descricao_comercial: string | null
+          duracao_estimada_dias: number | null
+          duracao_media_real: number | null
+          escritorio_id: string | null
+          execucoes_concluidas: number | null
+          icone: string | null
+          id: string | null
+          nome: string | null
+          preco_base: number | null
+          status: string | null
+          tags: string[] | null
+          taxa_sucesso: number | null
+          total_execucoes: number | null
+          total_fases: number | null
+          total_papeis: number | null
+          total_precos: number | null
+          updated_at: string | null
+          versao_atual: number | null
+          visivel_catalogo: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_produtos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_portfolio_projetos_completos: {
+        Row: {
+          area_juridica: string | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          cliente_tipo: string | null
+          codigo: string | null
+          created_at: string | null
+          data_conclusao: string | null
+          data_inicio: string | null
+          data_prevista_conclusao: string | null
+          escritorio_id: string | null
+          fases_concluidas: number | null
+          id: string | null
+          nome: string | null
+          processo_id: string | null
+          produto_codigo: string | null
+          produto_cor: string | null
+          produto_icone: string | null
+          produto_id: string | null
+          produto_nome: string | null
+          produto_versao: number | null
+          progresso_percentual: number | null
+          responsavel_id: string | null
+          responsavel_nome: string | null
+          resultado: string | null
+          status: string | null
+          total_aprendizados: number | null
+          total_equipe: number | null
+          total_fases: number | null
+          updated_at: string | null
+          valor_negociado: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_projetos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "v_portfolio_produtos_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_projetos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      v_processos_com_movimentacoes: {
+        Row: {
+          area: Database["public"]["Enums"]["area_juridica_enum"] | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          contrato_id: string | null
+          escavador_monitoramento_id: number | null
+          escritorio_id: string | null
+          fase: string | null
+          id: string | null
+          instancia: string | null
+          movimentacoes_nao_lidas: number | null
+          numero_cnj: string | null
+          numero_pasta: string | null
+          parte_contraria: string | null
+          responsavel_id: string | null
+          responsavel_nome: string | null
+          status: string | null
+          ultima_movimentacao: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processos_processos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_contratos_honorarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "v_receitas_por_contrato"
+            referencedColumns: ["contrato_id"]
+          },
+          {
+            foreignKeyName: "processos_processos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      v_processos_criticos: {
+        Row: {
+          area: Database["public"]["Enums"]["area_juridica_enum"] | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          escritorio_id: string | null
+          fase: string | null
+          id: string | null
+          movimentacoes_nao_lidas: number | null
+          numero_cnj: string | null
+          numero_pasta: string | null
+          responsavel_id: string | null
+          responsavel_nome: string | null
+          status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processos_processos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_processos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      v_processos_dashboard: {
+        Row: {
+          escritorio_id: string | null
+          provisao_total: number | null
+          total_arquivados: number | null
+          total_ativos: number | null
+          total_civel: number | null
+          total_suspensos: number | null
+          total_trabalhista: number | null
+          total_tributaria: number | null
+          valor_causa_total: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processos_processos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_publicacoes_completas: {
+        Row: {
+          aasp_id: string | null
+          acao_tomada: string | null
+          acoes_sugeridas: Json | null
+          analise_processada_em: string | null
+          cliente_email: string | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          cliente_telefone: string | null
+          cliente_tipo: string | null
+          confianca_analise: number | null
+          created_at: string | null
+          data_captura: string | null
+          data_intimacao: string | null
+          data_limite: string | null
+          data_publicacao: string | null
+          determinacoes: Json | null
+          editou_sugestao: boolean | null
+          escritorio_id: string | null
+          evento_data_inicio: string | null
+          evento_id: string | null
+          evento_tipo: string | null
+          evento_titulo: string | null
+          fundamentacao_legal: string | null
+          hash_conteudo: string | null
+          id: string | null
+          metadados_extras: Json | null
+          numero_processo: string | null
+          partes: string[] | null
+          pdf_url: string | null
+          pontos_principais: Json | null
+          prazo_dias: number | null
+          prazo_tipo_dias: string | null
+          processado_por: string | null
+          processado_por_email: string | null
+          processado_por_nome: string | null
+          processo_area:
+            | Database["public"]["Enums"]["area_juridica_enum"]
+            | null
+          processo_id: string | null
+          processo_numero_cnj: string | null
+          processo_numero_pasta: string | null
+          processo_objeto: string | null
+          processo_status: string | null
+          processo_tipo: string | null
+          requer_manifestacao: boolean | null
+          resumo_executivo: string | null
+          sentimento: string | null
+          source: string | null
+          status: string | null
+          tem_determinacao: boolean | null
+          tem_prazo: boolean | null
+          template_sugerido: string | null
+          tempo_processamento_segundos: number | null
+          texto_completo: string | null
+          tipo_decisao: string | null
+          tipo_prazo: string | null
+          tipo_publicacao: string | null
+          tratamento_observacoes: string | null
+          tratamento_processado_em: string | null
+          tribunal: string | null
+          updated_at: string | null
+          urgente: boolean | null
+          vara: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publicacoes_publicacoes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "publicacoes_tratamentos_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_eventos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_tratamentos_processado_por_fkey"
+            columns: ["processado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_tratamentos_processado_por_fkey"
+            columns: ["processado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      v_publicacoes_dashboard: {
+        Row: {
+          arquivadas: number | null
+          em_analise: number | null
+          escritorio_id: string | null
+          pendentes: number | null
+          processadas: number | null
+          processadas_hoje: number | null
+          total_pendentes: number | null
+          total_publicacoes: number | null
+          ultima_atualizacao: string | null
+          urgentes_nao_processadas: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publicacoes_publicacoes_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_publicacoes_pendentes: {
+        Row: {
+          aasp_id: string | null
+          acoes_sugeridas: Json | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          confianca_analise: number | null
+          created_at: string | null
+          data_captura: string | null
+          data_intimacao: string | null
+          data_limite: string | null
+          data_publicacao: string | null
+          escritorio_id: string | null
+          fundamentacao_legal: string | null
+          id: string | null
+          numero_processo: string | null
+          partes: string[] | null
+          pdf_url: string | null
+          pontos_principais: Json | null
+          prazo_dias: number | null
+          prazo_tipo_dias: string | null
+          processo_id: string | null
+          processo_numero_cnj: string | null
+          processo_objeto: string | null
+          processo_status: string | null
+          resumo_executivo: string | null
+          sentimento: string | null
+          status: string | null
+          tem_prazo: boolean | null
+          texto_completo: string | null
+          tipo_decisao: string | null
+          tipo_prazo: string | null
+          tipo_publicacao: string | null
+          tribunal: string | null
+          updated_at: string | null
+          urgente: boolean | null
+          vara: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publicacoes_publicacoes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+        ]
+      }
+      v_publicacoes_urgentes: {
+        Row: {
+          aasp_id: string | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          created_at: string | null
+          data_limite: string | null
+          data_publicacao: string | null
+          dias_restantes: number | null
+          escritorio_id: string | null
+          id: string | null
+          numero_processo: string | null
+          prazo_dias: number | null
+          processo_id: string | null
+          processo_numero_cnj: string | null
+          processo_objeto: string | null
+          status: string | null
+          tem_prazo: boolean | null
+          tipo_prazo: string | null
+          tipo_publicacao: string | null
+          tribunal: string | null
+          urgente: boolean | null
+          vara: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publicacoes_publicacoes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publicacoes_publicacoes_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+        ]
+      }
+      v_receitas_por_contrato: {
+        Row: {
+          cliente_id: string | null
+          contrato_id: string | null
+          escritorio_id: string | null
+          inadimplente: boolean | null
+          maior_atraso: number | null
+          numero_contrato: string | null
+          parcelas_pagas: number | null
+          proxima_parcela: string | null
+          total_parcelas: number | null
+          valor_pendente: number | null
+          valor_recebido: number | null
+          valor_total: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contratos_honorarios_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_honorarios_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_crm_pessoas_resumo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_honorarios_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_saldos_contas_bancarias: {
+        Row: {
+          agencia: string | null
+          ativa: boolean | null
+          banco: string | null
+          conta_principal: boolean | null
+          created_at: string | null
+          data_abertura: string | null
+          entradas_dia: number | null
+          entradas_mes: number | null
+          escritorio_id: string | null
+          id: string | null
+          nome_escritorio: string | null
+          numero_conta: string | null
+          saidas_dia: number | null
+          saidas_mes: number | null
+          saldo_atual: number | null
+          saldo_inicial: number | null
+          tipo_conta: string | null
+          ultima_movimentacao: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_bancarias_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_timers_ativos: {
+        Row: {
+          audiencia_id: string | null
+          audiencia_titulo: string | null
+          cliente_nome: string | null
+          consulta_id: string | null
+          consulta_titulo: string | null
+          cor: string | null
+          created_at: string | null
+          descricao: string | null
+          escritorio_id: string | null
+          evento_id: string | null
+          evento_titulo: string | null
+          faturavel: boolean | null
+          hora_inicio: string | null
+          hora_pausa: string | null
+          id: string | null
+          processo_id: string | null
+          processo_numero: string | null
+          segundos_acumulados: number | null
+          status: string | null
+          tarefa_id: string | null
+          tarefa_titulo: string | null
+          titulo: string | null
+          updated_at: string | null
+          user_id: string | null
+          user_nome: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timers_ativos_audiencia_id_fkey"
+            columns: ["audiencia_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_audiencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "v_consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["consultivo_id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_eventos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_tarefas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timers_ativos_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      v_timesheet_aprovacao: {
+        Row: {
+          aprovado: boolean | null
+          aprovado_em: string | null
+          aprovado_por: string | null
+          atividade: string | null
+          cliente_nome: string | null
+          colaborador_nome: string | null
+          consulta_id: string | null
+          consulta_titulo: string | null
+          contrato_id: string | null
+          created_at: string | null
+          data_trabalho: string | null
+          editado: boolean | null
+          editado_em: string | null
+          editado_por: string | null
+          escritorio_id: string | null
+          fatura_id: string | null
+          faturado: boolean | null
+          faturavel: boolean | null
+          faturavel_auto: boolean | null
+          forma_cobranca_contrato: string | null
+          hora_fim: string | null
+          hora_inicio: string | null
+          horas: number | null
+          id: string | null
+          justificativa_reprovacao: string | null
+          nome_escritorio: string | null
+          numero_processo: string | null
+          origem: string | null
+          processo_id: string | null
+          processo_pasta: string | null
+          processo_titulo: string | null
+          reprovado: boolean | null
+          reprovado_em: string | null
+          reprovado_por: string | null
+          status: string | null
+          tarefa_id: string | null
+          updated_at: string | null
+          user_id: string | null
+          valor_hora_calculado: number | null
+          valor_total_estimado: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_timesheet_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "v_consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["consultivo_id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_editado_por_fkey"
+            columns: ["editado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_editado_por_fkey"
+            columns: ["editado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_tarefas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_timesheet_fatura"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "financeiro_faturamento_faturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_timesheet_fatura"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "v_faturas_geradas"
+            referencedColumns: ["fatura_id"]
+          },
+          {
+            foreignKeyName: "timesheet_aprovado_por_fkey"
+            columns: ["aprovado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_aprovado_por_fkey"
+            columns: ["aprovado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "timesheet_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_reprovado_por_fkey"
+            columns: ["reprovado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_reprovado_por_fkey"
+            columns: ["reprovado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "timesheet_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      v_timesheet_pendente_aprovacao: {
+        Row: {
+          aprovado: boolean | null
+          aprovado_em: string | null
+          aprovado_por: string | null
+          atividade: string | null
+          cliente_nome: string | null
+          colaborador_id: string | null
+          colaborador_nome: string | null
+          consulta_id: string | null
+          created_at: string | null
+          data_trabalho: string | null
+          escritorio_id: string | null
+          faturado: boolean | null
+          faturavel: boolean | null
+          hora_fim: string | null
+          hora_inicio: string | null
+          horas: number | null
+          id: string | null
+          justificativa_reprovacao: string | null
+          numero_processo: string | null
+          origem: string | null
+          processo_id: string | null
+          reprovado: boolean | null
+          reprovado_em: string | null
+          reprovado_por: string | null
+          status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_timesheet_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "v_consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["consultivo_id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_timesheet_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+          {
+            foreignKeyName: "timesheet_aprovado_por_fkey"
+            columns: ["aprovado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_aprovado_por_fkey"
+            columns: ["aprovado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "timesheet_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_reprovado_por_fkey"
+            columns: ["reprovado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_reprovado_por_fkey"
+            columns: ["reprovado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "timesheet_user_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_user_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_escritorio_ativo"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      vw_consultivo_processos_convertidos: {
+        Row: {
+          cliente_nome: string | null
+          consultivo_area: string | null
+          consultivo_criado_em: string | null
+          consultivo_id: string | null
+          consultivo_numero: string | null
+          consultivo_status:
+            | Database["public"]["Enums"]["status_consultivo"]
+            | null
+          consultivo_titulo: string | null
+          escritorio_id: string | null
+          processo_cnj: string | null
+          processo_criado_em: string | null
+          processo_id: string | null
+          processo_numero: string | null
+          processo_status: string | null
+          responsavel_nome: string | null
+          tempo_conversao: unknown
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultivo_consultas_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vw_depositos_resumo: {
+        Row: {
+          processo_id: string | null
+          total_ativos: number | null
+          total_convertidos: number | null
+          total_levantados: number | null
+          total_perdidos: number | null
+          valor_ativo: number | null
+          valor_convertido: number | null
+          valor_levantado: number | null
+          valor_perdido: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processos_depositos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_depositos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_com_movimentacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_depositos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "v_processos_criticos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_depositos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultivo_processos_convertidos"
+            referencedColumns: ["processo_id"]
+          },
+        ]
+      }
+    }
+    Functions: {
+      add_movimentacao: {
+        Args: { p_dados: Json; p_processo_id: string }
+        Returns: string
+      }
+      ajustar_horarios_timesheet: {
+        Args: {
+          p_editado_por: string
+          p_hora_fim: string
+          p_hora_inicio: string
+          p_timesheet_id: string
+        }
+        Returns: boolean
+      }
+      aplicar_limites_mensais: {
+        Args: { p_contrato_id: string; p_valor_calculado: number }
+        Returns: number
+      }
+      aplicar_reajuste_contrato: {
+        Args: { p_contrato_id: string; p_indice?: string }
+        Returns: Json
+      }
+      aprovar_fechamento_pasta: {
+        Args: { p_fechamento_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      aprovar_timesheet: {
+        Args: { p_aprovado_por: string; p_timesheet_ids: string[] }
+        Returns: number
+      }
+      atualizar_receitas_atrasadas: { Args: never; Returns: number }
+      atualizar_status_parcelas: { Args: never; Returns: number }
+      atualizar_valor_processo: {
+        Args: { p_processo_id: string }
+        Returns: Json
+      }
+      atualizar_valores_processos_escritorio: {
+        Args: { p_escritorio_id: string }
+        Returns: Json
+      }
+      auto_match_reconciliacao: {
+        Args: { p_reconciliacao_id: string }
+        Returns: number
+      }
+      cache_embedding: {
+        Args: {
+          p_embedding: string
+          p_input_hash: string
+          p_input_text: string
+        }
+        Returns: undefined
+      }
+      calcular_atualizacao_monetaria: {
+        Args: {
+          p_data_atualizacao: string
+          p_data_base: string
+          p_indice?: string
+          p_valor: number
+        }
+        Returns: {
+          fator_correcao: number
+          meses_periodo: number
+          valor_atualizado: number
+          valor_original: number
+          variacao_percentual: number
+        }[]
+      }
+      calcular_correcao_monetaria: {
+        Args: {
+          p_data_final: string
+          p_data_inicial: string
+          p_indice?: string
+          p_valor_original: number
+        }
+        Returns: {
+          competencia_final: string
+          competencia_inicial: string
+          fator_correcao: number
+          indice_final: number
+          indice_inicial: number
+          valor_corrigido: number
+        }[]
+      }
+      calcular_data_fechamento_cartao: {
+        Args: {
+          p_dia_vencimento: number
+          p_dias_antes: number
+          p_mes_referencia: string
+        }
+        Returns: string
+      }
+      calcular_data_limite_prazo: {
+        Args: {
+          p_data_intimacao: string
+          p_dias_uteis?: boolean
+          p_escritorio_id?: string
+          p_quantidade_dias: number
+        }
+        Returns: string
+      }
+      calcular_data_prazo:
+        | {
+            Args: {
+              p_data_base: string
+              p_dias_uteis?: boolean
+              p_quantidade_dias: number
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_data_inicio: string
+              p_prazo_dias: number
+              p_tipo_dias?: string
+            }
+            Returns: string
+          }
+      calcular_faturabilidade_ato_hora: {
+        Args: {
+          p_ato_tipo_id: string
+          p_horas_novas: number
+          p_processo_id: string
+        }
+        Returns: {
+          atingiu_maximo: boolean
+          horas_acumuladas_antes: number
+          horas_acumuladas_depois: number
+          horas_excedentes: number
+          horas_faturaveis: number
+          horas_maximas: number
+          valor_hora: number
+        }[]
+      }
+      calcular_faturavel_timesheet: {
+        Args: { p_consulta_id?: string; p_processo_id?: string }
+        Returns: boolean
+      }
+      calcular_hash_extrato: {
+        Args: {
+          p_data: string
+          p_descricao: string
+          p_fitid?: string
+          p_tipo: string
+          p_valor: number
+        }
+        Returns: string
+      }
+      calcular_metricas_produto: {
+        Args: { p_produto_id: string }
+        Returns: undefined
+      }
+      calcular_proxima_execucao_recorrencia: {
+        Args: {
+          p_data_base: string
+          p_dia_mes: number
+          p_dias_semana: number[]
+          p_frequencia: string
+          p_intervalo: number
+          p_mes: number
+        }
+        Returns: string
+      }
+      calcular_proximo_vencimento: {
+        Args: {
+          p_dia_vencimento?: number
+          p_frequencia: string
+          p_ultima_data: string
+        }
+        Returns: string
+      }
+      calcular_saldo_conta: { Args: { p_conta_id: string }; Returns: number }
+      calcular_saldo_reconciliacao: {
+        Args: { p_reconciliacao_id: string }
+        Returns: number
+      }
+      calcular_valor_horas_faturar: {
+        Args: { p_escritorio_id: string }
+        Returns: number
+      }
+      calcular_valor_timesheet_mensal: {
+        Args: { p_contrato_id: string; p_mes: string }
+        Returns: {
+          aplicou_maximo: boolean
+          aplicou_minimo: boolean
+          total_horas: number
+          valor_bruto: number
+          valor_final: number
+          valor_hora_usado: number
+        }[]
+      }
+      cancelar_lancamento_recorrente: {
+        Args: { p_compra_id: string; p_data_fim?: string }
+        Returns: boolean
+      }
+      check_my_permission: {
+        Args: { p_escritorio_id: string; p_modulo: string; p_permissao: string }
+        Returns: boolean
+      }
+      cleanup_expired_memories: { Args: never; Returns: number }
+      clonar_produto_para_projeto: {
+        Args: {
+          p_cliente_id: string
+          p_data_inicio?: string
+          p_nome: string
+          p_processo_id?: string
+          p_produto_id: string
+          p_responsavel_id: string
+          p_valor_negociado?: number
+        }
+        Returns: string
+      }
+      complete_profile_onboarding: {
+        Args: {
+          p_avatar_url?: string
+          p_oab_numero?: string
+          p_oab_uf?: string
+          p_telefone?: string
+        }
+        Returns: Json
+      }
+      consultivo_buscar_precedentes_similares: {
+        Args: {
+          p_area: string
+          p_escritorio_id: string
+          p_limit?: number
+          p_palavras_chave: string[]
+        }
+        Returns: {
+          id: string
+          relevancia: number
+          resumo: string
+          titulo: string
+        }[]
+      }
+      converter_alerta_em_receita: {
+        Args: {
+          p_alerta_id: string
+          p_descricao: string
+          p_user_id: string
+          p_valor: number
+        }
+        Returns: string
+      }
+      converter_oportunidade_cliente: {
+        Args: {
+          p_etapa_ganho_id: string
+          p_oportunidade_id: string
+          p_user_id: string
+          p_valor_fechado: number
+        }
+        Returns: boolean
+      }
+      create_atos_padrao_escritorio: {
+        Args: { p_escritorio_id: string }
+        Returns: undefined
+      }
+      create_escritorio_onboarding: {
+        Args: {
+          p_cnpj?: string
+          p_email?: string
+          p_endereco?: Json
+          p_nome: string
+          p_telefone?: string
+        }
+        Returns: Json
+      }
+      create_pessoa: {
+        Args: {
+          p_cpf_cnpj?: string
+          p_dados?: Json
+          p_escritorio_id: string
+          p_nome_completo: string
+          p_tipo_contato: string
+          p_tipo_pessoa: string
+        }
+        Returns: string
+      }
+      create_processo: { Args: { p_dados: Json }; Returns: Json }
+      criar_alerta_cobranca: {
+        Args: {
+          p_ato_tipo_id: string
+          p_processo_id: string
+          p_tipo_alerta?: string
+          p_valor_sugerido?: number
+        }
+        Returns: string
+      }
+      criar_alerta_cobranca_manual: {
+        Args: {
+          p_ato_tipo_id: string
+          p_descricao?: string
+          p_processo_id: string
+          p_titulo?: string
+          p_valor_sugerido?: number
+        }
+        Returns: string
+      }
+      criar_despesa_cartao: {
+        Args: {
+          p_cartao_id: string
+          p_categoria: string
+          p_comprovante_url?: string
+          p_data_compra: string
+          p_descricao: string
+          p_documento_fiscal?: string
+          p_escritorio_id: string
+          p_fornecedor?: string
+          p_hash?: string
+          p_importado?: boolean
+          p_numero_parcelas: number
+          p_processo_id?: string
+          p_valor_total: number
+        }
+        Returns: string
+      }
+      criar_escritorio: {
+        Args: { p_cnpj?: string; p_nome: string }
+        Returns: string
+      }
+      criar_honorario: {
+        Args: {
+          p_cliente_id: string
+          p_consulta_id?: string
+          p_data_vencimento_primeira?: string
+          p_descricao: string
+          p_escritorio_id: string
+          p_etapas?: Json
+          p_numero_parcelas?: number
+          p_parcelado?: boolean
+          p_processo_id?: string
+          p_responsavel_id: string
+          p_tipo_honorario: string
+          p_valor_total: number
+        }
+        Returns: string
+      }
+      criar_lancamento_cartao:
+        | {
+            Args: {
+              p_cartao_id: string
+              p_categoria: string
+              p_data_compra?: string
+              p_descricao: string
+              p_documento_fiscal?: string
+              p_fornecedor?: string
+              p_importado_de_fatura?: boolean
+              p_mes_referencia?: string
+              p_observacoes?: string
+              p_parcelas?: number
+              p_processo_id?: string
+              p_tipo?: string
+              p_valor?: number
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_cartao_id: string
+              p_categoria: string
+              p_data_compra?: string
+              p_descricao: string
+              p_documento_fiscal?: string
+              p_fornecedor?: string
+              p_importado_de_fatura?: boolean
+              p_observacoes?: string
+              p_parcelas?: number
+              p_processo_id?: string
+              p_tipo?: string
+              p_valor?: number
+            }
+            Returns: string
+          }
+      criar_prazo_de_publicacao: {
+        Args: { p_dados: Json; p_publicacao_id: string }
+        Returns: string
+      }
+      criar_receita:
+        | {
+            Args: {
+              p_categoria?: string
+              p_cliente_id: string
+              p_contrato_id?: string
+              p_created_by?: string
+              p_data_vencimento: string
+              p_descricao: string
+              p_escritorio_id: string
+              p_numero_parcelas?: number
+              p_parcelado?: boolean
+              p_processo_id?: string
+              p_valor: number
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_categoria: Database["public"]["Enums"]["receita_categoria_enum"]
+              p_cliente_id: string
+              p_contrato_id: string
+              p_created_by?: string
+              p_data_vencimento: string
+              p_descricao: string
+              p_escritorio_id: string
+              p_numero_parcelas?: number
+              p_parcelado?: boolean
+              p_processo_id: string
+              p_valor: number
+            }
+            Returns: string
+          }
+      criar_versao_produto: {
+        Args: { p_alteracoes?: string; p_motivo?: string; p_produto_id: string }
+        Returns: number
+      }
+      decay_memory_relevance: { Args: never; Returns: number }
+      desaprovar_timesheet: {
+        Args: { p_desaprovado_por?: string; p_timesheet_ids: string[] }
+        Returns: undefined
+      }
+      descartar_publicacao: {
+        Args: { p_motivo: string; p_publicacao_id: string }
+        Returns: boolean
+      }
+      descartar_timer: { Args: { p_timer_id: string }; Returns: boolean }
+      desmanchar_fatura: {
+        Args: { p_fatura_id: string; p_user_id?: string }
+        Returns: boolean
+      }
+      dividir_timesheet: {
+        Args: { p_divisoes: Json; p_timesheet_id: string }
+        Returns: string[]
+      }
+      editar_timesheet: {
+        Args: {
+          p_atividade: string
+          p_editado_por: string
+          p_faturavel: boolean
+          p_horas: number
+          p_timesheet_id: string
+        }
+        Returns: undefined
+      }
+      encerrar_contrato_limite: {
+        Args: { p_contrato_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      escritorios_mesmo_grupo: {
+        Args: { p_escritorio_id_1: string; p_escritorio_id_2: string }
+        Returns: boolean
+      }
+      excluir_lancamento_cartao: {
+        Args: { p_lancamento_id: string }
+        Returns: boolean
+      }
+      executar_fechamento_mensal_pasta: {
+        Args: { p_competencia?: string }
+        Returns: Json
+      }
+      execute_raw_sql: { Args: { sql_query: string }; Returns: Json }
+      execute_safe_delete: {
+        Args: {
+          confirmacao_dupla?: boolean
+          escritorio_param: string
+          registro_id: string
+          tabela: string
+        }
+        Returns: Json
+      }
+      execute_safe_insert: {
+        Args: { dados: Json; escritorio_param: string; tabela: string }
+        Returns: Json
+      }
+      execute_safe_query: {
+        Args: { escritorio_param: string; query_text: string }
+        Returns: Json
+      }
+      execute_safe_update: {
+        Args: {
+          alteracoes: Json
+          escritorio_param: string
+          registro_id: string
+          tabela: string
+        }
+        Returns: Json
+      }
+      extrair_numero_cnj: { Args: { texto: string }; Returns: string }
+      fechar_fatura_cartao:
+        | {
+            Args: { p_cartao_id: string; p_mes_referencia: string }
+            Returns: string
+          }
+        | { Args: { p_fatura_id: string }; Returns: string }
+      finalizar_ato_hora: {
+        Args: {
+          p_ato_tipo_id: string
+          p_processo_id: string
+          p_user_id?: string
+        }
+        Returns: {
+          aplicou_minimo: boolean
+          horas_cobradas: number
+          horas_trabalhadas: number
+          mensagem: string
+          receita_id: string
+          valor_total: number
+        }[]
+      }
+      finalizar_timer: {
+        Args: {
+          p_ajuste_minutos?: number
+          p_descricao?: string
+          p_timer_id: string
+        }
+        Returns: string
+      }
+      find_cliente_id: {
+        Args: { p_escritorio_id: string; p_nome: string }
+        Returns: string
+      }
+      finish_onboarding: { Args: never; Returns: Json }
+      gerar_codigo_portfolio: {
+        Args: { p_area?: string; p_escritorio_id: string; p_tipo: string }
+        Returns: string
+      }
+      gerar_fatura_v2: {
+        Args: {
+          p_cliente_id: string
+          p_data_emissao?: string
+          p_data_vencimento?: string
+          p_escritorio_id: string
+          p_honorarios_ids?: string[]
+          p_observacoes?: string
+          p_timesheet_ids?: string[]
+          p_user_id?: string
+        }
+        Returns: string
+      }
+      gerar_fatura_v3:
+        | {
+            Args: {
+              p_cliente_id: string
+              p_data_emissao: string
+              p_data_vencimento?: string
+              p_escritorio_id: string
+              p_fechamentos_ids?: string[]
+              p_honorarios_ids?: string[]
+              p_observacoes?: string
+              p_timesheet_ids?: string[]
+              p_user_id?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_cliente_id: string
+              p_data_emissao?: string
+              p_data_vencimento?: string
+              p_escritorio_id: string
+              p_fechamentos_ids?: string[]
+              p_honorarios_ids?: string[]
+              p_observacoes?: string
+              p_timesheet_ids?: string[]
+              p_user_id?: string
+            }
+            Returns: string
+          }
+      gerar_lancamentos_recorrentes:
+        | { Args: never; Returns: number }
+        | {
+            Args: { p_cartao_id: string; p_mes_referencia: string }
+            Returns: number
+          }
+      gerar_numero_modulo: {
+        Args: { p_escritorio_id: string; p_modulo: string; p_prefixo: string }
+        Returns: string
+      }
+      gerar_numero_pasta_unificado: {
+        Args: { p_escritorio_id: string }
+        Returns: string
+      }
+      get_agenda_consultivo: {
+        Args: { p_consultivo_id: string }
+        Returns: {
+          consultivo_id: string
+          consultivo_titulo: string
+          cor: string
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          descricao: string
+          dia_inteiro: boolean
+          escritorio_id: string
+          id: string
+          local: string
+          prazo_cumprido: boolean
+          prazo_data_limite: string
+          prazo_tipo: string
+          prioridade: string
+          processo_id: string
+          processo_numero: string
+          recorrencia_id: string
+          responsavel_id: string
+          responsavel_nome: string
+          status: string
+          subtipo: string
+          tipo_entidade: string
+          titulo: string
+          updated_at: string
+        }[]
+      }
+      get_agenda_processo: {
+        Args: { p_processo_id: string }
+        Returns: {
+          consultivo_id: string
+          consultivo_titulo: string
+          cor: string
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          descricao: string
+          dia_inteiro: boolean
+          escritorio_id: string
+          id: string
+          local: string
+          prazo_cumprido: boolean
+          prazo_data_limite: string
+          prazo_tipo: string
+          prioridade: string
+          processo_id: string
+          processo_numero: string
+          recorrencia_id: string
+          responsaveis_nomes: string[]
+          responsavel_id: string
+          responsavel_nome: string
+          status: string
+          subtipo: string
+          tipo_entidade: string
+          titulo: string
+          updated_at: string
+        }[]
+      }
+      get_ato_config_hora: {
+        Args: { p_ato_tipo_id: string; p_contrato_id: string }
+        Returns: Json
+      }
+      get_audiencia_escritorio_id: {
+        Args: { p_audiencia_id: string }
+        Returns: string
+      }
+      get_audiencia_responsaveis_nomes: {
+        Args: { p_audiencia_id: string }
+        Returns: string
+      }
+      get_cached_embedding: { Args: { p_input_hash: string }; Returns: string }
+      get_colleague_user_ids: { Args: never; Returns: string[] }
+      get_enum_values: { Args: { tipo_nome: string }; Returns: Json }
+      get_escritorio_ativo: { Args: { user_uuid: string }; Returns: string }
+      get_escritorios_do_grupo: {
+        Args: { p_escritorio_id: string }
+        Returns: {
+          ativo: boolean
+          cnpj: string
+          grupo_id: string
+          id: string
+          logo_url: string
+          nome: string
+          plano: string
+        }[]
+      }
+      get_estatisticas_conversao_consultivo: {
+        Args: {
+          p_escritorio_id: string
+          p_periodo_fim?: string
+          p_periodo_inicio?: string
+        }
+        Returns: Json
+      }
+      get_evento_criado_por: { Args: { p_evento_id: string }; Returns: string }
+      get_evento_escritorio_id: {
+        Args: { p_evento_id: string }
+        Returns: string
+      }
+      get_evento_responsaveis_nomes: {
+        Args: { p_evento_id: string }
+        Returns: string
+      }
+      get_extrato_com_recorrentes: {
+        Args: {
+          p_data_fim: string
+          p_data_inicio: string
+          p_escritorio_ids: string[]
+        }
+        Returns: {
+          categoria: string
+          cliente_id: string
+          conta_bancaria_id: string
+          conta_bancaria_nome: string
+          data_efetivacao: string
+          data_referencia: string
+          data_vencimento: string
+          descricao: string
+          entidade: string
+          escritorio_id: string
+          id: string
+          origem: string
+          origem_id: string
+          origem_pai_id: string
+          processo_id: string
+          status: string
+          tipo_movimento: string
+          valor: number
+          valor_pago: number
+          virtual: boolean
+        }[]
+      }
+      get_faturas_geradas: {
+        Args: { p_escritorio_id: string }
+        Returns: {
+          categoria_status: string
+          cliente_email: string
+          cliente_id: string
+          cliente_nome: string
+          created_at: string
+          data_emissao: string
+          data_vencimento: string
+          dias_ate_vencimento: number
+          enviada_em: string
+          escritorio_id: string
+          fatura_id: string
+          gerada_automaticamente: boolean
+          numero_fatura: string
+          numero_parcelas: number
+          observacoes: string
+          paga_em: string
+          parcelado: boolean
+          pdf_url: string
+          qtd_honorarios: number
+          qtd_horas: number
+          soma_horas: number
+          status: string
+          total_honorarios: number
+          total_horas: number
+          updated_at: string
+          valor_total: number
+        }[]
+      }
+      get_grupo_id_ativo: { Args: never; Returns: string }
+      get_horas_acumuladas_ato: {
+        Args: { p_ato_tipo_id: string; p_processo_id: string }
+        Returns: {
+          atingiu_maximo: boolean
+          horas_disponiveis: number
+          horas_excedentes: number
+          horas_faturaveis: number
+          horas_totais: number
+          percentual_usado: number
+          status: string
+          valor_atual: number
+          valor_maximo: number
+          valor_minimo: number
+        }[]
+      }
+      get_lancamentos_prontos_faturar: {
+        Args: { p_escritorio_id: string }
+        Returns: {
+          categoria: string
+          cliente_id: string
+          cliente_nome: string
+          consulta_id: string
+          created_at: string
+          descricao: string
+          escritorio_id: string
+          horas: number
+          lancamento_id: string
+          processo_id: string
+          tipo_lancamento: string
+          valor: number
+        }[]
+      }
+      get_my_permissions: {
+        Args: { p_escritorio_id: string }
+        Returns: {
+          modulo: string
+          pode_criar: boolean
+          pode_editar: boolean
+          pode_excluir: boolean
+          pode_exportar: boolean
+          pode_visualizar: boolean
+        }[]
+      }
+      get_portfolio_dashboard_metricas: {
+        Args: { p_escritorio_id: string }
+        Returns: {
+          projetos_atrasados: number
+          receita_mes_anterior: number
+          receita_mes_atual: number
+          taxa_sucesso_geral: number
+          total_produtos_ativos: number
+          total_projetos_ativos: number
+        }[]
+      }
+      get_publicacao_completa: {
+        Args: { p_publicacao_id: string }
+        Returns: Json
+      }
+      get_responsaveis_nomes_from_array: {
+        Args: { p_ids: string[] }
+        Returns: string
+      }
+      get_tabelas_permitidas: { Args: never; Returns: string[] }
+      get_table_info: { Args: { tabela_nome: string }; Returns: Json }
+      get_table_schema: { Args: { tabela_nome: string }; Returns: Json }
+      get_tarefa_escritorio_id: {
+        Args: { p_tarefa_id: string }
+        Returns: string
+      }
+      get_tarefa_faturavel: { Args: { p_tarefa_id: string }; Returns: boolean }
+      get_tarefa_responsaveis_nomes: {
+        Args: { p_tarefa_id: string }
+        Returns: string
+      }
+      get_tempo_na_etapa: {
+        Args: { oportunidade_id: string }
+        Returns: unknown
+      }
+      get_ultima_interacao: {
+        Args: { p_pessoa_id: string }
+        Returns: {
+          assunto: string
+          data_hora: string
+          tipo: string
+          user_nome: string
+        }[]
+      }
+      get_user_escritorios: {
+        Args: { user_uuid: string }
+        Returns: {
+          escritorio_id: string
+          escritorio_nome: string
+          is_owner: boolean
+          role: string
+          ultimo_acesso: string
+        }[]
+      }
+      get_user_grupo_ids: { Args: never; Returns: string[] }
+      get_valor_hora_contrato: {
+        Args: { p_contrato_id: string }
+        Returns: number
+      }
+      get_valor_hora_efetivo: {
+        Args: { p_contrato_id: string; p_user_id: string }
+        Returns: number
+      }
+      has_permission: {
+        Args: {
+          p_escritorio_id: string
+          p_modulo: string
+          p_permissao: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      ignorar_alerta_cobranca: {
+        Args: {
+          p_alerta_id: string
+          p_justificativa?: string
+          p_user_id?: string
+        }
+        Returns: boolean
+      }
+      importar_indice_bcb: {
+        Args: {
+          p_codigo_bcb: number
+          p_competencia: string
+          p_nome: string
+          p_valor: number
+          p_variacao_mensal?: number
+        }
+        Returns: Json
+      }
+      iniciar_timer:
+        | {
+            Args: {
+              p_audiencia_id?: string
+              p_consulta_id?: string
+              p_descricao?: string
+              p_escritorio_id: string
+              p_evento_id?: string
+              p_faturavel?: boolean
+              p_processo_id?: string
+              p_tarefa_id?: string
+              p_titulo: string
+              p_user_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_consulta_id?: string
+              p_descricao?: string
+              p_escritorio_id: string
+              p_faturavel?: boolean
+              p_processo_id?: string
+              p_tarefa_id?: string
+              p_titulo: string
+              p_user_id: string
+            }
+            Returns: string
+          }
+      is_dono_or_socio: { Args: { p_escritorio_id: string }; Returns: boolean }
+      is_dono_or_socio_direct: {
+        Args: { p_escritorio_id: string }
+        Returns: boolean
+      }
+      limpar_cache_datajud_expirado: { Args: never; Returns: number }
+      limpar_escavador_cache_expirado: { Args: never; Returns: number }
+      limpar_faturas_storage_antigas: {
+        Args: never
+        Returns: {
+          arquivos_removidos: number
+          registros_atualizados: number
+        }[]
+      }
+      limpar_migracao_temp: { Args: never; Returns: undefined }
+      marcar_alerta_cobrado: {
+        Args: { p_alerta_id: string; p_honorario_id?: string }
+        Returns: boolean
+      }
+      marcar_fechamento_faturado: {
+        Args: { p_fatura_id: string; p_fechamento_id: string }
+        Returns: boolean
+      }
+      mover_oportunidade_etapa: {
+        Args: {
+          p_nova_etapa_id: string
+          p_observacao?: string
+          p_oportunidade_id: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      obter_codigo_bcb: { Args: { p_nome_indice: string }; Returns: number }
+      obter_dashboard_mes: {
+        Args: { p_ano: number; p_mes: number; p_user_id: string }
+        Returns: Json
+      }
+      obter_fatura_atual_cartao: {
+        Args: { p_cartao_id: string }
+        Returns: {
+          data_fechamento: string
+          data_vencimento: string
+          dias_para_fechamento: number
+          dias_para_vencimento: number
+          fatura_id: string
+          mes_referencia: string
+          status: string
+          total_lancamentos: number
+          valor_total: number
+        }[]
+      }
+      obter_indice_padrao_processo: {
+        Args: { p_area: string }
+        Returns: string
+      }
+      obter_lancamentos_mes: {
+        Args: { p_cartao_id: string; p_mes_referencia: string }
+        Returns: {
+          categoria: string
+          compra_id: string
+          data_compra: string
+          descricao: string
+          fatura_id: string
+          faturado: boolean
+          fornecedor: string
+          id: string
+          mes_referencia: string
+          parcela_numero: number
+          parcela_total: number
+          recorrente_ativo: boolean
+          recorrente_data_fim: string
+          tipo: string
+          valor: number
+        }[]
+      }
+      obter_ou_criar_fatura_cartao: {
+        Args: { p_cartao_id: string; p_mes_referencia: string }
+        Returns: string
+      }
+      pagar_fatura: {
+        Args: {
+          p_comprovante_url?: string
+          p_conta_bancaria_id?: string
+          p_data_pagamento: string
+          p_fatura_id: string
+          p_forma_pagamento: string
+          p_observacoes?: string
+          p_user_id?: string
+          p_valor_pago: number
+        }
+        Returns: string
+      }
+      pausar_timer: { Args: { p_timer_id: string }; Returns: boolean }
+      pecas_gerar_numero_interno: {
+        Args: { p_escritorio_id: string }
+        Returns: string
+      }
+      processar_recorrencias_diarias: { Args: never; Returns: number }
+      reativar_lancamento_recorrente: {
+        Args: { p_compra_id: string }
+        Returns: boolean
+      }
+      receber_receita: {
+        Args: {
+          p_conta_bancaria_id?: string
+          p_data_pagamento?: string
+          p_forma_pagamento?: Database["public"]["Enums"]["forma_pagamento_enum"]
+          p_receita_id: string
+          p_valor_pago?: number
+        }
+        Returns: boolean
+      }
+      receber_receita_parcial: {
+        Args: {
+          p_conta_bancaria_id: string
+          p_forma_pagamento: Database["public"]["Enums"]["forma_pagamento_enum"]
+          p_nova_data_vencimento: string
+          p_receita_id: string
+          p_valor_pago: number
+        }
+        Returns: string
+      }
+      registrar_andamento_publicacao: {
+        Args: {
+          p_notificar_cliente?: boolean
+          p_publicacao_id: string
+          p_resumo: string
+        }
+        Returns: string
+      }
+      registrar_interacao: {
+        Args: {
+          p_assunto: string
+          p_dados?: Json
+          p_descricao: string
+          p_pessoa_id: string
+          p_tipo: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      registrar_tempo_retroativo: {
+        Args: {
+          p_atividade?: string
+          p_ato_tipo_id?: string
+          p_audiencia_id?: string
+          p_consulta_id?: string
+          p_data_trabalho: string
+          p_escritorio_id: string
+          p_evento_id?: string
+          p_faturavel?: boolean
+          p_faturavel_manual?: boolean
+          p_hora_fim?: string
+          p_hora_inicio?: string
+          p_horas?: number
+          p_processo_id?: string
+          p_tarefa_id?: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      remover_processo_fechamento: {
+        Args: { p_fechamento_id: string; p_processo_id: string }
+        Returns: boolean
+      }
+      renovar_contrato_pasta: {
+        Args: {
+          p_contrato_id: string
+          p_novo_limite?: number
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      reprovar_timesheet: {
+        Args: {
+          p_justificativa: string
+          p_reprovado_por: string
+          p_timesheet_ids: string[]
+        }
+        Returns: number
+      }
+      resetar_creditos_escavador: { Args: never; Returns: number }
+      retomar_timer: { Args: { p_timer_id: string }; Returns: boolean }
+      sanitize_name: { Args: { input_text: string }; Returns: string }
+      search_knowledge_base: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          chunk_id: string
+          content: string
+          id: string
+          metadata: Json
+          similarity: number
+          source: string
+          title: string
+        }[]
+      }
+      search_memories: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          p_escritorio_id: string
+          p_sessao_id?: string
+          p_user_id: string
+          query_embedding: string
+        }
+        Returns: {
+          content: string
+          content_resumido: string
+          entidade: string
+          id: string
+          relevancia_score: number
+          similarity: number
+          tipo: string
+        }[]
+      }
+      search_similar_feedback: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          p_escritorio_id: string
+          query_embedding: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          similarity: number
+          tipo_feedback: string
+          user_message: string
+        }[]
+      }
+      seed_cargo_permissoes: {
+        Args: { p_cargo_id: string; p_cargo_nome: string }
+        Returns: undefined
+      }
+      seed_cargos_for_escritorio: {
+        Args: { p_escritorio_id: string }
+        Returns: undefined
+      }
+      seed_default_cargos: {
+        Args: { p_escritorio_id: string }
+        Returns: undefined
+      }
+      seed_default_tags_for_escritorio: {
+        Args: { p_escritorio_id: string }
+        Returns: undefined
+      }
+      set_escritorio_ativo: {
+        Args: { escritorio_uuid: string; user_uuid: string }
+        Returns: boolean
+      }
+      title_case_smart: { Args: { input_text: string }; Returns: string }
+      toggle_faturavel_timesheet: {
+        Args: {
+          p_alterado_por: string
+          p_faturavel: boolean
+          p_timesheet_ids: string[]
+        }
+        Returns: number
+      }
+      transformar_consultivo_em_processo: {
+        Args: {
+          p_arquivar_consultivo?: boolean
+          p_comarca?: string
+          p_consultivo_id: string
+          p_data_distribuicao?: string
+          p_fase?: string
+          p_instancia?: string
+          p_manter_contrato?: boolean
+          p_migrar_andamentos?: boolean
+          p_numero_cnj?: string
+          p_parte_contraria?: string
+          p_polo_cliente?: string
+          p_tipo?: string
+          p_tribunal?: string
+          p_uf?: string
+          p_valor_causa?: number
+          p_vara?: string
+        }
+        Returns: Json
+      }
+      trigger_publicacoes_sync_auto: { Args: never; Returns: undefined }
+      update_embedding_cache_usage: {
+        Args: { p_input_hash: string }
+        Returns: undefined
+      }
+      update_memory_usage: {
+        Args: { memory_ids: string[] }
+        Returns: undefined
+      }
+      user_belongs_to_escritorio:
+        | { Args: { p_escritorio_id: string }; Returns: boolean }
+        | {
+            Args: { escritorio_uuid: string; user_uuid: string }
+            Returns: boolean
+          }
+      user_can_access_alerta: { Args: { alerta_id: string }; Returns: boolean }
+      user_has_access_to_conta_bancaria: {
+        Args: { p_conta_id: string }
+        Returns: boolean
+      }
+      user_has_access_to_escritorio: {
+        Args: { p_escritorio_id: string }
+        Returns: boolean
+      }
+      user_has_access_to_escritorio_relatorios: {
+        Args: { p_escritorio_id: string }
+        Returns: boolean
+      }
+      user_has_access_to_grupo: {
+        Args: { p_escritorio_id: string }
+        Returns: boolean
+      }
+      user_has_access_to_peca: { Args: { p_peca_id: string }; Returns: boolean }
+      user_has_access_to_publicacao: {
+        Args: { p_publicacao_id: string }
+        Returns: boolean
+      }
+      user_has_access_to_template: {
+        Args: { p_template_id: string }
+        Returns: boolean
+      }
+      user_in_escritorio: {
+        Args: { p_escritorio_id: string }
+        Returns: boolean
+      }
+      user_pode_editar_processo: {
+        Args: { p_processo_id: string }
+        Returns: boolean
+      }
+      user_pode_gerenciar_financeiro: {
+        Args: { p_escritorio_id: string }
+        Returns: boolean
+      }
+      user_tem_acesso_documento: {
+        Args: { p_escritorio_id: string }
+        Returns: boolean
+      }
+      user_tem_acesso_escritorio: {
+        Args: { p_escritorio_id: string }
+        Returns: boolean
+      }
+      user_tem_acesso_escritorio_portfolio: {
+        Args: { p_escritorio_id: string }
+        Returns: boolean
+      }
+      user_tem_acesso_movimentacao: {
+        Args: { p_processo_id: string }
+        Returns: boolean
+      }
+      user_tem_acesso_permissao: {
+        Args: { p_usuario_escritorio_id: string }
+        Returns: boolean
+      }
+      user_tem_acesso_processo: {
+        Args: { p_processo_id: string }
+        Returns: boolean
+      }
+      user_tem_acesso_processo_direto: {
+        Args: { p_escritorio_id: string }
+        Returns: boolean
+      }
+      verificar_limites_contratos_pasta: { Args: never; Returns: Json }
+      vincular_processo_auto: {
+        Args: { p_publicacao_id: string }
+        Returns: string
+      }
+    }
+    Enums: {
+      area_juridica_enum:
+        | "civel"
+        | "trabalhista"
+        | "criminal"
+        | "tributario"
+        | "empresarial"
+        | "familia"
+        | "consumidor"
+        | "previdenciario"
+        | "administrativo"
+        | "outros"
+        | "ambiental"
+      despesa_categoria_enum:
+        | "custas"
+        | "cartorio"
+        | "oficial_justica"
+        | "correios"
+        | "copia"
+        | "publicacao"
+        | "certidao"
+        | "protesto"
+        | "honorarios_perito"
+        | "fornecedor"
+        | "material"
+        | "tecnologia"
+        | "assinatura"
+        | "aluguel"
+        | "telefonia"
+        | "folha"
+        | "prolabore"
+        | "retirada_socios"
+        | "beneficios"
+        | "impostos"
+        | "taxas_bancarias"
+        | "combustivel"
+        | "deslocamento"
+        | "estacionamento"
+        | "hospedagem"
+        | "viagem"
+        | "alimentacao"
+        | "marketing"
+        | "capacitacao"
+        | "associacoes"
+        | "emprestimos"
+        | "juros"
+        | "cartao_credito"
+        | "comissao"
+        | "outra"
+        | "outros"
+      despesa_status_enum: "pendente" | "pago" | "cancelado"
+      etapa_oportunidade_enum:
+        | "lead"
+        | "contato_feito"
+        | "proposta_enviada"
+        | "negociacao"
+        | "ganho"
+        | "perdido"
+      forma_pagamento_enum:
+        | "dinheiro"
+        | "pix"
+        | "ted"
+        | "boleto"
+        | "cartao_credito"
+        | "cartao_debito"
+        | "cheque"
+        | "deposito"
+      motivo_perda_enum:
+        | "preco"
+        | "concorrencia"
+        | "desistencia"
+        | "sem_resposta"
+        | "fora_escopo"
+        | "outros"
+      nivel_prioridade: "baixa" | "media" | "alta" | "urgente"
+      origem_crm_enum:
+        | "indicacao"
+        | "site"
+        | "google"
+        | "redes_sociais"
+        | "evento"
+        | "parceria"
+        | "outros"
+      receita_categoria_enum:
+        | "honorarios"
+        | "custas_reembolsadas"
+        | "exito"
+        | "consultoria"
+        | "outros"
+      receita_status_enum:
+        | "pendente"
+        | "pago"
+        | "parcial"
+        | "atrasado"
+        | "cancelado"
+        | "faturado"
+      receita_tipo_enum:
+        | "honorario"
+        | "parcela"
+        | "avulso"
+        | "saldo"
+        | "reembolso"
+      status_consultivo: "ativo" | "arquivado"
+      status_pessoa_enum: "ativo" | "inativo" | "arquivado"
+      status_projeto:
+        | "planejamento"
+        | "ativo"
+        | "pausado"
+        | "revisao"
+        | "concluido"
+      status_tarefa: "backlog" | "em_andamento" | "revisao" | "concluida"
+      tipo_cadastro_enum:
+        | "cliente"
+        | "prospecto"
+        | "parte_contraria"
+        | "correspondente"
+        | "testemunha"
+        | "perito"
+        | "juiz"
+        | "promotor"
+        | "outros"
+      tipo_pessoa_enum: "pf" | "pj"
+      uf_enum:
+        | "AC"
+        | "AL"
+        | "AM"
+        | "AP"
+        | "BA"
+        | "CE"
+        | "DF"
+        | "ES"
+        | "GO"
+        | "MA"
+        | "MG"
+        | "MS"
+        | "MT"
+        | "PA"
+        | "PB"
+        | "PE"
+        | "PI"
+        | "PR"
+        | "RJ"
+        | "RN"
+        | "RO"
+        | "RR"
+        | "RS"
+        | "SC"
+        | "SE"
+        | "SP"
+        | "TO"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      area_juridica_enum: [
+        "civel",
+        "trabalhista",
+        "criminal",
+        "tributario",
+        "empresarial",
+        "familia",
+        "consumidor",
+        "previdenciario",
+        "administrativo",
+        "outros",
+        "ambiental",
+      ],
+      despesa_categoria_enum: [
+        "custas",
+        "cartorio",
+        "oficial_justica",
+        "correios",
+        "copia",
+        "publicacao",
+        "certidao",
+        "protesto",
+        "honorarios_perito",
+        "fornecedor",
+        "material",
+        "tecnologia",
+        "assinatura",
+        "aluguel",
+        "telefonia",
+        "folha",
+        "prolabore",
+        "retirada_socios",
+        "beneficios",
+        "impostos",
+        "taxas_bancarias",
+        "combustivel",
+        "deslocamento",
+        "estacionamento",
+        "hospedagem",
+        "viagem",
+        "alimentacao",
+        "marketing",
+        "capacitacao",
+        "associacoes",
+        "emprestimos",
+        "juros",
+        "cartao_credito",
+        "comissao",
+        "outra",
+        "outros",
+      ],
+      despesa_status_enum: ["pendente", "pago", "cancelado"],
+      etapa_oportunidade_enum: [
+        "lead",
+        "contato_feito",
+        "proposta_enviada",
+        "negociacao",
+        "ganho",
+        "perdido",
+      ],
+      forma_pagamento_enum: [
+        "dinheiro",
+        "pix",
+        "ted",
+        "boleto",
+        "cartao_credito",
+        "cartao_debito",
+        "cheque",
+        "deposito",
+      ],
+      motivo_perda_enum: [
+        "preco",
+        "concorrencia",
+        "desistencia",
+        "sem_resposta",
+        "fora_escopo",
+        "outros",
+      ],
+      nivel_prioridade: ["baixa", "media", "alta", "urgente"],
+      origem_crm_enum: [
+        "indicacao",
+        "site",
+        "google",
+        "redes_sociais",
+        "evento",
+        "parceria",
+        "outros",
+      ],
+      receita_categoria_enum: [
+        "honorarios",
+        "custas_reembolsadas",
+        "exito",
+        "consultoria",
+        "outros",
+      ],
+      receita_status_enum: [
+        "pendente",
+        "pago",
+        "parcial",
+        "atrasado",
+        "cancelado",
+        "faturado",
+      ],
+      receita_tipo_enum: [
+        "honorario",
+        "parcela",
+        "avulso",
+        "saldo",
+        "reembolso",
+      ],
+      status_consultivo: ["ativo", "arquivado"],
+      status_pessoa_enum: ["ativo", "inativo", "arquivado"],
+      status_projeto: [
+        "planejamento",
+        "ativo",
+        "pausado",
+        "revisao",
+        "concluido",
+      ],
+      status_tarefa: ["backlog", "em_andamento", "revisao", "concluida"],
+      tipo_cadastro_enum: [
+        "cliente",
+        "prospecto",
+        "parte_contraria",
+        "correspondente",
+        "testemunha",
+        "perito",
+        "juiz",
+        "promotor",
+        "outros",
+      ],
+      tipo_pessoa_enum: ["pf", "pj"],
+      uf_enum: [
+        "AC",
+        "AL",
+        "AM",
+        "AP",
+        "BA",
+        "CE",
+        "DF",
+        "ES",
+        "GO",
+        "MA",
+        "MG",
+        "MS",
+        "MT",
+        "PA",
+        "PB",
+        "PE",
+        "PI",
+        "PR",
+        "RJ",
+        "RN",
+        "RO",
+        "RR",
+        "RS",
+        "SC",
+        "SE",
+        "SP",
+        "TO",
+      ],
+    },
+  },
+} as const

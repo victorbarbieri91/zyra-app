@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Clock, CheckCircle, XCircle, User, Building2, ChevronDown, Check, Pencil, X, Save, Users, Plus, Briefcase, FileText, Trash2 } from 'lucide-react'
+import { Clock, CheckCircle, XCircle, User, Building2, ChevronDown, Check, Pencil, X, Save, Users, Plus, Briefcase, FileText, Trash2, DollarSign } from 'lucide-react'
 import { toast } from 'sonner'
 import { format, subDays } from 'date-fns'
 import { DateRange } from 'react-day-picker'
@@ -85,6 +85,7 @@ export default function TimesheetPage() {
   const [aprovandoId, setAprovandoId] = useState<string | null>(null)
   const [desaprovandoId, setDesaprovandoId] = useState<string | null>(null)
   const [excluindoId, setExcluindoId] = useState<string | null>(null)
+  const [togglingFaturavelId, setTogglingFaturavelId] = useState<string | null>(null)
 
   // Multi-escritório states
   const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
@@ -397,6 +398,46 @@ export default function TimesheetPage() {
       console.error('Erro ao excluir:', error)
     } finally {
       setExcluindoId(null)
+    }
+  }
+
+  // Toggle faturável (individual)
+  const handleToggleFaturavel = async (ts: TimesheetRow) => {
+    if (ts.faturado) return
+    setTogglingFaturavelId(ts.id)
+    try {
+      const { error } = await supabase.rpc('toggle_faturavel_timesheet', {
+        p_timesheet_ids: [ts.id],
+        p_faturavel: !ts.faturavel,
+        p_alterado_por: (await supabase.auth.getUser()).data.user?.id,
+      })
+      if (error) throw error
+      toast.success(!ts.faturavel ? 'Marcado como cobrável' : 'Marcado como não cobrável')
+      loadTimesheets()
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao alterar cobrabilidade')
+      console.error('Erro ao toggle faturavel:', error)
+    } finally {
+      setTogglingFaturavelId(null)
+    }
+  }
+
+  // Toggle faturável em massa
+  const handleBulkSetFaturavel = (faturavel: boolean) => async () => {
+    if (selectedIds.size === 0) return
+    try {
+      const { error } = await supabase.rpc('toggle_faturavel_timesheet', {
+        p_timesheet_ids: Array.from(selectedIds),
+        p_faturavel: faturavel,
+        p_alterado_por: (await supabase.auth.getUser()).data.user?.id,
+      })
+      if (error) throw error
+      toast.success(`${selectedIds.size} registro(s) marcado(s) como ${faturavel ? 'cobrável' : 'não cobrável'}`)
+      setSelectedIds(new Set())
+      loadTimesheets()
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao alterar cobrabilidade')
+      console.error('Erro ao toggle faturavel bulk:', error)
     }
   }
 
@@ -873,17 +914,35 @@ export default function TimesheetPage() {
                         {editForm.faturavel ? 'Cobrável' : 'N/Cob.'}
                       </button>
                     ) : (
-                      <Badge
-                        variant="secondary"
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (!ts.faturado) handleToggleFaturavel(ts)
+                        }}
+                        disabled={ts.faturado || togglingFaturavelId === ts.id}
                         className={cn(
-                          'text-[10px]',
+                          'inline-flex items-center rounded-md px-2.5 py-0.5 text-[10px] font-semibold transition-all',
                           ts.faturavel
                             ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-slate-100 text-slate-600'
+                            : 'bg-slate-100 text-slate-600',
+                          !ts.faturado && 'cursor-pointer hover:ring-2 hover:ring-offset-1',
+                          ts.faturavel && !ts.faturado && 'hover:ring-emerald-300',
+                          !ts.faturavel && !ts.faturado && 'hover:ring-slate-300',
+                          ts.faturado && 'opacity-60 cursor-not-allowed',
+                          togglingFaturavelId === ts.id && 'animate-pulse'
                         )}
+                        title={
+                          ts.faturado
+                            ? 'Não é possível alterar - já faturado'
+                            : ts.faturavel
+                              ? 'Clique para marcar como não cobrável'
+                              : 'Clique para marcar como cobrável'
+                        }
                       >
-                        {ts.faturavel ? 'Cobrável' : 'N/Cob.'}
-                      </Badge>
+                        {togglingFaturavelId === ts.id
+                          ? '...'
+                          : ts.faturavel ? 'Cobrável' : 'N/Cob.'}
+                      </button>
                     )}
                   </div>
 
@@ -1041,6 +1100,30 @@ export default function TimesheetPage() {
               <CheckCircle className="w-4 h-4 mr-1.5" />
               Aprovar
             </Button>
+
+            {/* Toggle Faturável */}
+            <div className="flex items-center border-l border-white/20 pl-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-emerald-300 hover:text-emerald-200 hover:bg-emerald-500/20"
+                onClick={handleBulkSetFaturavel(true)}
+                title="Marcar selecionados como cobráveis"
+              >
+                <DollarSign className="w-4 h-4 mr-1" />
+                Cobrável
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-slate-300 hover:text-slate-200 hover:bg-slate-500/20"
+                onClick={handleBulkSetFaturavel(false)}
+                title="Marcar selecionados como não cobráveis"
+              >
+                <DollarSign className="w-4 h-4 mr-1" />
+                N/Cob.
+              </Button>
+            </div>
 
             {/* Delete */}
             <Button

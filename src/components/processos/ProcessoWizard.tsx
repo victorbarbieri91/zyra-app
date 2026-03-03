@@ -175,6 +175,7 @@ const FORMA_COBRANCA_LABELS: Record<string, string> = {
   por_pasta: 'Por Pasta (Mensal)',
   por_ato: 'Por Ato Processual',
   por_cargo: 'Por Cargo/Timesheet',
+  pro_bono: 'Pró-Bono',
 }
 
 // Funções para máscara de moeda brasileira

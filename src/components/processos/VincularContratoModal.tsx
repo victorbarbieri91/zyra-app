@@ -27,6 +27,7 @@ import {
   TrendingUp,
   PieChart,
   Plus,
+  Heart,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -36,7 +37,7 @@ import { ContratoModal } from '@/components/financeiro/ContratoModal'
 import { useContratosHonorarios, ContratoFormData } from '@/hooks/useContratosHonorarios'
 import { toast } from 'sonner'
 
-type FormaCobranca = 'fixo' | 'por_hora' | 'misto' | 'por_pasta' | 'por_ato' | 'por_cargo' | 'por_etapa'
+type FormaCobranca = 'fixo' | 'por_hora' | 'misto' | 'por_pasta' | 'por_ato' | 'por_cargo' | 'por_etapa' | 'pro_bono'
 
 interface ContratoDisponivel {
   id: string
@@ -69,6 +70,7 @@ const FORMA_LABELS: Record<FormaCobranca, string> = {
   por_ato: 'Por Ato Processual',
   por_etapa: 'Por Etapa',
   misto: 'Misto',
+  pro_bono: 'Pró-Bono',
 }
 
 const FORMA_ICONS: Record<FormaCobranca, React.ElementType> = {
@@ -79,6 +81,7 @@ const FORMA_ICONS: Record<FormaCobranca, React.ElementType> = {
   por_ato: Gavel,
   por_etapa: TrendingUp,
   misto: PieChart,
+  pro_bono: Heart,
 }
 
 const FORMA_COLORS: Record<FormaCobranca, string> = {
@@ -89,6 +92,7 @@ const FORMA_COLORS: Record<FormaCobranca, string> = {
   por_ato: 'bg-rose-100 text-rose-700',
   por_etapa: 'bg-emerald-100 text-emerald-700',
   misto: 'bg-amber-100 text-amber-700',
+  pro_bono: 'bg-pink-100 text-pink-700',
 }
 
 export default function VincularContratoModal({

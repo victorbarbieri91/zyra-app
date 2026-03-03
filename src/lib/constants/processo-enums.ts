@@ -123,6 +123,7 @@ export const PROCESSO_MODALIDADE_COBRANCA = {
   POR_PASTA: 'por_pasta',
   POR_ATO: 'por_ato',
   POR_CARGO: 'por_cargo',
+  PRO_BONO: 'pro_bono',
 } as const
 
 export const PROCESSO_MODALIDADE_COBRANCA_LABELS: Record<string, string> = {
@@ -133,6 +134,7 @@ export const PROCESSO_MODALIDADE_COBRANCA_LABELS: Record<string, string> = {
   por_pasta: 'Por Pasta',
   por_ato: 'Por Ato',
   por_cargo: 'Por Cargo',
+  pro_bono: 'Pró-Bono',
 }
 
 // Valores aceitos pelo banco para o campo 'resultado' (encerramento)

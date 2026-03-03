@@ -65,6 +65,8 @@ import { ConsultaWizardModal } from '@/components/consultivo/ConsultaWizardModal
 import ProcessoWizard from '@/components/processos/ProcessoWizard'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
+import KpiDetailModal from '@/components/dashboard/KpiDetailModal'
+import type { KpiType } from '@/hooks/useKpiDetails'
 import TarefaDetailModal from '@/components/agenda/TarefaDetailModal'
 import EventoDetailModal from '@/components/agenda/EventoDetailModal'
 import { AudienciaProxima } from '@/hooks/useDashboardAlertas'
@@ -147,6 +149,9 @@ export default function DashboardPage() {
   const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
   const [escritoriosSelecionados, setEscritoriosSelecionados] = useState<string[]>([])
   const [seletorAberto, setSeletorAberto] = useState(false)
+
+  // Estado para modal de detalhamento KPI
+  const [kpiDetailOpen, setKpiDetailOpen] = useState<KpiType | null>(null)
 
   // Estado para visualização de horas (lista ou barras)
   const [horasViewMode, setHorasViewMode] = useState<'list' | 'bars'>('list')
@@ -844,7 +849,7 @@ export default function DashboardPage() {
           ═══════════════════════════════════════════════════════════════ */}
       <div className="px-4 md:px-6 -mt-6 relative z-20">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
-          {[
+          {([
             {
               label: 'Processos Ativos',
               value: metrics?.processos_ativos || 0,
@@ -853,6 +858,7 @@ export default function DashboardPage() {
               icon: Briefcase,
               gradient: 'from-[#34495e] to-[#4a6fa5]',
               iconBg: 'bg-white/15',
+              kpiType: 'processos' as KpiType,
             },
             {
               label: 'Clientes Ativos',
@@ -862,6 +868,7 @@ export default function DashboardPage() {
               icon: Users,
               gradient: 'from-[#46627f] to-[#5a8f9e]',
               iconBg: 'bg-white/15',
+              kpiType: 'clientes' as KpiType,
             },
             {
               label: 'Casos Consultivos',
@@ -871,6 +878,7 @@ export default function DashboardPage() {
               icon: FileText,
               gradient: 'from-[#5a8f9e] to-[#89bcbe]',
               iconBg: 'bg-white/20',
+              kpiType: 'consultivo' as KpiType,
             },
             {
               label: 'Horas Cobráveis',
@@ -881,12 +889,14 @@ export default function DashboardPage() {
               icon: Activity,
               gradient: 'from-[#89bcbe] to-[#6ba9ab]',
               iconBg: 'bg-white/20',
+              kpiType: 'horas' as KpiType,
             },
-          ].map((kpi) => (
+          ]).map((kpi) => (
             <div
               key={kpi.label}
+              onClick={() => setKpiDetailOpen(kpi.kpiType)}
               className={cn(
-                "rounded-2xl p-3 md:p-4 bg-gradient-to-br shadow-[0_6px_28px_-4px_rgba(52,73,94,0.35)] hover:shadow-[0_12px_40px_-6px_rgba(52,73,94,0.45)] transition-all duration-300 hover:-translate-y-1",
+                "rounded-2xl p-3 md:p-4 bg-gradient-to-br shadow-[0_6px_28px_-4px_rgba(52,73,94,0.35)] hover:shadow-[0_12px_40px_-6px_rgba(52,73,94,0.45)] transition-all duration-300 hover:-translate-y-1 cursor-pointer",
                 kpi.gradient
               )}
             >
@@ -1467,6 +1477,14 @@ export default function DashboardPage() {
         open={timesheetModalOpen}
         onOpenChange={setTimesheetModalOpen}
         onSuccess={() => { setTimesheetModalOpen(false) }}
+      />
+
+      {/* Modal de Detalhamento KPI */}
+      <KpiDetailModal
+        open={!!kpiDetailOpen}
+        onOpenChange={(open) => { if (!open) setKpiDetailOpen(null) }}
+        kpiType={kpiDetailOpen}
+        metrics={metrics}
       />
 
       {audienciaSelecionada && (

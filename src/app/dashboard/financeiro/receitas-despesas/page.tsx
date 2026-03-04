@@ -68,7 +68,7 @@ interface ExtratoItem {
   id: string
   escritorio_id: string
   tipo_movimento: 'receita' | 'despesa' | 'transferencia_saida' | 'transferencia_entrada'
-  status: 'pendente' | 'efetivado' | 'vencido' | 'cancelado'
+  status: 'pendente' | 'efetivado' | 'vencido' | 'cancelado' | 'previsto'
   origem: string
   categoria: string
   descricao: string
@@ -83,6 +83,8 @@ interface ExtratoItem {
   origem_id: string | null
   processo_id: string | null
   cliente_id: string | null
+  virtual?: boolean
+  origem_pai_id?: string | null
 }
 
 // Categorias com labels bonitos e cores
@@ -150,7 +152,13 @@ const subMeses = (date: Date, meses: number) => {
   return result
 }
 
-type PeriodoPreset = 'mes_atual' | 'ultimos_3_meses' | 'ultimos_6_meses' | 'ano_atual' | 'ano_anterior' | 'personalizado'
+const addMeses = (date: Date, meses: number) => {
+  const result = new Date(date)
+  result.setMonth(result.getMonth() + meses)
+  return result
+}
+
+type PeriodoPreset = 'mes_atual' | 'ultimos_3_meses' | 'ultimos_6_meses' | 'ano_atual' | 'ano_anterior' | 'proximo_mes' | 'proximos_3_meses' | 'proximos_6_meses' | 'personalizado'
 
 export default function ExtratoFinanceiroPage() {
   const searchParams = useSearchParams()
@@ -167,7 +175,7 @@ export default function ExtratoFinanceiroPage() {
   const statusInicial = (statusUrl === 'vencido' || statusUrl === 'pendente' || statusUrl === 'efetivado') ? statusUrl : 'todos'
 
   const [tipoFiltro, setTipoFiltro] = useState<'todos' | 'receita' | 'despesa' | 'transferencia'>(statusUrl ? 'receita' : 'todos')
-  const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pendente' | 'vencido' | 'efetivado'>(statusInicial)
+  const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pendente' | 'vencido' | 'efetivado' | 'previsto'>(statusInicial)
   const [contaFiltro, setContaFiltro] = useState<string>('todas')  // 'todas' ou ID da conta
 
   // Filtro de período - padrão: mês atual
@@ -309,6 +317,18 @@ export default function ExtratoFinanceiroPage() {
         setDataInicio(getInicioAno(anoAnterior))
         setDataFim(getFimAno(anoAnterior))
         break
+      case 'proximo_mes':
+        setDataInicio(getInicioMes(addMeses(hoje, 1)))
+        setDataFim(getFimMes(addMeses(hoje, 1)))
+        break
+      case 'proximos_3_meses':
+        setDataInicio(getInicioMes(addMeses(hoje, 1)))
+        setDataFim(getFimMes(addMeses(hoje, 3)))
+        break
+      case 'proximos_6_meses':
+        setDataInicio(getInicioMes(addMeses(hoje, 1)))
+        setDataFim(getFimMes(addMeses(hoje, 6)))
+        break
       case 'personalizado':
         // Mantém as datas atuais
         break
@@ -328,6 +348,12 @@ export default function ExtratoFinanceiroPage() {
         return 'Este ano'
       case 'ano_anterior':
         return 'Ano anterior'
+      case 'proximo_mes':
+        return 'Próximo mês'
+      case 'proximos_3_meses':
+        return 'Próximos 3 meses'
+      case 'proximos_6_meses':
+        return 'Próximos 6 meses'
       case 'personalizado':
         return `${new Date(dataInicio + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} - ${new Date(dataFim + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`
       default:
@@ -389,16 +415,16 @@ export default function ExtratoFinanceiroPage() {
     try {
       const hoje = new Date().toISOString().split('T')[0]
 
-      // Query com filtro de período no servidor para melhor performance
+      // Usa RPC que retorna entradas reais + virtuais (recorrentes futuros sem lançamento)
       const { data: viewData, error: viewError } = await supabase
-        .from('v_extrato_financeiro')
-        .select('*')
-        .in('escritorio_id', escritoriosSelecionados)
-        .gte('data_referencia', dataInicio)
-        .lte('data_referencia', dataFim)
+        .rpc('get_extrato_com_recorrentes', {
+          p_escritorio_ids: escritoriosSelecionados,
+          p_data_inicio: dataInicio,
+          p_data_fim: dataFim,
+        })
 
       if (viewError) {
-        console.error('Erro ao carregar view:', viewError)
+        console.error('Erro ao carregar extrato:', viewError)
         toast.error('Erro ao carregar extrato')
         return
       }
@@ -407,7 +433,7 @@ export default function ExtratoFinanceiroPage() {
         id: item.id,
         escritorio_id: item.escritorio_id,
         tipo_movimento: item.tipo_movimento as 'receita' | 'despesa',
-        status: item.status === 'parcial' ? 'efetivado' : item.status,
+        status: item.virtual ? 'previsto' : (item.status === 'parcial' ? 'efetivado' : item.status),
         origem: item.origem,
         categoria: item.categoria,
         descricao: item.descricao,
@@ -418,10 +444,12 @@ export default function ExtratoFinanceiroPage() {
         data_efetivacao: item.data_efetivacao,
         entidade: item.entidade,
         conta_bancaria_id: item.conta_bancaria_id,
-        conta_bancaria_nome: item.conta_bancaria_nome,  // NOVO
+        conta_bancaria_nome: item.conta_bancaria_nome,
         origem_id: item.origem_id,
         processo_id: item.processo_id,
         cliente_id: item.cliente_id,
+        virtual: item.virtual || false,
+        origem_pai_id: item.origem_pai_id || null,
       }))
 
       // Filtro por conta bancária
@@ -448,6 +476,8 @@ export default function ExtratoFinanceiroPage() {
 
       if (statusFiltro !== 'todos') {
         combinedData = combinedData.filter((item) => item.status === statusFiltro)
+      } else {
+        // No filtro "todos", virtuais aparecem junto com os reais (já incluídos)
       }
 
       if (debouncedSearch) {
@@ -1798,14 +1828,38 @@ export default function ExtratoFinanceiroPage() {
                   <p className="text-xs font-medium text-[#34495e]">Selecionar período:</p>
                 </div>
 
-                {/* Opções predefinidas */}
+                {/* Opções predefinidas — passado */}
                 <div className="p-2 space-y-1">
+                  <p className="text-[10px] font-medium text-slate-400 px-3 pt-1">Passado</p>
                   {[
                     { value: 'mes_atual' as PeriodoPreset, label: 'Este mês' },
                     { value: 'ultimos_3_meses' as PeriodoPreset, label: 'Últimos 3 meses' },
                     { value: 'ultimos_6_meses' as PeriodoPreset, label: 'Últimos 6 meses' },
                     { value: 'ano_atual' as PeriodoPreset, label: 'Este ano' },
                     { value: 'ano_anterior' as PeriodoPreset, label: 'Ano anterior' },
+                  ].map((opcao) => (
+                    <button
+                      key={opcao.value}
+                      onClick={() => handlePeriodoChange(opcao.value)}
+                      className={cn(
+                        "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
+                        periodoPreset === opcao.value
+                          ? "bg-[#89bcbe]/20 text-[#34495e] font-medium"
+                          : "hover:bg-slate-50 text-slate-600"
+                      )}
+                    >
+                      {opcao.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Opções predefinidas — futuro */}
+                <div className="p-2 pt-0 space-y-1 border-t border-slate-100">
+                  <p className="text-[10px] font-medium text-slate-400 px-3 pt-2">Futuro (inclui previstos)</p>
+                  {[
+                    { value: 'proximo_mes' as PeriodoPreset, label: 'Próximo mês' },
+                    { value: 'proximos_3_meses' as PeriodoPreset, label: 'Próximos 3 meses' },
+                    { value: 'proximos_6_meses' as PeriodoPreset, label: 'Próximos 6 meses' },
                   ].map((opcao) => (
                     <button
                       key={opcao.value}
@@ -1918,6 +1972,10 @@ export default function ExtratoFinanceiroPage() {
                   <CheckCircle className="w-3 h-3 mr-1.5 text-emerald-600" />
                   Efetivados
                 </TabsTrigger>
+                <TabsTrigger value="previsto" className="text-xs h-7 px-3">
+                  <CalendarDays className="w-3 h-3 mr-1.5 text-slate-400" />
+                  Previstos
+                </TabsTrigger>
               </TabsList>
             </Tabs>
 
@@ -2021,6 +2079,7 @@ export default function ExtratoFinanceiroPage() {
               const diasVenc = getDiasVencimento(item.data_vencimento)
               const isVencido = item.status === 'vencido' || (diasVenc !== null && diasVenc < 0)
               const isPendente = item.status === 'pendente' || item.status === 'vencido'
+              const isPrevisto = item.virtual === true
               const categoriaConfig = getCategoriaConfig(item.categoria)
               const isSelected = itensSelecionados.includes(item.id)
 
@@ -2029,6 +2088,7 @@ export default function ExtratoFinanceiroPage() {
                   key={`mobile-${item.origem}-${item.id}`}
                   className={cn(
                     "px-4 py-3 space-y-2",
+                    isPrevisto && "opacity-70",
                     isSelected && "bg-[#f0f9f9]"
                   )}
                 >
@@ -2038,6 +2098,7 @@ export default function ExtratoFinanceiroPage() {
                       <div className="flex items-center gap-2 mb-1">
                         <Checkbox
                           checked={isSelected}
+                          disabled={isPrevisto}
                           onCheckedChange={(checked) => {
                             if (checked) {
                               setItensSelecionados([...itensSelecionados, item.id])
@@ -2045,7 +2106,7 @@ export default function ExtratoFinanceiroPage() {
                               setItensSelecionados(itensSelecionados.filter(id => id !== item.id))
                             }
                           }}
-                          className="data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
+                          className="data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e] disabled:opacity-30"
                         />
                         {item.tipo_movimento === 'receita' ? (
                           <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -2063,7 +2124,12 @@ export default function ExtratoFinanceiroPage() {
                             Transf.
                           </span>
                         )}
-                        {item.status === 'efetivado' ? (
+                        {isPrevisto ? (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 border border-dashed border-slate-300">
+                            <CalendarDays className="w-2.5 h-2.5" />
+                            Previsto
+                          </span>
+                        ) : item.status === 'efetivado' ? (
                           <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
                             <CheckCircle className="w-2.5 h-2.5" />
                             Pago
@@ -2221,6 +2287,7 @@ export default function ExtratoFinanceiroPage() {
                 const diasVenc = getDiasVencimento(item.data_vencimento)
                 const isVencido = item.status === 'vencido' || (diasVenc !== null && diasVenc < 0)
                 const isPendente = item.status === 'pendente' || item.status === 'vencido'
+                const isPrevisto = item.virtual === true
                 const categoriaConfig = getCategoriaConfig(item.categoria)
                 const isSelected = itensSelecionados.includes(item.id)
 
@@ -2228,7 +2295,10 @@ export default function ExtratoFinanceiroPage() {
                   <tr
                     key={`${item.origem}-${item.id}`}
                     className={cn(
-                      "border-b border-slate-100 hover:bg-slate-50/50 transition-colors",
+                      "border-b transition-colors",
+                      isPrevisto
+                        ? "border-dashed border-slate-200 opacity-70 hover:opacity-90 hover:bg-slate-50/30"
+                        : "border-slate-100 hover:bg-slate-50/50",
                       isSelected && "bg-[#f0f9f9]"
                     )}
                   >
@@ -2236,6 +2306,7 @@ export default function ExtratoFinanceiroPage() {
                     <td className="py-2.5 px-2 text-center">
                       <Checkbox
                         checked={isSelected}
+                        disabled={isPrevisto}
                         onCheckedChange={(checked) => {
                           if (checked) {
                             setItensSelecionados([...itensSelecionados, item.id])
@@ -2243,7 +2314,7 @@ export default function ExtratoFinanceiroPage() {
                             setItensSelecionados(itensSelecionados.filter(id => id !== item.id))
                           }
                         }}
-                        className="data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
+                        className="data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e] disabled:opacity-30"
                       />
                     </td>
 
@@ -2332,7 +2403,12 @@ export default function ExtratoFinanceiroPage() {
 
                     {/* Status */}
                     <td className="py-2.5 px-3 text-center">
-                      {item.status === 'efetivado' ? (
+                      {isPrevisto ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 border border-dashed border-slate-300 whitespace-nowrap">
+                          <CalendarDays className="w-3 h-3" />
+                          Previsto
+                        </span>
+                      ) : item.status === 'efetivado' ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
                           <CheckCircle className="w-3 h-3" />
                           Pago
@@ -2369,6 +2445,9 @@ export default function ExtratoFinanceiroPage() {
 
                     {/* Ações */}
                     <td className="py-2.5 px-2 text-center">
+                      {isPrevisto ? (
+                        <span className="text-[10px] text-slate-400 italic">—</span>
+                      ) : (
                       <div className="flex items-center justify-center gap-1">
                       {/* Botão Efetivar Rápido - apenas para pendentes/vencidos */}
                       {isPendente && contasBancarias.length > 0 && (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa') && (
@@ -2601,6 +2680,7 @@ export default function ExtratoFinanceiroPage() {
                         </DropdownMenu>
                       )}
                       </div>
+                      )}
                     </td>
                   </tr>
                 )

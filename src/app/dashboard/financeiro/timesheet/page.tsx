@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Clock, CheckCircle, XCircle, User, Building2, ChevronDown, Check, Pencil, X, Save, Users, Plus, Briefcase, FileText, Trash2, DollarSign } from 'lucide-react'
 import { toast } from 'sonner'
 import { format, subDays } from 'date-fns'
@@ -60,6 +61,9 @@ interface EditForm {
 export default function TimesheetPage() {
   const { escritorioAtivo } = useEscritorioAtivo()
   const supabase = createClient()
+  const searchParams = useSearchParams()
+  const usuarioParam = searchParams.get('usuario')
+  const filtroUsuarioAplicado = useRef(false)
 
   const [timesheets, setTimesheets] = useState<TimesheetRow[]>([])
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -147,8 +151,19 @@ export default function TimesheetPage() {
         }, [])
 
         setColaboradores(uniqueColabs.sort((a, b) => a.nome.localeCompare(b.nome)))
-        // Iniciar com todos selecionados
-        setColaboradoresSelecionados(uniqueColabs.map(c => c.user_id))
+        // Se veio do dashboard com ?usuario=meu, filtrar apenas pelo usuário atual (apenas na primeira vez)
+        if (usuarioParam === 'meu' && !filtroUsuarioAplicado.current) {
+          filtroUsuarioAplicado.current = true
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user && uniqueColabs.some(c => c.user_id === user.id)) {
+            setColaboradoresSelecionados([user.id])
+          } else {
+            setColaboradoresSelecionados(uniqueColabs.map(c => c.user_id))
+          }
+        } else {
+          // Iniciar com todos selecionados
+          setColaboradoresSelecionados(uniqueColabs.map(c => c.user_id))
+        }
       } catch (error) {
         console.error('Erro ao carregar colaboradores:', error)
       }

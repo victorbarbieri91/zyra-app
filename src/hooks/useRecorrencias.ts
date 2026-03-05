@@ -290,7 +290,7 @@ export function useRecorrencias(escritorioId?: string) {
       dados = {
         escritorio_id: regra.escritorio_id,
         recorrencia_id: regra.id,
-        status: 'pendente',
+        status: 'agendado',
         titulo: tpl.titulo || regra.template_nome,
         descricao: tpl.descricao || regra.template_descricao || undefined,
         tipo: tpl.tipo || undefined,

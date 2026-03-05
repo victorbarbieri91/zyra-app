@@ -286,7 +286,7 @@ export function useRecorrencias(escritorioId?: string) {
       }
     } else {
       // Colunas válidas em agenda_eventos
-      const hora = regra.regra_hora || '09:00'
+      const hora = (regra.regra_hora || '09:00').substring(0, 5)
       dados = {
         escritorio_id: regra.escritorio_id,
         recorrencia_id: regra.id,

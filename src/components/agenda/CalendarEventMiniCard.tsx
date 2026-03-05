@@ -89,6 +89,9 @@ export default function CalendarEventMiniCard({
     styles = tipoStyles.prazoFatalHoje
   }
 
+  // Recorrentes usam fundo azul royal escuro → forçar texto branco
+  const textClass = temIndicadorEspecial ? 'text-white' : styles.text
+
   return (
     <div
       onClick={onClick}
@@ -107,7 +110,7 @@ export default function CalendarEventMiniCard({
           <div className="flex items-center gap-1.5">
             {/* Horário (apenas se não for dia inteiro e não for tarefa) */}
             {!dia_inteiro && tipo !== 'tarefa' && (
-              <span className={cn('text-[10px] font-bold flex-shrink-0', styles.text)}>
+              <span className={cn('text-[10px] font-bold flex-shrink-0', textClass)}>
                 {format(data_inicio, 'HH:mm')}
               </span>
             )}
@@ -115,7 +118,7 @@ export default function CalendarEventMiniCard({
             {/* Título */}
             <span className={cn(
               'text-[11px] font-semibold truncate leading-tight',
-              styles.text,
+              textClass,
               isConcluido && 'line-through opacity-75'
             )}>
               {titulo}

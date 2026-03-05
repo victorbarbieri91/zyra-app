@@ -543,7 +543,7 @@ export default function TarefaDetailModal({
     <>
     <Dialog open={open} onOpenChange={handleMainDialogOpenChange}>
       <DialogContent
-        className="max-w-xl p-0 overflow-hidden border-0"
+        className="max-w-2xl p-0 overflow-hidden border-0"
         onPointerDownOutside={(e) => {
           // Prevenir fechamento quando dialogs secundários estão abertos
           if (prazoFatalWarningOpen || confirmPrazoFatalOpen || calendarField !== null) {
@@ -857,7 +857,7 @@ export default function TarefaDetailModal({
           </div>
 
           {/* Footer com Ações */}
-          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex-shrink-0">
             <div className="flex items-center justify-between flex-wrap gap-y-2">
               {/* Grupo esquerdo: ações primárias + timer */}
               <div className="flex items-center gap-2">
@@ -871,7 +871,7 @@ export default function TarefaDetailModal({
                     }}
                     className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
                   >
-                    <Check className="w-3 h-3 mr-1" />
+                    <Check className="w-3.5 h-3.5 mr-1.5" />
                     {isFixa ? 'Concluir Hoje' : 'Concluir'}
                   </Button>
                 ) : (
@@ -884,7 +884,7 @@ export default function TarefaDetailModal({
                     }}
                     className="h-8 text-xs border-slate-200"
                   >
-                    <RotateCcw className="w-3 h-3 mr-1" />
+                    <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
                     Reabrir
                   </Button>
                 )}
@@ -903,7 +903,7 @@ export default function TarefaDetailModal({
                         : "border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
                     )}
                   >
-                    <Timer className="w-3 h-3 mr-1" />
+                    <Timer className="w-3.5 h-3.5 mr-1.5" />
                     Lançar Horas
                   </Button>
                 )}
@@ -916,7 +916,7 @@ export default function TarefaDetailModal({
                     onClick={() => setTimesheetListOpen(true)}
                     className="h-8 text-xs border-slate-200 text-[#34495e] hover:bg-slate-50"
                   >
-                    <Clock className="w-3 h-3 mr-1" />
+                    <Clock className="w-3.5 h-3.5 mr-1.5" />
                     Ver Horas
                     <span className="ml-1 px-1.5 py-0.5 rounded-full bg-slate-100 text-[9px] font-semibold text-slate-500">
                       {timesheetEntries.length}
@@ -930,18 +930,18 @@ export default function TarefaDetailModal({
                   variant={timerExistente?.status === 'rodando' ? 'default' : 'outline'}
                   onClick={handleTimerClick}
                   className={cn(
-                    "h-8 text-xs",
+                    "h-8 text-xs min-w-[120px]",
                     timerExistente?.status === 'rodando'
                       ? "bg-amber-500 hover:bg-amber-600 text-white"
                       : "border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
                   )}
                 >
                   {timerExistente?.status === 'rodando' ? (
-                    <><PauseCircle className="w-3 h-3 mr-1" /> Pausar</>
+                    <><PauseCircle className="w-3.5 h-3.5 mr-1.5" /> Pausar</>
                   ) : timerExistente?.status === 'pausado' ? (
-                    <><PlayCircle className="w-3 h-3 mr-1" /> Retomar</>
+                    <><PlayCircle className="w-3.5 h-3.5 mr-1.5" /> Retomar</>
                   ) : (
-                    <><PlayCircle className="w-3 h-3 mr-1" /> Iniciar Timer</>
+                    <><PlayCircle className="w-3.5 h-3.5 mr-1.5" /> Iniciar Timer</>
                   )}
                 </Button>
               </div>
@@ -954,7 +954,7 @@ export default function TarefaDetailModal({
                   onClick={onEdit}
                   className="h-8 text-xs text-slate-600 hover:text-slate-900"
                 >
-                  <Edit2 className="w-3 h-3 mr-1" />
+                  <Edit2 className="w-3.5 h-3.5 mr-1.5" />
                   Editar
                 </Button>
 
@@ -964,7 +964,7 @@ export default function TarefaDetailModal({
                   onClick={onDelete}
                   className="h-8 text-xs text-red-600 hover:text-red-700"
                 >
-                  <Trash2 className="w-3 h-3 mr-1" />
+                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
                   Excluir
                 </Button>
               </div>

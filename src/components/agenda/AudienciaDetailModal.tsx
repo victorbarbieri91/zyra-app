@@ -219,12 +219,12 @@ export default function AudienciaDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl p-0 overflow-hidden border-0">
+      <DialogContent className="max-w-2xl p-0 overflow-hidden border-0">
         <DialogTitle className="sr-only">Detalhes da Audiência</DialogTitle>
-        <div className="bg-white rounded-lg">
+        <div className="bg-white rounded-lg flex flex-col max-h-[85vh]">
 
           {/* Header Minimalista */}
-          <div className="p-6 pb-4 border-b border-slate-100">
+          <div className="p-6 pb-4 border-b border-slate-100 flex-shrink-0">
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900 mb-1">
@@ -258,7 +258,7 @@ export default function AudienciaDetailModal({
           </div>
 
           {/* Conteúdo Principal */}
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 overflow-y-auto flex-1">
 
             {/* DESCRIÇÃO */}
             <div>
@@ -469,7 +469,7 @@ export default function AudienciaDetailModal({
           </div>
 
           {/* Footer com Ações */}
-          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex-shrink-0">
             <div className="flex items-center justify-between flex-wrap gap-y-2">
               {/* Grupo esquerdo: ações primárias + timer */}
               <div className="flex items-center gap-2">
@@ -479,7 +479,7 @@ export default function AudienciaDetailModal({
                     size="sm"
                     className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
                   >
-                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                    <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
                     Marcar como Realizada
                   </Button>
                 )}
@@ -491,7 +491,7 @@ export default function AudienciaDetailModal({
                     variant="outline"
                     className="h-8 text-xs border-slate-200"
                   >
-                    <RotateCcw className="w-3 h-3 mr-1" />
+                    <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
                     Reabrir
                   </Button>
                 )}
@@ -513,18 +513,18 @@ export default function AudienciaDetailModal({
                   variant={timerExistente?.status === 'rodando' ? 'default' : 'outline'}
                   onClick={handleTimerClick}
                   className={cn(
-                    "h-8 text-xs",
+                    "h-8 text-xs min-w-[120px]",
                     timerExistente?.status === 'rodando'
                       ? "bg-amber-500 hover:bg-amber-600 text-white"
                       : "border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
                   )}
                 >
                   {timerExistente?.status === 'rodando' ? (
-                    <><PauseCircle className="w-3 h-3 mr-1" /> Pausar</>
+                    <><PauseCircle className="w-3.5 h-3.5 mr-1.5" /> Pausar</>
                   ) : timerExistente?.status === 'pausado' ? (
-                    <><PlayCircle className="w-3 h-3 mr-1" /> Retomar</>
+                    <><PlayCircle className="w-3.5 h-3.5 mr-1.5" /> Retomar</>
                   ) : (
-                    <><PlayCircle className="w-3 h-3 mr-1" /> Iniciar Timer</>
+                    <><PlayCircle className="w-3.5 h-3.5 mr-1.5" /> Iniciar Timer</>
                   )}
                 </Button>
               </div>
@@ -538,7 +538,7 @@ export default function AudienciaDetailModal({
                     variant="ghost"
                     className="h-8 text-xs text-slate-600 hover:text-slate-900"
                   >
-                    <Edit className="w-3 h-3 mr-1" />
+                    <Edit className="w-3.5 h-3.5 mr-1.5" />
                     Editar
                   </Button>
                 )}
@@ -550,7 +550,7 @@ export default function AudienciaDetailModal({
                     variant="ghost"
                     className="h-8 text-xs text-red-600 hover:text-red-700"
                   >
-                    <X className="w-3 h-3 mr-1" />
+                    <X className="w-3.5 h-3.5 mr-1.5" />
                     Cancelar
                   </Button>
                 )}

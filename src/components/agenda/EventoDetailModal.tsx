@@ -146,12 +146,12 @@ export default function EventoDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl p-0 overflow-hidden border-0">
+      <DialogContent className="max-w-2xl p-0 overflow-hidden border-0">
         <DialogTitle className="sr-only">Detalhes do {isPrazo ? 'Prazo' : 'Compromisso'}</DialogTitle>
-        <div className="bg-white rounded-lg">
+        <div className="bg-white rounded-lg flex flex-col max-h-[85vh]">
 
           {/* Header Minimalista */}
-          <div className="p-6 pb-4 border-b border-slate-100">
+          <div className="p-6 pb-4 border-b border-slate-100 flex-shrink-0">
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900 mb-1">
@@ -184,7 +184,7 @@ export default function EventoDetailModal({
           </div>
 
           {/* Conteúdo Principal */}
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 overflow-y-auto flex-1">
 
             {/* Alerta de Prazo Vencido ou Crítico */}
             {isPrazo && (prazoVencido || evento.prazo_criticidade === 'hoje' || evento.prazo_criticidade === 'critico') && (
@@ -392,7 +392,7 @@ export default function EventoDetailModal({
           </div>
 
           {/* Footer - Botões de Ação */}
-          <div className="p-6 pt-4 border-t border-slate-100">
+          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex-shrink-0">
             <div className="flex items-center justify-between flex-wrap gap-y-2">
               {/* Grupo esquerdo: ações primárias + timer */}
               <div className="flex items-center gap-2">
@@ -425,7 +425,7 @@ export default function EventoDetailModal({
                   variant={timerExistente?.status === 'rodando' ? 'default' : 'outline'}
                   onClick={handleTimerClick}
                   className={cn(
-                    "text-xs h-8",
+                    "text-xs h-8 min-w-[120px]",
                     timerExistente?.status === 'rodando'
                       ? "bg-amber-500 hover:bg-amber-600 text-white"
                       : "border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
@@ -447,8 +447,8 @@ export default function EventoDetailModal({
                   <Button
                     onClick={onEdit}
                     size="sm"
-                    variant="outline"
-                    className="text-xs h-8"
+                    variant="ghost"
+                    className="text-xs text-slate-600 hover:text-slate-900 h-8"
                   >
                     <Edit className="w-3.5 h-3.5 mr-1.5" />
                     Editar
@@ -459,8 +459,8 @@ export default function EventoDetailModal({
                   <Button
                     onClick={onCancelar}
                     size="sm"
-                    variant="outline"
-                    className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 h-8"
+                    variant="ghost"
+                    className="text-xs text-red-600 hover:text-red-700 h-8"
                   >
                     <X className="w-3.5 h-3.5 mr-1.5" />
                     Cancelar

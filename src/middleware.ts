@@ -95,7 +95,8 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/cadastro') ||
     request.nextUrl.pathname.startsWith('/convite') ||
     request.nextUrl.pathname.startsWith('/reset-password') ||
-    request.nextUrl.pathname.startsWith('/auth/callback')
+    request.nextUrl.pathname.startsWith('/auth/callback') ||
+    request.nextUrl.pathname.startsWith('/auth/confirm')
 
   if (!user && !isPublicRoute) {
     return NextResponse.redirect(new URL('/login', request.url))

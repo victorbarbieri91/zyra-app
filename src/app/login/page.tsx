@@ -52,6 +52,14 @@ export default function LoginPage() {
 
       localStorage.setItem('zyra_last_email', email)
 
+      // Ask browser to save credentials for password autofill
+      if (window.PasswordCredential) {
+        try {
+          const cred = new PasswordCredential({ id: email, password })
+          await navigator.credentials.store(cred)
+        } catch { /* browser may block, ignore */ }
+      }
+
       // Check if there's a pending invite to process
       const pendingInviteToken = sessionStorage.getItem('pendingInviteToken')
       if (pendingInviteToken) {

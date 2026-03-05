@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -32,6 +32,11 @@ export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
 
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('zyra_last_email')
+    if (savedEmail) setEmail(savedEmail)
+  }, [])
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -44,6 +49,8 @@ export default function LoginPage() {
       })
 
       if (signInError) throw signInError
+
+      localStorage.setItem('zyra_last_email', email)
 
       // Check if there's a pending invite to process
       const pendingInviteToken = sessionStorage.getItem('pendingInviteToken')
@@ -283,7 +290,9 @@ export default function LoginPage() {
                     </Label>
                     <Input
                       id="login-email"
+                      name="email"
                       type="email"
+                      autoComplete="email"
                       placeholder="seu@email.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -309,7 +318,9 @@ export default function LoginPage() {
                     <div className="relative">
                       <Input
                         id="login-password"
+                        name="password"
                         type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
                         placeholder="Digite sua senha"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}

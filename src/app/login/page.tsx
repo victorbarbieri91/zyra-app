@@ -53,9 +53,9 @@ export default function LoginPage() {
       localStorage.setItem('zyra_last_email', email)
 
       // Ask browser to save credentials for password autofill
-      if (window.PasswordCredential) {
+      if ('PasswordCredential' in window) {
         try {
-          const cred = new PasswordCredential({ id: email, password })
+          const cred = new (window as any).PasswordCredential({ id: email, password })
           await navigator.credentials.store(cred)
         } catch { /* browser may block, ignore */ }
       }

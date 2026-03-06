@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   FileText,
   Eye,
@@ -14,6 +14,8 @@ import {
   ChevronDown,
   Check,
   FolderOpen,
+  Search,
+  X,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -51,7 +53,6 @@ import { FaturasTable } from '@/components/faturamento/FaturasTable'
 import { FaturaDetalhesPanel } from '@/components/faturamento/FaturaDetalhesPanel'
 import { ClientesTable } from '@/components/faturamento/ClientesTable'
 import { cn, formatHoras } from '@/lib/utils'
-import { formatDateForDB } from '@/lib/timezone'
 import { toast } from 'sonner'
 import type {
   ClienteParaFaturar,
@@ -100,6 +101,40 @@ export default function FaturamentoPage() {
   const [selectedFatura, setSelectedFatura] = useState<FaturaGerada | null>(null)
   const [showFaturaDetails, setShowFaturaDetails] = useState(false)
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
+
+  // Pesquisa e filtros de faturas
+  const [searchFaturas, setSearchFaturas] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string | null>(null)
+
+  const faturasFiltradas = useMemo(() => {
+    let resultado = faturas
+
+    // Filtro por texto (número da fatura ou nome do cliente)
+    if (searchFaturas.trim()) {
+      const termo = searchFaturas.toLowerCase().trim()
+      resultado = resultado.filter(
+        (f) =>
+          f.numero_fatura.toLowerCase().includes(termo) ||
+          f.cliente_nome.toLowerCase().includes(termo)
+      )
+    }
+
+    // Filtro por status
+    if (statusFilter) {
+      resultado = resultado.filter((f) => f.categoria_status === statusFilter)
+    }
+
+    return resultado
+  }, [faturas, searchFaturas, statusFilter])
+
+  const statusContagem = useMemo(() => {
+    const contagem: Record<string, number> = {}
+    for (const f of faturas) {
+      const cat = f.categoria_status || f.status
+      contagem[cat] = (contagem[cat] || 0) + 1
+    }
+    return contagem
+  }, [faturas])
 
   // Dialog de confirmação para desmontar fatura
   const [faturaParaDesmontar, setFaturaParaDesmontar] = useState<string | null>(null)
@@ -207,13 +242,14 @@ export default function FaturamentoPage() {
   const handleGerarFatura = () => {
     if (!selectedCliente) return
 
-    // Calcular defaults
+    // Calcular defaults — input type="date" precisa de yyyy-MM-dd
     const hoje = new Date()
     const vencimento = new Date(hoje)
     vencimento.setDate(vencimento.getDate() + 30)
 
-    setDataEmissao(formatDateForDB(hoje))
-    setDataVencimento(formatDateForDB(vencimento))
+    const toYMD = (d: Date) => d.toISOString().split('T')[0]
+    setDataEmissao(toYMD(hoje))
+    setDataVencimento(toYMD(vencimento))
     setShowConfirmModal(true)
   }
 
@@ -508,14 +544,16 @@ export default function FaturamentoPage() {
             {/* Coluna Esquerda - Lista de Faturas */}
             <div className={cn(showFaturaDetails ? 'xl:col-span-7' : 'xl:col-span-12')}>
               <Card className="border-slate-200 shadow-sm">
-                <CardHeader className="pb-2 pt-3">
+                <CardHeader className="pb-2 pt-3 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <CardTitle className="text-sm font-medium text-slate-700">
                         Faturas Geradas
                       </CardTitle>
                       <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                        {faturas.length} {faturas.length === 1 ? 'fatura' : 'faturas'}
+                        {faturasFiltradas.length === faturas.length
+                          ? `${faturas.length} ${faturas.length === 1 ? 'fatura' : 'faturas'}`
+                          : `${faturasFiltradas.length} de ${faturas.length}`}
                       </Badge>
                     </div>
                     <div className="flex items-center gap-2">
@@ -537,6 +575,95 @@ export default function FaturamentoPage() {
                       </Button>
                     </div>
                   </div>
+
+                  {/* Barra de pesquisa e filtros de status */}
+                  <div className="space-y-2">
+                    {/* Pesquisa */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                      <Input
+                        placeholder="Buscar por n\u00famero da fatura ou nome do cliente..."
+                        value={searchFaturas}
+                        onChange={(e) => setSearchFaturas(e.target.value)}
+                        className="pl-9 pr-8 h-9 text-sm border-slate-200"
+                      />
+                      {searchFaturas && (
+                        <button
+                          onClick={() => setSearchFaturas('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Filtros de status */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        onClick={() => setStatusFilter(null)}
+                        className={cn(
+                          'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
+                          statusFilter === null
+                            ? 'bg-[#34495e] text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        )}
+                      >
+                        Todas
+                      </button>
+                      {statusContagem['pendente'] && (
+                        <button
+                          onClick={() => setStatusFilter('pendente')}
+                          className={cn(
+                            'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
+                            statusFilter === 'pendente'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                          )}
+                        >
+                          Pendentes ({statusContagem['pendente']})
+                        </button>
+                      )}
+                      {statusContagem['atrasado'] && (
+                        <button
+                          onClick={() => setStatusFilter('atrasado')}
+                          className={cn(
+                            'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
+                            statusFilter === 'atrasado'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-red-50 text-red-700 hover:bg-red-100'
+                          )}
+                        >
+                          Atrasadas ({statusContagem['atrasado']})
+                        </button>
+                      )}
+                      {statusContagem['pago'] && (
+                        <button
+                          onClick={() => setStatusFilter('pago')}
+                          className={cn(
+                            'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
+                            statusFilter === 'pago'
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                          )}
+                        >
+                          Pagas ({statusContagem['pago']})
+                        </button>
+                      )}
+                      {statusContagem['cancelado'] && (
+                        <button
+                          onClick={() => setStatusFilter('cancelado')}
+                          className={cn(
+                            'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
+                            statusFilter === 'cancelado'
+                              ? 'bg-slate-600 text-white'
+                              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                          )}
+                        >
+                          Canceladas ({statusContagem['cancelado']})
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="pt-2 pb-3">
                   {viewMode === 'card' ? (
@@ -545,10 +672,24 @@ export default function FaturamentoPage() {
                         <Clock className="h-8 w-8 mx-auto text-slate-400 animate-spin" />
                         <p className="text-sm text-slate-500 mt-2">Carregando...</p>
                       </div>
-                    ) : faturas.length === 0 ? (
+                    ) : faturasFiltradas.length === 0 ? (
                       <div className="py-12 text-center">
                         <FileText className="h-12 w-12 mx-auto text-slate-300" />
-                        <p className="text-sm text-slate-500 mt-2">Nenhuma fatura gerada ainda</p>
+                        <p className="text-sm text-slate-500 mt-2">
+                          {faturas.length === 0
+                            ? 'Nenhuma fatura gerada ainda'
+                            : 'Nenhuma fatura encontrada com os filtros aplicados'}
+                        </p>
+                        {(searchFaturas || statusFilter) && faturas.length > 0 && (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={() => { setSearchFaturas(''); setStatusFilter(null) }}
+                            className="mt-1 text-xs text-blue-600"
+                          >
+                            Limpar filtros
+                          </Button>
+                        )}
                       </div>
                     ) : (
                       <div className={cn(
@@ -557,7 +698,7 @@ export default function FaturamentoPage() {
                           ? "grid-cols-1 xl:grid-cols-2"
                           : "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"
                       )}>
-                        {faturas.map((fatura) => (
+                        {faturasFiltradas.map((fatura) => (
                           <FaturaGeradaCard
                             key={fatura.fatura_id}
                             fatura={fatura}
@@ -570,7 +711,7 @@ export default function FaturamentoPage() {
                     )
                   ) : (
                     <FaturasTable
-                      faturas={faturas}
+                      faturas={faturasFiltradas}
                       selectedFatura={selectedFatura}
                       onSelectFatura={handleVisualizarFatura}
                       onDesmontar={(id) => setFaturaParaDesmontar(id)}
@@ -664,11 +805,28 @@ export default function FaturamentoPage() {
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-500">Valor Total</span>
                   <span className="font-bold text-emerald-600 text-sm">
-                    {formatCurrency(
-                      lancamentos
-                        .filter(l => selectedLancamentosIds.includes(l.lancamento_id))
-                        .reduce((sum, l) => sum + (l.valor || 0), 0)
-                    )}
+                    {(() => {
+                      const selectedLancs = lancamentos.filter(l => selectedLancamentosIds.includes(l.lancamento_id))
+                      let total = selectedLancs.reduce((sum, l) => sum + (l.valor || 0), 0)
+
+                      // Aplicar ajustes contratuais (min/max)
+                      const contratoIds = [...new Set(selectedLancs.map(l => l.contrato_id).filter(Boolean))] as string[]
+                      for (const cid of contratoIds) {
+                        const limits = contractLimits[cid]
+                        if (!limits) continue
+                        const subtotalHoras = selectedLancs
+                          .filter(l => l.contrato_id === cid && l.tipo_lancamento === 'timesheet')
+                          .reduce((sum, l) => sum + (l.valor || 0), 0)
+                        if (subtotalHoras === 0) continue
+                        if (limits.min !== null && subtotalHoras < limits.min) {
+                          total += (limits.min - subtotalHoras)
+                        } else if (limits.max !== null && subtotalHoras > limits.max) {
+                          total += (limits.max - subtotalHoras)
+                        }
+                      }
+
+                      return formatCurrency(total)
+                    })()}
                   </span>
                 </div>
               </div>

@@ -6,27 +6,24 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
  * Sincroniza índices econômicos do Banco Central do Brasil (BCB)
  * para uso em correção monetária de processos e contratos.
  *
- * Deve ser executada mensalmente (via cron job ou pg_cron) após o dia 15,
- * quando a maioria dos índices já está disponível.
+ * NOTA: A execução automática é feita via pg_cron (SQL function sync_e_atualizar_correcao_monetaria).
+ * Esta Edge Function serve como alternativa manual ou para chamadas externas (n8n, etc).
  *
  * Índices sincronizados:
- * - INPC (188) - Padrão para processos
- * - IPCA (433) - Índice oficial de inflação
- * - IPCA-E (10764) - Tabelas judiciais
- * - IGP-M (189) - Contratos e aluguéis
- * - SELIC (11) - Processos tributários
+ * - INPC (188) - Padrão para processos cíveis (variação mensal %)
+ * - SELIC (11) - Processos trabalhistas e tributários (taxa diária → acumulada mensal %)
+ *
+ * IMPORTANTE: Os valores armazenados são VARIAÇÕES MENSAIS em %,
+ * não números-índice acumulados. A correção usa fórmula de composição:
+ * fator = ∏(1 + taxa_i/100) para cada mês no período.
  */
 
-// Configuração dos índices a sincronizar
+// Apenas INPC e SELIC (índices efetivamente usados)
 const INDICES_CONFIG = [
-  { codigo: 188, nome: 'INPC', descricao: 'Índice Nacional de Preços ao Consumidor' },
-  { codigo: 433, nome: 'IPCA', descricao: 'Índice de Preços ao Consumidor Amplo' },
-  { codigo: 10764, nome: 'IPCA-E', descricao: 'IPCA Especial' },
-  { codigo: 189, nome: 'IGP-M', descricao: 'Índice Geral de Preços do Mercado' },
-  { codigo: 11, nome: 'SELIC', descricao: 'Taxa Selic' },
+  { codigo: 188, nome: 'INPC', tipo: 'mensal' as const },
+  { codigo: 11, nome: 'SELIC', tipo: 'diario' as const },
 ]
 
-// Buscar últimos N meses de dados
 const MESES_HISTORICO = 24
 
 interface BCBDataPoint {
@@ -46,7 +43,6 @@ Deno.serve(async (req) => {
   const startTime = Date.now()
 
   try {
-    // Verificar método
     if (req.method === 'OPTIONS') {
       return new Response('ok', {
         headers: {
@@ -63,7 +59,6 @@ Deno.serve(async (req) => {
 
     console.log(`[${new Date().toISOString()}] Iniciando sincronização de índices BCB...`)
 
-    // Parâmetros opcionais do request
     let atualizarProcessos = true
     let escritorioId: string | null = null
 
@@ -78,7 +73,6 @@ Deno.serve(async (req) => {
     const resultados: IndiceResult[] = []
     let totalImportados = 0
 
-    // Sincronizar cada índice
     for (const indice of INDICES_CONFIG) {
       console.log(`\n[${indice.nome}] Buscando dados do BCB...`)
 
@@ -99,15 +93,38 @@ Deno.serve(async (req) => {
 
         console.log(`  → ${dados.length} registros recebidos`)
 
-        // Importar cada registro
         let importados = 0
         let ultimoMes: string | null = null
 
-        for (const ponto of dados) {
-          const resultado = await importarIndice(supabase, indice.codigo, indice.nome, ponto)
-          if (resultado) {
-            importados++
-            ultimoMes = ponto.data
+        if (indice.tipo === 'diario') {
+          // SELIC: acumular taxas diárias em taxas mensais compostas
+          const mensais = acumularDiarioParaMensal(dados)
+          console.log(`  → ${mensais.length} meses acumulados de ${dados.length} registros diários`)
+
+          for (const { competencia, taxaMensal } of mensais) {
+            const { error } = await supabase.rpc('importar_indice_bcb', {
+              p_codigo_bcb: indice.codigo,
+              p_nome: indice.nome,
+              p_competencia: competencia,
+              p_valor: taxaMensal,
+              p_variacao_mensal: null,
+            })
+
+            if (!error) {
+              importados++
+              ultimoMes = competencia
+            } else {
+              console.log(`    Erro ao importar ${competencia}: ${error.message}`)
+            }
+          }
+        } else {
+          // INPC: valores mensais diretos (variação % mensal)
+          for (const ponto of dados) {
+            const resultado = await importarIndiceMensal(supabase, indice.codigo, indice.nome, ponto)
+            if (resultado) {
+              importados++
+              ultimoMes = ponto.data
+            }
           }
         }
 
@@ -120,7 +137,6 @@ Deno.serve(async (req) => {
           registros_importados: importados,
           ultimo_mes: ultimoMes,
         })
-
       } catch (error) {
         console.error(`  ✗ Erro ao processar ${indice.nome}:`, error)
         resultados.push({
@@ -133,19 +149,17 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Atualizar valores dos processos se solicitado
+    // Atualizar valores dos processos
     let processosAtualizados = 0
     if (atualizarProcessos && totalImportados > 0) {
       console.log(`\nAtualizando valores dos processos...`)
 
       if (escritorioId) {
-        // Atualizar apenas um escritório específico
         const { data } = await supabase.rpc('atualizar_valores_processos_escritorio', {
           p_escritorio_id: escritorioId,
         })
         processosAtualizados = data?.atualizados || 0
       } else {
-        // Atualizar todos os escritórios
         const { data: escritorios } = await supabase
           .from('escritorios')
           .select('id')
@@ -184,7 +198,6 @@ Deno.serve(async (req) => {
         status: 200,
       }
     )
-
   } catch (error) {
     console.error('Erro geral:', error)
     return new Response(
@@ -208,23 +221,16 @@ Deno.serve(async (req) => {
  * Busca dados de um índice na API do BCB
  */
 async function buscarIndiceBCB(codigo: number, meses: number): Promise<BCBDataPoint[]> {
-  // Calcular data inicial (N meses atrás)
   const dataFinal = new Date()
   const dataInicial = new Date()
   dataInicial.setMonth(dataInicial.getMonth() - meses)
 
-  const dataInicialStr = formatDateBCB(dataInicial)
-  const dataFinalStr = formatDateBCB(dataFinal)
-
-  // URL da API do BCB
-  const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${codigo}/dados?formato=json&dataInicial=${dataInicialStr}&dataFinal=${dataFinalStr}`
+  const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${codigo}/dados?formato=json&dataInicial=${formatDateBCB(dataInicial)}&dataFinal=${formatDateBCB(dataFinal)}`
 
   console.log(`  URL: ${url}`)
 
   const response = await fetch(url, {
-    headers: {
-      'Accept': 'application/json',
-    },
+    headers: { 'Accept': 'application/json' },
   })
 
   if (!response.ok) {
@@ -241,34 +247,60 @@ async function buscarIndiceBCB(codigo: number, meses: number): Promise<BCBDataPo
 }
 
 /**
- * Importa um registro de índice no banco de dados
+ * Acumula taxas diárias da SELIC em taxas mensais compostas.
+ * Formula: taxa_mensal = (∏(1 + taxa_diaria/100) - 1) × 100
  */
-async function importarIndice(
+function acumularDiarioParaMensal(dados: BCBDataPoint[]): Array<{ competencia: string; taxaMensal: number }> {
+  const porMes = new Map<string, number[]>()
+
+  for (const ponto of dados) {
+    const [, mes, ano] = ponto.data.split('/').map(Number)
+    const chave = `${ano}-${String(mes).padStart(2, '0')}-01`
+    const valor = parseFloat(ponto.valor.replace(',', '.'))
+
+    if (isNaN(valor) || valor <= 0) continue
+
+    if (!porMes.has(chave)) porMes.set(chave, [])
+    porMes.get(chave)!.push(valor)
+  }
+
+  const resultado: Array<{ competencia: string; taxaMensal: number }> = []
+
+  for (const [competencia, taxasDiarias] of porMes) {
+    // Compor taxas diárias: ∏(1 + r_i/100) - 1
+    const fator = taxasDiarias.reduce((acc, taxa) => acc * (1 + taxa / 100), 1)
+    const taxaMensal = (fator - 1) * 100
+    resultado.push({ competencia, taxaMensal })
+  }
+
+  return resultado.sort((a, b) => a.competencia.localeCompare(b.competencia))
+}
+
+/**
+ * Importa um registro mensal de índice (INPC, IPCA, etc)
+ */
+async function importarIndiceMensal(
   supabase: any,
   codigo: number,
   nome: string,
   ponto: BCBDataPoint
 ): Promise<boolean> {
   try {
-    // Converter data DD/MM/YYYY para Date
-    const [dia, mes, ano] = ponto.data.split('/').map(Number)
-    const competencia = new Date(ano, mes - 1, 1) // Primeiro dia do mês
+    const [, mes, ano] = ponto.data.split('/').map(Number)
+    const competencia = `${ano}-${String(mes).padStart(2, '0')}-01`
 
-    // Converter valor
     const valor = parseFloat(ponto.valor.replace(',', '.'))
-
     if (isNaN(valor)) {
       console.log(`    Valor inválido ignorado: ${ponto.valor}`)
       return false
     }
 
-    // Chamar função de importação
     const { error } = await supabase.rpc('importar_indice_bcb', {
       p_codigo_bcb: codigo,
       p_nome: nome,
-      p_competencia: competencia.toISOString().split('T')[0],
+      p_competencia: competencia,
       p_valor: valor,
-      p_variacao_mensal: null, // BCB não retorna variação, seria calculada
+      p_variacao_mensal: null,
     })
 
     if (error) {
@@ -277,7 +309,6 @@ async function importarIndice(
     }
 
     return true
-
   } catch (error) {
     console.log(`    Erro ao processar ponto: ${error.message}`)
     return false

@@ -52,6 +52,7 @@ import ProcessoFinanceiroCard from '@/components/processos/ProcessoFinanceiroCar
 import ProcessoCobrancasCard from '@/components/processos/ProcessoCobrancasCard'
 import ProcessoCobrancaFixaCard from '@/components/processos/ProcessoCobrancaFixaCard'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
+import DespesaModal from '@/components/financeiro/DespesaModal'
 import { useRouter } from 'next/navigation'
 import type { TarefaFormData } from '@/hooks/useTarefas'
 
@@ -96,6 +97,7 @@ interface Processo {
 
 interface ProcessoResumoProps {
   processo: Processo
+  leftColumnFooter?: React.ReactNode
 }
 
 interface Movimentacao {
@@ -107,7 +109,7 @@ interface Movimentacao {
   origem?: string
 }
 
-export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
+export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoResumoProps) {
   const [copiedCNJ, setCopiedCNJ] = useState(false)
   const [openNovoAndamento, setOpenNovoAndamento] = useState(false)
   const [novoAndamento, setNovoAndamento] = useState({
@@ -125,6 +127,7 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
   const [showEventoWizard, setShowEventoWizard] = useState(false)
   const [showAudienciaWizard, setShowAudienciaWizard] = useState(false)
   const [showTimesheetModal, setShowTimesheetModal] = useState(false)
+  const [showDespesaModal, setShowDespesaModal] = useState(false)
   const [escritorioId, setEscritorioId] = useState<string | null>(null)
   const [financeiroRefreshTrigger, setFinanceiroRefreshTrigger] = useState(0)
 
@@ -947,6 +950,9 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           </Card>
         )}
 
+        {/* Slot para conteúdo extra na coluna esquerda (ex: Processos Vinculados) */}
+        {leftColumnFooter}
+
       </div>
 
       {/* Coluna Lateral (4/12) */}
@@ -1171,10 +1177,7 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
             console.log('Lançar honorário')
           }}
           onLancarHoras={() => setShowTimesheetModal(true)}
-          onLancarDespesa={() => {
-            // TODO: Abrir modal de despesa
-            console.log('Lançar despesa')
-          }}
+          onLancarDespesa={() => setShowDespesaModal(true)}
           refreshTrigger={financeiroRefreshTrigger}
         />
 
@@ -1348,6 +1351,14 @@ export default function ProcessoResumo({ processo }: ProcessoResumoProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Despesa */}
+      <DespesaModal
+        open={showDespesaModal}
+        onOpenChange={setShowDespesaModal}
+        processoId={processo.id}
+        onSuccess={() => setFinanceiroRefreshTrigger(prev => prev + 1)}
+      />
 
       {/* Modal de Timesheet */}
       <TimesheetModal

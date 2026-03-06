@@ -57,6 +57,7 @@ import EditarConsultivoModal from '@/components/consultivo/EditarConsultivoModal
 import ConsultivoFinanceiroCard from '@/components/consultivo/ConsultivoFinanceiroCard'
 import ProcessoCobrancaFixaCard from '@/components/processos/ProcessoCobrancaFixaCard'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
+import DespesaModal from '@/components/financeiro/DespesaModal'
 import type { TarefaFormData } from '@/hooks/useTarefas'
 
 interface Consulta {
@@ -146,6 +147,7 @@ export default function ConsultaDetalhePage() {
 
   // Estados para Financeiro
   const [timesheetModalOpen, setTimesheetModalOpen] = useState(false)
+  const [despesaModalOpen, setDespesaModalOpen] = useState(false)
   const [financeiroRefreshTrigger, setFinanceiroRefreshTrigger] = useState(0)
 
   // Estados para conclusão com modal de horas
@@ -1225,10 +1227,7 @@ export default function ConsultaDetalhePage() {
               clienteId={consulta.cliente_id}
               clienteNome={consulta.cliente_nome}
               onLancarHoras={() => setTimesheetModalOpen(true)}
-              onLancarDespesa={() => {
-                // TODO: Implementar modal de despesa
-                toast.info('Lancamento de despesas em desenvolvimento')
-              }}
+              onLancarDespesa={() => setDespesaModalOpen(true)}
               onLancarHonorario={() => {
                 // TODO: Implementar modal de honorario
                 toast.info('Lancamento de honorarios em desenvolvimento')
@@ -1381,6 +1380,14 @@ export default function ConsultaDetalhePage() {
         onSuccess={(processoId, numeroPasta) => {
           router.push(`/dashboard/processos/${processoId}`)
         }}
+      />
+
+      {/* Modal Lançar Despesa */}
+      <DespesaModal
+        open={despesaModalOpen}
+        onOpenChange={setDespesaModalOpen}
+        consultaId={consulta.id}
+        onSuccess={() => setFinanceiroRefreshTrigger(prev => prev + 1)}
       />
 
       {/* Modal Lançar Horas */}

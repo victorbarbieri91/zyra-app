@@ -637,42 +637,44 @@ export default function ProcessoDetalhe() {
 
           {/* Conteúdo das Abas */}
           <TabsContent value="ficha" className="space-y-6">
-            <ProcessoResumo processo={processo} />
-            {processoRaw && (() => {
-              const polo = processoRaw.polo_cliente
-              const clienteNome = processo.cliente_nome
-              const parteContraria = processoRaw.parte_contraria ?? ''
-              const autor = polo === 'ativo' ? clienteNome : polo === 'passivo' ? parteContraria : ''
-              const reu = polo === 'ativo' ? parteContraria : polo === 'passivo' ? clienteNome : ''
-              const ppData: ProcessoPrincipalData = {
-                id: processo.id,
-                numero_cnj: processoRaw.numero_cnj,
-                numero_pasta: processo.numero_pasta,
-                cliente_id: processoRaw.cliente_id,
-                cliente_nome: clienteNome,
-                autor,
-                reu,
-                polo_cliente: polo,
-                parte_contraria: parteContraria,
-                area: processoRaw.area,
-                instancia: processoRaw.instancia,
-                comarca: processoRaw.comarca,
-                responsavel_id: processoRaw.responsavel_id,
-                responsavel_nome: processo.responsavel_nome,
-                colaboradores_ids: processoRaw.colaboradores_ids,
-                tags: processoRaw.tags,
-                contrato_id: processoRaw.contrato_id,
-                modalidade_cobranca: processoRaw.modalidade_cobranca,
-                valor_causa: processoRaw.valor_causa,
-                objeto_acao: processoRaw.objeto_acao,
-              }
-              return (
-                <ProcessoRelacionados
-                  processoId={processo.id}
-                  processoPrincipalData={ppData}
-                />
-              )
-            })()}
+            <ProcessoResumo
+              processo={processo}
+              leftColumnFooter={processoRaw ? (() => {
+                const polo = processoRaw.polo_cliente
+                const clienteNome = processo.cliente_nome
+                const parteContraria = processoRaw.parte_contraria ?? ''
+                const autor = polo === 'ativo' ? clienteNome : polo === 'passivo' ? parteContraria : ''
+                const reu = polo === 'ativo' ? parteContraria : polo === 'passivo' ? clienteNome : ''
+                const ppData: ProcessoPrincipalData = {
+                  id: processo.id,
+                  numero_cnj: processoRaw.numero_cnj,
+                  numero_pasta: processo.numero_pasta,
+                  cliente_id: processoRaw.cliente_id,
+                  cliente_nome: clienteNome,
+                  autor,
+                  reu,
+                  polo_cliente: polo,
+                  parte_contraria: parteContraria,
+                  area: processoRaw.area,
+                  instancia: processoRaw.instancia,
+                  comarca: processoRaw.comarca,
+                  responsavel_id: processoRaw.responsavel_id,
+                  responsavel_nome: processo.responsavel_nome,
+                  colaboradores_ids: processoRaw.colaboradores_ids,
+                  tags: processoRaw.tags,
+                  contrato_id: processoRaw.contrato_id,
+                  modalidade_cobranca: processoRaw.modalidade_cobranca,
+                  valor_causa: processoRaw.valor_causa,
+                  objeto_acao: processoRaw.objeto_acao,
+                }
+                return (
+                  <ProcessoRelacionados
+                    processoId={processo.id}
+                    processoPrincipalData={ppData}
+                  />
+                )
+              })() : undefined}
+            />
           </TabsContent>
 
           <TabsContent value="documentos" className="space-y-6">

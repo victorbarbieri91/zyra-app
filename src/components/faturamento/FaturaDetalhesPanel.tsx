@@ -151,6 +151,7 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
   const statusInfo = getStatusInfo()
   const honorarios = itens.filter(i => i.tipo_item === 'honorario')
   const timesheet = itens.filter(i => i.tipo_item === 'timesheet')
+  const ajustes = itens.filter(i => i.tipo_item === 'ajuste_contratual')
 
   // Calcular período do timesheet
   const timesheetDatas = timesheet
@@ -461,6 +462,37 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
                 </Tabs>
               )}
             </div>
+
+            {/* Ajustes Contratuais (min/max mensal) */}
+            {ajustes.length > 0 && (
+              <div className="mb-4">
+                {ajustes.map((ajuste) => {
+                  const isComplement = ajuste.valor_total > 0
+                  return (
+                    <div
+                      key={ajuste.id}
+                      className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-xs mb-2 ${
+                        isComplement
+                          ? 'bg-amber-50 border-amber-200 text-amber-800'
+                          : 'bg-blue-50 border-blue-200 text-blue-800'
+                      }`}
+                    >
+                      <div>
+                        <p className="font-medium">{ajuste.descricao}</p>
+                        {ajuste.subtotal_original != null && ajuste.valor_limite != null && (
+                          <p className="text-[10px] mt-0.5 opacity-70">
+                            Subtotal horas: {formatCurrency(ajuste.subtotal_original)} → Limite: {formatCurrency(ajuste.valor_limite)}
+                          </p>
+                        )}
+                      </div>
+                      <span className="font-bold whitespace-nowrap ml-3">
+                        {isComplement ? '+' : ''}{formatCurrency(ajuste.valor_total)}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
 
             {/* Valor Total - Destaque Final */}
             <div className="mb-4 pt-4 border-t-2 border-slate-300">

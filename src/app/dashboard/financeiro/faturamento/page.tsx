@@ -57,6 +57,7 @@ import type {
   ClienteParaFaturar,
   LancamentoProntoFaturar,
   FaturaGerada,
+  ContractLimits,
 } from '@/hooks/useFaturamento'
 
 export default function FaturamentoPage() {
@@ -76,6 +77,7 @@ export default function FaturamentoPage() {
     loadFaturasGeradas,
     gerarFatura,
     desmontarFatura,
+    loadContractLimits,
   } = useFaturamento(escritoriosSelecionados)
 
   const {
@@ -106,6 +108,9 @@ export default function FaturamentoPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [dataEmissao, setDataEmissao] = useState('')
   const [dataVencimento, setDataVencimento] = useState('')
+
+  // Limites contratuais para preview
+  const [contractLimits, setContractLimits] = useState<Record<string, ContractLimits>>({})
 
   // Modal de execução manual de fechamento de pastas
   const [showExecutarModal, setShowExecutarModal] = useState(false)
@@ -170,15 +175,26 @@ export default function FaturamentoPage() {
       loadClientesParaFaturar(),
       loadFaturasGeradas(),
     ])
-    setClientes(clientesData)
+    // Enriquecer cada cliente com o nome do escritório
+    const enriched = clientesData.map(c => ({
+      ...c,
+      escritorio_nome: escritoriosGrupo.find(e => e.id === c.escritorio_id)?.nome || '',
+    }))
+    setClientes(enriched)
     setFaturas(faturasData)
   }
 
   const handlePreview = async (cliente: ClienteParaFaturar) => {
     setSelectedCliente(cliente)
-    const lancamentosData = await loadLancamentosPorCliente(cliente.cliente_id)
+    const lancamentosData = await loadLancamentosPorCliente(cliente.cliente_id, cliente.escritorio_id)
     setLancamentos(lancamentosData)
     setSelectedLancamentosIds(lancamentosData.map((l) => l.lancamento_id))
+
+    // Carregar limites contratuais (min/max mensal) dos contratos envolvidos
+    const contratoIds = [...new Set(lancamentosData.map(l => l.contrato_id).filter(Boolean))] as string[]
+    const limits = await loadContractLimits(contratoIds)
+    setContractLimits(limits)
+
     setShowPreview(true)
   }
 
@@ -225,7 +241,7 @@ export default function FaturamentoPage() {
       timesheetIds,
       undefined, // observações
       dataVencimento || undefined,
-      undefined, // escritorioIdOverride
+      selectedCliente.escritorio_id, // escritorioIdOverride — gerar no escritório correto
       fechamentosIds,
       undefined, // despesasIds
       dataEmissao || undefined
@@ -455,6 +471,7 @@ export default function FaturamentoPage() {
                 selectedCliente={selectedCliente}
                 onSelectCliente={handlePreview}
                 loading={loading}
+                showEscritorio={escritoriosGrupo.length > 1}
               />
             </div>
           </div>
@@ -480,6 +497,7 @@ export default function FaturamentoPage() {
               pastas={selectedCliente.pastas}
               onRemoverProcessoPasta={handleRemoverProcessoPasta}
               onExcluirPasta={handleExcluirPasta}
+              contractLimits={contractLimits}
             />
           )}
         </TabsContent>
@@ -545,6 +563,7 @@ export default function FaturamentoPage() {
                             fatura={fatura}
                             onDesmontar={(id) => setFaturaParaDesmontar(id)}
                             onVisualizarItens={() => handleVisualizarFatura(fatura)}
+                            escritorioNome={escritoriosGrupo.length > 1 ? escritoriosGrupo.find(e => e.id === fatura.escritorio_id)?.nome : undefined}
                           />
                         ))}
                       </div>
@@ -556,6 +575,8 @@ export default function FaturamentoPage() {
                       onSelectFatura={handleVisualizarFatura}
                       onDesmontar={(id) => setFaturaParaDesmontar(id)}
                       loading={loading}
+                      showEscritorio={escritoriosGrupo.length > 1}
+                      escritoriosMap={new Map(escritoriosGrupo.map(e => [e.id, e.nome]))}
                     />
                   )}
                 </CardContent>
@@ -567,7 +588,7 @@ export default function FaturamentoPage() {
               <div className="xl:col-span-5">
                 <FaturaDetalhesPanel
                   fatura={selectedFatura}
-                  escritorioId={escritorioAtivo}
+                  escritorioId={selectedFatura?.escritorio_id || escritorioAtivo}
                   onClose={() => {
                     setShowFaturaDetails(false)
                     setSelectedFatura(null)

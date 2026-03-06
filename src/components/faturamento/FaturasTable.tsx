@@ -12,6 +12,8 @@ interface FaturasTableProps {
   onSelectFatura: (fatura: FaturaGerada) => void
   onDesmontar: (faturaId: string) => void
   loading?: boolean
+  showEscritorio?: boolean
+  escritoriosMap?: Map<string, string>
 }
 
 export function FaturasTable({
@@ -20,6 +22,8 @@ export function FaturasTable({
   onSelectFatura,
   onDesmontar,
   loading = false,
+  showEscritorio = false,
+  escritoriosMap,
 }: FaturasTableProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -109,8 +113,11 @@ export function FaturasTable({
       {/* Header */}
       <div className="bg-slate-50 border-b border-slate-200">
         <div className="grid grid-cols-12 gap-3 px-4 py-2.5 text-xs font-medium text-slate-600">
-          <div className="col-span-3">FATURA</div>
-          <div className="col-span-3">CLIENTE</div>
+          <div className={showEscritorio ? "col-span-2" : "col-span-3"}>FATURA</div>
+          <div className={showEscritorio ? "col-span-2" : "col-span-3"}>CLIENTE</div>
+          {showEscritorio && (
+            <div className="col-span-2">ESCRITÓRIO</div>
+          )}
           <div className="col-span-2 text-center">EMISSÃO</div>
           <div className="col-span-2 text-right">VALOR</div>
           <div className="col-span-2 text-right">AÇÕES</div>
@@ -129,7 +136,7 @@ export function FaturasTable({
             onClick={() => onSelectFatura(fatura)}
           >
             {/* Número da Fatura */}
-            <div className="col-span-3">
+            <div className={showEscritorio ? "col-span-2" : "col-span-3"}>
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-[#46627f] shrink-0" />
                 <div className="min-w-0">
@@ -142,7 +149,7 @@ export function FaturasTable({
             </div>
 
             {/* Cliente */}
-            <div className="col-span-3">
+            <div className={showEscritorio ? "col-span-2" : "col-span-3"}>
               <p className="text-sm text-slate-700 truncate">{fatura.cliente_nome}</p>
               <div className="flex items-center gap-2 mt-0.5">
                 {fatura.qtd_honorarios > 0 && (
@@ -157,6 +164,15 @@ export function FaturasTable({
                 )}
               </div>
             </div>
+
+            {/* Escritório */}
+            {showEscritorio && (
+              <div className="col-span-2 flex items-center">
+                <Badge variant="outline" className="text-[10px] font-normal text-slate-500 border-slate-200 truncate max-w-full">
+                  {escritoriosMap?.get(fatura.escritorio_id) || '-'}
+                </Badge>
+              </div>
+            )}
 
             {/* Data de Emissão */}
             <div className="col-span-2 text-center">

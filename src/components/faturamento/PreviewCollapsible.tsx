@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { FileText, Plus, FolderOpen, Trash2, DollarSign, Clock, ChevronDown, Building2 } from 'lucide-react'
+import { FileText, Plus, FolderOpen, Trash2, DollarSign, Clock, ChevronDown, Building2, AlertTriangle, Scale } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { cn, formatHoras } from '@/lib/utils'
 import { LancamentoSelectableItem } from './LancamentoSelectableItem'
-import type { LancamentoProntoFaturar, ProcessoFechamento } from '@/hooks/useFaturamento'
+import type { LancamentoProntoFaturar, ProcessoFechamento, ContractLimits } from '@/hooks/useFaturamento'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -49,6 +49,7 @@ interface PreviewCollapsibleProps {
   pastas?: PastaData[]
   onRemoverProcessoPasta?: (fechamentoId: string, processoId: string) => void
   onExcluirPasta?: (fechamentoId: string) => void
+  contractLimits?: Record<string, ContractLimits>
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -74,6 +75,7 @@ export function PreviewCollapsible({
   onGerarFatura,
   onRemoverProcessoPasta,
   onExcluirPasta,
+  contractLimits = {},
 }: PreviewCollapsibleProps) {
   const [activeContratoKey, setActiveContratoKey] = useState<string>('__all__')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
@@ -139,6 +141,33 @@ export function PreviewCollapsible({
       .reduce((sum, l) => sum + (l.valor || 0), 0)
   }
 
+  // Calcular ajuste contratual para um grupo (min/max mensal)
+  const getGroupAdjustment = (group: ContratoGroup): { ajuste: number; subtotal: number; limite: number; tipo: 'min' | 'max' } | null => {
+    if (!group.contrato_id || !contractLimits[group.contrato_id]) return null
+    const { min, max } = contractLimits[group.contrato_id]
+    const subtotalHoras = group.timesheet
+      .filter(l => selectedIds.includes(l.lancamento_id))
+      .reduce((sum, l) => sum + (l.valor || 0), 0)
+    if (subtotalHoras === 0) return null
+    if (min !== null && subtotalHoras < min) {
+      return { ajuste: min - subtotalHoras, subtotal: subtotalHoras, limite: min, tipo: 'min' }
+    }
+    if (max !== null && subtotalHoras > max) {
+      return { ajuste: max - subtotalHoras, subtotal: subtotalHoras, limite: max, tipo: 'max' }
+    }
+    return null
+  }
+
+  // Total de ajustes contratuais (para somar ao footer)
+  const totalAjustes = useMemo(() => {
+    let ajuste = 0
+    for (const group of contratoGroups) {
+      const adj = getGroupAdjustment(group)
+      if (adj) ajuste += adj.ajuste
+    }
+    return ajuste
+  }, [contratoGroups, selectedIds, contractLimits]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const toggleSection = (sectionKey: string) =>
     setCollapsed(prev => ({ ...prev, [sectionKey]: !prev[sectionKey] }))
 
@@ -203,6 +232,7 @@ export function PreviewCollapsible({
                     const total = [...group.honorarios, ...group.timesheet, ...group.pastas]
                     const selCount = getGroupSelectedCount(group)
                     const isActive = activeContratoKey === group.key
+                    const hasAdj = getGroupAdjustment(group) !== null
                     return (
                       <button
                         key={group.key}
@@ -216,9 +246,12 @@ export function PreviewCollapsible({
                       >
                         <Building2 className={cn('h-3.5 w-3.5 mt-0.5 shrink-0', isActive ? 'text-[#1E3A8A]' : 'text-slate-400')} />
                         <div className="min-w-0">
-                          <p className={cn('text-xs font-medium truncate', isActive ? 'text-[#1E3A8A]' : 'text-slate-700')}>
-                            {group.label}
-                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <p className={cn('text-xs font-medium truncate', isActive ? 'text-[#1E3A8A]' : 'text-slate-700')}>
+                              {group.label}
+                            </p>
+                            {hasAdj && <Scale className="h-3 w-3 shrink-0 text-amber-500" />}
+                          </div>
                           {group.numero_contrato && group.contrato_titulo && (
                             <p className="text-[10px] text-slate-400 truncate mt-0.5">{group.numero_contrato}</p>
                           )}
@@ -253,6 +286,31 @@ export function PreviewCollapsible({
                         </div>
                       </div>
                     )}
+
+                    {/* Banner de ajuste contratual (min/max mensal) */}
+                    {(() => {
+                      const adj = getGroupAdjustment(activeGroup)
+                      if (!adj) return null
+                      const isComplement = adj.tipo === 'min'
+                      return (
+                        <div className={cn(
+                          'flex items-center justify-between px-4 py-2.5 rounded-lg border text-xs',
+                          isComplement
+                            ? 'bg-amber-50 border-amber-200 text-amber-800'
+                            : 'bg-blue-50 border-blue-200 text-blue-800'
+                        )}>
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                            <span>
+                              Subtotal horas {formatCurrency(adj.subtotal)} — {isComplement ? 'Mínimo' : 'Máximo'} contratual {formatCurrency(adj.limite)}
+                            </span>
+                          </div>
+                          <span className="font-semibold whitespace-nowrap ml-3">
+                            {isComplement ? 'Complemento' : 'Redução'}: {isComplement ? '+' : ''}{formatCurrency(adj.ajuste)}
+                          </span>
+                        </div>
+                      )
+                    })()}
 
                     {/* Seção: Honorários */}
                     {activeGroup.honorarios.length > 0 && (
@@ -344,8 +402,13 @@ export function PreviewCollapsible({
                   <>
                     <p className="text-xs text-slate-500">
                       {totalSelecionados} item{totalSelecionados !== 1 ? 's' : ''} selecionado{totalSelecionados !== 1 ? 's' : ''}
+                      {totalAjustes !== 0 && (
+                        <span className={cn('ml-2', totalAjustes > 0 ? 'text-amber-600' : 'text-blue-600')}>
+                          ({totalAjustes > 0 ? '+' : ''}{formatCurrency(totalAjustes)} ajuste contratual)
+                        </span>
+                      )}
                     </p>
-                    <p className="text-lg font-bold text-emerald-600 mt-0.5">{formatCurrency(totalValor)}</p>
+                    <p className="text-lg font-bold text-emerald-600 mt-0.5">{formatCurrency(totalValor + totalAjustes)}</p>
                   </>
                 ) : (
                   <p className="text-sm text-slate-400">Selecione itens para gerar a fatura</p>

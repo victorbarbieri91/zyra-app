@@ -46,6 +46,8 @@ export interface LancamentoProntoFaturar {
 export interface ClienteParaFaturar {
   cliente_id: string
   cliente_nome: string
+  escritorio_id: string
+  escritorio_nome?: string
   total_honorarios: number
   total_horas: number
   qtd_honorarios: number
@@ -96,10 +98,16 @@ export interface FaturaGerada {
   dias_ate_vencimento: number | null
 }
 
+export interface ContractLimits {
+  min: number | null
+  max: number | null
+  forma_cobranca: string
+}
+
 export interface ItemFatura {
   id: string
   fatura_id: string
-  tipo_item: 'honorario' | 'timesheet' | 'despesa' | 'pasta'
+  tipo_item: 'honorario' | 'timesheet' | 'despesa' | 'pasta' | 'ajuste_contratual'
   descricao: string
   processo_id: string | null
   consulta_id: string | null
@@ -123,6 +131,10 @@ export interface ItemFatura {
   competencia?: string | null
   qtd_processos?: number | null
   processos_lista?: ProcessoFechamento[] | null
+  // Campos para ajuste contratual (min/max mensal)
+  contrato_id?: string | null
+  subtotal_original?: number | null
+  valor_limite?: number | null
 }
 
 export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
@@ -187,14 +199,16 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
 
       const lancamentos = await loadLancamentosProntos()
 
-      // Agrupar por cliente
+      // Agrupar por cliente + escritório (mesmo cliente em escritórios diferentes = linhas separadas)
       const clientesMap = new Map<string, ClienteParaFaturar>()
 
       lancamentos.forEach((lanc) => {
-        if (!clientesMap.has(lanc.cliente_id)) {
-          clientesMap.set(lanc.cliente_id, {
+        const groupKey = `${lanc.cliente_id}::${lanc.escritorio_id}`
+        if (!clientesMap.has(groupKey)) {
+          clientesMap.set(groupKey, {
             cliente_id: lanc.cliente_id,
             cliente_nome: lanc.cliente_nome || 'Cliente não identificado',
+            escritorio_id: lanc.escritorio_id,
             total_honorarios: 0,
             total_horas: 0,
             qtd_honorarios: 0,
@@ -208,7 +222,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
           })
         }
 
-        const cliente = clientesMap.get(lanc.cliente_id)!
+        const cliente = clientesMap.get(groupKey)!
 
         if (lanc.tipo_lancamento === 'honorario' || lanc.tipo_lancamento === 'despesa') {
           cliente.qtd_honorarios += 1
@@ -251,18 +265,26 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
   }, [escritorioIds, loadLancamentosProntos])
 
   const loadLancamentosPorCliente = useCallback(
-    async (clienteId: string): Promise<LancamentoProntoFaturar[]> => {
+    async (clienteId: string, escritorioId?: string): Promise<LancamentoProntoFaturar[]> => {
       if (escritorioIds.length === 0) return []
 
       try {
         setLoading(true)
         setError(null)
 
-        const { data, error: queryError } = await supabase
+        let query = supabase
           .from('v_lancamentos_prontos_faturar')
           .select('*')
-          .in('escritorio_id', escritorioIds)
           .eq('cliente_id', clienteId)
+
+        // Filtrar por escritório específico ou pelos selecionados
+        if (escritorioId) {
+          query = query.eq('escritorio_id', escritorioId)
+        } else {
+          query = query.in('escritorio_id', escritorioIds)
+        }
+
+        const { data, error: queryError } = await query
           .order('tipo_lancamento', { ascending: true })
           .order('created_at', { ascending: false })
 
@@ -363,6 +385,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
           if (item.tipo === 'timesheet') tipoItem = 'timesheet'
           else if (item.tipo === 'honorario') tipoItem = 'honorario'
           else if (item.tipo === 'pasta') tipoItem = 'pasta'
+          else if (item.tipo === 'ajuste_contratual') tipoItem = 'ajuste_contratual'
 
           return {
             id: `${faturaId}-item-${index}`,
@@ -395,6 +418,10 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
             competencia: item.competencia || null,
             qtd_processos: item.qtd_processos || null,
             processos_lista: item.processos || null,
+            // Campos para ajuste contratual
+            contrato_id: item.contrato_id || null,
+            subtotal_original: item.subtotal_original != null ? Number(item.subtotal_original) : null,
+            valor_limite: item.valor_limite != null ? Number(item.valor_limite) : null,
           }
         })
 
@@ -578,6 +605,37 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
     }
   }, [escritorioIds, supabase])
 
+  // ============================================
+  // LIMITES CONTRATUAIS (para preview de faturamento)
+  // ============================================
+
+  const loadContractLimits = useCallback(async (contratoIds: string[]): Promise<Record<string, ContractLimits>> => {
+    if (contratoIds.length === 0) return {}
+
+    try {
+      const { data, error: queryError } = await supabase
+        .from('financeiro_contratos_honorarios')
+        .select('id, forma_cobranca, config')
+        .in('id', contratoIds)
+        .in('forma_cobranca', ['por_hora', 'por_cargo'])
+
+      if (queryError) throw queryError
+
+      const result: Record<string, ContractLimits> = {}
+      data?.forEach((c: { id: string; forma_cobranca: string; config: Record<string, unknown> | null }) => {
+        const min = c.config?.valor_minimo_mensal != null ? Number(c.config.valor_minimo_mensal) : null
+        const max = c.config?.valor_maximo_mensal != null ? Number(c.config.valor_maximo_mensal) : null
+        if (min !== null || max !== null) {
+          result[c.id] = { min, max, forma_cobranca: c.forma_cobranca }
+        }
+      })
+      return result
+    } catch (err: any) {
+      captureOperationError(err, { module: 'Faturamento', operation: 'buscar', table: 'financeiro_contratos_honorarios' })
+      return {}
+    }
+  }, [supabase])
+
   return {
     loading,
     error,
@@ -590,5 +648,6 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
     desmontarFatura,
     pagarFatura,
     loadContasBancarias,
+    loadContractLimits,
   }
 }

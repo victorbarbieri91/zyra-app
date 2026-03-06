@@ -11,12 +11,14 @@ interface FaturaGeradaCardProps {
   fatura: FaturaGerada
   onDesmontar: (faturaId: string) => void
   onVisualizarItens: (faturaId: string) => void
+  escritorioNome?: string
 }
 
 export function FaturaGeradaCard({
   fatura,
   onDesmontar,
   onVisualizarItens,
+  escritorioNome,
 }: FaturaGeradaCardProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -108,6 +110,11 @@ export function FaturaGeradaCard({
           <div className="mb-3">
             <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">Cliente</p>
             <p className="text-sm font-semibold text-[#34495e]">{fatura.cliente_nome}</p>
+            {escritorioNome && (
+              <Badge variant="outline" className="mt-1 text-[10px] font-normal text-slate-500 border-slate-200">
+                {escritorioNome}
+              </Badge>
+            )}
           </div>
 
           {/* Discriminação de Serviços - Estilo Tabela */}

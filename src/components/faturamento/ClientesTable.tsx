@@ -24,6 +24,7 @@ interface ClientesTableProps {
   selectedCliente: ClienteParaFaturar | null
   onSelectCliente: (cliente: ClienteParaFaturar) => void
   loading: boolean
+  showEscritorio?: boolean
 }
 
 export function ClientesTable({
@@ -31,6 +32,7 @@ export function ClientesTable({
   selectedCliente,
   onSelectCliente,
   loading,
+  showEscritorio = false,
 }: ClientesTableProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortField, setSortField] = useState<SortField>('total')
@@ -50,10 +52,12 @@ export function ClientesTable({
   const filteredAndSortedClientes = useMemo(() => {
     let result = [...clientes]
 
-    // Filtrar por busca
+    // Filtrar por busca (nome do cliente ou nome do escritório)
     if (searchTerm) {
+      const term = searchTerm.toLowerCase()
       result = result.filter((cliente) =>
-        cliente.cliente_nome.toLowerCase().includes(searchTerm.toLowerCase())
+        cliente.cliente_nome.toLowerCase().includes(term) ||
+        (showEscritorio && cliente.escritorio_nome?.toLowerCase().includes(term))
       )
     }
 
@@ -83,7 +87,7 @@ export function ClientesTable({
     })
 
     return result
-  }, [clientes, searchTerm, sortField, sortDirection])
+  }, [clientes, searchTerm, sortField, sortDirection, showEscritorio])
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -117,6 +121,10 @@ export function ClientesTable({
     spacious: <LayoutGrid className="h-4 w-4" />,
   }
 
+  const isSelected = (cliente: ClienteParaFaturar) =>
+    selectedCliente?.cliente_id === cliente.cliente_id &&
+    selectedCliente?.escritorio_id === cliente.escritorio_id
+
   return (
     <div className="space-y-3">
       {/* Toolbar */}
@@ -125,7 +133,7 @@ export function ClientesTable({
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
-            placeholder="Buscar cliente..."
+            placeholder={showEscritorio ? "Buscar cliente ou escritório..." : "Buscar cliente..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9 h-9 text-sm border-slate-200"
@@ -158,7 +166,7 @@ export function ClientesTable({
         {/* Header */}
         <div className="bg-slate-50 border-b border-slate-200">
           <div className="grid grid-cols-12 gap-3 px-4 py-2.5">
-            <div className="col-span-4">
+            <div className={showEscritorio ? "col-span-3" : "col-span-4"}>
               <button
                 onClick={() => handleSort('nome')}
                 className="flex items-center gap-1.5 text-xs font-medium text-slate-700 hover:text-[#1E3A8A] transition-colors"
@@ -167,6 +175,11 @@ export function ClientesTable({
                 <SortIcon field="nome" />
               </button>
             </div>
+            {showEscritorio && (
+              <div className="col-span-1">
+                <span className="text-xs font-medium text-slate-700">ESCRITÓRIO</span>
+              </div>
+            )}
             <div className="col-span-2 text-center">
               <button
                 onClick={() => handleSort('horas')}
@@ -224,22 +237,31 @@ export function ClientesTable({
           ) : (
             filteredAndSortedClientes.map((cliente) => (
               <div
-                key={cliente.cliente_id}
+                key={`${cliente.cliente_id}::${cliente.escritorio_id}`}
                 className={cn(
                   'grid grid-cols-12 gap-3 px-4 cursor-pointer transition-all',
                   densityClasses[density],
-                  selectedCliente?.cliente_id === cliente.cliente_id
+                  isSelected(cliente)
                     ? 'bg-blue-50 border-l-2 border-l-[#1E3A8A]'
                     : 'hover:bg-slate-50'
                 )}
                 onClick={() => onSelectCliente(cliente)}
               >
                 {/* Nome do Cliente */}
-                <div className="col-span-4 flex items-center">
+                <div className={cn("flex items-center", showEscritorio ? "col-span-3" : "col-span-4")}>
                   <p className="text-sm font-medium text-[#34495e] truncate">
                     {cliente.cliente_nome}
                   </p>
                 </div>
+
+                {/* Escritório */}
+                {showEscritorio && (
+                  <div className="col-span-1 flex items-center">
+                    <Badge variant="outline" className="text-[10px] font-normal text-slate-500 border-slate-200 truncate max-w-full">
+                      {cliente.escritorio_nome || '-'}
+                    </Badge>
+                  </div>
+                )}
 
                 {/* Horas */}
                 <div className="col-span-2 flex items-center justify-center">

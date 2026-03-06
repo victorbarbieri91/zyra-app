@@ -1186,7 +1186,7 @@ export default function TimesheetModal({
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => setDuracaoMinutos(Math.max(0, duracaoMinutos - 15))}
+                  onClick={() => setDuracaoMinutos(Math.max(0, duracaoMinutos - 5))}
                   className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] transition-colors leading-none"
                 >
                   <span className="relative" style={{ top: '-1px' }}>&#8722;</span>
@@ -1195,7 +1195,7 @@ export default function TimesheetModal({
                 <span className="text-[11px] text-slate-400 -ml-0.5">min</span>
                 <button
                   type="button"
-                  onClick={() => setDuracaoMinutos(Math.min(45, duracaoMinutos + 15))}
+                  onClick={() => setDuracaoMinutos(Math.min(55, duracaoMinutos + 5))}
                   className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] transition-colors leading-none"
                 >
                   <span className="relative" style={{ top: '-0.5px' }}>+</span>

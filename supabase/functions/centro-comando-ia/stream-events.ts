@@ -1,5 +1,7 @@
 export type StreamEventName =
   | 'status'
+  | 'tool_call'
+  | 'tool_result'
   | 'input_required'
   | 'action_required'
   | 'final'

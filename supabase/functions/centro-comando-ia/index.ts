@@ -1,10 +1,10 @@
-﻿
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { classifyIntent, type FlowType, type SupportedOperation } from './intent-router.ts'
 import { normalizeConsultivoArea, normalizeDateInput, normalizePriority, normalizeTaskType } from './payload-normalization.ts'
 import { buildActionPreview, formatDate, formatDateTime, renderMarkdownTable } from './response-renderer.ts'
 import { createSSEStream } from './stream-events.ts'
+import { runAgentOrchestrator, type AgentToolDefinition, type AgentToolTraceItem } from './agent-orchestrator.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -65,6 +65,9 @@ interface RequestPayload {
   dados_adicionais?: Record<string, unknown>
   pending_input_id?: string
   input_values?: Record<string, unknown>
+  historico_mensagens?: Array<{ role?: string; content?: string }>
+  max_steps?: number
+  session_context_version?: string
   escritorio_id?: string | null
   user_id?: string | null
 }
@@ -80,8 +83,10 @@ interface FlowResult {
   acoes_pendentes?: ActionRequired[]
   pending_input?: PendingInput | null
   erro?: string
+  tool_trace?: AgentToolTraceItem[]
 }
-interface RunContext { supabase: ServiceClient; auth: AuthContext; runId: string; sessaoId: string; mensagem: string }
+interface HistoryMessage { role: 'user' | 'assistant' | 'system'; content: string }
+interface RunContext { supabase: ServiceClient; auth: AuthContext; runId: string; sessaoId: string; mensagem: string; historicoMensagens: HistoryMessage[] }
 interface TableInfoColumn {
   coluna: string
   tipo: string
@@ -108,6 +113,22 @@ const errorResponse = (message: string, status = 400) => new Response(JSON.strin
 const asText = (v: unknown) => (typeof v === 'string' && v.trim().length ? v.trim() : null)
 const schemaCache = new Map<string, { info: TableInfo; expiresAt: number }>()
 const isRouterV2Enabled = () => (Deno.env.get('CCIA_ROUTER_V2') || 'true').toLowerCase() !== 'false'
+const isAgenticEnabled = () => (Deno.env.get('CCIA_AGENTIC_V1') || 'true').toLowerCase() !== 'false'
+const getAgentModel = () => Deno.env.get('CCIA_MODEL') || 'gpt-5-mini'
+const AGENT_LOOP_TIMEOUT_MS = 45000
+
+function buildAgentSystemPrompt(): string {
+  return [
+    'Voce e o Centro de Comando IA da Zyra Legal.',
+    'Objetivo: resolver pedidos com ferramentas de banco de forma segura e objetiva.',
+    'Sempre siga o ciclo: planejar -> usar ferramenta -> validar -> resumir.',
+    'Operacoes de escrita devem ser SEMPRE preparadas primeiro e so executadas com confirmacao explicita.',
+    'Se houver ambiguidade de entidade (cliente, processo, tarefa), solicite desambiguacao antes de preparar escrita.',
+    'Memoria e seletiva: salvar apenas preferencia, correcao e contexto duravel.',
+    'Nao invente IDs, colunas ou constraints; consulte descobrir_estrutura quando necessario.',
+    'Responda em portugues brasileiro de forma direta.',
+  ].join(' ')
+}
 
 function extractBearerToken(req: Request) {
   const h = req.headers.get('authorization')
@@ -166,7 +187,7 @@ function pickQuoted(message: string): string | null {
 }
 
 function guessDate(message: string): string | null {
-  if (/\bamanh[ãa]?\b/i.test(message)) return normalizeDateInput('amanha')
+  if (/\bamanh/i.test(message)) return normalizeDateInput('amanha')
   if (/\bhoje\b/i.test(message)) return normalizeDateInput('hoje')
   const br = message.match(/\b\d{1,2}\/\d{1,2}(?:\/\d{4})?\b/)
   if (br?.[0]) return normalizeDateInput(br[0])
@@ -175,6 +196,66 @@ function guessDate(message: string): string | null {
   return null
 }
 
+
+function normalizeClientName(value?: string | null): string | null {
+  if (!value) return null
+  const cleaned = value
+    .replace(/[!?.,;:]+$/g, '')
+    .replace(/^(do|da|de|o|a)\s+/i, '')
+    .trim()
+  return cleaned.length ? cleaned : null
+}
+
+function extractClientNameFromMessage(message: string): string | null {
+  const explicit = message.match(/\bcliente\s+([^\n?.!,:;]{2,120})/i)
+  if (explicit?.[1]) return normalizeClientName(explicit[1])
+
+  const quoted = message.match(/\"([^\"]{2,120})\"/)
+  if (quoted?.[1] && /\bcliente\b/i.test(message)) return normalizeClientName(quoted[1])
+
+  return null
+}
+
+function hasClientReferenceWithoutName(message: string): boolean {
+  const normalized = message.toLowerCase()
+  return /(esse|esta|este|ele|ela|dele|dela)\s+cliente/.test(normalized)
+    || /(esse|esta|este)\s+contato/.test(normalized)
+    || /\b(ele|ela|dele|dela)\b/.test(normalized)
+}
+
+function sanitizeHistoryMessages(raw: unknown): HistoryMessage[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((item) => {
+      const roleRaw = typeof item === 'object' && item ? (item as Record<string, unknown>).role : null
+      const contentRaw = typeof item === 'object' && item ? (item as Record<string, unknown>).content : null
+      const role = roleRaw === 'assistant' || roleRaw === 'system' ? roleRaw : 'user'
+      const content = typeof contentRaw === 'string' ? contentRaw.trim() : ''
+      return content ? { role, content } as HistoryMessage : null
+    })
+    .filter((item): item is HistoryMessage => Boolean(item))
+    .slice(-40)
+}
+
+function inferClientNameFromHistory(ctx: RunContext): string | null {
+  for (let i = ctx.historicoMensagens.length - 1; i >= 0; i -= 1) {
+    const msg = ctx.historicoMensagens[i]
+    const candidate = extractClientNameFromMessage(msg.content)
+    if (candidate) return candidate
+  }
+  return null
+}
+
+function resolveClientNameFromContext(ctx: RunContext, extras: Record<string, unknown>): string | null {
+  const fromPayload = asText(extras.client_name) || asText(extras.nome_cliente)
+  if (fromPayload) return fromPayload
+
+  const fromMessage = classifyIntent(ctx.mensagem).clientName || extractClientNameFromMessage(ctx.mensagem)
+  if (fromMessage) return fromMessage
+
+  if (hasClientReferenceWithoutName(ctx.mensagem)) return inferClientNameFromHistory(ctx)
+  return null
+}
 function normalizeTaskStatus(value?: string | null): string {
   if (!value) return 'pendente'
   const v = value.trim().toLowerCase().replace(/\s+/g, '_')
@@ -423,6 +504,302 @@ async function resolveTaskByRef(supabase: ServiceClient, escritorioId: string, t
   return data || []
 }
 
+async function searchSelectiveMemories(ctx: RunContext, queryText: string, limit = 6) {
+  const words = queryText
+    .toLowerCase()
+    .split(/\s+/)
+    .map((w) => w.replace(/[^a-z0-9]/g, ''))
+    .filter((w) => w.length >= 4)
+    .slice(0, 8)
+
+  const { data, error } = await ctx.supabase
+    .from('centro_comando_memories')
+    .select('id, tipo, entidade, content, content_resumido, relevancia_score, permanente, created_at')
+    .eq('escritorio_id', ctx.auth.escritorioId)
+    .eq('user_id', ctx.auth.userId)
+    .eq('ativo', true)
+    .in('tipo', ['preferencia', 'correcao', 'contexto'])
+    .order('relevancia_score', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(Math.max(limit * 3, 12))
+
+  if (error || !data) return []
+  if (!words.length) return data.slice(0, limit)
+
+  const ranked = data
+    .map((item: any) => {
+      const source = `${item.content_resumido || ''} ${item.content || ''}`.toLowerCase()
+      const score = words.reduce((acc, w) => acc + (source.includes(w) ? 1 : 0), 0)
+      return { item, score }
+    })
+    .sort((a: any, b: any) => b.score - a.score)
+    .filter((entry: any) => entry.score > 0)
+    .slice(0, limit)
+    .map((entry: any) => entry.item)
+
+  return ranked.length ? ranked : data.slice(0, limit)
+}
+
+function isAllowedMemoryType(value: string): value is 'preferencia' | 'correcao' | 'contexto' {
+  return ['preferencia', 'correcao', 'contexto'].includes(value)
+}
+
+async function saveSelectiveMemory(ctx: RunContext, args: Record<string, unknown>) {
+  const tipoRaw = String(args.tipo || '').trim().toLowerCase()
+  if (!isAllowedMemoryType(tipoRaw)) throw new Error('tipo de memoria invalido; use preferencia, correcao ou contexto')
+
+  const content = asText(args.content)
+  if (!content || content.length < 12) throw new Error('conteudo de memoria invalido')
+
+  const permanente = Boolean(args.permanente ?? (tipoRaw !== 'contexto'))
+  const expiraEm = permanente ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data, error } = await ctx.supabase
+    .from('centro_comando_memories')
+    .insert({
+      escritorio_id: ctx.auth.escritorioId,
+      user_id: ctx.auth.userId,
+      sessao_id: ctx.sessaoId,
+      tipo: tipoRaw,
+      entidade: asText(args.entidade),
+      content,
+      content_resumido: content.slice(0, 220),
+      relevancia_score: Number(args.relevancia_score || 1),
+      permanente,
+      expira_em: expiraEm,
+      ativo: true,
+    })
+    .select('id, tipo, content_resumido, permanente, expira_em')
+    .single()
+
+  if (error) throw new Error(error.message)
+  return data
+}
+
+function mapAgentTraceToToolResults(trace: AgentToolTraceItem[]): ToolResult[] {
+  return trace
+    .filter((t) => t.ok)
+    .map((t) => {
+      if (t.tool_name === 'consultar_dados' && t.result?.rows && Array.isArray(t.result.rows)) {
+        return {
+          tool: 'consultar_dados',
+          explicacao: String(t.result.explicacao || 'Consulta de dados'),
+          dados: t.result.rows as Array<Record<string, unknown>>,
+          total: Number(t.result.total || (t.result.rows as Array<unknown>).length || 0),
+          filtros: (t.result.filtros as Record<string, unknown>) || undefined,
+        }
+      }
+      return {
+        tool: t.tool_name,
+        explicacao: `Etapa executada: ${t.tool_name}`,
+      }
+    })
+}
+
+async function runAgenticTurn(ctx: RunContext, payload: RequestPayload): Promise<Partial<FlowResult>> {
+  const apiKey = Deno.env.get('OPENAI_API_KEY')
+  if (!apiKey) throw new Error('OPENAI_API_KEY ausente para modo agentic')
+
+  const memories = await searchSelectiveMemories(ctx, ctx.mensagem, 6)
+
+  const tools: AgentToolDefinition[] = [
+    {
+      name: 'descobrir_estrutura',
+      description: 'Retorna estrutura de tabela: colunas, checks e relacionamentos',
+      inputSchema: {
+        type: 'object',
+        properties: { tabela: { type: 'string' } },
+        required: ['tabela'],
+      },
+      execute: async (args) => {
+        const tabela = asText(args.tabela)
+        if (!tabela) throw new Error('tabela obrigatoria')
+        const info = await getTableInfo(ctx.supabase, tabela)
+        return { tabela, info }
+      },
+    },
+    {
+      name: 'consultar_dados',
+      description: 'Executa consulta segura somente leitura no banco',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: { type: 'string' },
+          explicacao: { type: 'string' },
+          filtros: { type: 'object' },
+        },
+        required: ['query'],
+      },
+      execute: async (args) => {
+        const query = asText(args.query)
+        if (!query) throw new Error('query obrigatoria')
+        const { data, error } = await ctx.supabase.rpc('execute_safe_query', { query_text: query, escritorio_param: ctx.auth.escritorioId })
+        if (error) throw new Error(error.message)
+        const rows = Array.isArray(data) ? data : []
+        return { rows, total: rows.length, explicacao: asText(args.explicacao) || 'Consulta de dados', filtros: args.filtros || {} }
+      },
+    },
+    {
+      name: 'buscar_entidades',
+      description: 'Resolve entidades por texto para IDs reais do banco (cliente, processo, tarefa)',
+      inputSchema: {
+        type: 'object',
+        properties: { tipo: { type: 'string' }, termo: { type: 'string' } },
+        required: ['tipo', 'termo'],
+      },
+      execute: async (args) => {
+        const tipo = asText(args.tipo)
+        const termo = asText(args.termo)
+        if (!tipo || !termo) throw new Error('tipo e termo obrigatorios')
+        if (tipo === 'cliente') return { tipo, resultados: await resolveClientByName(ctx.supabase, ctx.auth.escritorioId, termo) }
+        if (tipo === 'processo') return { tipo, resultados: await resolveProcessRef(ctx.supabase, ctx.auth.escritorioId, termo) }
+        if (tipo === 'tarefa') return { tipo, resultados: await resolveTaskByRef(ctx.supabase, ctx.auth.escritorioId, termo) }
+        throw new Error('tipo invalido para buscar_entidades')
+      },
+    },
+    {
+      name: 'preparar_operacao',
+      description: 'Prepara operacao de escrita com preview e confirmacao obrigatoria',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          operation_name: { type: 'string' },
+          tipo: { type: 'string' },
+          tabela: { type: 'string' },
+          target_label: { type: 'string' },
+          explicacao: { type: 'string' },
+          dados: { type: 'object' },
+          registro_id: { type: 'string' },
+          preview_lines: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['operation_name', 'tipo', 'tabela', 'dados'],
+      },
+      execute: async (args) => {
+        const operationName = asText(args.operation_name) || 'operacao_generica'
+        const tipo = String(args.tipo || '') as 'insert' | 'update' | 'delete'
+        const tabela = asText(args.tabela)
+        const dados = (args.dados && typeof args.dados === 'object' && !Array.isArray(args.dados)) ? (args.dados as Record<string, unknown>) : null
+        if (!tabela || !dados) throw new Error('tabela e dados obrigatorios')
+        if (!['insert', 'update', 'delete'].includes(tipo)) throw new Error('tipo de operacao invalido')
+
+        const previewLines = Array.isArray(args.preview_lines)
+          ? (args.preview_lines as unknown[]).map((v) => String(v)).filter(Boolean)
+          : []
+
+        const action = await createAction(ctx.supabase, ctx.auth, {
+          sessaoId: ctx.sessaoId,
+          runId: ctx.runId,
+          operationName,
+          tipo,
+          tabela,
+          targetLabel: asText(args.target_label) || undefined,
+          explicacao: asText(args.explicacao) || 'Revise os dados para confirmar a operacao.',
+          dados,
+          registroId: asText(args.registro_id) || undefined,
+          preview: previewLines.length ? buildActionPreview(asText(args.target_label) || 'Operacao preparada', previewLines) : undefined,
+        })
+
+        return { action_required: action }
+      },
+    },
+    {
+      name: 'executar_operacao',
+      description: 'Executa operacao previamente preparada (somente se confirmacao=true)',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          acao_id: { type: 'string' },
+          confirmacao: { type: 'boolean' },
+          dupla_confirmacao: { type: 'boolean' },
+        },
+        required: ['acao_id', 'confirmacao'],
+      },
+      execute: async (args) => {
+        const acaoId = asText(args.acao_id)
+        if (!acaoId) throw new Error('acao_id obrigatorio')
+        if (!Boolean(args.confirmacao)) return { executed: false, reason: 'confirmacao_pendente' }
+        await executeConfirmedAction(ctx.supabase, ctx.auth, acaoId, { dupla_confirmacao: Boolean(args.dupla_confirmacao) })
+        return { executed: true, acao_id: acaoId }
+      },
+    },
+    {
+      name: 'memoria_buscar',
+      description: 'Busca memorias seletivas relevantes do usuario para contexto duravel',
+      inputSchema: {
+        type: 'object',
+        properties: { query: { type: 'string' }, limit: { type: 'number' } },
+      },
+      execute: async (args) => {
+        const query = asText(args.query) || ctx.mensagem
+        const limit = Math.min(Math.max(Number(args.limit || 6), 1), 10)
+        const rows = await searchSelectiveMemories(ctx, query, limit)
+        return { rows, total: rows.length }
+      },
+    },
+    {
+      name: 'memoria_salvar',
+      description: 'Salva memoria seletiva duravel (preferencia, correcao ou contexto)',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          tipo: { type: 'string' },
+          content: { type: 'string' },
+          entidade: { type: 'string' },
+          permanente: { type: 'boolean' },
+          relevancia_score: { type: 'number' },
+        },
+        required: ['tipo', 'content'],
+      },
+      execute: async (args) => ({ saved: await saveSelectiveMemory(ctx, args) }),
+    },
+  ]
+
+  const agentResult = await runAgentOrchestrator({
+    apiKey,
+    model: getAgentModel(),
+    userMessage: ctx.mensagem,
+    history: ctx.historicoMensagens,
+    systemPrompt: buildAgentSystemPrompt(),
+    runtimeContext: {
+      escritorio_id: ctx.auth.escritorioId,
+      user_id: ctx.auth.userId,
+      sessao_id: ctx.sessaoId,
+      session_context_version: payload.session_context_version || 'v1',
+      memories,
+    },
+    tools,
+    maxSteps: Math.min(Math.max(Number(payload.max_steps || 6), 1), 10),
+    timeoutMs: AGENT_LOOP_TIMEOUT_MS,
+  })
+
+  const preparedAction = agentResult.toolTrace.find((t) => t.ok && t.result?.action_required) as AgentToolTraceItem | undefined
+
+  if (preparedAction?.result?.action_required) {
+    return {
+      resposta: agentResult.finalText || 'Acao preparada e aguardando confirmacao.',
+      acoes_pendentes: [preparedAction.result.action_required as ActionRequired],
+      flow_type: 'agentic' as FlowType,
+      termination_reason: 'action_required',
+      tool_results: mapAgentTraceToToolResults(agentResult.toolTrace),
+      tool_trace: agentResult.toolTrace,
+    }
+  }
+
+  const failureReason = agentResult.stopReason === 'tool_repetition_guard_triggered'
+    ? 'tool_repetition_guard_triggered'
+    : agentResult.stopReason === 'max_steps'
+      ? 'max_iterations_reached'
+      : 'final'
+
+  return {
+    resposta: agentResult.finalText,
+    flow_type: 'agentic' as FlowType,
+    termination_reason: failureReason as TerminationReason,
+    tool_results: mapAgentTraceToToolResults(agentResult.toolTrace),
+    tool_trace: agentResult.toolTrace,
+  }
+}
+
 function optionFromRow(row: Record<string, unknown>, label: string, description?: string): PendingInputOption {
   return { id: String(row.id), label, description }
 }
@@ -446,6 +823,46 @@ async function readOperations(ctx: RunContext, operation: SupportedOperation, ex
     return { resposta: `Encontrei ${rows.length} publicacoes pendentes.\n\n${renderMarkdownTable(['Data', 'Processo', 'Tribunal', 'Urgente'], table)}`, tool_results: [{ tool: 'consultar_dados', explicacao: 'Lista de publicacoes pendentes', total: rows.length, dados: rows as any[] }], flow_type: 'read_simple', termination_reason: 'final' }
   }
 
+
+  if (operation === 'list_deadlines_today') {
+    const today = new Date().toISOString().slice(0, 10)
+    const { data, error } = await ctx.supabase
+      .from('agenda_tarefas')
+      .select('id, titulo, prioridade, status, prazo_data_limite')
+      .eq('escritorio_id', ctx.auth.escritorioId)
+      .eq('responsavel_id', ctx.auth.userId)
+      .eq('tipo', 'prazo_processual')
+      .eq('prazo_data_limite', today)
+      .neq('status', 'concluida')
+      .neq('status', 'cancelada')
+      .order('prioridade', { ascending: false })
+      .limit(30)
+
+    if (error) throw new Error(error.message)
+    const rows = data || []
+    if (!rows.length) {
+      return {
+        resposta: 'Voce nao tem prazos processuais vencendo hoje.',
+        tool_results: [{ tool: 'consultar_dados', explicacao: 'Prazos de hoje', total: 0, dados: [] }],
+        flow_type: 'read_simple',
+        termination_reason: 'final',
+      }
+    }
+
+    const table = rows.map((r) => ({
+      Titulo: r.titulo,
+      Prioridade: r.prioridade,
+      Status: r.status,
+      Prazo: formatDate(String(r.prazo_data_limite || '')),
+    }))
+
+    return {
+      resposta: `Encontrei ${rows.length} prazo(s) processual(is) para hoje.\n\n${renderMarkdownTable(['Titulo', 'Prioridade', 'Status', 'Prazo'], table)}`,
+      tool_results: [{ tool: 'consultar_dados', explicacao: 'Prazos de hoje', total: rows.length, dados: rows as any[] }],
+      flow_type: 'read_simple',
+      termination_reason: 'final',
+    }
+  }
   if (operation === 'list_tasks_today') {
     const today = new Date().toISOString().slice(0, 10)
     const { data, error } = await ctx.supabase.from('agenda_tarefas').select('id, titulo, tipo, prioridade, status, data_inicio, prazo_data_limite').eq('escritorio_id', ctx.auth.escritorioId).eq('responsavel_id', ctx.auth.userId).eq('data_inicio', today).order('prioridade', { ascending: false }).limit(30)
@@ -489,7 +906,7 @@ async function readOperations(ctx: RunContext, operation: SupportedOperation, ex
   }
 
   if (operation === 'check_consultivo_by_client') {
-    const clientName = asText(extras.client_name) || classifyIntent(ctx.mensagem).clientName
+    const clientName = resolveClientNameFromContext(ctx, extras)
     const clientId = asText(extras.cliente_id)
     if (!clientName && !clientId) {
       const pending = await createPendingInput(ctx.supabase, ctx.auth, { sessaoId: ctx.sessaoId, runId: ctx.runId, tipo: 'collection', contexto: 'Informe o nome do cliente para verificar pasta consultiva.', schema: { fields: [{ campo: 'client_name', descricao: 'Nome do cliente', obrigatorio: true, tipo: 'texto' }], meta: { operation: 'check_consultivo_by_client' } } })
@@ -651,7 +1068,7 @@ async function createOrUpdateOperation(ctx: RunContext, operation: SupportedOper
     const descricao = asText(extras.descricao)
     const prioridade = normalizePriority(asText(extras.prioridade) || 'media')
     const area = normalizeConsultivoArea(asText(extras.area))
-    const clientName = asText(extras.client_name) || asText(extras.nome_cliente) || classifyIntent(ctx.mensagem).clientName || null
+    const clientName = resolveClientNameFromContext(ctx, extras)
     let clienteId = asText(extras.cliente_id)
     let clienteNome = ''
 
@@ -762,7 +1179,7 @@ async function createOrUpdateOperation(ctx: RunContext, operation: SupportedOper
 }
 
 async function runOperation(ctx: RunContext, operation: SupportedOperation, flowType: FlowType, extras: Record<string, unknown>): Promise<Partial<FlowResult>> {
-  if (['count_pending_publications', 'list_pending_publications', 'list_tasks_today', 'list_hearings_week', 'list_timesheet_month', 'check_consultivo_by_client', 'navigate'].includes(operation)) {
+  if (['count_pending_publications', 'list_pending_publications', 'list_deadlines_today', 'list_tasks_today', 'list_hearings_week', 'list_timesheet_month', 'check_consultivo_by_client', 'navigate'].includes(operation)) {
     return await readOperations(ctx, operation, extras)
   }
   if (['list_case_tasks', 'list_case_hearings', 'list_case_agenda'].includes(operation)) return await readCaseOperation(ctx, operation, extras)
@@ -791,6 +1208,7 @@ async function executeFlow(req: Request, payload: RequestPayload, supabase: Serv
   const mensagem = (payload.mensagem || '').trim()
   const hinted = mensagem ? classifyIntent(mensagem) : null
   const flowType = hinted?.flowType || 'unknown'
+  const historicoMensagens = sanitizeHistoryMessages(payload.historico_mensagens)
   const operationSignatures = new Set<string>()
   await saveExecutionStart(supabase, auth, runId, sessaoId, flowType)
   await cleanupExpiredPendings(supabase, auth, sessaoId)
@@ -808,7 +1226,7 @@ async function executeFlow(req: Request, payload: RequestPayload, supabase: Serv
 
   try {
     let partial: Partial<FlowResult>
-    const ctx: RunContext = { supabase, auth, runId, sessaoId, mensagem }
+    const ctx: RunContext = { supabase, auth, runId, sessaoId, mensagem, historicoMensagens }
 
     if (payload.confirmar_acao) {
       if (!payload.acao_id) throw new Error('acao_id ausente para confirmar_acao')
@@ -829,28 +1247,40 @@ async function executeFlow(req: Request, payload: RequestPayload, supabase: Serv
       }
     } else {
       if (!mensagem) throw new Error('Mensagem ausente')
-      const operation = hinted?.operation || 'unsupported'
-      const signature = buildOperationSignature(operation, {})
-      if (operationSignatures.has(signature)) {
-        partial = {
-          resposta: 'Detectei repeticao da mesma operacao no mesmo turno. Encerrando para evitar loop.',
-          flow_type: hinted?.flowType || 'unknown',
-          termination_reason: 'tool_repetition_guard_triggered',
+
+      if (isAgenticEnabled()) {
+        try {
+          partial = await runAgenticTurn(ctx, payload)
+        } catch (agentError) {
+          const operation = hinted?.operation || 'unsupported'
+          partial = await runOperation(ctx, operation, hinted?.flowType || 'unknown', {})
+          if (!partial.resposta) partial.resposta = 'Falha no modo agentic; executei fallback seguro.'
         }
       } else {
-        operationSignatures.add(signature)
-        if (!isRouterV2Enabled() && !['read_simple', 'read_ambiguous', 'navigate'].includes(hinted?.flowType || 'unknown')) {
+        const operation = hinted?.operation || 'unsupported'
+        const signature = buildOperationSignature(operation, {})
+        if (operationSignatures.has(signature)) {
           partial = {
-            resposta: 'O fluxo de escrita do router v2 esta desativado no momento. Posso seguir com consultas e navegacao.',
+            resposta: 'Detectei repeticao da mesma operacao no mesmo turno. Encerrando para evitar loop.',
             flow_type: hinted?.flowType || 'unknown',
-            termination_reason: 'final',
+            termination_reason: 'tool_repetition_guard_triggered',
           }
         } else {
-          partial = await runOperation(ctx, operation, hinted?.flowType || 'unknown', {})
+          operationSignatures.add(signature)
+          if (!isRouterV2Enabled() && !['read_simple', 'read_ambiguous', 'navigate'].includes(hinted?.flowType || 'unknown')) {
+            partial = {
+              resposta: 'O fluxo de escrita do router v2 esta desativado no momento. Posso seguir com consultas e navegacao.',
+              flow_type: hinted?.flowType || 'unknown',
+              termination_reason: 'final',
+            }
+          } else {
+            partial = await runOperation(ctx, operation, hinted?.flowType || 'unknown', {})
+          }
         }
       }
-    }
 
+
+    }
     hadInput = !!partial.pending_input
     hadConfirmation = !!partial.acoes_pendentes?.length
     hadWrite = hadWrite || hadConfirmation
@@ -859,6 +1289,7 @@ async function executeFlow(req: Request, payload: RequestPayload, supabase: Serv
       sucesso: true,
       resposta: partial.resposta,
       tool_results: partial.tool_results,
+      tool_trace: partial.tool_trace,
       acoes_pendentes: partial.acoes_pendentes,
       pending_input: partial.pending_input || null,
       flow_type: (partial.flow_type || flowType) as FlowType,
@@ -876,11 +1307,12 @@ async function executeFlow(req: Request, payload: RequestPayload, supabase: Serv
         role: 'assistant',
         content: result.resposta,
         tool_results: result.tool_results || [],
+        tool_calls: result.tool_trace || [],
         erro: null,
         run_id: runId,
         flow_type: result.flow_type,
         termination_reason: result.termination_reason,
-        iteration_count: 1,
+        iteration_count: Math.max(result.tool_trace?.length || 1, 1),
         stream_mode: 'sse',
         had_input_modal: hadInput,
         had_confirmation_modal: hadConfirmation,
@@ -890,7 +1322,7 @@ async function executeFlow(req: Request, payload: RequestPayload, supabase: Serv
       })
     }
 
-    await saveExecutionEnd(supabase, runId, { flow_type: result.flow_type, termination_reason: result.termination_reason, iteration_count: 1, had_input_modal: hadInput, had_confirmation_modal: hadConfirmation, had_write: hadWrite, had_error: false, tool_repetition_count: operationSignatures.size > 1 ? operationSignatures.size - 1 : 0, tempo_execucao_ms: result.tempo_execucao_ms, error_message: null })
+    await saveExecutionEnd(supabase, runId, { flow_type: result.flow_type, termination_reason: result.termination_reason, iteration_count: Math.max(result.tool_trace?.length || 1, 1), had_input_modal: hadInput, had_confirmation_modal: hadConfirmation, had_write: hadWrite, had_error: false, tool_repetition_count: operationSignatures.size > 1 ? operationSignatures.size - 1 : 0, tempo_execucao_ms: result.tempo_execucao_ms, error_message: null })
     return result
   } catch (error) {
     const message = asError(error)
@@ -898,7 +1330,7 @@ async function executeFlow(req: Request, payload: RequestPayload, supabase: Serv
     result = { sucesso: false, flow_type: flowType, termination_reason: termination, run_id: runId, sessao_id: sessaoId, tempo_execucao_ms: Date.now() - startedAt, erro: message }
 
     await saveHistorico(supabase, { sessao_id: sessaoId, user_id: auth.userId, escritorio_id: auth.escritorioId, role: 'assistant', content: 'Nao foi possivel concluir a solicitacao.', erro: message, run_id: runId, flow_type: result.flow_type, termination_reason: result.termination_reason, iteration_count: 1, stream_mode: 'sse', had_input_modal: false, had_confirmation_modal: false, had_write: hadWrite, had_error: true, tempo_execucao_ms: result.tempo_execucao_ms })
-    await saveExecutionEnd(supabase, runId, { flow_type: result.flow_type, termination_reason: result.termination_reason, iteration_count: 1, had_input_modal: false, had_confirmation_modal: false, had_write: hadWrite, had_error: true, tool_repetition_count: operationSignatures.size > 1 ? operationSignatures.size - 1 : 0, tempo_execucao_ms: result.tempo_execucao_ms, error_message: message })
+    await saveExecutionEnd(supabase, runId, { flow_type: result.flow_type, termination_reason: result.termination_reason, iteration_count: Math.max(result.tool_trace?.length || 1, 1), had_input_modal: false, had_confirmation_modal: false, had_write: hadWrite, had_error: true, tool_repetition_count: operationSignatures.size > 1 ? operationSignatures.size - 1 : 0, tempo_execucao_ms: result.tempo_execucao_ms, error_message: message })
     return result
   }
 }
@@ -931,10 +1363,16 @@ serve(async (req) => {
       let heartbeatInterval: number | null = null
       let terminalEventSent = false
       try {
-        sendEvent('status', { type: 'status', message: 'Processando solicitacao...', run_id: runId, flow_type: classifyIntent((payload.mensagem || '').trim()).flowType, sessao_id: sessaoId })
+        sendEvent('status', { type: 'status', message: 'Processando solicitacao...', run_id: runId, flow_type: isAgenticEnabled() ? 'agentic' : classifyIntent((payload.mensagem || '').trim()).flowType, sessao_id: sessaoId })
         heartbeatInterval = setInterval(() => sendEvent('heartbeat', { run_id: runId, at: nowIso() }), HEARTBEAT_INTERVAL_MS)
         const result = await withTimeout(executeFlow(req, payload, supabase, auth, runId, sessaoId), STREAM_TIMEOUT_MS)
 
+        if (result.tool_trace?.length) {
+          for (const step of result.tool_trace) {
+            sendEvent('tool_call', { run_id: result.run_id, sessao_id: result.sessao_id, flow_type: result.flow_type, step: step.step, tool_name: step.tool_name, args: step.args })
+            sendEvent('tool_result', { run_id: result.run_id, sessao_id: result.sessao_id, flow_type: result.flow_type, step: step.step, tool_name: step.tool_name, ok: step.ok, result: step.result, error: step.error, duration_ms: step.duration_ms })
+          }
+        }
         if (result.pending_input) sendEvent('input_required', { run_id: result.run_id, sessao_id: result.sessao_id, flow_type: result.flow_type, pending_input: result.pending_input })
         if (result.acoes_pendentes?.length) sendEvent('action_required', { run_id: result.run_id, sessao_id: result.sessao_id, flow_type: result.flow_type, acoes_pendentes: result.acoes_pendentes, acao: result.acoes_pendentes[0] })
 

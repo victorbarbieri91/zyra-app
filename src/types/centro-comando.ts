@@ -11,6 +11,7 @@ export type FlowType =
   | 'navigate'
   | 'unsupported'
   | 'unknown'
+  | 'agentic'
 
 export type TerminationReason =
   | 'final'
@@ -33,6 +34,17 @@ export interface CampoNecessario {
 }
 
 // Resultado de ferramenta (tool call)
+
+export interface AgentToolTrace {
+  step: number
+  tool_name: string
+  args: Record<string, any>
+  ok: boolean
+  result?: Record<string, any>
+  error?: string
+  duration_ms: number
+  signature?: string
+}
 export interface ToolResult {
   tool: string
   explicacao?: string
@@ -104,6 +116,7 @@ export interface CentroComandoMensagem {
   content: string
   timestamp: Date
   tool_results?: ToolResult[]
+  tool_trace?: AgentToolTrace[]
   acoes_pendentes?: AcaoPendente[]
   pending_input?: PendingInput | null
   run_id?: string
@@ -143,6 +156,7 @@ export interface CentroComandoResponse {
   sucesso: boolean
   resposta?: string
   tool_results?: ToolResult[]
+  tool_trace?: AgentToolTrace[]
   acoes_pendentes?: AcaoPendente[]
   pending_input?: PendingInput | null
   flow_type?: FlowType
@@ -200,10 +214,15 @@ export interface PassoThinking {
 
 // Eventos SSE recebidos do streaming
 export interface StreamEvent {
-  event: 'status' | 'input_required' | 'action_required' | 'final' | 'error' | 'heartbeat'
+  event: 'status' | 'tool_call' | 'tool_result' | 'input_required' | 'action_required' | 'final' | 'error' | 'heartbeat'
   data: {
     type?: 'thinking' | 'tool_start' | 'tool_end' | 'terminal'
     tool?: string
+    tool_name?: string
+    step?: number
+    ok?: boolean
+    error?: string
+    duration_ms?: number
     message?: string
     args?: any
     resultado?: any
@@ -215,6 +234,7 @@ export interface StreamEvent {
     sucesso?: boolean
     resposta?: string
     tool_results?: ToolResult[]
+    tool_trace?: AgentToolTrace[]
     acoes_pendentes?: AcaoPendente[]
     tem_confirmacao_pendente?: boolean
     termination_reason?: TerminationReason

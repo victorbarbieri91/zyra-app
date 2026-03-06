@@ -96,6 +96,7 @@ export function useCentroComando() {
         content: h.content || '',
         timestamp: new Date(h.created_at),
         tool_results: h.tool_results || undefined,
+        tool_trace: h.tool_calls || undefined,
         run_id: h.run_id || undefined,
         erro: h.erro || undefined,
       }))
@@ -153,6 +154,7 @@ export function useCentroComando() {
       content: data.resposta || '',
       timestamp: new Date(),
       tool_results: data.tool_results,
+      tool_trace: data.tool_trace,
       acoes_pendentes: data.acoes_pendentes,
       pending_input: data.pending_input,
       run_id: data.run_id,
@@ -187,6 +189,19 @@ export function useCentroComando() {
       if (evento === 'heartbeat') {
         atualizarExecucao({ lastEventAt: now })
         adicionarPasso('Conexao ativa...', 'heartbeat')
+        return
+      }
+      if (evento === 'tool_call') {
+        const toolName = parsedData.tool_name || parsedData.tool || 'tool'
+        adicionarPasso(`Chamando ferramenta: ${toolName}`, 'tool_start', toolName)
+        atualizarExecucao({ lastEventAt: now })
+        return
+      }
+      if (evento === 'tool_result') {
+        const toolName = parsedData.tool_name || parsedData.tool || 'tool'
+        const ok = parsedData.ok !== false
+        adicionarPasso(ok ? `Resultado de ${toolName} recebido` : `Falha em ${toolName}: ${parsedData.error || 'erro'}`, 'tool_end', toolName)
+        atualizarExecucao({ lastEventAt: now })
         return
       }
       if (evento === 'input_required') {
@@ -278,7 +293,7 @@ export function useCentroComando() {
       const response = await fetch(`${supabaseUrl}/functions/v1/centro-comando-ia`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}`, apikey: anonKey || '' },
-        body: JSON.stringify({ mensagem: texto.trim(), sessao_id: sessaoAtual, historico_mensagens: historicoParaEnviar, streaming: true }),
+        body: JSON.stringify({ mensagem: texto.trim(), sessao_id: sessaoAtual, historico_mensagens: historicoParaEnviar, max_steps: 6, session_context_version: 'v1', streaming: true }),
       })
       if (!response.ok) throw new Error(`Erro na requisicao: ${response.status}`)
       const contentType = response.headers.get('content-type') || ''

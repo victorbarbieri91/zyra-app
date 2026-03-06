@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { classifyIntent } from '../../../supabase/functions/centro-comando-ia/intent-router'
 
 describe('centro-comando intent router', () => {
@@ -6,6 +6,19 @@ describe('centro-comando intent router', () => {
     const result = classifyIntent('quais tarefas tenho hoje?')
     expect(result.flowType).toBe('read_simple')
     expect(result.operation).toBe('list_tasks_today')
+  })
+
+  it('classifica leitura simples de prazos de hoje', () => {
+    const result = classifyIntent('quais prazos tenho hoje?')
+    expect(result.flowType).toBe('read_simple')
+    expect(result.operation).toBe('list_deadlines_today')
+  })
+
+  it('classifica publicacoes pendentes com acentos', () => {
+    const result = classifyIntent('quantas publica\u00E7\u00F5es pendentes no escrit\u00F3rio?')
+    expect(result.flowType).toBe('read_simple')
+    expect(result.operation).toBe('count_pending_publications')
+    expect(result.wantsOfficeScope).toBe(true)
   })
 
   it('classifica leitura ambigua por pasta', () => {
@@ -36,6 +49,12 @@ describe('centro-comando intent router', () => {
     const result = classifyIntent('abrir pagina de agenda')
     expect(result.flowType).toBe('navigate')
     expect(result.operation).toBe('navigate')
+  })
+
+  it('classifica audiencias com acentos', () => {
+    const result = classifyIntent('quais audi\u00EAncias est\u00E3o marcadas para a pr\u00F3xima semana?')
+    expect(result.flowType).toBe('read_simple')
+    expect(result.operation).toBe('list_hearings_week')
   })
 
   it('classifica unsupported quando nao reconhece a intencao', () => {

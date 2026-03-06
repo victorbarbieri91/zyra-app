@@ -7,10 +7,12 @@ export type FlowType =
   | 'navigate'
   | 'unsupported'
   | 'unknown'
+  | 'agentic'
 
 export type SupportedOperation =
   | 'count_pending_publications'
   | 'list_pending_publications'
+  | 'list_deadlines_today'
   | 'list_tasks_today'
   | 'list_hearings_week'
   | 'list_case_tasks'
@@ -36,6 +38,13 @@ export interface IntentResult {
   wantsCurrentUserScope?: boolean
 }
 
+function normalizeIntentText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
 function extractProcessRef(message: string): string | undefined {
   const cnj = message.match(/\b\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}\b/)
   if (cnj) return cnj[0]
@@ -50,19 +59,19 @@ function extractProcessRef(message: string): string | undefined {
 }
 
 function extractClientName(message: string): string | undefined {
-  const cliente = message.match(/cliente\s+([a-z0-9\s.'-]+)/i)
+  const cliente = message.match(/cliente\s+([\p{L}0-9\s.'-]+)/iu)
   if (cliente) return cliente[1].trim()
   return undefined
 }
 
 export function classifyIntent(message: string): IntentResult {
-  const normalized = message.toLowerCase()
+  const normalized = normalizeIntentText(message)
   const processRef = extractProcessRef(message)
   const clientName = extractClientName(message)
-  const wantsCurrentUserScope = /\b(minhas|meus|minha|eu)\b/i.test(message)
-  const wantsOfficeScope = /\b(escrit[oó]rio|equipe)\b/i.test(message)
+  const wantsCurrentUserScope = /\b(minhas|meus|minha|eu)\b/.test(normalized)
+  const wantsOfficeScope = /\b(escritorio|equipe)\b/.test(normalized)
 
-  if (/\b(ir para|abrir tela|navegar|abrir p[aá]gina)\b/i.test(message)) {
+  if (/\b(ir para|abrir tela|navegar|abrir pagina)\b/.test(normalized)) {
     return {
       flowType: 'navigate',
       operation: 'navigate',
@@ -72,7 +81,7 @@ export function classifyIntent(message: string): IntentResult {
     }
   }
 
-  if (/\b(excluir|apagar|remover|deletar)\b/i.test(message)) {
+  if (/\b(excluir|apagar|remover|deletar)\b/.test(normalized)) {
     return {
       flowType: 'delete',
       operation: 'unsupported',
@@ -84,7 +93,7 @@ export function classifyIntent(message: string): IntentResult {
     }
   }
 
-  if (/\b(reagendar|alterar data|mudar data)\b/i.test(message)) {
+  if (/\b(reagendar|alterar data|mudar data)\b/.test(normalized)) {
     return {
       flowType: 'update',
       operation: 'reschedule_task',
@@ -96,8 +105,8 @@ export function classifyIntent(message: string): IntentResult {
     }
   }
 
-  if (/\b(criar|cadastrar|abrir|registrar|agendar|nova|novo)\b/i.test(message)) {
-    if (/\b(tarefa|tarefas)\b/i.test(message)) {
+  if (/\b(criar|cadastrar|abrir|registrar|agendar|nova|novo)\b/.test(normalized)) {
+    if (/\b(tarefa|tarefas)\b/.test(normalized)) {
       return {
         flowType: 'create',
         operation: 'create_task',
@@ -108,7 +117,7 @@ export function classifyIntent(message: string): IntentResult {
       }
     }
 
-    if (/\b(pasta consultiva|consultiv[oa]|consulta)\b/i.test(message)) {
+    if (/\b(pasta consultiva|consultiv[oa]|consulta)\b/.test(normalized)) {
       return {
         flowType: 'create',
         operation: 'create_consultivo',
@@ -120,7 +129,7 @@ export function classifyIntent(message: string): IntentResult {
     }
   }
 
-  if (/\bquantas\b/i.test(message) && /\bpublica[cç][oõ]es\b/i.test(message) && /\bpendentes?\b/i.test(message)) {
+  if (/\bquantas\b/.test(normalized) && /\bpublicac(?:ao|oes)\b/.test(normalized) && /\bpendentes?\b/.test(normalized)) {
     return {
       flowType: 'read_simple',
       operation: 'count_pending_publications',
@@ -130,7 +139,7 @@ export function classifyIntent(message: string): IntentResult {
     }
   }
 
-  if (/\bpublica[cç][oõ]es\b/i.test(message) && /\bpendentes?\b/i.test(message)) {
+  if (/\bpublicac(?:ao|oes)\b/.test(normalized) && /\bpendentes?\b/.test(normalized)) {
     return {
       flowType: 'read_simple',
       operation: 'list_pending_publications',
@@ -140,7 +149,17 @@ export function classifyIntent(message: string): IntentResult {
     }
   }
 
-  if (/\b(tarefas?)\b/i.test(message) && /\b(hoje|dia)\b/i.test(message)) {
+  if ((/\b(prazo|prazos)\b/.test(normalized) || /\bvenc(imento|imentos|e|em)\b/.test(normalized)) && /\b(hoje|dia)\b/.test(normalized)) {
+    return {
+      flowType: 'read_simple',
+      operation: 'list_deadlines_today',
+      confidence: 0.95,
+      wantsCurrentUserScope: wantsCurrentUserScope || !wantsOfficeScope,
+      wantsOfficeScope,
+    }
+  }
+
+  if (/\b(tarefas?)\b/.test(normalized) && /\b(hoje|dia)\b/.test(normalized)) {
     return {
       flowType: 'read_simple',
       operation: 'list_tasks_today',
@@ -150,7 +169,7 @@ export function classifyIntent(message: string): IntentResult {
     }
   }
 
-  if (/\b(audi[eê]ncias?)\b/i.test(message) && /\b(semana|marcad|pr[oó]xim)\b/i.test(message)) {
+  if (/\b(audiencias?)\b/.test(normalized) && /\b(semana|marcad|proxim)\b/.test(normalized)) {
     return {
       flowType: 'read_simple',
       operation: 'list_hearings_week',
@@ -160,7 +179,7 @@ export function classifyIntent(message: string): IntentResult {
     }
   }
 
-  if (/\b(horas?|timesheet)\b/i.test(message) && /\b(m[eê]s|mes)\b/i.test(message)) {
+  if (/\b(horas?|timesheet)\b/.test(normalized) && /\bmes\b/.test(normalized)) {
     return {
       flowType: 'read_simple',
       operation: 'list_timesheet_month',
@@ -170,7 +189,7 @@ export function classifyIntent(message: string): IntentResult {
     }
   }
 
-  if (/\b(tem pasta consultiva|possui pasta consultiva|pasta consultiva aberta)\b/i.test(message)) {
+  if (/\b(tem pasta consultiva|possui pasta consultiva|pasta consultiva aberta)\b/.test(normalized)) {
     return {
       flowType: 'read_simple',
       operation: 'check_consultivo_by_client',
@@ -181,7 +200,7 @@ export function classifyIntent(message: string): IntentResult {
     }
   }
 
-  if (processRef && /\b(tarefas?)\b/i.test(message)) {
+  if (processRef && /\b(tarefas?)\b/.test(normalized)) {
     return {
       flowType: 'read_ambiguous',
       operation: 'list_case_tasks',
@@ -192,7 +211,7 @@ export function classifyIntent(message: string): IntentResult {
     }
   }
 
-  if (processRef && /\b(audi[eê]ncias?)\b/i.test(message)) {
+  if (processRef && /\b(audiencias?)\b/.test(normalized)) {
     return {
       flowType: 'read_ambiguous',
       operation: 'list_case_hearings',
@@ -203,7 +222,7 @@ export function classifyIntent(message: string): IntentResult {
     }
   }
 
-  if (processRef && /\b(agenda|agendamentos|compromissos)\b/i.test(message)) {
+  if (processRef && /\b(agenda|agendamentos|compromissos)\b/.test(normalized)) {
     return {
       flowType: 'read_ambiguous',
       operation: 'list_case_agenda',

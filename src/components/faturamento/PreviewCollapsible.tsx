@@ -158,12 +158,20 @@ export function PreviewCollapsible({
     return null
   }
 
-  // Total de ajustes contratuais (para somar ao footer)
+  // Total de ajustes contratuais — minimo: total vira o limite (proporcional, sem linha extra),
+  // maximo: desconto negativo visivel
   const totalAjustes = useMemo(() => {
     let ajuste = 0
     for (const group of contratoGroups) {
       const adj = getGroupAdjustment(group)
-      if (adj) ajuste += adj.ajuste
+      if (!adj) continue
+      if (adj.tipo === 'min') {
+        // Minimo: o total sera o limite (valor_hora inflado proporcionalmente)
+        ajuste += adj.ajuste
+      } else {
+        // Maximo: desconto negativo
+        ajuste += adj.ajuste
+      }
     }
     return ajuste
   }, [contratoGroups, selectedIds, contractLimits]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -291,22 +299,28 @@ export function PreviewCollapsible({
                     {(() => {
                       const adj = getGroupAdjustment(activeGroup)
                       if (!adj) return null
-                      const isComplement = adj.tipo === 'min'
+                      const isMin = adj.tipo === 'min'
                       return (
                         <div className={cn(
                           'flex items-center justify-between px-4 py-2.5 rounded-lg border text-xs',
-                          isComplement
+                          isMin
                             ? 'bg-amber-50 border-amber-200 text-amber-800'
                             : 'bg-blue-50 border-blue-200 text-blue-800'
                         )}>
                           <div className="flex items-center gap-2">
-                            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                            <Scale className="h-3.5 w-3.5 shrink-0" />
                             <span>
-                              Subtotal horas {formatCurrency(adj.subtotal)} — {isComplement ? 'Mínimo' : 'Máximo'} contratual {formatCurrency(adj.limite)}
+                              {isMin
+                                ? `Valor/hora será ajustado proporcionalmente para atingir mínimo de ${formatCurrency(adj.limite)}`
+                                : `Subtotal horas ${formatCurrency(adj.subtotal)} — Máximo contratual ${formatCurrency(adj.limite)}`
+                              }
                             </span>
                           </div>
                           <span className="font-semibold whitespace-nowrap ml-3">
-                            {isComplement ? 'Complemento' : 'Redução'}: {isComplement ? '+' : ''}{formatCurrency(adj.ajuste)}
+                            {isMin
+                              ? `Total: ${formatCurrency(adj.limite)}`
+                              : `Redução: ${formatCurrency(adj.ajuste)}`
+                            }
                           </span>
                         </div>
                       )

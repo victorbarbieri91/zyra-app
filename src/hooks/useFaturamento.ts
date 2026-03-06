@@ -135,6 +135,8 @@ export interface ItemFatura {
   contrato_id?: string | null
   subtotal_original?: number | null
   valor_limite?: number | null
+  // Valor hora original (antes do ajuste proporcional por minimo contratual)
+  valor_hora_original?: number | null
 }
 
 export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
@@ -422,6 +424,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
             contrato_id: item.contrato_id || null,
             subtotal_original: item.subtotal_original != null ? Number(item.subtotal_original) : null,
             valor_limite: item.valor_limite != null ? Number(item.valor_limite) : null,
+            valor_hora_original: item.valor_hora_original != null ? Number(item.valor_hora_original) : null,
           }
         })
 

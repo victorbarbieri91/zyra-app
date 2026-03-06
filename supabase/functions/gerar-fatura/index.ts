@@ -226,29 +226,53 @@ Deno.serve(async (req: Request) => {
 
       // =========================================================================
       // POS-PROCESSAMENTO: Aplicar limites contratuais (min/max mensal)
-      // Agrupa timesheet por contrato_id, calcula subtotal e aplica limites.
+      // MINIMO: inflar valor_hora proporcionalmente (fatura limpa, sem linha extra)
+      // MAXIMO: manter ajuste_contratual negativo (desconto visivel ao cliente)
       // =========================================================================
       const timesheetItens = itens.filter(i => i.tipo === 'timesheet' && i.contrato_id);
       const contratoIds = [...new Set(timesheetItens.map(i => i.contrato_id))];
 
       for (const cid of contratoIds) {
-        const subtotal = timesheetItens
-          .filter(i => i.contrato_id === cid)
-          .reduce((sum, i) => sum + i.valor, 0);
+        const contratoItens = timesheetItens.filter(i => i.contrato_id === cid);
+        const subtotal = contratoItens.reduce((sum, i) => sum + i.valor, 0);
 
-        // Chamar funcao SQL que aplica clamp min/max
+        if (subtotal === 0) continue;
+
         const { data: ajustado } = await supabase.rpc('aplicar_limites_mensais', {
           p_valor_calculado: subtotal,
           p_contrato_id: cid
         });
 
         const valorAjustado = typeof ajustado === 'number' ? ajustado : parseFloat(ajustado);
-        const ajuste = valorAjustado - subtotal;
+        if (valorAjustado === subtotal) continue;
 
-        if (ajuste !== 0) {
+        if (valorAjustado > subtotal) {
+          // MINIMO: Inflar valor_hora proporcionalmente para atingir o minimo
+          const fator = valorAjustado / subtotal;
+          let acumulado = 0;
+
+          for (let i = 0; i < contratoItens.length; i++) {
+            const item = contratoItens[i];
+            item.valor_hora_original = item.valor_hora;
+
+            if (i < contratoItens.length - 1) {
+              item.valor_hora = Math.round(item.valor_hora * fator * 100) / 100;
+              item.valor = Math.round(item.horas * item.valor_hora * 100) / 100;
+              acumulado += item.valor;
+            } else {
+              // Ultimo item: ajuste fino para soma exata do minimo
+              item.valor = Math.round((valorAjustado - acumulado) * 100) / 100;
+              item.valor_hora = Math.round((item.valor / item.horas) * 100) / 100;
+            }
+          }
+          valorTotal = valorTotal - subtotal + valorAjustado;
+
+        } else {
+          // MAXIMO: Manter ajuste_contratual negativo (cliente ve desconto)
+          const ajuste = valorAjustado - subtotal;
           itens.push({
             tipo: 'ajuste_contratual',
-            descricao: ajuste > 0 ? 'Complemento minimo contratual' : 'Ajuste maximo contratual',
+            descricao: 'Ajuste maximo contratual',
             valor: ajuste,
             contrato_id: cid,
             subtotal_original: subtotal,

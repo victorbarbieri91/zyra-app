@@ -14,22 +14,54 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Receipt, Loader2, AlertCircle, FileText, DollarSign } from 'lucide-react'
+import {
+  Receipt,
+  Loader2,
+  AlertCircle,
+  FileText,
+  DollarSign,
+  Search,
+  Briefcase,
+  X,
+  Building2,
+} from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
+import { formatDateForDB, formatBrazilDate } from '@/lib/timezone'
 
 interface DespesaModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  processoId?: string
-  clienteId?: string
+  processoId?: string | null
+  consultaId?: string | null
+  clienteId?: string | null
   onSuccess?: () => void
+}
+
+interface ProcessoOption {
+  id: string
+  numero_cnj: string
+  numero_pasta?: string
+  cliente_nome?: string
+  cliente_id?: string
+}
+
+interface ConsultaOption {
+  id: string
+  numero?: string
+  titulo: string
+  cliente_nome?: string
+  cliente_id?: string
 }
 
 interface FormData {
@@ -39,90 +71,358 @@ interface FormData {
   data: string
   comprovante_url: string
   reembolsavel: boolean
-  observacao_reembolso: string
+  fornecedor: string
+  documento_fiscal: string
 }
 
-const CATEGORIAS_DESPESA = [
+const CATEGORIAS_PROCESSUAIS = [
   { value: 'custas', label: 'Custas Processuais' },
   { value: 'honorarios_perito', label: 'Honorários de Perito' },
   { value: 'oficial_justica', label: 'Oficial de Justiça' },
   { value: 'correios', label: 'Correios / Envios' },
   { value: 'cartorio', label: 'Cartório' },
   { value: 'copia', label: 'Cópias / Impressões' },
-  { value: 'deslocamento', label: 'Deslocamento / Transporte' },
-  { value: 'hospedagem', label: 'Hospedagem' },
-  { value: 'alimentacao', label: 'Alimentação' },
   { value: 'publicacao', label: 'Publicação' },
   { value: 'certidao', label: 'Certidões' },
   { value: 'protesto', label: 'Protesto' },
-  { value: 'outra', label: 'Outra Despesa' },
+  { value: 'deslocamento', label: 'Deslocamento / Transporte' },
+  { value: 'estacionamento', label: 'Estacionamento' },
+  { value: 'hospedagem', label: 'Hospedagem' },
+  { value: 'alimentacao', label: 'Alimentação' },
+  { value: 'combustivel', label: 'Combustível' },
+  { value: 'viagem', label: 'Viagem' },
 ]
 
-const initialFormData: FormData = {
+const CATEGORIAS_OPERACIONAIS = [
+  { value: 'aluguel', label: 'Aluguel' },
+  { value: 'folha', label: 'Folha de Pagamento' },
+  { value: 'prolabore', label: 'Pró-labore' },
+  { value: 'retirada_socios', label: 'Retirada de Sócios' },
+  { value: 'beneficios', label: 'Benefícios' },
+  { value: 'impostos', label: 'Impostos' },
+  { value: 'taxas_bancarias', label: 'Taxas Bancárias' },
+  { value: 'tecnologia', label: 'Tecnologia / Software' },
+  { value: 'assinatura', label: 'Assinaturas' },
+  { value: 'telefonia', label: 'Telefonia' },
+  { value: 'material', label: 'Material de Escritório' },
+  { value: 'marketing', label: 'Marketing' },
+  { value: 'capacitacao', label: 'Capacitação / Cursos' },
+  { value: 'associacoes', label: 'Associações' },
+  { value: 'fornecedor', label: 'Fornecedor' },
+  { value: 'emprestimos', label: 'Empréstimos' },
+  { value: 'juros', label: 'Juros' },
+  { value: 'cartao_credito', label: 'Fatura Cartão de Crédito' },
+  { value: 'comissao', label: 'Comissão' },
+]
+
+const CATEGORIAS_OUTRAS = [
+  { value: 'outra', label: 'Outra Despesa' },
+  { value: 'outros', label: 'Outros' },
+]
+
+const formatDateForInput = (date: Date = new Date()): string => {
+  return formatBrazilDate(date, 'yyyy-MM-dd')
+}
+
+const makeInitialFormData = (hasVinculo: boolean): FormData => ({
   categoria: '',
   descricao: '',
   valor: '',
-  data: new Date().toISOString().split('T')[0],
+  data: formatDateForInput(),
   comprovante_url: '',
-  reembolsavel: false,
-  observacao_reembolso: '',
-}
+  reembolsavel: hasVinculo,
+  fornecedor: '',
+  documento_fiscal: '',
+})
 
 export default function DespesaModal({
   open,
   onOpenChange,
   processoId,
+  consultaId,
   clienteId,
   onSuccess,
 }: DespesaModalProps) {
-  const [formData, setFormData] = useState<FormData>(initialFormData)
-  const [loading, setLoading] = useState(false)
-  const [processoInfo, setProcessoInfo] = useState<{ numero_cnj: string; cliente_nome: string } | null>(null)
   const supabase = createClient()
+  const { escritorioAtivo } = useEscritorioAtivo()
 
-  // Carregar info do processo se fornecido
-  useEffect(() => {
-    const loadProcessoInfo = async () => {
-      if (!processoId) {
-        setProcessoInfo(null)
-        return
-      }
+  // Form state
+  const [formData, setFormData] = useState<FormData>(makeInitialFormData(false))
+  const [loading, setLoading] = useState(false)
 
-      const { data, error } = await supabase
-        .from('processos_processos')
-        .select(`
-          numero_cnj,
-          clientes:cliente_id(nome)
-        `)
-        .eq('id', processoId)
+  // Vinculo state
+  const [vinculoTipo, setVinculoTipo] = useState<'processo' | 'consulta'>('processo')
+  const [searchTerm, setSearchTerm] = useState('')
+
+  // Selected state
+  const [processoSelecionado, setProcessoSelecionado] = useState<ProcessoOption | null>(null)
+  const [consultaSelecionada, setConsultaSelecionada] = useState<ConsultaOption | null>(null)
+
+  // Search results
+  const [processos, setProcessos] = useState<ProcessoOption[]>([])
+  const [consultas, setConsultas] = useState<ConsultaOption[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+
+  // Loading state para vinculo pre-carregado
+  const [loadingVinculo, setLoadingVinculo] = useState(false)
+
+  // Mostrar campos adicionais
+  const [showExtras, setShowExtras] = useState(false)
+
+  const updateField = (field: keyof FormData, value: string | boolean) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  // Carregar processo por ID
+  const loadProcessoById = async (id: string) => {
+    const { data: processoData, error } = await supabase
+      .from('processos_processos')
+      .select('id, numero_cnj, numero_pasta, cliente_id')
+      .eq('id', id)
+      .single()
+
+    if (error || !processoData) return
+
+    let clienteNome: string | undefined
+    if (processoData.cliente_id) {
+      const { data: clienteData } = await supabase
+        .from('crm_pessoas')
+        .select('nome_completo')
+        .eq('id', processoData.cliente_id)
         .single()
-
-      if (!error && data) {
-        setProcessoInfo({
-          numero_cnj: data.numero_cnj,
-          cliente_nome: (data.clientes as any)?.nome || 'Cliente não identificado',
-        })
-      }
+      clienteNome = clienteData?.nome_completo
     }
 
-    if (open) {
-      loadProcessoInfo()
+    setProcessoSelecionado({
+      id: processoData.id,
+      numero_cnj: processoData.numero_cnj,
+      numero_pasta: processoData.numero_pasta,
+      cliente_nome: clienteNome,
+      cliente_id: processoData.cliente_id,
+    })
+  }
+
+  // Carregar consulta por ID
+  const loadConsultaById = async (id: string) => {
+    const { data: consultaData, error } = await supabase
+      .from('consultivo_consultas')
+      .select('id, numero, titulo, cliente_id')
+      .eq('id', id)
+      .single()
+
+    if (error || !consultaData) return
+
+    let clienteNome: string | undefined
+    if (consultaData.cliente_id) {
+      const { data: clienteData } = await supabase
+        .from('crm_pessoas')
+        .select('nome_completo')
+        .eq('id', consultaData.cliente_id)
+        .single()
+      clienteNome = clienteData?.nome_completo
     }
-  }, [processoId, open, supabase])
+
+    setConsultaSelecionada({
+      id: consultaData.id,
+      numero: consultaData.numero,
+      titulo: consultaData.titulo,
+      cliente_nome: clienteNome,
+      cliente_id: consultaData.cliente_id,
+    })
+  }
 
   // Reset form quando abrir
   useEffect(() => {
     if (open) {
-      setFormData(initialFormData)
-    }
-  }, [open])
+      const hasVinculo = !!(processoId || consultaId)
+      setFormData(makeInitialFormData(hasVinculo))
+      setSearchTerm('')
+      setProcessoSelecionado(null)
+      setConsultaSelecionada(null)
+      setShowExtras(false)
 
-  const updateField = (field: keyof FormData, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+      if (processoId) {
+        setVinculoTipo('processo')
+        setLoadingVinculo(true)
+        loadProcessoById(processoId).finally(() => setLoadingVinculo(false))
+      } else if (consultaId) {
+        setVinculoTipo('consulta')
+        setLoadingVinculo(true)
+        loadConsultaById(consultaId).finally(() => setLoadingVinculo(false))
+      }
+    }
+  }, [open, processoId, consultaId])
+
+  // Buscar processos/consultas
+  useEffect(() => {
+    const buscar = async () => {
+      if (!escritorioAtivo || searchTerm.length < 2) {
+        setProcessos([])
+        setConsultas([])
+        return
+      }
+
+      setSearchLoading(true)
+      try {
+        if (vinculoTipo === 'processo') {
+          const { data: processosData } = await supabase
+            .from('processos_processos')
+            .select('id, numero_cnj, numero_pasta, parte_contraria, cliente_id')
+            .eq('escritorio_id', escritorioAtivo)
+            .or(`numero_cnj.ilike.%${searchTerm}%,numero_pasta.ilike.%${searchTerm}%,parte_contraria.ilike.%${searchTerm}%`)
+            .limit(15)
+
+          // Buscar por nome do cliente
+          const { data: clientesData } = await supabase
+            .from('crm_pessoas')
+            .select('id, nome_completo')
+            .eq('escritorio_id', escritorioAtivo)
+            .ilike('nome_completo', `%${searchTerm}%`)
+            .limit(10)
+
+          const clienteMap = new Map((clientesData || []).map((c: any) => [c.id, c.nome_completo]))
+
+          // Buscar processos desses clientes
+          let processosCliente: any[] = []
+          if (clienteMap.size > 0) {
+            const { data: pcData } = await supabase
+              .from('processos_processos')
+              .select('id, numero_cnj, numero_pasta, parte_contraria, cliente_id')
+              .eq('escritorio_id', escritorioAtivo)
+              .in('cliente_id', Array.from(clienteMap.keys()))
+              .limit(10)
+            processosCliente = pcData || []
+          }
+
+          // Combinar e remover duplicados
+          const todosProcessos = [...(processosData || []), ...processosCliente]
+          const processosUnicos = Array.from(
+            new Map(todosProcessos.map((p: any) => [p.id, p])).values()
+          ).slice(0, 10)
+
+          // Buscar nomes de clientes faltantes
+          const clienteIdsParaBuscar = processosUnicos
+            .filter((p: any) => p.cliente_id && !clienteMap.has(p.cliente_id))
+            .map((p: any) => p.cliente_id)
+
+          if (clienteIdsParaBuscar.length > 0) {
+            const { data: clientesAdicionais } = await supabase
+              .from('crm_pessoas')
+              .select('id, nome_completo')
+              .in('id', clienteIdsParaBuscar)
+
+            ;(clientesAdicionais || []).forEach((c: any) => clienteMap.set(c.id, c.nome_completo))
+          }
+
+          setProcessos(
+            processosUnicos.map((p: any) => ({
+              id: p.id,
+              numero_cnj: p.numero_cnj,
+              numero_pasta: p.numero_pasta,
+              cliente_nome: clienteMap.get(p.cliente_id) || p.parte_contraria,
+              cliente_id: p.cliente_id,
+            }))
+          )
+        } else {
+          const { data: consultasResultado } = await supabase
+            .from('consultivo_consultas')
+            .select('id, numero, titulo, cliente_id')
+            .eq('escritorio_id', escritorioAtivo)
+            .or(`titulo.ilike.%${searchTerm}%,numero.ilike.%${searchTerm}%`)
+            .limit(15)
+
+          // Buscar por nome do cliente
+          const { data: clientesConsultas } = await supabase
+            .from('crm_pessoas')
+            .select('id, nome_completo')
+            .eq('escritorio_id', escritorioAtivo)
+            .ilike('nome_completo', `%${searchTerm}%`)
+            .limit(10)
+
+          const clienteMapConsultas = new Map((clientesConsultas || []).map((c: any) => [c.id, c.nome_completo]))
+
+          let consultasDoCliente: any[] = []
+          if (clienteMapConsultas.size > 0) {
+            const { data: ccData } = await supabase
+              .from('consultivo_consultas')
+              .select('id, numero, titulo, cliente_id')
+              .eq('escritorio_id', escritorioAtivo)
+              .in('cliente_id', Array.from(clienteMapConsultas.keys()))
+              .limit(10)
+            consultasDoCliente = ccData || []
+          }
+
+          const todasConsultas = [...(consultasResultado || []), ...consultasDoCliente]
+          const consultasUnicas = Array.from(
+            new Map(todasConsultas.map((c: any) => [c.id, c])).values()
+          ).slice(0, 10)
+
+          const clienteIdsBuscarConsultas = consultasUnicas
+            .filter((c: any) => c.cliente_id && !clienteMapConsultas.has(c.cliente_id))
+            .map((c: any) => c.cliente_id)
+
+          if (clienteIdsBuscarConsultas.length > 0) {
+            const { data: clientesExtra } = await supabase
+              .from('crm_pessoas')
+              .select('id, nome_completo')
+              .in('id', clienteIdsBuscarConsultas)
+
+            ;(clientesExtra || []).forEach((c: any) => clienteMapConsultas.set(c.id, c.nome_completo))
+          }
+
+          setConsultas(
+            consultasUnicas.map((c: any) => ({
+              id: c.id,
+              numero: c.numero,
+              titulo: c.titulo,
+              cliente_nome: clienteMapConsultas.get(c.cliente_id) as string | undefined,
+              cliente_id: c.cliente_id,
+            }))
+          )
+        }
+      } catch (err) {
+        console.error('Erro ao buscar:', err)
+      } finally {
+        setSearchLoading(false)
+      }
+    }
+
+    const debounce = setTimeout(buscar, 300)
+    return () => clearTimeout(debounce)
+  }, [searchTerm, vinculoTipo, escritorioAtivo, supabase])
+
+  // Selecionar processo
+  const handleSelectProcesso = (processo: ProcessoOption) => {
+    setProcessoSelecionado(processo)
+    setConsultaSelecionada(null)
+    setSearchTerm('')
+    // Ativar reembolsavel por padrão ao vincular a caso
+    updateField('reembolsavel', true)
   }
 
+  // Selecionar consulta
+  const handleSelectConsulta = (consulta: ConsultaOption) => {
+    setConsultaSelecionada(consulta)
+    setProcessoSelecionado(null)
+    setSearchTerm('')
+    updateField('reembolsavel', true)
+  }
+
+  // Limpar selecao
+  const handleClearSelection = () => {
+    setProcessoSelecionado(null)
+    setConsultaSelecionada(null)
+    updateField('reembolsavel', false)
+  }
+
+  // Derivar cliente_id do vinculo
+  const derivedClienteId = processoSelecionado?.cliente_id || consultaSelecionada?.cliente_id || null
+
+  const hasSelection = processoSelecionado || consultaSelecionada
+  const hasPresetVinculo = !!(processoId || consultaId)
+  const opcoes = vinculoTipo === 'processo' ? processos : consultas
+
   const handleSubmit = async () => {
-    // Validações
     if (!formData.categoria) {
       toast.error('Selecione uma categoria')
       return
@@ -139,21 +439,28 @@ export default function DespesaModal({
       toast.error('Informe a data da despesa')
       return
     }
+    if (!escritorioAtivo) {
+      toast.error('Escritório não identificado')
+      return
+    }
 
     try {
       setLoading(true)
 
       const despesaData = {
-        processo_id: processoId || null,
-        cliente_id: clienteId || null,
+        escritorio_id: escritorioAtivo,
+        processo_id: processoSelecionado?.id || null,
+        consultivo_id: consultaSelecionada?.id || null,
+        cliente_id: derivedClienteId || clienteId || null,
         categoria: formData.categoria,
-        descricao: formData.descricao,
+        descricao: formData.descricao.trim(),
         valor: parseFloat(formData.valor),
-        data_despesa: formData.data,
-        comprovante_url: formData.comprovante_url || null,
+        data_vencimento: formatDateForDB(formData.data),
+        fornecedor: formData.fornecedor.trim() || null,
+        documento_fiscal: formData.documento_fiscal.trim() || null,
+        comprovante_url: formData.comprovante_url.trim() || null,
         reembolsavel: formData.reembolsavel,
         reembolso_status: formData.reembolsavel ? 'pendente' : null,
-        observacao_reembolso: formData.reembolsavel ? formData.observacao_reembolso : null,
         status: 'pendente',
       }
 
@@ -162,12 +469,8 @@ export default function DespesaModal({
       if (error) throw error
 
       toast.success('Despesa lançada com sucesso!')
-      setFormData(initialFormData)
       onOpenChange(false)
-
-      if (onSuccess) {
-        onSuccess()
-      }
+      onSuccess?.()
     } catch (error) {
       console.error('Erro ao lançar despesa:', error)
       toast.error('Erro ao lançar despesa. Tente novamente.')
@@ -178,28 +481,160 @@ export default function DespesaModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-[#34495e]">
-            <Receipt className="w-5 h-5" />
+            <Receipt className="w-5 h-5 text-[#89bcbe]" />
             Nova Despesa
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Info do processo */}
-          {processoInfo && (
-            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-              <div className="flex items-center gap-2 text-sm">
-                <FileText className="w-4 h-4 text-slate-400" />
-                <span className="text-slate-600">Processo:</span>
-                <span className="font-medium text-[#34495e]">{processoInfo.numero_cnj}</span>
+          {/* Vinculo - Card quando pre-carregado ou selecionado */}
+          {loadingVinculo ? (
+            <div className="rounded-lg border border-slate-200 px-4 py-3 flex items-center gap-3">
+              <Loader2 className="w-4 h-4 animate-spin text-[#89bcbe]" />
+              <span className="text-xs text-slate-500">Carregando vínculo...</span>
+            </div>
+          ) : hasSelection ? (
+            <div className="rounded-lg border border-slate-200 overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-1.5 bg-slate-100 border-b border-slate-200">
+                <div className="flex items-center gap-1.5">
+                  {processoSelecionado ? (
+                    <>
+                      <FileText className="w-3 h-3 text-[#34495e]" />
+                      <span className="text-[10px] font-medium text-[#34495e] uppercase tracking-wide">Processo</span>
+                    </>
+                  ) : (
+                    <>
+                      <Briefcase className="w-3 h-3 text-[#34495e]" />
+                      <span className="text-[10px] font-medium text-[#34495e] uppercase tracking-wide">Consultivo</span>
+                    </>
+                  )}
+                </div>
+                {!hasPresetVinculo && (
+                  <button
+                    onClick={handleClearSelection}
+                    className="p-0.5 rounded hover:bg-slate-200 transition-colors"
+                  >
+                    <X className="w-3 h-3 text-slate-500" />
+                  </button>
+                )}
               </div>
-              <div className="flex items-center gap-2 text-xs mt-1 text-slate-500">
-                <span>Cliente: {processoInfo.cliente_nome}</span>
+              <div className="px-3 py-2">
+                {processoSelecionado && (
+                  <>
+                    <p className="text-sm font-medium text-[#34495e]">
+                      {processoSelecionado.numero_cnj}
+                    </p>
+                    {processoSelecionado.numero_pasta && (
+                      <p className="text-[10px] text-slate-500">Pasta: {processoSelecionado.numero_pasta}</p>
+                    )}
+                  </>
+                )}
+                {consultaSelecionada && (
+                  <>
+                    <p className="text-sm font-medium text-[#34495e]">
+                      {consultaSelecionada.titulo}
+                    </p>
+                    {consultaSelecionada.numero && (
+                      <p className="text-[10px] text-slate-500">#{consultaSelecionada.numero}</p>
+                    )}
+                  </>
+                )}
+                {(processoSelecionado?.cliente_nome || consultaSelecionada?.cliente_nome) && (
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Cliente: {processoSelecionado?.cliente_nome || consultaSelecionada?.cliente_nome}
+                  </p>
+                )}
               </div>
             </div>
-          )}
+          ) : !hasPresetVinculo ? (
+            /* Busca de processo/consulta */
+            <div className="space-y-2">
+              <Label className="text-xs text-slate-600">Vincular a (opcional)</Label>
+
+              {/* Tabs */}
+              <div className="flex gap-1 p-0.5 bg-slate-100 rounded-md">
+                <button
+                  onClick={() => { setVinculoTipo('processo'); setSearchTerm(''); setProcessos([]); setConsultas([]) }}
+                  className={cn(
+                    'flex-1 text-xs py-1.5 rounded transition-colors',
+                    vinculoTipo === 'processo'
+                      ? 'bg-white shadow-sm text-[#34495e] font-medium'
+                      : 'text-slate-500 hover:text-slate-700'
+                  )}
+                >
+                  <FileText className="w-3 h-3 inline mr-1" />
+                  Processo
+                </button>
+                <button
+                  onClick={() => { setVinculoTipo('consulta'); setSearchTerm(''); setProcessos([]); setConsultas([]) }}
+                  className={cn(
+                    'flex-1 text-xs py-1.5 rounded transition-colors',
+                    vinculoTipo === 'consulta'
+                      ? 'bg-white shadow-sm text-[#34495e] font-medium'
+                      : 'text-slate-500 hover:text-slate-700'
+                  )}
+                >
+                  <Briefcase className="w-3 h-3 inline mr-1" />
+                  Consultivo
+                </button>
+              </div>
+
+              {/* Search input */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <Input
+                  placeholder={vinculoTipo === 'processo' ? 'Buscar por CNJ, pasta ou cliente...' : 'Buscar por título, número ou cliente...'}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8 h-8 text-sm"
+                />
+                {searchLoading && (
+                  <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-slate-400" />
+                )}
+              </div>
+
+              {/* Search results */}
+              {opcoes.length > 0 && (
+                <div className="max-h-[160px] overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100">
+                  {vinculoTipo === 'processo'
+                    ? processos.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => handleSelectProcesso(p)}
+                          className="w-full text-left px-3 py-2 hover:bg-slate-50 transition-colors"
+                        >
+                          <p className="text-xs font-medium text-[#34495e]">{p.numero_cnj}</p>
+                          <p className="text-[10px] text-slate-500">
+                            {p.numero_pasta && `Pasta: ${p.numero_pasta} · `}
+                            {p.cliente_nome || 'Sem cliente'}
+                          </p>
+                        </button>
+                      ))
+                    : consultas.map((c) => (
+                        <button
+                          key={c.id}
+                          onClick={() => handleSelectConsulta(c)}
+                          className="w-full text-left px-3 py-2 hover:bg-slate-50 transition-colors"
+                        >
+                          <p className="text-xs font-medium text-[#34495e]">{c.titulo}</p>
+                          <p className="text-[10px] text-slate-500">
+                            {c.numero && `#${c.numero} · `}
+                            {c.cliente_nome || 'Sem cliente'}
+                          </p>
+                        </button>
+                      ))
+                  }
+                </div>
+              )}
+
+              {searchTerm.length >= 2 && !searchLoading && opcoes.length === 0 && (
+                <p className="text-xs text-slate-400 text-center py-2">Nenhum resultado encontrado</p>
+              )}
+            </div>
+          ) : null}
 
           {/* Categoria */}
           <div>
@@ -209,16 +644,35 @@ export default function DespesaModal({
                 <SelectValue placeholder="Selecione a categoria..." />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORIAS_DESPESA.map((cat) => (
-                  <SelectItem key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectLabel>Processuais / Reembolsáveis</SelectLabel>
+                  {CATEGORIAS_PROCESSUAIS.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+                <SelectGroup>
+                  <SelectLabel>Operacionais</SelectLabel>
+                  {CATEGORIAS_OPERACIONAIS.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+                <SelectGroup>
+                  <SelectLabel>Outras</SelectLabel>
+                  {CATEGORIAS_OUTRAS.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>
 
-          {/* Descrição */}
+          {/* Descricao */}
           <div>
             <Label htmlFor="descricao">Descrição *</Label>
             <Textarea
@@ -255,22 +709,54 @@ export default function DespesaModal({
             </div>
           </div>
 
-          {/* Comprovante */}
+          {/* Campos adicionais (colapsaveis) */}
           <div>
-            <Label htmlFor="comprovante_url">URL do Comprovante</Label>
-            <Input
-              id="comprovante_url"
-              type="url"
-              placeholder="https://..."
-              value={formData.comprovante_url}
-              onChange={(e) => updateField('comprovante_url', e.target.value)}
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              Link para o comprovante armazenado (ex: Drive, Dropbox)
-            </p>
+            <button
+              type="button"
+              onClick={() => setShowExtras(!showExtras)}
+              className="text-xs text-[#46627f] hover:text-[#34495e] font-medium transition-colors"
+            >
+              {showExtras ? '- Ocultar detalhes adicionais' : '+ Detalhes adicionais (fornecedor, NF, comprovante)'}
+            </button>
+
+            {showExtras && (
+              <div className="mt-3 space-y-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <div>
+                  <Label htmlFor="fornecedor">Fornecedor</Label>
+                  <Input
+                    id="fornecedor"
+                    placeholder="Nome do fornecedor..."
+                    value={formData.fornecedor}
+                    onChange={(e) => updateField('fornecedor', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="documento_fiscal">Documento Fiscal (NF)</Label>
+                  <Input
+                    id="documento_fiscal"
+                    placeholder="Número da NF ou documento..."
+                    value={formData.documento_fiscal}
+                    onChange={(e) => updateField('documento_fiscal', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="comprovante_url">URL do Comprovante</Label>
+                  <Input
+                    id="comprovante_url"
+                    type="url"
+                    placeholder="https://..."
+                    value={formData.comprovante_url}
+                    onChange={(e) => updateField('comprovante_url', e.target.value)}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Link para o comprovante armazenado (ex: Drive, Dropbox)
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Reembolsável */}
+          {/* Reembolsavel - Cobrar do cliente */}
           <div className="p-4 rounded-lg border border-slate-200 bg-slate-50 space-y-3">
             <div className="flex items-start gap-3">
               <Checkbox
@@ -280,51 +766,44 @@ export default function DespesaModal({
               />
               <div className="flex-1">
                 <Label htmlFor="reembolsavel" className="cursor-pointer">
-                  <span className="font-medium">Despesa reembolsável pelo cliente</span>
+                  <span className="font-medium">Cobrar do cliente</span>
                 </Label>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Marque se esta despesa será cobrada do cliente posteriormente
+                  Despesa será incluída na fatura para reembolso pelo cliente
                 </p>
               </div>
             </div>
 
-            {formData.reembolsavel && (
-              <div className="pt-3 border-t border-slate-200">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="w-4 h-4 text-emerald-600" />
-                  <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
-                    Será incluída em fatura
-                  </Badge>
-                </div>
-                <Label htmlFor="observacao_reembolso">Observação para fatura</Label>
-                <Textarea
-                  id="observacao_reembolso"
-                  placeholder="Ex: NF nº 12345, data X..."
-                  value={formData.observacao_reembolso}
-                  onChange={(e) => updateField('observacao_reembolso', e.target.value)}
-                  rows={2}
-                  className="mt-1"
-                />
-                <p className="text-xs text-slate-500 mt-1">
-                  Informe dados da nota fiscal ou observações para cobrança
-                </p>
+            {formData.reembolsavel ? (
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-emerald-600" />
+                <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
+                  Será incluída em fatura para o cliente
+                </Badge>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-slate-400" />
+                <Badge variant="outline" className="text-xs bg-slate-100 text-slate-600 border-slate-200">
+                  Despesa interna do escritório
+                </Badge>
               </div>
             )}
           </div>
 
-          {/* Aviso se não vincular a processo */}
-          {!processoId && (
+          {/* Aviso se nao vincular a processo/consulta */}
+          {!hasSelection && !hasPresetVinculo && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
               <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
               <div className="text-xs text-amber-700">
-                <p className="font-medium">Despesa sem vínculo a processo</p>
-                <p>Esta despesa será registrada como despesa geral do escritório.</p>
+                <p className="font-medium">Despesa sem vínculo a caso</p>
+                <p>Será registrada como despesa geral do escritório.</p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Botões */}
+        {/* Botoes */}
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancelar

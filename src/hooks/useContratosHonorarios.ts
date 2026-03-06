@@ -153,7 +153,9 @@ export interface ContratoFormData {
   atos_configurados?: AtoContrato[]
   // Para contratos misto: define se horas são cobráveis (default: true)
   horas_faturaveis?: boolean
-  // Multi-escritório: escritório que vai faturar (se diferente do ativo)
+  // Multi-escritório: escritório dono do contrato (se diferente do ativo)
+  escritorio_contrato_id?: string
+  // Multi-escritório: escritório que vai faturar (CNPJ na nota)
   escritorio_id?: string
   // Limites mensais para contratos por_hora e por_cargo
   valor_minimo_mensal?: number | null
@@ -459,8 +461,11 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
         // Gerar número do contrato
         const numeroContrato = await gerarNumeroContrato()
 
-        // Determinar escritório de cobrança (se diferente do ativo)
-        const escritorioCobranca = data.escritorio_id && data.escritorio_id !== escritorioAtivo
+        // Determinar escritório dono do contrato (pode ser filial mesmo com ativo na matriz)
+        const ownerEscritorioId = data.escritorio_contrato_id || escritorioAtivo
+
+        // Determinar escritório de cobrança (se diferente do dono)
+        const escritorioCobranca = data.escritorio_id && data.escritorio_id !== ownerEscritorioId
           ? data.escritorio_id
           : null
 
@@ -468,7 +473,7 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
         const { data: novoContrato, error: contratoError } = await supabase
           .from('financeiro_contratos_honorarios')
           .insert({
-            escritorio_id: escritorioAtivo,
+            escritorio_id: ownerEscritorioId,
             escritorio_cobranca_id: escritorioCobranca, // Escritório que fatura (CNPJ)
             numero_contrato: numeroContrato,
             titulo: data.titulo || null,
@@ -635,9 +640,14 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
         if (data.data_inicio) updateData.data_inicio = data.data_inicio
         if (data.data_fim !== undefined) updateData.data_fim = data.data_fim || null
         if (data.observacoes !== undefined) updateData.descricao = data.observacoes || null
+        // Atualizar escritório dono do contrato se informado
+        if (data.escritorio_contrato_id !== undefined) {
+          updateData.escritorio_id = data.escritorio_contrato_id
+        }
         // Atualizar escritório de cobrança se informado
+        const ownerRef = data.escritorio_contrato_id || escritorioAtivo
         if (data.escritorio_id !== undefined) {
-          updateData.escritorio_cobranca_id = data.escritorio_id !== escritorioAtivo
+          updateData.escritorio_cobranca_id = data.escritorio_id !== ownerRef
             ? data.escritorio_id
             : null
         }
@@ -651,7 +661,7 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           .from('financeiro_contratos_honorarios')
           .update(updateData)
           .eq('id', id)
-          .eq('escritorio_id', escritorioAtivo)
+          .in('escritorio_id', idsParaConsulta)
 
         if (updateError) {
           console.error('[updateContrato] Erro no Step 1:', updateError)
@@ -773,7 +783,7 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
             .from('financeiro_contratos_honorarios')
             .update(jsonbUpdateData)
             .eq('id', id)
-            .eq('escritorio_id', escritorioAtivo)
+            .in('escritorio_id', idsParaConsulta)
 
           if (jsonbError) {
             console.error('[updateContrato] Erro ao atualizar JSONB:', jsonbError)

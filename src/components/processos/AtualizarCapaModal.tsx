@@ -436,17 +436,17 @@ export default function AtualizarCapaModal({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[#34495e]">
+          <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
             <RefreshCw className="w-5 h-5" />
             Atualizar Capa do Processo
           </DialogTitle>
         </DialogHeader>
 
         {/* Info do processo */}
-        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+        <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-200 dark:border-slate-700">
           <div className="flex-1">
-            <p className="text-sm font-semibold text-[#34495e]">{numeroPasta}</p>
-            <p className="text-xs text-slate-500">{numeroCnj}</p>
+            <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">{numeroPasta}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{numeroCnj}</p>
           </div>
           <Badge variant="outline" className="text-xs">
             Escavador
@@ -456,10 +456,10 @@ export default function AtualizarCapaModal({
         {/* Estado: Carregando */}
         {etapa === 'carregando' && (
           <div className="flex flex-col items-center justify-center py-12 gap-4">
-            <Loader2 className="w-8 h-8 text-[#34495e] animate-spin" />
+            <Loader2 className="w-8 h-8 text-[#34495e] dark:text-slate-200 animate-spin" />
             <div className="text-center">
-              <p className="text-sm font-medium text-[#34495e]">Consultando Escavador...</p>
-              <p className="text-xs text-slate-500 mt-1">Buscando dados atualizados do processo</p>
+              <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">Consultando Escavador...</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Buscando dados atualizados do processo</p>
             </div>
           </div>
         )}
@@ -467,12 +467,12 @@ export default function AtualizarCapaModal({
         {/* Estado: Erro */}
         {etapa === 'erro' && (
           <div className="flex flex-col items-center justify-center py-12 gap-4">
-            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-red-600" />
+            <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-500/15 flex items-center justify-center">
+              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium text-red-600">{erro}</p>
-              <p className="text-xs text-slate-500 mt-1">Verifique o número CNJ e tente novamente</p>
+              <p className="text-sm font-medium text-red-600 dark:text-red-400">{erro}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Verifique o número CNJ e tente novamente</p>
             </div>
             <Button variant="outline" onClick={carregarDados}>
               <RefreshCw className="w-4 h-4 mr-2" />
@@ -486,19 +486,19 @@ export default function AtualizarCapaModal({
           <>
             {campos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <Check className="w-6 h-6 text-emerald-600" />
+                <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-500/15 flex items-center justify-center">
+                  <Check className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-emerald-600">Processo já está atualizado!</p>
-                  <p className="text-xs text-slate-500 mt-1">Todos os campos estão iguais aos dados do Escavador</p>
+                  <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Processo já está atualizado!</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Todos os campos estão iguais aos dados do Escavador</p>
                 </div>
               </div>
             ) : (
               <>
                 {/* Ações em lote */}
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
                     <span className="font-medium">{campos.length}</span> campo(s) com diferença encontrado(s)
                   </p>
                   <div className="flex gap-2">
@@ -518,8 +518,8 @@ export default function AtualizarCapaModal({
                       key={campo.campo}
                       className={`p-3 rounded-lg border transition-colors cursor-pointer ${
                         campo.selecionado
-                          ? 'border-[#89bcbe] bg-[#f0f9f9]'
-                          : 'border-slate-200 hover:border-slate-300'
+                          ? 'border-[#89bcbe] bg-[#f0f9f9] dark:bg-teal-900/20'
+                          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                       }`}
                       onClick={() => toggleCampo(index)}
                     >
@@ -531,21 +531,21 @@ export default function AtualizarCapaModal({
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
-                            <span className="text-slate-400">{campo.icone}</span>
-                            <span className="text-sm font-medium text-[#34495e]">{campo.label}</span>
+                            <span className="text-slate-400 dark:text-slate-500">{campo.icone}</span>
+                            <span className="text-sm font-medium text-[#34495e] dark:text-slate-200">{campo.label}</span>
                           </div>
 
                           <div className="flex items-center gap-2 text-xs">
-                            <div className="flex-1 p-2 bg-white rounded border border-slate-200">
-                              <p className="text-[10px] text-slate-400 uppercase mb-0.5">Atual</p>
-                              <p className={campo.valorAtual ? 'text-slate-600' : 'text-slate-400 italic'}>
+                            <div className="flex-1 p-2 bg-white dark:bg-surface-1 rounded border border-slate-200 dark:border-slate-700">
+                              <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase mb-0.5">Atual</p>
+                              <p className={campo.valorAtual ? 'text-slate-600 dark:text-slate-400' : 'text-slate-400 dark:text-slate-500 italic'}>
                                 {campo.valorAtual || 'Não preenchido'}
                               </p>
                             </div>
-                            <ArrowRight className="w-4 h-4 text-slate-400 shrink-0" />
-                            <div className="flex-1 p-2 bg-emerald-50 rounded border border-emerald-200">
-                              <p className="text-[10px] text-emerald-600 uppercase mb-0.5">Novo</p>
-                              <p className="text-emerald-700 font-medium">{campo.valorNovo}</p>
+                            <ArrowRight className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
+                            <div className="flex-1 p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded border border-emerald-200 dark:border-emerald-700">
+                              <p className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase mb-0.5">Novo</p>
+                              <p className="text-emerald-700 dark:text-emerald-400 font-medium">{campo.valorNovo}</p>
                             </div>
                           </div>
                         </div>
@@ -555,7 +555,7 @@ export default function AtualizarCapaModal({
                 </div>
 
                 {/* Botões de ação */}
-                <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+                <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700">
                   <Button variant="outline" onClick={onClose}>
                     Cancelar
                   </Button>
@@ -585,10 +585,10 @@ export default function AtualizarCapaModal({
         {/* Estado: Atualizando */}
         {etapa === 'atualizando' && (
           <div className="flex flex-col items-center justify-center py-12 gap-4">
-            <Loader2 className="w-8 h-8 text-[#34495e] animate-spin" />
+            <Loader2 className="w-8 h-8 text-[#34495e] dark:text-slate-200 animate-spin" />
             <div className="text-center">
-              <p className="text-sm font-medium text-[#34495e]">Salvando atualizações...</p>
-              <p className="text-xs text-slate-500 mt-1">Atualizando {camposSelecionados.length} campo(s)</p>
+              <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">Salvando atualizações...</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Atualizando {camposSelecionados.length} campo(s)</p>
             </div>
           </div>
         )}

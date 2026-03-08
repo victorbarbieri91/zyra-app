@@ -341,12 +341,12 @@ export default function ProcessoDetalhe() {
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      ativo: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-      suspenso: 'bg-amber-100 text-amber-700 border-amber-200',
-      arquivado: 'bg-slate-100 text-slate-700 border-slate-200',
-      baixado: 'bg-blue-100 text-blue-700 border-blue-200',
-      transito_julgado: 'bg-purple-100 text-purple-700 border-purple-200',
-      acordo: 'bg-teal-100 text-teal-700 border-teal-200'
+      ativo: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-700',
+      suspenso: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-700',
+      arquivado: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-surface-2 dark:text-slate-300 dark:border-slate-700',
+      baixado: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-700',
+      transito_julgado: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-700',
+      acordo: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-500/10 dark:text-teal-400 dark:border-teal-700'
     }
     return styles[status as keyof typeof styles] || styles.ativo
   }
@@ -390,7 +390,7 @@ export default function ProcessoDetalhe() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="w-12 h-12 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin"></div>
+        <div className="w-12 h-12 border-4 border-teal-200 dark:border-teal-700 border-t-teal-500 dark:border-t-teal-400 rounded-full animate-spin"></div>
       </div>
     )
   }
@@ -399,7 +399,7 @@ export default function ProcessoDetalhe() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-[#34495e] mb-2">Processo não encontrado</h2>
+          <h2 className="text-xl font-semibold text-[#34495e] dark:text-slate-200 mb-2">Processo não encontrado</h2>
           <Button onClick={() => router.push('/dashboard/processos')}>
             Voltar para lista
           </Button>
@@ -409,11 +409,11 @@ export default function ProcessoDetalhe() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 dark:from-surface-0 dark:via-surface-0 dark:to-surface-0 p-6">
       <div className="max-w-[1800px] mx-auto space-y-6">
 
         {/* Header da Ficha */}
-        <div className="bg-gradient-to-r from-[#34495e] to-[#46627f] border border-slate-300 rounded-lg p-5 shadow-sm">
+        <div className="bg-gradient-to-r from-[#34495e] to-[#46627f] border border-slate-300 dark:border-slate-600 rounded-lg p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <Button
               variant="ghost"
@@ -527,14 +527,14 @@ export default function ProcessoDetalhe() {
 
         {/* Banner de encerramento */}
         {isEncerrado && processo.data_encerramento && (
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <div className="bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <Info className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
+              <Info className="w-4 h-4 text-slate-500 dark:text-slate-400 mt-0.5 flex-shrink-0" />
               <div className="flex-1 space-y-1">
-                <p className="text-sm font-medium text-[#34495e]">
+                <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                   Processo encerrado em {formatBrazilDate(processo.data_encerramento)}
                 </p>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
                   <Badge className={`text-[10px] border ${getStatusBadge(processo.status)}`}>
                     {PROCESSO_STATUS_LABELS[processo.status] || processo.status}
                   </Badge>
@@ -564,7 +564,7 @@ export default function ProcessoDetalhe() {
                   )}
                 </div>
                 {processo.resumo_encerramento && (
-                  <p className="text-xs text-slate-500 mt-1 italic">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 italic">
                     &ldquo;{processo.resumo_encerramento}&rdquo;
                   </p>
                 )}
@@ -575,9 +575,9 @@ export default function ProcessoDetalhe() {
 
         {/* Banner: processo derivado (recurso/incidente de outro processo) */}
         {processoDerived && (
-          <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <GitBranch className="w-4 h-4 text-amber-600 shrink-0" />
-            <p className="text-sm text-amber-800">
+          <div className="flex items-center gap-3 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-700 rounded-lg">
+            <GitBranch className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <p className="text-sm text-amber-800 dark:text-amber-300">
               Este processo é um{' '}
               <strong>
                 {processoDerived.tipo === 'recurso' ? 'Recurso' : 'Incidente'}
@@ -585,7 +585,7 @@ export default function ProcessoDetalhe() {
               do processo{' '}
               <button
                 onClick={() => router.push(`/dashboard/processos/${processoDerived.principal_id}`)}
-                className="font-mono font-semibold underline hover:text-amber-900"
+                className="font-mono font-semibold underline hover:text-amber-900 dark:hover:text-amber-200"
               >
                 {processoDerived.principal_cnj}
               </button>
@@ -595,9 +595,9 @@ export default function ProcessoDetalhe() {
 
         {/* Sistema de Abas */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
             <CardHeader className="pb-2">
-              <TabsList className="grid w-full grid-cols-6 bg-slate-100">
+              <TabsList className="grid w-full grid-cols-6 bg-slate-100 dark:bg-surface-2">
                 <TabsTrigger value="ficha" className="text-xs">
                   Ficha Processual
                 </TabsTrigger>

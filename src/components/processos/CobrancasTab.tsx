@@ -231,10 +231,10 @@ export default function CobrancasTab({ processo, escritorioId }: CobrancasTabPro
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      pago: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-      pendente: 'bg-amber-100 text-amber-700 border-amber-200',
-      atrasado: 'bg-red-100 text-red-700 border-red-200',
-      cancelado: 'bg-slate-100 text-slate-500 border-slate-200',
+      pago: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-700',
+      pendente: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-700',
+      atrasado: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-700',
+      cancelado: 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-surface-2 dark:text-slate-400 dark:border-slate-700',
     }
     return styles[status as keyof typeof styles] || styles.pendente
   }
@@ -243,21 +243,21 @@ export default function CobrancasTab({ processo, escritorioId }: CobrancasTabPro
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-        <span className="ml-2 text-sm text-slate-500">Carregando cobranças...</span>
+        <span className="ml-2 text-sm text-slate-500 dark:text-slate-400">Carregando cobranças...</span>
       </div>
     )
   }
 
   if (!processo.contrato_id) {
     return (
-      <Card className="border-amber-200 bg-amber-50">
+      <Card className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-500/10">
         <CardContent className="py-8">
           <div className="text-center">
             <FileText className="w-10 h-10 mx-auto mb-3 text-amber-500" />
-            <h3 className="text-base font-medium text-amber-800 mb-1">
+            <h3 className="text-base font-medium text-amber-800 dark:text-amber-300 mb-1">
               Processo sem Contrato Vinculado
             </h3>
-            <p className="text-sm text-amber-700">
+            <p className="text-sm text-amber-700 dark:text-amber-400">
               Para gerenciar cobranças, vincule um contrato de honorários a este processo.
             </p>
           </div>
@@ -269,18 +269,18 @@ export default function CobrancasTab({ processo, escritorioId }: CobrancasTabPro
   return (
     <div className="space-y-6">
       {/* Alertas Pendentes */}
-      <Card className="border-amber-200 shadow-sm">
+      <Card className="border-amber-200 dark:border-amber-800 shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
                 <AlertCircle className="w-4 h-4 text-white" />
               </div>
-              <CardTitle className="text-base font-medium text-[#34495e]">
+              <CardTitle className="text-base font-medium text-[#34495e] dark:text-slate-200">
                 Alertas Pendentes de Cobrança
               </CardTitle>
               {alertas.length > 0 && (
-                <Badge className="bg-amber-100 text-amber-700 border-amber-200">
+                <Badge className="bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-700">
                   {alertas.length}
                 </Badge>
               )}
@@ -289,7 +289,7 @@ export default function CobrancasTab({ processo, escritorioId }: CobrancasTabPro
         </CardHeader>
         <CardContent>
           {alertas.length === 0 ? (
-            <div className="text-center py-6 text-slate-500">
+            <div className="text-center py-6 text-slate-500 dark:text-slate-400">
               <Scale className="w-8 h-8 mx-auto mb-2 opacity-40" />
               <p className="text-sm">Nenhum alerta pendente</p>
               <p className="text-xs mt-1">
@@ -301,35 +301,35 @@ export default function CobrancasTab({ processo, escritorioId }: CobrancasTabPro
               {alertas.map(alerta => (
                 <div
                   key={alerta.id}
-                  className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200"
+                  className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-500/10 rounded-lg border border-amber-200 dark:border-amber-700"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-[10px] bg-white">
+                      <Badge variant="outline" className="text-[10px] bg-white dark:bg-surface-1">
                         {TIPO_ALERTA_LABELS[alerta.tipo_alerta]}
                       </Badge>
                       {alerta.ato_codigo && (
-                        <Badge variant="outline" className="text-[10px] bg-white">
+                        <Badge variant="outline" className="text-[10px] bg-white dark:bg-surface-1">
                           {alerta.ato_codigo}
                         </Badge>
                       )}
-                      <p className="text-sm font-medium text-[#34495e]">{alerta.titulo}</p>
+                      <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">{alerta.titulo}</p>
                     </div>
                     {alerta.descricao && (
-                      <p className="text-xs text-slate-600 mt-1 line-clamp-1">{alerta.descricao}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-1">{alerta.descricao}</p>
                     )}
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
                         <Calendar className="w-3 h-3 inline mr-1" />
                         {formatBrazilDate(new Date(alerta.created_at))}
                       </span>
                       {alerta.valor_sugerido && alerta.valor_sugerido > 0 && (
-                        <span className="text-xs font-medium text-emerald-600">
+                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                           Sugerido: {formatCurrency(alerta.valor_sugerido)}
                         </span>
                       )}
                       {alerta.ato_nome && (
-                        <span className="text-xs text-slate-500">{alerta.ato_nome}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{alerta.ato_nome}</span>
                       )}
                     </div>
                   </div>
@@ -338,7 +338,7 @@ export default function CobrancasTab({ processo, escritorioId }: CobrancasTabPro
                       variant="ghost"
                       size="sm"
                       onClick={() => handleAbrirIgnorar(alerta)}
-                      className="text-xs text-slate-500 hover:text-slate-700"
+                      className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
                     >
                       <Ban className="w-3.5 h-3.5 mr-1" />
                       Ignorar
@@ -361,14 +361,14 @@ export default function CobrancasTab({ processo, escritorioId }: CobrancasTabPro
 
       {/* Atos Disponíveis para Cobrança Manual */}
       {atosDisponiveis.length > 0 && (
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
                   <Plus className="w-4 h-4 text-white" />
                 </div>
-                <CardTitle className="text-base font-medium text-[#34495e]">
+                <CardTitle className="text-base font-medium text-[#34495e] dark:text-slate-200">
                   Atos Disponíveis para Cobrança
                 </CardTitle>
               </div>
@@ -379,20 +379,20 @@ export default function CobrancasTab({ processo, escritorioId }: CobrancasTabPro
               {atosDisponiveis.map(ato => (
                 <div
                   key={ato.id}
-                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-blue-300 transition-colors"
+                  className="flex items-center justify-between p-3 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
                 >
                   <div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-[10px]">
                         {ato.codigo}
                       </Badge>
-                      <p className="text-sm font-medium text-[#34495e]">{ato.nome}</p>
+                      <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">{ato.nome}</p>
                     </div>
                     {ato.valor_calculado && ato.valor_calculado > 0 && (
-                      <p className="text-xs text-emerald-600 mt-1">
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
                         Valor: {formatCurrency(ato.valor_calculado)}
                         {ato.percentual_contrato && (
-                          <span className="text-slate-400 ml-1">
+                          <span className="text-slate-400 dark:text-slate-500 ml-1">
                             ({ato.percentual_contrato}% da causa)
                           </span>
                         )}
@@ -416,14 +416,14 @@ export default function CobrancasTab({ processo, escritorioId }: CobrancasTabPro
       )}
 
       {/* Histórico de Cobranças */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center">
                 <History className="w-4 h-4 text-white" />
               </div>
-              <CardTitle className="text-base font-medium text-[#34495e]">
+              <CardTitle className="text-base font-medium text-[#34495e] dark:text-slate-200">
                 Histórico de Cobranças
               </CardTitle>
             </div>
@@ -431,7 +431,7 @@ export default function CobrancasTab({ processo, escritorioId }: CobrancasTabPro
         </CardHeader>
         <CardContent>
           {historico.length === 0 ? (
-            <div className="text-center py-6 text-slate-500">
+            <div className="text-center py-6 text-slate-500 dark:text-slate-400">
               <History className="w-8 h-8 mx-auto mb-2 opacity-40" />
               <p className="text-sm">Nenhuma cobrança registrada</p>
               <p className="text-xs mt-1">
@@ -441,24 +441,24 @@ export default function CobrancasTab({ processo, escritorioId }: CobrancasTabPro
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
+                <thead className="bg-slate-50 dark:bg-surface-0 border-b border-slate-200 dark:border-slate-700">
                   <tr>
-                    <th className="text-left p-3 text-xs font-semibold text-[#46627f]">Data</th>
-                    <th className="text-left p-3 text-xs font-semibold text-[#46627f]">Tipo</th>
-                    <th className="text-left p-3 text-xs font-semibold text-[#46627f]">Descrição</th>
-                    <th className="text-right p-3 text-xs font-semibold text-[#46627f]">Valor</th>
-                    <th className="text-center p-3 text-xs font-semibold text-[#46627f]">Status</th>
+                    <th className="text-left p-3 text-xs font-semibold text-[#46627f] dark:text-slate-400">Data</th>
+                    <th className="text-left p-3 text-xs font-semibold text-[#46627f] dark:text-slate-400">Tipo</th>
+                    <th className="text-left p-3 text-xs font-semibold text-[#46627f] dark:text-slate-400">Descrição</th>
+                    <th className="text-right p-3 text-xs font-semibold text-[#46627f] dark:text-slate-400">Valor</th>
+                    <th className="text-center p-3 text-xs font-semibold text-[#46627f] dark:text-slate-400">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {historico.map(item => (
-                    <tr key={item.id} className="border-b border-slate-100">
-                      <td className="p-3 text-xs text-slate-600">
+                    <tr key={item.id} className="border-b border-slate-100 dark:border-slate-800">
+                      <td className="p-3 text-xs text-slate-600 dark:text-slate-400">
                         {formatBrazilDate(new Date(item.created_at))}
                       </td>
-                      <td className="p-3 text-xs text-slate-600 capitalize">{item.categoria}</td>
-                      <td className="p-3 text-sm text-slate-700">{item.descricao}</td>
-                      <td className="p-3 text-sm text-right font-semibold text-[#34495e]">
+                      <td className="p-3 text-xs text-slate-600 dark:text-slate-400 capitalize">{item.categoria}</td>
+                      <td className="p-3 text-sm text-slate-700 dark:text-slate-300">{item.descricao}</td>
+                      <td className="p-3 text-sm text-right font-semibold text-[#34495e] dark:text-slate-200">
                         {formatCurrency(item.valor)}
                       </td>
                       <td className="p-3 text-center">
@@ -469,9 +469,9 @@ export default function CobrancasTab({ processo, escritorioId }: CobrancasTabPro
                     </tr>
                   ))}
                   {historico.length > 0 && (
-                    <tr className="bg-slate-50 font-semibold">
-                      <td colSpan={3} className="p-3 text-sm text-[#34495e]">Total</td>
-                      <td className="p-3 text-sm text-right text-[#34495e]">
+                    <tr className="bg-slate-50 dark:bg-surface-0 font-semibold">
+                      <td colSpan={3} className="p-3 text-sm text-[#34495e] dark:text-slate-200">Total</td>
+                      <td className="p-3 text-sm text-right text-[#34495e] dark:text-slate-200">
                         {formatCurrency(historico.reduce((sum, h) => sum + h.valor, 0))}
                       </td>
                       <td></td>
@@ -494,10 +494,10 @@ export default function CobrancasTab({ processo, escritorioId }: CobrancasTabPro
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="p-3 bg-slate-50 rounded-lg">
-              <p className="text-sm font-medium text-[#34495e]">{modalConfirmar?.titulo}</p>
+            <div className="p-3 bg-slate-50 dark:bg-surface-0 rounded-lg">
+              <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">{modalConfirmar?.titulo}</p>
               {modalConfirmar?.ato_nome && (
-                <p className="text-xs text-slate-500 mt-1">{modalConfirmar.ato_nome}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{modalConfirmar.ato_nome}</p>
               )}
             </div>
             <div>
@@ -558,8 +558,8 @@ export default function CobrancasTab({ processo, escritorioId }: CobrancasTabPro
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="p-3 bg-slate-50 rounded-lg">
-              <p className="text-sm font-medium text-[#34495e]">{modalIgnorar?.titulo}</p>
+            <div className="p-3 bg-slate-50 dark:bg-surface-0 rounded-lg">
+              <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">{modalIgnorar?.titulo}</p>
             </div>
             <div>
               <Label className="text-sm">Justificativa (opcional)</Label>
@@ -606,12 +606,12 @@ export default function CobrancasTab({ processo, escritorioId }: CobrancasTabPro
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="p-3 bg-slate-50 rounded-lg">
+            <div className="p-3 bg-slate-50 dark:bg-surface-0 rounded-lg">
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-[10px]">
                   {modalCobrarAto?.codigo}
                 </Badge>
-                <p className="text-sm font-medium text-[#34495e]">{modalCobrarAto?.nome}</p>
+                <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">{modalCobrarAto?.nome}</p>
               </div>
             </div>
             <div>
@@ -626,7 +626,7 @@ export default function CobrancasTab({ processo, escritorioId }: CobrancasTabPro
                 className="mt-1"
               />
               {modalCobrarAto?.percentual_contrato && processo.valor_causa && (
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   {modalCobrarAto.percentual_contrato}% de {formatCurrency(processo.valor_causa)} = {formatCurrency((modalCobrarAto.percentual_contrato / 100) * processo.valor_causa)}
                 </p>
               )}

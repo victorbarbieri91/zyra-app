@@ -180,7 +180,7 @@ export default function ProdutoDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#34495e]" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#34495e] dark:border-[#89bcbe]" />
       </div>
     )
   }
@@ -188,7 +188,7 @@ export default function ProdutoDetailPage() {
   if (!produto) {
     return (
       <div className="text-center py-12">
-        <p className="text-slate-500">Produto não encontrado</p>
+        <p className="text-slate-500 dark:text-slate-400">Produto não encontrado</p>
         <Link href="/dashboard/portfolio">
           <Button variant="outline" className="mt-4">
             Voltar ao Catálogo
@@ -213,17 +213,17 @@ export default function ProdutoDetailPage() {
           </Link>
 
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-[#89bcbe]/20 flex items-center justify-center">
-              <AreaIcon className="w-6 h-6 text-[#34495e]" />
+            <div className="w-12 h-12 rounded-lg bg-[#89bcbe]/20 dark:bg-[#89bcbe]/10 flex items-center justify-center">
+              <AreaIcon className="w-6 h-6 text-[#34495e] dark:text-[#89bcbe]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-semibold text-[#34495e]">{produto.nome}</h1>
+                <h1 className="text-xl font-semibold text-[#34495e] dark:text-slate-200">{produto.nome}</h1>
                 <Badge variant="outline" className="text-xs">
                   v{produto.versao_atual}
                 </Badge>
               </div>
-              <p className="text-sm text-slate-500">{produto.codigo}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{produto.codigo}</p>
             </div>
           </div>
         </div>
@@ -234,7 +234,7 @@ export default function ProdutoDetailPage() {
             variant="outline"
             size="sm"
             onClick={handleToggleVisibilidade}
-            className={produto.visivel_catalogo ? 'text-emerald-600' : 'text-slate-500'}
+            className={produto.visivel_catalogo ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}
           >
             {produto.visivel_catalogo ? (
               <>
@@ -282,7 +282,7 @@ export default function ProdutoDetailPage() {
                 Duplicar Produto
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleDelete} className="text-red-600">
+              <DropdownMenuItem onClick={handleDelete} className="text-red-600 dark:text-red-400">
                 <Trash2 className="w-4 h-4 mr-2" />
                 Excluir
               </DropdownMenuItem>
@@ -296,10 +296,10 @@ export default function ProdutoDetailPage() {
         <Badge
           className={`${
             produto.status === 'ativo'
-              ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+              ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30'
               : produto.status === 'rascunho'
-              ? 'bg-slate-100 text-slate-700 border-slate-200'
-              : 'bg-amber-100 text-amber-700 border-amber-200'
+              ? 'bg-slate-100 dark:bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-200 dark:border-slate-600'
+              : 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30'
           }`}
         >
           {STATUS_PRODUTO_LABELS[produto.status]}
@@ -315,12 +315,12 @@ export default function ProdutoDetailPage() {
           </Badge>
         )}
 
-        <span className="text-sm text-slate-500">
+        <span className="text-sm text-slate-500 dark:text-slate-400">
           {produto.fases.length} fase{produto.fases.length !== 1 ? 's' : ''}
         </span>
 
         {produto.duracao_estimada_dias && (
-          <span className="text-sm text-slate-500">
+          <span className="text-sm text-slate-500 dark:text-slate-400">
             ~{produto.duracao_estimada_dias} dias
           </span>
         )}
@@ -328,17 +328,17 @@ export default function ProdutoDetailPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="border-b border-slate-200 bg-transparent p-0 h-auto">
+        <TabsList className="border-b border-slate-200 dark:border-slate-700 bg-transparent p-0 h-auto">
           <TabsTrigger
             value="visao-geral"
-            className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-[#34495e] rounded-none"
+            className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-[#34495e] dark:data-[state=active]:border-[#89bcbe] rounded-none"
           >
             <Settings className="w-4 h-4 mr-2" />
             Visão Geral
           </TabsTrigger>
           <TabsTrigger
             value="fases"
-            className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-[#34495e] rounded-none"
+            className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-[#34495e] dark:data-[state=active]:border-[#89bcbe] rounded-none"
           >
             <ListChecks className="w-4 h-4 mr-2" />
             Fases
@@ -348,14 +348,14 @@ export default function ProdutoDetailPage() {
           </TabsTrigger>
           <TabsTrigger
             value="timeline"
-            className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-[#34495e] rounded-none"
+            className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-[#34495e] dark:data-[state=active]:border-[#89bcbe] rounded-none"
           >
             <Clock className="w-4 h-4 mr-2" />
             Timeline
           </TabsTrigger>
           <TabsTrigger
             value="equipe"
-            className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-[#34495e] rounded-none"
+            className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-[#34495e] dark:data-[state=active]:border-[#89bcbe] rounded-none"
           >
             <Users className="w-4 h-4 mr-2" />
             Equipe
@@ -365,7 +365,7 @@ export default function ProdutoDetailPage() {
           </TabsTrigger>
           <TabsTrigger
             value="precos"
-            className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-[#34495e] rounded-none"
+            className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-[#34495e] dark:data-[state=active]:border-[#89bcbe] rounded-none"
           >
             <DollarSign className="w-4 h-4 mr-2" />
             Preços
@@ -375,7 +375,7 @@ export default function ProdutoDetailPage() {
           </TabsTrigger>
           <TabsTrigger
             value="recursos"
-            className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-[#34495e] rounded-none"
+            className="px-4 py-2 data-[state=active]:border-b-2 data-[state=active]:border-[#34495e] dark:data-[state=active]:border-[#89bcbe] rounded-none"
           >
             <Paperclip className="w-4 h-4 mr-2" />
             Recursos
@@ -389,15 +389,15 @@ export default function ProdutoDetailPage() {
         <TabsContent value="visao-geral" className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Informações básicas */}
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold text-[#34495e]">
+                <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
                   Informações Básicas
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label className="text-sm text-slate-600">Nome do Produto</Label>
+                  <Label className="text-sm text-slate-600 dark:text-slate-400">Nome do Produto</Label>
                   <Input
                     value={formData.nome}
                     onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
@@ -406,13 +406,13 @@ export default function ProdutoDetailPage() {
                 </div>
 
                 <div>
-                  <Label className="text-sm text-slate-600">Área Jurídica</Label>
+                  <Label className="text-sm text-slate-600 dark:text-slate-400">Área Jurídica</Label>
                   <select
                     value={formData.area_juridica}
                     onChange={(e) =>
                       setFormData({ ...formData, area_juridica: e.target.value as AreaJuridica })
                     }
-                    className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    className="w-full mt-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-surface-2 dark:text-slate-200"
                   >
                     {Object.entries(AREA_JURIDICA_LABELS).map(([value, label]) => (
                       <option key={value} value={value}>
@@ -423,7 +423,7 @@ export default function ProdutoDetailPage() {
                 </div>
 
                 <div>
-                  <Label className="text-sm text-slate-600">Categoria</Label>
+                  <Label className="text-sm text-slate-600 dark:text-slate-400">Categoria</Label>
                   <Input
                     value={formData.categoria}
                     onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
@@ -434,7 +434,7 @@ export default function ProdutoDetailPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm text-slate-600">Duração Estimada (dias)</Label>
+                    <Label className="text-sm text-slate-600 dark:text-slate-400">Duração Estimada (dias)</Label>
                     <Input
                       type="number"
                       value={formData.duracao_estimada_dias}
@@ -446,13 +446,13 @@ export default function ProdutoDetailPage() {
                   </div>
 
                   <div>
-                    <Label className="text-sm text-slate-600">Complexidade</Label>
+                    <Label className="text-sm text-slate-600 dark:text-slate-400">Complexidade</Label>
                     <select
                       value={formData.complexidade}
                       onChange={(e) =>
                         setFormData({ ...formData, complexidade: e.target.value as Complexidade })
                       }
-                      className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                      className="w-full mt-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-surface-2 dark:text-slate-200"
                     >
                       {Object.entries(COMPLEXIDADE_LABELS).map(([value, label]) => (
                         <option key={value} value={value}>
@@ -466,33 +466,33 @@ export default function ProdutoDetailPage() {
             </Card>
 
             {/* Descrições */}
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold text-[#34495e]">
+                <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
                   Descrições
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label className="text-sm text-slate-600">Descrição Interna</Label>
+                  <Label className="text-sm text-slate-600 dark:text-slate-400">Descrição Interna</Label>
                   <textarea
                     value={formData.descricao}
                     onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
                     rows={3}
-                    className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none"
+                    className="w-full mt-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-surface-2 dark:text-slate-200 resize-none"
                     placeholder="Descrição técnica para uso interno..."
                   />
                 </div>
 
                 <div>
-                  <Label className="text-sm text-slate-600">Descrição Comercial (para PDF)</Label>
+                  <Label className="text-sm text-slate-600 dark:text-slate-400">Descrição Comercial (para PDF)</Label>
                   <textarea
                     value={formData.descricao_comercial}
                     onChange={(e) =>
                       setFormData({ ...formData, descricao_comercial: e.target.value })
                     }
                     rows={5}
-                    className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none"
+                    className="w-full mt-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-surface-2 dark:text-slate-200 resize-none"
                     placeholder="Texto de marketing para apresentação ao cliente..."
                   />
                 </div>
@@ -505,7 +505,7 @@ export default function ProdutoDetailPage() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="bg-gradient-to-r from-[#34495e] to-[#46627f]"
+              className="bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] dark:text-surface-0"
             >
               {saving ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
@@ -519,9 +519,9 @@ export default function ProdutoDetailPage() {
 
         {/* Tab: Fases */}
         <TabsContent value="fases" className="mt-6">
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700">
             <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-base font-semibold text-[#34495e]">
+              <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
                 Fases do Produto
               </CardTitle>
               <Button size="sm" variant="outline">
@@ -530,8 +530,8 @@ export default function ProdutoDetailPage() {
             </CardHeader>
             <CardContent>
               {produto.fases.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  <ListChecks className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                  <ListChecks className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
                   <p>Nenhuma fase cadastrada</p>
                   <p className="text-sm">Adicione fases para estruturar o produto</p>
                 </div>
@@ -540,17 +540,17 @@ export default function ProdutoDetailPage() {
                   {produto.fases.map((fase, index) => (
                     <div
                       key={fase.id}
-                      className="flex items-start gap-4 p-4 rounded-lg border border-slate-200 hover:border-[#89bcbe] transition-colors"
+                      className="flex items-start gap-4 p-4 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-[#89bcbe] dark:hover:border-[#89bcbe] transition-colors"
                     >
                       <div className="w-8 h-8 rounded-full bg-[#89bcbe] text-white flex items-center justify-center font-semibold text-sm">
                         {index + 1}
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-medium text-[#34495e]">{fase.nome}</h4>
+                        <h4 className="font-medium text-[#34495e] dark:text-slate-200">{fase.nome}</h4>
                         {fase.descricao && (
-                          <p className="text-sm text-slate-500 mt-1">{fase.descricao}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{fase.descricao}</p>
                         )}
-                        <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
+                        <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
                           {fase.duracao_estimada_dias && (
                             <span className="flex items-center gap-1">
                               <Clock className="w-3 h-3" />
@@ -583,22 +583,22 @@ export default function ProdutoDetailPage() {
 
         {/* Tab: Timeline */}
         <TabsContent value="timeline" className="mt-6">
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold text-[#34495e]">
+              <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
                 Timeline Visual
               </CardTitle>
             </CardHeader>
             <CardContent>
               {produto.fases.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  <Clock className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                  <Clock className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
                   <p>Adicione fases para visualizar a timeline</p>
                 </div>
               ) : (
                 <div className="relative">
                   {/* Linha conectora */}
-                  <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-slate-200" />
+                  <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-slate-200 dark:bg-slate-700" />
 
                   <div className="space-y-6">
                     {produto.fases.map((fase, index) => {
@@ -608,22 +608,22 @@ export default function ProdutoDetailPage() {
 
                       return (
                         <div key={fase.id} className="relative flex items-start gap-4 pl-3">
-                          <div className="w-6 h-6 rounded-full bg-[#34495e] text-white flex items-center justify-center text-xs font-medium z-10">
+                          <div className="w-6 h-6 rounded-full bg-[#34495e] dark:bg-[#89bcbe] text-white flex items-center justify-center text-xs font-medium z-10">
                             {index + 1}
                           </div>
-                          <div className="flex-1 bg-slate-50 rounded-lg p-4">
+                          <div className="flex-1 bg-slate-50 dark:bg-surface-2 rounded-lg p-4">
                             <div className="flex items-center justify-between">
-                              <h4 className="font-medium text-[#34495e]">{fase.nome}</h4>
-                              <span className="text-xs text-slate-500">
+                              <h4 className="font-medium text-[#34495e] dark:text-slate-200">{fase.nome}</h4>
+                              <span className="text-xs text-slate-500 dark:text-slate-400">
                                 Dia {diasAcumulados + 1}
                                 {fase.duracao_estimada_dias && ` - ${diasAcumulados + fase.duracao_estimada_dias}`}
                               </span>
                             </div>
                             {fase.descricao && (
-                              <p className="text-sm text-slate-500 mt-1">{fase.descricao}</p>
+                              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{fase.descricao}</p>
                             )}
                             {fase.duracao_estimada_dias && (
-                              <div className="mt-3 h-2 bg-slate-200 rounded-full overflow-hidden">
+                              <div className="mt-3 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                                 <div
                                   className="h-full bg-gradient-to-r from-[#89bcbe] to-[#aacfd0]"
                                   style={{
@@ -648,9 +648,9 @@ export default function ProdutoDetailPage() {
 
         {/* Tab: Equipe */}
         <TabsContent value="equipe" className="mt-6">
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700">
             <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-base font-semibold text-[#34495e]">
+              <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
                 Papéis da Equipe
               </CardTitle>
               <Button size="sm" variant="outline">
@@ -659,8 +659,8 @@ export default function ProdutoDetailPage() {
             </CardHeader>
             <CardContent>
               {produto.papeis_equipe.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  <Users className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                  <Users className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
                   <p>Nenhum papel definido</p>
                   <p className="text-sm">Defina os papéis necessários para executar este produto</p>
                 </div>
@@ -669,14 +669,14 @@ export default function ProdutoDetailPage() {
                   {produto.papeis_equipe.map((papel) => (
                     <div
                       key={papel.id}
-                      className="p-4 rounded-lg border border-slate-200 hover:border-[#89bcbe] transition-colors"
+                      className="p-4 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-[#89bcbe] dark:hover:border-[#89bcbe] transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
-                          <Users className="w-5 h-5 text-slate-500" />
+                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-surface-2 flex items-center justify-center">
+                          <Users className="w-5 h-5 text-slate-500 dark:text-slate-400" />
                         </div>
                         <div>
-                          <h4 className="font-medium text-[#34495e]">{papel.nome}</h4>
+                          <h4 className="font-medium text-[#34495e] dark:text-slate-200">{papel.nome}</h4>
                           {papel.obrigatorio && (
                             <Badge variant="outline" className="text-[10px] mt-1">
                               Obrigatório
@@ -685,7 +685,7 @@ export default function ProdutoDetailPage() {
                         </div>
                       </div>
                       {papel.descricao && (
-                        <p className="text-sm text-slate-500 mt-2">{papel.descricao}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{papel.descricao}</p>
                       )}
                     </div>
                   ))}
@@ -697,9 +697,9 @@ export default function ProdutoDetailPage() {
 
         {/* Tab: Preços */}
         <TabsContent value="precos" className="mt-6">
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700">
             <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-base font-semibold text-[#34495e]">
+              <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
                 Opções de Precificação
               </CardTitle>
               <Button size="sm" variant="outline">
@@ -708,8 +708,8 @@ export default function ProdutoDetailPage() {
             </CardHeader>
             <CardContent>
               {produto.precos.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  <DollarSign className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                  <DollarSign className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
                   <p>Nenhum preço cadastrado</p>
                   <p className="text-sm">Adicione opções de precificação para este produto</p>
                 </div>
@@ -720,12 +720,12 @@ export default function ProdutoDetailPage() {
                       key={preco.id}
                       className={`p-4 rounded-lg border transition-colors ${
                         preco.padrao
-                          ? 'border-[#89bcbe] bg-[#f0f9f9]'
-                          : 'border-slate-200 hover:border-[#89bcbe]'
+                          ? 'border-[#89bcbe] bg-[#f0f9f9] dark:bg-[#89bcbe]/5'
+                          : 'border-slate-200 dark:border-slate-700 hover:border-[#89bcbe] dark:hover:border-[#89bcbe]'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium text-[#34495e]">
+                        <h4 className="font-medium text-[#34495e] dark:text-slate-200">
                           {preco.nome_opcao || 'Padrão'}
                         </h4>
                         {preco.padrao && (
@@ -735,7 +735,7 @@ export default function ProdutoDetailPage() {
                         )}
                       </div>
 
-                      <div className="text-2xl font-semibold text-[#1E3A8A]">
+                      <div className="text-2xl font-semibold text-[#1E3A8A] dark:text-blue-400">
                         {preco.tipo === 'fixo' && preco.valor_fixo && (
                           <>R$ {preco.valor_fixo.toLocaleString('pt-BR')}</>
                         )}
@@ -753,7 +753,7 @@ export default function ProdutoDetailPage() {
                       </div>
 
                       {preco.descricao && (
-                        <p className="text-sm text-slate-500 mt-2">{preco.descricao}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{preco.descricao}</p>
                       )}
                     </div>
                   ))}
@@ -765,9 +765,9 @@ export default function ProdutoDetailPage() {
 
         {/* Tab: Recursos */}
         <TabsContent value="recursos" className="mt-6">
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700">
             <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-base font-semibold text-[#34495e]">
+              <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
                 Recursos e Documentos
               </CardTitle>
               <Button size="sm" variant="outline">
@@ -776,8 +776,8 @@ export default function ProdutoDetailPage() {
             </CardHeader>
             <CardContent>
               {produto.recursos.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  <Paperclip className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                  <Paperclip className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
                   <p>Nenhum recurso cadastrado</p>
                   <p className="text-sm">Anexe templates, modelos e materiais de apoio</p>
                 </div>
@@ -786,14 +786,14 @@ export default function ProdutoDetailPage() {
                   {produto.recursos.map((recurso) => (
                     <div
                       key={recurso.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-[#89bcbe] transition-colors"
+                      className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-[#89bcbe] dark:hover:border-[#89bcbe] transition-colors"
                     >
-                      <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-slate-500" />
+                      <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-surface-2 flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-slate-500 dark:text-slate-400" />
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-medium text-sm text-[#34495e]">{recurso.nome}</h4>
-                        <p className="text-xs text-slate-500">{recurso.tipo}</p>
+                        <h4 className="font-medium text-sm text-[#34495e] dark:text-slate-200">{recurso.nome}</h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{recurso.tipo}</p>
                       </div>
                       <Button variant="ghost" size="sm">
                         <MoreVertical className="w-4 h-4" />

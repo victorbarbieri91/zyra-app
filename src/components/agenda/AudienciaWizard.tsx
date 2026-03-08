@@ -387,7 +387,7 @@ export default function AudienciaWizard({
           <div className="space-y-4">
             {/* Tipo de Audiência */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#34495e]">Tipo de Audiência *</Label>
+              <Label className="text-sm font-medium text-[#34495e] dark:text-slate-200">Tipo de Audiência *</Label>
               <div className="grid grid-cols-6 gap-2">
                 {(Object.entries(TIPO_CONFIG) as [TipoAudiencia, typeof TIPO_CONFIG[keyof typeof TIPO_CONFIG]][]).map(
                   ([key, config]) => {
@@ -404,14 +404,14 @@ export default function AudienciaWizard({
                           selected
                             ? cn(
                                 'border-current shadow-sm',
-                                config.color === 'blue' && 'bg-blue-50 text-blue-600 border-blue-300',
-                                config.color === 'purple' && 'bg-purple-50 text-purple-600 border-purple-300',
-                                config.color === 'emerald' && 'bg-emerald-50 text-emerald-600 border-emerald-300',
-                                config.color === 'red' && 'bg-red-50 text-red-600 border-red-300',
-                                config.color === 'amber' && 'bg-amber-50 text-amber-600 border-amber-300',
-                                config.color === 'slate' && 'bg-slate-50 text-slate-600 border-slate-300'
+                                config.color === 'blue' && 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-500/50',
+                                config.color === 'purple' && 'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-300 dark:border-purple-500/50',
+                                config.color === 'emerald' && 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/50',
+                                config.color === 'red' && 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-300 dark:border-red-500/50',
+                                config.color === 'amber' && 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-500/50',
+                                config.color === 'slate' && 'bg-slate-50 dark:bg-surface-0 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600'
                               )
-                            : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 text-slate-400 dark:text-slate-500 hover:border-slate-300 dark:hover:border-slate-600 hover:text-slate-600 dark:hover:text-slate-300'
                         )}
                       >
                         <Icon className="w-5 h-5" />
@@ -427,7 +427,7 @@ export default function AudienciaWizard({
 
             {/* Título */}
             <div className="space-y-2">
-              <Label htmlFor="titulo" className="text-sm font-medium text-[#34495e]">
+              <Label htmlFor="titulo" className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                 Título da Audiência *
               </Label>
               <Input
@@ -437,14 +437,14 @@ export default function AudienciaWizard({
                 onChange={(e) => setTitulo(e.target.value)}
                 className="text-sm"
               />
-              <p className="text-xs text-slate-500">Mínimo 3 caracteres</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Mínimo 3 caracteres</p>
             </div>
 
             {/* Descrição */}
             <div className="space-y-2">
-              <Label htmlFor="descricao" className="text-sm font-medium text-[#34495e]">
+              <Label htmlFor="descricao" className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                 Descrição
-                <span className="text-xs text-slate-500 font-normal ml-2">(Opcional)</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-normal ml-2">(Opcional)</span>
               </Label>
               <Textarea
                 id="descricao"
@@ -465,7 +465,7 @@ export default function AudienciaWizard({
           <div className="space-y-4">
             {/* Data e Hora */}
             <div className="space-y-2">
-              <Label htmlFor="data-hora" className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+              <Label htmlFor="data-hora" className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-[#89bcbe]" />
                 Data e Horário *
               </Label>
@@ -478,7 +478,7 @@ export default function AudienciaWizard({
 
             {/* Duração */}
             <div className="space-y-2">
-              <Label htmlFor="duracao" className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+              <Label htmlFor="duracao" className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-[#89bcbe]" />
                 Duração *
               </Label>
@@ -515,7 +515,7 @@ export default function AudienciaWizard({
           <div className="space-y-4">
             {/* Modalidade - Cards Visuais */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#34495e]">Modalidade *</Label>
+              <Label className="text-sm font-medium text-[#34495e] dark:text-slate-200">Modalidade *</Label>
               <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
@@ -523,14 +523,14 @@ export default function AudienciaWizard({
                   className={cn(
                     'flex items-center gap-2.5 p-3 rounded-lg border-2 transition-all',
                     modalidade === 'presencial'
-                      ? 'border-[#10B981] bg-emerald-50 text-emerald-700 shadow-sm'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      ? 'border-[#10B981] bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shadow-sm'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                   )}
                 >
                   <MapPin className="w-5 h-5 flex-shrink-0" />
                   <div className="text-left flex-1">
                     <div className="font-semibold text-sm">Presencial</div>
-                    <div className="text-xs text-slate-500">Fórum/tribunal</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">Fórum/tribunal</div>
                   </div>
                 </button>
 
@@ -540,14 +540,14 @@ export default function AudienciaWizard({
                   className={cn(
                     'flex items-center gap-2.5 p-3 rounded-lg border-2 transition-all',
                     modalidade === 'virtual'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 shadow-sm'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                   )}
                 >
                   <Video className="w-5 h-5 flex-shrink-0" />
                   <div className="text-left flex-1">
                     <div className="font-semibold text-sm">Virtual</div>
-                    <div className="text-xs text-slate-500">Videoconferência</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">Videoconferência</div>
                   </div>
                 </button>
               </div>
@@ -555,11 +555,11 @@ export default function AudienciaWizard({
 
             {/* Campos Presencial */}
             {modalidade === 'presencial' && (
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 max-h-[320px] overflow-y-auto">
+              <div className="bg-slate-50 dark:bg-surface-0 p-3 rounded-lg border border-slate-200 dark:border-slate-700 max-h-[320px] overflow-y-auto">
                 <div className="space-y-2.5">
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <Label htmlFor="tribunal" className="text-xs font-medium text-[#34495e]">Tribunal *</Label>
+                      <Label htmlFor="tribunal" className="text-xs font-medium text-[#34495e] dark:text-slate-200">Tribunal *</Label>
                       <Input
                         id="tribunal"
                         placeholder="Ex: TJSP"
@@ -569,7 +569,7 @@ export default function AudienciaWizard({
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="comarca" className="text-xs font-medium text-[#34495e]">Comarca</Label>
+                      <Label htmlFor="comarca" className="text-xs font-medium text-[#34495e] dark:text-slate-200">Comarca</Label>
                       <Input
                         id="comarca"
                         placeholder="Ex: São Paulo"
@@ -582,7 +582,7 @@ export default function AudienciaWizard({
 
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <Label htmlFor="forum" className="text-xs font-medium text-[#34495e]">Fórum *</Label>
+                      <Label htmlFor="forum" className="text-xs font-medium text-[#34495e] dark:text-slate-200">Fórum *</Label>
                       <Input
                         id="forum"
                         placeholder="Nome do fórum"
@@ -592,7 +592,7 @@ export default function AudienciaWizard({
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="vara" className="text-xs font-medium text-[#34495e]">Vara</Label>
+                      <Label htmlFor="vara" className="text-xs font-medium text-[#34495e] dark:text-slate-200">Vara</Label>
                       <Input
                         id="vara"
                         placeholder="Ex: 1ª Vara Cível"
@@ -605,7 +605,7 @@ export default function AudienciaWizard({
 
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <Label htmlFor="sala" className="text-xs font-medium text-[#34495e]">Sala</Label>
+                      <Label htmlFor="sala" className="text-xs font-medium text-[#34495e] dark:text-slate-200">Sala</Label>
                       <Input
                         id="sala"
                         placeholder="Ex: 201"
@@ -615,7 +615,7 @@ export default function AudienciaWizard({
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="endereco" className="text-xs font-medium text-[#34495e]">Endereço</Label>
+                      <Label htmlFor="endereco" className="text-xs font-medium text-[#34495e] dark:text-slate-200">Endereço</Label>
                       <Input
                         id="endereco"
                         placeholder="Rua, número..."
@@ -631,9 +631,9 @@ export default function AudienciaWizard({
 
             {/* Campos Virtual */}
             {modalidade === 'virtual' && (
-              <div className="space-y-3 bg-blue-50 p-3 rounded-lg border border-blue-200">
+              <div className="space-y-3 bg-blue-50 dark:bg-blue-500/10 p-3 rounded-lg border border-blue-200 dark:border-blue-500/30">
                 <div className="space-y-2">
-                  <Label htmlFor="link-virtual" className="text-sm font-medium text-[#34495e]">Link da Reunião *</Label>
+                  <Label htmlFor="link-virtual" className="text-sm font-medium text-[#34495e] dark:text-slate-200">Link da Reunião *</Label>
                   <Input
                     id="link-virtual"
                     type="url"
@@ -645,7 +645,7 @@ export default function AudienciaWizard({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="plataforma" className="text-sm font-medium text-[#34495e]">Plataforma</Label>
+                  <Label htmlFor="plataforma" className="text-sm font-medium text-[#34495e] dark:text-slate-200">Plataforma</Label>
                   <Select value={plataforma} onValueChange={setPlataforma}>
                     <SelectTrigger className="text-sm">
                       <SelectValue placeholder="Selecione a plataforma" />
@@ -671,7 +671,7 @@ export default function AudienciaWizard({
           <div className="space-y-4">
             {/* Vínculo Obrigatório com VinculacaoSelector */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#34495e]">
+              <Label className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                 Vincular a Processo ou Consultivo *
               </Label>
               <VinculacaoSelector
@@ -682,7 +682,7 @@ export default function AudienciaWizard({
 
             {/* Observações */}
             <div className="space-y-2">
-              <Label htmlFor="observacoes" className="text-sm font-medium text-[#34495e]">Observações</Label>
+              <Label htmlFor="observacoes" className="text-sm font-medium text-[#34495e] dark:text-slate-200">Observações</Label>
               <Textarea
                 id="observacoes"
                 placeholder="Observações adicionais sobre a audiência..."
@@ -699,53 +699,53 @@ export default function AudienciaWizard({
       {/* ETAPA 5: Revisão - Grid Estruturado */}
       {currentStep === 4 && (
         <WizardStep title={steps[4].title} subtitle={steps[4].subtitle}>
-          <div className="bg-white border border-slate-200 rounded-lg p-4">
+          <div className="bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
             {/* Grid de Informações */}
             <div className="space-y-4">
               {/* Tipo e Título */}
               <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
-                <span className="text-slate-500">Tipo</span>
-                <span className="text-[#34495e] font-medium">{getTipoLabel(tipoAudiencia)}</span>
+                <span className="text-slate-500 dark:text-slate-400">Tipo</span>
+                <span className="text-[#34495e] dark:text-slate-200 font-medium">{getTipoLabel(tipoAudiencia)}</span>
 
-                <span className="text-slate-500">Título</span>
-                <span className="text-[#34495e] font-medium">{titulo}</span>
+                <span className="text-slate-500 dark:text-slate-400">Título</span>
+                <span className="text-[#34495e] dark:text-slate-200 font-medium">{titulo}</span>
 
                 {descricao && (
                   <>
-                    <span className="text-slate-500">Descrição</span>
-                    <span className="text-slate-600 text-[11px] leading-relaxed">{descricao}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Descrição</span>
+                    <span className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">{descricao}</span>
                   </>
                 )}
               </div>
 
-              <div className="border-t border-slate-100" />
+              <div className="border-t border-slate-100 dark:border-slate-800" />
 
               {/* Data e Horário */}
               <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
-                <span className="text-slate-500">Data/Hora</span>
-                <span className="text-[#34495e] font-medium">
+                <span className="text-slate-500 dark:text-slate-400">Data/Hora</span>
+                <span className="text-[#34495e] dark:text-slate-200 font-medium">
                   {formatBrazilDateTime(dataHora)}
                 </span>
 
-                <span className="text-slate-500">Duração</span>
-                <span className="text-[#34495e] font-medium">{duracaoMinutos} minutos</span>
+                <span className="text-slate-500 dark:text-slate-400">Duração</span>
+                <span className="text-[#34495e] dark:text-slate-200 font-medium">{duracaoMinutos} minutos</span>
 
                 {responsaveisIds.length > 0 && (
                   <>
-                    <span className="text-slate-500">Responsáveis</span>
-                    <span className="text-[#34495e] font-medium">
+                    <span className="text-slate-500 dark:text-slate-400">Responsáveis</span>
+                    <span className="text-[#34495e] dark:text-slate-200 font-medium">
                       {responsaveisIds.map(id => membros.find(m => m.user_id === id)?.nome || 'Não encontrado').join(', ')}
                     </span>
                   </>
                 )}
               </div>
 
-              <div className="border-t border-slate-100" />
+              <div className="border-t border-slate-100 dark:border-slate-800" />
 
               {/* Local e Modalidade */}
               <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
-                <span className="text-slate-500">Modalidade</span>
-                <span className="text-[#34495e] font-medium">
+                <span className="text-slate-500 dark:text-slate-400">Modalidade</span>
+                <span className="text-[#34495e] dark:text-slate-200 font-medium">
                   {modalidade === 'presencial' ? 'Presencial' : 'Virtual'}
                 </span>
 
@@ -753,44 +753,44 @@ export default function AudienciaWizard({
                   <>
                     {tribunal && (
                       <>
-                        <span className="text-slate-500">Tribunal</span>
-                        <span className="text-[#34495e] font-medium">{tribunal}</span>
+                        <span className="text-slate-500 dark:text-slate-400">Tribunal</span>
+                        <span className="text-[#34495e] dark:text-slate-200 font-medium">{tribunal}</span>
                       </>
                     )}
                     {forum && (
                       <>
-                        <span className="text-slate-500">Fórum</span>
-                        <span className="text-[#34495e] font-medium">{forum}</span>
+                        <span className="text-slate-500 dark:text-slate-400">Fórum</span>
+                        <span className="text-[#34495e] dark:text-slate-200 font-medium">{forum}</span>
                       </>
                     )}
                     {vara && (
                       <>
-                        <span className="text-slate-500">Vara</span>
-                        <span className="text-[#34495e] font-medium">{vara}</span>
+                        <span className="text-slate-500 dark:text-slate-400">Vara</span>
+                        <span className="text-[#34495e] dark:text-slate-200 font-medium">{vara}</span>
                       </>
                     )}
                     {endereco && (
                       <>
-                        <span className="text-slate-500">Endereço</span>
-                        <span className="text-slate-600 text-[11px] leading-relaxed">{endereco}</span>
+                        <span className="text-slate-500 dark:text-slate-400">Endereço</span>
+                        <span className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">{endereco}</span>
                       </>
                     )}
                   </>
                 ) : (
                   <>
-                    <span className="text-slate-500">Link</span>
+                    <span className="text-slate-500 dark:text-slate-400">Link</span>
                     <a
                       href={linkVirtual}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline text-[11px] truncate"
+                      className="text-blue-600 dark:text-blue-400 hover:underline text-[11px] truncate"
                     >
                       {linkVirtual}
                     </a>
                     {plataforma && (
                       <>
-                        <span className="text-slate-500">Plataforma</span>
-                        <span className="text-[#34495e] font-medium">{plataforma}</span>
+                        <span className="text-slate-500 dark:text-slate-400">Plataforma</span>
+                        <span className="text-[#34495e] dark:text-slate-200 font-medium">{plataforma}</span>
                       </>
                     )}
                   </>
@@ -800,17 +800,17 @@ export default function AudienciaWizard({
               {/* Pessoas e Vínculos */}
               {(vinculacao || juiz || promotor || advogadoContrario) && (
                 <>
-                  <div className="border-t border-slate-100" />
+                  <div className="border-t border-slate-100 dark:border-slate-800" />
 
                   <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
                     {vinculacao && (
                       <>
-                        <span className="text-slate-500">Vinculado a</span>
-                        <div className="text-[#34495e]">
+                        <span className="text-slate-500 dark:text-slate-400">Vinculado a</span>
+                        <div className="text-[#34495e] dark:text-slate-200">
                           <div className="font-medium">
                             {vinculacao.metadados?.partes || vinculacao.metadados?.titulo || `Pasta ${vinculacao.metadados?.numero_pasta}`}
                           </div>
-                          <div className="text-[11px] text-slate-500 mt-0.5">
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                             {vinculacao.metadados?.numero_pasta && `Pasta ${vinculacao.metadados.numero_pasta}`}
                             {vinculacao.metadados?.numero_cnj && ` • CNJ: ${vinculacao.metadados.numero_cnj}`}
                           </div>
@@ -820,22 +820,22 @@ export default function AudienciaWizard({
 
                     {juiz && (
                       <>
-                        <span className="text-slate-500">Juiz(a)</span>
-                        <span className="text-[#34495e] font-medium">{juiz}</span>
+                        <span className="text-slate-500 dark:text-slate-400">Juiz(a)</span>
+                        <span className="text-[#34495e] dark:text-slate-200 font-medium">{juiz}</span>
                       </>
                     )}
 
                     {promotor && (
                       <>
-                        <span className="text-slate-500">Promotor(a)</span>
-                        <span className="text-[#34495e] font-medium">{promotor}</span>
+                        <span className="text-slate-500 dark:text-slate-400">Promotor(a)</span>
+                        <span className="text-[#34495e] dark:text-slate-200 font-medium">{promotor}</span>
                       </>
                     )}
 
                     {advogadoContrario && (
                       <>
-                        <span className="text-slate-500">Adv. Contrário</span>
-                        <span className="text-[#34495e] font-medium">{advogadoContrario}</span>
+                        <span className="text-slate-500 dark:text-slate-400">Adv. Contrário</span>
+                        <span className="text-[#34495e] dark:text-slate-200 font-medium">{advogadoContrario}</span>
                       </>
                     )}
                   </div>

@@ -60,14 +60,14 @@ const statusChips = [
     label: 'Pendente',
     filterKey: 'agendado' as const,
     activeClasses: 'bg-amber-100 text-amber-800 border-amber-300 shadow-sm',
-    inactiveClasses: 'bg-white text-slate-400 border-slate-200 hover:border-amber-200 hover:text-amber-600',
+    inactiveClasses: 'bg-white dark:bg-surface-1 text-slate-400 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-amber-200 hover:text-amber-600',
   },
   {
     key: 'concluido' as const,
     label: 'Concluído',
     filterKey: 'realizado' as const,
     activeClasses: 'bg-emerald-100 text-emerald-800 border-emerald-400 shadow-sm',
-    inactiveClasses: 'bg-white text-slate-400 border-slate-200 hover:border-emerald-300 hover:text-emerald-600',
+    inactiveClasses: 'bg-white dark:bg-surface-1 text-slate-400 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-emerald-300 hover:text-emerald-600',
   },
 ]
 
@@ -113,8 +113,8 @@ export default function AgendaFiltersCompact({
             className={cn(
               'h-8 px-3 text-[11px] font-medium border gap-1.5 transition-all duration-200',
               !todosAtivos
-                ? 'border-[#89bcbe] bg-[#f0f9f9]/50 text-[#34495e]'
-                : 'border-slate-200 text-[#46627f] hover:border-slate-300'
+                ? 'border-[#89bcbe] bg-[#f0f9f9]/50 dark:bg-teal-900/20 text-[#34495e] dark:text-slate-200'
+                : 'border-slate-200 dark:border-slate-700 text-[#46627f] dark:text-slate-400 hover:border-slate-300'
             )}
           >
             <Filter className="h-3.5 w-3.5" />
@@ -136,8 +136,8 @@ export default function AgendaFiltersCompact({
                 className={cn(
                   'flex items-center gap-2.5 w-full px-2.5 py-2 rounded-md text-sm transition-colors duration-150 cursor-pointer',
                   isActive
-                    ? `${item.activeBg} text-[#34495e]`
-                    : 'text-slate-400 hover:bg-slate-50'
+                    ? `${item.activeBg} text-[#34495e] dark:text-slate-200`
+                    : 'text-slate-400 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2'
                 )}
               >
                 {/* Bolinha colorida */}
@@ -149,7 +149,7 @@ export default function AgendaFiltersCompact({
                 {/* Label */}
                 <span className={cn(
                   'flex-1 text-left text-[12px] font-medium',
-                  isActive ? 'text-[#34495e]' : 'text-slate-400'
+                  isActive ? 'text-[#34495e] dark:text-slate-200' : 'text-slate-400 dark:text-slate-400'
                 )}>
                   {item.label}
                 </span>
@@ -164,7 +164,7 @@ export default function AgendaFiltersCompact({
       </DropdownMenu>
 
       {/* Separador */}
-      <div className="w-px h-5 bg-slate-200" />
+      <div className="w-px h-5 bg-slate-200 dark:bg-slate-700" />
 
       {/* Chips de Status */}
       <div className="flex items-center gap-1.5">

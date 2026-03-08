@@ -9,7 +9,7 @@ export default function HonorariosPage() {
   if (!escritorioAtivo) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-slate-600">Carregando escritório...</p>
+        <p className="text-slate-600 dark:text-slate-400">Carregando escritório...</p>
       </div>
     )
   }

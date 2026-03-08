@@ -116,19 +116,19 @@ export default function TesesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-slate-600">Carregando...</div>
+        <div className="text-slate-600 dark:text-slate-400">Carregando...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 dark:from-surface-0 dark:via-surface-0 dark:to-surface-0 p-6">
       <div className="max-w-[1800px] mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#34495e]">Banco de Teses</h1>
-          <p className="text-sm text-slate-600 mt-1">
+          <h1 className="text-2xl font-bold text-[#34495e] dark:text-slate-200">Banco de Teses</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             Gerencie teses jurídicas reutilizáveis
           </p>
         </div>
@@ -141,7 +141,7 @@ export default function TesesPage() {
       </div>
 
       {/* Filters */}
-      <Card className="border-slate-200">
+      <Card className="border-slate-200 dark:border-slate-700">
         <CardContent className="pt-6 pb-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="relative">
@@ -150,11 +150,11 @@ export default function TesesPage() {
                 placeholder="Buscar por título, resumo ou tags..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 border-slate-200"
+                className="pl-10 border-slate-200 dark:border-slate-700"
               />
             </div>
             <Select value={selectedArea} onValueChange={setSelectedArea}>
-              <SelectTrigger className="border-slate-200">
+              <SelectTrigger className="border-slate-200 dark:border-slate-700">
                 <SelectValue placeholder="Área" />
               </SelectTrigger>
               <SelectContent>
@@ -173,11 +173,11 @@ export default function TesesPage() {
 
       {/* Teses Grid */}
       {filteredTeses.length === 0 ? (
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardContent className="py-12">
             <div className="text-center">
-              <Scale className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 mb-4">
+              <Scale className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+              <p className="text-slate-500 dark:text-slate-400 mb-4">
                 {teses.length === 0
                   ? 'Nenhuma tese cadastrada ainda'
                   : 'Nenhuma tese encontrada com os filtros aplicados'}
@@ -197,24 +197,24 @@ export default function TesesPage() {
         <div className="grid grid-cols-1 gap-4">
           {filteredTeses.map((tese) => (
             <Link key={tese.id} href={`/dashboard/pecas-teses/teses/${tese.id}`}>
-              <Card className={`border-slate-200 hover:shadow-md transition-shadow ${
+              <Card className={`border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow ${
                 !tese.ativa ? 'opacity-60' : ''
               }`}>
                 <CardHeader className="pb-2 pt-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <CardTitle className="text-base font-semibold text-[#34495e] mb-2">
+                      <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200 mb-2">
                         {tese.titulo}
                       </CardTitle>
                       {tese.resumo && (
-                        <p className="text-sm text-slate-600 line-clamp-2 mb-2">
+                        <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 mb-2">
                           {tese.resumo}
                         </p>
                       )}
                       <div className="flex flex-wrap gap-1.5">
                         <Badge
                           variant="outline"
-                          className="text-[10px] px-2 py-0.5 bg-[#89bcbe]/10 text-[#34495e] border-[#89bcbe]/30"
+                          className="text-[10px] px-2 py-0.5 bg-[#89bcbe]/10 text-[#34495e] dark:text-slate-200 border-[#89bcbe]/30"
                         >
                           {getAreaLabel(tese.area)}
                         </Badge>
@@ -246,7 +246,7 @@ export default function TesesPage() {
                         {!tese.ativa && (
                           <Badge
                             variant="outline"
-                            className="text-[10px] px-2 py-0.5 bg-slate-100"
+                            className="text-[10px] px-2 py-0.5 bg-slate-100 dark:bg-slate-800"
                           >
                             Inativa
                           </Badge>
@@ -254,10 +254,10 @@ export default function TesesPage() {
                       </div>
                     </div>
                     <div className="text-right ml-4">
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         {tese.uso_count} {tese.uso_count === 1 ? 'uso' : 'usos'}
                       </p>
-                      <p className="text-xs text-slate-400 mt-1">
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                         {new Date(tese.created_at).toLocaleDateString('pt-BR')}
                       </p>
                     </div>

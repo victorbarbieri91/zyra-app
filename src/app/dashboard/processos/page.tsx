@@ -343,26 +343,26 @@ export default function ProcessosPage() {
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      ativo: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-      suspenso: 'bg-amber-100 text-amber-700 border-amber-200',
-      arquivado: 'bg-slate-100 text-slate-700 border-slate-200',
-      baixado: 'bg-blue-100 text-blue-700 border-blue-200',
-      transito_julgado: 'bg-purple-100 text-purple-700 border-purple-200',
-      acordo: 'bg-teal-100 text-teal-700 border-teal-200'
+      ativo: 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
+      suspenso: 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20',
+      arquivado: 'bg-slate-100 dark:bg-surface-2 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+      baixado: 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20',
+      transito_julgado: 'bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/20',
+      acordo: 'bg-teal-100 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-500/20'
     }
     return styles[status as keyof typeof styles] || styles.ativo
   }
 
   const getAreaBadge = (area: string) => {
     const styles = {
-      'Trabalhista': 'bg-amber-100 text-amber-700 border-amber-200',
-      'Cível': 'bg-blue-100 text-blue-700 border-blue-200',
-      'Tributária': 'bg-emerald-100 text-emerald-700 border-emerald-200',
-      'Família': 'bg-pink-100 text-pink-700 border-pink-200',
-      'Criminal': 'bg-red-100 text-red-700 border-red-200',
-      'Consumidor': 'bg-teal-100 text-teal-700 border-teal-200'
+      'Trabalhista': 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20',
+      'Cível': 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20',
+      'Tributária': 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
+      'Família': 'bg-pink-100 dark:bg-pink-500/10 text-pink-700 dark:text-pink-400 border-pink-200 dark:border-pink-500/20',
+      'Criminal': 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/20',
+      'Consumidor': 'bg-teal-100 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-500/20'
     }
-    return styles[area as keyof typeof styles] || 'bg-slate-100 text-slate-700 border-slate-200'
+    return styles[area as keyof typeof styles] || 'bg-slate-100 dark:bg-surface-2 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
   }
 
   const formatTimestamp = (timestamp?: string) => {
@@ -460,8 +460,8 @@ export default function ProcessosPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">Processos</h1>
-            <p className="text-xs md:text-sm text-slate-600 mt-0.5 font-normal">
+            <h1 className="text-xl md:text-2xl font-semibold text-[#34495e] dark:text-slate-200">Processos</h1>
+            <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 mt-0.5 font-normal">
               {loading ? 'Carregando...' : `${totalCount} ${totalCount === 1 ? 'processo' : 'processos'}`}
             </p>
           </div>
@@ -479,7 +479,7 @@ export default function ProcessosPage() {
         </div>
 
         {/* Busca e Filtros */}
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
           <CardContent className="p-3 md:p-4">
             <div className="flex flex-col md:flex-row gap-2">
               <div className="relative flex-1">
@@ -504,7 +504,7 @@ export default function ProcessosPage() {
                     setCurrentView(e.target.value as typeof currentView)
                     setCurrentPage(1)
                   }}
-                  className="px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#89bcbe] flex-1 md:min-w-[160px]"
+                  className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-[#89bcbe] flex-1 md:min-w-[160px] dark:bg-surface-1"
                 >
                   <option value="ativos">Ativos</option>
                   <option value="todos">Todos</option>
@@ -532,7 +532,7 @@ export default function ProcessosPage() {
           <div className="flex items-center gap-2">
             <Badge
               variant="secondary"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[#aacfd0]/20 text-[#34495e] border border-[#89bcbe]/30"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[#aacfd0]/20 dark:bg-teal-900/20 text-[#34495e] dark:text-slate-200 border border-[#89bcbe]/30 dark:border-teal-600/30"
             >
               <Search className="w-3 h-3" />
               Busca: &quot;{debouncedSearch.trim()}&quot;
@@ -551,25 +551,25 @@ export default function ProcessosPage() {
         <div className="md:hidden space-y-2">
           {loading && processos.length === 0 && (
             <div className="flex items-center justify-center py-8 gap-3">
-              <Loader2 className="w-5 h-5 text-[#34495e] animate-spin" />
-              <span className="text-sm text-slate-600">Carregando...</span>
+              <Loader2 className="w-5 h-5 text-[#34495e] dark:text-slate-200 animate-spin" />
+              <span className="text-sm text-slate-600 dark:text-slate-400">Carregando...</span>
             </div>
           )}
           {!loading && processos.length === 0 && (
             <div className="flex flex-col items-center py-8 gap-2">
               <FileText className="w-10 h-10 text-slate-300" />
-              <p className="text-sm text-slate-600">Nenhum processo encontrado</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Nenhum processo encontrado</p>
             </div>
           )}
           {processos.map((processo) => (
             <Link
               key={processo.id}
               href={`/dashboard/processos/${processo.id}`}
-              className="block bg-white rounded-xl border border-slate-200 p-3.5 active:bg-slate-50 transition-colors cursor-pointer shadow-sm"
+              className="block bg-white dark:bg-surface-1 rounded-xl border border-slate-200 dark:border-slate-700 p-3.5 active:bg-slate-50 dark:active:bg-surface-0 transition-colors cursor-pointer shadow-sm"
             >
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-[#34495e]">{processo.numero_pasta}</span>
+                  <span className="text-sm font-bold text-[#34495e] dark:text-slate-200">{processo.numero_pasta}</span>
                   {processo.escavador_monitoramento_id && (
                     <Eye className="w-3 h-3 text-emerald-500" />
                   )}
@@ -579,11 +579,11 @@ export default function ProcessosPage() {
                 </Badge>
               </div>
               <div className="flex items-center gap-1 mb-1">
-                <p className="text-xs text-slate-500">{processo.numero_cnj}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{processo.numero_cnj}</p>
                 {processo.numero_cnj && (
                   <button
                     onClick={(e) => { e.preventDefault(); handleCopyCnj(processo.numero_cnj, e) }}
-                    className="p-0.5 rounded hover:bg-slate-100"
+                    className="p-0.5 rounded hover:bg-slate-100 dark:hover:bg-surface-3"
                     title="Copiar nº CNJ"
                   >
                     {copiedCnj === processo.numero_cnj ? (
@@ -594,11 +594,11 @@ export default function ProcessosPage() {
                   </button>
                 )}
               </div>
-              <p className="text-xs font-medium text-slate-700 truncate">{processo.cliente_nome || '-'}</p>
+              <p className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{processo.cliente_nome || '-'}</p>
               {processo.parte_contraria && (
                 <p className="text-[11px] text-slate-400 truncate">vs {processo.parte_contraria}</p>
               )}
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">
                   <Badge className={`text-[9px] border ${getAreaBadge(processo.area)}`}>
                     {processo.area}
@@ -617,7 +617,7 @@ export default function ProcessosPage() {
           {/* Mobile Pagination */}
           {totalCount > 0 && (
             <div className="flex items-center justify-between pt-2">
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
                 {startItem}-{endItem} de {totalCount}
               </span>
               <div className="flex items-center gap-1">
@@ -630,7 +630,7 @@ export default function ProcessosPage() {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <span className="text-xs font-medium text-slate-700 px-2">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 px-2">
                   {currentPage}/{totalPages}
                 </span>
                 <Button
@@ -648,27 +648,27 @@ export default function ProcessosPage() {
         </div>
 
         {/* Desktop: Tabela de Processos */}
-        <Card className="hidden md:block border-slate-200 shadow-sm">
+        <Card className="hidden md:block border-slate-200 dark:border-slate-700 shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full table-fixed">
-              <thead className="bg-slate-50 border-b border-slate-200">
+              <thead className="bg-slate-50 dark:bg-surface-0 border-b border-slate-200 dark:border-slate-700">
                 <tr>
                   <th className="text-center p-3 w-10">
                     <Checkbox
                       checked={processos.length > 0 && selectedIds.size === processos.length}
                       onCheckedChange={toggleSelectAll}
-                      className="border-slate-300 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
+                      className="border-slate-300 dark:border-slate-600 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
                     />
                   </th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-20">Pasta</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-52">CNJ</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-56">Cliente</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-44">Parte Contraria</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Area</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-32">Responsavel</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-16">Status</th>
-                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-20">Ult. Mov.</th>
-                  <th className="text-center p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-12">Acoes</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-20">Pasta</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-52">CNJ</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-56">Cliente</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-44">Parte Contraria</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-24">Area</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-32">Responsavel</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-16">Status</th>
+                  <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-20">Ult. Mov.</th>
+                  <th className="text-center p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-12">Acoes</th>
                 </tr>
               </thead>
               <tbody className={loading ? 'opacity-50' : ''}>
@@ -677,8 +677,8 @@ export default function ProcessosPage() {
                   <tr>
                     <td colSpan={10} className="p-8 text-center">
                       <div className="flex items-center justify-center gap-3">
-                        <Loader2 className="w-5 h-5 text-[#34495e] animate-spin" />
-                        <span className="text-sm text-slate-600">Carregando processos...</span>
+                        <Loader2 className="w-5 h-5 text-[#34495e] dark:text-slate-200 animate-spin" />
+                        <span className="text-sm text-slate-600 dark:text-slate-400">Carregando processos...</span>
                       </div>
                     </td>
                   </tr>
@@ -690,7 +690,7 @@ export default function ProcessosPage() {
                     <td colSpan={10} className="p-8 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <FileText className="w-10 h-10 text-slate-300" />
-                        <p className="text-sm text-slate-600">
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
                           {debouncedSearch ? 'Nenhum processo encontrado para esta busca' : 'Nenhum processo cadastrado'}
                         </p>
                         {debouncedSearch && (
@@ -698,7 +698,7 @@ export default function ProcessosPage() {
                             variant="link"
                             size="sm"
                             onClick={() => setSearchQuery('')}
-                            className="text-[#34495e]"
+                            className="text-[#34495e] dark:text-slate-200"
                           >
                             Limpar busca
                           </Button>
@@ -713,15 +713,15 @@ export default function ProcessosPage() {
                   return (
                   <tr
                     key={processo.id}
-                    className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${
-                      selectedIds.has(processo.id) ? 'bg-blue-50 hover:bg-blue-100' : ''
+                    className={`border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors ${
+                      selectedIds.has(processo.id) ? 'bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20' : ''
                     }`}
                   >
                     <td className="p-3 text-center">
                       <Checkbox
                         checked={selectedIds.has(processo.id)}
                         onCheckedChange={() => toggleSelection(processo.id)}
-                        className="border-slate-300 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
+                        className="border-slate-300 dark:border-slate-600 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
                       />
                     </td>
                     <td className="p-0 whitespace-nowrap">
@@ -731,19 +731,19 @@ export default function ProcessosPage() {
                             <Eye className="w-3 h-3 text-emerald-500" />
                           </span>
                         )}
-                        <span className="text-xs font-bold text-[#34495e]">
+                        <span className="text-xs font-bold text-[#34495e] dark:text-slate-200">
                           {processo.numero_pasta}
                         </span>
                       </Link>
                     </td>
                     <td className="p-0 whitespace-nowrap relative">
-                      <Link href={processoHref} className="flex items-center p-3 text-xs text-slate-600">
+                      <Link href={processoHref} className="flex items-center p-3 text-xs text-slate-600 dark:text-slate-400">
                         {processo.numero_cnj}
                       </Link>
                       {processo.numero_cnj && (
                         <button
                           onClick={(e) => handleCopyCnj(processo.numero_cnj, e)}
-                          className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-slate-100 transition-colors z-10"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-slate-100 dark:hover:bg-surface-3 transition-colors z-10"
                           title="Copiar nº CNJ"
                         >
                           {copiedCnj === processo.numero_cnj ? (
@@ -755,12 +755,12 @@ export default function ProcessosPage() {
                       )}
                     </td>
                     <td className="p-0">
-                      <Link href={processoHref} className="block p-3 text-xs text-slate-700 truncate" title={processo.cliente_nome || ''}>
+                      <Link href={processoHref} className="block p-3 text-xs text-slate-700 dark:text-slate-300 truncate" title={processo.cliente_nome || ''}>
                         {processo.cliente_nome || '-'}
                       </Link>
                     </td>
                     <td className="p-0">
-                      <Link href={processoHref} className="block p-3 text-xs text-slate-600 truncate" title={processo.parte_contraria || ''}>
+                      <Link href={processoHref} className="block p-3 text-xs text-slate-600 dark:text-slate-400 truncate" title={processo.parte_contraria || ''}>
                         {processo.parte_contraria || '-'}
                       </Link>
                     </td>
@@ -772,7 +772,7 @@ export default function ProcessosPage() {
                       </Link>
                     </td>
                     <td className="p-0">
-                      <Link href={processoHref} className="block p-3 text-xs text-slate-600 truncate" title={processo.responsavel_nome || ''}>
+                      <Link href={processoHref} className="block p-3 text-xs text-slate-600 dark:text-slate-400 truncate" title={processo.responsavel_nome || ''}>
                         {processo.responsavel_nome || '-'}
                       </Link>
                     </td>
@@ -784,7 +784,7 @@ export default function ProcessosPage() {
                       </Link>
                     </td>
                     <td className="p-0 whitespace-nowrap">
-                      <Link href={processoHref} className="block p-3 text-xs text-slate-500">
+                      <Link href={processoHref} className="block p-3 text-xs text-slate-500 dark:text-slate-400">
                         {formatTimestamp(processo.ultima_movimentacao)}
                       </Link>
                     </td>
@@ -808,7 +808,7 @@ export default function ProcessosPage() {
                               setShowTarefaWizard(true)
                             }}
                           >
-                            <ListTodo className="w-4 h-4 mr-2 text-[#34495e]" />
+                            <ListTodo className="w-4 h-4 mr-2 text-[#34495e] dark:text-slate-200" />
                             <span className="text-sm">Nova Tarefa</span>
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -828,7 +828,7 @@ export default function ProcessosPage() {
                               setShowAudienciaWizard(true)
                             }}
                           >
-                            <Gavel className="w-4 h-4 mr-2 text-emerald-600" />
+                            <Gavel className="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-400" />
                             <span className="text-sm">Nova Audiência</span>
                           </DropdownMenuItem>
                           {processo.numero_cnj && (
@@ -867,7 +867,7 @@ export default function ProcessosPage() {
                               window.open(`/dashboard/processos/${processo.id}`, '_blank')
                             }}
                           >
-                            <ExternalLink className="w-4 h-4 mr-2 text-slate-500" />
+                            <ExternalLink className="w-4 h-4 mr-2 text-slate-500 dark:text-slate-400" />
                             <span className="text-sm">Abrir em nova aba</span>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -881,9 +881,9 @@ export default function ProcessosPage() {
           </div>
 
           {/* Paginação */}
-          <div className="flex items-center justify-between p-4 border-t border-slate-200">
+          <div className="flex items-center justify-between p-4 border-t border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-4">
-              <div className="text-xs text-slate-600">
+              <div className="text-xs text-slate-600 dark:text-slate-400">
                 {loading ? (
                   'Carregando...'
                 ) : totalCount > 0 ? (
@@ -893,7 +893,7 @@ export default function ProcessosPage() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500">Por página:</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Por página:</span>
                 <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
                   <SelectTrigger className="w-[70px] h-8 text-xs">
                     <SelectValue />
@@ -932,7 +932,7 @@ export default function ProcessosPage() {
                       >
                         1
                       </Button>
-                      {currentPage > 3 && <span className="text-slate-400 px-1">...</span>}
+                      {currentPage > 3 && <span className="text-slate-400 dark:text-slate-500 px-1">...</span>}
                     </>
                   )}
 
@@ -952,7 +952,7 @@ export default function ProcessosPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="bg-[#34495e] text-white min-w-[32px]"
+                    className="bg-[#34495e] dark:bg-slate-600 text-white min-w-[32px]"
                     disabled
                   >
                     {currentPage}
@@ -973,7 +973,7 @@ export default function ProcessosPage() {
                   {/* Last page */}
                   {currentPage < totalPages - 1 && (
                     <>
-                      {currentPage < totalPages - 2 && <span className="text-slate-400 px-1">...</span>}
+                      {currentPage < totalPages - 2 && <span className="text-slate-400 dark:text-slate-500 px-1">...</span>}
                       <Button
                         variant="outline"
                         size="sm"

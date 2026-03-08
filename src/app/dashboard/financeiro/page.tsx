@@ -11,7 +11,7 @@ const ReceitasDespesasChart = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-[240px] bg-slate-100 animate-pulse rounded-lg" />
+      <div className="w-full h-[240px] bg-slate-100 dark:bg-surface-2 animate-pulse rounded-lg" />
     ),
   }
 )
@@ -412,6 +412,7 @@ export default function FinanceiroDashboard() {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
+      minimumFractionDigits: 2,
     }).format(value)
   }
 
@@ -419,15 +420,15 @@ export default function FinanceiroDashboard() {
     const configs = {
       pendente: {
         label: 'Pendente',
-        className: 'bg-amber-100 text-amber-700 border-amber-200',
+        className: 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20',
       },
       atrasado: {
         label: 'Atrasado',
-        className: 'bg-red-100 text-red-700 border-red-200',
+        className: 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/20',
       },
       pago: {
         label: 'Pago',
-        className: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+        className: 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
       },
     }
     const config = configs[status]
@@ -450,8 +451,8 @@ export default function FinanceiroDashboard() {
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">Dashboard Financeiro</h1>
-            <p className="text-xs md:text-sm text-slate-600 mt-1">
+            <h1 className="text-xl md:text-2xl font-semibold text-[#34495e] dark:text-slate-200">Dashboard Financeiro</h1>
+            <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 mt-1">
               {escritoriosSelecionados.length === escritoriosGrupo.length && escritoriosGrupo.length > 1
                 ? 'Visão consolidada de todos os escritórios do grupo'
                 : 'Visão geral das finanças do escritório'}
@@ -464,9 +465,9 @@ export default function FinanceiroDashboard() {
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="border-slate-200 bg-white hover:bg-slate-50"
+                  className="border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 hover:bg-slate-50 dark:hover:bg-surface-2"
                 >
-                  <Building2 className="h-4 w-4 mr-2 text-[#34495e]" />
+                  <Building2 className="h-4 w-4 mr-2 text-[#34495e] dark:text-slate-200" />
                   <span className="text-sm">{getSeletorLabel()}</span>
                   <ChevronDown className="h-4 w-4 ml-2 text-slate-400" />
                 </Button>
@@ -479,8 +480,8 @@ export default function FinanceiroDashboard() {
                     className={cn(
                       'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors',
                       escritoriosSelecionados.length === escritoriosGrupo.length
-                        ? 'bg-[#1E3A8A]/10 text-[#1E3A8A]'
-                        : 'hover:bg-slate-100 text-slate-700'
+                        ? 'bg-[#1E3A8A]/10 text-[#1E3A8A] dark:text-blue-400'
+                        : 'hover:bg-slate-100 dark:hover:bg-surface-3 text-slate-700 dark:text-slate-300'
                     )}
                   >
                     <span className="font-medium">Todos os escritórios</span>
@@ -489,13 +490,13 @@ export default function FinanceiroDashboard() {
                     )}
                   </button>
 
-                  <div className="h-px bg-slate-200 my-2" />
+                  <div className="h-px bg-slate-200 dark:bg-slate-700 my-2" />
 
                   {/* Lista de escritórios */}
                   {escritoriosGrupo.map((escritorio) => (
                     <div
                       key={escritorio.id}
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50"
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2"
                     >
                       <Checkbox
                         id={`esc-${escritorio.id}`}
@@ -504,7 +505,7 @@ export default function FinanceiroDashboard() {
                       />
                       <label
                         htmlFor={`esc-${escritorio.id}`}
-                        className="flex-1 text-sm text-slate-700 cursor-pointer"
+                        className="flex-1 text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
                       >
                         {escritorio.nome}
                       </label>
@@ -528,7 +529,7 @@ export default function FinanceiroDashboard() {
             variant="ghost"
             size="sm"
             onClick={irMesAnterior}
-            className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e] hover:bg-slate-100"
+            className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-surface-3"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -538,8 +539,8 @@ export default function FinanceiroDashboard() {
             className={cn(
               "text-sm font-medium px-3 py-1 rounded-md transition-colors",
               isMesAtual
-                ? "text-[#34495e]"
-                : "text-[#1E3A8A] hover:bg-[#1E3A8A]/5 cursor-pointer"
+                ? "text-[#34495e] dark:text-slate-200"
+                : "text-[#1E3A8A] dark:text-blue-400 hover:bg-[#1E3A8A]/5 cursor-pointer"
             )}
             title={!isMesAtual ? "Clique para voltar ao mês atual" : undefined}
           >
@@ -550,7 +551,7 @@ export default function FinanceiroDashboard() {
             variant="ghost"
             size="sm"
             onClick={irProximoMes}
-            className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e] hover:bg-slate-100"
+            className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-surface-3"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -646,9 +647,9 @@ export default function FinanceiroDashboard() {
           {/* Coluna Esquerda (2 colunas) */}
           <div className="md:col-span-2 space-y-4">
             {/* Gráfico */}
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
               <CardHeader className="pb-2 pt-3">
-                <CardTitle className="text-sm font-medium text-slate-700">
+                <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Receitas vs Despesas (Últimos 6 meses)
                 </CardTitle>
               </CardHeader>
@@ -658,9 +659,9 @@ export default function FinanceiroDashboard() {
             </Card>
 
             {/* Insights */}
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
               <CardHeader className="pb-2 pt-3">
-                <CardTitle className="text-sm font-medium text-slate-700">
+                <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Insights de Gestão
                 </CardTitle>
               </CardHeader>
@@ -693,29 +694,29 @@ export default function FinanceiroDashboard() {
           {/* Coluna Direita */}
           <div className="space-y-4">
             {/* Resumo do Mês */}
-            <Card className="border-slate-200 shadow-sm bg-gradient-to-br from-slate-50 to-white">
+            <Card className="border-slate-200 dark:border-slate-700 shadow-sm bg-gradient-to-br from-slate-50 dark:from-surface-1 to-white dark:to-surface-0">
               <CardHeader className="pb-2 pt-3">
-                <CardTitle className="text-sm font-medium text-slate-700">
+                <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Resumo de {format(mesSelecionado, 'MMMM', { locale: ptBR })}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-2 pb-3">
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-[#f0f9f9]/40">
-                    <span className="text-xs text-slate-600">A Receber</span>
-                    <span className="text-sm font-bold text-[#34495e]">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-[#f0f9f9]/40 dark:bg-teal-900/20">
+                    <span className="text-xs text-slate-600 dark:text-slate-400">A Receber</span>
+                    <span className="text-sm font-bold text-[#34495e] dark:text-slate-200">
                       {formatCurrency(contasReceber.reduce((sum, c) => sum + c.valor, 0))}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-slate-100">
-                    <span className="text-xs text-slate-600">A Pagar</span>
-                    <span className="text-sm font-bold text-[#34495e]">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-slate-100 dark:bg-surface-2">
+                    <span className="text-xs text-slate-600 dark:text-slate-400">A Pagar</span>
+                    <span className="text-sm font-bold text-[#34495e] dark:text-slate-200">
                       {formatCurrency(contasPagar.reduce((sum, c) => sum + c.valor, 0))}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-[#89bcbe]/10 border-t border-slate-200 mt-2 pt-2">
-                    <span className="text-xs font-semibold text-[#34495e]">Saldo</span>
-                    <span className="text-sm font-bold text-[#34495e]">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-[#89bcbe]/10 dark:bg-[#89bcbe]/5 border-t border-slate-200 dark:border-slate-700 mt-2 pt-2">
+                    <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200">Saldo</span>
+                    <span className="text-sm font-bold text-[#34495e] dark:text-slate-200">
                       {formatCurrency(
                         contasReceber.reduce((sum, c) => sum + c.valor, 0) -
                         contasPagar.reduce((sum, c) => sum + c.valor, 0)
@@ -727,14 +728,14 @@ export default function FinanceiroDashboard() {
             </Card>
 
             {/* Recebimentos Próximos */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="pb-2 pt-3 bg-[#f0f9f9]/30">
+            <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
+              <CardHeader className="pb-2 pt-3 bg-[#f0f9f9]/30 dark:bg-teal-900/10">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#89bcbe] to-[#aacfd0] flex items-center justify-center">
                       <TrendingUp className="h-3.5 w-3.5 text-white" />
                     </div>
-                    <CardTitle className="text-sm font-medium text-[#34495e]">
+                    <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                       Recebimentos
                     </CardTitle>
                   </div>
@@ -746,30 +747,30 @@ export default function FinanceiroDashboard() {
               <CardContent className="pt-3 pb-3">
                 <div className="space-y-2">
                   {contasReceber.length === 0 ? (
-                    <p className="text-xs text-slate-500 text-center py-4">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-4">
                       Nenhum recebimento próximo
                     </p>
                   ) : (
                     contasReceber.map((conta) => (
                       <div
                         key={conta.id}
-                        className="flex items-center justify-between p-2.5 rounded-lg bg-[#f0f9f9]/40 border border-[#89bcbe]/20 hover:bg-[#e8f5f5]/50 transition-colors"
+                        className="flex items-center justify-between p-2.5 rounded-lg bg-[#f0f9f9]/40 dark:bg-teal-900/20 border border-[#89bcbe]/20 hover:bg-[#e8f5f5]/50 dark:hover:bg-teal-900/30 transition-colors"
                       >
                         <div className="flex-1 min-w-0 pr-2">
                           <div className="flex items-center gap-2 mb-1">
-                            <p className="text-xs font-semibold text-[#34495e] truncate">
+                            <p className="text-xs font-semibold text-[#34495e] dark:text-slate-200 truncate">
                               {conta.descricao}
                             </p>
                             {getStatusBadge(conta.status)}
                           </div>
                           <div className="flex items-center gap-1.5">
                             <Calendar className="h-3 w-3 text-[#89bcbe] flex-shrink-0" />
-                            <p className="text-[10px] text-[#46627f]">
+                            <p className="text-[10px] text-[#46627f] dark:text-slate-400">
                               {conta.vencimento ? format(parseISO(conta.vencimento), 'dd/MM/yyyy') : '-'}
                             </p>
                           </div>
                         </div>
-                        <span className="text-sm font-bold text-[#34495e] ml-2 flex-shrink-0">
+                        <span className="text-sm font-bold text-[#34495e] dark:text-slate-200 ml-2 flex-shrink-0">
                           {formatCurrency(conta.valor)}
                         </span>
                       </div>
@@ -780,18 +781,18 @@ export default function FinanceiroDashboard() {
             </Card>
 
             {/* Despesas Próximas */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="pb-2 pt-3 bg-slate-50">
+            <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
+              <CardHeader className="pb-2 pt-3 bg-slate-50 dark:bg-surface-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#46627f] to-[#6c757d] flex items-center justify-center">
                       <TrendingDown className="h-3.5 w-3.5 text-white" />
                     </div>
-                    <CardTitle className="text-sm font-medium text-[#34495e]">
+                    <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                       Despesas a Pagar
                     </CardTitle>
                   </div>
-                  <button className="text-xs text-[#46627f] hover:text-[#34495e] hover:underline font-medium">
+                  <button className="text-xs text-[#46627f] dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 hover:underline font-medium">
                     Ver todas
                   </button>
                 </div>
@@ -799,27 +800,27 @@ export default function FinanceiroDashboard() {
               <CardContent className="pt-3 pb-3">
                 <div className="space-y-2">
                   {contasPagar.length === 0 ? (
-                    <p className="text-xs text-slate-500 text-center py-4">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-4">
                       Nenhuma despesa próxima
                     </p>
                   ) : (
                     contasPagar.map((conta) => (
                       <div
                         key={conta.id}
-                        className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors"
+                        className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-surface-3 transition-colors"
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-[#34495e] truncate">
+                          <p className="text-xs font-semibold text-[#34495e] dark:text-slate-200 truncate">
                             {conta.descricao}
                           </p>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <Calendar className="h-3 w-3 text-slate-500 flex-shrink-0" />
-                            <p className="text-[10px] text-[#46627f]">
+                            <Calendar className="h-3 w-3 text-slate-500 dark:text-slate-400 flex-shrink-0" />
+                            <p className="text-[10px] text-[#46627f] dark:text-slate-400">
                               {conta.vencimento ? format(parseISO(conta.vencimento), 'dd/MM/yyyy') : '-'}
                             </p>
                           </div>
                         </div>
-                        <span className="text-sm font-bold text-[#34495e] ml-2 flex-shrink-0">
+                        <span className="text-sm font-bold text-[#34495e] dark:text-slate-200 ml-2 flex-shrink-0">
                           {formatCurrency(conta.valor)}
                         </span>
                       </div>

@@ -120,23 +120,23 @@ export default function SidebarDinamica({
       {/* Sidebar */}
       <div
         className={cn(
-          'fixed right-0 top-0 bottom-0 h-screen w-[780px] max-w-[90vw] bg-white shadow-2xl z-[60]',
+          'fixed right-0 top-0 bottom-0 h-screen w-[780px] max-w-[90vw] bg-white dark:bg-surface-1 shadow-2xl z-[60]',
           'transform transition-transform duration-300 ease-in-out',
-          'border-l border-slate-200',
+          'border-l border-slate-200 dark:border-slate-700',
           'flex flex-col',
           isOpen ? 'translate-x-0' : 'translate-x-full',
           className
         )}
       >
         {/* Header */}
-        <div className="flex-shrink-0 border-b border-slate-200 bg-gradient-to-br from-slate-50 to-white">
+        <div className="flex-shrink-0 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-br from-slate-50 dark:from-surface-0 to-white dark:to-surface-1">
           {/* Título + Fechar */}
           <div className="flex items-center justify-between px-4 pt-3 pb-2">
             <div>
-              <h3 className="text-base font-semibold text-[#34495e]">
+              <h3 className="text-base font-semibold text-[#34495e] dark:text-slate-200">
                 {format(selectedDate, "d 'de' MMMM", { locale: ptBR })}
               </h3>
-              <p className="text-xs text-[#6c757d] mt-0.5">
+              <p className="text-xs text-[#6c757d] dark:text-slate-400 mt-0.5">
                 {format(selectedDate, 'EEEE', { locale: ptBR })}
               </p>
             </div>
@@ -144,7 +144,7 @@ export default function SidebarDinamica({
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="h-8 w-8 p-0 hover:bg-slate-100"
+              className="h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-surface-2"
             >
               <X className="w-4 h-4 text-[#6c757d]" />
             </Button>
@@ -160,12 +160,12 @@ export default function SidebarDinamica({
                 placeholder="Buscar por título, parte ou processo..."
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                className="w-full h-8 pl-8 pr-3 text-xs rounded-md border border-slate-200 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#89bcbe] focus:border-[#89bcbe] transition-colors"
+                className="w-full h-8 pl-8 pr-3 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-[#89bcbe] focus:border-[#89bcbe] transition-colors dark:text-slate-200"
               />
               {busca && (
                 <button
                   onClick={() => setBusca('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -180,7 +180,7 @@ export default function SidebarDinamica({
                   'px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors',
                   filtroTipo === 'todos'
                     ? 'bg-[#34495e] text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    : 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-surface-3'
                 )}
               >
                 Todos
@@ -193,14 +193,14 @@ export default function SidebarDinamica({
                     'flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors',
                     filtroTipo === f.key
                       ? 'bg-[#34495e] text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-surface-3'
                   )}
                 >
                   {f.icon}
                   {f.label}
                   <span className={cn(
                     'ml-0.5 text-[10px]',
-                    filtroTipo === f.key ? 'text-white/70' : 'text-slate-400'
+                    filtroTipo === f.key ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'
                   )}>
                     {f.count}
                   </span>
@@ -215,25 +215,25 @@ export default function SidebarDinamica({
           <div className="p-3">
             {eventos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                  <Calendar className="w-8 h-8 text-slate-400" />
+                <div className="w-16 h-16 bg-slate-100 dark:bg-surface-2 rounded-full flex items-center justify-center mb-4">
+                  <Calendar className="w-8 h-8 text-slate-400 dark:text-slate-500" />
                 </div>
-                <p className="text-sm text-[#6c757d] mb-1">Nenhum agendamento neste dia</p>
-                <p className="text-xs text-slate-400">
+                <p className="text-sm text-[#6c757d] dark:text-slate-400 mb-1">Nenhum agendamento neste dia</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500">
                   Clique em "Novo Evento" para adicionar
                 </p>
               </div>
             ) : eventosFiltrados.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Search className="w-6 h-6 text-slate-300 mb-2" />
-                <p className="text-xs text-[#6c757d]">Nenhum resultado encontrado</p>
+                <p className="text-xs text-[#6c757d] dark:text-slate-400">Nenhum resultado encontrado</p>
               </div>
             ) : (
               <>
-                <p className="text-xs font-medium text-[#46627f] mb-2.5">
+                <p className="text-xs font-medium text-[#46627f] dark:text-slate-400 mb-2.5">
                   {eventosFiltrados.length} {eventosFiltrados.length === 1 ? 'agendamento' : 'agendamentos'}
                   {(filtroTipo !== 'todos' || busca.trim()) && (
-                    <span className="text-slate-400 font-normal"> de {eventos.length}</span>
+                    <span className="text-slate-400 dark:text-slate-500 font-normal"> de {eventos.length}</span>
                   )}
                 </p>
                 <div className="space-y-2.5">

@@ -328,6 +328,7 @@ export default function ContasBancariasPage() {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
+      minimumFractionDigits: 2,
     }).format(value)
   }
 
@@ -340,8 +341,8 @@ export default function ContasBancariasPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">Contas Bancárias</h1>
-          <p className="text-xs md:text-sm text-slate-600 mt-1">
+          <h1 className="text-xl md:text-2xl font-semibold text-[#34495e] dark:text-slate-200">Contas Bancárias</h1>
+          <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 mt-1">
             Consolidação e gestão de contas bancárias do escritório
           </p>
         </div>
@@ -353,27 +354,27 @@ export default function ContasBancariasPage() {
                 <Button
                   variant="outline"
                   className={cn(
-                    "h-9 px-3 gap-2 border-slate-200 hover:bg-slate-50",
-                    escritoriosSelecionados.length === escritoriosGrupo.length && "border-[#89bcbe] bg-[#f0f9f9]/50"
+                    "h-9 px-3 gap-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-surface-2",
+                    escritoriosSelecionados.length === escritoriosGrupo.length && "border-[#89bcbe] bg-[#f0f9f9]/50 dark:bg-teal-900/20"
                   )}
                 >
                   <Building2 className="h-4 w-4 text-[#89bcbe]" />
-                  <span className="text-sm text-[#34495e] font-medium">
+                  <span className="text-sm text-[#34495e] dark:text-slate-200 font-medium">
                     {getSeletorLabel()}
                   </span>
                   <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-72 p-0" align="end">
-                <div className="p-3 border-b border-slate-100">
-                  <p className="text-xs font-medium text-[#34495e]">Visualizar contas de:</p>
+                <div className="p-3 border-b border-slate-100 dark:border-slate-800">
+                  <p className="text-xs font-medium text-[#34495e] dark:text-slate-200">Visualizar contas de:</p>
                 </div>
 
                 {/* Opção "Todos" */}
                 <div
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 border-b border-slate-100",
-                    escritoriosSelecionados.length === escritoriosGrupo.length && "bg-[#f0f9f9]"
+                    "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 border-b border-slate-100 dark:border-slate-800",
+                    escritoriosSelecionados.length === escritoriosGrupo.length && "bg-[#f0f9f9] dark:bg-teal-900/20"
                   )}
                   onClick={selecionarTodos}
                 >
@@ -381,15 +382,15 @@ export default function ContasBancariasPage() {
                     "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
                     escritoriosSelecionados.length === escritoriosGrupo.length
                       ? "bg-[#89bcbe] border-[#89bcbe]"
-                      : "border-slate-300"
+                      : "border-slate-300 dark:border-slate-600"
                   )}>
                     {escritoriosSelecionados.length === escritoriosGrupo.length && (
                       <Check className="h-3 w-3 text-white" />
                     )}
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-[#34495e]">Todos os escritórios</p>
-                    <p className="text-[10px] text-slate-500">Visão consolidada do grupo</p>
+                    <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">Todos os escritórios</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">Visão consolidada do grupo</p>
                   </div>
                 </div>
 
@@ -403,8 +404,8 @@ export default function ContasBancariasPage() {
                       <div
                         key={escritorio.id}
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 border-b border-slate-50 last:border-0",
-                          isSelected && escritoriosSelecionados.length < escritoriosGrupo.length && "bg-[#f0f9f9]/50"
+                          "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 border-b border-slate-50 dark:border-slate-800 last:border-0",
+                          isSelected && escritoriosSelecionados.length < escritoriosGrupo.length && "bg-[#f0f9f9]/50 dark:bg-teal-900/20"
                         )}
                         onClick={() => toggleEscritorio(escritorio.id)}
                       >
@@ -415,7 +416,7 @@ export default function ContasBancariasPage() {
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-[#34495e] truncate">
+                            <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">
                               {escritorio.nome}
                             </p>
                             {isAtivo && (
@@ -448,8 +449,8 @@ export default function ContasBancariasPage() {
                 </div>
 
                 {/* Rodapé com info */}
-                <div className="p-2.5 bg-slate-50 border-t border-slate-100">
-                  <p className="text-[10px] text-slate-500 text-center">
+                <div className="p-2.5 bg-slate-50 dark:bg-surface-0 border-t border-slate-100 dark:border-slate-800">
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 text-center">
                     {escritoriosSelecionados.length === 1
                       ? 'Exibindo contas de 1 escritório'
                       : `Exibindo contas de ${escritoriosSelecionados.length} escritórios`}
@@ -483,7 +484,7 @@ export default function ContasBancariasPage() {
       </div>
 
       {/* Saldo Consolidado */}
-      <Card className="border-slate-200 shadow-sm bg-gradient-to-br from-[#89bcbe] to-[#aacfd0] w-fit">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm bg-gradient-to-br from-[#89bcbe] to-[#aacfd0] w-fit">
         <CardContent className="py-4 px-5">
           <div className="flex items-center gap-3">
             <Building2 className="h-5 w-5 text-[#34495e]/70" />
@@ -502,19 +503,19 @@ export default function ContasBancariasPage() {
 
       {/* Lista de Contas */}
       <div className="space-y-3">
-        <h2 className="text-sm font-medium text-slate-700">Suas Contas</h2>
+        <h2 className="text-sm font-medium text-slate-700 dark:text-slate-300">Suas Contas</h2>
 
         {loading ? (
           <div className="py-12 text-center">
-            <div className="h-8 w-8 mx-auto border-4 border-slate-200 border-t-[#1E3A8A] rounded-full animate-spin" />
-            <p className="text-sm text-slate-500 mt-2">Carregando...</p>
+            <div className="h-8 w-8 mx-auto border-4 border-slate-200 dark:border-slate-700 border-t-[#1E3A8A] rounded-full animate-spin" />
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Carregando...</p>
           </div>
         ) : contas.length === 0 ? (
-          <Card className="border-slate-200 border-dashed">
+          <Card className="border-slate-200 dark:border-slate-700 border-dashed">
             <CardContent className="py-12 text-center">
-              <Building2 className="h-12 w-12 mx-auto text-slate-300" />
-              <p className="text-sm text-slate-500 mt-2">Nenhuma conta cadastrada</p>
-              <p className="text-xs text-slate-400 mt-1">Clique em "Nova Conta" para adicionar</p>
+              <Building2 className="h-12 w-12 mx-auto text-slate-300 dark:text-slate-600" />
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Nenhuma conta cadastrada</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Clique em "Nova Conta" para adicionar</p>
             </CardContent>
           </Card>
         ) : viewMode === 'table' ? (
@@ -536,21 +537,21 @@ export default function ContasBancariasPage() {
               </TableHeader>
               <TableBody>
                 {contas.map((conta) => (
-                  <TableRow key={conta.id} className="hover:bg-slate-50">
-                    <TableCell className="text-sm font-semibold text-[#34495e]">
+                  <TableRow key={conta.id} className="hover:bg-slate-50 dark:hover:bg-surface-2">
+                    <TableCell className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                       {conta.banco}
                     </TableCell>
-                    <TableCell className="text-xs text-slate-600">
+                    <TableCell className="text-xs text-slate-600 dark:text-slate-400">
                       {conta.agencia && `Ag ${conta.agencia}`}
                       {conta.agencia && conta.numero_conta && ' • '}
                       {conta.numero_conta && `C/C ${conta.numero_conta}`}
                       {!conta.agencia && !conta.numero_conta && '-'}
                     </TableCell>
-                    <TableCell className="text-xs text-slate-500">
+                    <TableCell className="text-xs text-slate-500 dark:text-slate-400">
                       {conta.titular || '-'}
                     </TableCell>
                     {escritoriosSelecionados.length > 1 && (
-                      <TableCell className="text-xs text-slate-500">
+                      <TableCell className="text-xs text-slate-500 dark:text-slate-400">
                         {conta.escritorio_nome || '-'}
                       </TableCell>
                     )}
@@ -559,10 +560,10 @@ export default function ContasBancariasPage() {
                         variant="secondary"
                         className={cn(
                           "text-[10px]",
-                          conta.tipo_conta === 'corrente' && "bg-blue-100 text-blue-700",
-                          conta.tipo_conta === 'poupanca' && "bg-emerald-100 text-emerald-700",
-                          conta.tipo_conta === 'investimento' && "bg-purple-100 text-purple-700",
-                          conta.tipo_conta === 'caixa' && "bg-amber-100 text-amber-700",
+                          conta.tipo_conta === 'corrente' && "bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400",
+                          conta.tipo_conta === 'poupanca' && "bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+                          conta.tipo_conta === 'investimento' && "bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400",
+                          conta.tipo_conta === 'caixa' && "bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400",
                         )}
                       >
                         {TIPO_CONTA_LABELS[conta.tipo_conta] || conta.tipo_conta}
@@ -571,7 +572,7 @@ export default function ContasBancariasPage() {
                     <TableCell className="text-right">
                       <span className={cn(
                         "text-sm font-semibold",
-                        Number(conta.saldo_atual) >= 0 ? "text-[#34495e]" : "text-red-600"
+                        Number(conta.saldo_atual) >= 0 ? "text-[#34495e] dark:text-slate-200" : "text-red-600 dark:text-red-400"
                       )}>
                         {formatCurrency(Number(conta.saldo_atual))}
                       </span>
@@ -589,7 +590,7 @@ export default function ContasBancariasPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="h-7 w-7 p-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10"
                           onClick={() => handleOpenDelete(conta)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -605,26 +606,26 @@ export default function ContasBancariasPage() {
           /* Cards View */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {contas.map((conta) => (
-              <Card key={conta.id} className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+              <Card key={conta.id} className="border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="pt-4 pb-4">
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-[#34495e] truncate">
+                      <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200 truncate">
                         {conta.banco}
                       </p>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                         {conta.agencia && `Ag ${conta.agencia}`}
                         {conta.agencia && conta.numero_conta && ' • '}
                         {conta.numero_conta && `C/C ${conta.numero_conta}`}
                       </p>
                       {conta.titular && (
-                        <p className="text-xs text-slate-400 mt-0.5 truncate">
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">
                           {conta.titular}
                         </p>
                       )}
                       {/* Mostrar escritório quando exibindo múltiplos */}
                       {escritoriosSelecionados.length > 1 && conta.escritorio_nome && (
-                        <Badge variant="outline" className="text-[9px] mt-1.5 font-normal text-slate-500 border-slate-200">
+                        <Badge variant="outline" className="text-[9px] mt-1.5 font-normal text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700">
                           {conta.escritorio_nome}
                         </Badge>
                       )}
@@ -643,7 +644,7 @@ export default function ContasBancariasPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleOpenDelete(conta)}
-                          className="text-red-600 focus:text-red-600"
+                          className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
                           Excluir
@@ -652,13 +653,13 @@ export default function ContasBancariasPage() {
                     </DropdownMenu>
                   </div>
 
-                  <div className="mt-3 pt-3 border-t border-slate-100">
+                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-slate-500">Saldo Atual</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Saldo Atual</p>
                         <p className={cn(
                           "text-xl font-bold mt-0.5",
-                          Number(conta.saldo_atual) >= 0 ? "text-[#34495e]" : "text-red-600"
+                          Number(conta.saldo_atual) >= 0 ? "text-[#34495e] dark:text-slate-200" : "text-red-600 dark:text-red-400"
                         )}>
                           {formatCurrency(Number(conta.saldo_atual))}
                         </p>
@@ -667,10 +668,10 @@ export default function ContasBancariasPage() {
                         variant="secondary"
                         className={cn(
                           "text-[10px]",
-                          conta.tipo_conta === 'corrente' && "bg-blue-100 text-blue-700",
-                          conta.tipo_conta === 'poupanca' && "bg-emerald-100 text-emerald-700",
-                          conta.tipo_conta === 'investimento' && "bg-purple-100 text-purple-700",
-                          conta.tipo_conta === 'caixa' && "bg-amber-100 text-amber-700",
+                          conta.tipo_conta === 'corrente' && "bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400",
+                          conta.tipo_conta === 'poupanca' && "bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+                          conta.tipo_conta === 'investimento' && "bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400",
+                          conta.tipo_conta === 'caixa' && "bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400",
                         )}
                       >
                         {TIPO_CONTA_LABELS[conta.tipo_conta] || conta.tipo_conta}
@@ -688,7 +689,7 @@ export default function ContasBancariasPage() {
       <Dialog open={showContaDialog} onOpenChange={setShowContaDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-[#34495e]">
+            <DialogTitle className="text-[#34495e] dark:text-slate-200">
               {editMode ? 'Editar Conta Bancária' : 'Nova Conta Bancária'}
             </DialogTitle>
             <DialogDescription>
@@ -707,7 +708,7 @@ export default function ContasBancariasPage() {
                   id="escritorio_id"
                   value={contaForm.escritorio_id || escritorioAtivo || ''}
                   onChange={(e) => setContaForm({ ...contaForm, escritorio_id: e.target.value })}
-                  className="w-full h-10 rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
+                  className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] dark:bg-surface-1 dark:text-slate-200"
                   required
                 >
                   {escritorios.map((esc) => (
@@ -771,7 +772,7 @@ export default function ContasBancariasPage() {
                 id="tipo_conta"
                 value={contaForm.tipo_conta}
                 onChange={(e) => setContaForm({ ...contaForm, tipo_conta: e.target.value as any })}
-                className="w-full h-10 rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
+                className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] dark:bg-surface-1 dark:text-slate-200"
               >
                 <option value="corrente">Conta Corrente</option>
                 <option value="poupanca">Poupança</option>
@@ -794,7 +795,7 @@ export default function ContasBancariasPage() {
                 placeholder="R$ 0,00"
                 className="font-mono"
               />
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 {editMode
                   ? 'Atualize o saldo conforme seu extrato bancário.'
                   : 'Informe o saldo atual da conta para iniciar a consolidação.'}

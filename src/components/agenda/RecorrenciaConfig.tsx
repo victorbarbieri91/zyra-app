@@ -175,21 +175,21 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
             className={cn(
               'flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-all',
               modo === 'fixa'
-                ? 'border-teal-400 bg-teal-50'
-                : 'border-slate-200 bg-white hover:border-teal-300 hover:bg-teal-50/30'
+                ? 'border-teal-400 bg-teal-50 dark:bg-teal-500/10'
+                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 hover:border-teal-300 hover:bg-teal-50/30'
             )}
           >
             <div className={cn(
               'w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0',
-              modo === 'fixa' ? 'bg-teal-100' : 'bg-slate-100'
+              modo === 'fixa' ? 'bg-teal-100 dark:bg-teal-500/20' : 'bg-slate-100 dark:bg-surface-2'
             )}>
               <Pin className={cn('w-4 h-4', modo === 'fixa' ? 'text-teal-600' : 'text-slate-400')} />
             </div>
             <div className="min-w-0">
-              <div className={cn('text-sm font-medium', modo === 'fixa' ? 'text-teal-700' : 'text-slate-600')}>
+              <div className={cn('text-sm font-medium', modo === 'fixa' ? 'text-teal-700 dark:text-teal-400' : 'text-slate-600 dark:text-slate-400')}>
                 Tarefa Fixa
               </div>
-              <div className={cn('text-[11px] mt-0.5', modo === 'fixa' ? 'text-teal-600' : 'text-slate-400')}>
+              <div className={cn('text-[11px] mt-0.5', modo === 'fixa' ? 'text-teal-600 dark:text-teal-400' : 'text-slate-400 dark:text-slate-400')}>
                 Todo dia, sem acumular
               </div>
             </div>
@@ -203,21 +203,21 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
           className={cn(
             'flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-all',
             modo === 'recorrente'
-              ? 'border-[#89bcbe] bg-[#aacfd0]/10'
-              : 'border-slate-200 bg-white hover:border-[#89bcbe]/60 hover:bg-[#aacfd0]/5'
+              ? 'border-[#89bcbe] bg-[#aacfd0]/10 dark:bg-teal-900/20'
+              : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 hover:border-[#89bcbe]/60 hover:bg-[#aacfd0]/5'
           )}
         >
           <div className={cn(
             'w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0',
-            modo === 'recorrente' ? 'bg-[#aacfd0]/30' : 'bg-slate-100'
+            modo === 'recorrente' ? 'bg-[#aacfd0]/30' : 'bg-slate-100 dark:bg-surface-2'
           )}>
             <Repeat className={cn('w-4 h-4', modo === 'recorrente' ? 'text-[#34495e]' : 'text-slate-400')} />
           </div>
           <div className="min-w-0">
-            <div className={cn('text-sm font-medium', modo === 'recorrente' ? 'text-[#34495e]' : 'text-slate-600')}>
+            <div className={cn('text-sm font-medium', modo === 'recorrente' ? 'text-[#34495e] dark:text-slate-200' : 'text-slate-600 dark:text-slate-400')}>
               Recorrente
             </div>
-            <div className={cn('text-[11px] mt-0.5', modo === 'recorrente' ? 'text-[#46627f]' : 'text-slate-400')}>
+            <div className={cn('text-[11px] mt-0.5', modo === 'recorrente' ? 'text-[#46627f] dark:text-slate-400' : 'text-slate-400 dark:text-slate-400')}>
               Personalizar frequência
             </div>
           </div>
@@ -226,7 +226,7 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
 
       {/* Config de recorrência (expandido quando modo === 'recorrente') */}
       {modo === 'recorrente' && value && (
-        <div className="border border-slate-200 rounded-lg p-4 space-y-3 bg-slate-50">
+        <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 space-y-3 bg-slate-50 dark:bg-surface-0">
           {/* Frequência + Intervalo na mesma linha */}
           <div className="flex items-center gap-2 flex-wrap">
             <Select
@@ -243,7 +243,7 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
                 <SelectItem value="anual">Anual</SelectItem>
               </SelectContent>
             </Select>
-            <span className="text-sm text-slate-500">a cada</span>
+            <span className="text-sm text-slate-500 dark:text-slate-400">a cada</span>
             <Input
               type="number"
               min="1"
@@ -251,7 +251,7 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
               onChange={(e) => handleFieldChange('intervalo', parseInt(e.target.value) || 1)}
               className="w-16 text-center"
             />
-            <span className="text-sm text-slate-500">{unidadeLabel()}</span>
+            <span className="text-sm text-slate-500 dark:text-slate-400">{unidadeLabel()}</span>
           </div>
 
           {/* Condicional: dias úteis (diária) */}
@@ -262,7 +262,7 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
                 checked={value.apenasUteis || false}
                 onCheckedChange={(checked) => handleFieldChange('apenasUteis', checked)}
               />
-              <Label htmlFor="apenas-uteis" className="text-sm cursor-pointer text-slate-600">
+              <Label htmlFor="apenas-uteis" className="text-sm cursor-pointer text-slate-600 dark:text-slate-400">
                 Apenas dias úteis
               </Label>
             </div>
@@ -271,7 +271,7 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
           {/* Condicional: dias da semana (semanal) */}
           {value.frequencia === 'semanal' && (
             <div className="space-y-1.5">
-              <Label className="text-xs text-slate-500">Dias</Label>
+              <Label className="text-xs text-slate-500 dark:text-slate-400">Dias</Label>
               <div className="grid grid-cols-7 gap-1.5">
                 {DIAS_SEMANA.map((dia) => (
                   <button
@@ -282,7 +282,7 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
                       'h-9 rounded-md border transition-all text-sm font-medium',
                       value.diasSemana?.includes(dia.value)
                         ? 'bg-[#89bcbe] border-[#89bcbe] text-white'
-                        : 'bg-white border-slate-200 text-slate-500 hover:border-[#89bcbe]'
+                        : 'bg-white dark:bg-surface-1 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-[#89bcbe]'
                     )}
                     title={dia.nome}
                   >
@@ -368,19 +368,19 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
           )}
 
           {/* Separador fino */}
-          <div className="border-t border-slate-200" />
+          <div className="border-t border-slate-200 dark:border-slate-700" />
 
           {/* Período: início + término lado a lado */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs text-slate-500">Início</Label>
+              <Label className="text-xs text-slate-500 dark:text-slate-400">Início</Label>
               <DateInput
                 value={value.dataInicio || ''}
                 onChange={(date) => handleFieldChange('dataInicio', date)}
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-slate-500">Término</Label>
+              <Label className="text-xs text-slate-500 dark:text-slate-400">Término</Label>
               <Select
                 value={value.terminoTipo || 'permanente'}
                 onValueChange={(v) => handleFieldChange('terminoTipo', v)}
@@ -415,13 +415,13 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
                 onChange={(e) => handleFieldChange('numeroOcorrencias', parseInt(e.target.value) || 10)}
                 className="w-20"
               />
-              <span className="text-sm text-slate-500">vezes</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">vezes</span>
             </div>
           )}
 
           {/* Resumo compacto */}
-          <div className="bg-[#aacfd0]/20 border border-[#89bcbe]/40 rounded-md px-3 py-2">
-            <p className="text-xs text-[#34495e] font-medium flex items-center gap-2">
+          <div className="bg-[#aacfd0]/20 dark:bg-teal-900/20 border border-[#89bcbe]/40 rounded-md px-3 py-2">
+            <p className="text-xs text-[#34495e] dark:text-slate-200 font-medium flex items-center gap-2">
               <Repeat className="w-3.5 h-3.5 flex-shrink-0 text-[#89bcbe]" />
               <span>{getRecorrenciaSummary(value)}</span>
             </p>
@@ -431,8 +431,8 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
 
       {/* Info compacta para Tarefa Fixa */}
       {modo === 'fixa' && (
-        <div className="bg-teal-50 border border-teal-200 rounded-lg px-3 py-2">
-          <p className="text-xs text-teal-700 flex items-center gap-2">
+        <div className="bg-teal-50 dark:bg-teal-500/10 border border-teal-200 rounded-lg px-3 py-2">
+          <p className="text-xs text-teal-700 dark:text-teal-400 flex items-center gap-2">
             <Pin className="w-3.5 h-3.5 flex-shrink-0" />
             <span>Aparece todo dia automaticamente. Nunca acumula atrasos. Vínculo com processo/consultivo obrigatório.</span>
           </p>

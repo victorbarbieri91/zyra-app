@@ -34,7 +34,12 @@ import {
   ChevronUp,
   RefreshCw,
   Heart,
+  Receipt,
+  CalendarPlus,
+  CheckCircle2,
 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -53,6 +58,15 @@ interface ContratoDetailModalProps {
   onOpenChange: (open: boolean) => void
   contrato: ContratoHonorario | null
   onEdit?: (contrato: ContratoHonorario) => void
+  onReceitasGeradas?: () => void // Callback para recarregar dados após gerar receitas
+}
+
+interface ReceitaGerada {
+  receita_id: string
+  descricao: string
+  valor: number
+  data_vencimento: string
+  mes_numero: number
 }
 
 interface ContratoForma {
@@ -124,6 +138,7 @@ export default function ContratoDetailModal({
   onOpenChange,
   contrato,
   onEdit,
+  onReceitasGeradas,
 }: ContratoDetailModalProps) {
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
@@ -143,6 +158,16 @@ export default function ContratoDetailModal({
     indice_reajuste: string | null
     reajuste_ativo: boolean
   } | null>(null)
+
+  // Estado para gerar receitas
+  const [showGerarReceitas, setShowGerarReceitas] = useState(false)
+  const [gerarMeses, setGerarMeses] = useState(1)
+  const [gerarDataInicio, setGerarDataInicio] = useState('')
+  const [gerarParcelado, setGerarParcelado] = useState(false)
+  const [gerarNumeroParcelas, setGerarNumeroParcelas] = useState(2)
+  const [loadingGerar, setLoadingGerar] = useState(false)
+  const [receitasGeradas, setReceitasGeradas] = useState<ReceitaGerada[]>([])
+  const [gerarSucesso, setGerarSucesso] = useState(false)
 
   // Constante para limite inicial de processos visíveis
   const PROCESSOS_LIMITE_INICIAL = 3
@@ -299,13 +324,62 @@ export default function ContratoDetailModal({
     }
   }
 
+  // Função para gerar receitas do contrato
+  const handleGerarReceitas = async () => {
+    if (!contrato) return
+
+    setLoadingGerar(true)
+    setReceitasGeradas([])
+    setGerarSucesso(false)
+
+    try {
+      const { data, error } = await supabase.rpc('gerar_receitas_contrato', {
+        p_contrato_id: contrato.id,
+        p_meses: gerarMeses,
+        p_data_inicio: gerarDataInicio || null,
+        p_parcelado: gerarParcelado,
+        p_numero_parcelas: gerarParcelado ? gerarNumeroParcelas : 1,
+      })
+
+      if (error) {
+        console.error('Erro ao gerar receitas:', error)
+        alert(error.message || 'Erro ao gerar receitas')
+        return
+      }
+
+      setReceitasGeradas(data || [])
+      setGerarSucesso(true)
+
+      // Callback para atualizar dados do contrato na lista
+      if (onReceitasGeradas) {
+        onReceitasGeradas()
+      }
+    } catch (error) {
+      console.error('Erro ao gerar receitas:', error)
+      alert('Erro inesperado ao gerar receitas')
+    } finally {
+      setLoadingGerar(false)
+    }
+  }
+
+  // Resetar estado de gerar receitas ao fechar
+  const handleResetGerar = () => {
+    setShowGerarReceitas(false)
+    setGerarSucesso(false)
+    setReceitasGeradas([])
+    setGerarMeses(1)
+    setGerarParcelado(false)
+    setGerarNumeroParcelas(2)
+    setGerarDataInicio('')
+  }
+
   if (!contrato) return null
 
   const statusBadge = contrato.inadimplente
-    ? { label: 'Inadimplente', class: 'bg-red-100 text-red-700', Icon: AlertTriangle }
+    ? { label: 'Inadimplente', class: 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400', Icon: AlertTriangle }
     : contrato.ativo
-    ? { label: 'Ativo', class: 'bg-green-100 text-green-700', Icon: CheckCircle }
-    : { label: 'Encerrado', class: 'bg-gray-100 text-gray-700', Icon: XCircle }
+    ? { label: 'Ativo', class: 'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400', Icon: CheckCircle }
+    : { label: 'Encerrado', class: 'bg-gray-100 dark:bg-gray-500/10 text-gray-700 dark:text-gray-300', Icon: XCircle }
 
   // Parse config - o config é um objeto JSONB direto, não um array com tipo_config
   // O hook coloca em [config], então pegamos o primeiro elemento
@@ -362,15 +436,15 @@ export default function ContratoDetailModal({
           return (
             <div className="text-right space-y-0.5">
               {configFixo.valores_fixos.length === 1 ? (
-                <span className="text-sm font-semibold text-[#34495e]">
+                <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                   {formatCurrency(configFixo.valor_total)}
                 </span>
               ) : (
                 <>
                   {configFixo.valores_fixos.slice(0, 2).map((v, i) => (
                     <p key={i} className="text-xs">
-                      <span className="text-slate-500">{v.descricao || 'Fixo'}:</span>{' '}
-                      <span className="font-semibold text-[#34495e]">{formatCurrency(v.valor)}</span>
+                      <span className="text-slate-500 dark:text-slate-400">{v.descricao || 'Fixo'}:</span>{' '}
+                      <span className="font-semibold text-[#34495e] dark:text-slate-200">{formatCurrency(v.valor)}</span>
                     </p>
                   ))}
                   {configFixo.valores_fixos.length > 2 && (
@@ -389,11 +463,11 @@ export default function ContratoDetailModal({
         if (configHora?.valor_hora) {
           return (
             <div className="text-right">
-              <span className="text-sm font-semibold text-[#34495e]">
+              <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                 {formatCurrency(configHora.valor_hora)}/h
               </span>
               {horasEstimadas && (
-                <p className="text-[10px] text-slate-500">{formatHoras(horasEstimadas, 'curto')} estimadas</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">{formatHoras(horasEstimadas, 'curto')} estimadas</p>
               )}
             </div>
           )
@@ -404,11 +478,11 @@ export default function ContratoDetailModal({
         if (configPasta?.valor_por_processo) {
           return (
             <div className="text-right">
-              <span className="text-sm font-semibold text-[#34495e]">
+              <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                 {formatCurrency(configPasta.valor_por_processo)}/processo
               </span>
               {configPasta.dia_cobranca && (
-                <p className="text-[10px] text-slate-500">Dia {configPasta.dia_cobranca}</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">Dia {configPasta.dia_cobranca}</p>
               )}
             </div>
           )
@@ -421,8 +495,8 @@ export default function ContratoDetailModal({
             <div className="text-right space-y-0.5">
               {Object.entries(etapasValores).slice(0, 2).map(([etapa, valor]) => (
                 <p key={etapa} className="text-xs">
-                  <span className="text-slate-500">{ETAPAS_LABELS[etapa] || etapa}:</span>{' '}
-                  <span className="font-semibold text-[#34495e]">{formatCurrency(valor)}</span>
+                  <span className="text-slate-500 dark:text-slate-400">{ETAPAS_LABELS[etapa] || etapa}:</span>{' '}
+                  <span className="font-semibold text-[#34495e] dark:text-slate-200">{formatCurrency(valor)}</span>
                 </p>
               ))}
               {Object.keys(etapasValores).length > 2 && (
@@ -439,11 +513,11 @@ export default function ContratoDetailModal({
         if (exitoConfig.percentual) {
           return (
             <div className="text-right">
-              <span className="text-sm font-semibold text-[#34495e]">
+              <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                 {exitoConfig.percentual}% êxito
               </span>
               {exitoConfig.valor_minimo && (
-                <p className="text-[10px] text-slate-500">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
                   mín. {formatCurrency(exitoConfig.valor_minimo)}
                 </p>
               )}
@@ -458,8 +532,8 @@ export default function ContratoDetailModal({
             <div className="text-right space-y-0.5">
               {valoresCargo.slice(0, 2).map(cargo => (
                 <p key={cargo.cargo_id} className="text-xs">
-                  <span className="text-slate-500">{cargo.cargo_nome}:</span>{' '}
-                  <span className="font-semibold text-[#34495e]">
+                  <span className="text-slate-500 dark:text-slate-400">{cargo.cargo_nome}:</span>{' '}
+                  <span className="font-semibold text-[#34495e] dark:text-slate-200">
                     {formatCurrency(cargo.valor_hora_negociado)}/h
                   </span>
                 </p>
@@ -480,8 +554,8 @@ export default function ContratoDetailModal({
             <div className="text-right space-y-0.5">
               {atos.slice(0, 2).map(ato => (
                 <p key={ato.ato_tipo_id} className="text-xs">
-                  <span className="text-slate-500">{ato.ato_nome}:</span>{' '}
-                  <span className="font-semibold text-[#34495e]">
+                  <span className="text-slate-500 dark:text-slate-400">{ato.ato_nome}:</span>{' '}
+                  <span className="font-semibold text-[#34495e] dark:text-slate-200">
                     {ato.percentual_valor_causa
                       ? `${ato.percentual_valor_causa}%`
                       : ''}
@@ -515,15 +589,15 @@ export default function ContratoDetailModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto overflow-x-hidden">
-        <DialogHeader className="pb-4 border-b border-slate-100 pr-8">
+        <DialogHeader className="pb-4 border-b border-slate-100 dark:border-slate-800 pr-8">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
-              <DialogTitle className="text-lg font-semibold text-[#34495e] flex items-center gap-2">
+              <DialogTitle className="text-lg font-semibold text-[#34495e] dark:text-slate-200 flex items-center gap-2">
                 <FileText className="w-4 h-4 text-[#89bcbe]" />
                 {contrato.numero_contrato}
               </DialogTitle>
               <div className="flex items-center gap-2 mt-1">
-                <p className="text-sm text-slate-500">{contrato.cliente_nome}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{contrato.cliente_nome}</p>
                 <Badge className={cn('text-[10px]', statusBadge.class)}>
                   <statusBadge.Icon className="w-3 h-3 mr-1" />
                   {statusBadge.label}
@@ -541,7 +615,7 @@ export default function ContratoDetailModal({
           <div className="space-y-5 py-2">
             {/* Informações Básicas */}
             <div>
-              <p className="text-xs font-semibold text-[#46627f] uppercase tracking-wide mb-3">
+              <p className="text-xs font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide mb-3">
                 Informações
               </p>
               <div className="grid grid-cols-2 gap-3">
@@ -549,7 +623,7 @@ export default function ContratoDetailModal({
                   <Briefcase className="w-3.5 h-3.5 text-slate-400" />
                   <div>
                     <p className="text-[10px] text-slate-400">Tipo</p>
-                    <p className="text-xs font-medium text-[#34495e]">
+                    <p className="text-xs font-medium text-[#34495e] dark:text-slate-200">
                       {TIPO_SERVICO_LABELS[contrato.tipo_servico] || contrato.tipo_servico}
                     </p>
                   </div>
@@ -558,7 +632,7 @@ export default function ContratoDetailModal({
                   <Calendar className="w-3.5 h-3.5 text-slate-400" />
                   <div>
                     <p className="text-[10px] text-slate-400">Início</p>
-                    <p className="text-xs font-medium text-[#34495e]">
+                    <p className="text-xs font-medium text-[#34495e] dark:text-slate-200">
                       {formatBrazilDate(parseDateInBrazil(contrato.data_inicio))}
                     </p>
                   </div>
@@ -567,7 +641,7 @@ export default function ContratoDetailModal({
                   <Calendar className="w-3.5 h-3.5 text-slate-400" />
                   <div>
                     <p className="text-[10px] text-slate-400">Fim</p>
-                    <p className="text-xs font-medium text-[#34495e]">
+                    <p className="text-xs font-medium text-[#34495e] dark:text-slate-200">
                       {contrato.data_fim
                         ? formatBrazilDate(parseDateInBrazil(contrato.data_fim))
                         : 'Indeterminado'}
@@ -578,7 +652,7 @@ export default function ContratoDetailModal({
                   <User className="w-3.5 h-3.5 text-slate-400" />
                   <div>
                     <p className="text-[10px] text-slate-400">Cliente</p>
-                    <p className="text-xs font-medium text-[#34495e] truncate max-w-[140px]">
+                    <p className="text-xs font-medium text-[#34495e] dark:text-slate-200 truncate max-w-[140px]">
                       {contrato.cliente_nome}
                     </p>
                   </div>
@@ -589,10 +663,10 @@ export default function ContratoDetailModal({
             {/* Grupo de Clientes */}
             {grupoClientes && grupoClientes.clientes && grupoClientes.clientes.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-[#46627f] uppercase tracking-wide mb-3">
+                <p className="text-xs font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide mb-3">
                   Grupo de Clientes
                 </p>
-                <div className="bg-slate-50 rounded-lg border border-slate-100 p-3">
+                <div className="bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-100 dark:border-slate-800 p-3">
                   <div className="space-y-2">
                     {grupoClientes.clientes.map((cliente) => (
                       <div
@@ -601,17 +675,17 @@ export default function ContratoDetailModal({
                       >
                         <div className="flex items-center gap-2">
                           <User className="w-3.5 h-3.5 text-slate-400" />
-                          <span className="text-sm text-[#34495e]">{cliente.nome}</span>
+                          <span className="text-sm text-[#34495e] dark:text-slate-200">{cliente.nome}</span>
                         </div>
                         {grupoClientes.cliente_pagador_id === cliente.cliente_id && (
-                          <Badge className="text-[9px] bg-[#89bcbe]/10 text-[#46627f] border border-[#89bcbe]/30">
+                          <Badge className="text-[9px] bg-[#89bcbe]/10 text-[#46627f] dark:text-slate-400 border border-[#89bcbe]/30">
                             CNPJ Pagador
                           </Badge>
                         )}
                       </div>
                     ))}
                   </div>
-                  <div className="mt-2 pt-2 border-t border-slate-200">
+                  <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
                     <p className="text-[10px] text-slate-400">
                       Faturamento consolidado para o CNPJ pagador
                     </p>
@@ -622,11 +696,11 @@ export default function ContratoDetailModal({
 
             {/* Formas de Cobrança */}
             <div>
-              <p className="text-xs font-semibold text-[#46627f] uppercase tracking-wide mb-3">
+              <p className="text-xs font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide mb-3">
                 Formas de Cobrança
               </p>
               {formas.length === 0 ? (
-                <div className="text-center py-4 bg-slate-50 rounded-lg">
+                <div className="text-center py-4 bg-slate-50 dark:bg-surface-0 rounded-lg">
                   <Info className="w-5 h-5 mx-auto text-slate-300 mb-1" />
                   <p className="text-xs text-slate-400">Nenhuma forma configurada</p>
                 </div>
@@ -638,13 +712,13 @@ export default function ContratoDetailModal({
                     return (
                       <div
                         key={forma.id}
-                        className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100"
+                        className="flex items-center justify-between p-3 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-100 dark:border-slate-800"
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-md bg-white border border-slate-200 flex items-center justify-center">
+                          <div className="w-7 h-7 rounded-md bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
                             <Icon className="w-3.5 h-3.5 text-[#89bcbe]" />
                           </div>
-                          <span className="text-sm font-medium text-[#34495e]">
+                          <span className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                             {info.label}
                           </span>
                         </div>
@@ -661,21 +735,21 @@ export default function ContratoDetailModal({
              (contrato.forma_cobranca === 'fixo' || contrato.forma_cobranca === 'por_pasta' ||
               formas.some(f => f.forma_cobranca === 'fixo' || f.forma_cobranca === 'por_pasta')) && (
               <div>
-                <p className="text-xs font-semibold text-[#46627f] uppercase tracking-wide mb-3">
+                <p className="text-xs font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide mb-3">
                   Reajuste Monetário
                 </p>
                 <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg border border-emerald-100 p-4">
                   {/* Valor atualizado e data */}
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <p className="text-[10px] text-slate-500 uppercase tracking-wide">Valor Atualizado</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wide">Valor Atualizado</p>
                       {reajusteData.valor_atualizado ? (
                         <>
-                          <p className="text-lg font-bold text-emerald-700">
+                          <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
                             {formatCurrency(reajusteData.valor_atualizado)}
                           </p>
                           {reajusteData.data_ultimo_reajuste && (
-                            <p className="text-[10px] text-slate-500">
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400">
                               Atualizado em {formatBrazilDate(parseDateInBrazil(reajusteData.data_ultimo_reajuste))}
                             </p>
                           )}
@@ -685,7 +759,7 @@ export default function ContratoDetailModal({
                       )}
                     </div>
                     <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                      <TrendingUp className="w-5 h-5 text-emerald-600" />
+                      <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                     </div>
                   </div>
 
@@ -693,7 +767,7 @@ export default function ContratoDetailModal({
                   <div className="flex items-center gap-3 pt-3 border-t border-emerald-200/50">
                     <div className="flex-1">
                       <Select value={selectedIndice} onValueChange={setSelectedIndice}>
-                        <SelectTrigger className="h-9 text-xs bg-white border-slate-200">
+                        <SelectTrigger className="h-9 text-xs bg-white dark:bg-surface-1 border-slate-200 dark:border-slate-700">
                           <SelectValue placeholder="Selecione o índice" />
                         </SelectTrigger>
                         <SelectContent>
@@ -722,17 +796,223 @@ export default function ContratoDetailModal({
               </div>
             )}
 
+            {/* Gerar Receitas - Apenas para contratos com valores fixos */}
+            {contrato.ativo && !!(configFixo || configData?.valor_fixo) && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide">
+                    Gerar Receitas
+                  </p>
+                  {!showGerarReceitas && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-3 text-xs border-[#89bcbe]/50 text-[#46627f] dark:text-slate-400 hover:bg-[#89bcbe]/10"
+                      onClick={() => {
+                        handleResetGerar()
+                        setShowGerarReceitas(true)
+                      }}
+                    >
+                      <CalendarPlus className="w-3.5 h-3.5 mr-1.5" />
+                      Gerar Receitas
+                    </Button>
+                  )}
+                </div>
+
+                {showGerarReceitas && !gerarSucesso && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100 p-4 space-y-3">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                      Gere receitas (honorários) automaticamente com base nos valores fixos do contrato.
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                          Quantidade de meses
+                        </Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={24}
+                          value={gerarMeses}
+                          onChange={(e) => setGerarMeses(Math.min(24, Math.max(1, parseInt(e.target.value) || 1)))}
+                          className="h-9 text-sm mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                          A partir de
+                        </Label>
+                        <Input
+                          type="date"
+                          value={gerarDataInicio}
+                          onChange={(e) => setGerarDataInicio(e.target.value)}
+                          className="h-9 text-sm mt-1"
+                          placeholder="Data atual"
+                        />
+                        {!gerarDataInicio && (
+                          <p className="text-[10px] text-slate-400 mt-0.5">Padrão: data atual</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Opção de parcelamento */}
+                    <div className="flex items-start gap-3 pt-1">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={gerarParcelado}
+                          onChange={(e) => setGerarParcelado(e.target.checked)}
+                          className="rounded border-slate-300 text-[#89bcbe] focus:ring-[#89bcbe]"
+                        />
+                        <span className="text-xs text-slate-600 dark:text-slate-400">Parcelar cada receita</span>
+                      </label>
+                      {gerarParcelado && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-slate-500 dark:text-slate-400">em</span>
+                          <Input
+                            type="number"
+                            min={2}
+                            max={60}
+                            value={gerarNumeroParcelas}
+                            onChange={(e) => setGerarNumeroParcelas(Math.min(60, Math.max(2, parseInt(e.target.value) || 2)))}
+                            className="h-7 w-16 text-xs"
+                          />
+                          <span className="text-xs text-slate-500 dark:text-slate-400">parcelas</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Preview dos valores */}
+                    {configFixo && (
+                      <div className="bg-white/60 rounded-md p-2.5 border border-blue-100/50">
+                        <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1.5">
+                          Valores por mês
+                        </p>
+                        {configFixo.valores_fixos.map((v, i) => (
+                          <div key={i} className="flex items-center justify-between text-xs">
+                            <span className="text-slate-600 dark:text-slate-400">{v.descricao || 'Fixo'}</span>
+                            <span className="font-semibold text-[#34495e] dark:text-slate-200">{formatCurrency(v.valor)}</span>
+                          </div>
+                        ))}
+                        {configFixo.valores_fixos.length > 1 && (
+                          <div className="flex items-center justify-between text-xs pt-1.5 mt-1.5 border-t border-blue-100/50">
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">Total/mês</span>
+                            <span className="font-bold text-[#34495e] dark:text-slate-200">{formatCurrency(configFixo.valor_total)}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between text-xs pt-1 mt-1 border-t border-blue-100/50">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">
+                            Total ({gerarMeses} {gerarMeses === 1 ? 'mês' : 'meses'})
+                          </span>
+                          <span className="font-bold text-blue-700 dark:text-blue-400">
+                            {formatCurrency(configFixo.valor_total * gerarMeses)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Botões */}
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={handleResetGerar}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-8 text-xs bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                        onClick={handleGerarReceitas}
+                        disabled={loadingGerar}
+                      >
+                        {loadingGerar ? (
+                          <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        ) : (
+                          <Receipt className="w-3.5 h-3.5 mr-1.5" />
+                        )}
+                        Gerar {gerarMeses} {gerarMeses === 1 ? 'mês' : 'meses'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Resultado de sucesso */}
+                {gerarSucesso && receitasGeradas.length > 0 && (
+                  <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-lg border border-emerald-100 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                        {receitasGeradas.length} {receitasGeradas.length === 1 ? 'receita gerada' : 'receitas geradas'} com sucesso!
+                      </p>
+                    </div>
+                    <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                      {receitasGeradas.map((r, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs bg-white/60 rounded-md px-2.5 py-1.5">
+                          <div>
+                            <span className="text-slate-700 dark:text-slate-300 font-medium">{r.descricao}</span>
+                            <span className="text-slate-400 ml-2">
+                              Venc: {formatBrazilDate(parseDateInBrazil(r.data_vencimento))}
+                            </span>
+                          </div>
+                          <span className="font-semibold text-emerald-700 dark:text-emerald-400">{formatCurrency(r.valor)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-emerald-200/50">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        Total gerado
+                      </span>
+                      <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                        {formatCurrency(receitasGeradas.reduce((sum, r) => sum + r.valor, 0))}
+                      </span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-8 text-xs border-emerald-200 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:bg-emerald-500/10"
+                      onClick={handleResetGerar}
+                    >
+                      Fechar
+                    </Button>
+                  </div>
+                )}
+
+                {/* Sucesso sem receitas (todas já existiam) */}
+                {gerarSucesso && receitasGeradas.length === 0 && (
+                  <div className="bg-amber-50 dark:bg-amber-500/10 rounded-lg border border-amber-100 p-4">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      <p className="text-sm text-amber-700 dark:text-amber-400">
+                        Nenhuma receita nova gerada. As receitas para o período informado já existem.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 h-7 text-xs border-amber-200 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:bg-amber-500/10"
+                      onClick={handleResetGerar}
+                    >
+                      Fechar
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Processos Vinculados */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-semibold text-[#46627f] uppercase tracking-wide">
+                <p className="text-xs font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide">
                   Processos Vinculados ({processosVinculados.length})
                 </p>
                 {processosVinculados.length > PROCESSOS_LIMITE_INICIAL && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 px-2 text-[10px] text-slate-500 hover:text-[#34495e]"
+                    className="h-6 px-2 text-[10px] text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:text-slate-200"
                     onClick={() => setProcessosExpandidos(!processosExpandidos)}
                   >
                     {processosExpandidos ? (
@@ -750,7 +1030,7 @@ export default function ContratoDetailModal({
                 )}
               </div>
               {processosVinculados.length === 0 ? (
-                <div className="text-center py-4 bg-slate-50 rounded-lg">
+                <div className="text-center py-4 bg-slate-50 dark:bg-surface-0 rounded-lg">
                   <Scale className="w-5 h-5 mx-auto text-slate-300 mb-1" />
                   <p className="text-xs text-slate-400">Nenhum processo vinculado</p>
                 </div>
@@ -766,29 +1046,29 @@ export default function ContratoDetailModal({
                     <Link
                       key={processo.id}
                       href={`/dashboard/processos/${processo.id}`}
-                      className="flex items-center p-3 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 hover:border-[#89bcbe]/30 transition-colors group overflow-hidden"
+                      className="flex items-center p-3 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-surface-3 dark:bg-surface-2 hover:border-[#89bcbe]/30 transition-colors group overflow-hidden"
                     >
                       <div className="flex items-center gap-3 w-0 flex-1 overflow-hidden">
-                        <div className="w-7 h-7 rounded-md bg-white border border-slate-200 flex items-center justify-center flex-shrink-0">
+                        <div className="w-7 h-7 rounded-md bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 flex items-center justify-center flex-shrink-0">
                           <Scale className="w-3.5 h-3.5 text-[#89bcbe]" />
                         </div>
                         <div className="w-0 flex-1 overflow-hidden">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[#34495e]">
+                            <span className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                               {processo.numero_pasta}
                             </span>
                             <Badge
                               className={cn(
                                 'text-[9px] px-1.5 py-0 flex-shrink-0',
                                 processo.status === 'ativo'
-                                  ? 'bg-emerald-100 text-emerald-700'
-                                  : 'bg-slate-100 text-slate-600'
+                                  ? 'bg-emerald-100 text-emerald-700 dark:text-emerald-400'
+                                  : 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400'
                               )}
                             >
                               {processo.status}
                             </Badge>
                           </div>
-                          <p className="text-[10px] text-slate-500 truncate">
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                             {processo.cliente_nome}
                             {processo.parte_contraria && (
                               <span className="text-slate-400"> vs {processo.parte_contraria}</span>
@@ -807,7 +1087,7 @@ export default function ContratoDetailModal({
                   {!processosExpandidos && processosVinculados.length > PROCESSOS_LIMITE_INICIAL && (
                     <button
                       onClick={() => setProcessosExpandidos(true)}
-                      className="w-full py-2 text-center text-[11px] text-slate-400 hover:text-[#89bcbe] hover:bg-slate-50 rounded-lg transition-colors"
+                      className="w-full py-2 text-center text-[11px] text-slate-400 hover:text-[#89bcbe] hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0 rounded-lg transition-colors"
                     >
                       + {processosVinculados.length - PROCESSOS_LIMITE_INICIAL} processos
                     </button>
@@ -819,10 +1099,10 @@ export default function ContratoDetailModal({
             {/* Observações */}
             {contrato.observacoes && (
               <div>
-                <p className="text-xs font-semibold text-[#46627f] uppercase tracking-wide mb-2">
+                <p className="text-xs font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide mb-2">
                   Observações
                 </p>
-                <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg">
+                <p className="text-sm text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-surface-0 p-3 rounded-lg">
                   {contrato.observacoes}
                 </p>
               </div>
@@ -831,7 +1111,7 @@ export default function ContratoDetailModal({
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+        <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
           <Button
             variant="outline"
             size="sm"

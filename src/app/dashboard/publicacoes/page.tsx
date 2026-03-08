@@ -671,13 +671,13 @@ export default function PublicacoesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white p-4 md:p-6">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 dark:from-surface-0 to-white dark:to-surface-0 p-4 md:p-6">
       {/* Header */}
       <div className="mb-4 md:mb-6">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-[#34495e]">Publicações</h1>
-            <p className="text-xs md:text-sm text-slate-600">Gestão de publicações e intimações</p>
+            <h1 className="text-xl md:text-2xl font-bold text-[#34495e] dark:text-slate-200">Publicações</h1>
+            <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400">Gestão de publicações e intimações</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -742,7 +742,7 @@ export default function PublicacoesPage() {
 
       {/* Filtros Rápidos */}
       <div className="flex items-center gap-2 mb-4 overflow-x-auto no-scrollbar whitespace-nowrap pb-1">
-        <span className="text-xs font-medium text-slate-500 mr-1">Filtros rápidos:</span>
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mr-1">Filtros rápidos:</span>
         {FILTROS_RAPIDOS.map(filtro => (
           <Button
             key={filtro.id}
@@ -766,7 +766,7 @@ export default function PublicacoesPage() {
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 text-xs px-2 text-slate-500"
+          className="h-7 text-xs px-2 text-slate-500 dark:text-slate-400"
           onClick={() => setMostrarFiltrosAvancados(!mostrarFiltrosAvancados)}
         >
           <Filter className="w-3.5 h-3.5 mr-1" />
@@ -789,7 +789,7 @@ export default function PublicacoesPage() {
 
       {/* Filtros Avançados (colapsável) */}
       {mostrarFiltrosAvancados && (
-        <div className="bg-white rounded-lg border border-slate-200 p-4 mb-4 shadow-sm">
+        <div className="bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 p-4 mb-4 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -829,7 +829,7 @@ export default function PublicacoesPage() {
                     variant="ghost"
                     className={cn(
                       'w-full justify-start h-8 text-sm',
-                      filtros.status === opt.value && 'bg-slate-100'
+                      filtros.status === opt.value && 'bg-slate-100 dark:bg-surface-2'
                     )}
                     onClick={() => {
                       setFiltroRapidoAtivo(null)
@@ -867,7 +867,7 @@ export default function PublicacoesPage() {
                     variant="ghost"
                     className={cn(
                       'w-full justify-start h-8 text-sm',
-                      filtros.tipo === opt.value && 'bg-slate-100'
+                      filtros.tipo === opt.value && 'bg-slate-100 dark:bg-surface-2'
                     )}
                     onClick={() => {
                       setFiltroRapidoAtivo(null)
@@ -889,7 +889,7 @@ export default function PublicacoesPage() {
                   setFiltros({ ...filtros, semPasta: !!checked })
                 }}
               />
-              <label htmlFor="sem-pasta" className="text-sm text-slate-600 cursor-pointer">
+              <label htmlFor="sem-pasta" className="text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
                 Sem pasta vinculada
               </label>
             </div>
@@ -938,17 +938,17 @@ export default function PublicacoesPage() {
       )}
 
       {/* Publicações */}
-      <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
+      <div className="bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
         {/* Abas dentro do card */}
-        <div className="p-3 md:p-4 border-b border-slate-200 overflow-x-auto no-scrollbar">
+        <div className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-700 overflow-x-auto no-scrollbar">
           <Tabs value={abaAtiva} onValueChange={(v) => setAbaAtiva(v as AbaPublicacoes)}>
-            <TabsList className="bg-slate-100 p-1 h-9 w-max md:w-auto">
+            <TabsList className="bg-slate-100 dark:bg-surface-2 p-1 h-9 w-max md:w-auto">
               <TabsTrigger
                 value="todas"
                 className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
               >
                 Todas
-                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-slate-200/80 text-slate-600">
+                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-slate-200/80 dark:bg-surface-3 text-slate-600 dark:text-slate-400">
                   {stats.total}
                 </Badge>
               </TabsTrigger>
@@ -978,7 +978,7 @@ export default function PublicacoesPage() {
               >
                 <span className="hidden md:inline">Tratadas</span>
                 <span className="md:hidden">Trat.</span>
-                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-emerald-100/80 text-emerald-600">
+                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-emerald-100/80 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                   {stats.tratadas}
                 </Badge>
               </TabsTrigger>
@@ -988,7 +988,7 @@ export default function PublicacoesPage() {
               >
                 <span className="hidden md:inline">Arquivadas</span>
                 <span className="md:hidden">Arq.</span>
-                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-slate-200/80 text-slate-500">
+                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-slate-200/80 dark:bg-surface-3 text-slate-500 dark:text-slate-400">
                   {stats.arquivadas}
                 </Badge>
               </TabsTrigger>
@@ -996,8 +996,8 @@ export default function PublicacoesPage() {
           </Tabs>
         </div>
 
-        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-slate-600">
+        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-slate-600 dark:text-slate-400">
             {publicacoesFiltradas.length} {publicacoesFiltradas.length === 1 ? 'publicação' : 'publicações'}
             {temFiltrosAtivos && (
               <span className="text-slate-400 font-normal ml-1">
@@ -1010,7 +1010,7 @@ export default function PublicacoesPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-xs gap-1.5 text-slate-500"
+              className="h-7 text-xs gap-1.5 text-slate-500 dark:text-slate-400"
               onClick={selecionarTodos}
             >
               <ListChecks className="w-3.5 h-3.5" />
@@ -1022,15 +1022,15 @@ export default function PublicacoesPage() {
         {carregando ? (
           <div className="p-12 text-center">
             <Loader2 className="w-8 h-8 animate-spin text-slate-400 mx-auto mb-4" />
-            <p className="text-sm text-slate-500">Carregando publicações...</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Carregando publicações...</p>
           </div>
         ) : publicacoesFiltradas.length === 0 ? (
           <div className="p-12 text-center">
-            <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-surface-2 flex items-center justify-center mx-auto mb-4">
               <FileX className="w-8 h-8 text-slate-400" />
             </div>
-            <h3 className="text-sm font-semibold text-slate-700 mb-1">Nenhuma publicação encontrada</h3>
-            <p className="text-xs text-slate-500 mb-4">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Nenhuma publicação encontrada</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
               {publicacoes.length === 0
                 ? 'Não há publicações recebidas ainda. Configure as fontes de publicações.'
                 : 'Nenhuma publicação corresponde aos filtros selecionados.'}
@@ -1053,7 +1053,7 @@ export default function PublicacoesPage() {
         ) : (
           <>
           {/* Mobile: Card list com expansão inline */}
-          <div className="md:hidden divide-y divide-slate-100">
+          <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
             {publicacoesFiltradas.map((pub) => (
               <div key={pub.id}>
                 <div
@@ -1080,10 +1080,10 @@ export default function PublicacoesPage() {
                       {new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}
                     </span>
                   </div>
-                  <p className="text-xs font-medium text-slate-700 truncate">{pub.tribunal}</p>
-                  {pub.vara && <p className="text-[11px] text-slate-500">{pub.vara}</p>}
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
-                    <span className="text-[11px] text-slate-500">{getTipoLabel(pub.tipo_publicacao)}</span>
+                  <p className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{pub.tribunal}</p>
+                  {pub.vara && <p className="text-[11px] text-slate-500 dark:text-slate-400">{pub.vara}</p>}
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">{getTipoLabel(pub.tipo_publicacao)}</span>
                     {pub.numero_processo ? (
                       <span className={cn(
                         'text-[11px] font-mono truncate max-w-[160px]',
@@ -1177,7 +1177,7 @@ export default function PublicacoesPage() {
           {/* Desktop: Table */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
+              <thead className="bg-slate-50 dark:bg-surface-0 border-b border-slate-200 dark:border-slate-700">
                 <tr>
                   <th className="w-10 p-3">
                     <Checkbox
@@ -1185,8 +1185,8 @@ export default function PublicacoesPage() {
                       onCheckedChange={selecionarTodos}
                     />
                   </th>
-                  <th className="text-left text-xs font-medium text-slate-600 p-3">Status</th>
-                  <th className="text-left text-xs font-medium text-slate-600 p-3">
+                  <th className="text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Status</th>
+                  <th className="text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">
                     <TooltipProvider delayDuration={200}>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -1198,18 +1198,18 @@ export default function PublicacoesPage() {
                       </Tooltip>
                     </TooltipProvider>
                   </th>
-                  <th className="text-left text-xs font-medium text-slate-600 p-3">Tribunal</th>
-                  <th className="text-left text-xs font-medium text-slate-600 p-3">Tipo</th>
-                  <th className="text-left text-xs font-medium text-slate-600 p-3">Processo</th>
-                  <th className="text-right text-xs font-medium text-slate-600 p-3">Ações</th>
+                  <th className="text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Tribunal</th>
+                  <th className="text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Tipo</th>
+                  <th className="text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Processo</th>
+                  <th className="text-right text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                 {publicacoesFiltradas.map((pub) => (
                   <React.Fragment key={pub.id}>
                     <tr
                       className={cn(
-                        'hover:bg-slate-50 transition-colors cursor-pointer group',
+                        'hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors cursor-pointer group',
                         selecionados.has(pub.id) && 'bg-blue-50 hover:bg-blue-100',
                         expandedId === pub.id && 'bg-blue-50/40 border-b-0'
                       )}
@@ -1244,18 +1244,18 @@ export default function PublicacoesPage() {
                         </div>
                       </td>
                       <td className="p-3">
-                        <span className="text-sm text-slate-700">
+                        <span className="text-sm text-slate-700 dark:text-slate-300">
                           {new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}
                         </span>
                       </td>
                       <td className="p-3">
                         <div>
-                          <div className="text-sm font-medium text-slate-700 truncate max-w-[200px]" title={pub.tribunal}>{pub.tribunal}</div>
-                          {pub.vara && <div className="text-xs text-slate-500">{pub.vara}</div>}
+                          <div className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate max-w-[200px]" title={pub.tribunal}>{pub.tribunal}</div>
+                          {pub.vara && <div className="text-xs text-slate-500 dark:text-slate-400">{pub.vara}</div>}
                         </div>
                       </td>
                       <td className="p-3">
-                        <span className="text-sm text-slate-700">{getTipoLabel(pub.tipo_publicacao)}</span>
+                        <span className="text-sm text-slate-700 dark:text-slate-300">{getTipoLabel(pub.tipo_publicacao)}</span>
                       </td>
                       <td className="p-3">
                         {pub.numero_processo ? (
@@ -1272,7 +1272,7 @@ export default function PublicacoesPage() {
                             </span>
                           ) : (
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-mono text-slate-700">{pub.numero_processo}</span>
+                              <span className="text-sm font-mono text-slate-700 dark:text-slate-300">{pub.numero_processo}</span>
                               <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
                                 Sem pasta
                               </Badge>

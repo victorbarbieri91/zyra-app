@@ -15,11 +15,11 @@ export function ThinkingSteps({ passos, className }: ThinkingStepsProps) {
   return (
     <div className={cn('flex items-center gap-3 py-3', className)}>
       <div className="flex items-center gap-1">
-        <div className={`w-1.5 h-1.5 rounded-full ${terminal ? 'bg-slate-400' : 'bg-[#89bcbe] animate-pulse'}`} />
-        <div className={`w-1.5 h-1.5 rounded-full ${terminal ? 'bg-slate-400' : 'bg-[#89bcbe] animate-pulse [animation-delay:0.2s]'}`} />
-        <div className={`w-1.5 h-1.5 rounded-full ${terminal ? 'bg-slate-400' : 'bg-[#89bcbe] animate-pulse [animation-delay:0.4s]'}`} />
+        <div className={`w-1.5 h-1.5 rounded-full ${terminal ? 'bg-slate-400 dark:bg-slate-500' : 'bg-[#89bcbe] animate-pulse'}`} />
+        <div className={`w-1.5 h-1.5 rounded-full ${terminal ? 'bg-slate-400 dark:bg-slate-500' : 'bg-[#89bcbe] animate-pulse [animation-delay:0.2s]'}`} />
+        <div className={`w-1.5 h-1.5 rounded-full ${terminal ? 'bg-slate-400 dark:bg-slate-500' : 'bg-[#89bcbe] animate-pulse [animation-delay:0.4s]'}`} />
       </div>
-      <span className="text-xs text-slate-500">{ultimoPasso?.message || 'Processando...'}</span>
+      <span className="text-xs text-slate-500 dark:text-slate-400">{ultimoPasso?.message || 'Processando...'}</span>
     </div>
   )
 }

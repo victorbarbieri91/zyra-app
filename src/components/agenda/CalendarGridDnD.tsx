@@ -160,13 +160,13 @@ function DroppableDay({
         'p-2 rounded-lg border transition-all cursor-pointer group overflow-y-auto',
         'hover:border-[#89bcbe] hover:shadow-sm',
         !isWeekView && 'min-h-[110px]',
-        !isCurrentMonth && 'bg-slate-50/50',
-        isCurrentMonth && 'bg-white',
-        isSelected && 'border-[#89bcbe] bg-[#f0f9f9]/30',
-        !isSelected && 'border-slate-200',
-        isFeriadoDay && 'bg-purple-50/30',
-        isWeekendDay && !isFeriadoDay && 'bg-slate-50',
-        isOver && 'ring-2 ring-[#89bcbe] ring-offset-1 bg-[#f0f9f9]/50'
+        !isCurrentMonth && 'bg-slate-50/50 dark:bg-surface-0/50',
+        isCurrentMonth && 'bg-white dark:bg-surface-1',
+        isSelected && 'border-[#89bcbe] bg-[#f0f9f9]/30 dark:bg-teal-900/20',
+        !isSelected && 'border-slate-200 dark:border-slate-700',
+        isFeriadoDay && 'bg-purple-50/30 dark:bg-purple-500/10',
+        isWeekendDay && !isFeriadoDay && 'bg-slate-50 dark:bg-surface-0',
+        isOver && 'ring-2 ring-[#89bcbe] ring-offset-1 bg-[#f0f9f9]/50 dark:bg-teal-900/20'
       )}
     >
       {children}
@@ -455,7 +455,7 @@ export default function CalendarGridDnD({
         {/* Header do Calendário */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-semibold text-[#34495e] capitalize">
+            <h2 className="text-2xl font-semibold text-[#34495e] dark:text-slate-200 capitalize">
               {headerTitle}
             </h2>
             <div className="flex items-center gap-1">
@@ -463,7 +463,7 @@ export default function CalendarGridDnD({
                 variant="outline"
                 size="sm"
                 onClick={navigateBack}
-                className="h-8 w-8 p-0 border-slate-200"
+                className="h-8 w-8 p-0 border-slate-200 dark:border-slate-700"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -471,17 +471,17 @@ export default function CalendarGridDnD({
                 variant="outline"
                 size="sm"
                 onClick={navigateForward}
-                className="h-8 w-8 p-0 border-slate-200"
+                className="h-8 w-8 p-0 border-slate-200 dark:border-slate-700"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
 
             {/* Toggle Mês / Semana */}
-            <div className="relative flex items-center bg-slate-100 rounded-full p-0.5 h-8">
+            <div className="relative flex items-center bg-slate-100 dark:bg-surface-2 rounded-full p-0.5 h-8">
               <div
                 className={cn(
-                  'absolute top-0.5 h-7 rounded-full bg-white shadow-sm transition-all duration-300 ease-in-out',
+                  'absolute top-0.5 h-7 rounded-full bg-white dark:bg-surface-1 shadow-sm transition-all duration-300 ease-in-out',
                   calendarView === 'month'
                     ? 'left-0.5 w-[48px]'
                     : 'left-[50px] w-[64px]'
@@ -491,7 +491,7 @@ export default function CalendarGridDnD({
                 onClick={() => switchView('month')}
                 className={cn(
                   'relative z-10 w-[48px] py-1 text-xs font-medium rounded-full transition-colors duration-200 text-center',
-                  calendarView === 'month' ? 'text-[#34495e]' : 'text-slate-400 hover:text-slate-600'
+                  calendarView === 'month' ? 'text-[#34495e] dark:text-slate-200' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                 )}
               >
                 Mês
@@ -500,7 +500,7 @@ export default function CalendarGridDnD({
                 onClick={() => switchView('week')}
                 className={cn(
                   'relative z-10 w-[64px] py-1 text-xs font-medium rounded-full transition-colors duration-200 text-center',
-                  calendarView === 'week' ? 'text-[#34495e]' : 'text-slate-400 hover:text-slate-600'
+                  calendarView === 'week' ? 'text-[#34495e] dark:text-slate-200' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                 )}
               >
                 Semana
@@ -520,19 +520,19 @@ export default function CalendarGridDnD({
         </div>
 
         {/* Grid do Calendário */}
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
           <div className="p-4">
             {/* Cabeçalho - Dias da Semana */}
             <div className="grid grid-cols-7 gap-2 mb-2">
               {isWeekView
                 ? weekDays.map((day) => (
                     <div key={day.toISOString()} className="text-center py-2">
-                      <div className="text-[10px] font-medium text-[#46627f] uppercase">
+                      <div className="text-[10px] font-medium text-[#46627f] dark:text-slate-400 uppercase">
                         {format(day, 'EEE', { locale: ptBR })}
                       </div>
                       <div className={cn(
                         'text-sm font-semibold mt-0.5',
-                        isToday(day) ? 'text-[#89bcbe]' : 'text-[#34495e]'
+                        isToday(day) ? 'text-[#89bcbe]' : 'text-[#34495e] dark:text-slate-200'
                       )}>
                         {format(day, 'd')}
                       </div>
@@ -541,7 +541,7 @@ export default function CalendarGridDnD({
                 : ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map((day) => (
                     <div
                       key={day}
-                      className="text-center text-xs font-semibold text-[#46627f] py-2"
+                      className="text-center text-xs font-semibold text-[#46627f] dark:text-slate-400 py-2"
                     >
                       {day}
                     </div>
@@ -582,10 +582,10 @@ export default function CalendarGridDnD({
                       <span
                         className={cn(
                           'text-xs font-medium',
-                          !isCurrentMonth && 'text-slate-400',
-                          isCurrentMonth && !isTodayDate && 'text-[#34495e]',
+                          !isCurrentMonth && 'text-slate-400 dark:text-slate-500',
+                          isCurrentMonth && !isTodayDate && 'text-[#34495e] dark:text-slate-200',
                           isTodayDate && 'text-white',
-                          isFeriadoDay && isCurrentMonth && !isTodayDate && 'text-purple-600'
+                          isFeriadoDay && isCurrentMonth && !isTodayDate && 'text-purple-600 dark:text-purple-400'
                         )}
                       >
                         {isTodayDate && (
@@ -635,17 +635,17 @@ export default function CalendarGridDnD({
         </Card>
 
         {/* Legenda */}
-        <div className="flex items-center gap-4 text-xs text-[#6c757d]">
+        <div className="flex items-center gap-4 text-xs text-[#6c757d] dark:text-slate-400">
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-full bg-gradient-to-br from-[#89bcbe] to-[#6ba9ab]" />
             <span>Hoje</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-purple-50 border border-purple-200" />
+            <div className="w-3 h-3 rounded bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-700" />
             <span>Feriado</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-slate-50 border border-slate-200" />
+            <div className="w-3 h-3 rounded bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700" />
             <span>Fim de semana</span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -696,18 +696,18 @@ export default function CalendarGridDnD({
         }
       }}>
         <AlertDialogContent className="max-w-md p-0 overflow-hidden border-0">
-          <div className="bg-white rounded-lg">
+          <div className="bg-white dark:bg-surface-1 rounded-lg">
             {/* Header */}
-            <div className="px-6 pt-5 pb-4 border-b border-slate-100">
+            <div className="px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#f0f9f9] flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-[#46627f]" />
+                <div className="w-10 h-10 rounded-full bg-[#f0f9f9] dark:bg-teal-900/20 flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-[#46627f] dark:text-slate-400" />
                 </div>
                 <div>
-                  <AlertDialogTitle className="text-base font-semibold text-[#34495e]">
+                  <AlertDialogTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
                     Reagendar Prazo Fatal
                   </AlertDialogTitle>
-                  <AlertDialogDescription className="text-xs text-[#46627f] mt-0.5">
+                  <AlertDialogDescription className="text-xs text-[#46627f] dark:text-slate-400 mt-0.5">
                     A nova data de execução ultrapassa o prazo fatal atual
                   </AlertDialogDescription>
                 </div>
@@ -717,21 +717,21 @@ export default function CalendarGridDnD({
             <div className="p-6 space-y-4">
               {/* Info das datas */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-[#f0f9f9] rounded-lg border border-[#89bcbe]/30">
-                  <p className="text-[10px] text-[#46627f] mb-1">Nova Data Execução</p>
-                  <p className="text-sm font-semibold text-[#34495e]">
+                <div className="p-3 bg-[#f0f9f9] dark:bg-teal-900/20 rounded-lg border border-[#89bcbe]/30">
+                  <p className="text-[10px] text-[#46627f] dark:text-slate-400 mb-1">Nova Data Execução</p>
+                  <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                     {pendingMoveWithPrazo?.newDate && format(pendingMoveWithPrazo.newDate, 'dd/MM/yyyy', { locale: ptBR })}
                   </p>
                 </div>
-                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                  <p className="text-[10px] text-slate-500 mb-1">Prazo Fatal Atual</p>
-                  <p className="text-sm font-semibold text-[#34495e]">
+                <div className="p-3 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-1">Prazo Fatal Atual</p>
+                  <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                     {pendingMoveWithPrazo?.prazoFatal && format(pendingMoveWithPrazo.prazoFatal, 'dd/MM/yyyy', { locale: ptBR })}
                   </p>
                 </div>
               </div>
 
-              <p className="text-xs text-[#46627f]">
+              <p className="text-xs text-[#46627f] dark:text-slate-400">
                 Escolha a nova data para o prazo fatal:
               </p>
 
@@ -744,11 +744,11 @@ export default function CalendarGridDnD({
                   >
                     <Calendar className="mr-2 h-4 w-4 text-[#89bcbe]" />
                     {novoPrazoFatalSelecionado ? (
-                      <span className="text-[#34495e] font-medium">
+                      <span className="text-[#34495e] dark:text-slate-200 font-medium">
                         {format(novoPrazoFatalSelecionado, 'dd/MM/yyyy', { locale: ptBR })}
                       </span>
                     ) : (
-                      <span className="text-slate-500">Selecionar data...</span>
+                      <span className="text-slate-500 dark:text-slate-400">Selecionar data...</span>
                     )}
                   </Button>
                 </PopoverTrigger>
@@ -771,7 +771,7 @@ export default function CalendarGridDnD({
             </div>
 
             {/* Footer com opções */}
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-surface-0/50">
               <div className="flex items-center gap-2">
                 <Button
                   onClick={handleConfirmMoveWithPrazo}
@@ -787,7 +787,7 @@ export default function CalendarGridDnD({
                     setPendingMoveWithPrazo(null)
                     setNovoPrazoFatalSelecionado(null)
                   }}
-                  className="flex-1 h-9 text-xs font-medium border-slate-200 hover:bg-white text-[#46627f]"
+                  className="flex-1 h-9 text-xs font-medium border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-surface-1 text-[#46627f] dark:text-slate-400"
                 >
                   Cancelar
                 </Button>

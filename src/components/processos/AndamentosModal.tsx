@@ -154,7 +154,7 @@ export function AndamentosModal({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <RefreshCw className="w-5 h-5 text-blue-600" />
+            <RefreshCw className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             Atualizar Andamentos
           </DialogTitle>
           <DialogDescription>
@@ -167,9 +167,9 @@ export function AndamentosModal({
           {!loading && !concluido && (
             <>
               {/* Contagem */}
-              <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg">
-                <FileText className="w-4 h-4 text-blue-600" />
-                <span className="text-sm text-slate-700">
+              <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-surface-0 rounded-lg">
+                <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm text-slate-700 dark:text-slate-300">
                   {processosComCNJ.length} {processosComCNJ.length === 1 ? 'processo será' : 'processos serão'}{' '}
                   atualizados
                 </span>
@@ -177,9 +177,9 @@ export function AndamentosModal({
 
               {/* Processos sem CNJ */}
               {processosSemCNJ.length > 0 && (
-                <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                  <X className="w-4 h-4 text-amber-600" />
-                  <span className="text-sm text-amber-700">
+                <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-500/10 rounded-lg border border-amber-200 dark:border-amber-700">
+                  <X className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span className="text-sm text-amber-700 dark:text-amber-400">
                     {processosSemCNJ.length} {processosSemCNJ.length === 1 ? 'processo não possui' : 'processos não possuem'}{' '}
                     número CNJ e {processosSemCNJ.length === 1 ? 'será ignorado' : 'serão ignorados'}
                   </span>
@@ -188,9 +188,9 @@ export function AndamentosModal({
 
               {/* Aviso de tempo */}
               {processosComCNJ.length > 5 && (
-                <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <AlertTriangle className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm text-blue-700">
+                <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg border border-blue-200 dark:border-blue-700">
+                  <AlertTriangle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm text-blue-700 dark:text-blue-400">
                     A atualização de muitos processos pode demorar. Aguarde a conclusão.
                   </span>
                 </div>
@@ -202,7 +202,7 @@ export function AndamentosModal({
           {(loading || concluido) && (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">
+                <span className="text-slate-600 dark:text-slate-400">
                   {loading ? 'Atualizando andamentos...' : 'Concluído'}
                 </span>
                 <span className="font-medium">
@@ -217,7 +217,7 @@ export function AndamentosModal({
           {concluido && (
             <div className="space-y-2">
               {sucessos.length > 0 && totalMovimentacoesNovas > 0 && (
-                <div className="flex items-center gap-2 p-2 bg-emerald-50 rounded text-sm text-emerald-700">
+                <div className="flex items-center gap-2 p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded text-sm text-emerald-700 dark:text-emerald-400">
                   <Check className="w-4 h-4" />
                   {sucessos.length} {sucessos.length === 1 ? 'processo atualizado' : 'processos atualizados'}
                   <span className="ml-1">
@@ -228,13 +228,13 @@ export function AndamentosModal({
 
               {/* Sucesso mas sem movimentações novas */}
               {sucessos.length > 0 && totalMovimentacoesNovas === 0 && (
-                <div className="flex items-start gap-2 p-3 bg-blue-50 rounded text-sm text-blue-700 border border-blue-200">
+                <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-500/10 rounded text-sm text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-700">
                   <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="font-medium">
                       {sucessos.length} {sucessos.length === 1 ? 'processo consultado' : 'processos consultados'} - nenhuma movimentação nova encontrada
                     </p>
-                    <p className="text-xs mt-1 text-blue-600">
+                    <p className="text-xs mt-1 text-blue-600 dark:text-blue-400">
                       O Escavador pode não ter histórico para processos recentes (2025).
                       Tente novamente em alguns dias ou com processos mais antigos.
                     </p>
@@ -243,8 +243,8 @@ export function AndamentosModal({
               )}
 
               {erros > 0 && (
-                <div className="p-2 bg-red-50 rounded border border-red-200">
-                  <div className="flex items-center gap-2 text-sm text-red-700">
+                <div className="p-2 bg-red-50 dark:bg-red-500/10 rounded border border-red-200 dark:border-red-700">
+                  <div className="flex items-center gap-2 text-sm text-red-700 dark:text-red-400">
                     <X className="w-4 h-4" />
                     {erros} {erros === 1 ? 'processo falhou' : 'processos falharam'}
                   </div>
@@ -253,16 +253,16 @@ export function AndamentosModal({
                     {resultados
                       .filter(r => r.status === 'erro')
                       .map(r => (
-                        <div key={r.processo_id} className="text-xs text-red-600 flex justify-between gap-2">
+                        <div key={r.processo_id} className="text-xs text-red-600 dark:text-red-400 flex justify-between gap-2">
                           <span className="truncate font-medium">{r.numero_pasta}</span>
-                          <span className="truncate text-red-500">{r.mensagem}</span>
+                          <span className="truncate text-red-500 dark:text-red-400">{r.mensagem}</span>
                         </div>
                       ))}
                   </div>
                 </div>
               )}
               {semCnj > 0 && (
-                <div className="flex items-center gap-2 p-2 bg-amber-50 rounded text-sm text-amber-700">
+                <div className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-500/10 rounded text-sm text-amber-700 dark:text-amber-400">
                   <AlertTriangle className="w-4 h-4" />
                   {semCnj} {semCnj === 1 ? 'processo ignorado' : 'processos ignorados'} (sem CNJ)
                 </div>
@@ -270,15 +270,15 @@ export function AndamentosModal({
 
               {/* Lista detalhada se houver novas movimentações */}
               {totalMovimentacoesNovas > 0 && (
-                <div className="mt-3 pt-3 border-t border-slate-200">
-                  <p className="text-xs text-slate-500 mb-2">Detalhes:</p>
+                <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Detalhes:</p>
                   <div className="max-h-32 overflow-y-auto space-y-1">
                     {sucessos
                       .filter(r => (r.movimentacoes_novas || 0) > 0)
                       .map(r => (
-                        <div key={r.processo_id} className="text-xs text-slate-600 flex justify-between">
+                        <div key={r.processo_id} className="text-xs text-slate-600 dark:text-slate-400 flex justify-between">
                           <span className="truncate">{r.numero_pasta}</span>
-                          <span className="text-emerald-600 ml-2">+{r.movimentacoes_novas}</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 ml-2">+{r.movimentacoes_novas}</span>
                         </div>
                       ))}
                   </div>
@@ -306,7 +306,7 @@ export function AndamentosModal({
           )}
 
           {loading && (
-            <Button disabled className="bg-slate-400">
+            <Button disabled className="bg-slate-400 dark:bg-slate-600">
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Processando...
             </Button>

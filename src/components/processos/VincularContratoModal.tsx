@@ -85,14 +85,14 @@ const FORMA_ICONS: Record<FormaCobranca, React.ElementType> = {
 }
 
 const FORMA_COLORS: Record<FormaCobranca, string> = {
-  fixo: 'bg-blue-100 text-blue-700',
-  por_hora: 'bg-purple-100 text-purple-700',
-  por_cargo: 'bg-indigo-100 text-indigo-700',
-  por_pasta: 'bg-cyan-100 text-cyan-700',
-  por_ato: 'bg-rose-100 text-rose-700',
-  por_etapa: 'bg-emerald-100 text-emerald-700',
-  misto: 'bg-amber-100 text-amber-700',
-  pro_bono: 'bg-pink-100 text-pink-700',
+  fixo: 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400',
+  por_hora: 'bg-purple-100 dark:bg-purple-500/15 text-purple-700 dark:text-purple-400',
+  por_cargo: 'bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400',
+  por_pasta: 'bg-cyan-100 dark:bg-cyan-500/15 text-cyan-700 dark:text-cyan-400',
+  por_ato: 'bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400',
+  por_etapa: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
+  misto: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400',
+  pro_bono: 'bg-pink-100 dark:bg-pink-500/15 text-pink-700 dark:text-pink-400',
 }
 
 export default function VincularContratoModal({
@@ -264,14 +264,14 @@ export default function VincularContratoModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[#34495e]">
+          <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
             <FileText className="h-5 w-5 text-[#89bcbe]" />
             Vincular Contrato
           </DialogTitle>
           <DialogDescription>
             Selecione o contrato de honorários para vincular a este processo
             {clienteNome && (
-              <span className="block mt-1 font-medium text-[#34495e]">
+              <span className="block mt-1 font-medium text-[#34495e] dark:text-slate-200">
                 Cliente: {clienteNome}
               </span>
             )}
@@ -282,25 +282,25 @@ export default function VincularContratoModal({
           {loading ? (
             <div className="text-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-[#89bcbe] mx-auto mb-2" />
-              <p className="text-sm text-slate-600">Carregando contratos...</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Carregando contratos...</p>
             </div>
           ) : !clienteId ? (
             <div className="text-center py-8">
-              <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-              <p className="text-sm text-slate-600">
+              <AlertTriangle className="w-8 h-8 text-amber-500 dark:text-amber-400 mx-auto mb-2" />
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 Este processo não tem um cliente vinculado.
               </p>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Vincule um cliente ao processo primeiro.
               </p>
             </div>
           ) : contratos.length === 0 ? (
             <div className="text-center py-8">
-              <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-sm text-slate-600">
+              <FileText className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 Nenhum contrato ativo encontrado para este cliente.
               </p>
-              <p className="text-xs text-slate-500 mt-2 mb-4">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 mb-4">
                 Crie um contrato de honorários para vincular a este processo.
               </p>
               <Button
@@ -327,8 +327,8 @@ export default function VincularContratoModal({
                       className={cn(
                         'relative flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all',
                         isSelected
-                          ? 'border-[#89bcbe] bg-[#f0f9f9]'
-                          : 'border-slate-200 hover:border-slate-300 bg-white'
+                          ? 'border-[#89bcbe] bg-[#f0f9f9] dark:bg-teal-900/20'
+                          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-surface-1'
                       )}
                       onClick={() => setSelectedContrato(contrato.id)}
                     >
@@ -339,10 +339,10 @@ export default function VincularContratoModal({
                       >
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="text-sm font-semibold text-[#34495e]">
+                            <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                               {contrato.numero_contrato}
                             </p>
-                            <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
+                            <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
                               <Calendar className="w-3 h-3" />
                               <span>
                                 {formatBrazilDate(parseDateInBrazil(contrato.data_inicio))}
@@ -360,7 +360,7 @@ export default function VincularContratoModal({
                               </Badge>
                             ))}
                             {contrato.formas_disponiveis.length > 2 && (
-                              <Badge className="text-[9px] px-1.5 py-0 bg-slate-100 text-slate-600">
+                              <Badge className="text-[9px] px-1.5 py-0 bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400">
                                 +{contrato.formas_disponiveis.length - 2}
                               </Badge>
                             )}
@@ -369,7 +369,7 @@ export default function VincularContratoModal({
 
                         {/* Info dos valores */}
                         {(contrato.config.valor_hora || contrato.config.valor_fixo || contrato.config.valor_por_processo) && (
-                          <div className="flex flex-wrap gap-3 mt-2 pt-2 border-t border-slate-100 text-xs text-slate-500">
+                          <div className="flex flex-wrap gap-3 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
                             {contrato.config.valor_hora && (
                               <span>
                                 <Clock className="w-3 h-3 inline mr-0.5" />
@@ -398,8 +398,8 @@ export default function VincularContratoModal({
 
               {/* Seletor de Modalidade (se múltiplas formas) */}
               {contratoSelecionado && contratoSelecionado.formas_disponiveis.length > 1 && (
-                <div className="mt-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
-                  <p className="text-xs font-semibold text-[#34495e] mb-2">
+                <div className="mt-4 p-3 rounded-lg bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700">
+                  <p className="text-xs font-semibold text-[#34495e] dark:text-slate-200 mb-2">
                     Selecione a modalidade de cobrança para este processo:
                   </p>
                   <RadioGroup
@@ -415,8 +415,8 @@ export default function VincularContratoModal({
                           className={cn(
                             'flex items-center gap-2 p-2 rounded-md border cursor-pointer transition-all',
                             selectedModalidade === forma
-                              ? 'border-[#89bcbe] bg-white'
-                              : 'border-transparent hover:border-slate-300 bg-white/50'
+                              ? 'border-[#89bcbe] bg-white dark:bg-surface-1'
+                              : 'border-transparent hover:border-slate-300 dark:hover:border-slate-600 bg-white/50'
                           )}
                           onClick={() => setSelectedModalidade(forma)}
                         >
@@ -437,9 +437,9 @@ export default function VincularContratoModal({
 
               {/* Aviso obrigatório */}
               {contratoSelecionado && contratoSelecionado.formas_disponiveis.length > 1 && !selectedModalidade && (
-                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200">
-                  <AlertTriangle className="w-4 h-4 text-amber-600" />
-                  <span className="text-xs text-amber-700">
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-700">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span className="text-xs text-amber-700 dark:text-amber-400">
                     Selecione a modalidade de cobrança acima
                   </span>
                 </div>
@@ -447,9 +447,9 @@ export default function VincularContratoModal({
 
               {/* Erro */}
               {error && (
-                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-red-50 border border-red-200">
-                  <AlertTriangle className="w-4 h-4 text-red-600" />
-                  <span className="text-xs text-red-700">{error}</span>
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-700">
+                  <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                  <span className="text-xs text-red-700 dark:text-red-400">{error}</span>
                 </div>
               )}
             </div>

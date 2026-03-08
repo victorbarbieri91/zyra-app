@@ -24,10 +24,10 @@ function AlertaItem({ label, value, sublabel, color, href, onClick }: AlertaItem
   }
 
   const valueColors = {
-    red: 'text-red-600',
-    amber: 'text-amber-600',
-    yellow: 'text-yellow-600',
-    emerald: 'text-emerald-600',
+    red: 'text-red-600 dark:text-red-400',
+    amber: 'text-amber-600 dark:text-amber-400',
+    yellow: 'text-yellow-600 dark:text-yellow-400',
+    emerald: 'text-emerald-600 dark:text-emerald-400',
   }
 
   const isClickable = href || onClick
@@ -35,11 +35,11 @@ function AlertaItem({ label, value, sublabel, color, href, onClick }: AlertaItem
   const content = (
     <div className={cn(
       'flex items-center gap-2.5 px-2 py-2 rounded-lg transition-colors',
-      isClickable && 'hover:bg-slate-50 cursor-pointer'
+      isClickable && 'hover:bg-slate-50 dark:hover:bg-surface-2 cursor-pointer'
     )}>
       <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', dotColors[color])} />
       <div className="flex-1 min-w-0">
-        <span className="text-[11px] text-slate-600">{label}</span>
+        <span className="text-[11px] text-slate-600 dark:text-slate-400">{label}</span>
         {sublabel && (
           <span className="text-[10px] text-slate-400 ml-1">({sublabel})</span>
         )}
@@ -73,12 +73,12 @@ export default function AlertasCard({ className, onAudienciasClick }: AlertasCar
       className
     )}>
       <CardHeader className="pb-1 pt-5 px-5">
-        <CardTitle className="text-sm flex items-center gap-2 text-[#34495e]">
+        <CardTitle className="text-sm flex items-center gap-2 text-[#34495e] dark:text-slate-200">
           <span className="font-bold">Atenção Imediata</span>
           {totalAlertas > 0 && (
             <span className={cn(
               'inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-semibold',
-              temAlertasCriticos ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+              temAlertasCriticos ? 'bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400' : 'bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'
             )}>
               {totalAlertas}
             </span>

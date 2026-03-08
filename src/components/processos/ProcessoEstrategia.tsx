@@ -72,7 +72,7 @@ export default function ProcessoEstrategia({ processoId }: ProcessoEstrategiaPro
 
   if (loading) {
     return (
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardContent className="py-12">
           <div className="flex items-center justify-center">
             <Loader2 className="w-6 h-6 animate-spin text-[#89bcbe]" />
@@ -85,13 +85,13 @@ export default function ProcessoEstrategia({ processoId }: ProcessoEstrategiaPro
   // Empty State
   if (estrategias.length === 0) {
     return (
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardContent className="py-12 text-center">
-          <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-surface-2 flex items-center justify-center mx-auto mb-4">
             <Lightbulb className="w-8 h-8 text-slate-400" />
           </div>
-          <p className="text-sm font-medium text-slate-600 mb-1">Nenhuma estratégia cadastrada</p>
-          <p className="text-xs text-slate-500 mb-4">
+          <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Nenhuma estratégia cadastrada</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
             Defina a estratégia processual, teses principais e próximos passos
           </p>
           <Button className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e] text-white">
@@ -117,16 +117,16 @@ export default function ProcessoEstrategia({ processoId }: ProcessoEstrategiaPro
             className={`cursor-pointer transition-all ${
               e.id === versaoSelecionada
                 ? 'border-[#89bcbe] shadow-lg'
-                : 'border-slate-200 hover:border-slate-300'
+                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
             }`}
             onClick={() => setVersaoSelecionada(e.id)}
           >
             <CardContent className="p-3">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-semibold text-[#34495e]">Versão {e.versao}</span>
+                <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">Versão {e.versao}</span>
                 {e.is_versao_atual && <Badge className="text-[10px] bg-emerald-600">Atual</Badge>}
               </div>
-              <p className="text-xs text-slate-600">{formatBrazilDate(e.created_at)}</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400">{formatBrazilDate(e.created_at)}</p>
             </CardContent>
           </Card>
         ))}
@@ -135,10 +135,10 @@ export default function ProcessoEstrategia({ processoId }: ProcessoEstrategiaPro
       {/* Conteúdo da Estratégia */}
       <div className="col-span-9 space-y-6">
         {estrategiaAtual ? (
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-medium text-[#34495e]">
+                <CardTitle className="text-lg font-medium text-[#34495e] dark:text-slate-200">
                   Estratégia - Versão {estrategiaAtual.versao}
                 </CardTitle>
                 <Button variant="outline">
@@ -151,18 +151,18 @@ export default function ProcessoEstrategia({ processoId }: ProcessoEstrategiaPro
               {/* Resumo do Caso */}
               {estrategiaAtual.resumo_caso && (
                 <div>
-                  <h4 className="text-sm font-semibold text-[#34495e] mb-2">Resumo do Caso</h4>
-                  <p className="text-sm text-slate-700 leading-relaxed">{estrategiaAtual.resumo_caso}</p>
+                  <h4 className="text-sm font-semibold text-[#34495e] dark:text-slate-200 mb-2">Resumo do Caso</h4>
+                  <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{estrategiaAtual.resumo_caso}</p>
                 </div>
               )}
 
               {/* Objetivo/Tese Principal */}
               {(estrategiaAtual.objetivo_principal || estrategiaAtual.estrategia_texto) && (
-                <div className="p-4 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] rounded-lg">
-                  <h4 className="text-sm font-semibold text-[#34495e] mb-2">
+                <div className="p-4 bg-gradient-to-br from-[#f0f9f9] dark:from-teal-900/20 to-[#e8f5f5] dark:to-teal-900/15 rounded-lg">
+                  <h4 className="text-sm font-semibold text-[#34495e] dark:text-slate-200 mb-2">
                     {estrategiaAtual.objetivo_principal ? 'Objetivo Principal' : 'Estratégia'}
                   </h4>
-                  <p className="text-sm text-slate-700 leading-relaxed">
+                  <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                     {estrategiaAtual.objetivo_principal || estrategiaAtual.estrategia_texto}
                   </p>
                 </div>
@@ -171,10 +171,10 @@ export default function ProcessoEstrategia({ processoId }: ProcessoEstrategiaPro
               {/* Teses Principais */}
               {estrategiaAtual.teses_principais && estrategiaAtual.teses_principais.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-semibold text-[#34495e] mb-2">Teses Principais</h4>
+                  <h4 className="text-sm font-semibold text-[#34495e] dark:text-slate-200 mb-2">Teses Principais</h4>
                   <ul className="space-y-1">
                     {estrategiaAtual.teses_principais.map((tese, i) => (
-                      <li key={i} className="text-sm text-slate-700 flex items-start gap-2">
+                      <li key={i} className="text-sm text-slate-700 dark:text-slate-300 flex items-start gap-2">
                         <span className="text-[#89bcbe] mt-1">•</span>
                         {tese}
                       </li>
@@ -186,10 +186,10 @@ export default function ProcessoEstrategia({ processoId }: ProcessoEstrategiaPro
               {/* Teses Subsidiárias */}
               {estrategiaAtual.teses_subsidiarias && estrategiaAtual.teses_subsidiarias.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-semibold text-[#34495e] mb-2">Teses Subsidiárias</h4>
+                  <h4 className="text-sm font-semibold text-[#34495e] dark:text-slate-200 mb-2">Teses Subsidiárias</h4>
                   <ul className="space-y-1">
                     {estrategiaAtual.teses_subsidiarias.map((tese, i) => (
-                      <li key={i} className="text-sm text-slate-700 flex items-start gap-2">
+                      <li key={i} className="text-sm text-slate-700 dark:text-slate-300 flex items-start gap-2">
                         <span className="text-slate-400 mt-1">•</span>
                         {tese}
                       </li>
@@ -202,9 +202,9 @@ export default function ProcessoEstrategia({ processoId }: ProcessoEstrategiaPro
               {(estrategiaAtual.pontos_fortes?.length || estrategiaAtual.pontos_fracos?.length || estrategiaAtual.riscos_identificados?.length) && (
                 <div className="grid grid-cols-3 gap-4">
                   {estrategiaAtual.pontos_fortes && estrategiaAtual.pontos_fortes.length > 0 && (
-                    <Card className="border-emerald-200 bg-emerald-50">
+                    <Card className="border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10">
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-semibold text-emerald-800 flex items-center gap-2">
+                        <CardTitle className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 flex items-center gap-2">
                           <CheckCircle className="w-4 h-4" />
                           Pontos Fortes
                         </CardTitle>
@@ -212,7 +212,7 @@ export default function ProcessoEstrategia({ processoId }: ProcessoEstrategiaPro
                       <CardContent>
                         <ul className="space-y-1">
                           {estrategiaAtual.pontos_fortes.map((ponto, i) => (
-                            <li key={i} className="text-xs text-emerald-700">• {ponto.descricao}</li>
+                            <li key={i} className="text-xs text-emerald-700 dark:text-emerald-400">• {ponto.descricao}</li>
                           ))}
                         </ul>
                       </CardContent>
@@ -220,9 +220,9 @@ export default function ProcessoEstrategia({ processoId }: ProcessoEstrategiaPro
                   )}
 
                   {estrategiaAtual.pontos_fracos && estrategiaAtual.pontos_fracos.length > 0 && (
-                    <Card className="border-amber-200 bg-amber-50">
+                    <Card className="border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10">
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-semibold text-amber-800 flex items-center gap-2">
+                        <CardTitle className="text-sm font-semibold text-amber-800 dark:text-amber-400 flex items-center gap-2">
                           <XCircle className="w-4 h-4" />
                           Pontos Fracos
                         </CardTitle>
@@ -230,7 +230,7 @@ export default function ProcessoEstrategia({ processoId }: ProcessoEstrategiaPro
                       <CardContent>
                         <ul className="space-y-1">
                           {estrategiaAtual.pontos_fracos.map((ponto, i) => (
-                            <li key={i} className="text-xs text-amber-700">• {ponto.descricao}</li>
+                            <li key={i} className="text-xs text-amber-700 dark:text-amber-400">• {ponto.descricao}</li>
                           ))}
                         </ul>
                       </CardContent>
@@ -238,9 +238,9 @@ export default function ProcessoEstrategia({ processoId }: ProcessoEstrategiaPro
                   )}
 
                   {estrategiaAtual.riscos_identificados && estrategiaAtual.riscos_identificados.length > 0 && (
-                    <Card className="border-red-200 bg-red-50">
+                    <Card className="border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10">
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-semibold text-red-800 flex items-center gap-2">
+                        <CardTitle className="text-sm font-semibold text-red-800 dark:text-red-400 flex items-center gap-2">
                           <AlertTriangle className="w-4 h-4" />
                           Riscos
                         </CardTitle>
@@ -248,7 +248,7 @@ export default function ProcessoEstrategia({ processoId }: ProcessoEstrategiaPro
                       <CardContent>
                         <ul className="space-y-1">
                           {estrategiaAtual.riscos_identificados.map((risco, i) => (
-                            <li key={i} className="text-xs text-red-700">• {risco.descricao}</li>
+                            <li key={i} className="text-xs text-red-700 dark:text-red-400">• {risco.descricao}</li>
                           ))}
                         </ul>
                       </CardContent>
@@ -260,14 +260,14 @@ export default function ProcessoEstrategia({ processoId }: ProcessoEstrategiaPro
               {/* Próximos Passos */}
               {estrategiaAtual.proximos_passos && estrategiaAtual.proximos_passos.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-semibold text-[#34495e] mb-3">Próximos Passos</h4>
+                  <h4 className="text-sm font-semibold text-[#34495e] dark:text-slate-200 mb-3">Próximos Passos</h4>
                   <div className="space-y-2">
                     {estrategiaAtual.proximos_passos.map((passo, i) => (
-                      <div key={i} className="flex items-start gap-3 p-2 bg-slate-50 rounded-lg">
+                      <div key={i} className="flex items-start gap-3 p-2 bg-slate-50 dark:bg-surface-0 rounded-lg">
                         <div className="w-5 h-5 rounded bg-[#89bcbe] text-white text-xs flex items-center justify-center font-semibold flex-shrink-0 mt-0.5">
                           {i + 1}
                         </div>
-                        <p className="text-sm text-slate-700 flex-1">{passo.acao}</p>
+                        <p className="text-sm text-slate-700 dark:text-slate-300 flex-1">{passo.acao}</p>
                       </div>
                     ))}
                   </div>
@@ -276,9 +276,9 @@ export default function ProcessoEstrategia({ processoId }: ProcessoEstrategiaPro
             </CardContent>
           </Card>
         ) : (
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
             <CardContent className="py-8 text-center">
-              <p className="text-sm text-slate-500">Selecione uma versão para visualizar</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Selecione uma versão para visualizar</p>
             </CardContent>
           </Card>
         )}

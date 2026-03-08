@@ -125,11 +125,11 @@ function EventListItem({
     <div
       onClick={onClick}
       className={cn(
-        "group bg-white rounded-lg border transition-all cursor-pointer",
+        "group bg-white dark:bg-surface-1 rounded-lg border transition-all cursor-pointer",
         "hover:shadow-md hover:border-[#89bcbe]/50",
         isPastEvent && !isEventToday && "opacity-60",
         isCompact ? "p-3" : "p-4",
-        "border-slate-200"
+        "border-slate-200 dark:border-slate-700"
       )}
     >
       <div className="flex items-start gap-3">
@@ -142,10 +142,10 @@ function EventListItem({
         {/* Icon */}
         <div className={cn(
           "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
-          evento.tipo === 'audiencia' ? "bg-emerald-100 text-emerald-600" :
-          evento.tipo === 'tarefa' ? "bg-purple-100 text-purple-600" :
-          evento.tipo === 'prazo' ? "bg-red-100 text-red-600" :
-          "bg-blue-100 text-blue-600"
+          evento.tipo === 'audiencia' ? "bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" :
+          evento.tipo === 'tarefa' ? "bg-purple-100 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400" :
+          evento.tipo === 'prazo' ? "bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400" :
+          "bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400"
         )}>
           {getTipoIcon(evento.tipo)}
         </div>
@@ -155,7 +155,7 @@ function EventListItem({
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1">
               <h4 className={cn(
-                "font-semibold text-[#34495e] group-hover:text-[#89bcbe] transition-colors",
+                "font-semibold text-[#34495e] dark:text-slate-200 group-hover:text-[#89bcbe] transition-colors",
                 isCompact ? "text-sm" : "text-base"
               )}>
                 {evento.titulo}
@@ -164,7 +164,7 @@ function EventListItem({
               {/* Date and Time */}
               <div className="flex items-center gap-3 mt-1">
                 {showDate && (
-                  <div className="flex items-center gap-1 text-xs text-slate-600">
+                  <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
                     <Calendar className="w-3 h-3" />
                     <span className="font-medium">
                       {isEventToday ? 'Hoje' :
@@ -175,7 +175,7 @@ function EventListItem({
                 )}
 
                 {!evento.dia_inteiro && (
-                  <div className="flex items-center gap-1 text-xs text-slate-600">
+                  <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
                     <Clock className="w-3 h-3" />
                     <span>{format(evento.data_inicio, 'HH:mm')}</span>
                     {evento.data_fim && (
@@ -195,14 +195,14 @@ function EventListItem({
               {!isCompact && (
                 <div className="flex items-center gap-3 mt-2">
                   {evento.local && (
-                    <div className="flex items-center gap-1 text-xs text-slate-500">
+                    <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                       <MapPin className="w-3 h-3" />
                       <span className="truncate max-w-[150px]">{evento.local}</span>
                     </div>
                   )}
 
                   {evento.responsavel_nome && (
-                    <div className="flex items-center gap-1 text-xs text-slate-500">
+                    <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                       <User className="w-3 h-3" />
                       <span>{evento.responsavel_nome}</span>
                     </div>
@@ -214,7 +214,7 @@ function EventListItem({
             {/* Status and Action */}
             <div className="flex items-center gap-2">
               {getStatusIcon(evento.status)}
-              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#89bcbe] transition-colors" />
+              <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-[#89bcbe] transition-colors" />
             </div>
           </div>
         </div>
@@ -353,25 +353,25 @@ export default function ListViewEnhanced({
   return (
     <div className={cn('space-y-6', className)}>
       {/* Header with Controls */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardHeader className="pb-4">
           <div className="space-y-4">
             {/* Title and Stats */}
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold text-[#34495e]">Eventos e Tarefas</h2>
+                <h2 className="text-xl font-semibold text-[#34495e] dark:text-slate-200">Eventos e Tarefas</h2>
                 <div className="flex items-center gap-4 mt-1">
-                  <span className="text-xs text-slate-600">
+                  <span className="text-xs text-slate-600 dark:text-slate-400">
                     <span className="font-semibold text-[#89bcbe]">{stats.total}</span> total
                   </span>
-                  <span className="text-xs text-slate-600">
-                    <span className="font-semibold text-blue-600">{stats.hoje}</span> hoje
+                  <span className="text-xs text-slate-600 dark:text-slate-400">
+                    <span className="font-semibold text-blue-600 dark:text-blue-400">{stats.hoje}</span> hoje
                   </span>
-                  <span className="text-xs text-slate-600">
-                    <span className="font-semibold text-amber-600">{stats.pendentes}</span> pendentes
+                  <span className="text-xs text-slate-600 dark:text-slate-400">
+                    <span className="font-semibold text-amber-600 dark:text-amber-400">{stats.pendentes}</span> pendentes
                   </span>
-                  <span className="text-xs text-slate-600">
-                    <span className="font-semibold text-green-600">{stats.realizados}</span> realizados
+                  <span className="text-xs text-slate-600 dark:text-slate-400">
+                    <span className="font-semibold text-green-600 dark:text-green-400">{stats.realizados}</span> realizados
                   </span>
                 </div>
               </div>
@@ -395,13 +395,13 @@ export default function ListViewEnhanced({
                   placeholder="Buscar eventos..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 h-9 text-sm border-slate-200 focus:border-[#89bcbe]"
+                  className="pl-9 h-9 text-sm border-slate-200 dark:border-slate-700 focus:border-[#89bcbe]"
                 />
               </div>
 
               {/* Period Filter */}
               <Select value={selectedPeriod} onValueChange={(v: any) => setSelectedPeriod(v)}>
-                <SelectTrigger className="w-[140px] h-9 text-sm border-slate-200">
+                <SelectTrigger className="w-[140px] h-9 text-sm border-slate-200 dark:border-slate-700">
                   <CalendarDays className="w-3.5 h-3.5 mr-1.5" />
                   <SelectValue />
                 </SelectTrigger>
@@ -415,7 +415,7 @@ export default function ListViewEnhanced({
 
               {/* Type Filter */}
               <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-[140px] h-9 text-sm border-slate-200">
+                <SelectTrigger className="w-[140px] h-9 text-sm border-slate-200 dark:border-slate-700">
                   <Filter className="w-3.5 h-3.5 mr-1.5" />
                   <SelectValue />
                 </SelectTrigger>
@@ -431,7 +431,7 @@ export default function ListViewEnhanced({
               {/* Sort */}
               <div className="flex items-center gap-1">
                 <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
-                  <SelectTrigger className="w-[120px] h-9 text-sm border-slate-200">
+                  <SelectTrigger className="w-[120px] h-9 text-sm border-slate-200 dark:border-slate-700">
                     <ArrowUpDown className="w-3.5 h-3.5 mr-1.5" />
                     <SelectValue />
                   </SelectTrigger>
@@ -455,7 +455,7 @@ export default function ListViewEnhanced({
               </div>
 
               {/* View Mode */}
-              <div className="flex items-center gap-1 border rounded-lg p-1 border-slate-200">
+              <div className="flex items-center gap-1 border rounded-lg p-1 border-slate-200 dark:border-slate-700">
                 <Button
                   variant={viewMode === 'timeline' ? 'default' : 'ghost'}
                   size="sm"
@@ -488,14 +488,14 @@ export default function ListViewEnhanced({
 
       {/* Events List */}
       {processedEventos.length === 0 ? (
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
           <CardContent className="py-12">
             <div className="text-center">
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Calendar className="w-8 h-8 text-slate-400" />
+              <div className="w-16 h-16 bg-slate-100 dark:bg-surface-2 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Calendar className="w-8 h-8 text-slate-400 dark:text-slate-500" />
               </div>
-              <p className="text-sm text-[#6c757d] mb-1">Nenhum evento encontrado</p>
-              <p className="text-xs text-slate-400">
+              <p className="text-sm text-[#6c757d] dark:text-slate-400 mb-1">Nenhum evento encontrado</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500">
                 {searchTerm || filterType !== 'all' || filterStatus !== 'all'
                   ? 'Tente ajustar os filtros'
                   : 'Comece criando seu primeiro evento'}
@@ -523,12 +523,12 @@ export default function ListViewEnhanced({
           {viewMode === 'grouped' && (
             <div className="space-y-6">
               {groupedEventos.map(([groupName, groupEventos]) => (
-                <Card key={groupName} className="border-slate-200 shadow-sm">
+                <Card key={groupName} className="border-slate-200 dark:border-slate-700 shadow-sm">
                   <CardHeader className="pb-3">
-                    <h3 className="text-sm font-semibold text-[#34495e] flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-[#34495e] dark:text-slate-200 flex items-center gap-2">
                       {groupName === 'Hoje' && <div className="w-2 h-2 rounded-full bg-[#89bcbe]" />}
                       {groupName}
-                      <span className="text-xs font-normal text-slate-500 ml-1">
+                      <span className="text-xs font-normal text-slate-500 dark:text-slate-400 ml-1">
                         ({groupEventos.length})
                       </span>
                     </h3>
@@ -550,7 +550,7 @@ export default function ListViewEnhanced({
 
           {/* Compact View */}
           {viewMode === 'compact' && (
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
               <CardContent className="p-3 space-y-2">
                 {processedEventos.map((evento) => (
                   <EventListItem

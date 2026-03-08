@@ -65,14 +65,14 @@ export function NovoProcessoDropdown({ onProcessoCriado }: NovoProcessoDropdownP
             onClick={() => setShowBuscaCNJ(true)}
             className="flex items-start gap-3 p-3 cursor-pointer"
           >
-            <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
-              <Search className="w-4 h-4 text-emerald-600" />
+            <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+              <Search className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-sm text-slate-900">
+              <div className="font-medium text-sm text-slate-900 dark:text-slate-100">
                 Buscar por CNJ
               </div>
-              <div className="text-xs text-slate-500 mt-0.5">
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Importar dados automaticamente
               </div>
             </div>
@@ -84,14 +84,14 @@ export function NovoProcessoDropdown({ onProcessoCriado }: NovoProcessoDropdownP
             onClick={() => setShowWizardManual(true)}
             className="flex items-start gap-3 p-3 cursor-pointer"
           >
-            <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-              <FileEdit className="w-4 h-4 text-slate-600" />
+            <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-surface-2 flex items-center justify-center flex-shrink-0">
+              <FileEdit className="w-4 h-4 text-slate-600 dark:text-slate-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-sm text-slate-900">
+              <div className="font-medium text-sm text-slate-900 dark:text-slate-100">
                 Cadastro Manual
               </div>
-              <div className="text-xs text-slate-500 mt-0.5">
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Preencher todos os dados
               </div>
             </div>

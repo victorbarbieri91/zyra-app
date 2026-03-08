@@ -483,7 +483,7 @@ export default function DespesaModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[#34495e]">
+          <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
             <Receipt className="w-5 h-5 text-[#89bcbe]" />
             Nova Despesa
           </DialogTitle>
@@ -492,23 +492,23 @@ export default function DespesaModal({
         <div className="space-y-4">
           {/* Vinculo - Card quando pre-carregado ou selecionado */}
           {loadingVinculo ? (
-            <div className="rounded-lg border border-slate-200 px-4 py-3 flex items-center gap-3">
+            <div className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center gap-3">
               <Loader2 className="w-4 h-4 animate-spin text-[#89bcbe]" />
-              <span className="text-xs text-slate-500">Carregando vínculo...</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Carregando vínculo...</span>
             </div>
           ) : hasSelection ? (
-            <div className="rounded-lg border border-slate-200 overflow-hidden">
-              <div className="flex items-center justify-between px-3 py-1.5 bg-slate-100 border-b border-slate-200">
+            <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-1.5 bg-slate-100 dark:bg-surface-2 border-b border-slate-200 dark:border-slate-700">
                 <div className="flex items-center gap-1.5">
                   {processoSelecionado ? (
                     <>
-                      <FileText className="w-3 h-3 text-[#34495e]" />
-                      <span className="text-[10px] font-medium text-[#34495e] uppercase tracking-wide">Processo</span>
+                      <FileText className="w-3 h-3 text-[#34495e] dark:text-slate-200" />
+                      <span className="text-[10px] font-medium text-[#34495e] dark:text-slate-200 uppercase tracking-wide">Processo</span>
                     </>
                   ) : (
                     <>
-                      <Briefcase className="w-3 h-3 text-[#34495e]" />
-                      <span className="text-[10px] font-medium text-[#34495e] uppercase tracking-wide">Consultivo</span>
+                      <Briefcase className="w-3 h-3 text-[#34495e] dark:text-slate-200" />
+                      <span className="text-[10px] font-medium text-[#34495e] dark:text-slate-200 uppercase tracking-wide">Consultivo</span>
                     </>
                   )}
                 </div>
@@ -517,33 +517,33 @@ export default function DespesaModal({
                     onClick={handleClearSelection}
                     className="p-0.5 rounded hover:bg-slate-200 transition-colors"
                   >
-                    <X className="w-3 h-3 text-slate-500" />
+                    <X className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                   </button>
                 )}
               </div>
               <div className="px-3 py-2">
                 {processoSelecionado && (
                   <>
-                    <p className="text-sm font-medium text-[#34495e]">
+                    <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                       {processoSelecionado.numero_cnj}
                     </p>
                     {processoSelecionado.numero_pasta && (
-                      <p className="text-[10px] text-slate-500">Pasta: {processoSelecionado.numero_pasta}</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">Pasta: {processoSelecionado.numero_pasta}</p>
                     )}
                   </>
                 )}
                 {consultaSelecionada && (
                   <>
-                    <p className="text-sm font-medium text-[#34495e]">
+                    <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                       {consultaSelecionada.titulo}
                     </p>
                     {consultaSelecionada.numero && (
-                      <p className="text-[10px] text-slate-500">#{consultaSelecionada.numero}</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">#{consultaSelecionada.numero}</p>
                     )}
                   </>
                 )}
                 {(processoSelecionado?.cliente_nome || consultaSelecionada?.cliente_nome) && (
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     Cliente: {processoSelecionado?.cliente_nome || consultaSelecionada?.cliente_nome}
                   </p>
                 )}
@@ -552,17 +552,17 @@ export default function DespesaModal({
           ) : !hasPresetVinculo ? (
             /* Busca de processo/consulta */
             <div className="space-y-2">
-              <Label className="text-xs text-slate-600">Vincular a (opcional)</Label>
+              <Label className="text-xs text-slate-600 dark:text-slate-400">Vincular a (opcional)</Label>
 
               {/* Tabs */}
-              <div className="flex gap-1 p-0.5 bg-slate-100 rounded-md">
+              <div className="flex gap-1 p-0.5 bg-slate-100 dark:bg-surface-2 rounded-md">
                 <button
                   onClick={() => { setVinculoTipo('processo'); setSearchTerm(''); setProcessos([]); setConsultas([]) }}
                   className={cn(
                     'flex-1 text-xs py-1.5 rounded transition-colors',
                     vinculoTipo === 'processo'
-                      ? 'bg-white shadow-sm text-[#34495e] font-medium'
-                      : 'text-slate-500 hover:text-slate-700'
+                      ? 'bg-white dark:bg-surface-1 shadow-sm text-[#34495e] dark:text-slate-200 font-medium'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300'
                   )}
                 >
                   <FileText className="w-3 h-3 inline mr-1" />
@@ -573,8 +573,8 @@ export default function DespesaModal({
                   className={cn(
                     'flex-1 text-xs py-1.5 rounded transition-colors',
                     vinculoTipo === 'consulta'
-                      ? 'bg-white shadow-sm text-[#34495e] font-medium'
-                      : 'text-slate-500 hover:text-slate-700'
+                      ? 'bg-white dark:bg-surface-1 shadow-sm text-[#34495e] dark:text-slate-200 font-medium'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300'
                   )}
                 >
                   <Briefcase className="w-3 h-3 inline mr-1" />
@@ -598,16 +598,16 @@ export default function DespesaModal({
 
               {/* Search results */}
               {opcoes.length > 0 && (
-                <div className="max-h-[160px] overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100">
+                <div className="max-h-[160px] overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700">
                   {vinculoTipo === 'processo'
                     ? processos.map((p) => (
                         <button
                           key={p.id}
                           onClick={() => handleSelectProcesso(p)}
-                          className="w-full text-left px-3 py-2 hover:bg-slate-50 transition-colors"
+                          className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0 transition-colors"
                         >
-                          <p className="text-xs font-medium text-[#34495e]">{p.numero_cnj}</p>
-                          <p className="text-[10px] text-slate-500">
+                          <p className="text-xs font-medium text-[#34495e] dark:text-slate-200">{p.numero_cnj}</p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400">
                             {p.numero_pasta && `Pasta: ${p.numero_pasta} · `}
                             {p.cliente_nome || 'Sem cliente'}
                           </p>
@@ -617,10 +617,10 @@ export default function DespesaModal({
                         <button
                           key={c.id}
                           onClick={() => handleSelectConsulta(c)}
-                          className="w-full text-left px-3 py-2 hover:bg-slate-50 transition-colors"
+                          className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0 transition-colors"
                         >
-                          <p className="text-xs font-medium text-[#34495e]">{c.titulo}</p>
-                          <p className="text-[10px] text-slate-500">
+                          <p className="text-xs font-medium text-[#34495e] dark:text-slate-200">{c.titulo}</p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400">
                             {c.numero && `#${c.numero} · `}
                             {c.cliente_nome || 'Sem cliente'}
                           </p>
@@ -714,13 +714,13 @@ export default function DespesaModal({
             <button
               type="button"
               onClick={() => setShowExtras(!showExtras)}
-              className="text-xs text-[#46627f] hover:text-[#34495e] font-medium transition-colors"
+              className="text-xs text-[#46627f] dark:text-slate-400 hover:text-[#34495e] dark:text-slate-200 font-medium transition-colors"
             >
               {showExtras ? '- Ocultar detalhes adicionais' : '+ Detalhes adicionais (fornecedor, NF, comprovante)'}
             </button>
 
             {showExtras && (
-              <div className="mt-3 space-y-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="mt-3 space-y-3 p-3 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-200 dark:border-slate-700">
                 <div>
                   <Label htmlFor="fornecedor">Fornecedor</Label>
                   <Input
@@ -748,7 +748,7 @@ export default function DespesaModal({
                     value={formData.comprovante_url}
                     onChange={(e) => updateField('comprovante_url', e.target.value)}
                   />
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Link para o comprovante armazenado (ex: Drive, Dropbox)
                   </p>
                 </div>
@@ -757,7 +757,7 @@ export default function DespesaModal({
           </div>
 
           {/* Reembolsavel - Cobrar do cliente */}
-          <div className="p-4 rounded-lg border border-slate-200 bg-slate-50 space-y-3">
+          <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-surface-0 space-y-3">
             <div className="flex items-start gap-3">
               <Checkbox
                 id="reembolsavel"
@@ -768,7 +768,7 @@ export default function DespesaModal({
                 <Label htmlFor="reembolsavel" className="cursor-pointer">
                   <span className="font-medium">Cobrar do cliente</span>
                 </Label>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Despesa será incluída na fatura para reembolso pelo cliente
                 </p>
               </div>
@@ -776,15 +776,15 @@ export default function DespesaModal({
 
             {formData.reembolsavel ? (
               <div className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-emerald-600" />
-                <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
+                <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <Badge variant="outline" className="text-xs bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200">
                   Será incluída em fatura para o cliente
                 </Badge>
               </div>
             ) : (
               <div className="flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-slate-400" />
-                <Badge variant="outline" className="text-xs bg-slate-100 text-slate-600 border-slate-200">
+                <Badge variant="outline" className="text-xs bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700">
                   Despesa interna do escritório
                 </Badge>
               </div>
@@ -793,9 +793,9 @@ export default function DespesaModal({
 
           {/* Aviso se nao vincular a processo/consulta */}
           {!hasSelection && !hasPresetVinculo && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
-              <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-              <div className="text-xs text-amber-700">
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+              <div className="text-xs text-amber-700 dark:text-amber-400">
                 <p className="font-medium">Despesa sem vínculo a caso</p>
                 <p>Será registrada como despesa geral do escritório.</p>
               </div>
@@ -804,7 +804,7 @@ export default function DespesaModal({
         </div>
 
         {/* Botoes */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancelar
           </Button>

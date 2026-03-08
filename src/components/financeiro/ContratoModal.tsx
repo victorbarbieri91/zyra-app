@@ -716,6 +716,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
+      minimumFractionDigits: 2,
     }).format(value)
   }
 
@@ -723,7 +724,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[#34495e]">
+          <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
             <FileText className="h-5 w-5 text-[#89bcbe]" />
             {contrato ? 'Editar Contrato' : 'Novo Contrato de Honorários'}
           </DialogTitle>
@@ -743,7 +744,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                   'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors',
                   step >= s
                     ? 'bg-[#89bcbe] text-white'
-                    : 'bg-slate-200 text-slate-500'
+                    : 'bg-slate-200 text-slate-500 dark:text-slate-400'
                 )}
               >
                 {s}
@@ -759,7 +760,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
             </div>
           ))}
         </div>
-        <div className="text-center text-xs text-slate-500 mb-4">
+        <div className="text-center text-xs text-slate-500 dark:text-slate-400 mb-4">
           {step === 1 && 'Selecione o Cliente'}
           {step === 2 && 'Tipo de Serviço'}
           {step === 3 && 'Valores'}
@@ -772,19 +773,19 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
         {step === 1 && (
           <div className="space-y-3 py-4">
             {/* Toggle Único/Grupo - PRIMEIRO */}
-            <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200">
+            <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700">
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-slate-400" />
-                <span className="text-sm text-slate-600">Tipo de Contrato</span>
+                <span className="text-sm text-slate-600 dark:text-slate-400">Tipo de Contrato</span>
               </div>
-              <div className="flex items-center bg-white rounded-md border border-slate-200 p-0.5">
+              <div className="flex items-center bg-white dark:bg-surface-1 rounded-md border border-slate-200 dark:border-slate-700 p-0.5">
                 <button
                   type="button"
                   className={cn(
                     'px-3 py-1 text-xs font-medium rounded transition-colors',
                     !formData.grupo_habilitado
                       ? 'bg-[#89bcbe] text-white'
-                      : 'text-slate-500 hover:text-slate-700'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300'
                   )}
                   onClick={() => {
                     setFormData((prev) => ({
@@ -804,7 +805,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                     'px-3 py-1 text-xs font-medium rounded transition-colors',
                     formData.grupo_habilitado
                       ? 'bg-[#89bcbe] text-white'
-                      : 'text-slate-500 hover:text-slate-700'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300'
                   )}
                   onClick={() => {
                     setFormData((prev) => ({
@@ -846,8 +847,8 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                     className={cn(
                       'h-6 pl-2 pr-1 gap-1 text-xs font-normal',
                       formData.cliente_pagador_id === cliente.cliente_id
-                        ? 'bg-[#89bcbe]/20 text-[#34495e] border border-[#89bcbe]/40'
-                        : 'bg-white text-slate-600 border border-slate-200'
+                        ? 'bg-[#89bcbe]/20 text-[#34495e] dark:text-slate-200 border border-[#89bcbe]/40'
+                        : 'bg-white dark:bg-surface-1 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
                     )}
                   >
                     <span className="truncate max-w-[150px]">{cliente.nome.split(' ').slice(0, 3).join(' ')}</span>
@@ -897,7 +898,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                       setFormData((prev) => ({ ...prev, cliente_pagador_id: value }))
                     }
                   >
-                    <SelectTrigger className="h-6 w-auto min-w-[140px] text-[10px] border-dashed bg-white">
+                    <SelectTrigger className="h-6 w-auto min-w-[140px] text-[10px] border-dashed bg-white dark:bg-surface-1">
                       <span className="text-slate-400 mr-1">Pagador:</span>
                       <SelectValue placeholder="..." />
                     </SelectTrigger>
@@ -918,7 +919,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
               <div className="flex items-center justify-between p-2 rounded-lg bg-[#f0f9f9]/50 border border-[#89bcbe]/30">
                 <div className="flex items-center gap-2 min-w-0">
                   <CheckCircle className="h-4 w-4 text-[#89bcbe] flex-shrink-0" />
-                  <span className="text-sm font-medium text-[#34495e] truncate">{selectedCliente.nome_completo}</span>
+                  <span className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">{selectedCliente.nome_completo}</span>
                   <span className="text-[10px] text-slate-400 flex-shrink-0">
                     {selectedCliente.tipo_pessoa === 'juridica' ? 'PJ' : 'PF'}
                   </span>
@@ -945,7 +946,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
 
             {/* Lista de Resultados - Compacta */}
             {!loadingClientes && clientes.length > 0 && showSearchResults && (
-              <div ref={searchResultsRef} className="space-y-1 max-h-[200px] overflow-y-auto border border-slate-200 rounded-md p-1 bg-white">
+              <div ref={searchResultsRef} className="space-y-1 max-h-[200px] overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-md p-1 bg-white dark:bg-surface-1">
                 {clientes.map((cliente) => {
                   const isSelected = formData.grupo_habilitado
                     ? (formData.grupo_clientes || []).some(c => c.cliente_id === cliente.id)
@@ -958,7 +959,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                         'flex items-center justify-between px-2.5 py-2 rounded-md cursor-pointer transition-colors',
                         isSelected
                           ? 'bg-[#89bcbe]/10 border border-[#89bcbe]/30'
-                          : 'hover:bg-slate-50 border border-transparent'
+                          : 'hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0 border border-transparent'
                       )}
                       onClick={() => {
                         if (formData.grupo_habilitado) {
@@ -1012,7 +1013,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                       }}
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <span className="text-sm text-[#34495e] truncate">{cliente.nome_completo}</span>
+                        <span className="text-sm text-[#34495e] dark:text-slate-200 truncate">{cliente.nome_completo}</span>
                         <span className="text-[10px] text-slate-400 flex-shrink-0">
                           {cliente.tipo_pessoa === 'juridica' ? 'PJ' : 'PF'}
                         </span>
@@ -1045,7 +1046,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                   setFormData((prev) => ({ ...prev, titulo: e.target.value }))
                 }
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Título de referência para identificar o contrato (opcional)
               </p>
             </div>
@@ -1092,7 +1093,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Selecione a qual escritório este contrato pertence
                 </p>
               </div>
@@ -1129,7 +1130,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Selecione qual CNPJ será usado para faturar este contrato
                 </p>
               </div>
@@ -1147,9 +1148,9 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                   <Card
                     key={option.value}
                     className={cn(
-                      'cursor-pointer transition-colors hover:bg-slate-50',
+                      'cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0',
                       formData.tipo_servico === option.value &&
-                        'border-[#89bcbe] bg-[#f0f9f9]'
+                        'border-[#89bcbe] bg-[#f0f9f9] dark:bg-teal-900/20'
                     )}
                     onClick={() =>
                       setFormData((prev) => ({
@@ -1159,7 +1160,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                     }
                   >
                     <CardContent className="p-2 text-center">
-                      <p className="font-medium text-xs text-[#34495e]">{option.label}</p>
+                      <p className="font-medium text-xs text-[#34495e] dark:text-slate-200">{option.label}</p>
                     </CardContent>
                   </Card>
                 ))}
@@ -1171,7 +1172,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
             <div className="space-y-3">
               <div>
                 <Label>Formas de Cobrança</Label>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Selecione uma ou mais formas de cobrança disponíveis para este contrato
                 </p>
               </div>
@@ -1183,8 +1184,8 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                     <Card
                       key={option.value}
                       className={cn(
-                        'cursor-pointer transition-colors hover:bg-slate-50 relative',
-                        isSelected && 'border-[#89bcbe] bg-[#f0f9f9]'
+                        'cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0 relative',
+                        isSelected && 'border-[#89bcbe] bg-[#f0f9f9] dark:bg-teal-900/20'
                       )}
                       onClick={() => {
                         const formas = formData.formas_selecionadas || []
@@ -1211,8 +1212,8 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                           <Icon className="h-4 w-4 text-[#89bcbe]" />
                         </div>
                         <div className="pr-6">
-                          <p className="font-medium text-sm text-[#34495e]">{option.label}</p>
-                          <p className="text-xs text-slate-500 mt-0.5">{option.description}</p>
+                          <p className="font-medium text-sm text-[#34495e] dark:text-slate-200">{option.label}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{option.description}</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -1308,12 +1309,12 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                       {formData.valores_fixos.map((valorFixo, index) => (
                         <div
                           key={valorFixo.id}
-                          className="p-3 rounded-lg bg-slate-50 border border-slate-100 space-y-2"
+                          className="p-3 rounded-lg bg-slate-50 dark:bg-surface-0 border border-slate-100 dark:border-slate-800 space-y-2"
                         >
                           <div className="flex items-start gap-2">
                             <div className="flex-1 grid grid-cols-2 gap-2">
                               <div>
-                                <Label className="text-[10px] text-slate-500">Descrição</Label>
+                                <Label className="text-[10px] text-slate-500 dark:text-slate-400">Descrição</Label>
                                 <Input
                                   placeholder="Ex: Inicial, Sentença..."
                                   value={valorFixo.descricao}
@@ -1326,7 +1327,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                                 />
                               </div>
                               <div>
-                                <Label className="text-[10px] text-slate-500">Valor (R$)</Label>
+                                <Label className="text-[10px] text-slate-500 dark:text-slate-400">Valor (R$)</Label>
                                 <div className="relative">
                                   <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">R$</span>
                                   <Input
@@ -1353,7 +1354,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                               type="button"
                               variant="ghost"
                               size="sm"
-                              className="h-6 w-6 p-0 text-slate-300 hover:text-red-500 hover:bg-red-50 mt-4"
+                              className="h-6 w-6 p-0 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:bg-red-500/10 mt-4"
                               onClick={() => {
                                 const novosValores = (formData.valores_fixos || []).filter((_, i) => i !== index)
                                 setFormData((prev) => ({ ...prev, valores_fixos: novosValores }))
@@ -1379,7 +1380,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                                 }}
                                 className="h-3.5 w-3.5 data-[state=checked]:bg-[#89bcbe] data-[state=checked]:border-[#89bcbe]"
                               />
-                              <Label htmlFor={`atualizacao_${valorFixo.id}`} className="text-[10px] cursor-pointer text-slate-500">
+                              <Label htmlFor={`atualizacao_${valorFixo.id}`} className="text-[10px] cursor-pointer text-slate-500 dark:text-slate-400">
                                 Atualizar
                               </Label>
                             </div>
@@ -1493,16 +1494,16 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                       </div>
                       {/* Mostrar contador de meses se for edição */}
                       {contrato && contrato.config?.[0]?.meses_cobrados !== undefined && (
-                        <div className="p-2 bg-slate-50 rounded border border-slate-100">
+                        <div className="p-2 bg-slate-50 dark:bg-surface-0 rounded border border-slate-100 dark:border-slate-800">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-500">
-                              Meses já cobrados: <strong className="text-[#34495e]">{contrato.config[0]?.meses_cobrados || 0}</strong>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              Meses já cobrados: <strong className="text-[#34495e] dark:text-slate-200">{contrato.config[0]?.meses_cobrados || 0}</strong>
                               {contrato.config[0]?.limite_meses && (
                                 <span className="text-slate-400"> / {contrato.config[0].limite_meses}</span>
                               )}
                             </span>
                             {(contrato.config[0]?.meses_cobrados ?? 0) >= (contrato.config[0]?.limite_meses || 24) && (
-                              <Badge variant="outline" className="text-[10px] h-5 bg-amber-50 text-amber-700 border-amber-200">
+                              <Badge variant="outline" className="text-[10px] h-5 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200">
                                 Limite atingido
                               </Badge>
                             )}
@@ -1569,9 +1570,9 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                   ) : (
                     <div className="grid grid-cols-2 gap-2">
                       {formData.valores_por_cargo?.map((valorCargo, index) => (
-                        <div key={valorCargo.cargo_id} className="flex items-center gap-2 p-2 rounded bg-slate-50">
+                        <div key={valorCargo.cargo_id} className="flex items-center gap-2 p-2 rounded bg-slate-50 dark:bg-surface-0">
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-[#34495e] truncate">{valorCargo.cargo_nome}</p>
+                            <p className="text-xs font-medium text-[#34495e] dark:text-slate-200 truncate">{valorCargo.cargo_nome}</p>
                             <p className="text-[10px] text-slate-400">
                               Padrão: {valorCargo.valor_padrao ? formatCurrency(valorCargo.valor_padrao) : '—'}
                             </p>
@@ -1740,12 +1741,12 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                 </CardHeader>
 
                 {/* Toggle global de modo de cobrança */}
-                <div className="mx-4 mb-2 p-2 bg-slate-50 rounded-md border border-slate-100">
+                <div className="mx-4 mb-2 p-2 bg-slate-50 dark:bg-surface-0 rounded-md border border-slate-100 dark:border-slate-800">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[9px] text-slate-500">
+                    <p className="text-[9px] text-slate-500 dark:text-slate-400">
                       Modo padrão:
                     </p>
-                    <div className="flex gap-0.5 bg-white rounded p-0.5 border border-slate-200">
+                    <div className="flex gap-0.5 bg-white dark:bg-surface-1 rounded p-0.5 border border-slate-200 dark:border-slate-700">
                       <button
                         type="button"
                         onClick={() => {
@@ -1759,7 +1760,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                           "px-2 py-0.5 text-[9px] font-medium rounded transition-all",
                           (formData.atos_configurados?.filter(a => a.ativo !== false) || []).every(a => (a.modo_cobranca || 'percentual') === 'percentual')
                             ? "bg-[#34495e] text-white"
-                            : "text-slate-500 hover:bg-slate-100"
+                            : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-surface-3 dark:bg-surface-2"
                         )}
                       >
                         % Causa
@@ -1778,7 +1779,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                           (formData.atos_configurados?.filter(a => a.ativo !== false) || []).length > 0 &&
                           (formData.atos_configurados?.filter(a => a.ativo !== false) || []).every(a => a.modo_cobranca === 'por_hora')
                             ? "bg-[#34495e] text-white"
-                            : "text-slate-500 hover:bg-slate-100"
+                            : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-surface-3 dark:bg-surface-2"
                         )}
                       >
                         Por Hora
@@ -1833,14 +1834,14 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pb-3">
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
                     Este contrato não terá cobrança de honorários. As horas registradas serão
                     automaticamente marcadas como <strong>não faturáveis</strong>, permitindo
                     controle interno do tempo dedicado sem gerar cobranças ao cliente.
                   </p>
-                  <div className="mt-3 p-2 bg-white rounded border border-pink-100">
-                    <p className="text-[10px] text-slate-500 font-medium mb-1">O que você pode fazer:</p>
-                    <ul className="text-[10px] text-slate-500 space-y-0.5 list-disc list-inside">
+                  <div className="mt-3 p-2 bg-white dark:bg-surface-1 rounded border border-pink-100">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mb-1">O que você pode fazer:</p>
+                    <ul className="text-[10px] text-slate-500 dark:text-slate-400 space-y-0.5 list-disc list-inside">
                       <li>Registrar horas de trabalho (timesheet)</li>
                       <li>Registrar despesas (se houver)</li>
                       <li>Acompanhar o histórico de atividades</li>
@@ -1871,24 +1872,24 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
           <div className="space-y-4 py-4">
             <Card className="bg-[#f0f9f9]/30">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-[#34495e]">Resumo do Contrato</CardTitle>
+                <CardTitle className="text-sm text-[#34495e] dark:text-slate-200">Resumo do Contrato</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-slate-500">Cliente</p>
-                    <p className="font-medium text-[#34495e]">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Cliente</p>
+                    <p className="font-medium text-[#34495e] dark:text-slate-200">
                       {selectedCliente?.nome_completo || '-'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500">Tipo de Serviço</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Tipo de Serviço</p>
                     <Badge variant="outline" className="mt-1">
                       {TIPO_SERVICO_OPTIONS.find((o) => o.value === formData.tipo_servico)?.label}
                     </Badge>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500">Formas de Cobrança</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Formas de Cobrança</p>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {(formData.formas_selecionadas || []).map((forma) => (
                         <Badge key={forma} variant="outline" className="text-xs">
@@ -1898,8 +1899,8 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500">Período</p>
-                    <p className="font-medium text-[#34495e]">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Período</p>
+                    <p className="font-medium text-[#34495e] dark:text-slate-200">
                       {formData.data_inicio
                         ? formatBrazilDate(parseDateInBrazil(formData.data_inicio))
                         : '-'}
@@ -1910,19 +1911,19 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                   {escritoriosGrupo.length > 1 && (
                     <>
                       <div>
-                        <p className="text-xs text-slate-500">Escritório do Contrato</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Escritório do Contrato</p>
                         <div className="flex items-center gap-2 mt-1">
                           <Building2 className="h-3.5 w-3.5 text-[#89bcbe]" />
-                          <p className="font-medium text-[#34495e]">
+                          <p className="font-medium text-[#34495e] dark:text-slate-200">
                             {escritoriosGrupo.find((e) => e.id === (formData.escritorio_contrato_id || escritorioAtivo))?.nome || '-'}
                           </p>
                         </div>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-500">Escritório Faturador</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Escritório Faturador</p>
                         <div className="flex items-center gap-2 mt-1">
                           <Building2 className="h-3.5 w-3.5 text-[#89bcbe]" />
-                          <p className="font-medium text-[#34495e]">
+                          <p className="font-medium text-[#34495e] dark:text-slate-200">
                             {escritoriosGrupo.find((e) => e.id === (formData.escritorio_id || formData.escritorio_contrato_id || escritorioAtivo))?.nome || '-'}
                           </p>
                         </div>
@@ -1938,14 +1939,14 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <Users className="h-4 w-4 text-[#89bcbe]" />
-                        <p className="text-xs text-slate-500">Grupo de Clientes</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Grupo de Clientes</p>
                       </div>
                       <div className="space-y-1">
                         {formData.grupo_clientes.map((cliente) => (
                           <div key={cliente.cliente_id} className="flex items-center justify-between">
-                            <span className="text-sm text-[#34495e]">{cliente.nome}</span>
+                            <span className="text-sm text-[#34495e] dark:text-slate-200">{cliente.nome}</span>
                             {formData.cliente_pagador_id === cliente.cliente_id && (
-                              <Badge variant="outline" className="text-[10px] h-5 bg-[#89bcbe]/10 text-[#46627f] border-[#89bcbe]/30">
+                              <Badge variant="outline" className="text-[10px] h-5 bg-[#89bcbe]/10 text-[#46627f] dark:text-slate-400 border-[#89bcbe]/30">
                                 CNPJ Pagador
                               </Badge>
                             )}
@@ -1959,15 +1960,15 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                 <Separator />
 
                 <div>
-                  <p className="text-xs text-slate-500 mb-2">Valores Configurados</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Valores Configurados</p>
                   <div className="space-y-1">
                     {/* Valores Fixos Múltiplos */}
                     {formData.valores_fixos && formData.valores_fixos.length > 0 && (
                       <div className="mb-2">
-                        <p className="text-xs text-slate-500 mb-1">Valores Fixos:</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Valores Fixos:</p>
                         {formData.valores_fixos.filter(v => v.valor > 0).map((vf) => (
                           <div key={vf.id} className="flex justify-between text-sm">
-                            <span className="text-slate-600">
+                            <span className="text-slate-600 dark:text-slate-400">
                               {vf.descricao || 'Valor Fixo'}
                               {vf.atualizacao_monetaria && (
                                 <span className="text-[10px] text-[#89bcbe] ml-1">
@@ -1983,36 +1984,36 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                     {/* Valor Fixo único (deprecated - compatibilidade) */}
                     {formData.valor_fixo && (!formData.valores_fixos || formData.valores_fixos.length === 0) && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Valor Fixo:</span>
+                        <span className="text-slate-600 dark:text-slate-400">Valor Fixo:</span>
                         <span className="font-medium">{formatCurrency(formData.valor_fixo)}</span>
                       </div>
                     )}
                     {formData.valor_hora && (formData.formas_selecionadas || []).includes('por_hora') && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Valor Hora (Taxa Única):</span>
+                        <span className="text-slate-600 dark:text-slate-400">Valor Hora (Taxa Única):</span>
                         <span className="font-medium">{formatCurrency(formData.valor_hora)}/h</span>
                       </div>
                     )}
                     {formData.valor_por_processo && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Valor por Processo:</span>
+                        <span className="text-slate-600 dark:text-slate-400">Valor por Processo:</span>
                         <span className="font-medium">{formatCurrency(formData.valor_por_processo)}</span>
                       </div>
                     )}
                     {formData.dia_cobranca && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Dia da Cobrança:</span>
+                        <span className="text-slate-600 dark:text-slate-400">Dia da Cobrança:</span>
                         <span className="font-medium">Dia {formData.dia_cobranca}</span>
                       </div>
                     )}
                     {formData.valores_por_cargo && formData.valores_por_cargo.length > 0 && (formData.formas_selecionadas || []).includes('por_cargo') && (
                       <div className="mt-2">
-                        <p className="text-xs text-slate-500 mb-1">Valores por Cargo:</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Valores por Cargo:</p>
                         {formData.valores_por_cargo
                           .filter((v) => v.valor_padrao || v.valor_negociado)
                           .map((v) => (
                             <div key={v.cargo_id} className="flex justify-between text-sm">
-                              <span className="text-slate-600">{v.cargo_nome}:</span>
+                              <span className="text-slate-600 dark:text-slate-400">{v.cargo_nome}:</span>
                               <span className="font-medium">
                                 {v.valor_negociado
                                   ? `${formatCurrency(v.valor_negociado)} (negociado)`
@@ -2026,14 +2027,14 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                     )}
                     {formData.atos_configurados && formData.atos_configurados.length > 0 && (formData.formas_selecionadas || []).includes('por_ato') && (
                       <div className="mt-2">
-                        <p className="text-xs text-slate-500 mb-1">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
                           Atos ({AREAS_JURIDICAS.find((a) => a.value === formData.area_juridica)?.label}):
                         </p>
                         {formData.atos_configurados
                           .filter((a) => a.ativo !== false && (a.percentual_valor_causa || a.valor_fixo || a.valor_hora))
                           .map((a) => (
                             <div key={a.ato_tipo_id} className="flex justify-between text-sm">
-                              <span className="text-slate-600">{a.ato_nome}:</span>
+                              <span className="text-slate-600 dark:text-slate-400">{a.ato_nome}:</span>
                               <span className="font-medium">
                                 {/* Modo Percentual */}
                                 {(a.modo_cobranca || 'percentual') === 'percentual' && (
@@ -2065,17 +2066,17 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                     )}
                     {/* Limites Mensais */}
                     {(formData.valor_minimo_mensal || formData.valor_maximo_mensal) && (
-                      <div className="mt-2 pt-2 border-t border-slate-100">
-                        <p className="text-xs text-slate-500 mb-1">Limites Mensais:</p>
+                      <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Limites Mensais:</p>
                         {formData.valor_minimo_mensal && (
                           <div className="flex justify-between text-sm">
-                            <span className="text-slate-600">Mínimo Mensal:</span>
+                            <span className="text-slate-600 dark:text-slate-400">Mínimo Mensal:</span>
                             <span className="font-medium">{formatCurrency(formData.valor_minimo_mensal)}</span>
                           </div>
                         )}
                         {formData.valor_maximo_mensal && (
                           <div className="flex justify-between text-sm">
-                            <span className="text-slate-600">Máximo Mensal:</span>
+                            <span className="text-slate-600 dark:text-slate-400">Máximo Mensal:</span>
                             <span className="font-medium">{formatCurrency(formData.valor_maximo_mensal)}</span>
                           </div>
                         )}
@@ -2089,8 +2090,8 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                   <>
                     <Separator />
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Observações</p>
-                      <p className="text-sm text-slate-600">{formData.observacoes}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Observações</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">{formData.observacoes}</p>
                     </div>
                   </>
                 )}

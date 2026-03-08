@@ -43,19 +43,19 @@ export default function KanbanColumn({
   const totalItems = tarefas.length + agendaItems.length
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg border border-slate-200 overflow-hidden">
+    <div className="flex flex-col h-full bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
       {/* Barra colorida fina no topo */}
       <div className={cn('h-1 rounded-t-lg', corBarra)} />
 
       {/* Header minimalista */}
-      <div className="px-3 py-2 flex items-center justify-between border-b border-slate-100">
+      <div className="px-3 py-2 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-2">
           <div className={cn('w-5 h-5 rounded-md flex items-center justify-center', corIconeBg)}>
             {icone}
           </div>
-          <span className="font-semibold text-xs text-[#34495e]">{titulo}</span>
+          <span className="font-semibold text-xs text-[#34495e] dark:text-slate-200">{titulo}</span>
         </div>
-        <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full font-medium">
+        <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-surface-2 px-2 py-0.5 rounded-full font-medium">
           {totalItems}
         </span>
       </div>
@@ -64,8 +64,8 @@ export default function KanbanColumn({
       <div
         ref={setNodeRef}
         className={cn(
-          'flex-1 p-2 bg-slate-50/50 overflow-y-auto space-y-2 min-h-[200px]',
-          isOver && 'bg-blue-50 border-2 border-dashed border-blue-300 rounded-md'
+          'flex-1 p-2 bg-slate-50/50 dark:bg-surface-0/50 overflow-y-auto space-y-2 min-h-[200px]',
+          isOver && 'bg-blue-50 dark:bg-blue-500/10 border-2 border-dashed border-blue-300 rounded-md'
         )}
       >
         {/* Agenda items (compromissos/audiências) - draggable, aparecem primeiro */}
@@ -84,7 +84,7 @@ export default function KanbanColumn({
         ))}
 
         {totalItems === 0 && !isOver && (
-          <div className="flex items-center justify-center h-24 text-center text-slate-400 text-xs">
+          <div className="flex items-center justify-center h-24 text-center text-slate-400 dark:text-slate-400 text-xs">
             Nenhum item
           </div>
         )}
@@ -100,7 +100,7 @@ export default function KanbanColumn({
       {status === 'pendente' && onCreateTarefa && (
         <button
           onClick={onCreateTarefa}
-          className="px-3 py-2 border-t border-slate-100 text-xs text-[#89bcbe] hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5"
+          className="px-3 py-2 border-t border-slate-100 dark:border-slate-800 text-xs text-[#89bcbe] hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors flex items-center justify-center gap-1.5"
         >
           <Plus className="w-3.5 h-3.5" />
           <span className="font-medium">Nova Tarefa</span>

@@ -431,7 +431,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
           <div className="space-y-4">
             {/* Tipo de Tarefa */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#34495e]">Tipo de Tarefa *</Label>
+              <Label className="text-sm font-medium text-[#34495e] dark:text-slate-200">Tipo de Tarefa *</Label>
               <div className="grid grid-cols-5 gap-2">
                 {(Object.entries(TIPO_CONFIG) as [TipoTarefa, typeof TIPO_CONFIG[keyof typeof TIPO_CONFIG]][]).map(
                   ([key, config]) => {
@@ -448,13 +448,13 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
                           selected
                             ? cn(
                                 'border-current shadow-sm',
-                                config.color === 'red' && 'bg-red-50 text-red-600 border-red-300',
-                                config.color === 'blue' && 'bg-blue-50 text-blue-600 border-blue-300',
-                                config.color === 'emerald' && 'bg-emerald-50 text-emerald-600 border-emerald-300',
-                                config.color === 'purple' && 'bg-purple-50 text-purple-600 border-purple-300',
-                                config.color === 'slate' && 'bg-slate-50 text-slate-600 border-slate-300'
+                                config.color === 'red' && 'bg-red-50 text-red-600 border-red-300 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/50',
+                                config.color === 'blue' && 'bg-blue-50 text-blue-600 border-blue-300 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/50',
+                                config.color === 'emerald' && 'bg-emerald-50 text-emerald-600 border-emerald-300 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/50',
+                                config.color === 'purple' && 'bg-purple-50 text-purple-600 border-purple-300 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/50',
+                                config.color === 'slate' && 'bg-slate-50 text-slate-600 border-slate-300 dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/50'
                               )
-                            : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600'
+                            : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600 dark:border-slate-700 dark:bg-surface-1 dark:text-slate-500 dark:hover:border-slate-600 dark:hover:text-slate-300'
                         )}
                       >
                         <Icon className="w-5 h-5" />
@@ -470,7 +470,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
 
             {/* Título */}
             <div className="space-y-2">
-              <Label htmlFor="titulo" className="text-sm font-medium text-[#34495e]">
+              <Label htmlFor="titulo" className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                 Título da Tarefa *
               </Label>
               <Input
@@ -484,9 +484,9 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
 
             {/* Descrição */}
             <div className="space-y-2">
-              <Label htmlFor="descricao" className="text-sm font-medium text-[#34495e]">
+              <Label htmlFor="descricao" className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                 Descrição
-                <span className="text-xs text-slate-500 font-normal ml-2">(Opcional)</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-normal ml-2">(Opcional)</span>
               </Label>
               <Textarea
                 id="descricao"
@@ -507,19 +507,19 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
           <div className="space-y-4">
             {/* Info para tarefa fixa */}
             {isFixa && (
-              <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 text-xs text-teal-700">
+              <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 text-xs text-teal-700 dark:bg-teal-500/10 dark:border-teal-500/30 dark:text-teal-400">
                 <div className="flex items-center gap-2 font-medium mb-1">
                   <Pin className="w-3.5 h-3.5" />
                   Tarefa Fixa — aparece todo dia
                 </div>
-                <p className="text-teal-600">Não é necessário definir data. Esta tarefa aparecerá automaticamente no dia atual.</p>
+                <p className="text-teal-600 dark:text-teal-400">Não é necessário definir data. Esta tarefa aparecerá automaticamente no dia atual.</p>
               </div>
             )}
 
             {/* Data de Execução (esconde para fixa) */}
             {!isFixa && (
               <div className="space-y-2">
-                <Label htmlFor="data-execucao" className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+                <Label htmlFor="data-execucao" className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-[#89bcbe]" />
                   Data que irei realizar *
                 </Label>
@@ -533,10 +533,10 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
             {/* Prazo Fatal (esconde para fixa) */}
             {!isFixa && (
               <div className="space-y-2">
-                <Label htmlFor="prazo-fatal" className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+                <Label htmlFor="prazo-fatal" className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
                   <CalendarClock className="w-4 h-4 text-[#34495e]" />
                   Prazo Fatal
-                  <span className="text-xs text-slate-500 font-normal">(Opcional)</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">(Opcional)</span>
                 </Label>
                 <DateInput
                   value={prazoFatal}
@@ -547,7 +547,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
 
             {/* Prioridade */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#34495e]">
+              <Label className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                 Prioridade *
               </Label>
               <div className="grid grid-cols-3 gap-2">
@@ -570,11 +570,11 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
                         selected
                           ? cn(
                               'border-current shadow-sm',
-                              config.color === 'red' && 'bg-red-50 text-red-600 border-red-300',
-                              config.color === 'amber' && 'bg-amber-50 text-amber-600 border-amber-300',
-                              config.color === 'emerald' && 'bg-emerald-50 text-emerald-600 border-emerald-300'
+                              config.color === 'red' && 'bg-red-50 text-red-600 border-red-300 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/50',
+                              config.color === 'amber' && 'bg-amber-50 text-amber-600 border-amber-300 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/50',
+                              config.color === 'emerald' && 'bg-emerald-50 text-emerald-600 border-emerald-300 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/50'
                             )
-                          : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600'
+                          : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600 dark:border-slate-700 dark:bg-surface-1 dark:text-slate-500 dark:hover:border-slate-600 dark:hover:text-slate-300'
                       )}
                     >
                       <IconComponent className="w-5 h-5" />
@@ -609,7 +609,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
           <div className="space-y-4">
             {/* Aviso para tarefa fixa */}
             {isFixa && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-400">
                 Obrigatório vincular a um processo ou consultivo para poder lançar horas.
               </div>
             )}
@@ -642,64 +642,64 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       {/* ETAPA 5: Revisão - Ficha Completa */}
       {steps[currentStep]?.id === 'revisao' && (
         <WizardStep title={steps[currentStep].title} subtitle={steps[currentStep].subtitle}>
-          <div className="bg-white border border-slate-200 rounded-lg p-4">
+          <div className="bg-white border border-slate-200 rounded-lg p-4 dark:bg-surface-1 dark:border-slate-700">
             {/* Grid de Informações */}
             <div className="space-y-4">
               {/* Tipo e Título */}
               <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
-                <span className="text-slate-500">Tipo</span>
-                <span className="text-[#34495e] font-medium">{getTipoLabel(tipo)}</span>
+                <span className="text-slate-500 dark:text-slate-400">Tipo</span>
+                <span className="text-[#34495e] dark:text-slate-200 font-medium">{getTipoLabel(tipo)}</span>
 
                 {isFixa && (
                   <>
-                    <span className="text-slate-500">Modo</span>
-                    <span className="text-teal-600 font-medium">Tarefa Fixa (todo dia)</span>
+                    <span className="text-slate-500 dark:text-slate-400">Modo</span>
+                    <span className="text-teal-600 dark:text-teal-400 font-medium">Tarefa Fixa (todo dia)</span>
                   </>
                 )}
 
-                <span className="text-slate-500">Título</span>
-                <span className="text-[#34495e] font-medium">{titulo}</span>
+                <span className="text-slate-500 dark:text-slate-400">Título</span>
+                <span className="text-[#34495e] dark:text-slate-200 font-medium">{titulo}</span>
 
                 {descricao && (
                   <>
-                    <span className="text-slate-500">Descrição</span>
-                    <span className="text-slate-600 text-[11px] leading-relaxed">{descricao}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Descrição</span>
+                    <span className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">{descricao}</span>
                   </>
                 )}
               </div>
 
-              <div className="border-t border-slate-100" />
+              <div className="border-t border-slate-100 dark:border-slate-800" />
 
               {/* Datas e Prioridade */}
               <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
-                <span className="text-slate-500">Execução</span>
-                <span className="text-[#34495e] font-medium">
+                <span className="text-slate-500 dark:text-slate-400">Execução</span>
+                <span className="text-[#34495e] dark:text-slate-200 font-medium">
                   {isFixa ? 'Todo dia (tarefa fixa)' : (dataExecucao ? formatBrazilDateLong(parseDateInBrazil(dataExecucao, 'yyyy-MM-dd')) : 'Não definida')}
                 </span>
 
                 {!isFixa && prazoFatal && (
                   <>
-                    <span className="text-slate-500">Prazo Fatal</span>
-                    <span className="text-red-600 font-medium">
+                    <span className="text-slate-500 dark:text-slate-400">Prazo Fatal</span>
+                    <span className="text-red-600 dark:text-red-400 font-medium">
                       {prazoFatal ? formatBrazilDateLong(parseDateInBrazil(prazoFatal, 'yyyy-MM-dd')) : 'Não definido'}
                     </span>
                   </>
                 )}
 
-                <span className="text-slate-500">Prioridade</span>
+                <span className="text-slate-500 dark:text-slate-400">Prioridade</span>
                 <span className={cn(
                   "font-medium",
-                  prioridade === 'alta' && "text-red-600",
-                  prioridade === 'media' && "text-amber-600",
-                  prioridade === 'baixa' && "text-emerald-600"
+                  prioridade === 'alta' && "text-red-600 dark:text-red-400",
+                  prioridade === 'media' && "text-amber-600 dark:text-amber-400",
+                  prioridade === 'baixa' && "text-emerald-600 dark:text-emerald-400"
                 )}>
                   {getPrioridadeLabel(prioridade)}
                 </span>
 
                 {responsaveisIds.length > 0 && (
                   <>
-                    <span className="text-slate-500">Responsáveis</span>
-                    <span className="text-[#34495e] font-medium">
+                    <span className="text-slate-500 dark:text-slate-400">Responsáveis</span>
+                    <span className="text-[#34495e] dark:text-slate-200 font-medium">
                       {responsaveisIds.map(id => membros.find(m => m.user_id === id)?.nome || 'Não encontrado').join(', ')}
                     </span>
                   </>
@@ -709,15 +709,15 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
               {/* Vínculos (se houver) */}
               {vinculacao && (
                 <>
-                  <div className="border-t border-slate-100" />
+                  <div className="border-t border-slate-100 dark:border-slate-800" />
 
                   <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
-                    <span className="text-slate-500">Vinculado a</span>
-                    <div className="text-[#34495e]">
+                    <span className="text-slate-500 dark:text-slate-400">Vinculado a</span>
+                    <div className="text-[#34495e] dark:text-slate-200">
                       <div className="font-medium">
                         {vinculacao.metadados?.partes || vinculacao.metadados?.titulo || `Pasta ${vinculacao.metadados?.numero_pasta}`}
                       </div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                         {vinculacao.metadados?.numero_pasta && `Pasta ${vinculacao.metadados.numero_pasta}`}
                         {vinculacao.metadados?.numero_cnj && ` • CNJ: ${vinculacao.metadados.numero_cnj}`}
                       </div>
@@ -729,11 +729,11 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
               {/* Recorrência (se houver) */}
               {recorrencia?.ativa && (
                 <>
-                  <div className="border-t border-slate-100" />
+                  <div className="border-t border-slate-100 dark:border-slate-800" />
 
                   <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
-                    <span className="text-slate-500">Recorrência</span>
-                    <span className="text-[#34495e] font-medium flex items-center gap-1.5">
+                    <span className="text-slate-500 dark:text-slate-400">Recorrência</span>
+                    <span className="text-[#34495e] dark:text-slate-200 font-medium flex items-center gap-1.5">
                       <Repeat className="w-3.5 h-3.5 text-[#89bcbe]" />
                       {getRecorrenciaSummary(recorrencia)}
                     </span>

@@ -402,6 +402,7 @@ export default function CartaoDetalhePage() {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
+      minimumFractionDigits: 2,
     }).format(value)
   }
 
@@ -412,13 +413,13 @@ export default function CartaoDetalhePage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'aberta':
-        return <Badge className="bg-blue-100 text-blue-700 border-blue-200">Aberta</Badge>
+        return <Badge className="bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200">Aberta</Badge>
       case 'fechada':
-        return <Badge className="bg-amber-100 text-amber-700 border-amber-200">Fechada</Badge>
+        return <Badge className="bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200">Fechada</Badge>
       case 'paga':
-        return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Paga</Badge>
+        return <Badge className="bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200">Paga</Badge>
       case 'cancelada':
-        return <Badge className="bg-slate-100 text-slate-700 border-slate-200">Cancelada</Badge>
+        return <Badge className="bg-slate-100 dark:bg-surface-2 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700">Cancelada</Badge>
       default:
         return null
     }
@@ -428,13 +429,13 @@ export default function CartaoDetalhePage() {
     switch (lancamento.tipo) {
       case 'unica':
         return (
-          <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200">
+          <Badge variant="outline" className="bg-slate-50 dark:bg-surface-0 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700">
             À vista
           </Badge>
         )
       case 'parcelada':
         return (
-          <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+          <Badge className="bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200">
             {lancamento.parcela_numero}/{lancamento.parcela_total}
           </Badge>
         )
@@ -443,8 +444,8 @@ export default function CartaoDetalhePage() {
           <Badge className={cn(
             "border",
             lancamento.recorrente_ativo
-              ? "bg-purple-100 text-purple-700 border-purple-200"
-              : "bg-slate-100 text-slate-500 border-slate-200"
+              ? "bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200"
+              : "bg-slate-100 dark:bg-surface-2 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700"
           )}>
             <Repeat className="w-3 h-3 mr-1" />
             {lancamento.recorrente_ativo ? 'Recorrente' : 'Cancelado'}
@@ -459,8 +460,8 @@ export default function CartaoDetalhePage() {
     return (
       <div className="p-4 md:p-6">
         <div className="py-12 text-center">
-          <div className="h-8 w-8 mx-auto border-4 border-slate-200 border-t-[#1E3A8A] rounded-full animate-spin" />
-          <p className="text-sm text-slate-500 mt-2">Carregando...</p>
+          <div className="h-8 w-8 mx-auto border-4 border-slate-200 dark:border-slate-700 border-t-[#1E3A8A] rounded-full animate-spin" />
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Carregando...</p>
         </div>
       </div>
     )
@@ -469,10 +470,10 @@ export default function CartaoDetalhePage() {
   if (!cartao) {
     return (
       <div className="p-4 md:p-6">
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardContent className="py-12 text-center">
             <AlertCircle className="h-12 w-12 mx-auto text-slate-300" />
-            <p className="text-sm text-slate-500 mt-2">Cartão não encontrado</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Cartão não encontrado</p>
             <Button
               variant="outline"
               className="mt-4"
@@ -515,8 +516,8 @@ export default function CartaoDetalhePage() {
               <CreditCard className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h1 className="text-base font-medium text-[#34495e]">{cartao.nome}</h1>
-              <p className="text-xs text-slate-500">
+              <h1 className="text-base font-medium text-[#34495e] dark:text-slate-200">{cartao.nome}</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {cartao.banco} •••• {cartao.ultimos_digitos}
               </p>
             </div>
@@ -539,7 +540,7 @@ export default function CartaoDetalhePage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-slate-100">
+        <TabsList className="bg-slate-100 dark:bg-surface-2">
           <TabsTrigger value="lancamentos">Lançamentos ({lancamentos.length})</TabsTrigger>
           <TabsTrigger value="faturas">Faturas ({faturas.length})</TabsTrigger>
         </TabsList>
@@ -555,12 +556,12 @@ export default function CartaoDetalhePage() {
                 variant="ghost"
                 size="sm"
                 onClick={irMesAnterior}
-                className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e] hover:bg-slate-100"
+                className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-surface-3"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
 
-              <span className="text-sm font-medium text-[#34495e] min-w-[140px] text-center">
+              <span className="text-sm font-medium text-[#34495e] dark:text-slate-200 min-w-[140px] text-center">
                 {mesNome}
               </span>
 
@@ -568,7 +569,7 @@ export default function CartaoDetalhePage() {
                 variant="ghost"
                 size="sm"
                 onClick={irProximoMes}
-                className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e] hover:bg-slate-100"
+                className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-surface-3"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -577,22 +578,22 @@ export default function CartaoDetalhePage() {
             <div className="flex-1 flex justify-end">
               <div className="text-right">
                 <p className="text-[10px] text-slate-400">Total</p>
-                <p className="text-sm font-semibold text-[#34495e]">{formatCurrency(valorFaturaAtual)}</p>
+                <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">{formatCurrency(valorFaturaAtual)}</p>
               </div>
             </div>
           </div>
 
           {/* Barra de ações em massa */}
           {lancamentosSelecionados.size > 0 && (
-            <div className="flex items-center justify-between bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5">
+            <div className="flex items-center justify-between bg-slate-100 dark:bg-surface-2 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5">
               <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-slate-700">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   {lancamentosSelecionados.size} selecionado{lancamentosSelecionados.size > 1 ? 's' : ''}
                 </span>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 text-xs text-slate-500"
+                  className="h-7 text-xs text-slate-500 dark:text-slate-400"
                   onClick={limparSelecao}
                 >
                   <X className="h-3 w-3 mr-1" />
@@ -612,7 +613,7 @@ export default function CartaoDetalhePage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 text-red-600 border-red-200 hover:bg-red-50"
+                  className="h-8 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/30 hover:bg-red-50 dark:hover:bg-red-500/10"
                   onClick={() => setMostrarDialogExcluirEmMassa(true)}
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-1.5" />
@@ -622,12 +623,12 @@ export default function CartaoDetalhePage() {
             </div>
           )}
 
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700">
             <CardContent className="pt-4 pb-3">
               {lancamentos.length === 0 ? (
                 <div className="py-8 text-center">
                   <Receipt className="h-10 w-10 mx-auto text-slate-300" />
-                  <p className="text-sm text-slate-500 mt-2">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
                     Nenhum lançamento em {mesNome}
                   </p>
                 </div>
@@ -654,7 +655,7 @@ export default function CartaoDetalhePage() {
                     {lancamentos.map((lancamento) => (
                       <TableRow
                         key={lancamento.id}
-                        className={cn(lancamentosSelecionados.has(lancamento.id) && 'bg-slate-50')}
+                        className={cn(lancamentosSelecionados.has(lancamento.id) && 'bg-slate-50 dark:bg-surface-0')}
                       >
                         <TableCell>
                           <Checkbox
@@ -671,7 +672,7 @@ export default function CartaoDetalhePage() {
                             {getCategoriaLabel(lancamento.categoria)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-slate-600">
+                        <TableCell className="text-slate-600 dark:text-slate-400">
                           {lancamento.fornecedor || '-'}
                         </TableCell>
                         <TableCell className="text-center">
@@ -754,9 +755,9 @@ export default function CartaoDetalhePage() {
 
         {/* Faturas */}
         <TabsContent value="faturas">
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700">
             <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-medium text-slate-700">
+              <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Histórico de Faturas
               </CardTitle>
               {!faturaAtual && valorFaturaAtual > 0 && (
@@ -774,7 +775,7 @@ export default function CartaoDetalhePage() {
               {faturas.length === 0 ? (
                 <div className="py-8 text-center">
                   <FileText className="h-10 w-10 mx-auto text-slate-300" />
-                  <p className="text-sm text-slate-500 mt-2">Nenhuma fatura gerada</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Nenhuma fatura gerada</p>
                 </div>
               ) : (
                 <Table>
@@ -996,7 +997,7 @@ export default function CartaoDetalhePage() {
                         <div className="border-t my-1" />
                         <button
                           type="button"
-                          className="w-full px-2 py-1.5 text-left text-sm text-[#1E3A8A] hover:bg-slate-100 rounded flex items-center gap-2"
+                          className="w-full px-2 py-1.5 text-left text-sm text-[#1E3A8A] hover:bg-slate-100 dark:hover:bg-surface-3 rounded flex items-center gap-2"
                           onClick={() => {
                             setMostrarDialogAlterarCategoria(false)
                             setMostrarDialogNovaCategoria(true)
@@ -1044,7 +1045,7 @@ export default function CartaoDetalhePage() {
                 onKeyDown={(e) => e.key === 'Enter' && handleCriarCategoria()}
               />
               {novaCategoriaLabel && (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Será salvo como: <span className="font-medium">{sanearNomeCategoria(novaCategoriaLabel)}</span>
                 </p>
               )}

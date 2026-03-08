@@ -111,28 +111,28 @@ export function StepUpload({
           className={`
             border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-all
             ${isDragActive
-              ? 'border-blue-500 bg-blue-50'
-              : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'}
+              ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10'
+              : 'border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-surface-2'}
             ${isLoading ? 'opacity-50 pointer-events-none' : ''}
           `}
         >
           <input {...getInputProps()} />
 
-          <Upload className="w-12 h-12 mx-auto text-slate-400 mb-4" />
+          <Upload className="w-12 h-12 mx-auto text-slate-400 dark:text-slate-500 mb-4" />
 
           {isLoading ? (
             <div>
-              <p className="text-slate-600 font-medium">Processando arquivo...</p>
-              <p className="text-sm text-slate-400 mt-1">Aguarde enquanto analisamos os dados</p>
+              <p className="text-slate-600 dark:text-slate-400 font-medium">Processando arquivo...</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Aguarde enquanto analisamos os dados</p>
             </div>
           ) : isDragActive ? (
-            <p className="text-blue-600 font-medium">Solte o arquivo aqui</p>
+            <p className="text-blue-600 dark:text-blue-400 font-medium">Solte o arquivo aqui</p>
           ) : (
             <>
-              <p className="text-slate-600 font-medium mb-2">
+              <p className="text-slate-600 dark:text-slate-400 font-medium mb-2">
                 Arraste um arquivo ou clique para selecionar
               </p>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-slate-400 dark:text-slate-500">
                 Formatos aceitos: .csv, .xlsx, .xls (máximo 10MB)
               </p>
             </>
@@ -140,15 +140,15 @@ export function StepUpload({
         </div>
       ) : (
         /* Arquivo selecionado */
-        <Card className="p-4 border-green-200 bg-green-50/50">
+        <Card className="p-4 border-green-200 dark:border-green-500/30 bg-green-50/50 dark:bg-emerald-500/10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
-                <FileSpreadsheet className="w-6 h-6 text-green-600" />
+              <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-emerald-500/20 flex items-center justify-center">
+                <FileSpreadsheet className="w-6 h-6 text-green-600 dark:text-emerald-400" />
               </div>
               <div>
-                <p className="font-medium text-slate-800">{state.arquivo.name}</p>
-                <p className="text-sm text-slate-500">
+                <p className="font-medium text-slate-800 dark:text-slate-200">{state.arquivo.name}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   {formatFileSize(state.arquivo.size)} • {state.totalLinhas} linhas detectadas
                 </p>
               </div>
@@ -163,19 +163,19 @@ export function StepUpload({
       {/* Preview dos dados */}
       {state.arquivo && state.amostra.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium text-slate-700 mb-3">
+          <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
             Preview das primeiras linhas:
           </h3>
 
-          <div className="overflow-x-auto border rounded-lg">
+          <div className="overflow-x-auto border dark:border-slate-700 rounded-lg">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b">
+              <thead className="bg-slate-50 dark:bg-surface-0 border-b dark:border-slate-700">
                 <tr>
-                  <th className="px-3 py-2 text-left font-medium text-slate-500 w-10">#</th>
+                  <th className="px-3 py-2 text-left font-medium text-slate-500 dark:text-slate-400 w-10">#</th>
                   {state.headers.map((header, i) => (
                     <th
                       key={i}
-                      className="px-3 py-2 text-left font-medium text-slate-700 whitespace-nowrap"
+                      className="px-3 py-2 text-left font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap"
                     >
                       {header}
                     </th>
@@ -184,12 +184,12 @@ export function StepUpload({
               </thead>
               <tbody>
                 {state.amostra.slice(0, 5).map((row, i) => (
-                  <tr key={i} className="border-b last:border-0 hover:bg-slate-50">
-                    <td className="px-3 py-2 text-slate-400 text-xs">{i + 1}</td>
+                  <tr key={i} className="border-b dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-surface-2">
+                    <td className="px-3 py-2 text-slate-400 dark:text-slate-500 text-xs">{i + 1}</td>
                     {state.headers.map((header, j) => (
                       <td
                         key={j}
-                        className="px-3 py-2 text-slate-600 whitespace-nowrap max-w-[200px] truncate"
+                        className="px-3 py-2 text-slate-600 dark:text-slate-400 whitespace-nowrap max-w-[200px] truncate"
                         title={String(row[header] || '')}
                       >
                         {String(row[header] || '-')}
@@ -202,7 +202,7 @@ export function StepUpload({
           </div>
 
           {state.totalLinhas > 5 && (
-            <p className="text-xs text-slate-400 mt-2 text-center">
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 text-center">
               Mostrando 5 de {state.totalLinhas} linhas
             </p>
           )}
@@ -211,10 +211,10 @@ export function StepUpload({
 
       {/* Info sobre colunas */}
       {state.headers.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-700">
+            <div className="text-sm text-blue-700 dark:text-blue-400">
               <p className="font-medium">
                 {state.headers.length} colunas detectadas
               </p>

@@ -79,7 +79,8 @@ export interface FaturaGerada {
   data_emissao: string
   data_vencimento: string
   valor_total: number
-  status: 'rascunho' | 'emitida' | 'enviada' | 'paga' | 'atrasada' | 'cancelada'
+  valor_pago: number
+  status: 'rascunho' | 'emitida' | 'enviada' | 'paga' | 'parcialmente_paga' | 'atrasada' | 'cancelada'
   parcelado: boolean
   numero_parcelas: number | null
   observacoes: string | null
@@ -96,6 +97,7 @@ export interface FaturaGerada {
   updated_at: string
   categoria_status: string
   dias_ate_vencimento: number | null
+  conta_bancaria_id: string | null
 }
 
 export interface ContractLimits {
@@ -454,7 +456,8 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
       escritorioIdOverride?: string,
       fechamentosIds?: string[],
       despesasIds?: string[],
-      dataEmissao?: string
+      dataEmissao?: string,
+      contaBancariaId?: string
     ): Promise<string | null> => {
       const targetEscritorioId = escritorioIdOverride || escritorioIdPrincipal
       if (!targetEscritorioId) {
@@ -484,6 +487,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
             p_data_vencimento: dataVencimento || null,
             p_observacoes: observacoes || null,
             p_user_id: user?.id || null,
+            p_conta_bancaria_id: contaBancariaId || null,
           },
         })
 
@@ -549,7 +553,8 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
       dataPagamento: string,
       formaPagamento: string,
       contaBancariaId?: string,
-      observacoes?: string
+      observacoes?: string,
+      dataVencimentoSaldo?: string
     ): Promise<string | null> => {
       try {
         setLoading(true)
@@ -568,6 +573,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
           p_conta_bancaria_id: contaBancariaId || null,
           p_user_id: user?.id || null,
           p_observacoes: observacoes || null,
+          p_data_vencimento_saldo: dataVencimentoSaldo || null,
         })
 
         if (rpcError) throw rpcError

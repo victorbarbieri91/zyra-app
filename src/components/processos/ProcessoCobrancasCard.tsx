@@ -235,9 +235,9 @@ export default function ProcessoCobrancasCard({
 
   return (
     <>
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardHeader className="pb-3 pt-4">
-          <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+          <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
             <Receipt className="w-4 h-4 text-[#89bcbe]" />
             Cobrança de Atos
           </CardTitle>
@@ -250,8 +250,8 @@ export default function ProcessoCobrancasCard({
                 className={cn(
                   "p-3 rounded-lg border",
                   ato.jaCobrado
-                    ? "bg-slate-100/60 border-slate-200/80"
-                    : "bg-slate-50 border-slate-200"
+                    ? "bg-slate-100/60 dark:bg-surface-2/60 border-slate-200/80 dark:border-slate-700/80"
+                    : "bg-slate-50 dark:bg-surface-0 border-slate-200 dark:border-slate-700"
                 )}
               >
                 {/* Cabeçalho do Ato */}
@@ -259,7 +259,7 @@ export default function ProcessoCobrancasCard({
                   <div className="flex-1 min-w-0">
                     <p className={cn(
                       "text-xs font-medium truncate",
-                      ato.jaCobrado ? "text-slate-500" : "text-[#34495e]"
+                      ato.jaCobrado ? "text-slate-500 dark:text-slate-400" : "text-[#34495e] dark:text-slate-200"
                     )}>
                       {ato.nome}
                     </p>
@@ -267,7 +267,7 @@ export default function ProcessoCobrancasCard({
                     {/* Info do Cálculo */}
                     <div className="mt-2 space-y-1">
                       {!ato.jaCobrado && (
-                        <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                        <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400">
                           <span>
                             {ato.percentual_contrato || ato.percentual_padrao}% de{' '}
                             {formatCurrency(
@@ -277,7 +277,7 @@ export default function ProcessoCobrancasCard({
                             )}
                           </span>
                           {ato.calculoAtualizado.usouMinimo && (
-                            <Badge className="text-[8px] px-1 py-0 h-3.5 bg-amber-100 text-amber-700 border-amber-200">
+                            <Badge className="text-[8px] px-1 py-0 h-3.5 bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-700">
                               mín. aplicado
                             </Badge>
                           )}
@@ -285,7 +285,7 @@ export default function ProcessoCobrancasCard({
                       )}
                       <p className={cn(
                         "text-sm font-semibold",
-                        ato.jaCobrado ? "text-slate-500" : "text-emerald-600"
+                        ato.jaCobrado ? "text-slate-500 dark:text-slate-400" : "text-emerald-600 dark:text-emerald-400"
                       )}>
                         {formatCurrency(ato.jaCobrado ? (ato.receitaValor ?? ato.valorFinal) : ato.valorFinal)}
                       </p>
@@ -297,10 +297,10 @@ export default function ProcessoCobrancasCard({
                     <div className={cn(
                       "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[10px] font-medium shrink-0",
                       ato.receitaStatus === 'pago'
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-700"
                         : ato.receitaStatus === 'faturado'
-                          ? "bg-blue-50 text-blue-700 border border-blue-200"
-                          : "bg-amber-50 text-amber-700 border border-amber-200"
+                          ? "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-700"
+                          : "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-700"
                     )}>
                       <CheckCircle2 className="w-3 h-3" />
                       {ato.receitaStatus === 'pago' ? 'Pago'
@@ -330,7 +330,7 @@ export default function ProcessoCobrancasCard({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="mt-2 h-6 px-2 text-[10px] text-slate-500 hover:text-[#34495e] w-full justify-start"
+                        className="mt-2 h-6 px-2 text-[10px] text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 w-full justify-start"
                       >
                         <Pencil className="w-3 h-3 mr-1" />
                         {ato.usandoBaseAlternativa ? 'Usando base alternativa' : 'Alterar base de cálculo'}
@@ -341,9 +341,9 @@ export default function ProcessoCobrancasCard({
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="pt-2">
-                      <div className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-2">
+                      <div className="p-2.5 bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 space-y-2">
                         <div className="flex items-center gap-2">
-                          <Label className="text-[10px] text-slate-500 whitespace-nowrap">
+                          <Label className="text-[10px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                             Base alternativa:
                           </Label>
                           <Input
@@ -361,7 +361,7 @@ export default function ProcessoCobrancasCard({
                             variant="ghost"
                             size="sm"
                             onClick={() => toggleBaseAlternativa(ato.id)}
-                            className="h-6 px-2 text-[10px] text-slate-500"
+                            className="h-6 px-2 text-[10px] text-slate-500 dark:text-slate-400"
                           >
                             <X className="w-3 h-3 mr-1" />
                             Usar valor da causa
@@ -387,25 +387,25 @@ export default function ProcessoCobrancasCard({
             </DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <div className="p-3 bg-slate-50 rounded-lg space-y-2">
+            <div className="p-3 bg-slate-50 dark:bg-surface-0 rounded-lg space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500">Ato:</span>
-                <span className="text-xs font-medium text-[#34495e]">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Ato:</span>
+                <span className="text-xs font-medium text-[#34495e] dark:text-slate-200">
                   {modalConfirmacao?.nome}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500">Base:</span>
-                <span className="text-xs text-slate-600">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Base:</span>
+                <span className="text-xs text-slate-600 dark:text-slate-400">
                   {modalConfirmacao?.usandoBaseAlternativa && modalConfirmacao?.baseAlternativa
                     ? formatCurrency(parseFloat(modalConfirmacao.baseAlternativa))
                     : formatCurrency(modalConfirmacao?.base_calculo_padrao || valorCausa || 0)
                   }
                 </span>
               </div>
-              <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-                <span className="text-sm font-medium text-[#34495e]">Valor:</span>
-                <span className="text-sm font-bold text-emerald-600">
+              <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
+                <span className="text-sm font-medium text-[#34495e] dark:text-slate-200">Valor:</span>
+                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                   {formatCurrency(modalConfirmacao?.valorFinal || 0)}
                 </span>
               </div>

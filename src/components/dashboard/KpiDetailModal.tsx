@@ -166,10 +166,10 @@ export default function KpiDetailModal({ open, onOpenChange, kpiType, metrics }:
         </div>
 
         {/* ── Footer ── */}
-        <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50">
+        <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-surface-0/50">
           <Link
             href={config.href}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#46627f] hover:text-[#34495e] transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#46627f] dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 transition-colors"
           >
             {config.hrefLabel}
             <ExternalLink className="w-3 h-3" />

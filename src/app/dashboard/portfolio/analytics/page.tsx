@@ -39,7 +39,7 @@ const AREA_COLORS: Record<AreaJuridica, string> = {
   societario: 'bg-blue-500',
   trabalhista: 'bg-emerald-500',
   civel: 'bg-purple-500',
-  outro: 'bg-slate-500',
+  outro: 'bg-slate-50 dark:bg-surface-20',
 }
 
 export default function PortfolioAnalyticsPage() {
@@ -124,7 +124,7 @@ export default function PortfolioAnalyticsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#34495e]" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#34495e] dark:border-[#89bcbe]" />
       </div>
     )
   }
@@ -133,15 +133,15 @@ export default function PortfolioAnalyticsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-[#34495e]">Analytics do Portfólio</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl font-semibold text-[#34495e] dark:text-slate-200">Analytics do Portfólio</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           Métricas e indicadores de desempenho dos produtos e projetos
         </p>
       </div>
 
       {/* KPIs Principais */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-slate-200 bg-gradient-to-br from-[#34495e] to-[#46627f] text-white">
+        <Card className="border-slate-200 dark:border-slate-700 bg-gradient-to-br from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] text-white dark:text-surface-0">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -153,7 +153,7 @@ export default function PortfolioAnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 bg-gradient-to-br from-[#46627f] to-[#6c757d] text-white">
+        <Card className="border-slate-200 dark:border-slate-700 bg-gradient-to-br from-[#46627f] to-[#6c757d] dark:from-[#6ba9ab] dark:to-[#89bcbe] text-white dark:text-surface-0">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -165,7 +165,7 @@ export default function PortfolioAnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 bg-gradient-to-br from-[#89bcbe] to-[#aacfd0] text-white">
+        <Card className="border-slate-200 dark:border-slate-700 bg-gradient-to-br from-[#89bcbe] to-[#aacfd0] dark:from-[#aacfd0] dark:to-[#89bcbe] text-white dark:text-surface-0">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -179,12 +179,12 @@ export default function PortfolioAnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Atrasados</p>
-                <p className="text-3xl font-bold text-red-600">
+                <p className="text-sm text-slate-500 dark:text-slate-400">Atrasados</p>
+                <p className="text-3xl font-bold text-red-600 dark:text-red-400">
                   {dashboardMetricas?.projetos_atrasados || 0}
                 </p>
               </div>
@@ -197,25 +197,25 @@ export default function PortfolioAnalyticsPage() {
       {/* Receita */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Receita do Mês */}
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-[#34495e]">
+            <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
               Receita do Mês
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-end justify-between">
               <div>
-                <p className="text-3xl font-bold text-[#1E3A8A]">
+                <p className="text-3xl font-bold text-[#1E3A8A] dark:text-blue-400">
                   {formatCurrency(receitaAtual)}
                 </p>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   Mês anterior: {formatCurrency(receitaAnterior)}
                 </p>
               </div>
               <div
                 className={`flex items-center gap-1 text-sm font-medium ${
-                  variacaoReceita >= 0 ? 'text-emerald-600' : 'text-red-600'
+                  variacaoReceita >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
                 }`}
               >
                 {variacaoReceita >= 0 ? (
@@ -230,9 +230,9 @@ export default function PortfolioAnalyticsPage() {
         </Card>
 
         {/* Gráfico de Receita por Mês */}
-        <Card className="border-slate-200 lg:col-span-2">
+        <Card className="border-slate-200 dark:border-slate-700 lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-[#34495e]">
+            <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
               Receita Mensal ({new Date().getFullYear()})
             </CardTitle>
           </CardHeader>
@@ -249,7 +249,7 @@ export default function PortfolioAnalyticsPage() {
                       style={{ height: `${Math.max(altura, 2)}%` }}
                       title={`${mesesNomes[mes.mes - 1]}: ${formatCurrency(mes.receita)}`}
                     />
-                    <span className="text-[10px] text-slate-500">{mesesNomes[mes.mes - 1]}</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">{mesesNomes[mes.mes - 1]}</span>
                   </div>
                 )
               })}
@@ -261,9 +261,9 @@ export default function PortfolioAnalyticsPage() {
       {/* Métricas por Área e Produtos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Desempenho por Área */}
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-[#34495e]">
+            <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
               Desempenho por Área Jurídica
             </CardTitle>
           </CardHeader>
@@ -281,31 +281,31 @@ export default function PortfolioAnalyticsPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div
-                          className={`w-8 h-8 rounded-lg ${AREA_COLORS[area.area_juridica]} bg-opacity-20 flex items-center justify-center`}
+                          className={`w-8 h-8 rounded-lg ${AREA_COLORS[area.area_juridica]} bg-opacity-20 dark:bg-opacity-10 flex items-center justify-center`}
                         >
-                          <AreaIcon className="w-4 h-4 text-slate-600" />
+                          <AreaIcon className="w-4 h-4 text-slate-600 dark:text-slate-300" />
                         </div>
-                        <span className="text-sm font-medium text-[#34495e]">
+                        <span className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                           {AREA_JURIDICA_LABELS[area.area_juridica]}
                         </span>
                       </div>
                       <div className="text-right">
-                        <span className="text-sm font-semibold text-[#34495e]">
+                        <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                           {area.total_projetos} projetos
                         </span>
-                        <span className="text-xs text-slate-500 ml-2">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">
                           ({area.produtos_ativos} produtos)
                         </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Progress value={taxaSucesso} className="h-2 flex-1" />
-                      <span className="text-xs text-slate-500 w-12 text-right">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 w-12 text-right">
                         {taxaSucesso.toFixed(0)}%
                       </span>
                     </div>
                     {area.receita_total && (
-                      <p className="text-xs text-slate-500 text-right">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 text-right">
                         Receita: {formatCurrency(area.receita_total)}
                       </p>
                     )}
@@ -314,7 +314,7 @@ export default function PortfolioAnalyticsPage() {
               })}
 
               {metricasPorArea.length === 0 && (
-                <p className="text-center text-slate-500 py-4">
+                <p className="text-center text-slate-500 dark:text-slate-400 py-4">
                   Nenhum dado disponível
                 </p>
               )}
@@ -323,9 +323,9 @@ export default function PortfolioAnalyticsPage() {
         </Card>
 
         {/* Produtos Mais Vendidos */}
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-[#34495e]">
+            <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
               Produtos Mais Executados
             </CardTitle>
           </CardHeader>
@@ -337,27 +337,27 @@ export default function PortfolioAnalyticsPage() {
                 return (
                   <div
                     key={produto.produto_id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-slate-50"
+                    className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-surface-2"
                   >
-                    <div className="w-8 h-8 rounded-full bg-[#34495e] text-white flex items-center justify-center font-semibold text-sm">
+                    <div className="w-8 h-8 rounded-full bg-[#34495e] dark:bg-[#89bcbe] text-white flex items-center justify-center font-semibold text-sm">
                       {index + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-[#34495e] truncate">
+                      <p className="font-medium text-sm text-[#34495e] dark:text-slate-200 truncate">
                         {produto.produto_nome}
                       </p>
-                      <p className="text-xs text-slate-500">{produto.produto_codigo}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{produto.produto_codigo}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-[#34495e]">{produto.total_execucoes}</p>
-                      <p className="text-xs text-slate-500">execuções</p>
+                      <p className="font-semibold text-[#34495e] dark:text-slate-200">{produto.total_execucoes}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">execuções</p>
                     </div>
                   </div>
                 )
               })}
 
               {produtosMaisVendidos.length === 0 && (
-                <p className="text-center text-slate-500 py-4">
+                <p className="text-center text-slate-500 dark:text-slate-400 py-4">
                   Nenhum produto executado ainda
                 </p>
               )}
@@ -369,9 +369,9 @@ export default function PortfolioAnalyticsPage() {
       {/* Taxa de Sucesso e Duração */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Taxa de Sucesso por Área */}
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-[#34495e]">
+            <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
               Taxa de Sucesso por Área
             </CardTitle>
           </CardHeader>
@@ -384,21 +384,21 @@ export default function PortfolioAnalyticsPage() {
                 return (
                   <div key={area.area_juridica} className="flex items-center gap-4">
                     <div
-                      className={`w-10 h-10 rounded-lg ${AREA_COLORS[areaKey]} bg-opacity-20 flex items-center justify-center`}
+                      className={`w-10 h-10 rounded-lg ${AREA_COLORS[areaKey]} bg-opacity-20 dark:bg-opacity-10 flex items-center justify-center`}
                     >
-                      <AreaIcon className="w-5 h-5 text-slate-600" />
+                      <AreaIcon className="w-5 h-5 text-slate-600 dark:text-slate-300" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-[#34495e]">
+                        <span className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                           {AREA_JURIDICA_LABELS[areaKey]}
                         </span>
-                        <span className="text-sm font-semibold text-[#34495e]">
+                        <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                           {area.taxa_sucesso.toFixed(0)}%
                         </span>
                       </div>
                       <Progress value={area.taxa_sucesso} className="h-2" />
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                         {area.total_sucesso} de {area.total_concluidos} concluídos com sucesso
                       </p>
                     </div>
@@ -407,7 +407,7 @@ export default function PortfolioAnalyticsPage() {
               })}
 
               {taxaSucessoArea.length === 0 && (
-                <p className="text-center text-slate-500 py-4">
+                <p className="text-center text-slate-500 dark:text-slate-400 py-4">
                   Nenhum projeto concluído ainda
                 </p>
               )}
@@ -416,9 +416,9 @@ export default function PortfolioAnalyticsPage() {
         </Card>
 
         {/* Análise de Duração */}
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-[#34495e]">
+            <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
               Análise de Duração
             </CardTitle>
           </CardHeader>
@@ -432,7 +432,7 @@ export default function PortfolioAnalyticsPage() {
                 return (
                   <div
                     key={produto.produto_id}
-                    className="flex items-center gap-3 p-3 rounded-lg border border-slate-200"
+                    className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700"
                   >
                     <Clock
                       className={`w-5 h-5 ${
@@ -444,10 +444,10 @@ export default function PortfolioAnalyticsPage() {
                       }`}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-[#34495e] truncate">
+                      <p className="font-medium text-sm text-[#34495e] dark:text-slate-200 truncate">
                         {produto.produto_nome}
                       </p>
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                         <span>Estimado: {produto.duracao_estimada_dias}d</span>
                         <span>|</span>
                         <span>Real: {produto.duracao_media_dias?.toFixed(0)}d</span>
@@ -456,10 +456,10 @@ export default function PortfolioAnalyticsPage() {
                     <div
                       className={`text-right text-sm font-semibold ${
                         isOnTime
-                          ? 'text-emerald-600'
+                          ? 'text-emerald-600 dark:text-emerald-400'
                           : isSlightlyLate
-                          ? 'text-amber-600'
-                          : 'text-red-600'
+                          ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-red-600 dark:text-red-400'
                       }`}
                     >
                       {produto.diferenca_dias > 0 ? '+' : ''}
@@ -470,7 +470,7 @@ export default function PortfolioAnalyticsPage() {
               })}
 
               {duracaoMedia.length === 0 && (
-                <p className="text-center text-slate-500 py-4">
+                <p className="text-center text-slate-500 dark:text-slate-400 py-4">
                   Nenhum dado de duração disponível
                 </p>
               )}

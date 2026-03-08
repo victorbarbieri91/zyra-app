@@ -111,8 +111,8 @@ export function BuscaCNJModal({
         <DialogTitle className="sr-only">Buscar Processo por CNJ</DialogTitle>
 
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200">
-          <h2 className="text-lg font-semibold text-[#34495e]">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+          <h2 className="text-lg font-semibold text-[#34495e] dark:text-slate-200">
             Buscar Processo por CNJ
           </h2>
         </div>
@@ -120,7 +120,7 @@ export function BuscaCNJModal({
         {/* Content */}
         <div className="px-6 py-5 space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="numero_cnj" className="text-sm font-medium text-[#34495e]">
+            <Label htmlFor="numero_cnj" className="text-sm font-medium text-[#34495e] dark:text-slate-200">
               Número CNJ *
             </Label>
             <Input
@@ -133,17 +133,17 @@ export function BuscaCNJModal({
               disabled={buscando}
               autoFocus
             />
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Digite o número do processo no formato CNJ (20 dígitos)
             </p>
           </div>
 
           {erro && (
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 border border-red-200">
-              <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-700">
+              <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm text-red-800">{erro}</p>
-                <p className="text-xs text-red-600 mt-0.5">
+                <p className="text-sm text-red-800 dark:text-red-400">{erro}</p>
+                <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
                   Verifique o número ou tente o cadastro manual.
                 </p>
               </div>
@@ -153,15 +153,15 @@ export function BuscaCNJModal({
           {buscando && (
             <div className="flex items-center justify-center py-4">
               <div className="flex items-center gap-3">
-                <Loader2 className="w-5 h-5 text-[#34495e] animate-spin" />
-                <p className="text-sm text-slate-600">Buscando dados do processo...</p>
+                <Loader2 className="w-5 h-5 text-[#34495e] dark:text-slate-200 animate-spin" />
+                <p className="text-sm text-slate-600 dark:text-slate-400">Buscando dados do processo...</p>
               </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-slate-50/50">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50/50">
           <Button variant="ghost" onClick={handleClose} size="sm">
             Cancelar
           </Button>

@@ -117,19 +117,19 @@ export default function LembretesEditor({
       {/* Lista de Lembretes Ativos */}
       {lembretes.length > 0 && (
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-[#46627f]">Lembretes Ativos</Label>
+          <Label className="text-sm font-medium text-[#46627f] dark:text-slate-400">Lembretes Ativos</Label>
           <div className="space-y-2">
             {lembretes.map((lembrete, index) => (
               <div
                 key={index}
-                className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg"
+                className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700 rounded-lg"
               >
-                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <Bell className="w-4 h-4 text-blue-600" />
+                <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                  <Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[#34495e]">
+                  <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                     {formatarTempo(lembrete.tempo_antes_minutos)}
                   </p>
                   <div className="flex items-center gap-1.5 mt-1 flex-wrap">
@@ -142,9 +142,9 @@ export default function LembretesEditor({
                           variant="outline"
                           className={cn(
                             'text-[10px] flex items-center gap-1',
-                            config.color === 'blue' && 'border-blue-200 text-blue-700',
-                            config.color === 'emerald' && 'border-emerald-200 text-emerald-700',
-                            config.color === 'amber' && 'border-amber-200 text-amber-700'
+                            config.color === 'blue' && 'border-blue-200 text-blue-700 dark:text-blue-400',
+                            config.color === 'emerald' && 'border-emerald-200 text-emerald-700 dark:text-emerald-400',
+                            config.color === 'amber' && 'border-amber-200 text-amber-700 dark:text-amber-400'
                           )}
                         >
                           <Icon className="w-3 h-3" />
@@ -171,12 +171,12 @@ export default function LembretesEditor({
       )}
 
       {/* Adicionar Novo Lembrete */}
-      <div className="space-y-3 p-4 border border-slate-200 rounded-lg bg-white">
+      <div className="space-y-3 p-4 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-surface-1">
         <Label className="text-sm font-medium text-[#46627f]">Adicionar Lembrete</Label>
 
         {/* Seletor de Tempo */}
         <div className="space-y-1.5">
-          <Label className="text-xs text-slate-600">Quando notificar?</Label>
+          <Label className="text-xs text-slate-600 dark:text-slate-400">Quando notificar?</Label>
           <Select
             value={String(tempoSelecionado)}
             onValueChange={value => setTempoSelecionado(Number(value))}
@@ -196,7 +196,7 @@ export default function LembretesEditor({
 
         {/* Seletor de Métodos */}
         <div className="space-y-2">
-          <Label className="text-xs text-slate-600">Métodos de Notificação</Label>
+          <Label className="text-xs text-slate-600 dark:text-slate-400">Métodos de Notificação</Label>
           <div className="grid grid-cols-3 gap-2">
             {(Object.entries(METODO_CONFIG) as [keyof typeof METODO_CONFIG, typeof METODO_CONFIG[keyof typeof METODO_CONFIG]][]).map(
               ([metodo, config]) => {
@@ -213,12 +213,12 @@ export default function LembretesEditor({
                       ativo
                         ? cn(
                             'border-current shadow-sm',
-                            config.color === 'blue' && 'bg-blue-50 text-blue-600 border-blue-300',
+                            config.color === 'blue' && 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-300',
                             config.color === 'emerald' &&
-                              'bg-emerald-50 text-emerald-600 border-emerald-300',
-                            config.color === 'amber' && 'bg-amber-50 text-amber-600 border-amber-300'
+                              'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-300',
+                            config.color === 'amber' && 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-300'
                           )
-                        : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600'
+                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 text-slate-400 dark:text-slate-400 hover:border-slate-300 hover:text-slate-600 dark:hover:text-slate-300'
                     )}
                   >
                     <Icon className="w-5 h-5" />
@@ -246,7 +246,7 @@ export default function LembretesEditor({
 
       {/* Empty State */}
       {lembretes.length === 0 && (
-        <div className="text-center py-6 text-sm text-slate-400 border border-dashed border-slate-200 rounded-lg">
+        <div className="text-center py-6 text-sm text-slate-400 dark:text-slate-400 border border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
           Nenhum lembrete configurado. Configure acima para ser notificado.
         </div>
       )}

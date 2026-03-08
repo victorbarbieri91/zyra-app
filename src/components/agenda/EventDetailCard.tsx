@@ -133,21 +133,21 @@ const subtipoTarefaLabels: Record<string, string> = {
 
 const prioridadeConfig = {
   alta: {
-    color: 'text-red-600',
-    bg: 'bg-red-50',
-    border: 'border-red-200',
+    color: 'text-red-600 dark:text-red-400',
+    bg: 'bg-red-50 dark:bg-red-500/10',
+    border: 'border-red-200 dark:border-red-800',
     label: 'Alta',
   },
   media: {
-    color: 'text-amber-600',
-    bg: 'bg-amber-50',
-    border: 'border-amber-200',
+    color: 'text-amber-600 dark:text-amber-400',
+    bg: 'bg-amber-50 dark:bg-amber-500/10',
+    border: 'border-amber-200 dark:border-amber-800',
     label: 'Média',
   },
   baixa: {
-    color: 'text-emerald-600',
-    bg: 'bg-emerald-50',
-    border: 'border-emerald-200',
+    color: 'text-emerald-600 dark:text-emerald-400',
+    bg: 'bg-emerald-50 dark:bg-emerald-500/10',
+    border: 'border-emerald-200 dark:border-emerald-800',
     label: 'Baixa',
   },
 }
@@ -204,8 +204,8 @@ export default function EventDetailCard({
   return (
     <Card
       className={cn(
-        'border border-slate-200 hover:border-[#89bcbe] transition-all shadow hover:shadow-md cursor-pointer',
-        'bg-white'
+        'border border-slate-200 dark:border-slate-700 hover:border-[#89bcbe] transition-all shadow hover:shadow-md cursor-pointer',
+        'bg-white dark:bg-surface-1'
       )}
       onClick={onViewDetails}
     >
@@ -213,7 +213,7 @@ export default function EventDetailCard({
         {/* Header com título e tipo */}
         <div className="flex items-start justify-between gap-2 mb-1.5">
           <h4 className={cn(
-            'text-xs font-bold text-[#34495e] leading-tight line-clamp-2',
+            'text-xs font-bold text-[#34495e] dark:text-slate-200 leading-tight line-clamp-2',
             estaConcluida && 'line-through opacity-60'
           )}>
             {titulo}
@@ -228,7 +228,7 @@ export default function EventDetailCard({
 
         {/* Descrição (se houver) */}
         {descricao && (
-          <p className="text-[11px] text-slate-600 mb-1.5 line-clamp-1">
+          <p className="text-[11px] text-slate-600 dark:text-slate-400 mb-1.5 line-clamp-1">
             {descricao}
           </p>
         )}
@@ -239,7 +239,7 @@ export default function EventDetailCard({
           {tipo === 'tarefa' && subtipoLabel && (
             <div className="flex items-center gap-1.5">
               <ClipboardList className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
-              <span className="text-[11px] text-slate-600 font-medium">{subtipoLabel}</span>
+              <span className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">{subtipoLabel}</span>
             </div>
           )}
 
@@ -247,7 +247,7 @@ export default function EventDetailCard({
           {tipo === 'tarefa' && (
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
-              <span className="text-[11px] text-slate-600">
+              <span className="text-[11px] text-slate-600 dark:text-slate-400">
                 {formatBrazilDate(data_inicio, 'dd/MM/yyyy')}
               </span>
             </div>
@@ -275,7 +275,7 @@ export default function EventDetailCard({
           {tipo !== 'tarefa' && (
             <div className="flex items-center gap-1.5">
               <Clock className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
-              <span className="text-[11px] text-slate-600">
+              <span className="text-[11px] text-slate-600 dark:text-slate-400">
                 {dia_inteiro ? (
                   'Dia inteiro'
                 ) : (
@@ -292,7 +292,7 @@ export default function EventDetailCard({
           {local && (
             <div className="flex items-center gap-1.5">
               <MapPin className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
-              <span className="text-[11px] text-slate-600 truncate">{local}</span>
+              <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate">{local}</span>
             </div>
           )}
 
@@ -318,14 +318,14 @@ export default function EventDetailCard({
                       navigator.clipboard.writeText(processo_numero)
                       toast.success('Número copiado!')
                     }}
-                    className="p-0.5 rounded hover:bg-slate-100 text-slate-400 hover:text-[#89bcbe] transition-colors flex-shrink-0"
+                    className="p-0.5 rounded hover:bg-slate-100 dark:hover:bg-surface-3 text-slate-400 dark:text-slate-500 hover:text-[#89bcbe] transition-colors flex-shrink-0"
                     title="Copiar número do processo"
                   >
                     <Copy className="w-3 h-3" />
                   </button>
                 </div>
                 {caso_titulo && (
-                  <span className="text-[10px] text-slate-500 truncate">{caso_titulo}</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{caso_titulo}</span>
                 )}
               </div>
             </div>
@@ -352,7 +352,7 @@ export default function EventDetailCard({
           {(todos_responsaveis || responsavel_nome) && (
             <div className="flex items-center gap-1.5">
               <User className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
-              <span className="text-[11px] text-slate-600 truncate">
+              <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate">
                 {todos_responsaveis || responsavel_nome}
               </span>
             </div>
@@ -363,7 +363,7 @@ export default function EventDetailCard({
             <div className="flex items-center gap-1.5 mt-1">
               <Badge
                 variant="outline"
-                className="text-[10px] px-1.5 py-0 h-4 font-medium bg-teal-50 text-teal-700 border-teal-200"
+                className="text-[10px] px-1.5 py-0 h-4 font-medium bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-800"
               >
                 Fixa — todo dia
               </Badge>
@@ -376,7 +376,7 @@ export default function EventDetailCard({
               <Repeat className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
               <Badge
                 variant="outline"
-                className="text-[10px] px-1.5 py-0 h-4 font-medium bg-blue-50 text-blue-700 border-blue-200"
+                className="text-[10px] px-1.5 py-0 h-4 font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800"
               >
                 Evento recorrente
               </Badge>
@@ -387,7 +387,7 @@ export default function EventDetailCard({
           {prazo_data_limite && (
             <div className="flex items-center gap-1.5 mt-1">
               <Zap className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
-              <span className="text-[11px] text-slate-600">Prazo Fatal:</span>
+              <span className="text-[11px] text-slate-600 dark:text-slate-400">Prazo Fatal:</span>
               <span className="text-[11px] font-semibold text-red-600">
                 {formatBrazilDate(prazo_data_limite, 'dd/MM/yyyy')}
               </span>
@@ -395,7 +395,7 @@ export default function EventDetailCard({
           )}
 
           {prazo_tipo && (
-            <div className="text-[10px] text-slate-500">
+            <div className="text-[10px] text-slate-500 dark:text-slate-400">
               Tipo: {prazo_tipo.charAt(0).toUpperCase() + prazo_tipo.slice(1)}
             </div>
           )}
@@ -403,18 +403,18 @@ export default function EventDetailCard({
 
         {/* Footer com ações */}
         {(podeSerConcluido || estaConcluida || onLancarHoras || (tipo === 'tarefa' && onReschedule)) && (
-          <div className="flex items-center justify-between gap-2 mt-2 pt-1.5 border-t border-slate-100">
+          <div className="flex items-center justify-between gap-2 mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-800">
             {/* Status badge */}
             <Badge
               variant="outline"
               className={cn(
                 'text-[10px] px-1.5 py-0 h-4 font-medium',
-                estaConcluida && 'bg-emerald-100 text-emerald-700 border-emerald-200',
-                statusEfetivo === 'em_andamento' && 'bg-blue-100 text-blue-700 border-blue-200',
-                statusEfetivo === 'em_pausa' && 'bg-amber-100 text-amber-700 border-amber-200',
-                (statusEfetivo === 'pendente' || statusEfetivo === 'agendada' || statusEfetivo === 'agendado') && 'bg-slate-100 text-slate-700 border-slate-200',
-                statusEfetivo === 'confirmada' && 'bg-emerald-100 text-emerald-700 border-emerald-200',
-                isItemCancelled(statusEfetivo) && 'bg-red-100 text-red-700 border-red-200'
+                estaConcluida && 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+                statusEfetivo === 'em_andamento' && 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+                statusEfetivo === 'em_pausa' && 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+                (statusEfetivo === 'pendente' || statusEfetivo === 'agendada' || statusEfetivo === 'agendado') && 'bg-slate-100 dark:bg-surface-2 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+                statusEfetivo === 'confirmada' && 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+                isItemCancelled(statusEfetivo) && 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
               )}
             >
               {estaConcluida && (tipo === 'tarefa' ? 'Concluída' : tipo === 'audiencia' ? 'Realizada' : 'Cumprido')}
@@ -434,7 +434,7 @@ export default function EventDetailCard({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-6 px-2 text-[10px] border-slate-200 text-slate-600 hover:bg-slate-50"
+                      className="h-6 px-2 text-[10px] border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2"
                     >
                       <CalendarClock className="w-3 h-3 mr-1" />
                       Reagendar
@@ -503,7 +503,7 @@ export default function EventDetailCard({
                     e.stopPropagation()
                     onLancarHoras()
                   }}
-                  className="h-6 px-2 text-[10px] border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
+                  className="h-6 px-2 text-[10px] border-[#89bcbe] text-[#34495e] dark:text-slate-200 hover:bg-[#f0f9f9] dark:hover:bg-teal-900/20"
                 >
                   <Timer className="w-3 h-3 mr-1" />
                   Horas
@@ -550,7 +550,7 @@ export default function EventDetailCard({
       {onReschedule && (
         <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
           <DialogContent className="max-w-fit p-4" onClick={(e) => e.stopPropagation()}>
-            <DialogTitle className="text-sm font-medium text-slate-700 mb-2">
+            <DialogTitle className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               Selecione a nova data
             </DialogTitle>
             <CalendarComponent

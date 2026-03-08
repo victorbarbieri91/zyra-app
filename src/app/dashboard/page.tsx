@@ -624,23 +624,23 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-[#f0f9f9]/30 to-slate-50">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-[#f0f9f9]/30 to-slate-50 dark:from-surface-0 dark:via-surface-0 dark:to-surface-0">
         <div className="flex flex-col items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center shadow-lg">
             <Loader2 className="w-7 h-7 text-white animate-spin" />
           </div>
-          <p className="text-sm text-[#46627f] font-medium">Preparando seu dashboard...</p>
+          <p className="text-sm text-[#46627f] dark:text-slate-400 font-medium">Preparando seu dashboard...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f0f9f9]/20 to-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f0f9f9]/20 to-slate-50 dark:from-surface-0 dark:via-surface-0 dark:to-surface-0">
       {/* ═══════════════════════════════════════════════════════════════
           HERO BANNER - Light gradient with decorative elements
           ═══════════════════════════════════════════════════════════════ */}
-      <div className="bg-gradient-to-br from-[#f0f9f9] via-[#e8f5f5]/60 to-slate-50 px-4 md:px-6 pt-3 md:pt-4 pb-8 md:pb-10 relative overflow-hidden border-b border-[#aacfd0]/20">
+      <div className="bg-gradient-to-br from-[#f0f9f9] via-[#e8f5f5]/60 to-slate-50 dark:from-surface-1 dark:via-surface-1 dark:to-surface-0 px-4 md:px-6 pt-3 md:pt-4 pb-8 md:pb-10 relative overflow-hidden border-b border-[#aacfd0]/20 dark:border-slate-700">
         {/* Decorative geometric shapes - hidden on mobile */}
         <div className="hidden md:block">
           <div className="absolute top-6 right-[14%] w-28 h-28 rounded-2xl bg-[#34495e]/[0.08] rotate-12" />
@@ -693,7 +693,7 @@ export default function DashboardPage() {
                     <Button
                       variant="ghost"
                       className={cn(
-                        "h-8 px-3 gap-2 text-[#46627f] hover:text-[#34495e] hover:bg-white/70 border border-[#aacfd0]/30 shadow-sm"
+                        "h-8 px-3 gap-2 text-[#46627f] dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 hover:bg-white/70 dark:hover:bg-surface-2/70 border border-[#aacfd0]/30 shadow-sm"
                       )}
                     >
                       <Building2 className="h-3.5 w-3.5" />
@@ -702,13 +702,13 @@ export default function DashboardPage() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-72 p-0" align="end">
-                    <div className="p-3 border-b border-slate-100">
-                      <p className="text-xs font-medium text-[#34495e]">Visualizar dados de:</p>
+                    <div className="p-3 border-b border-slate-100 dark:border-slate-800">
+                      <p className="text-xs font-medium text-[#34495e] dark:text-slate-200">Visualizar dados de:</p>
                     </div>
                     <div
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 border-b border-slate-100",
-                        escritoriosSelecionados.length === escritoriosGrupo.length && "bg-[#f0f9f9]"
+                        "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 border-b border-slate-100 dark:border-slate-800",
+                        escritoriosSelecionados.length === escritoriosGrupo.length && "bg-[#f0f9f9] dark:bg-teal-900/20"
                       )}
                       onClick={selecionarTodos}
                     >
@@ -723,8 +723,8 @@ export default function DashboardPage() {
                         )}
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-[#34495e]">Todos os escritórios</p>
-                        <p className="text-[10px] text-slate-500">Visão consolidada do grupo</p>
+                        <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">Todos os escritórios</p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">Visão consolidada do grupo</p>
                       </div>
                     </div>
                     <div className="max-h-64 overflow-y-auto">
@@ -735,8 +735,8 @@ export default function DashboardPage() {
                           <div
                             key={escritorio.id}
                             className={cn(
-                              "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 border-b border-slate-50 last:border-0",
-                              isSelected && escritoriosSelecionados.length < escritoriosGrupo.length && "bg-[#f0f9f9]/50"
+                              "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 border-b border-slate-50 dark:border-slate-800 last:border-0",
+                              isSelected && escritoriosSelecionados.length < escritoriosGrupo.length && "bg-[#f0f9f9]/50 dark:bg-teal-900/15"
                             )}
                             onClick={() => toggleEscritorio(escritorio.id)}
                           >
@@ -747,12 +747,12 @@ export default function DashboardPage() {
                             />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium text-[#34495e] truncate">{escritorio.nome}</p>
+                                <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">{escritorio.nome}</p>
                                 {isAtivo && (
                                   <span className="text-[9px] font-medium text-[#89bcbe] bg-[#89bcbe]/10 px-1.5 py-0.5 rounded">Atual</span>
                                 )}
                               </div>
-                              {escritorio.cnpj && <p className="text-[10px] text-slate-400 truncate">{escritorio.cnpj}</p>}
+                              {escritorio.cnpj && <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{escritorio.cnpj}</p>}
                             </div>
                             {escritoriosSelecionados.length > 1 && (
                               <button
@@ -766,8 +766,8 @@ export default function DashboardPage() {
                         )
                       })}
                     </div>
-                    <div className="p-2.5 bg-slate-50 border-t border-slate-100">
-                      <p className="text-[10px] text-slate-500 text-center">
+                    <div className="p-2.5 bg-slate-50 dark:bg-surface-2 border-t border-slate-100 dark:border-slate-800">
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 text-center">
                         {escritoriosSelecionados.length === 1
                           ? 'Exibindo dados de 1 escritório'
                           : `Exibindo dados consolidados de ${escritoriosSelecionados.length} escritórios`}
@@ -782,16 +782,16 @@ export default function DashboardPage() {
           {/* Greeting + AI Summary */}
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h1 className="text-xl font-bold text-[#34495e] mb-0.5">
+              <h1 className="text-xl font-bold text-[#34495e] dark:text-slate-200 mb-0.5">
                 {saudacao}{nomeUsuario ? `, ${nomeUsuario}!` : '!'}
               </h1>
               {loadingResumo ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-3 h-3 text-[#89bcbe] animate-spin" />
-                  <span className="text-sm text-[#46627f]/60">Analisando seu dia...</span>
+                  <span className="text-sm text-[#46627f]/60 dark:text-slate-400/60">Analisando seu dia...</span>
                 </div>
               ) : (
-                <p className="text-sm text-[#46627f]/80 leading-relaxed max-w-2xl line-clamp-2">
+                <p className="text-sm text-[#46627f]/80 dark:text-slate-300/80 leading-relaxed max-w-2xl line-clamp-2">
                   {resumo.mensagem}
                 </p>
               )}
@@ -806,7 +806,7 @@ export default function DashboardPage() {
                     </span>
                   )}
                   {resumo.dados.tarefas > 0 && (
-                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#e8f5f5] text-[11px] font-medium text-[#46627f] border border-[#aacfd0]/30">
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#e8f5f5] dark:bg-teal-900/15 text-[11px] font-medium text-[#46627f] dark:text-slate-400 border border-[#aacfd0]/30">
                       <CheckSquare className="w-3 h-3" />
                       {resumo.dados.tarefas} {resumo.dados.tarefas === 1 ? 'tarefa' : 'tarefas'}
                     </span>
@@ -829,11 +829,11 @@ export default function DashboardPage() {
 
             {/* Refresh */}
             <div className="flex items-center gap-1.5 ml-4 flex-shrink-0">
-              <span className="text-[10px] text-[#46627f]/40">{loadingResumo ? '' : tempoDesdeAtualizacao}</span>
+              <span className="text-[10px] text-[#46627f]/40 dark:text-slate-500/40">{loadingResumo ? '' : tempoDesdeAtualizacao}</span>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 text-[#46627f]/50 hover:text-[#34495e] hover:bg-white/60"
+                className="h-7 w-7 p-0 text-[#46627f]/50 dark:text-slate-400/50 hover:text-[#34495e] dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-surface-2/60"
                 onClick={() => refreshResumo()}
                 disabled={loadingResumo}
               >
@@ -896,7 +896,7 @@ export default function DashboardPage() {
               key={kpi.label}
               onClick={() => setKpiDetailOpen(kpi.kpiType)}
               className={cn(
-                "rounded-2xl p-3 md:p-4 bg-gradient-to-br shadow-[0_6px_28px_-4px_rgba(52,73,94,0.35)] hover:shadow-[0_12px_40px_-6px_rgba(52,73,94,0.45)] transition-all duration-300 hover:-translate-y-1 cursor-pointer",
+                "rounded-2xl p-3 md:p-4 bg-gradient-to-br shadow-[0_6px_28px_-4px_rgba(52,73,94,0.35)] dark:shadow-[0_6px_28px_-4px_rgba(0,0,0,0.5)] hover:shadow-[0_12px_40px_-6px_rgba(52,73,94,0.45)] dark:hover:shadow-[0_12px_40px_-6px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1 cursor-pointer",
                 kpi.gradient
               )}
             >
@@ -937,12 +937,12 @@ export default function DashboardPage() {
           {/* ── LEFT: AGENDA + PERFORMANCE ── */}
           <div className="lg:col-span-7 space-y-5">
             {/* ── AGENDA DO DIA (Hero) ── */}
-            <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] transition-all duration-300 overflow-hidden">
+            <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] dark:hover:shadow-[0_10px_35px_-6px_rgba(0,0,0,0.4)] transition-all duration-300 overflow-hidden">
               {/* Agenda Header */}
               <div className="flex items-center justify-between px-5 pt-5 pb-3">
                 <div>
-                  <h2 className="text-sm font-bold text-[#34495e]">Agenda do Dia</h2>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
+                  <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200">Agenda do Dia</h2>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
                     {agendaItems.length > 0
                       ? `${agendaItems.length} ${agendaItems.length === 1 ? 'compromisso' : 'compromissos'} hoje`
                       : 'Nenhum compromisso'}
@@ -974,8 +974,8 @@ export default function DashboardPage() {
                     </div>
                   ) : isAgendaEmpty ? (
                     <div className="flex-1 flex flex-col items-center justify-center text-center">
-                      <p className="text-sm font-medium text-[#34495e] mb-1">Dia livre!</p>
-                      <p className="text-xs text-slate-400">Aproveite para organizar suas tarefas ou registrar horas</p>
+                      <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 mb-1">Dia livre!</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">Aproveite para organizar suas tarefas ou registrar horas</p>
                     </div>
                   ) : (
                     <>
@@ -994,7 +994,7 @@ export default function DashboardPage() {
                               const badgeConfig: Record<string, { className: string; label: string }> = {
                                 audiencia: { className: 'text-red-600', label: 'Audiência' },
                                 prazo: { className: 'text-amber-600', label: 'Prazo' },
-                                tarefa: { className: 'text-[#46627f]', label: 'Tarefa' },
+                                tarefa: { className: 'text-[#46627f] dark:text-slate-400', label: 'Tarefa' },
                                 evento: { className: 'text-[#1E3A8A]', label: 'Evento' },
                               }
                               const dot = dotColor[event.tipo] || dotColor.evento
@@ -1005,7 +1005,7 @@ export default function DashboardPage() {
                                 <button
                                   key={`${event.id}-${index}`}
                                   onClick={() => handleAgendaItemClick(event)}
-                                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer text-left group"
+                                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors cursor-pointer text-left group"
                                 >
                                   {/* Dot */}
                                   <div className={cn("w-2 h-2 rounded-full flex-shrink-0", dot)} />
@@ -1013,17 +1013,17 @@ export default function DashboardPage() {
                                   {/* Content */}
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1.5">
-                                      <p className="text-sm font-medium text-[#34495e] truncate group-hover:text-[#1E3A8A] transition-colors">{event.title}</p>
+                                      <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate group-hover:text-[#1E3A8A] dark:group-hover:text-blue-400 transition-colors">{event.title}</p>
                                     </div>
                                     {event.subtitle && (
-                                      <p className="text-[11px] text-slate-400 truncate">{event.subtitle}</p>
+                                      <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{event.subtitle}</p>
                                     )}
                                   </div>
 
                                   {/* Time + Type */}
                                   <div className="flex items-center gap-2.5 flex-shrink-0">
                                     {(event.tipo === 'audiencia' || event.tipo === 'evento') && temHorario && (
-                                      <span className="text-xs text-slate-500 tabular-nums">
+                                      <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
                                         {event.time}
                                       </span>
                                     )}
@@ -1039,24 +1039,24 @@ export default function DashboardPage() {
 
                       {/* Pagination */}
                       {agendaItems.length > AGENDA_PER_PAGE && (
-                        <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                          <span className="text-[10px] text-slate-400">
+                        <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500">
                             {agendaPage * AGENDA_PER_PAGE + 1}-{Math.min((agendaPage + 1) * AGENDA_PER_PAGE, agendaItems.length)} de {agendaItems.length}
                           </span>
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => setAgendaPage(p => Math.max(0, p - 1))}
                               disabled={agendaPage === 0}
-                              className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                              className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             >
-                              <ChevronLeft className="w-3.5 h-3.5 text-slate-500" />
+                              <ChevronLeft className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                             </button>
                             <button
                               onClick={() => setAgendaPage(p => Math.min(Math.ceil(agendaItems.length / AGENDA_PER_PAGE) - 1, p + 1))}
                               disabled={agendaPage >= Math.ceil(agendaItems.length / AGENDA_PER_PAGE) - 1}
-                              className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                              className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             >
-                              <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                              <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                             </button>
                           </div>
                         </div>
@@ -1068,21 +1068,21 @@ export default function DashboardPage() {
             </div>
 
             {/* ── PERFORMANCE DA EQUIPE ── */}
-            <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] transition-all duration-300 overflow-hidden">
+            <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] dark:hover:shadow-[0_10px_35px_-6px_rgba(0,0,0,0.4)] transition-all duration-300 overflow-hidden">
               <div className="flex items-center justify-between px-5 pt-5 pb-3">
-                <h2 className="text-sm font-bold text-[#34495e]">Performance da Equipe</h2>
-                <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-lg">
+                <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200">Performance da Equipe</h2>
+                <div className="flex items-center gap-1 p-0.5 bg-slate-100 dark:bg-surface-2 rounded-lg">
                   <button
                     onClick={() => setHorasViewMode('list')}
-                    className={cn("p-1.5 rounded-md transition-all", horasViewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-slate-200')}
+                    className={cn("p-1.5 rounded-md transition-all", horasViewMode === 'list' ? 'bg-white dark:bg-surface-2 shadow-sm dark:shadow-none' : 'hover:bg-slate-200 dark:hover:bg-surface-3')}
                   >
-                    <List className={cn("w-3.5 h-3.5", horasViewMode === 'list' ? 'text-[#1E3A8A]' : 'text-slate-400')} />
+                    <List className={cn("w-3.5 h-3.5", horasViewMode === 'list' ? 'text-[#1E3A8A] dark:text-blue-400' : 'text-slate-400 dark:text-slate-500')} />
                   </button>
                   <button
                     onClick={() => setHorasViewMode('bars')}
-                    className={cn("p-1.5 rounded-md transition-all", horasViewMode === 'bars' ? 'bg-white shadow-sm' : 'hover:bg-slate-200')}
+                    className={cn("p-1.5 rounded-md transition-all", horasViewMode === 'bars' ? 'bg-white dark:bg-surface-2 shadow-sm dark:shadow-none' : 'hover:bg-slate-200 dark:hover:bg-surface-3')}
                   >
-                    <BarChart3 className={cn("w-3.5 h-3.5", horasViewMode === 'bars' ? 'text-[#1E3A8A]' : 'text-slate-400')} />
+                    <BarChart3 className={cn("w-3.5 h-3.5", horasViewMode === 'bars' ? 'text-[#1E3A8A] dark:text-blue-400' : 'text-slate-400 dark:text-slate-500')} />
                   </button>
                 </div>
               </div>
@@ -1112,12 +1112,12 @@ export default function DashboardPage() {
                           return (
                             <div key={membro.id} className={cn(
                               "flex items-center gap-3 p-2 rounded-xl transition-colors",
-                              isCurrentUser ? "bg-[#f0f9f9]" : "hover:bg-slate-50"
+                              isCurrentUser ? "bg-[#f0f9f9] dark:bg-teal-900/20" : "hover:bg-slate-50 dark:hover:bg-surface-2"
                             )}>
                               {/* Position */}
                               <span className={cn(
                                 "w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0",
-                                position <= 3 ? "bg-[#89bcbe]/15 text-[#46627f]" : "bg-slate-50 text-slate-400"
+                                position <= 3 ? "bg-[#89bcbe]/15 text-[#46627f] dark:text-slate-400" : "bg-slate-50 dark:bg-surface-2 text-slate-400 dark:text-slate-500"
                               )}>
                                 {position}
                               </span>
@@ -1125,14 +1125,14 @@ export default function DashboardPage() {
                               {/* Name + Bar */}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5 mb-1">
-                                  <span className="text-xs font-semibold text-[#34495e] truncate">{membro.nome}</span>
+                                  <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200 truncate">{membro.nome}</span>
                                   {isCurrentUser && (
-                                    <span className="px-1.5 py-0.5 rounded-full bg-[#89bcbe]/20 text-[8px] font-bold text-[#46627f]">
+                                    <span className="px-1.5 py-0.5 rounded-full bg-[#89bcbe]/20 text-[8px] font-bold text-[#46627f] dark:text-slate-400">
                                       Você
                                     </span>
                                   )}
                                 </div>
-                                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
+                                <div className="w-full h-1.5 bg-slate-100 dark:bg-surface-2 rounded-full overflow-hidden flex">
                                   <div
                                     className="h-full bg-emerald-500 transition-all duration-500"
                                     style={{ width: `${cobraveisPercent}%` }}
@@ -1145,7 +1145,7 @@ export default function DashboardPage() {
                               </div>
 
                               {/* Hours */}
-                              <span className="text-xs font-bold text-[#34495e] tabular-nums flex-shrink-0">
+                              <span className="text-xs font-bold text-[#34495e] dark:text-slate-200 tabular-nums flex-shrink-0">
                                 {formatHoras(membro.horas, 'curto')}
                               </span>
                             </div>
@@ -1154,18 +1154,18 @@ export default function DashboardPage() {
                       </div>
                     </ScrollArea>
                     {/* Legend + Total */}
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1.5">
                           <div className="w-2.5 h-1.5 rounded-full bg-emerald-500" />
-                          <span className="text-[10px] text-slate-400">Cobráveis</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500">Cobráveis</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <div className="w-2.5 h-1.5 rounded-full bg-[#34495e]" />
-                          <span className="text-[10px] text-slate-400">Não cobráveis</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500">Não cobráveis</span>
                         </div>
                       </div>
-                      <span className="text-[10px] text-slate-400">Total: <span className="font-semibold text-[#34495e]">{formatHoras(totalHorasEquipe, 'curto')}</span></span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">Total: <span className="font-semibold text-[#34495e] dark:text-slate-200">{formatHoras(totalHorasEquipe, 'curto')}</span></span>
                     </div>
                   </div>
                 ) : (
@@ -1200,11 +1200,11 @@ export default function DashboardPage() {
                             <div className="flex flex-col items-center mt-2">
                               <span className={cn(
                                 "text-[10px] truncate max-w-[60px] text-center",
-                                isCurrentUser ? 'font-semibold text-[#34495e]' : 'text-slate-400'
+                                isCurrentUser ? 'font-semibold text-[#34495e] dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'
                               )}>
                                 {isCurrentUser ? 'Você' : membro.nome.split(' ')[0]}
                               </span>
-                              <span className="text-[10px] font-semibold text-[#34495e]">
+                              <span className="text-[10px] font-semibold text-[#34495e] dark:text-slate-200">
                                 {formatHoras(membro.horas, 'curto')}
                               </span>
                             </div>
@@ -1212,18 +1212,18 @@ export default function DashboardPage() {
                         )
                       })}
                     </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1.5">
                           <div className="w-2.5 h-1.5 rounded-full bg-emerald-500" />
-                          <span className="text-[10px] text-slate-400">Cobráveis</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500">Cobráveis</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <div className="w-2.5 h-1.5 rounded-full bg-[#34495e]" />
-                          <span className="text-[10px] text-slate-400">Não cobráveis</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500">Não cobráveis</span>
                         </div>
                       </div>
-                      <span className="text-[10px] text-slate-400">Total: <span className="font-semibold text-[#34495e]">{formatHoras(totalHorasEquipe, 'curto')}</span></span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">Total: <span className="font-semibold text-[#34495e] dark:text-slate-200">{formatHoras(totalHorasEquipe, 'curto')}</span></span>
                     </div>
                   </div>
                 )}
@@ -1234,8 +1234,8 @@ export default function DashboardPage() {
           {/* ── RIGHT: MEUS NÚMEROS + LANÇAMENTOS + ALERTAS + INSIGHTS ── */}
           <div className="lg:col-span-5 space-y-5">
             {/* Meus Números do Mês */}
-            <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] transition-all duration-300 p-5">
-              <h2 className="text-sm font-bold text-[#34495e] mb-4">Meus Números</h2>
+            <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] dark:hover:shadow-[0_10px_35px_-6px_rgba(0,0,0,0.4)] transition-all duration-300 p-5">
+              <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200 mb-4">Meus Números</h2>
 
               <div className="grid grid-cols-2 gap-4">
                 {/* Horas Cobráveis */}
@@ -1249,13 +1249,13 @@ export default function DashboardPage() {
                       color="#89bcbe"
                     />
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-[10px] font-bold text-[#34495e]">{Math.round(progressoHoras)}%</span>
+                      <span className="text-[10px] font-bold text-[#34495e] dark:text-slate-200">{Math.round(progressoHoras)}%</span>
                     </div>
                   </div>
                   <div>
-                    <p className="text-[10px] font-medium text-slate-500 mb-0.5">Horas Cobráveis</p>
-                    <p className="text-sm font-bold text-[#34495e]">{formatHoras(metrics?.horas_cobraveis_usuario || 0, 'curto')}</p>
-                    <p className="text-[9px] text-slate-400">de {formatHoras(metrics?.horas_meta || 160, 'curto')}</p>
+                    <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Horas Cobráveis</p>
+                    <p className="text-sm font-bold text-[#34495e] dark:text-slate-200">{formatHoras(metrics?.horas_cobraveis_usuario || 0, 'curto')}</p>
+                    <p className="text-[9px] text-slate-400 dark:text-slate-500">de {formatHoras(metrics?.horas_meta || 160, 'curto')}</p>
                     {(metrics?.horas_ja_faturadas_usuario ?? 0) > 0 && (
                       <p className="text-[9px] text-emerald-500">{formatHoras(metrics?.horas_ja_faturadas_usuario || 0, 'curto')} já faturadas</p>
                     )}
@@ -1273,28 +1273,28 @@ export default function DashboardPage() {
                       color="#10b981"
                     />
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-[10px] font-bold text-[#34495e]">{Math.round(progressoReceita)}%</span>
+                      <span className="text-[10px] font-bold text-[#34495e] dark:text-slate-200">{Math.round(progressoReceita)}%</span>
                     </div>
                   </div>
                   <div>
-                    <p className="text-[10px] font-medium text-slate-500 mb-0.5">Honorários</p>
-                    <p className="text-sm font-bold text-[#34495e]">{formatCurrency(metrics?.honorarios_mes || 0)}</p>
-                    <p className="text-[9px] text-slate-400">Meta: {formatCurrency(metrics?.receita_meta || 40000)}</p>
+                    <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Honorários</p>
+                    <p className="text-sm font-bold text-[#34495e] dark:text-slate-200">{formatCurrency(metrics?.honorarios_mes || 0)}</p>
+                    <p className="text-[9px] text-slate-400 dark:text-slate-500">Meta: {formatCurrency(metrics?.receita_meta || 40000)}</p>
                   </div>
                 </div>
               </div>
 
               {/* Horas não cobráveis - compact */}
-              <div className="mt-4 pt-3 border-t border-slate-100">
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-slate-300" />
-                    <span className="text-[11px] text-slate-500">Horas não cobráveis</span>
+                    <div className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600" />
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">Horas não cobráveis</span>
                   </div>
-                  <span className="text-xs font-semibold text-slate-500">{formatHoras(metrics?.horas_nao_cobraveis || 0, 'curto')}</span>
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{formatHoras(metrics?.horas_nao_cobraveis || 0, 'curto')}</span>
                 </div>
                 {(metrics?.valor_horas_nao_cobraveis ?? 0) > 0 && (
-                  <p className="text-[9px] text-slate-400 ml-4 mt-0.5">
+                  <p className="text-[9px] text-slate-400 dark:text-slate-500 ml-4 mt-0.5">
                     Oportunidade: {formatCurrency(metrics?.valor_horas_nao_cobraveis || 0)}
                   </p>
                 )}
@@ -1324,20 +1324,20 @@ export default function DashboardPage() {
 
             {/* Insights de Gestão */}
             {hasInsightsPermission && (
-              <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] transition-all duration-300 overflow-hidden">
+              <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] dark:hover:shadow-[0_10px_35px_-6px_rgba(0,0,0,0.4)] transition-all duration-300 overflow-hidden">
                 <div className="flex items-center justify-between px-5 pt-5 pb-3">
-                  <h2 className="text-sm font-bold text-[#34495e]">Insights IA</h2>
+                  <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200">Insights IA</h2>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 w-7 p-0 hover:bg-slate-100 rounded-lg"
+                    className="h-7 w-7 p-0 hover:bg-slate-100 dark:hover:bg-surface-3 rounded-lg"
                     onClick={() => refreshInsights()}
                     disabled={loadingInsights}
                   >
                     {loadingInsights ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-[#89bcbe]" />
                     ) : (
-                      <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+                      <RefreshCw className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                     )}
                   </Button>
                 </div>
@@ -1347,7 +1347,7 @@ export default function DashboardPage() {
                       <Loader2 className="w-4 h-4 text-[#89bcbe] animate-spin" />
                     </div>
                   ) : insights.length === 0 ? (
-                    <p className="text-[11px] text-slate-400 text-center py-3">Nenhum insight disponível</p>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center py-3">Nenhum insight disponível</p>
                   ) : (
                     insights.map((insight, index) => (
                       <InsightCard
@@ -1382,7 +1382,7 @@ export default function DashboardPage() {
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6c757d]" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6c757d] dark:text-slate-400" />
               <Input
                 placeholder="O que você gostaria de fazer?"
                 value={commandInput}
@@ -1392,24 +1392,24 @@ export default function DashboardPage() {
               />
             </div>
             <div className="border-t pt-3">
-              <p className="text-xs text-[#6c757d] mb-2 font-medium">Ações rápidas</p>
+              <p className="text-xs text-[#6c757d] dark:text-slate-400 mb-2 font-medium">Ações rápidas</p>
               <div className="grid grid-cols-2 gap-2">
                 {commandShortcuts.map((shortcut) => (
                   <button
                     key={shortcut.label}
                     onClick={() => { shortcut.action(); setCommandOpen(false) }}
-                    className="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 hover:bg-[#f0f9f9] hover:border-[#89bcbe] transition-colors text-left"
+                    className="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-[#f0f9f9] dark:hover:bg-teal-900/20 hover:border-[#89bcbe] transition-colors text-left"
                   >
                     <shortcut.icon className="w-4 h-4 text-[#89bcbe]" />
-                    <span className="text-sm text-[#34495e]">{shortcut.label}</span>
+                    <span className="text-sm text-[#34495e] dark:text-slate-200">{shortcut.label}</span>
                   </button>
                 ))}
               </div>
             </div>
             <div className="border-t pt-3">
-              <div className="flex items-center gap-2 text-xs text-[#adb5bd]">
+              <div className="flex items-center gap-2 text-xs text-[#adb5bd] dark:text-slate-500">
                 <MessageSquare className="w-3.5 h-3.5" />
-                <span>Pressione <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">Ctrl+K</kbd> para abrir a qualquer momento</span>
+                <span>Pressione <kbd className="px-1.5 py-0.5 bg-slate-100 dark:bg-surface-2 rounded text-[10px] font-mono">Ctrl+K</kbd> para abrir a qualquer momento</span>
               </div>
             </div>
           </div>
@@ -1645,8 +1645,8 @@ export default function DashboardPage() {
       <Dialog open={dashConfirmSemHoras} onOpenChange={setDashConfirmSemHoras}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[#34495e]">Concluir sem registrar horas?</DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
+            <DialogTitle className="text-[#34495e] dark:text-slate-200">Concluir sem registrar horas?</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
               Você não registrou horas para esta tarefa. Deseja concluí-la mesmo assim?
             </DialogDescription>
           </DialogHeader>
@@ -1674,11 +1674,11 @@ export default function DashboardPage() {
       <Dialog open={audienciasListOpen} onOpenChange={setAudienciasListOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#34495e]">
+            <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
               <Gavel className="w-4 h-4 text-amber-500" />
               Audiências nos próximos 7 dias
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
               Clique em uma audiência para ver os detalhes
             </DialogDescription>
           </DialogHeader>
@@ -1691,15 +1691,15 @@ export default function DashboardPage() {
                   setAudienciaSelecionada(aud)
                   setAudienciaDetailOpen(true)
                 }}
-                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-colors"
+                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-colors"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-[#34495e] truncate">{aud.titulo}</span>
-                  <span className="text-[10px] text-slate-400 ml-2 flex-shrink-0">{aud.tipo_audiencia || 'Audiência'}</span>
+                  <span className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">{aud.titulo}</span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-2 flex-shrink-0">{aud.tipo_audiencia || 'Audiência'}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <Calendar className="w-3 h-3 text-slate-400" />
-                  <span className="text-xs text-slate-500">
+                  <Calendar className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
                     {format(new Date(aud.data_hora), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                   </span>
                 </div>

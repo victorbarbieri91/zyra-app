@@ -77,7 +77,7 @@ const getTipoBadge = (forma: ContratoHonorario['forma_cobranca']) => {
   const badges: Record<string, { label: string; class: string; icon: React.ReactNode }> = {
     fixo: {
       label: 'Fixo',
-      class: 'bg-blue-100 text-blue-700',
+      class: 'bg-blue-100 text-blue-700 dark:text-blue-400',
       icon: <Calendar className="w-3 h-3" />,
     },
     por_hora: {
@@ -102,12 +102,12 @@ const getTipoBadge = (forma: ContratoHonorario['forma_cobranca']) => {
     },
     por_etapa: {
       label: 'Por Etapa',
-      class: 'bg-slate-100 text-slate-700',
+      class: 'bg-slate-100 dark:bg-surface-2 text-slate-700 dark:text-slate-300',
       icon: <TrendingUp className="w-3 h-3" />,
     },
     misto: {
       label: 'Misto',
-      class: 'bg-amber-100 text-amber-700',
+      class: 'bg-amber-100 text-amber-700 dark:text-amber-400',
       icon: <PieChart className="w-3 h-3" />,
     },
     pro_bono: {
@@ -123,20 +123,20 @@ const getStatusBadge = (ativo: boolean, inadimplente?: boolean) => {
   if (inadimplente) {
     return {
       label: 'Inadimplente',
-      class: 'bg-red-100 text-red-700',
+      class: 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400',
       icon: <AlertTriangle className="w-3 h-3" />,
     }
   }
   if (ativo) {
     return {
       label: 'Ativo',
-      class: 'bg-green-100 text-green-700',
+      class: 'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400',
       icon: <CheckCircle className="w-3 h-3" />,
     }
   }
   return {
     label: 'Inativo',
-    class: 'bg-gray-100 text-gray-700',
+    class: 'bg-gray-100 dark:bg-gray-500/10 text-gray-700 dark:text-gray-300',
     icon: <XCircle className="w-3 h-3" />,
   }
 }
@@ -362,7 +362,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
       <div className="p-6 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-[#89bcbe] mx-auto mb-2" />
-          <p className="text-sm text-slate-600">Carregando contratos...</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Carregando contratos...</p>
         </div>
       </div>
     )
@@ -373,7 +373,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
       {/* Header da Página */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-[#34495e]">Contratos de Honorários</h1>
+          <h1 className="text-2xl font-semibold text-[#34495e] dark:text-slate-200">Contratos de Honorários</h1>
           <p className="text-sm text-[#6c757d] mt-0.5">
             Gerencie todos os contratos de honorários do escritório
           </p>
@@ -386,27 +386,27 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
               <Button
                 variant="outline"
                 className={cn(
-                  "h-9 px-3 gap-2 border-slate-200 hover:bg-slate-50",
+                  "h-9 px-3 gap-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0",
                   escritoriosSelecionados.length === escritoriosGrupo.length && "border-[#89bcbe] bg-[#f0f9f9]/50"
                 )}
               >
                 <Building2 className="h-4 w-4 text-[#89bcbe]" />
-                <span className="text-sm text-[#34495e] font-medium">
+                <span className="text-sm text-[#34495e] dark:text-slate-200 font-medium">
                   {getSeletorLabel()}
                 </span>
                 <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-72 p-0" align="end">
-              <div className="p-3 border-b border-slate-100">
-                <p className="text-xs font-medium text-[#34495e]">Visualizar contratos de:</p>
+              <div className="p-3 border-b border-slate-100 dark:border-slate-800">
+                <p className="text-xs font-medium text-[#34495e] dark:text-slate-200">Visualizar contratos de:</p>
               </div>
 
               {/* Opção "Todos" */}
               <div
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 border-b border-slate-100",
-                  escritoriosSelecionados.length === escritoriosGrupo.length && "bg-[#f0f9f9]"
+                  "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0 border-b border-slate-100 dark:border-slate-800",
+                  escritoriosSelecionados.length === escritoriosGrupo.length && "bg-[#f0f9f9] dark:bg-teal-900/20"
                 )}
                 onClick={selecionarTodos}
               >
@@ -421,8 +421,8 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-[#34495e]">Todos os escritórios</p>
-                  <p className="text-[10px] text-slate-500">Visão consolidada do grupo</p>
+                  <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">Todos os escritórios</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Visão consolidada do grupo</p>
                 </div>
               </div>
 
@@ -436,7 +436,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                     <div
                       key={escritorio.id}
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 border-b border-slate-50 last:border-0",
+                        "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0 border-b border-slate-50 last:border-0",
                         isSelected && escritoriosSelecionados.length < escritoriosGrupo.length && "bg-[#f0f9f9]/50"
                       )}
                       onClick={() => toggleEscritorio(escritorio.id)}
@@ -448,7 +448,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-[#34495e] truncate">
+                          <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">
                             {escritorio.nome}
                           </p>
                           {isAtivo && (
@@ -481,8 +481,8 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
               </div>
 
               {/* Rodapé com info */}
-              <div className="p-2.5 bg-slate-50 border-t border-slate-100">
-                <p className="text-[10px] text-slate-500 text-center">
+              <div className="p-2.5 bg-slate-50 dark:bg-surface-0 border-t border-slate-100 dark:border-slate-800">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 text-center">
                   {escritoriosSelecionados.length === 1
                     ? 'Exibindo contratos de 1 escritório'
                     : `Exibindo contratos de ${escritoriosSelecionados.length} escritórios`}
@@ -494,12 +494,12 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
       </div>
 
       {/* Card Principal */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardHeader className="pb-4">
           {/* Tabs e Ações */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-              <TabsList className="bg-slate-100">
+              <TabsList className="bg-slate-100 dark:bg-surface-2">
                 <TabsTrigger value="ativos" className="text-xs">
                   <CheckCircle className="w-3 h-3 mr-1" />
                   Ativos ({contratosAtivos})
@@ -560,12 +560,12 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                 placeholder="Buscar contratos..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 h-9 text-sm border-slate-200 focus:border-[#89bcbe]"
+                className="pl-9 h-9 text-sm border-slate-200 dark:border-slate-700 focus:border-[#89bcbe]"
               />
             </div>
 
             <Select value={filterTipo} onValueChange={setFilterTipo}>
-              <SelectTrigger className="w-[160px] h-9 text-sm border-slate-200">
+              <SelectTrigger className="w-[160px] h-9 text-sm border-slate-200 dark:border-slate-700">
                 <Filter className="w-3.5 h-3.5 mr-1.5" />
                 <SelectValue />
               </SelectTrigger>
@@ -581,7 +581,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
             </Select>
 
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[140px] h-9 text-sm border-slate-200">
+              <SelectTrigger className="w-[140px] h-9 text-sm border-slate-200 dark:border-slate-700">
                 <Activity className="w-3.5 h-3.5 mr-1.5" />
                 <SelectValue />
               </SelectTrigger>
@@ -605,7 +605,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                   <Card
                     key={contrato.id}
                     className={cn(
-                      'border-slate-200 hover:shadow-lg transition-all cursor-pointer',
+                      'border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all cursor-pointer',
                       contrato.inadimplente && 'border-red-200 bg-red-50/30',
                       !contrato.ativo && 'opacity-60'
                     )}
@@ -617,19 +617,19 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                         <div className="flex-1 min-w-0 pr-2">
                           <p className="text-xs font-semibold text-[#89bcbe]">{contrato.numero_contrato}</p>
                           {contrato.titulo && (
-                            <h4 className="text-sm font-semibold text-[#34495e] mt-1 truncate" title={contrato.titulo}>
+                            <h4 className="text-sm font-semibold text-[#34495e] dark:text-slate-200 mt-1 truncate" title={contrato.titulo}>
                               {contrato.titulo}
                             </h4>
                           )}
                           <p className={cn(
-                            "text-slate-600 truncate",
-                            contrato.titulo ? "text-xs mt-0.5" : "text-sm font-semibold text-[#34495e] mt-1"
+                            "text-slate-600 dark:text-slate-400 truncate",
+                            contrato.titulo ? "text-xs mt-0.5" : "text-sm font-semibold text-[#34495e] dark:text-slate-200 mt-1"
                           )} title={contrato.cliente_nome}>
                             {contrato.cliente_nome}
                           </p>
                           {/* Mostrar escritório quando exibindo múltiplos */}
                           {escritoriosSelecionados.length > 1 && contrato.escritorio_nome && (
-                            <Badge variant="outline" className="text-[9px] mt-1.5 font-normal text-slate-500 border-slate-200 w-fit">
+                            <Badge variant="outline" className="text-[9px] mt-1.5 font-normal text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 w-fit">
                               {contrato.escritorio_nome}
                             </Badge>
                           )}
@@ -649,7 +649,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                                   )
                                 })}
                                 {contrato.formas_configuradas.length > 3 && (
-                                  <Badge className="text-[10px] px-1.5 py-0 bg-slate-100 text-slate-600">
+                                  <Badge className="text-[10px] px-1.5 py-0 bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400">
                                     +{contrato.formas_configuradas.length - 3}
                                   </Badge>
                                 )}
@@ -671,7 +671,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
 
                       {/* Info da Vigência */}
                       {contrato.data_inicio && (
-                        <div className="flex items-center gap-2 text-xs text-slate-500 mb-3">
+                        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-3">
                           <Calendar className="w-3 h-3" />
                           <span>
                             Vigência: {formatBrazilDate(parseDateInBrazil(contrato.data_inicio))}
@@ -682,12 +682,12 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
 
                       {/* Alerta de Inadimplência (sem valores) */}
                       {contrato.inadimplente && (
-                        <div className="bg-red-100 border border-red-200 rounded-md p-2">
+                        <div className="bg-red-100 dark:bg-red-500/10 border border-red-200 rounded-md p-2">
                           <div className="flex items-center gap-2">
-                            <AlertTriangle className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />
+                            <AlertTriangle className="w-3.5 h-3.5 text-red-600 dark:text-red-400 flex-shrink-0" />
                             <div className="flex-1">
-                              <p className="text-xs font-semibold text-red-700">Inadimplente</p>
-                              <p className="text-[10px] text-red-600">
+                              <p className="text-xs font-semibold text-red-700 dark:text-red-400">Inadimplente</p>
+                              <p className="text-[10px] text-red-600 dark:text-red-400">
                                 {contrato.dias_atraso} dias de atraso
                               </p>
                             </div>
@@ -696,7 +696,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                       )}
 
                       {/* Actions */}
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                         <div className="flex items-center gap-2">
                           <Button
                             variant="ghost"
@@ -724,7 +724,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              className="h-7 px-2 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:bg-amber-500/10"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleDeleteClick(contrato)
@@ -737,7 +737,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                              className="h-7 px-2 text-green-600 dark:text-green-400 hover:text-green-700 dark:text-green-400 hover:bg-green-50 dark:bg-green-500/10"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleReativar(contrato)
@@ -790,7 +790,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                       <TableRow
                         key={contrato.id}
                         className={cn(
-                          'cursor-pointer hover:bg-slate-50',
+                          'cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0',
                           contrato.inadimplente && 'bg-red-50/30',
                           !contrato.ativo && 'opacity-60'
                         )}
@@ -799,14 +799,14 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                         <TableCell className="text-xs font-medium text-[#89bcbe]">
                           {contrato.numero_contrato}
                         </TableCell>
-                        <TableCell className="text-xs font-medium text-[#34495e] max-w-[200px] truncate" title={contrato.titulo || ''}>
+                        <TableCell className="text-xs font-medium text-[#34495e] dark:text-slate-200 max-w-[200px] truncate" title={contrato.titulo || ''}>
                           {contrato.titulo || '-'}
                         </TableCell>
-                        <TableCell className="text-xs text-slate-600">
+                        <TableCell className="text-xs text-slate-600 dark:text-slate-400">
                           {contrato.cliente_nome}
                         </TableCell>
                         {escritoriosSelecionados.length > 1 && (
-                          <TableCell className="text-xs text-slate-500">
+                          <TableCell className="text-xs text-slate-500 dark:text-slate-400">
                             {contrato.escritorio_nome || '-'}
                           </TableCell>
                         )}
@@ -823,7 +823,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                                   )
                                 })}
                                 {contrato.formas_configuradas.length > 3 && (
-                                  <Badge className="text-[10px] px-1.5 py-0 bg-slate-100 text-slate-600">
+                                  <Badge className="text-[10px] px-1.5 py-0 bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400">
                                     +{contrato.formas_configuradas.length - 3}
                                   </Badge>
                                 )}
@@ -836,7 +836,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-xs text-slate-600">
+                        <TableCell className="text-xs text-slate-600 dark:text-slate-400">
                           {contrato.data_inicio ? (
                             <div>
                               <p>{formatBrazilDate(parseDateInBrazil(contrato.data_inicio))}</p>
@@ -884,7 +884,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 w-7 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                className="h-7 w-7 p-0 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:bg-amber-500/10"
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleDeleteClick(contrato)
@@ -897,7 +897,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                className="h-7 w-7 p-0 text-green-600 dark:text-green-400 hover:text-green-700 dark:text-green-400 hover:bg-green-50 dark:bg-green-500/10"
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleReativar(contrato)
@@ -920,10 +920,10 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
           {/* Empty State */}
           {filteredContratos.length === 0 && (
             <div className="text-center py-12">
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-slate-100 dark:bg-surface-2 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FileText className="w-8 h-8 text-slate-400" />
               </div>
-              <p className="text-sm text-slate-600 mb-1">Nenhum contrato encontrado</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Nenhum contrato encontrado</p>
               <p className="text-xs text-slate-400">
                 {searchTerm || filterTipo !== 'all' || filterStatus !== 'all'
                   ? 'Tente ajustar os filtros'
@@ -986,6 +986,7 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
           setSelectedContrato(null)
           handleEditContrato(contrato)
         }}
+        onReceitasGeradas={() => loadContratos()}
       />
     </div>
   )

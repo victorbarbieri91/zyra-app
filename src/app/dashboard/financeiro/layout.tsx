@@ -74,9 +74,9 @@ export default function FinanceiroLayout({
   return (
     <div className="h-full flex flex-col">
       {/* Submenu */}
-      <div className="border-b border-slate-200 bg-white">
-        <div className="px-3 md:px-6 py-2 md:py-3">
-          <div className="flex items-center gap-1.5 md:gap-2 overflow-x-auto no-scrollbar">
+      <div className="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1">
+        <div className="px-2 sm:px-3 md:px-6 py-1.5 sm:py-2 md:py-3">
+          <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 overflow-x-auto scrollbar-thin">
             {financeiroMenuItems.map((item) => {
               const isActive = pathname === item.href
               const Icon = item.icon
@@ -86,15 +86,15 @@ export default function FinanceiroLayout({
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap',
+                    'flex items-center gap-1 sm:gap-1.5 md:gap-2 px-2 sm:px-2.5 md:px-4 py-1.5 md:py-2 rounded-lg text-[11px] sm:text-xs md:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0',
                     isActive
                       ? 'bg-gradient-to-r from-[#34495e] to-[#46627f] text-white shadow-md'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-[#34495e]'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-surface-3 hover:text-[#34495e] dark:hover:text-slate-200'
                   )}
                 >
-                  <Icon className="h-4 w-4 flex-shrink-0" />
-                  <span className="hidden md:inline">{item.title}</span>
-                  <span className="md:hidden">{item.shortTitle}</span>
+                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                  <span className="hidden lg:inline">{item.title}</span>
+                  <span className="lg:hidden">{item.shortTitle}</span>
                 </Link>
               )
             })}

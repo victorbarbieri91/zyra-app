@@ -18,12 +18,12 @@ export default function MeusLancamentos({ className, onEditEntry }: MeusLancamen
 
   return (
     <div className={cn(
-      "bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] transition-all duration-300 p-5",
+      "bg-white dark:bg-surface-1 rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] dark:hover:shadow-[0_10px_35px_-6px_rgba(0,0,0,0.4)] transition-all duration-300 p-5",
       className
     )}>
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-bold text-[#34495e]">Meus Timesheets</h2>
+        <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200">Meus Timesheets</h2>
         <Link
           href="/dashboard/financeiro/timesheet?usuario=meu"
           className="text-[10px] font-medium text-[#89bcbe] hover:text-[#6ba9ab] transition-colors"
@@ -56,7 +56,7 @@ export default function MeusLancamentos({ className, onEditEntry }: MeusLancamen
               <button
                 key={entry.id}
                 onClick={() => onEditEntry(entry)}
-                className="w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg hover:bg-slate-50 transition-colors text-left group"
+                className="w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors text-left group"
               >
                 {/* Data */}
                 <span className="text-[10px] font-medium text-slate-400 w-10 flex-shrink-0 pt-0.5">
@@ -65,7 +65,7 @@ export default function MeusLancamentos({ className, onEditEntry }: MeusLancamen
 
                 {/* Atividade + caso */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-700 truncate group-hover:text-[#34495e]">
+                  <p className="text-xs text-slate-700 dark:text-slate-300 truncate group-hover:text-[#34495e] dark:group-hover:text-slate-200">
                     {entry.atividade}
                   </p>
                   {casoTitulo && (
@@ -76,14 +76,14 @@ export default function MeusLancamentos({ className, onEditEntry }: MeusLancamen
                 </div>
 
                 {/* Horas */}
-                <span className="text-xs font-semibold text-[#34495e] flex-shrink-0 pt-0.5">
+                <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200 flex-shrink-0 pt-0.5">
                   {formatHoras(Number(entry.horas), 'curto')}
                 </span>
 
                 {/* Dot cobrável */}
                 <div className={cn(
                   "w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5",
-                  entry.faturavel ? "bg-emerald-500" : "bg-slate-300"
+                  entry.faturavel ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"
                 )} />
               </button>
             )

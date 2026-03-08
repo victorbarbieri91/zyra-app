@@ -98,26 +98,26 @@ export function AtoHoraProgress({
           {atingiuMaximo ? (
             <>
               <AlertTriangle className="h-3 w-3 text-red-500" />
-              <span className="text-red-600 font-medium">Máximo atingido</span>
+              <span className="text-red-600 dark:text-red-400 font-medium">Máximo atingido</span>
             </>
           ) : vaiAtingirMaximo ? (
             <>
               <AlertTriangle className="h-3 w-3 text-amber-500" />
-              <span className="text-amber-600 font-medium">
+              <span className="text-amber-600 dark:text-amber-400 font-medium">
                 Este lançamento excederá o máximo em {formatHoras(horasExcedentesPreview, 'curto')}
               </span>
             </>
           ) : proximoDoMaximo ? (
             <>
               <Clock className="h-3 w-3 text-amber-500" />
-              <span className="text-amber-600 font-medium">
+              <span className="text-amber-600 dark:text-amber-400 font-medium">
                 {formatHoras(horasDisponiveis || 0, 'curto')} restantes
               </span>
             </>
           ) : (
             <>
               <CheckCircle className="h-3 w-3 text-emerald-500" />
-              <span className="text-slate-500">
+              <span className="text-slate-500 dark:text-slate-400">
                 {formatHoras(horasUsadas, 'curto')}{horasNovas > 0 ? ` + ${formatHoras(horasNovas, 'curto')}` : ''}{horasMaximas ? ` de ${formatHoras(horasMaximas, 'curto')}` : ''}
               </span>
             </>
@@ -143,7 +143,7 @@ export function AtoHoraProgress({
 
       {/* Alerta de mínimo */}
       {abaixoDoMinimo && showDetails && (
-        <div className="text-[10px] text-amber-600 bg-amber-50 rounded px-2 py-1 flex items-center gap-1">
+        <div className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 rounded px-2 py-1 flex items-center gap-1">
           <AlertTriangle className="h-3 w-3" />
           <span>
             Abaixo do mínimo ({formatHoras(horasMinimas || 0, 'curto')}). Ao finalizar, será cobrado R$

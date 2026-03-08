@@ -34,6 +34,7 @@ export default function FaturaImprimirPage() {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
+      minimumFractionDigits: 2,
     }).format(value)
   }
 
@@ -118,7 +119,7 @@ export default function FaturaImprimirPage() {
     )
   }
 
-  const { escritorio, fatura, cliente, itens, totais } = dados
+  const { escritorio, fatura, cliente, itens, totais, impostos, regime_tributario_label } = dados
 
   // Separar itens por tipo
   const timesheetItens = itens.filter(i => i.tipo_item === 'timesheet')
@@ -571,6 +572,126 @@ export default function FaturaImprimirPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Impostos / Retenções */}
+              {impostos && impostos.total_retencoes > 0 && (
+                <div className="mb-6 print-section print-break-inside-avoid">
+                  <h3 className="text-xs print-text-sm font-bold text-[#34495e] uppercase tracking-wide mb-3 pb-1 border-b-2 border-[#89bcbe]">
+                    Retenções Tributárias
+                    {regime_tributario_label && (
+                      <span className="ml-2 text-[10px] print-text-xs font-normal text-slate-400 normal-case tracking-normal">
+                        ({regime_tributario_label})
+                      </span>
+                    )}
+                  </h3>
+
+                  <div className="flex justify-end">
+                    <div className="w-80 print-totals space-y-0.5">
+                      <div className="flex justify-between text-xs print-totals-item text-slate-500">
+                        <span>Base de Cálculo:</span>
+                        <span className="font-medium text-slate-700">
+                          {formatCurrency(impostos.base_calculo)}
+                        </span>
+                      </div>
+
+                      {impostos.irrf.valor > 0 && (
+                        <div className="flex justify-between text-xs print-totals-item">
+                          <span className="text-slate-500">
+                            IRRF ({impostos.irrf.aliquota}%)
+                            {impostos.irrf.retido && <span className="text-[10px] text-slate-400 ml-1">retido</span>}
+                          </span>
+                          <span className="font-medium text-slate-700">
+                            {impostos.irrf.retido ? '- ' : ''}{formatCurrency(impostos.irrf.valor)}
+                          </span>
+                        </div>
+                      )}
+
+                      {impostos.pis.valor > 0 && (
+                        <div className="flex justify-between text-xs print-totals-item">
+                          <span className="text-slate-500">
+                            PIS ({impostos.pis.aliquota}%)
+                            {impostos.pis.retido && <span className="text-[10px] text-slate-400 ml-1">retido</span>}
+                          </span>
+                          <span className="font-medium text-slate-700">
+                            {impostos.pis.retido ? '- ' : ''}{formatCurrency(impostos.pis.valor)}
+                          </span>
+                        </div>
+                      )}
+
+                      {impostos.cofins.valor > 0 && (
+                        <div className="flex justify-between text-xs print-totals-item">
+                          <span className="text-slate-500">
+                            COFINS ({impostos.cofins.aliquota}%)
+                            {impostos.cofins.retido && <span className="text-[10px] text-slate-400 ml-1">retido</span>}
+                          </span>
+                          <span className="font-medium text-slate-700">
+                            {impostos.cofins.retido ? '- ' : ''}{formatCurrency(impostos.cofins.valor)}
+                          </span>
+                        </div>
+                      )}
+
+                      {impostos.csll.valor > 0 && (
+                        <div className="flex justify-between text-xs print-totals-item">
+                          <span className="text-slate-500">
+                            CSLL ({impostos.csll.aliquota}%)
+                            {impostos.csll.retido && <span className="text-[10px] text-slate-400 ml-1">retido</span>}
+                          </span>
+                          <span className="font-medium text-slate-700">
+                            {impostos.csll.retido ? '- ' : ''}{formatCurrency(impostos.csll.valor)}
+                          </span>
+                        </div>
+                      )}
+
+                      {impostos.iss.valor > 0 && (
+                        <div className="flex justify-between text-xs print-totals-item">
+                          <span className="text-slate-500">
+                            ISS ({impostos.iss.aliquota}%)
+                            {impostos.iss.retido && <span className="text-[10px] text-slate-400 ml-1">retido</span>}
+                          </span>
+                          <span className="font-medium text-slate-700">
+                            {impostos.iss.retido ? '- ' : ''}{formatCurrency(impostos.iss.valor)}
+                          </span>
+                        </div>
+                      )}
+
+                      {impostos.inss.valor > 0 && (
+                        <div className="flex justify-between text-xs print-totals-item">
+                          <span className="text-slate-500">
+                            INSS ({impostos.inss.aliquota}%)
+                            {impostos.inss.retido && <span className="text-[10px] text-slate-400 ml-1">retido</span>}
+                          </span>
+                          <span className="font-medium text-slate-700">
+                            {impostos.inss.retido ? '- ' : ''}{formatCurrency(impostos.inss.valor)}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between text-xs print-totals-item pt-1 mt-1 border-t border-slate-200">
+                        <span className="font-semibold text-slate-600">Total Retenções:</span>
+                        <span className="font-semibold text-red-600">
+                          - {formatCurrency(impostos.total_retencoes)}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-baseline pt-2 mt-1 border-t-2 border-[#34495e]">
+                        <span className="text-sm print-totals-main font-bold text-[#34495e] uppercase">Valor Líquido:</span>
+                        <span className="text-xl print-totals-value font-bold text-emerald-700">
+                          {formatCurrency(impostos.valor_liquido)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Observação fiscal do escritório */}
+              {escritorio.config_fiscal?.observacao_fiscal && (
+                <div className="mb-4 print-obs p-2 bg-amber-50/50 rounded border border-amber-200/50 print-break-inside-avoid">
+                  <p className="text-[10px] print-text-xs text-amber-700 italic">
+                    {escritorio.config_fiscal.observacao_fiscal}
+                  </p>
+                </div>
+              )}
 
               {/* Observacoes */}
               {fatura.observacoes && (

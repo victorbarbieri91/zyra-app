@@ -51,12 +51,16 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
   // Estados para o modal de pagamento
   const [showPagamentoDialog, setShowPagamentoDialog] = useState(false)
   const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([])
+
+  const saldoRestante = fatura.valor_total - (fatura.valor_pago || 0)
+
   const [pagamentoForm, setPagamentoForm] = useState({
-    valor: fatura.valor_total.toString(),
+    valor: saldoRestante.toString(),
     dataPagamento: new Date().toISOString().split('T')[0],
     formaPagamento: 'pix',
     contaBancariaId: '',
     observacoes: '',
+    dataVencimentoSaldo: '',
   })
 
   useEffect(() => {
@@ -76,12 +80,16 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
   const handleOpenPagamentoDialog = async () => {
     const contas = await loadContasBancarias()
     setContasBancarias(contas)
+    const valorAberto = fatura.valor_total - (fatura.valor_pago || 0)
+    const vencimentoSaldoDefault = new Date()
+    vencimentoSaldoDefault.setDate(vencimentoSaldoDefault.getDate() + 30)
     setPagamentoForm({
-      valor: fatura.valor_total.toString(),
+      valor: valorAberto.toString(),
       dataPagamento: new Date().toISOString().split('T')[0],
       formaPagamento: 'pix',
-      contaBancariaId: contas.length > 0 ? contas[0].id : '',
+      contaBancariaId: fatura.conta_bancaria_id || (contas.length > 0 ? contas[0].id : ''),
       observacoes: '',
+      dataVencimentoSaldo: vencimentoSaldoDefault.toISOString().split('T')[0],
     })
     setShowPagamentoDialog(true)
   }
@@ -94,17 +102,31 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
       return
     }
 
+    const valorAberto = fatura.valor_total - (fatura.valor_pago || 0)
+    if (valorPago > valorAberto) {
+      toast.error('Valor pago não pode exceder o saldo restante')
+      return
+    }
+
+    const isParcial = valorPago < valorAberto
+
     const pagamentoId = await pagarFatura(
       fatura.fatura_id,
       valorPago,
       pagamentoForm.dataPagamento,
       pagamentoForm.formaPagamento,
       pagamentoForm.contaBancariaId || undefined,
-      pagamentoForm.observacoes || undefined
+      pagamentoForm.observacoes || undefined,
+      isParcial ? pagamentoForm.dataVencimentoSaldo || undefined : undefined
     )
 
     if (pagamentoId) {
-      toast.success('Pagamento registrado com sucesso! O valor foi lançado na conta bancária.')
+      const saldoGerado = valorAberto - valorPago
+      if (isParcial) {
+        toast.success(`Pagamento parcial registrado! Saldo de ${formatCurrency(saldoGerado)} gerado com novo vencimento.`)
+      } else {
+        toast.success('Pagamento total registrado com sucesso!')
+      }
       setShowPagamentoDialog(false)
       onPagamentoRealizado?.()
     } else {
@@ -116,11 +138,14 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
+      minimumFractionDigits: 2,
     }).format(value)
   }
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('pt-BR', {
+    // Append T12:00:00 to avoid UTC midnight → previous day in Brazil (UTC-3)
+    const d = date.length === 10 ? new Date(date + 'T12:00:00') : new Date(date)
+    return d.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'long',
       year: 'numeric',
@@ -135,6 +160,8 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
         return { label: 'Emitida', color: 'bg-blue-100 text-blue-700' }
       case 'enviada':
         return { label: 'Enviada', color: 'bg-teal-100 text-teal-700' }
+      case 'parcialmente_paga':
+        return { label: 'Parcialmente Paga', color: 'bg-amber-100 text-amber-700' }
       case 'paga':
         return { label: 'Paga', color: 'bg-emerald-100 text-emerald-700' }
       case 'atrasada':
@@ -503,7 +530,31 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
                 </p>
               </div>
 
-              {/* Botão de Registrar Pagamento - Apenas se não estiver paga */}
+              {/* Info de pagamento parcial */}
+              {fatura.valor_pago > 0 && fatura.status !== 'paga' && (
+                <div className="mt-3 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500">Valor já pago</span>
+                    <span className="font-semibold text-emerald-600">{formatCurrency(fatura.valor_pago)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500">Saldo restante</span>
+                    <span className="font-bold text-amber-600">{formatCurrency(fatura.valor_total - fatura.valor_pago)}</span>
+                  </div>
+                  {/* Barra de progresso */}
+                  <div className="w-full bg-slate-200 rounded-full h-1.5">
+                    <div
+                      className="bg-emerald-500 h-1.5 rounded-full transition-all"
+                      style={{ width: `${Math.min(100, (fatura.valor_pago / fatura.valor_total) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 text-right">
+                    {Math.round((fatura.valor_pago / fatura.valor_total) * 100)}% pago
+                  </p>
+                </div>
+              )}
+
+              {/* Botão de Registrar Pagamento - Quando não totalmente paga nem cancelada */}
               {fatura.status !== 'paga' && fatura.status !== 'cancelada' && (
                 <div className="mt-4">
                   <Button
@@ -512,7 +563,7 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
                     size="lg"
                   >
                     <Banknote className="h-5 w-5 mr-2" />
-                    Registrar Pagamento
+                    {fatura.status === 'parcialmente_paga' ? 'Registrar Pagamento do Saldo' : 'Registrar Pagamento'}
                   </Button>
                 </div>
               )}
@@ -565,9 +616,28 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
+            {/* Info do saldo */}
+            {fatura.valor_pago > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-amber-700">Valor total da fatura</span>
+                  <span className="font-semibold text-slate-700">{formatCurrency(fatura.valor_total)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-amber-700">Já pago</span>
+                  <span className="font-semibold text-emerald-600">{formatCurrency(fatura.valor_pago)}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between">
+                  <span className="text-amber-800 font-medium">Saldo restante</span>
+                  <span className="font-bold text-amber-700">{formatCurrency(fatura.valor_total - fatura.valor_pago)}</span>
+                </div>
+              </div>
+            )}
+
             {/* Valor */}
             <div className="grid gap-2">
-              <Label htmlFor="valor">Valor Pago</Label>
+              <Label htmlFor="valor">Valor a Pagar</Label>
               <Input
                 id="valor"
                 type="number"
@@ -575,6 +645,18 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
                 value={pagamentoForm.valor}
                 onChange={(e) => setPagamentoForm({ ...pagamentoForm, valor: e.target.value })}
               />
+              {(() => {
+                const valorDigitado = parseFloat(pagamentoForm.valor) || 0
+                const valorAberto = fatura.valor_total - (fatura.valor_pago || 0)
+                if (valorDigitado > 0 && valorDigitado < valorAberto) {
+                  return (
+                    <p className="text-[11px] text-amber-600">
+                      Pagamento parcial — saldo de {formatCurrency(valorAberto - valorDigitado)} será gerado como nova obrigação
+                    </p>
+                  )
+                }
+                return null
+              })()}
             </div>
 
             {/* Data do Pagamento */}
@@ -632,6 +714,29 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
                 O valor será lançado automaticamente como entrada nesta conta.
               </p>
             </div>
+
+            {/* Data de vencimento do saldo (apenas quando parcial) */}
+            {(() => {
+              const valorDigitado = parseFloat(pagamentoForm.valor) || 0
+              const valorAberto = fatura.valor_total - (fatura.valor_pago || 0)
+              if (valorDigitado > 0 && valorDigitado < valorAberto) {
+                return (
+                  <div className="grid gap-2">
+                    <Label htmlFor="dataVencimentoSaldo">Vencimento do Saldo Restante</Label>
+                    <Input
+                      id="dataVencimentoSaldo"
+                      type="date"
+                      value={pagamentoForm.dataVencimentoSaldo}
+                      onChange={(e) => setPagamentoForm({ ...pagamentoForm, dataVencimentoSaldo: e.target.value })}
+                    />
+                    <p className="text-xs text-slate-500">
+                      Nova obrigação de {formatCurrency(valorAberto - valorDigitado)} será criada com este vencimento
+                    </p>
+                  </div>
+                )
+              }
+              return null
+            })()}
 
             {/* Observações */}
             <div className="grid gap-2">

@@ -564,9 +564,9 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
       <div className="xl:col-span-8 space-y-6">
 
         {/* Card Principal - Informações Gerais */}
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
           <CardHeader className="pb-4">
-            <CardTitle className="text-sm font-medium text-[#34495e] mb-1">
+            <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 mb-1">
               Informações Gerais
             </CardTitle>
           </CardHeader>
@@ -579,29 +579,29 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
                 {/* Partes */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-slate-500 mb-1.5">Cliente</p>
-                    <Button variant="link" className="text-sm font-semibold text-[#34495e] hover:text-[#89bcbe] p-0 h-auto max-w-full truncate block" title={processo.cliente_nome}>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Cliente</p>
+                    <Button variant="link" className="text-sm font-semibold text-[#34495e] dark:text-slate-200 hover:text-[#89bcbe] p-0 h-auto max-w-full truncate block" title={processo.cliente_nome}>
                       {processo.cliente_nome}
                     </Button>
                   </div>
 
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-slate-500 mb-1.5">Parte Contrária</p>
-                    <p className="text-sm font-semibold text-slate-700 truncate" title={processo.parte_contraria || 'Não informado'}>{processo.parte_contraria || 'Não informado'}</p>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Parte Contrária</p>
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 truncate" title={processo.parte_contraria || 'Não informado'}>{processo.parte_contraria || 'Não informado'}</p>
                   </div>
                 </div>
 
                 {/* CNJ */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs font-medium text-slate-500 mb-1.5">Número CNJ</p>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Número CNJ</p>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-slate-700">{processo.numero_cnj}</span>
+                      <span className="text-sm text-slate-700 dark:text-slate-300">{processo.numero_cnj}</span>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={copyCNJ}
-                        className="h-6 w-6 p-0 hover:bg-slate-100"
+                        className="h-6 w-6 p-0 hover:bg-slate-100 dark:hover:bg-surface-2"
                         title="Copiar CNJ"
                       >
                         {copiedCNJ ? (
@@ -614,8 +614,8 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
                   </div>
 
                   <div>
-                    <p className="text-xs font-medium text-slate-500 mb-1.5">Data de Distribuição</p>
-                    <p className="text-sm text-slate-700">
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Data de Distribuição</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">
                       {format(new Date(processo.data_distribuicao), "dd/MM/yyyy", { locale: ptBR })}
                     </p>
                   </div>
@@ -624,16 +624,16 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
                 {/* Informações Processuais */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs font-medium text-slate-500 mb-1.5">Fase / Instância</p>
-                    <p className="text-sm text-slate-700">
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Fase / Instância</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">
                       {processo.fase} / {processo.instancia}
                     </p>
                   </div>
 
                   {processo.rito && (
                     <div>
-                      <p className="text-xs font-medium text-slate-500 mb-1.5">Rito</p>
-                      <p className="text-sm text-slate-700 capitalize">{processo.rito}</p>
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Rito</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300 capitalize">{processo.rito}</p>
                     </div>
                   )}
                 </div>
@@ -641,31 +641,31 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
                 {/* Objeto da Ação */}
                 {processo.objeto_acao && (
                   <div>
-                    <p className="text-xs font-medium text-slate-500 mb-1.5">Objeto da Ação</p>
-                    <p className="text-sm text-slate-700 leading-relaxed">{processo.objeto_acao}</p>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Objeto da Ação</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{processo.objeto_acao}</p>
                   </div>
                 )}
 
                 {/* Valores */}
-                <div className="pt-3 border-t border-slate-100">
-                  <p className="text-xs font-medium text-slate-500 mb-2.5">Valores</p>
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2.5">Valores</p>
                   <div className="space-y-2">
                     <div className="flex justify-between items-baseline">
-                      <span className="text-xs text-slate-600">Valor da Causa:</span>
-                      <span className="text-sm font-semibold text-[#34495e]">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">Valor da Causa:</span>
+                      <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                         {processo.valor_causa ? formatCurrency(processo.valor_causa) : 'Não definido'}
                       </span>
                     </div>
 
                     {processo.valor_atualizado && processo.valor_atualizado !== processo.valor_causa && (
                       <div className="flex justify-between items-baseline">
-                        <span className="text-xs text-slate-600">Valor Atualizado:</span>
+                        <span className="text-xs text-slate-600 dark:text-slate-400">Valor Atualizado:</span>
                         <div className="text-right">
-                          <span className="text-sm font-semibold text-emerald-700">
+                          <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
                             {formatCurrency(processo.valor_atualizado)}
                           </span>
                           {processo.data_ultima_atualizacao_monetaria && (
-                            <p className="text-[10px] text-slate-500">
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400">
                               Atualizado em {format(new Date(processo.data_ultima_atualizacao_monetaria), "dd/MM/yyyy", { locale: ptBR })}
                             </p>
                           )}
@@ -678,43 +678,43 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
               </div>
 
               {/* Coluna Direita - Localização e Responsável */}
-              <div className="col-span-5 pl-6 border-l border-slate-100 space-y-4">
+              <div className="col-span-5 pl-6 border-l border-slate-100 dark:border-slate-800 space-y-4">
                 {/* Localização */}
                 <div className="flex items-start gap-2">
                   <MapPin className="w-4 h-4 text-[#89bcbe] mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
-                    <p className="text-xs font-medium text-slate-500 mb-2.5">Localização</p>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2.5">Localização</p>
                     <div className="space-y-2.5">
                       <div>
-                        <p className="text-xs text-slate-500">Tribunal</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Tribunal</p>
                         {processo.link_tribunal ? (
                           <Button
                             variant="link"
-                            className="text-sm text-[#34495e] hover:text-[#89bcbe] font-medium p-0 h-auto"
+                            className="text-sm text-[#34495e] dark:text-slate-200 hover:text-[#89bcbe] font-medium p-0 h-auto"
                             onClick={() => window.open(processo.link_tribunal, '_blank')}
                           >
                             {processo.tribunal} →
                           </Button>
                         ) : (
-                          <p className="text-sm text-slate-700 font-medium">{processo.tribunal}</p>
+                          <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">{processo.tribunal}</p>
                         )}
                       </div>
                       {processo.comarca && (
                         <div>
-                          <p className="text-xs text-slate-500">Comarca</p>
-                          <p className="text-sm text-slate-700">{processo.comarca}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Comarca</p>
+                          <p className="text-sm text-slate-700 dark:text-slate-300">{processo.comarca}</p>
                         </div>
                       )}
                       {processo.vara && (
                         <div>
-                          <p className="text-xs text-slate-500">Vara</p>
-                          <p className="text-sm text-slate-700">{processo.vara}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Vara</p>
+                          <p className="text-sm text-slate-700 dark:text-slate-300">{processo.vara}</p>
                         </div>
                       )}
                       {processo.juiz && (
                         <div>
-                          <p className="text-xs text-slate-500">Juiz</p>
-                          <p className="text-sm text-slate-700">{processo.juiz}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Juiz</p>
+                          <p className="text-sm text-slate-700 dark:text-slate-300">{processo.juiz}</p>
                         </div>
                       )}
                     </div>
@@ -722,10 +722,10 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
                 </div>
 
                 {/* Responsável */}
-                <div className="flex items-start gap-2 pt-3 border-t border-slate-100">
+                <div className="flex items-start gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                   <Users className="w-4 h-4 text-[#89bcbe] mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
-                    <p className="text-xs font-medium text-slate-500 mb-2.5">Responsável</p>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2.5">Responsável</p>
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center flex-shrink-0">
                         <span className="text-[10px] font-semibold text-white">
@@ -733,8 +733,8 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
                         </span>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-[#34495e]">{processo.responsavel_nome}</p>
-                        <p className="text-[10px] text-slate-500">Advogado responsável</p>
+                        <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">{processo.responsavel_nome}</p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">Advogado responsável</p>
                       </div>
                     </div>
                   </div>
@@ -746,10 +746,10 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
         </Card>
 
         {/* Andamentos Processuais */}
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between mb-1">
-              <CardTitle className="text-sm font-medium text-[#34495e]">
+              <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                 Últimos Andamentos
               </CardTitle>
 
@@ -762,7 +762,7 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
-                    <DialogTitle className="text-lg font-semibold text-[#34495e]">
+                    <DialogTitle className="text-lg font-semibold text-[#34495e] dark:text-slate-200">
                       Novo Andamento Manual
                     </DialogTitle>
                   </DialogHeader>
@@ -770,7 +770,7 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
                   <div className="space-y-4 pt-4">
                     <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">
                           Data
                         </label>
                         <Input
@@ -781,7 +781,7 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
                         />
                       </div>
                       <div className="col-span-2">
-                        <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">
                           Tipo de Andamento
                         </label>
                         <Input
@@ -794,7 +794,7 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
                     </div>
 
                     <div>
-                      <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">
                         Descrição
                       </label>
                       <Textarea
@@ -839,23 +839,23 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
               <div
                 key={mov.id}
                 id={`andamento-${mov.id}`}
-                className={`transition-colors duration-300 cursor-pointer hover:bg-slate-50 rounded-md p-2 -mx-2 group ${index !== paginatedMovimentacoes.length - 1 ? 'pb-3 border-b border-slate-100' : ''}`}
+                className={`transition-colors duration-300 cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 rounded-md p-2 -mx-2 group ${index !== paginatedMovimentacoes.length - 1 ? 'pb-3 border-b border-slate-100 dark:border-slate-800' : ''}`}
                 onClick={() => setSelectedMovimentacao(mov)}
               >
                 <div className="flex gap-3">
                   {/* Data */}
                   <div className="flex-shrink-0 w-20">
-                    <p className="text-xs font-medium text-slate-700">
+                    <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
                       {format(new Date(mov.data_movimento), "dd/MM/yyyy", { locale: ptBR })}
                     </p>
                   </div>
 
                   {/* Conteúdo */}
                   <div className="flex-1">
-                    <p className="text-xs font-semibold text-[#34495e] mb-0.5">
+                    <p className="text-xs font-semibold text-[#34495e] dark:text-slate-200 mb-0.5">
                       {mov.tipo_descricao}
                     </p>
-                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-2">
                       {mov.descricao}
                     </p>
                   </div>
@@ -885,15 +885,15 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
 
             {movimentacoes.length === 0 && (
               <div className="text-center py-8">
-                <FileText className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm text-slate-600">Nenhum andamento registrado</p>
+                <FileText className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                <p className="text-sm text-slate-600 dark:text-slate-400">Nenhum andamento registrado</p>
               </div>
             )}
 
             {/* Paginação de Movimentações */}
             {movimentacoes.length > movimentacoesPerPage && (
-              <div className="flex items-center justify-between pt-4 mt-2 border-t border-slate-100">
-                <p className="text-xs text-slate-500">
+              <div className="flex items-center justify-between pt-4 mt-2 border-t border-slate-100 dark:border-slate-800">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   {movStartIndex + 1}-{Math.min(movStartIndex + movimentacoesPerPage, movimentacoes.length)} de {movimentacoes.length}
                 </p>
                 <div className="flex items-center gap-1">
@@ -934,7 +934,7 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
 
         {/* Timeline Visual Horizontal */}
         {movimentacoes.length > 0 && (
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
             <CardContent className="pt-4 pb-4">
               <ProcessoTimelineHorizontal
                 movimentacoes={movimentacoes}
@@ -959,10 +959,10 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
       <div className="xl:col-span-4 space-y-6">
 
         {/* Agenda */}
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2 mb-1">
+              <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2 mb-1">
                 <Calendar className="w-4 h-4 text-[#89bcbe]" />
                 Agenda
               </CardTitle>
@@ -1000,7 +1000,7 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
               </div>
             ) : agendaItems.length === 0 ? (
               <div className="text-center py-4">
-                <p className="text-xs text-slate-500">Nenhum agendamento vinculado</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Nenhum agendamento vinculado</p>
               </div>
             ) : (
               <div className="space-y-3.5">
@@ -1012,10 +1012,10 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
                   return paginatedAgenda
                 })().map((item) => {
                   const statusConfig: Record<string, { bg: string; text: string }> = {
-                    pendente: { bg: 'bg-amber-100', text: 'text-amber-700' },
-                    em_andamento: { bg: 'bg-blue-100', text: 'text-blue-700' },
-                    concluida: { bg: 'bg-emerald-100', text: 'text-emerald-700' },
-                    agendada: { bg: 'bg-blue-100', text: 'text-blue-700' },
+                    pendente: { bg: 'bg-amber-100 dark:bg-amber-500/10', text: 'text-amber-700 dark:text-amber-400' },
+                    em_andamento: { bg: 'bg-blue-100 dark:bg-blue-500/10', text: 'text-blue-700 dark:text-blue-400' },
+                    concluida: { bg: 'bg-emerald-100 dark:bg-emerald-500/10', text: 'text-emerald-700 dark:text-emerald-400' },
+                    agendada: { bg: 'bg-blue-100 dark:bg-blue-500/10', text: 'text-blue-700 dark:text-blue-400' },
                   }
                   const statusStyle = statusConfig[item.status] || statusConfig.pendente
 
@@ -1063,12 +1063,12 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
                     <div
                       key={item.id}
                       onClick={handleClick}
-                      className="border border-slate-200 rounded-lg p-4 hover:border-[#89bcbe] hover:shadow-sm transition-all cursor-pointer"
+                      className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-[#89bcbe] hover:shadow-sm transition-all cursor-pointer"
                     >
                       {/* Header com título e status */}
                       <div className="flex items-start gap-2.5 mb-2.5">
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-[#34495e] leading-tight truncate">
+                          <p className="text-xs font-semibold text-[#34495e] dark:text-slate-200 leading-tight truncate">
                             {item.titulo}
                           </p>
                         </div>
@@ -1082,7 +1082,7 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
                         {/* Data/Horário - tarefas sem hora, eventos e audiências com hora */}
                         <div className="flex items-center gap-1.5">
                           <Clock className="w-3 h-3 text-[#89bcbe]" />
-                          <span className="text-[10px] text-slate-600">
+                          <span className="text-[10px] text-slate-600 dark:text-slate-400">
                             {item.tipo_entidade === 'tarefa'
                               ? formatBrazilDate(item.data_inicio)
                               : formatBrazilDateTime(item.data_inicio)}
@@ -1093,7 +1093,7 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
                         {(item.responsaveis_nomes?.length > 0 || item.responsavel_nome) && (
                           <div className="flex items-center gap-1.5">
                             <User className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
-                            <span className="text-[10px] text-slate-600 truncate">
+                            <span className="text-[10px] text-slate-600 dark:text-slate-400 truncate">
                               {item.responsaveis_nomes?.length > 0
                                 ? item.responsaveis_nomes.join(', ')
                                 : item.responsavel_nome}
@@ -1117,8 +1117,8 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
 
                 {/* Paginação da Agenda */}
                 {agendaItems.length > agendaPerPage && (
-                  <div className="flex items-center justify-between pt-3 mt-2 border-t border-slate-100">
-                    <p className="text-xs text-slate-500">
+                  <div className="flex items-center justify-between pt-3 mt-2 border-t border-slate-100 dark:border-slate-800">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       {((agendaPage - 1) * agendaPerPage) + 1}-{Math.min(agendaPage * agendaPerPage, agendaItems.length)} de {agendaItems.length}
                     </p>
                     <div className="flex items-center gap-1">
@@ -1305,7 +1305,7 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
       <Dialog open={!!selectedMovimentacao} onOpenChange={(open) => !open && setSelectedMovimentacao(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-[#34495e]">
+            <DialogTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
               Detalhe da Movimentação
             </DialogTitle>
           </DialogHeader>
@@ -1313,25 +1313,25 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
           {selectedMovimentacao && (
             <div className="space-y-4 pt-2">
               {/* Data e Tipo */}
-              <div className="flex items-baseline gap-4 pb-3 border-b border-slate-100">
+              <div className="flex items-baseline gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Data</p>
-                  <p className="text-sm font-medium text-[#34495e]">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Data</p>
+                  <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                     {format(new Date(selectedMovimentacao.data_movimento), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                   </p>
                 </div>
                 {selectedMovimentacao.tipo_descricao && (
                   <div className="flex-1">
-                    <p className="text-xs text-slate-500 mb-1">Tipo</p>
-                    <p className="text-sm font-medium text-[#34495e]">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Tipo</p>
+                    <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                       {selectedMovimentacao.tipo_descricao}
                     </p>
                   </div>
                 )}
                 {selectedMovimentacao.origem && (
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">Origem</p>
-                    <p className="text-xs text-slate-600 capitalize">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Origem</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 capitalize">
                       {selectedMovimentacao.origem}
                     </p>
                   </div>
@@ -1340,9 +1340,9 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
 
               {/* Conteúdo Completo */}
               <div>
-                <p className="text-xs text-slate-500 mb-2">Descrição</p>
-                <div className="bg-slate-50 rounded-lg p-4 max-h-[400px] overflow-y-auto">
-                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Descrição</p>
+                <div className="bg-slate-50 dark:bg-surface-0 rounded-lg p-4 max-h-[400px] overflow-y-auto">
+                  <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
                     {selectedMovimentacao.conteudo_completo || selectedMovimentacao.descricao}
                   </p>
                 </div>
@@ -1393,8 +1393,8 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
       <Dialog open={confirmSemHoras} onOpenChange={setConfirmSemHoras}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[#34495e]">Concluir sem registrar horas?</DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
+            <DialogTitle className="text-[#34495e] dark:text-slate-200">Concluir sem registrar horas?</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
               Você não registrou horas para esta tarefa. Deseja concluí-la mesmo assim?
             </DialogDescription>
           </DialogHeader>
@@ -1429,11 +1429,11 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
       <Dialog open={editMovimentacaoOpen} onOpenChange={setEditMovimentacaoOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-[#34495e]">Editar Andamento</DialogTitle>
+            <DialogTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">Editar Andamento</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Tipo</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Tipo</label>
               <Input
                 placeholder="Ex: Sentença, Despacho, Juntada..."
                 value={editMovimentacaoForm.tipo_descricao}
@@ -1442,7 +1442,7 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Descrição *</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Descrição *</label>
               <Textarea
                 placeholder="Descreva o andamento..."
                 value={editMovimentacaoForm.descricao}
@@ -1469,8 +1469,8 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
       <Dialog open={deleteMovimentacaoOpen} onOpenChange={setDeleteMovimentacaoOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-[#34495e]">Excluir Andamento</DialogTitle>
-            <DialogDescription className="text-sm text-slate-600">
+            <DialogTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">Excluir Andamento</DialogTitle>
+            <DialogDescription className="text-sm text-slate-600 dark:text-slate-400">
               Tem certeza que deseja excluir este andamento? Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>

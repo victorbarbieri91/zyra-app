@@ -189,6 +189,7 @@ export default function CartoesPage() {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
+      minimumFractionDigits: 2,
     }).format(value)
   }
 
@@ -197,8 +198,8 @@ export default function CartoesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">Cartões de Crédito</h1>
-          <p className="text-xs md:text-sm text-slate-600 mt-1">
+          <h1 className="text-xl md:text-2xl font-semibold text-[#34495e] dark:text-slate-200">Cartões de Crédito</h1>
+          <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 mt-1">
             Gerencie os cartões de crédito e suas faturas
           </p>
         </div>
@@ -209,9 +210,9 @@ export default function CartoesPage() {
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="border-slate-200 bg-white hover:bg-slate-50"
+                  className="border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 hover:bg-slate-50 dark:hover:bg-surface-2"
                 >
-                  <Building2 className="h-4 w-4 mr-2 text-[#34495e]" />
+                  <Building2 className="h-4 w-4 mr-2 text-[#34495e] dark:text-slate-200" />
                   <span className="text-sm">{getSeletorLabel()}</span>
                   <ChevronDown className="h-4 w-4 ml-2 text-slate-400" />
                 </Button>
@@ -225,7 +226,7 @@ export default function CartoesPage() {
                       'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors',
                       escritoriosSelecionados.length === escritoriosGrupo.length
                         ? 'bg-[#1E3A8A]/10 text-[#1E3A8A]'
-                        : 'hover:bg-slate-100 text-slate-700'
+                        : 'hover:bg-slate-100 dark:hover:bg-surface-3 text-slate-700 dark:text-slate-300'
                     )}
                   >
                     <span className="font-medium">Todos os escritórios</span>
@@ -234,13 +235,13 @@ export default function CartoesPage() {
                     )}
                   </button>
 
-                  <div className="h-px bg-slate-200 my-2" />
+                  <div className="h-px bg-slate-200 dark:bg-slate-700 my-2" />
 
                   {/* Lista de escritórios */}
                   {escritoriosGrupo.map((escritorio) => (
                     <div
                       key={escritorio.id}
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50"
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2"
                     >
                       <Checkbox
                         id={`esc-${escritorio.id}`}
@@ -249,7 +250,7 @@ export default function CartoesPage() {
                       />
                       <label
                         htmlFor={`esc-${escritorio.id}`}
-                        className="flex-1 text-sm text-slate-700 cursor-pointer"
+                        className="flex-1 text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
                       >
                         {escritorio.nome}
                       </label>
@@ -283,7 +284,7 @@ export default function CartoesPage() {
       </div>
 
       {/* Card de Resumo */}
-      <Card className="border-slate-200 bg-gradient-to-br from-[#34495e] to-[#46627f] text-white max-w-xs">
+      <Card className="border-slate-200 dark:border-slate-700 bg-gradient-to-br from-[#34495e] to-[#46627f] text-white max-w-xs">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -313,14 +314,14 @@ export default function CartoesPage() {
       {/* Lista de Cartões */}
       {loading ? (
         <div className="py-12 text-center">
-          <div className="h-8 w-8 mx-auto border-4 border-slate-200 border-t-[#1E3A8A] rounded-full animate-spin" />
-          <p className="text-sm text-slate-500 mt-2">Carregando cartões...</p>
+          <div className="h-8 w-8 mx-auto border-4 border-slate-200 dark:border-slate-700 border-t-[#1E3A8A] rounded-full animate-spin" />
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Carregando cartões...</p>
         </div>
       ) : cartoesFiltrados.length === 0 ? (
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardContent className="py-12 text-center">
             <CreditCard className="h-12 w-12 mx-auto text-slate-300" />
-            <p className="text-sm text-slate-500 mt-2">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
               {searchTerm
                 ? 'Nenhum cartão encontrado com esse termo'
                 : 'Nenhum cartão cadastrado ainda'}
@@ -361,7 +362,7 @@ export default function CartoesPage() {
                 return (
                   <TableRow
                     key={cartao.id}
-                    className="hover:bg-slate-50 cursor-pointer"
+                    className="hover:bg-slate-50 dark:hover:bg-surface-2 cursor-pointer"
                     onClick={() => handleViewDetails(cartao.id)}
                   >
                     <TableCell>
@@ -373,24 +374,24 @@ export default function CartoesPage() {
                           <CreditCard className="w-3.5 h-3.5 text-white" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-[#34495e]">{cartao.nome}</p>
+                          <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">{cartao.nome}</p>
                           <p className="text-[10px] text-slate-400">•••• {cartao.ultimos_digitos}</p>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-slate-600">
+                    <TableCell className="text-sm text-slate-600 dark:text-slate-400">
                       {cartao.banco}
                     </TableCell>
-                    <TableCell className="text-sm text-slate-600">
+                    <TableCell className="text-sm text-slate-600 dark:text-slate-400">
                       Dia {cartao.dia_vencimento}
                     </TableCell>
                     {escritoriosSelecionados.length > 1 && (
-                      <TableCell className="text-xs text-slate-500">
+                      <TableCell className="text-xs text-slate-500 dark:text-slate-400">
                         {cartao.escritorio_nome || '-'}
                       </TableCell>
                     )}
                     <TableCell className="text-right">
-                      <span className="text-sm font-semibold text-[#34495e]">
+                      <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                         {formatCurrency(faturaValor)}
                       </span>
                     </TableCell>
@@ -400,9 +401,9 @@ export default function CartoesPage() {
                           variant="secondary"
                           className={cn(
                             "text-[10px]",
-                            faturaStatus === 'aberta' && "bg-blue-100 text-blue-700",
-                            faturaStatus === 'fechada' && "bg-amber-100 text-amber-700",
-                            faturaStatus === 'paga' && "bg-emerald-100 text-emerald-700"
+                            faturaStatus === 'aberta' && "bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400",
+                            faturaStatus === 'fechada' && "bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400",
+                            faturaStatus === 'paga' && "bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
                           )}
                         >
                           {faturaStatus === 'aberta' && 'Aberta'}
@@ -421,7 +422,7 @@ export default function CartoesPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-7 px-2.5 text-xs font-medium text-[#34495e] border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                          className="h-7 px-2.5 text-xs font-medium text-[#34495e] dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-surface-2 hover:border-slate-300 dark:hover:border-slate-600"
                           onClick={() => handleViewDetails(cartao.id)}
                         >
                           Ver Fatura
@@ -438,7 +439,7 @@ export default function CartoesPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="h-7 w-7 p-0 text-red-600 dark:text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-500/10"
                           onClick={() => setCartaoParaExcluir(cartao.id)}
                           title="Desativar"
                         >

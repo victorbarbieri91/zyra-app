@@ -388,21 +388,21 @@ export default function ProcessoWizardAutomatico({
 
   // Componente para exibir uma parte
   const ParteItem = ({ parte }: { parte: ParteNormalizada }) => (
-    <div className="flex items-start gap-2 py-1.5 border-b border-slate-100 last:border-0">
+    <div className="flex items-start gap-2 py-1.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+          <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             {parte.tipo_participacao}
           </span>
           {parte.tipo_pessoa !== 'desconhecido' && (
-            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 text-slate-500">
+            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 text-slate-500 dark:text-slate-400">
               {parte.tipo_pessoa === 'fisica' ? 'PF' : 'PJ'}
             </Badge>
           )}
         </div>
-        <p className="text-sm text-slate-700">{parte.nome}</p>
+        <p className="text-sm text-slate-700 dark:text-slate-300">{parte.nome}</p>
         {parte.advogados && parte.advogados.length > 0 && (
-          <p className="text-[11px] text-slate-500 mt-0.5">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
             Adv: {parte.advogados.map(a => a.nome).join(', ')}
           </p>
         )}
@@ -416,19 +416,19 @@ export default function ProcessoWizardAutomatico({
         <DialogTitle className="sr-only">Cadastrar Processo</DialogTitle>
 
         {/* Header compacto */}
-        <div className="flex items-center gap-3 px-6 py-3 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+        <div className="flex items-center gap-3 px-6 py-3 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-white">
           <div className="w-9 h-9 rounded-lg bg-[#34495e]/10 flex items-center justify-center">
-            <Scale className="w-4 h-4 text-[#34495e]" />
+            <Scale className="w-4 h-4 text-[#34495e] dark:text-slate-200" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-[#34495e]">Cadastrar Processo</h2>
-            <p className="text-xs text-slate-500 font-mono">{dadosEscavador.numero_cnj}</p>
+            <h2 className="text-base font-semibold text-[#34495e] dark:text-slate-200">Cadastrar Processo</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">{dadosEscavador.numero_cnj}</p>
           </div>
         </div>
 
         {/* Content - 2 colunas lado a lado */}
         <div className="flex-1 overflow-y-auto">
-          <div className="grid grid-cols-5 divide-x divide-slate-200 min-h-0">
+          <div className="grid grid-cols-5 divide-x divide-slate-200 dark:divide-slate-700 min-h-0">
 
             {/* Coluna Esquerda - Ficha do Processo (3/5) */}
             <div className="col-span-3 p-5 space-y-4 overflow-y-auto">
@@ -438,8 +438,8 @@ export default function ProcessoWizardAutomatico({
                 {/* Classe e Tipo */}
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Classe</p>
-                    <p className="text-sm font-semibold text-[#34495e] mt-0.5">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider font-medium">Classe</p>
+                    <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200 mt-0.5">
                       {dadosEscavador.classe || dadosEscavador.area || '-'}
                     </p>
                   </div>
@@ -451,8 +451,8 @@ export default function ProcessoWizardAutomatico({
                 {/* Assunto */}
                 {dadosEscavador.assunto && (
                   <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Assunto</p>
-                    <p className="text-sm text-slate-600 mt-0.5">{dadosEscavador.assunto}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider font-medium">Assunto</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">{dadosEscavador.assunto}</p>
                   </div>
                 )}
 
@@ -460,31 +460,31 @@ export default function ProcessoWizardAutomatico({
                 <div className="grid grid-cols-3 gap-4 pt-2">
                   {/* Tribunal */}
                   <div className="flex items-start gap-2">
-                    <Building2 className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                    <Building2 className="w-4 h-4 text-slate-400 dark:text-slate-500 mt-0.5 shrink-0" />
                     <div>
-                      <p className="text-xs text-slate-400">Tribunal</p>
-                      <p className="text-sm text-slate-700 font-medium">{dadosEscavador.tribunal}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">Tribunal</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">{dadosEscavador.tribunal}</p>
                       {dadosEscavador.tribunal_nome && dadosEscavador.tribunal_nome !== dadosEscavador.tribunal && (
-                        <p className="text-[11px] text-slate-500">{dadosEscavador.tribunal_nome}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{dadosEscavador.tribunal_nome}</p>
                       )}
                     </div>
                   </div>
 
                   {/* Vara */}
                   <div className="flex items-start gap-2">
-                    <Gavel className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                    <Gavel className="w-4 h-4 text-slate-400 dark:text-slate-500 mt-0.5 shrink-0" />
                     <div>
-                      <p className="text-xs text-slate-400">Vara</p>
-                      <p className="text-sm text-slate-700">{dadosEscavador.vara || dadosEscavador.orgao_julgador || '-'}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">Vara</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300">{dadosEscavador.vara || dadosEscavador.orgao_julgador || '-'}</p>
                     </div>
                   </div>
 
                   {/* Comarca */}
                   <div className="flex items-start gap-2">
-                    <MapPin className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                    <MapPin className="w-4 h-4 text-slate-400 dark:text-slate-500 mt-0.5 shrink-0" />
                     <div>
-                      <p className="text-xs text-slate-400">Comarca</p>
-                      <p className="text-sm text-slate-700">
+                      <p className="text-xs text-slate-400 dark:text-slate-500">Comarca</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300">
                         {dadosEscavador.comarca || dadosEscavador.cidade || '-'}
                         {dadosEscavador.estado && ` - ${dadosEscavador.estado}`}
                       </p>
@@ -493,19 +493,19 @@ export default function ProcessoWizardAutomatico({
 
                   {/* Distribuição */}
                   <div className="flex items-start gap-2">
-                    <Calendar className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                    <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500 mt-0.5 shrink-0" />
                     <div>
-                      <p className="text-xs text-slate-400">Distribuição</p>
-                      <p className="text-sm text-slate-700">{formatarDataExibicao(dadosEscavador.data_distribuicao)}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">Distribuição</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300">{formatarDataExibicao(dadosEscavador.data_distribuicao)}</p>
                     </div>
                   </div>
 
                   {/* Valor */}
                   <div className="flex items-start gap-2">
-                    <Banknote className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                    <Banknote className="w-4 h-4 text-slate-400 dark:text-slate-500 mt-0.5 shrink-0" />
                     <div>
-                      <p className="text-xs text-slate-400">Valor da Causa</p>
-                      <p className="text-sm text-slate-700 font-medium">
+                      <p className="text-xs text-slate-400 dark:text-slate-500">Valor da Causa</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">
                         {dadosEscavador.valor_causa_formatado || formatarValorCausa(dadosEscavador.valor_causa)}
                       </p>
                     </div>
@@ -513,20 +513,20 @@ export default function ProcessoWizardAutomatico({
 
                   {/* Instância */}
                   <div className="flex items-start gap-2">
-                    <FileText className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                    <FileText className="w-4 h-4 text-slate-400 dark:text-slate-500 mt-0.5 shrink-0" />
                     <div>
-                      <p className="text-xs text-slate-400">Instância</p>
-                      <p className="text-sm text-slate-700">{dadosEscavador.instancia} Instância</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">Instância</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300">{dadosEscavador.instancia} Instância</p>
                     </div>
                   </div>
 
                   {/* Juiz */}
                   {dadosEscavador.juiz && (
                     <div className="flex items-start gap-2">
-                      <User className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                      <User className="w-4 h-4 text-slate-400 dark:text-slate-500 mt-0.5 shrink-0" />
                       <div>
-                        <p className="text-xs text-slate-400">Juiz</p>
-                        <p className="text-sm text-slate-700">{dadosEscavador.juiz}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">Juiz</p>
+                        <p className="text-sm text-slate-700 dark:text-slate-300">{dadosEscavador.juiz}</p>
                       </div>
                     </div>
                   )}
@@ -534,13 +534,13 @@ export default function ProcessoWizardAutomatico({
               </div>
 
               {/* Divisor */}
-              <div className="border-t border-slate-200" />
+              <div className="border-t border-slate-200 dark:border-slate-700" />
 
               {/* Partes */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <Users className="w-4 h-4 text-slate-400" />
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <Users className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     Partes do Processo
                   </p>
                 </div>
@@ -549,27 +549,27 @@ export default function ProcessoWizardAutomatico({
                 {partesAtivas.length === 0 && partesPassivas.length === 0 ? (
                   <div className="grid grid-cols-2 gap-4">
                     {dadosEscavador.titulo_polo_ativo && (
-                      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                        <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                      <div className="bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+                        <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
                           Polo Ativo
                         </p>
-                        <p className="text-sm text-slate-700">{dadosEscavador.titulo_polo_ativo}</p>
+                        <p className="text-sm text-slate-700 dark:text-slate-300">{dadosEscavador.titulo_polo_ativo}</p>
                       </div>
                     )}
                     {dadosEscavador.titulo_polo_passivo && (
-                      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                        <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                      <div className="bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+                        <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
                           Polo Passivo
                         </p>
-                        <p className="text-sm text-slate-700">{dadosEscavador.titulo_polo_passivo}</p>
+                        <p className="text-sm text-slate-700 dark:text-slate-300">{dadosEscavador.titulo_polo_passivo}</p>
                       </div>
                     )}
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
                     {/* Polo Ativo */}
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                      <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-2">
+                    <div className="bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+                      <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                         Polo Ativo
                       </p>
                       {partesAtivas.length > 0 ? (
@@ -579,15 +579,15 @@ export default function ProcessoWizardAutomatico({
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-slate-400 italic">
+                        <p className="text-xs text-slate-400 dark:text-slate-500 italic">
                           {dadosEscavador.titulo_polo_ativo || 'Não identificado'}
                         </p>
                       )}
                     </div>
 
                     {/* Polo Passivo */}
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                      <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-2">
+                    <div className="bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+                      <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                         Polo Passivo
                       </p>
                       {partesPassivas.length > 0 ? (
@@ -597,7 +597,7 @@ export default function ProcessoWizardAutomatico({
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-slate-400 italic">
+                        <p className="text-xs text-slate-400 dark:text-slate-500 italic">
                           {dadosEscavador.titulo_polo_passivo || 'Não identificado'}
                         </p>
                       )}
@@ -612,31 +612,31 @@ export default function ProcessoWizardAutomatico({
 
               {/* Vincular Cliente */}
               <div className="space-y-2">
-                <Label className="text-sm font-semibold text-[#34495e]">
+                <Label className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                   Vincular Cliente *
                 </Label>
 
                 {/* Busca */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                   <Input
                     value={buscaCliente}
                     onChange={(e) => setBuscaCliente(e.target.value)}
                     placeholder="Buscar cliente..."
-                    className="pl-9 bg-white"
+                    className="pl-9 bg-white dark:bg-surface-1"
                   />
                 </div>
 
                 {/* Sugestões */}
                 {sugestoesBusca.length > 0 && (
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] text-slate-400">Sugestões:</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">Sugestões:</span>
                     {sugestoesBusca.map((sugestao, i) => (
                       <button
                         key={i}
                         type="button"
                         onClick={() => setBuscaCliente(sugestao)}
-                        className="text-[11px] px-2 py-0.5 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-600 transition-colors"
+                        className="text-[11px] px-2 py-0.5 bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-surface-2 rounded text-slate-600 dark:text-slate-400 transition-colors"
                       >
                         {sugestao}
                       </button>
@@ -650,7 +650,7 @@ export default function ProcessoWizardAutomatico({
                   onValueChange={setClienteId}
                   disabled={loadingClientes}
                 >
-                  <SelectTrigger className="bg-white">
+                  <SelectTrigger className="bg-white dark:bg-surface-1">
                     <SelectValue placeholder={
                       loadingClientes ? 'Buscando...' :
                       clientes.length === 0 ? 'Nenhum encontrado' :
@@ -661,7 +661,7 @@ export default function ProcessoWizardAutomatico({
                     {clientes.map(cliente => (
                       <SelectItem key={cliente.id} value={cliente.id}>
                         <div className="flex items-center gap-2">
-                          <UserCircle className="w-4 h-4 text-slate-400" />
+                          <UserCircle className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                           <span className="truncate">{cliente.nome_completo}</span>
                           <Badge variant="outline" className="text-[9px] px-1 py-0 ml-auto">
                             {cliente.tipo_pessoa === 'fisica' ? 'PF' : 'PJ'}
@@ -687,7 +687,7 @@ export default function ProcessoWizardAutomatico({
 
               {/* Responsável */}
               <div className="space-y-2">
-                <Label className="text-sm font-semibold text-[#34495e]">
+                <Label className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                   Advogado Responsável *
                 </Label>
                 <Select
@@ -695,14 +695,14 @@ export default function ProcessoWizardAutomatico({
                   onValueChange={setResponsavelId}
                   disabled={loadingColaboradores}
                 >
-                  <SelectTrigger className="bg-white">
+                  <SelectTrigger className="bg-white dark:bg-surface-1">
                     <SelectValue placeholder={loadingColaboradores ? 'Carregando...' : 'Selecione'} />
                   </SelectTrigger>
                   <SelectContent>
                     {colaboradores.map(colab => (
                       <SelectItem key={colab.id} value={colab.id}>
                         <div className="flex items-center gap-2">
-                          <Briefcase className="w-4 h-4 text-slate-400" />
+                          <Briefcase className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                           <span>{colab.nome_completo}</span>
                         </div>
                       </SelectItem>
@@ -712,31 +712,31 @@ export default function ProcessoWizardAutomatico({
               </div>
 
               {/* Monitoramento */}
-              <div className="bg-white border border-slate-200 rounded-lg p-3">
+              <div className="bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      ativarMonitoramento ? 'bg-emerald-100' : 'bg-slate-100'
+                      ativarMonitoramento ? 'bg-emerald-100 dark:bg-emerald-500/15' : 'bg-slate-100 dark:bg-surface-2'
                     }`}>
                       {ativarMonitoramento ? (
-                        <Bell className="w-4 h-4 text-emerald-600" />
+                        <Bell className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                       ) : (
-                        <BellOff className="w-4 h-4 text-slate-400" />
+                        <BellOff className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                       )}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-slate-700">Monitoramento</p>
-                      <p className="text-[11px] text-slate-500">Alertas automáticos</p>
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Monitoramento</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Alertas automáticos</p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setAtivarMonitoramento(!ativarMonitoramento)}
                     className={`relative w-10 h-5 rounded-full transition-colors ${
-                      ativarMonitoramento ? 'bg-emerald-500' : 'bg-slate-300'
+                      ativarMonitoramento ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-slate-300 dark:bg-slate-600'
                     }`}
                   >
-                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white dark:bg-surface-1 shadow transition-transform ${
                       ativarMonitoramento ? 'translate-x-5' : 'translate-x-0.5'
                     }`} />
                   </button>
@@ -747,7 +747,7 @@ export default function ProcessoWizardAutomatico({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-3 border-t border-slate-200 bg-white">
+        <div className="flex items-center justify-between px-6 py-3 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1">
           <Button
             type="button"
             variant="outline"

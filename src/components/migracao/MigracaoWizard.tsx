@@ -58,10 +58,10 @@ export function MigracaoWizard({ modulo }: Props) {
             </Button>
           </Link>
           <div>
-            <h1 className="text-xl font-semibold text-[#34495e]">
+            <h1 className="text-xl font-semibold text-[#34495e] dark:text-slate-200">
               Migrar {moduloConfig?.nome || modulo}
             </h1>
-            <p className="text-sm text-[#46627f]">
+            <p className="text-sm text-[#46627f] dark:text-slate-400">
               {moduloConfig?.descricao}
             </p>
           </div>
@@ -83,8 +83,8 @@ export function MigracaoWizard({ modulo }: Props) {
                   className={`
                     w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all
                     ${isCompleted ? 'bg-green-500 text-white' :
-                      isCurrent ? 'bg-blue-600 text-white ring-4 ring-blue-100' :
-                      'bg-slate-200 text-slate-500'}
+                      isCurrent ? 'bg-blue-600 text-white ring-4 ring-blue-100 dark:ring-blue-500/30' :
+                      'bg-slate-200 dark:bg-surface-3 text-slate-500 dark:text-slate-400'}
                   `}
                 >
                   {isCompleted ? (
@@ -96,9 +96,9 @@ export function MigracaoWizard({ modulo }: Props) {
                 <span
                   className={`
                     text-xs mt-2 font-medium
-                    ${isCurrent ? 'text-blue-600' :
-                      isCompleted ? 'text-green-600' :
-                      'text-slate-400'}
+                    ${isCurrent ? 'text-blue-600 dark:text-blue-400' :
+                      isCompleted ? 'text-green-600 dark:text-emerald-400' :
+                      'text-slate-400 dark:text-slate-500'}
                   `}
                 >
                   {STEP_TITLES[step]}
@@ -110,7 +110,7 @@ export function MigracaoWizard({ modulo }: Props) {
                 <div
                   className={`
                     w-16 h-1 mx-2 rounded-full
-                    ${index < currentStepIndex ? 'bg-green-500' : 'bg-slate-200'}
+                    ${index < currentStepIndex ? 'bg-green-500' : 'bg-slate-200 dark:bg-surface-3'}
                   `}
                 />
               )}
@@ -121,11 +121,11 @@ export function MigracaoWizard({ modulo }: Props) {
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
+        <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg p-4 text-red-700 dark:text-red-400 text-sm">
           {error}
           <Button
             variant="link"
-            className="ml-2 p-0 h-auto text-red-700 underline"
+            className="ml-2 p-0 h-auto text-red-700 dark:text-red-400 underline"
             onClick={() => setError(null)}
           >
             Fechar
@@ -134,7 +134,7 @@ export function MigracaoWizard({ modulo }: Props) {
       )}
 
       {/* Step Content */}
-      <div className="bg-white rounded-lg border p-6">
+      <div className="bg-white dark:bg-surface-1 rounded-lg border dark:border-slate-700 p-6">
         {state.step === 'upload' && (
           <StepUpload
             state={state}

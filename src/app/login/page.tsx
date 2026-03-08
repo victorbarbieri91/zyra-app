@@ -205,7 +205,7 @@ export default function LoginPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="w-full lg:w-1/2 flex flex-col min-h-screen bg-white"
+        className="w-full lg:w-1/2 flex flex-col min-h-screen bg-white dark:bg-surface-0"
       >
         {/* Mobile Header Visual */}
         <div className="lg:hidden relative h-48 overflow-hidden bg-gradient-to-br from-[#2c3e50] via-[#34495e] to-[#46627f]">
@@ -266,13 +266,13 @@ export default function LoginPage() {
             >
               <motion.h1
                 variants={itemVariants}
-                className="text-2xl font-semibold text-[#34495e] mb-1"
+                className="text-2xl font-semibold text-[#34495e] dark:text-slate-200 mb-1"
               >
                 {mode === 'login' ? 'Bem-vindo de volta' : 'Crie sua conta'}
               </motion.h1>
               <motion.p
                 variants={itemVariants}
-                className="text-[#46627f] text-sm"
+                className="text-[#46627f] dark:text-slate-400 text-sm"
               >
                 {mode === 'login'
                   ? 'Entre para acessar o sistema'
@@ -293,7 +293,7 @@ export default function LoginPage() {
                   className="space-y-5"
                 >
                   <div className="space-y-2">
-                    <Label htmlFor="login-email" className="text-sm font-medium text-[#34495e]">
+                    <Label htmlFor="login-email" className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                       E-mail
                     </Label>
                     <Input
@@ -306,13 +306,13 @@ export default function LoginPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       disabled={loading}
-                      className="h-12 bg-slate-50/50 border-slate-200 focus:border-[#89bcbe] focus:ring-[#89bcbe]/20 rounded-xl transition-all"
+                      className="h-12 bg-slate-50/50 dark:bg-surface-1 border-slate-200 dark:border-slate-700 focus:border-[#89bcbe] focus:ring-[#89bcbe]/20 rounded-xl transition-all"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="login-password" className="text-sm font-medium text-[#34495e]">
+                      <Label htmlFor="login-password" className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                         Senha
                       </Label>
                       <button
@@ -334,12 +334,12 @@ export default function LoginPage() {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                         disabled={loading}
-                        className="h-12 bg-slate-50/50 border-slate-200 focus:border-[#89bcbe] focus:ring-[#89bcbe]/20 rounded-xl transition-all pr-12"
+                        className="h-12 bg-slate-50/50 dark:bg-surface-1 border-slate-200 dark:border-slate-700 focus:border-[#89bcbe] focus:ring-[#89bcbe]/20 rounded-xl transition-all pr-12"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                       >
                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                       </button>
@@ -350,7 +350,7 @@ export default function LoginPage() {
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm"
+                      className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl text-sm"
                     >
                       {error}
                     </motion.div>
@@ -371,7 +371,7 @@ export default function LoginPage() {
                     )}
                   </Button>
 
-                  <p className="text-center text-sm text-slate-600 pt-4">
+                  <p className="text-center text-sm text-slate-600 dark:text-slate-400 pt-4">
                     Ainda nao tem conta?{' '}
                     <button
                       type="button"
@@ -393,7 +393,7 @@ export default function LoginPage() {
                   className="space-y-4"
                 >
                   <div className="space-y-2">
-                    <Label htmlFor="register-nome" className="text-sm font-medium text-[#34495e]">
+                    <Label htmlFor="register-nome" className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                       Nome completo
                     </Label>
                     <Input
@@ -404,12 +404,12 @@ export default function LoginPage() {
                       onChange={(e) => setNome(e.target.value)}
                       required
                       disabled={loading}
-                      className="h-11 bg-slate-50/50 border-slate-200 focus:border-[#89bcbe] focus:ring-[#89bcbe]/20 rounded-xl"
+                      className="h-11 bg-slate-50/50 dark:bg-surface-1 border-slate-200 dark:border-slate-700 focus:border-[#89bcbe] focus:ring-[#89bcbe]/20 rounded-xl"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="register-email" className="text-sm font-medium text-[#34495e]">
+                    <Label htmlFor="register-email" className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                       E-mail
                     </Label>
                     <Input
@@ -420,13 +420,13 @@ export default function LoginPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       disabled={loading}
-                      className="h-11 bg-slate-50/50 border-slate-200 focus:border-[#89bcbe] focus:ring-[#89bcbe]/20 rounded-xl"
+                      className="h-11 bg-slate-50/50 dark:bg-surface-1 border-slate-200 dark:border-slate-700 focus:border-[#89bcbe] focus:ring-[#89bcbe]/20 rounded-xl"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label htmlFor="register-password" className="text-sm font-medium text-[#34495e]">
+                      <Label htmlFor="register-password" className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                         Senha
                       </Label>
                       <div className="relative">
@@ -438,7 +438,7 @@ export default function LoginPage() {
                           onChange={(e) => setPassword(e.target.value)}
                           required
                           disabled={loading}
-                          className="h-11 bg-slate-50/50 border-slate-200 focus:border-[#89bcbe] focus:ring-[#89bcbe]/20 rounded-xl pr-10"
+                          className="h-11 bg-slate-50/50 dark:bg-surface-1 border-slate-200 dark:border-slate-700 focus:border-[#89bcbe] focus:ring-[#89bcbe]/20 rounded-xl pr-10"
                         />
                         <button
                           type="button"
@@ -451,7 +451,7 @@ export default function LoginPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="register-confirm" className="text-sm font-medium text-[#34495e]">
+                      <Label htmlFor="register-confirm" className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                         Confirmar
                       </Label>
                       <Input
@@ -462,7 +462,7 @@ export default function LoginPage() {
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
                         disabled={loading}
-                        className="h-11 bg-slate-50/50 border-slate-200 focus:border-[#89bcbe] focus:ring-[#89bcbe]/20 rounded-xl"
+                        className="h-11 bg-slate-50/50 dark:bg-surface-1 border-slate-200 dark:border-slate-700 focus:border-[#89bcbe] focus:ring-[#89bcbe]/20 rounded-xl"
                       />
                     </div>
                   </div>
@@ -480,7 +480,7 @@ export default function LoginPage() {
                                   : level === 2
                                   ? 'bg-amber-500'
                                   : 'bg-emerald-500'
-                                : 'bg-slate-200'
+                                : 'bg-slate-200 dark:bg-slate-700'
                             }`}
                           />
                         ))}
@@ -499,7 +499,7 @@ export default function LoginPage() {
                       disabled={loading}
                       className="mt-0.5 border-slate-300 data-[state=checked]:bg-[#89bcbe] data-[state=checked]:border-[#89bcbe]"
                     />
-                    <Label htmlFor="terms" className="text-xs text-slate-600 leading-relaxed cursor-pointer">
+                    <Label htmlFor="terms" className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed cursor-pointer">
                       Aceito os{' '}
                       <a href="#" className="text-[#89bcbe] hover:text-[#6ba9ab] font-medium underline">
                         termos de uso
@@ -515,7 +515,7 @@ export default function LoginPage() {
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm"
+                      className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl text-sm"
                     >
                       {error}
                     </motion.div>
@@ -536,7 +536,7 @@ export default function LoginPage() {
                     )}
                   </Button>
 
-                  <p className="text-center text-sm text-slate-600 pt-2">
+                  <p className="text-center text-sm text-slate-600 dark:text-slate-400 pt-2">
                     Ja possui uma conta?{' '}
                     <button
                       type="button"
@@ -554,7 +554,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div className="px-6 py-4 text-center">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-400 dark:text-slate-500">
             2025 Zyra Legal. Todos os direitos reservados.
           </p>
         </div>
@@ -578,14 +578,14 @@ export default function LoginPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2 }}
-              className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+              className="w-full max-w-md bg-white dark:bg-surface-1 rounded-2xl shadow-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
               <div className="relative px-6 pt-6 pb-4">
                 <button
                   onClick={closeForgotPassword}
-                  className="absolute right-4 top-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+                  className="absolute right-4 top-4 p-2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-surface-2 rounded-full transition-colors"
                 >
                   <X size={20} />
                 </button>
@@ -594,10 +594,10 @@ export default function LoginPage() {
                   <Mail className="w-6 h-6 text-[#89bcbe]" />
                 </div>
 
-                <h2 className="text-xl font-bold text-[#34495e]">
+                <h2 className="text-xl font-bold text-[#34495e] dark:text-slate-200">
                   {forgotSuccess ? 'Email enviado!' : 'Recuperar senha'}
                 </h2>
-                <p className="text-sm text-[#46627f] mt-1">
+                <p className="text-sm text-[#46627f] dark:text-slate-400 mt-1">
                   {forgotSuccess
                     ? 'Verifique sua caixa de entrada'
                     : 'Digite seu email para receber o link de recuperacao'}
@@ -608,7 +608,7 @@ export default function LoginPage() {
               <div className="px-6 pb-6">
                 {forgotSuccess ? (
                   <div className="space-y-4">
-                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl text-sm">
+                    <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 px-4 py-3 rounded-xl text-sm">
                       Enviamos um link de recuperacao para <strong>{forgotEmail}</strong>.
                       Verifique tambem sua pasta de spam.
                     </div>
@@ -623,7 +623,7 @@ export default function LoginPage() {
                 ) : (
                   <form onSubmit={handleForgotPassword} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="forgot-email" className="text-sm font-medium text-[#34495e]">
+                      <Label htmlFor="forgot-email" className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                         E-mail
                       </Label>
                       <Input
@@ -635,7 +635,7 @@ export default function LoginPage() {
                         required
                         disabled={forgotLoading}
                         autoFocus
-                        className="h-12 bg-slate-50/50 border-slate-200 focus:border-[#89bcbe] focus:ring-[#89bcbe]/20 rounded-xl transition-all"
+                        className="h-12 bg-slate-50/50 dark:bg-surface-1 border-slate-200 dark:border-slate-700 focus:border-[#89bcbe] focus:ring-[#89bcbe]/20 rounded-xl transition-all"
                       />
                     </div>
 
@@ -643,7 +643,7 @@ export default function LoginPage() {
                       <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm"
+                        className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl text-sm"
                       >
                         {forgotError}
                       </motion.div>
@@ -655,7 +655,7 @@ export default function LoginPage() {
                         variant="outline"
                         onClick={closeForgotPassword}
                         disabled={forgotLoading}
-                        className="flex-1 h-11 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl"
+                        className="flex-1 h-11 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2 rounded-xl"
                       >
                         Cancelar
                       </Button>

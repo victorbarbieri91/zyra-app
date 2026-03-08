@@ -177,7 +177,7 @@ export default function CalendarGrid({
       {/* Header do Calendário */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-semibold text-[#34495e] capitalize">
+          <h2 className="text-2xl font-semibold text-[#34495e] dark:text-slate-200 capitalize">
             {headerTitle}
           </h2>
           <div className="flex items-center gap-1">
@@ -185,7 +185,7 @@ export default function CalendarGrid({
               variant="outline"
               size="sm"
               onClick={navigateBack}
-              className="h-8 w-8 p-0 border-slate-200"
+              className="h-8 w-8 p-0 border-slate-200 dark:border-slate-700"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -193,17 +193,17 @@ export default function CalendarGrid({
               variant="outline"
               size="sm"
               onClick={navigateForward}
-              className="h-8 w-8 p-0 border-slate-200"
+              className="h-8 w-8 p-0 border-slate-200 dark:border-slate-700"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Toggle Mês / Semana */}
-          <div className="relative flex items-center bg-slate-100 rounded-full p-0.5 h-8">
+          <div className="relative flex items-center bg-slate-100 dark:bg-surface-2 rounded-full p-0.5 h-8">
             <div
               className={cn(
-                'absolute top-0.5 h-7 rounded-full bg-white shadow-sm transition-all duration-300 ease-in-out',
+                'absolute top-0.5 h-7 rounded-full bg-white dark:bg-surface-1 shadow-sm transition-all duration-300 ease-in-out',
                 calendarView === 'month'
                   ? 'left-0.5 w-[48px]'
                   : 'left-[50px] w-[64px]'
@@ -213,7 +213,7 @@ export default function CalendarGrid({
               onClick={() => switchView('month')}
               className={cn(
                 'relative z-10 w-[48px] py-1 text-xs font-medium rounded-full transition-colors duration-200 text-center',
-                calendarView === 'month' ? 'text-[#34495e]' : 'text-slate-400 hover:text-slate-600'
+                calendarView === 'month' ? 'text-[#34495e] dark:text-slate-200' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
               )}
             >
               Mês
@@ -222,7 +222,7 @@ export default function CalendarGrid({
               onClick={() => switchView('week')}
               className={cn(
                 'relative z-10 w-[64px] py-1 text-xs font-medium rounded-full transition-colors duration-200 text-center',
-                calendarView === 'week' ? 'text-[#34495e]' : 'text-slate-400 hover:text-slate-600'
+                calendarView === 'week' ? 'text-[#34495e] dark:text-slate-200' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
               )}
             >
               Semana
@@ -242,19 +242,19 @@ export default function CalendarGrid({
       </div>
 
       {/* Grid do Calendário */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <div className="p-4">
           {/* Cabeçalho - Dias da Semana */}
           <div className="grid grid-cols-7 gap-2 mb-2">
             {isWeekView
               ? weekDays.map((day) => (
                   <div key={day.toISOString()} className="text-center py-2">
-                    <div className="text-[10px] font-medium text-[#46627f] uppercase">
+                    <div className="text-[10px] font-medium text-[#46627f] dark:text-slate-400 uppercase">
                       {format(day, 'EEE', { locale: ptBR })}
                     </div>
                     <div className={cn(
                       'text-sm font-semibold mt-0.5',
-                      isToday(day) ? 'text-[#89bcbe]' : 'text-[#34495e]'
+                      isToday(day) ? 'text-[#89bcbe]' : 'text-[#34495e] dark:text-slate-200'
                     )}>
                       {format(day, 'd')}
                     </div>
@@ -263,7 +263,7 @@ export default function CalendarGrid({
               : ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map((day) => (
                   <div
                     key={day}
-                    className="text-center text-xs font-semibold text-[#46627f] py-2"
+                    className="text-center text-xs font-semibold text-[#46627f] dark:text-slate-400 py-2"
                   >
                     {day}
                   </div>
@@ -297,12 +297,12 @@ export default function CalendarGrid({
                     'p-2 rounded-lg border transition-all cursor-pointer group overflow-y-auto',
                     'hover:border-[#89bcbe] hover:shadow-sm',
                     !isWeekView && 'min-h-[110px]',
-                    !isCurrentMonth && 'bg-slate-50/50',
-                    isCurrentMonth && 'bg-white',
-                    isSelected && 'border-[#89bcbe] bg-[#f0f9f9]/30',
-                    !isSelected && 'border-slate-200',
-                    isFeriadoDay && 'bg-purple-50/30',
-                    isWeekendDay && !isFeriadoDay && 'bg-slate-50'
+                    !isCurrentMonth && 'bg-slate-50/50 dark:bg-surface-0/50',
+                    isCurrentMonth && 'bg-white dark:bg-surface-1',
+                    isSelected && 'border-[#89bcbe] bg-[#f0f9f9]/30 dark:bg-teal-900/20',
+                    !isSelected && 'border-slate-200 dark:border-slate-700',
+                    isFeriadoDay && 'bg-purple-50/30 dark:bg-purple-500/10',
+                    isWeekendDay && !isFeriadoDay && 'bg-slate-50 dark:bg-surface-0'
                   )}
                 >
                   {/* Cabeçalho do Dia */}
@@ -310,10 +310,10 @@ export default function CalendarGrid({
                     <span
                       className={cn(
                         'text-xs font-medium',
-                        !isCurrentMonth && 'text-slate-400',
-                        isCurrentMonth && !isTodayDate && 'text-[#34495e]',
+                        !isCurrentMonth && 'text-slate-400 dark:text-slate-500',
+                        isCurrentMonth && !isTodayDate && 'text-[#34495e] dark:text-slate-200',
                         isTodayDate && 'text-white',
-                        isFeriadoDay && isCurrentMonth && !isTodayDate && 'text-purple-600'
+                        isFeriadoDay && isCurrentMonth && !isTodayDate && 'text-purple-600 dark:text-purple-400'
                       )}
                     >
                       {isTodayDate && (
@@ -365,17 +365,17 @@ export default function CalendarGrid({
       </Card>
 
       {/* Legenda */}
-      <div className="flex items-center gap-4 text-xs text-[#6c757d]">
+      <div className="flex items-center gap-4 text-xs text-[#6c757d] dark:text-slate-400">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-gradient-to-br from-[#89bcbe] to-[#6ba9ab]" />
           <span>Hoje</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-purple-50 border border-purple-200" />
+          <div className="w-3 h-3 rounded bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-700" />
           <span>Feriado</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-slate-50 border border-slate-200" />
+          <div className="w-3 h-3 rounded bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700" />
           <span>Fim de semana</span>
         </div>
       </div>

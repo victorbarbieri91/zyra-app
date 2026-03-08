@@ -75,10 +75,10 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  ativo: 'bg-blue-50 text-blue-700 border-blue-200',
-  levantado: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  convertido: 'bg-amber-50 text-amber-700 border-amber-200',
-  perdido: 'bg-red-50 text-red-700 border-red-200',
+  ativo: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-700',
+  levantado: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-700',
+  convertido: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-700',
+  perdido: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-700',
 }
 
 const initialFormState = {
@@ -289,7 +289,7 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
 
   if (loading) {
     return (
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardContent className="py-12">
           <div className="flex items-center justify-center">
             <Loader2 className="w-6 h-6 animate-spin text-[#89bcbe]" />
@@ -301,10 +301,10 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
 
   return (
     <>
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-semibold text-[#34495e] flex items-center gap-2">
+            <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200 flex items-center gap-2">
               <Landmark className="w-5 h-5 text-[#89bcbe]" />
               Depósitos Judiciais
             </CardTitle>
@@ -322,26 +322,26 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
         <CardContent className="space-y-4">
           {/* Totais */}
           {depositos.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-slate-50 rounded-lg">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-slate-50 dark:bg-surface-0 rounded-lg">
               <div>
-                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Ativo</p>
-                <p className="text-sm font-semibold text-blue-700">{formatCurrency(totais.ativo)}</p>
-                <p className="text-[10px] text-slate-400">{totais.countAtivo} depósito(s)</p>
+                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Ativo</p>
+                <p className="text-sm font-semibold text-blue-700 dark:text-blue-400">{formatCurrency(totais.ativo)}</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500">{totais.countAtivo} depósito(s)</p>
               </div>
               <div>
-                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Levantado</p>
-                <p className="text-sm font-semibold text-emerald-700">{formatCurrency(totais.levantado)}</p>
-                <p className="text-[10px] text-slate-400">{totais.countLevantado} depósito(s)</p>
+                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Levantado</p>
+                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{formatCurrency(totais.levantado)}</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500">{totais.countLevantado} depósito(s)</p>
               </div>
               <div>
-                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Convertido</p>
-                <p className="text-sm font-semibold text-amber-700">{formatCurrency(totais.convertido)}</p>
-                <p className="text-[10px] text-slate-400">{totais.countConvertido} depósito(s)</p>
+                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Convertido</p>
+                <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">{formatCurrency(totais.convertido)}</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500">{totais.countConvertido} depósito(s)</p>
               </div>
               <div>
-                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Perdido</p>
-                <p className="text-sm font-semibold text-red-700">{formatCurrency(totais.perdido)}</p>
-                <p className="text-[10px] text-slate-400">{totais.countPerdido} depósito(s)</p>
+                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Perdido</p>
+                <p className="text-sm font-semibold text-red-700 dark:text-red-400">{formatCurrency(totais.perdido)}</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500">{totais.countPerdido} depósito(s)</p>
               </div>
             </div>
           )}
@@ -349,18 +349,18 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
           {/* Lista de Depósitos */}
           {depositos.length === 0 ? (
             <div className="text-center py-12">
-              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-surface-2 flex items-center justify-center mx-auto mb-4">
                 <Wallet className="w-8 h-8 text-slate-400" />
               </div>
-              <p className="text-sm font-medium text-slate-600 mb-1">Nenhum depósito cadastrado</p>
-              <p className="text-xs text-slate-500 mb-4">
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Nenhum depósito cadastrado</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
                 Cadastre depósitos recursais, de embargo, caução ou outros
               </p>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={handleNovoDeposito}
-                className="text-xs h-8 border-[#89bcbe] text-[#34495e] hover:bg-[#89bcbe]/10"
+                className="text-xs h-8 border-[#89bcbe] text-[#34495e] dark:text-slate-200 hover:bg-[#89bcbe]/10"
               >
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
                 Cadastrar Depósito
@@ -371,12 +371,12 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
               {depositos.map((deposito) => (
                 <div
                   key={deposito.id}
-                  className="p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
+                  className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-semibold text-[#34495e] uppercase tracking-wide">
+                        <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200 uppercase tracking-wide">
                           {TIPO_LABELS[deposito.tipo]}
                         </span>
                         <Badge
@@ -388,13 +388,13 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
                       </div>
 
                       {deposito.descricao && (
-                        <p className="text-sm text-slate-600 mb-2 line-clamp-2">
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-2 line-clamp-2">
                           {deposito.descricao}
                         </p>
                       )}
 
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
-                        <span className="font-semibold text-[#34495e] text-base">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                        <span className="font-semibold text-[#34495e] dark:text-slate-200 text-base">
                           {formatCurrency(deposito.valor)}
                         </span>
 
@@ -412,11 +412,11 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
                       </div>
 
                       {deposito.status === 'levantado' && deposito.valor_levantado && (
-                        <div className="mt-2 flex items-center gap-2 text-xs text-emerald-700">
+                        <div className="mt-2 flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400">
                           <ArrowUpRight className="w-3.5 h-3.5" />
                           Levantado: {formatCurrency(deposito.valor_levantado)}
                           {deposito.data_levantamento && (
-                            <span className="text-slate-500">
+                            <span className="text-slate-500 dark:text-slate-400">
                               em {formatBrazilDate(deposito.data_levantamento)}
                             </span>
                           )}
@@ -424,7 +424,7 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
                       )}
 
                       {deposito.observacoes && (
-                        <p className="mt-2 text-xs text-slate-500 italic">
+                        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 italic">
                           {deposito.observacoes}
                         </p>
                       )}
@@ -435,7 +435,7 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEditDeposito(deposito)}
-                        className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e]"
+                        className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200"
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -463,7 +463,7 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-[#34495e]">
+            <DialogTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
               {editingDeposito ? 'Editar Depósito' : 'Novo Depósito'}
             </DialogTitle>
           </DialogHeader>
@@ -471,7 +471,7 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
           <div className="space-y-4 py-2">
             {/* Tipo */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-600">Tipo de Depósito *</Label>
+              <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Tipo de Depósito *</Label>
               <Select
                 value={formData.tipo}
                 onValueChange={(value) => setFormData({ ...formData, tipo: value as any })}
@@ -491,7 +491,7 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
             {/* Valor e Data */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-600">Valor *</Label>
+                <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Valor *</Label>
                 <Input
                   type="text"
                   placeholder="R$ 0,00"
@@ -501,7 +501,7 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-600">Data do Depósito *</Label>
+                <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Data do Depósito *</Label>
                 <Input
                   type="date"
                   value={formData.data_deposito}
@@ -513,7 +513,7 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
 
             {/* Descrição */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-600">Descrição</Label>
+              <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Descrição</Label>
               <Textarea
                 placeholder="Descreva o motivo do depósito..."
                 value={formData.descricao}
@@ -524,7 +524,7 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
 
             {/* Número da Guia */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-600">Número da Guia</Label>
+              <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Número da Guia</Label>
               <Input
                 type="text"
                 placeholder="Ex: 2025.0012345-6"
@@ -537,7 +537,7 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
             {/* Dados Bancários */}
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-600">Banco</Label>
+                <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Banco</Label>
                 <Input
                   type="text"
                   placeholder="Ex: CEF"
@@ -547,7 +547,7 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-600">Agência</Label>
+                <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Agência</Label>
                 <Input
                   type="text"
                   placeholder="0000"
@@ -557,7 +557,7 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-600">Conta</Label>
+                <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Conta</Label>
                 <Input
                   type="text"
                   placeholder="00000-0"
@@ -570,13 +570,13 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
 
             {/* Seção de Status/Levantamento (apenas na edição) */}
             {editingDeposito && (
-              <div className="pt-3 border-t border-slate-100 space-y-4">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                   Situação do Depósito
                 </p>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-600">Status</Label>
+                  <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Status</Label>
                   <Select
                     value={formData.status}
                     onValueChange={(value) => setFormData({ ...formData, status: value as any })}
@@ -596,7 +596,7 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
                 {formData.status !== 'ativo' && (
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-slate-600">Data do Levantamento</Label>
+                      <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Data do Levantamento</Label>
                       <Input
                         type="date"
                         value={formData.data_levantamento}
@@ -606,7 +606,7 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
                     </div>
                     {formData.status === 'levantado' && (
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-medium text-slate-600">Valor Levantado</Label>
+                        <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Valor Levantado</Label>
                         <Input
                           type="text"
                           placeholder="R$ 0,00"
@@ -620,7 +620,7 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
                 )}
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-600">Observações</Label>
+                  <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Observações</Label>
                   <Textarea
                     placeholder="Observações sobre o levantamento ou conversão..."
                     value={formData.observacoes}
@@ -662,12 +662,12 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-[#34495e] flex items-center gap-2">
+            <DialogTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200 flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-red-500" />
               Excluir Depósito
             </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             Tem certeza que deseja excluir este depósito? Esta ação não pode ser desfeita.
           </p>
           <DialogFooter>

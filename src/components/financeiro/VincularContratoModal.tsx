@@ -186,7 +186,7 @@ export function VincularContratoModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold text-[#34495e]">
+          <DialogTitle className="text-lg font-semibold text-[#34495e] dark:text-slate-200">
             Vincular Contrato de Honorários
           </DialogTitle>
           <DialogDescription>
@@ -221,41 +221,41 @@ export function VincularContratoModal({
           ) : filteredContratos.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <FileText className="w-10 h-10 text-slate-300 mb-2" />
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 {searchQuery ? 'Nenhum contrato encontrado' : 'Nenhum contrato ativo'}
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-700">
               {filteredContratos.map((contrato) => (
                 <button
                   key={contrato.id}
                   onClick={() => setSelectedContratoId(contrato.id)}
                   className={cn(
-                    'w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors',
-                    selectedContratoId === contrato.id && 'bg-blue-50 hover:bg-blue-50'
+                    'w-full px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0 transition-colors',
+                    selectedContratoId === contrato.id && 'bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-50 dark:bg-blue-500/10'
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-[#34495e]">
+                        <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                           {contrato.numero_contrato}
                         </span>
                         <Badge
                           variant="secondary"
-                          className="text-[10px] bg-slate-100 text-slate-600"
+                          className="text-[10px] bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400"
                         >
                           {formatFormaCobranca(contrato.forma_cobranca)}
                         </Badge>
                       </div>
                       {contrato.titulo && (
-                        <p className="text-xs text-slate-600 mt-0.5 truncate">
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 truncate">
                           {contrato.titulo}
                         </p>
                       )}
                       <div className="flex items-center gap-3 mt-1.5">
-                        <div className="flex items-center gap-1 text-[11px] text-slate-500">
+                        <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
                           <User className="w-3 h-3" />
                           <span className="truncate max-w-[200px]">{contrato.cliente_nome}</span>
                         </div>

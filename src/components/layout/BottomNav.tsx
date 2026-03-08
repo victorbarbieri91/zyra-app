@@ -15,7 +15,7 @@ export default function BottomNav() {
 
   return (
     <>
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]"
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-surface-1 border-t border-slate-200 dark:border-slate-700 shadow-[0_-2px_10px_rgba(0,0,0,0.06)] dark:shadow-none"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="flex items-center justify-around h-14">
@@ -32,7 +32,7 @@ export default function BottomNav() {
                 <button
                   key="more"
                   onClick={() => setDrawerOpen(true)}
-                  className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 text-slate-400 active:text-[#34495e] transition-colors"
+                  className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 text-slate-400 dark:text-slate-500 active:text-[#34495e] dark:active:text-[#89bcbe] transition-colors"
                 >
                   <Icon className="w-5 h-5" />
                   <span className="text-[10px] font-medium">{item.title}</span>
@@ -47,8 +47,8 @@ export default function BottomNav() {
                 className={cn(
                   'flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-colors',
                   isActive
-                    ? 'text-[#34495e]'
-                    : 'text-slate-400 active:text-[#34495e]'
+                    ? 'text-[#34495e] dark:text-[#89bcbe]'
+                    : 'text-slate-400 dark:text-slate-500 active:text-[#34495e] dark:active:text-[#89bcbe]'
                 )}
               >
                 <Icon className={cn('w-5 h-5', isActive && 'drop-shadow-sm')} />
@@ -59,7 +59,7 @@ export default function BottomNav() {
                   {item.title}
                 </span>
                 {isActive && (
-                  <div className="absolute top-0 w-8 h-0.5 bg-[#34495e] rounded-full" />
+                  <div className="absolute top-0 w-8 h-0.5 bg-[#34495e] dark:bg-[#89bcbe] rounded-full" />
                 )}
               </Link>
             )

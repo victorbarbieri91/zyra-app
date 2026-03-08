@@ -203,24 +203,24 @@ export default function TemplatesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-slate-600">Carregando...</div>
+        <div className="text-slate-600 dark:text-slate-400">Carregando...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 dark:from-surface-0 dark:via-surface-0 dark:to-surface-0 p-6">
       <div className="max-w-[1800px] mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#34495e]">Templates de Peças</h1>
-          <p className="text-sm text-slate-600 mt-1">
+          <h1 className="text-2xl font-bold text-[#34495e] dark:text-slate-200">Templates de Peças</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             Gerencie seus modelos de peças processuais
           </p>
         </div>
         <Link href="/dashboard/pecas-teses/templates/novo">
-          <Button className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white hover:opacity-90">
+          <Button className="bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] text-white hover:opacity-90">
             <Plus className="w-4 h-4 mr-2" />
             Novo Template
           </Button>
@@ -228,7 +228,7 @@ export default function TemplatesPage() {
       </div>
 
       {/* Filters */}
-      <Card className="border-slate-200">
+      <Card className="border-slate-200 dark:border-slate-700">
         <CardContent className="pt-6 pb-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
@@ -237,11 +237,11 @@ export default function TemplatesPage() {
                 placeholder="Buscar por nome..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 border-slate-200"
+                className="pl-10 border-slate-200 dark:border-slate-700"
               />
             </div>
             <Select value={selectedCategoria} onValueChange={setSelectedCategoria}>
-              <SelectTrigger className="border-slate-200">
+              <SelectTrigger className="border-slate-200 dark:border-slate-700">
                 <SelectValue placeholder="Categoria" />
               </SelectTrigger>
               <SelectContent>
@@ -256,7 +256,7 @@ export default function TemplatesPage() {
               </SelectContent>
             </Select>
             <Select value={selectedArea} onValueChange={setSelectedArea}>
-              <SelectTrigger className="border-slate-200">
+              <SelectTrigger className="border-slate-200 dark:border-slate-700">
                 <SelectValue placeholder="Área" />
               </SelectTrigger>
               <SelectContent>
@@ -275,11 +275,11 @@ export default function TemplatesPage() {
 
       {/* Templates Grid */}
       {filteredTemplates.length === 0 ? (
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardContent className="py-12">
             <div className="text-center">
-              <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 mb-4">
+              <FileText className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+              <p className="text-slate-500 dark:text-slate-400 mb-4">
                 {templates.length === 0
                   ? 'Nenhum template cadastrado ainda'
                   : 'Nenhum template encontrado com os filtros aplicados'}
@@ -300,14 +300,14 @@ export default function TemplatesPage() {
           {filteredTemplates.map((template) => (
             <Card
               key={template.id}
-              className={`border-slate-200 ${
+              className={`border-slate-200 dark:border-slate-700 ${
                 !template.ativo ? 'opacity-60' : ''
               }`}
             >
               <CardHeader className="pb-2 pt-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-sm font-semibold text-[#34495e] mb-2">
+                    <CardTitle className="text-sm font-semibold text-[#34495e] dark:text-slate-200 mb-2">
                       {template.nome}
                     </CardTitle>
                     <div className="flex flex-wrap gap-1.5">
@@ -320,7 +320,7 @@ export default function TemplatesPage() {
                       {!template.ativo && (
                         <Badge
                           variant="outline"
-                          className="text-[10px] px-2 py-0.5 bg-slate-100"
+                          className="text-[10px] px-2 py-0.5 bg-slate-100 dark:bg-slate-800"
                         >
                           Inativo
                         </Badge>
@@ -355,7 +355,7 @@ export default function TemplatesPage() {
               </CardHeader>
               <CardContent className="pt-2 pb-4">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                     <Scale className="w-3 h-3" />
                     <span>
                       {template.total_teses_vinculadas || 0}{' '}
@@ -367,7 +367,7 @@ export default function TemplatesPage() {
                       {template.total_juris_vinculadas || 0} juris
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-slate-500">
+                  <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                     <span>
                       {template.uso_count} {template.uso_count === 1 ? 'uso' : 'usos'}
                     </span>

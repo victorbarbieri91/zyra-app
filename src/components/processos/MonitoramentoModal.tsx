@@ -144,12 +144,12 @@ export function MonitoramentoModal({
           <DialogTitle className="flex items-center gap-2">
             {action === 'ativar' ? (
               <>
-                <Eye className="w-5 h-5 text-emerald-600" />
+                <Eye className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 Ativar Monitoramento
               </>
             ) : (
               <>
-                <EyeOff className="w-5 h-5 text-slate-500" />
+                <EyeOff className="w-5 h-5 text-slate-500 dark:text-slate-400" />
                 Desativar Monitoramento
               </>
             )}
@@ -166,9 +166,9 @@ export function MonitoramentoModal({
           {!loading && !concluido && (
             <>
               {/* Contagem */}
-              <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg">
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
-                <span className="text-sm text-slate-700">
+              <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-surface-0 rounded-lg">
+                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <span className="text-sm text-slate-700 dark:text-slate-300">
                   {processosComCNJ.length} {processosComCNJ.length === 1 ? 'processo sera' : 'processos serao'}{' '}
                   {action === 'ativar' ? 'monitorados' : 'desativados'}
                 </span>
@@ -176,9 +176,9 @@ export function MonitoramentoModal({
 
               {/* Processos sem CNJ */}
               {processosSemCNJ.length > 0 && (
-                <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                  <X className="w-4 h-4 text-amber-600" />
-                  <span className="text-sm text-amber-700">
+                <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-500/10 rounded-lg border border-amber-200 dark:border-amber-700">
+                  <X className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span className="text-sm text-amber-700 dark:text-amber-400">
                     {processosSemCNJ.length} {processosSemCNJ.length === 1 ? 'processo nao possui' : 'processos nao possuem'}{' '}
                     numero CNJ e {processosSemCNJ.length === 1 ? 'sera ignorado' : 'serao ignorados'}
                   </span>
@@ -187,9 +187,9 @@ export function MonitoramentoModal({
 
               {/* Aviso de creditos */}
               {action === 'ativar' && processosComCNJ.length > 0 && (
-                <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <CreditCard className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm text-blue-700">
+                <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg border border-blue-200 dark:border-blue-700">
+                  <CreditCard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm text-blue-700 dark:text-blue-400">
                     O monitoramento consome creditos da API Escavador mensalmente.
                   </span>
                 </div>
@@ -197,8 +197,8 @@ export function MonitoramentoModal({
 
               {/* Frequencia de monitoramento */}
               {action === 'ativar' && processosComCNJ.length > 0 && (
-                <div className="space-y-3 p-3 bg-slate-50 rounded-lg">
-                  <Label className="text-sm font-medium text-slate-700">
+                <div className="space-y-3 p-3 bg-slate-50 dark:bg-surface-0 rounded-lg">
+                  <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                     Frequencia de verificacao
                   </Label>
                   <RadioGroup
@@ -209,17 +209,17 @@ export function MonitoramentoModal({
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="SEMANAL" id="semanal" />
                       <Label htmlFor="semanal" className="flex items-center gap-1.5 text-sm cursor-pointer">
-                        <Calendar className="w-4 h-4 text-slate-500" />
+                        <Calendar className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                         Semanal
-                        <span className="text-xs text-slate-400">(recomendado)</span>
+                        <span className="text-xs text-slate-400 dark:text-slate-500">(recomendado)</span>
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="DIARIO" id="diario" />
                       <Label htmlFor="diario" className="flex items-center gap-1.5 text-sm cursor-pointer">
-                        <Clock className="w-4 h-4 text-slate-500" />
+                        <Clock className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                         Diario
-                        <span className="text-xs text-amber-500">(mais creditos)</span>
+                        <span className="text-xs text-amber-500 dark:text-amber-400">(mais creditos)</span>
                       </Label>
                     </div>
                   </RadioGroup>
@@ -232,7 +232,7 @@ export function MonitoramentoModal({
           {(loading || concluido) && (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">
+                <span className="text-slate-600 dark:text-slate-400">
                   {loading ? 'Processando...' : 'Concluido'}
                 </span>
                 <span className="font-medium">
@@ -247,20 +247,20 @@ export function MonitoramentoModal({
           {concluido && (
             <div className="space-y-2">
               {sucessos > 0 && (
-                <div className="flex items-center gap-2 p-2 bg-emerald-50 rounded text-sm text-emerald-700">
+                <div className="flex items-center gap-2 p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded text-sm text-emerald-700 dark:text-emerald-400">
                   <Check className="w-4 h-4" />
                   {sucessos} {sucessos === 1 ? 'processo' : 'processos'}{' '}
                   {action === 'ativar' ? 'monitorado' : 'desativado'} com sucesso
                 </div>
               )}
               {erros > 0 && (
-                <div className="flex items-center gap-2 p-2 bg-red-50 rounded text-sm text-red-700">
+                <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-500/10 rounded text-sm text-red-700 dark:text-red-400">
                   <X className="w-4 h-4" />
                   {erros} {erros === 1 ? 'processo falhou' : 'processos falharam'}
                 </div>
               )}
               {semCnj > 0 && (
-                <div className="flex items-center gap-2 p-2 bg-amber-50 rounded text-sm text-amber-700">
+                <div className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-500/10 rounded text-sm text-amber-700 dark:text-amber-400">
                   <AlertTriangle className="w-4 h-4" />
                   {semCnj} {semCnj === 1 ? 'processo ignorado' : 'processos ignorados'} (sem CNJ)
                 </div>
@@ -290,7 +290,7 @@ export function MonitoramentoModal({
           )}
 
           {loading && (
-            <Button disabled className="bg-slate-400">
+            <Button disabled className="bg-slate-400 dark:bg-slate-600">
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Processando...
             </Button>

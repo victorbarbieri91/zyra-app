@@ -148,16 +148,16 @@ export default function EventoDetailModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl p-0 overflow-hidden border-0">
         <DialogTitle className="sr-only">Detalhes do {isPrazo ? 'Prazo' : 'Compromisso'}</DialogTitle>
-        <div className="bg-white rounded-lg flex flex-col max-h-[85vh]">
+        <div className="bg-white dark:bg-surface-1 rounded-lg flex flex-col max-h-[85vh]">
 
           {/* Header Minimalista */}
-          <div className="p-6 pb-4 border-b border-slate-100 flex-shrink-0">
+          <div className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900 mb-1">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">
                   {evento.titulo}
                 </h2>
-                <div className="flex items-center gap-3 text-[10px] text-slate-500">
+                <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
                   <span>{subtipoLabel}</span>
                   {evento.status && (
                     <span className={cn("font-medium capitalize", getStatusColor())}>
@@ -176,7 +176,7 @@ export default function EventoDetailModal({
 
             {/* Metadata sutil */}
             {evento.created_at && (
-              <div className="flex items-center gap-2 mt-3 text-[10px] text-slate-400">
+              <div className="flex items-center gap-2 mt-3 text-[10px] text-slate-400 dark:text-slate-500">
                 <Clock className="w-3 h-3" />
                 <span>Criado {formatBrazilDate(evento.created_at)}</span>
               </div>
@@ -190,15 +190,15 @@ export default function EventoDetailModal({
             {isPrazo && (prazoVencido || evento.prazo_criticidade === 'hoje' || evento.prazo_criticidade === 'critico') && (
               <div className={cn(
                 'p-3 rounded-lg border-l-4',
-                prazoVencido ? 'bg-red-50 border-red-500' : 'bg-amber-50 border-amber-500'
+                prazoVencido ? 'bg-red-50 dark:bg-red-500/10 border-red-500' : 'bg-amber-50 dark:bg-amber-500/10 border-amber-500'
               )}>
                 <div className="flex items-start gap-2">
                   <AlertCircle className={cn('w-4 h-4 flex-shrink-0 mt-0.5', prazoVencido ? 'text-red-600' : 'text-amber-600')} />
                   <div>
-                    <div className={cn('text-xs font-semibold', prazoVencido ? 'text-red-900' : 'text-amber-900')}>
+                    <div className={cn('text-xs font-semibold', prazoVencido ? 'text-red-900 dark:text-red-300' : 'text-amber-900 dark:text-amber-300')}>
                       {prazoVencido ? 'Prazo Vencido' : evento.prazo_criticidade === 'hoje' ? 'Vence Hoje' : 'Prazo Crítico'}
                     </div>
-                    <div className={cn('text-[10px] mt-0.5', prazoVencido ? 'text-red-700' : 'text-amber-700')}>
+                    <div className={cn('text-[10px] mt-0.5', prazoVencido ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-400')}>
                       {prazoVencido
                         ? `Este prazo venceu há ${Math.abs(diasRestantes || 0)} dia(s)`
                         : diasRestantes === 0
@@ -217,7 +217,7 @@ export default function EventoDetailModal({
                 Descrição
               </div>
               {evento.descricao ? (
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                   {evento.descricao}
                 </p>
               ) : (
@@ -235,20 +235,20 @@ export default function EventoDetailModal({
                 </div>
                 <button
                   onClick={() => onProcessoClick?.(evento.processo_id!)}
-                  className="w-full text-left p-3 bg-slate-50 rounded-md hover:bg-slate-100 transition-colors group"
+                  className="w-full text-left p-3 bg-slate-50 dark:bg-surface-0 rounded-md hover:bg-slate-100 dark:hover:bg-surface-3 transition-colors group"
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-xs font-medium text-slate-700">
+                      <div className="text-xs font-medium text-slate-700 dark:text-slate-300">
                         Processo {evento.processo_numero}
                       </div>
                       {evento.cliente_nome && (
-                        <div className="text-[10px] text-slate-500 mt-1">
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
                           {evento.cliente_nome}
                         </div>
                       )}
                     </div>
-                    <svg className="w-4 h-4 text-slate-300 group-hover:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-slate-400 dark:group-hover:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
@@ -264,18 +264,18 @@ export default function EventoDetailModal({
                 </div>
                 <button
                   onClick={() => onConsultivoClick?.(evento.consultivo_id!)}
-                  className="w-full text-left p-3 bg-slate-50 rounded-md hover:bg-slate-100 transition-colors group"
+                  className="w-full text-left p-3 bg-slate-50 dark:bg-surface-0 rounded-md hover:bg-slate-100 dark:hover:bg-surface-3 transition-colors group"
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-xs font-medium text-slate-700">
+                      <div className="text-xs font-medium text-slate-700 dark:text-slate-300">
                         {evento.consultivo_titulo}
                       </div>
-                      <div className="text-[10px] text-slate-500 mt-1">
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
                         Consultivo
                       </div>
                     </div>
-                    <svg className="w-4 h-4 text-slate-300 group-hover:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-slate-400 dark:group-hover:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
@@ -287,12 +287,12 @@ export default function EventoDetailModal({
             <div className="flex flex-wrap gap-x-6 gap-y-3">
               {/* Data de Início */}
               <div className="min-w-[140px]">
-                <div className="text-[10px] text-slate-500 mb-1 h-4">
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 h-4">
                   <CalendarIcon className="w-3 h-3 text-slate-400 inline mr-1.5 align-text-bottom" />
                   {isPrazo ? 'Data Início' : 'Data e Hora'}
                 </div>
                 <div className="h-5 leading-5">
-                  <span className="text-xs font-medium text-slate-700">
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
                     {evento.data_inicio ? (
                       evento.dia_inteiro
                         ? formatBrazilDate(parseDBDate(evento.data_inicio))
@@ -305,11 +305,11 @@ export default function EventoDetailModal({
               {/* Data Fim / Hora Fim */}
               {evento.data_fim && !evento.dia_inteiro && (
                 <div className="min-w-[100px]">
-                  <div className="text-[10px] text-slate-500 mb-1 h-4">
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 h-4">
                     Até
                   </div>
                   <div className="h-5 leading-5">
-                    <span className="text-xs text-slate-700">
+                    <span className="text-xs text-slate-700 dark:text-slate-300">
                       {formatBrazilTime(parseDBDate(evento.data_fim))}
                     </span>
                   </div>
@@ -333,7 +333,7 @@ export default function EventoDetailModal({
                       {formatBrazilDate(parseDBDate(evento.prazo_data_limite))}
                     </span>
                     {diasRestantes !== null && !prazoVencido && (
-                      <span className="text-[10px] text-slate-400 ml-1.5">
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-1.5">
                         {diasRestantes === 0 ? 'Hoje' : `${diasRestantes}d`}
                       </span>
                     )}
@@ -349,11 +349,11 @@ export default function EventoDetailModal({
               {/* Duração */}
               {duracao && !isPrazo && (
                 <div className="min-w-[100px]">
-                  <div className="text-[10px] text-slate-500 mb-1 h-4">
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 h-4">
                     Duração
                   </div>
                   <div className="h-5 leading-5">
-                    <span className="text-xs text-slate-700">
+                    <span className="text-xs text-slate-700 dark:text-slate-300">
                       {duracao} min
                     </span>
                   </div>
@@ -363,11 +363,11 @@ export default function EventoDetailModal({
               {/* Responsável */}
               {evento.responsavel_nome && (
                 <div className="min-w-[120px]">
-                  <div className="text-[10px] text-slate-500 mb-1 h-4">
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 h-4">
                     Responsável
                   </div>
                   <div className="h-5 leading-5">
-                    <span className="text-xs text-slate-700">
+                    <span className="text-xs text-slate-700 dark:text-slate-300">
                       {evento.responsavel_nome}
                     </span>
                   </div>
@@ -377,12 +377,12 @@ export default function EventoDetailModal({
               {/* Local */}
               {evento.local && (
                 <div className="min-w-[150px]">
-                  <div className="text-[10px] text-slate-500 mb-1 h-4">
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 h-4">
                     <MapPin className="w-3 h-3 text-slate-400 inline mr-1.5 align-text-bottom" />
                     Local
                   </div>
                   <div className="h-5 leading-5">
-                    <span className="text-xs text-slate-700">
+                    <span className="text-xs text-slate-700 dark:text-slate-300">
                       {evento.local}
                     </span>
                   </div>
@@ -392,7 +392,7 @@ export default function EventoDetailModal({
           </div>
 
           {/* Footer - Botões de Ação */}
-          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex-shrink-0">
+          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-surface-0/50 flex-shrink-0">
             <div className="flex items-center justify-between flex-wrap gap-y-2">
               {/* Grupo esquerdo: ações primárias + timer */}
               <div className="flex items-center gap-2">
@@ -428,7 +428,7 @@ export default function EventoDetailModal({
                     "text-xs h-8 min-w-[120px]",
                     timerExistente?.status === 'rodando'
                       ? "bg-amber-500 hover:bg-amber-600 text-white"
-                      : "border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
+                      : "border-[#89bcbe] text-[#34495e] dark:text-slate-200 hover:bg-[#f0f9f9] dark:hover:bg-teal-900/20"
                   )}
                 >
                   {timerExistente?.status === 'rodando' ? (
@@ -448,7 +448,7 @@ export default function EventoDetailModal({
                     onClick={onEdit}
                     size="sm"
                     variant="ghost"
-                    className="text-xs text-slate-600 hover:text-slate-900 h-8"
+                    className="text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 h-8"
                   >
                     <Edit className="w-3.5 h-3.5 mr-1.5" />
                     Editar
@@ -460,7 +460,7 @@ export default function EventoDetailModal({
                     onClick={onCancelar}
                     size="sm"
                     variant="ghost"
-                    className="text-xs text-red-600 hover:text-red-700 h-8"
+                    className="text-xs text-red-600 hover:text-red-700 dark:text-red-400 h-8"
                   >
                     <X className="w-3.5 h-3.5 mr-1.5" />
                     Cancelar

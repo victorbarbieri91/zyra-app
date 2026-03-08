@@ -65,8 +65,8 @@ export function FeedbackButtons({
   // Se feedback ja foi enviado, mostrar o que foi escolhido
   if (feedbackEnviado) {
     return (
-      <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100">
-        <span className="text-[10px] text-slate-400 mr-1">
+      <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+        <span className="text-[10px] text-slate-400 dark:text-slate-500 mr-1">
           {feedbackEnviado === 'positivo' && 'Obrigado pelo feedback positivo!'}
           {feedbackEnviado === 'negativo' && 'Tentando novamente com sua correcao...'}
           {feedbackEnviado === 'correcao' && 'Correcao enviada!'}
@@ -87,8 +87,8 @@ export function FeedbackButtons({
   return (
     <TooltipProvider>
       <div onMouseLeave={() => setHovered(null)}>
-        <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-100">
-          <span className="text-[10px] text-slate-400 mr-1">Esta resposta foi util?</span>
+        <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 mr-1">Esta resposta foi util?</span>
 
           {/* Positivo */}
           <Tooltip>
@@ -97,8 +97,8 @@ export function FeedbackButtons({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  'h-6 w-6 rounded-full hover:bg-emerald-50',
-                  hovered === 'positivo' && 'bg-emerald-50'
+                  'h-6 w-6 rounded-full hover:bg-emerald-50 dark:hover:bg-emerald-500/10',
+                  hovered === 'positivo' && 'bg-emerald-50 dark:bg-emerald-500/10'
                 )}
                 disabled={disabled}
                 onClick={() => handleFeedback('positivo')}
@@ -106,8 +106,8 @@ export function FeedbackButtons({
               >
                 <ThumbsUp
                   className={cn(
-                    'w-3 h-3 text-slate-400 transition-colors',
-                    hovered === 'positivo' && 'text-emerald-500'
+                    'w-3 h-3 text-slate-400 dark:text-slate-500 transition-colors',
+                    hovered === 'positivo' && 'text-emerald-500 dark:text-emerald-400'
                   )}
                 />
               </Button>
@@ -124,9 +124,9 @@ export function FeedbackButtons({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  'h-6 w-6 rounded-full hover:bg-red-50',
-                  hovered === 'negativo' && 'bg-red-50',
-                  mostrarInlineCorrection && 'bg-red-50'
+                  'h-6 w-6 rounded-full hover:bg-red-50 dark:hover:bg-red-500/10',
+                  hovered === 'negativo' && 'bg-red-50 dark:bg-red-500/10',
+                  mostrarInlineCorrection && 'bg-red-50 dark:bg-red-500/10'
                 )}
                 disabled={disabled}
                 onClick={() => handleFeedback('negativo')}
@@ -134,8 +134,8 @@ export function FeedbackButtons({
               >
                 <ThumbsDown
                   className={cn(
-                    'w-3 h-3 text-slate-400 transition-colors',
-                    (hovered === 'negativo' || mostrarInlineCorrection) && 'text-red-400'
+                    'w-3 h-3 text-slate-400 dark:text-slate-500 transition-colors',
+                    (hovered === 'negativo' || mostrarInlineCorrection) && 'text-red-400 dark:text-red-400'
                   )}
                 />
               </Button>
@@ -152,8 +152,8 @@ export function FeedbackButtons({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  'h-6 w-6 rounded-full hover:bg-amber-50',
-                  hovered === 'correcao' && 'bg-amber-50'
+                  'h-6 w-6 rounded-full hover:bg-amber-50 dark:hover:bg-amber-500/10',
+                  hovered === 'correcao' && 'bg-amber-50 dark:bg-amber-500/10'
                 )}
                 disabled={disabled}
                 onClick={() => handleFeedback('correcao')}
@@ -161,8 +161,8 @@ export function FeedbackButtons({
               >
                 <Pencil
                   className={cn(
-                    'w-3 h-3 text-slate-400 transition-colors',
-                    hovered === 'correcao' && 'text-amber-500'
+                    'w-3 h-3 text-slate-400 dark:text-slate-500 transition-colors',
+                    hovered === 'correcao' && 'text-amber-500 dark:text-amber-400'
                   )}
                 />
               </Button>
@@ -187,9 +187,10 @@ export function FeedbackButtons({
                   handleInlineSubmit()
                 }
               }}
-              className="flex-1 text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg
+              className="flex-1 text-xs px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg
+                         bg-white dark:bg-surface-1 text-slate-700 dark:text-slate-300
                          focus:outline-none focus:ring-1 focus:ring-[#89bcbe] focus:border-[#89bcbe]
-                         placeholder:text-slate-400"
+                         placeholder:text-slate-400 dark:placeholder:text-slate-500"
               autoFocus
             />
             <Button
@@ -201,7 +202,7 @@ export function FeedbackButtons({
             >
               <SendHorizontal className={cn(
                 'w-3.5 h-3.5 transition-colors',
-                inlineText.trim() ? 'text-[#89bcbe]' : 'text-slate-300'
+                inlineText.trim() ? 'text-[#89bcbe]' : 'text-slate-300 dark:text-slate-600'
               )} />
             </Button>
           </div>

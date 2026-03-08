@@ -132,7 +132,7 @@ export default function NovaJurisprudenciaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 dark:from-surface-0 dark:via-surface-0 dark:to-surface-0 p-6">
       <div className="max-w-[1800px] mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
@@ -143,10 +143,10 @@ export default function NovaJurisprudenciaPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-[#34495e]">
+          <h1 className="text-2xl font-bold text-[#34495e] dark:text-slate-200">
             Nova Jurisprudência
           </h1>
-          <p className="text-sm text-slate-600 mt-1">
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             Adicione um acórdão ou jurisprudência ao banco
           </p>
         </div>
@@ -154,9 +154,9 @@ export default function NovaJurisprudenciaPage() {
 
       {/* Form */}
       <form onSubmit={handleSubmit}>
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardHeader className="pb-4 pt-6">
-            <CardTitle className="text-base font-semibold text-[#34495e]">
+            <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
               Informações da Jurisprudência
             </CardTitle>
           </CardHeader>
@@ -172,7 +172,7 @@ export default function NovaJurisprudenciaPage() {
                     setFormData({ ...formData, tribunal: e.target.value })
                   }
                   required
-                  className="border-slate-200"
+                  className="border-slate-200 dark:border-slate-700"
                 />
               </div>
 
@@ -185,7 +185,7 @@ export default function NovaJurisprudenciaPage() {
                   }
                   required
                 >
-                  <SelectTrigger className="border-slate-200">
+                  <SelectTrigger className="border-slate-200 dark:border-slate-700">
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
@@ -208,7 +208,7 @@ export default function NovaJurisprudenciaPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, numero_acordao: e.target.value })
                   }
-                  className="border-slate-200"
+                  className="border-slate-200 dark:border-slate-700"
                 />
               </div>
 
@@ -221,7 +221,7 @@ export default function NovaJurisprudenciaPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, numero_processo: e.target.value })
                   }
-                  className="border-slate-200"
+                  className="border-slate-200 dark:border-slate-700"
                 />
               </div>
 
@@ -234,7 +234,7 @@ export default function NovaJurisprudenciaPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, data_julgamento: e.target.value })
                   }
-                  className="border-slate-200"
+                  className="border-slate-200 dark:border-slate-700"
                 />
               </div>
 
@@ -247,7 +247,7 @@ export default function NovaJurisprudenciaPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, data_publicacao: e.target.value })
                   }
-                  className="border-slate-200"
+                  className="border-slate-200 dark:border-slate-700"
                 />
               </div>
 
@@ -260,7 +260,7 @@ export default function NovaJurisprudenciaPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, orgao_julgador: e.target.value })
                   }
-                  className="border-slate-200"
+                  className="border-slate-200 dark:border-slate-700"
                 />
               </div>
 
@@ -273,7 +273,7 @@ export default function NovaJurisprudenciaPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, relator: e.target.value })
                   }
-                  className="border-slate-200"
+                  className="border-slate-200 dark:border-slate-700"
                 />
               </div>
             </div>
@@ -287,7 +287,7 @@ export default function NovaJurisprudenciaPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, ementa: e.target.value })
                 }
-                className="min-h-[150px] border-slate-200"
+                className="min-h-[150px] border-slate-200 dark:border-slate-700"
               />
             </div>
 
@@ -300,7 +300,7 @@ export default function NovaJurisprudenciaPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, texto_completo: e.target.value })
                 }
-                className="min-h-[200px] border-slate-200"
+                className="min-h-[200px] border-slate-200 dark:border-slate-700"
               />
             </div>
 
@@ -315,7 +315,7 @@ export default function NovaJurisprudenciaPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, link_inteiro_teor: e.target.value })
                   }
-                  className="border-slate-200"
+                  className="border-slate-200 dark:border-slate-700"
                 />
               </div>
 
@@ -329,7 +329,7 @@ export default function NovaJurisprudenciaPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, link_consulta: e.target.value })
                   }
-                  className="border-slate-200"
+                  className="border-slate-200 dark:border-slate-700"
                 />
               </div>
             </div>
@@ -348,7 +348,7 @@ export default function NovaJurisprudenciaPage() {
                       handleAddTema()
                     }
                   }}
-                  className="border-slate-200"
+                  className="border-slate-200 dark:border-slate-700"
                 />
                 <Button
                   type="button"
@@ -395,7 +395,7 @@ export default function NovaJurisprudenciaPage() {
                       handleAddTag()
                     }
                   }}
-                  className="border-slate-200"
+                  className="border-slate-200 dark:border-slate-700"
                 />
                 <Button
                   type="button"
@@ -439,7 +439,7 @@ export default function NovaJurisprudenciaPage() {
           <Button
             type="submit"
             disabled={loading}
-            className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white hover:opacity-90"
+            className="bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] text-white hover:opacity-90"
           >
             <Save className="w-4 h-4 mr-2" />
             {loading ? 'Salvando...' : 'Salvar Jurisprudência'}

@@ -48,36 +48,120 @@
     --text-body: #6c757d;
     --text-muted: #adb5bd;
     --text-light: #ced4da;
+
+    /* Surface Elevation Hierarchy (light) */
+    --surface-0: 210 16% 97%;   /* page bg - #f8f9fa */
+    --surface-1: 0 0% 100%;     /* cards - #ffffff */
+    --surface-2: 210 16% 97%;   /* elevated - #f1f5f9 */
+    --surface-3: 214 32% 91%;   /* hover - same as border */
+
+    /* Gradient Endpoints */
+    --gradient-kpi1-from: #34495e;
+    --gradient-kpi1-to: #46627f;
+    --gradient-kpi2-from: #46627f;
+    --gradient-kpi2-to: #6c757d;
+    --gradient-kpi3-from: #89bcbe;
+    --gradient-kpi3-to: #aacfd0;
+    --gradient-kpi4-from: #aacfd0;
+    --gradient-kpi4-to: #cbe2e2;
+
+    /* Sidebar */
+    --sidebar-bg-from: 0 0% 100%;
+    --sidebar-bg-to: 210 16% 97%;
+    --sidebar-active-from: #34495e;
+    --sidebar-active-to: #46627f;
+    --sidebar-active-text: 0 0% 100%;
+
+    /* Financial Surfaces */
+    --financial-surface: 180 33% 97%;   /* #f0f9f9 */
+    --financial-surface-alt: 180 38% 94%; /* #e8f5f5 */
+
+    /* Chart Colors */
+    --chart-grid: #e2e8f0;
+    --chart-tick: #64748b;
+    --chart-tooltip-bg: #ffffff;
+    --chart-tooltip-border: #e2e8f0;
   }
 
+  /* ═══════════════════════════════════════════════════════════ */
+  /* DARK MODE - "Elevated Dark" Theme                          */
+  /* Layered blue-gray surfaces with teal accent                */
+  /* ═══════════════════════════════════════════════════════════ */
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Core shadcn/ui tokens */
+    --background: 220 20% 8%;          /* #111827 - page base */
+    --foreground: 214 32% 91%;         /* #e2e8f0 - primary text */
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 18% 11%;              /* #1a2233 - card surface */
+    --card-foreground: 214 32% 91%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 16% 14%;           /* #212d3f - elevated */
+    --popover-foreground: 214 32% 91%;
 
-    --primary: 210 29% 29%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary: Teal becomes primary in dark mode */
+    --primary: 184 26% 64%;           /* #89bcbe */
+    --primary-foreground: 220 20% 8%;
 
-    --secondary: 184 26% 64%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 220 16% 17%;         /* surface-3 */
+    --secondary-foreground: 214 32% 91%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 220 16% 14%;
+    --muted-foreground: 215 16% 57%;  /* #8392a5 */
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 220 16% 17%;
+    --accent-foreground: 184 26% 64%; /* teal accent */
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 63% 45%;         /* muted red */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 210 29% 29%;
+    --border: 220 14% 20%;            /* #293548 */
+    --input: 220 14% 20%;
+    --ring: 184 26% 64%;              /* teal ring */
+
+    /* Surface Elevation Hierarchy */
+    --surface-0: 220 20% 8%;          /* #111827 */
+    --surface-1: 220 18% 11%;         /* #1a2233 */
+    --surface-2: 220 16% 14%;         /* #212d3f */
+    --surface-3: 220 14% 17%;         /* #293548 */
+
+    /* Gradient Endpoints (deeper, more saturated) */
+    --gradient-kpi1-from: #1e3148;
+    --gradient-kpi1-to: #2a4a6b;
+    --gradient-kpi2-from: #2a4a6b;
+    --gradient-kpi2-to: #4a5568;
+    --gradient-kpi3-from: #2d6a6d;
+    --gradient-kpi3-to: #3d8a8d;
+    --gradient-kpi4-from: #1f5154;
+    --gradient-kpi4-to: #2d6a6d;
+
+    /* Sidebar */
+    --sidebar-bg-from: 220 18% 11%;
+    --sidebar-bg-to: 220 18% 11%;
+    --sidebar-active-from: rgba(137, 188, 190, 0.2);
+    --sidebar-active-to: rgba(137, 188, 190, 0.1);
+    --sidebar-active-text: 184 26% 64%;
+
+    /* Financial Surfaces */
+    --financial-surface: 184 30% 12%;
+    --financial-surface-alt: 184 25% 10%;
+
+    /* Zyra Legal Design System - Dark overrides */
+    --color-primary: #89bcbe;
+    --color-secondary: #6ba9ab;
+    --color-tertiary: #94a3b8;
+
+    /* Text Hierarchy - Dark */
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-body: #9ca3af;
+    --text-muted: #6b7280;
+    --text-light: #4b5563;
+
+    /* Chart Colors - Dark */
+    --chart-grid: #2d3748;
+    --chart-tick: #9ca3af;
+    --chart-tooltip-bg: #1a2233;
+    --chart-tooltip-border: #2d3748;
   }
 }
 
@@ -135,4 +219,62 @@
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Thin scrollbar for submenu navigation */
+.scrollbar-thin::-webkit-scrollbar {
+  height: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+.dark .scrollbar-thin {
+  scrollbar-color: #374151 transparent;
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #374151;
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* Gradient Utility Classes (CSS vars for dark mode support)  */
+/* ═══════════════════════════════════════════════════════════ */
+.gradient-kpi1 {
+  background-image: linear-gradient(to bottom right, var(--gradient-kpi1-from), var(--gradient-kpi1-to));
+}
+.gradient-kpi2 {
+  background-image: linear-gradient(to bottom right, var(--gradient-kpi2-from), var(--gradient-kpi2-to));
+}
+.gradient-kpi3 {
+  background-image: linear-gradient(to bottom right, var(--gradient-kpi3-from), var(--gradient-kpi3-to));
+}
+.gradient-kpi4 {
+  background-image: linear-gradient(to bottom right, var(--gradient-kpi4-from), var(--gradient-kpi4-to));
+}
+.gradient-primary {
+  background-image: linear-gradient(to right, var(--gradient-kpi1-from), var(--gradient-kpi1-to));
+}
+.gradient-sidebar-active {
+  background-image: linear-gradient(to right, var(--sidebar-active-from), var(--sidebar-active-to));
+}
+
+/* Dark mode transition for smooth theme switch */
+html.transitioning,
+html.transitioning *,
+html.transitioning *::before,
+html.transitioning *::after {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.15s ease !important;
 }

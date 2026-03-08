@@ -189,8 +189,8 @@ export default function DayViewTimeGrid({
             <Clock className="w-4 h-4 text-white" />
           </div>
           <div>
-            <CardTitle className="text-base text-[#34495e]">Grade Horária</CardTitle>
-            <p className="text-xs text-[#6c757d] mt-0.5">
+            <CardTitle className="text-base text-[#34495e] dark:text-slate-200">Grade Horária</CardTitle>
+            <p className="text-xs text-[#6c757d] dark:text-slate-400 mt-0.5">
               Compromissos e tarefas agendadas
             </p>
           </div>
@@ -201,11 +201,11 @@ export default function DayViewTimeGrid({
         <ScrollArea ref={gridContainerRef} className="h-[calc(100vh-280px)]">
           <div className="grid grid-cols-[60px_1fr]">
             {/* Coluna de horários */}
-            <div className="border-r border-slate-200 bg-slate-50/50">
+            <div className="border-r border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-surface-0/50">
               {HOURS.map((hour) => (
                 <div
                   key={hour}
-                  className="h-[90px] p-2 text-xs text-[#6c757d] border-b border-slate-100 text-right font-medium"
+                  className="h-[90px] p-2 text-xs text-[#6c757d] dark:text-slate-400 border-b border-slate-100 dark:border-slate-800 text-right font-medium"
                 >
                   {String(hour).padStart(2, '0')}:00
                 </div>
@@ -213,7 +213,7 @@ export default function DayViewTimeGrid({
             </div>
 
             {/* Coluna principal com slots e eventos */}
-            <div className="relative bg-white">
+            <div className="relative bg-white dark:bg-surface-1">
               {/* Linha da hora atual */}
               <CurrentTimeLine />
 

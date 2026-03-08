@@ -149,7 +149,7 @@ export default function PortfolioCatalogoPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 w-7 p-0 text-slate-400 hover:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-7 w-7 p-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <MoreVertical className="w-4 h-4" />
                 </Button>
@@ -184,13 +184,13 @@ export default function PortfolioCatalogoPage() {
           </div>
 
           {/* Título */}
-          <h3 className="text-sm font-semibold text-slate-800 leading-snug line-clamp-2 mb-1">
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug line-clamp-2 mb-1">
             {produto.nome}
           </h3>
 
           {/* Descrição */}
           {produto.descricao && (
-            <p className="text-xs text-slate-500 line-clamp-2 mb-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">
               {produto.descricao}
             </p>
           )}
@@ -212,7 +212,7 @@ export default function PortfolioCatalogoPage() {
           {/* Footer */}
           <div className="flex items-center justify-between pt-3 border-t border-black/5">
             {produto.preco_base ? (
-              <span className="text-sm font-semibold text-slate-700">
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                 {formatCurrency(produto.preco_base)}
               </span>
             ) : (
@@ -242,8 +242,8 @@ export default function PortfolioCatalogoPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Catálogo de Produtos</h1>
-          <p className="text-sm text-slate-500">Serviços jurídicos padronizados</p>
+          <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-200">Catálogo de Produtos</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Serviços jurídicos padronizados</p>
         </div>
 
         <Button
@@ -271,7 +271,7 @@ export default function PortfolioCatalogoPage() {
         <select
           value={filtroStatus}
           onChange={(e) => setFiltroStatus(e.target.value as StatusProduto | 'todos')}
-          className="h-9 px-3 border border-slate-200 rounded-md text-sm text-slate-600 bg-white"
+          className="h-9 px-3 border border-slate-200 dark:border-slate-700 rounded-md text-sm text-slate-600 dark:text-slate-400 bg-white dark:bg-surface-1"
         >
           <option value="todos">Todos</option>
           <option value="ativo">Ativos</option>
@@ -288,7 +288,7 @@ export default function PortfolioCatalogoPage() {
             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
               areaAtiva === 'todas'
                 ? 'bg-slate-800 text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                : 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-surface-3'
             }`}
           >
             Todas ({produtos.length})
@@ -306,7 +306,7 @@ export default function PortfolioCatalogoPage() {
                 className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${
                   isActive
                     ? 'bg-slate-800 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    : 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-surface-3'
                 }`}
               >
                 <div className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-white' : colors.dot}`} />
@@ -320,27 +320,27 @@ export default function PortfolioCatalogoPage() {
       {/* Conteúdo */}
       {loading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-slate-600 animate-spin" />
+          <div className="w-8 h-8 rounded-full border-2 border-slate-200 dark:border-slate-700 border-t-slate-600 dark:border-t-slate-400 animate-spin" />
         </div>
       ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <p className="text-sm text-red-600 mb-3">Erro ao carregar produtos</p>
+        <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg p-6 text-center">
+          <p className="text-sm text-red-600 dark:text-red-400 mb-3">Erro ao carregar produtos</p>
           <Button onClick={() => loadProdutos()} variant="outline" size="sm">
             Tentar novamente
           </Button>
         </div>
       ) : produtos.length === 0 ? (
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-12 text-center">
-          <h3 className="text-base font-medium text-slate-700 mb-1">Catálogo vazio</h3>
-          <p className="text-sm text-slate-500 mb-4">Crie seu primeiro produto jurídico</p>
+        <div className="bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700 rounded-lg p-12 text-center">
+          <h3 className="text-base font-medium text-slate-700 dark:text-slate-300 mb-1">Catálogo vazio</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Crie seu primeiro produto jurídico</p>
           <Button onClick={handleNovoProduto} size="sm" className="bg-slate-800 hover:bg-slate-700">
             <Plus className="w-4 h-4 mr-1.5" />
             Criar Produto
           </Button>
         </div>
       ) : produtosFiltrados.length === 0 ? (
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-8 text-center">
-          <p className="text-sm text-slate-500">Nenhum produto encontrado</p>
+        <div className="bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700 rounded-lg p-8 text-center">
+          <p className="text-sm text-slate-500 dark:text-slate-400">Nenhum produto encontrado</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

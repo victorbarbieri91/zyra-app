@@ -161,14 +161,14 @@ export default function EditarLancamentoCartaoModal({
     switch (lancamento.tipo) {
       case 'unica':
         return (
-          <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200">
+          <Badge variant="outline" className="bg-slate-50 dark:bg-surface-0 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700">
             <Receipt className="w-3 h-3 mr-1" />
             A vista
           </Badge>
         )
       case 'parcelada':
         return (
-          <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+          <Badge className="bg-blue-100 text-blue-700 dark:text-blue-400 border-blue-200">
             <Calendar className="w-3 h-3 mr-1" />
             Parcela {lancamento.parcela_numero}/{lancamento.parcela_total}
           </Badge>
@@ -179,7 +179,7 @@ export default function EditarLancamentoCartaoModal({
             "border",
             lancamento.recorrente_ativo
               ? "bg-purple-100 text-purple-700 border-purple-200"
-              : "bg-slate-100 text-slate-500 border-slate-200"
+              : "bg-slate-100 dark:bg-surface-2 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700"
           )}>
             <Repeat className="w-3 h-3 mr-1" />
             {lancamento.recorrente_ativo ? 'Recorrente' : 'Cancelado'}
@@ -194,6 +194,7 @@ export default function EditarLancamentoCartaoModal({
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
+      minimumFractionDigits: 2,
     }).format(value)
   }
 
@@ -203,7 +204,7 @@ export default function EditarLancamentoCartaoModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[#34495e]">
+          <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
             <Edit2 className="w-5 h-5" />
             Editar Lancamento
           </DialogTitle>
@@ -214,13 +215,13 @@ export default function EditarLancamentoCartaoModal({
 
         <div className="space-y-4">
           {/* Info do tipo de lancamento (nao editavel) */}
-          <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
+          <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-600">Tipo:</span>
+              <span className="text-sm text-slate-600 dark:text-slate-400">Tipo:</span>
               {getTipoBadge()}
             </div>
             {lancamento.tipo === 'parcelada' && (
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
                 Valor total: {formatCurrency(lancamento.valor * lancamento.parcela_total)}
               </span>
             )}
@@ -297,8 +298,8 @@ export default function EditarLancamentoCartaoModal({
 
           {/* Aviso para parcelado */}
           {lancamento.tipo === 'parcelada' && (
-            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
-              <p className="text-xs text-amber-700">
+            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200">
+              <p className="text-xs text-amber-700 dark:text-amber-400">
                 <strong>Atencao:</strong> Esta edicao altera apenas esta parcela ({lancamento.parcela_numero}/{lancamento.parcela_total}).
                 As demais parcelas permanecem inalteradas.
               </p>
@@ -360,7 +361,7 @@ export default function EditarLancamentoCartaoModal({
         </div>
 
         {/* Botoes */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancelar
           </Button>

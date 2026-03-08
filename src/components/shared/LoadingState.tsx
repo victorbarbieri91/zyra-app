@@ -18,9 +18,9 @@ const sizeClasses = {
 export function LoadingState({ message = 'Carregando...', className, size = 'md' }: LoadingStateProps) {
   return (
     <div className={cn('flex flex-col items-center justify-center py-12', className)}>
-      <Loader2 className={cn(sizeClasses[size], 'animate-spin text-[#34495e] mb-4')} />
+      <Loader2 className={cn(sizeClasses[size], 'animate-spin text-[#34495e] dark:text-[#89bcbe] mb-4')} />
       {message && (
-        <p className={cn(typography.content, 'text-slate-600')}>{message}</p>
+        <p className={cn(typography.content, 'text-slate-600 dark:text-slate-400')}>{message}</p>
       )}
     </div>
   );

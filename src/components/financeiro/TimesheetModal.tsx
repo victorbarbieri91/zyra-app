@@ -806,7 +806,7 @@ export default function TimesheetModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[#34495e]">
+          <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
             <Clock className="w-5 h-5 text-[#89bcbe]" />
             {isEditMode ? 'Editar Lançamento' : 'Lançar Horas'}
           </DialogTitle>
@@ -815,24 +815,24 @@ export default function TimesheetModal({
         <div className="space-y-4">
           {/* Vínculo selecionado - Card minimalista com mais info */}
           {loadingVinculo ? (
-            <div className="rounded-lg border border-slate-200 px-4 py-3 flex items-center gap-3">
+            <div className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center gap-3">
               <Loader2 className="w-4 h-4 animate-spin text-[#89bcbe]" />
-              <span className="text-xs text-slate-500">Carregando vínculo...</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Carregando vínculo...</span>
             </div>
           ) : hasSelection ? (
-            <div className="rounded-lg border border-slate-200 overflow-hidden">
+            <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
               {/* Header com tipo e ação de remover */}
-              <div className="flex items-center justify-between px-3 py-1.5 bg-slate-100 border-b border-slate-200">
+              <div className="flex items-center justify-between px-3 py-1.5 bg-slate-100 dark:bg-surface-2 border-b border-slate-200 dark:border-slate-700">
                 <div className="flex items-center gap-1.5">
                   {processoSelecionado ? (
                     <>
-                      <FileText className="w-3 h-3 text-[#34495e]" />
-                      <span className="text-[10px] font-medium text-[#34495e] uppercase tracking-wide">Processo</span>
+                      <FileText className="w-3 h-3 text-[#34495e] dark:text-slate-200" />
+                      <span className="text-[10px] font-medium text-[#34495e] dark:text-slate-200 uppercase tracking-wide">Processo</span>
                     </>
                   ) : (
                     <>
-                      <Briefcase className="w-3 h-3 text-[#34495e]" />
-                      <span className="text-[10px] font-medium text-[#34495e] uppercase tracking-wide">Consulta</span>
+                      <Briefcase className="w-3 h-3 text-[#34495e] dark:text-slate-200" />
+                      <span className="text-[10px] font-medium text-[#34495e] dark:text-slate-200 uppercase tracking-wide">Consulta</span>
                     </>
                   )}
                 </div>
@@ -843,8 +843,8 @@ export default function TimesheetModal({
                       className={cn(
                         "text-[9px] px-1.5 py-0 h-4 border",
                         FORMAS_FATURAVEIS.includes(contratoInfo.forma_cobranca)
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : "bg-slate-50 text-slate-600 border-slate-200"
+                          ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200"
+                          : "bg-slate-50 dark:bg-surface-0 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
                       )}
                     >
                       {FORMA_COBRANCA_LABELS[contratoInfo.forma_cobranca] || contratoInfo.forma_cobranca}
@@ -853,7 +853,7 @@ export default function TimesheetModal({
                   {!processoId && !consultaId && (
                     <button
                       type="button"
-                      className="p-0.5 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors"
+                      className="p-0.5 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-600 dark:text-slate-400 transition-colors"
                       onClick={handleClearSelection}
                     >
                       <X className="w-3 h-3" />
@@ -863,23 +863,23 @@ export default function TimesheetModal({
               </div>
 
               {/* Conteúdo principal */}
-              <div className="px-3 py-2 bg-white">
+              <div className="px-3 py-2 bg-white dark:bg-surface-1">
                 {processoSelecionado ? (
                   <div className="space-y-1">
                     {/* Número da pasta + CNJ */}
                     <div className="flex items-baseline gap-2">
                       {processoSelecionado.numero_pasta && (
-                        <span className="text-xs font-semibold text-[#34495e]">
+                        <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200">
                           {processoSelecionado.numero_pasta}
                         </span>
                       )}
-                      <span className="text-[11px] text-slate-500 font-mono">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                         {processoSelecionado.numero_cnj}
                       </span>
                     </div>
                     {/* Cliente */}
                     {processoSelecionado.cliente_nome && (
-                      <p className="text-[11px] text-slate-600 truncate">
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate">
                         {processoSelecionado.cliente_nome}
                       </p>
                     )}
@@ -889,17 +889,17 @@ export default function TimesheetModal({
                     {/* Número + Título */}
                     <div className="flex items-baseline gap-2">
                       {consultaSelecionada.numero && (
-                        <span className="text-xs font-semibold text-[#34495e]">
+                        <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200">
                           {consultaSelecionada.numero}
                         </span>
                       )}
-                      <span className="text-[11px] text-slate-700 truncate">
+                      <span className="text-[11px] text-slate-700 dark:text-slate-300 truncate">
                         {consultaSelecionada.titulo}
                       </span>
                     </div>
                     {/* Cliente */}
                     {consultaSelecionada.cliente_nome && (
-                      <p className="text-[11px] text-slate-600 truncate">
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate">
                         {consultaSelecionada.cliente_nome}
                       </p>
                     )}
@@ -909,9 +909,9 @@ export default function TimesheetModal({
 
               {/* Alerta se não tem contrato */}
               {!contratoInfo && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border-t border-amber-100">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-500/10 border-t border-amber-100">
                   <Info className="w-3 h-3 text-amber-500 shrink-0" />
-                  <p className="text-[10px] text-amber-600">
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400">
                     Sem contrato vinculado
                   </p>
                 </div>
@@ -920,7 +920,7 @@ export default function TimesheetModal({
           ) : (
             /* Busca de vínculo */
             <div>
-              <Label className="text-xs text-slate-600">Vincular a</Label>
+              <Label className="text-xs text-slate-600 dark:text-slate-400">Vincular a</Label>
 
               {/* Toggle Processo/Consulta */}
               <div className="flex gap-2 mt-1.5 mb-2">
@@ -934,7 +934,7 @@ export default function TimesheetModal({
                     "flex-1 px-3 py-1.5 text-xs rounded-lg border transition-colors",
                     vinculoTipo === 'processo'
                       ? "border-[#34495e] bg-[#34495e] text-white"
-                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0"
                   )}
                 >
                   <FileText className="w-3 h-3 inline mr-1" />
@@ -950,7 +950,7 @@ export default function TimesheetModal({
                     "flex-1 px-3 py-1.5 text-xs rounded-lg border transition-colors",
                     vinculoTipo === 'consulta'
                       ? "border-[#34495e] bg-[#34495e] text-white"
-                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0"
                   )}
                 >
                   <Briefcase className="w-3 h-3 inline mr-1" />
@@ -972,7 +972,7 @@ export default function TimesheetModal({
 
                 {/* Dropdown de resultados */}
                 {searchTerm.length >= 2 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
                     {searchLoading ? (
                       <div className="flex items-center justify-center py-4">
                         <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
@@ -985,16 +985,16 @@ export default function TimesheetModal({
                               key={processo.id}
                               type="button"
                               onClick={() => handleSelectProcesso(processo)}
-                              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-left border-b border-slate-100 last:border-b-0"
+                              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0 text-left border-b border-slate-100 dark:border-slate-800 last:border-b-0"
                             >
                               <FileText className="w-4 h-4 text-slate-400 shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-[#34495e] truncate">
+                                <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">
                                   {processo.numero_pasta ? `${processo.numero_pasta} - ` : ''}{processo.numero_cnj}
                                 </p>
                                 <div className="flex items-center gap-2">
                                   {processo.cliente_nome && (
-                                    <span className="text-[10px] text-slate-500 truncate">
+                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                                       {processo.cliente_nome}
                                     </span>
                                   )}
@@ -1004,7 +1004,7 @@ export default function TimesheetModal({
                                     </Badge>
                                   )}
                                   {!processo.contrato_id && (
-                                    <span className="text-[9px] text-amber-600">Sem contrato</span>
+                                    <span className="text-[9px] text-amber-600 dark:text-amber-400">Sem contrato</span>
                                   )}
                                 </div>
                               </div>
@@ -1016,16 +1016,16 @@ export default function TimesheetModal({
                               key={consulta.id}
                               type="button"
                               onClick={() => handleSelectConsulta(consulta)}
-                              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-left border-b border-slate-100 last:border-b-0"
+                              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0 text-left border-b border-slate-100 dark:border-slate-800 last:border-b-0"
                             >
                               <Briefcase className="w-4 h-4 text-slate-400 shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-[#34495e] truncate">
+                                <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">
                                   {consulta.numero ? `${consulta.numero} - ` : ''}{consulta.titulo}
                                 </p>
                                 <div className="flex items-center gap-2">
                                   {consulta.cliente_nome && (
-                                    <span className="text-[10px] text-slate-500 truncate">
+                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                                       {consulta.cliente_nome}
                                     </span>
                                   )}
@@ -1035,7 +1035,7 @@ export default function TimesheetModal({
                                     </Badge>
                                   )}
                                   {!consulta.contrato_id && (
-                                    <span className="text-[9px] text-amber-600">Sem contrato</span>
+                                    <span className="text-[9px] text-amber-600 dark:text-amber-400">Sem contrato</span>
                                   )}
                                 </div>
                               </div>
@@ -1044,7 +1044,7 @@ export default function TimesheetModal({
                         )}
                       </>
                     ) : (
-                      <div className="py-4 text-center text-sm text-slate-500">
+                      <div className="py-4 text-center text-sm text-slate-500 dark:text-slate-400">
                         Nenhum resultado encontrado
                       </div>
                     )}
@@ -1057,7 +1057,7 @@ export default function TimesheetModal({
           {/* Seleção de Ato - aparece apenas para contratos por_ato com atos em modo hora */}
           {hasSelection && atosHora.length > 0 && (
             <div className="space-y-2">
-              <Label className="text-xs text-slate-600">Qual ato você está trabalhando? *</Label>
+              <Label className="text-xs text-slate-600 dark:text-slate-400">Qual ato você está trabalhando? *</Label>
               <Select
                 value={atoSelecionado || ''}
                 onValueChange={(value) => setAtoSelecionado(value)}
@@ -1094,15 +1094,15 @@ export default function TimesheetModal({
           )}
 
           {/* Toggle Modo de Registro */}
-          <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+          <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
             <button
               type="button"
               onClick={() => setModoRegistro('duracao')}
               className={cn(
                 "flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs transition-colors",
                 modoRegistro === 'duracao'
-                  ? "bg-[#f0f9f9] text-[#34495e] font-medium border-r border-slate-200"
-                  : "bg-white text-slate-500 hover:bg-slate-50 border-r border-slate-200"
+                  ? "bg-[#f0f9f9] dark:bg-teal-900/20 text-[#34495e] dark:text-slate-200 font-medium border-r border-slate-200 dark:border-slate-700"
+                  : "bg-white dark:bg-surface-1 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0 border-r border-slate-200 dark:border-slate-700"
               )}
             >
               <Timer className="w-3 h-3" />
@@ -1114,8 +1114,8 @@ export default function TimesheetModal({
               className={cn(
                 "flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs transition-colors",
                 modoRegistro === 'horario'
-                  ? "bg-[#f0f9f9] text-[#34495e] font-medium"
-                  : "bg-white text-slate-500 hover:bg-slate-50"
+                  ? "bg-[#f0f9f9] dark:bg-teal-900/20 text-[#34495e] dark:text-slate-200 font-medium"
+                  : "bg-white dark:bg-surface-1 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0"
               )}
             >
               <Clock className="w-3 h-3" />
@@ -1126,7 +1126,7 @@ export default function TimesheetModal({
           {/* Data */}
           <div className={cn("grid gap-3", modoRegistro === 'horario' ? "grid-cols-3" : "grid-cols-1")}>
             <div>
-              <Label className="text-xs text-slate-600">Data</Label>
+              <Label className="text-xs text-slate-600 dark:text-slate-400">Data</Label>
               <Input
                 type="date"
                 value={dataTrabalho}
@@ -1138,7 +1138,7 @@ export default function TimesheetModal({
             {modoRegistro === 'horario' && (
               <>
                 <div>
-                  <Label className="text-xs text-slate-600">Início</Label>
+                  <Label className="text-xs text-slate-600 dark:text-slate-400">Início</Label>
                   <Input
                     type="time"
                     value={horaInicio}
@@ -1147,7 +1147,7 @@ export default function TimesheetModal({
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-slate-600">Fim</Label>
+                  <Label className="text-xs text-slate-600 dark:text-slate-400">Fim</Label>
                   <Input
                     type="time"
                     value={horaFim}
@@ -1161,21 +1161,21 @@ export default function TimesheetModal({
 
           {/* Duração - Stepper compacto */}
           {modoRegistro === 'duracao' && (
-            <div className="flex items-center justify-center gap-3 py-2.5 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="flex items-center justify-center gap-3 py-2.5 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-200 dark:border-slate-700">
               <div className="flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => setDuracaoHoras(Math.max(0, duracaoHoras - 1))}
-                  className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] transition-colors leading-none"
+                  className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] dark:text-slate-200 transition-colors leading-none"
                 >
                   <span className="relative" style={{ top: '-1px' }}>&#8722;</span>
                 </button>
-                <span className="text-base font-semibold text-[#34495e] w-7 text-center tabular-nums">{duracaoHoras}</span>
+                <span className="text-base font-semibold text-[#34495e] dark:text-slate-200 w-7 text-center tabular-nums">{duracaoHoras}</span>
                 <span className="text-[11px] text-slate-400 -ml-0.5">h</span>
                 <button
                   type="button"
                   onClick={() => setDuracaoHoras(Math.min(23, duracaoHoras + 1))}
-                  className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] transition-colors leading-none"
+                  className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] dark:text-slate-200 transition-colors leading-none"
                 >
                   <span className="relative" style={{ top: '-0.5px' }}>+</span>
                 </button>
@@ -1187,16 +1187,16 @@ export default function TimesheetModal({
                 <button
                   type="button"
                   onClick={() => setDuracaoMinutos(Math.max(0, duracaoMinutos - 5))}
-                  className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] transition-colors leading-none"
+                  className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] dark:text-slate-200 transition-colors leading-none"
                 >
                   <span className="relative" style={{ top: '-1px' }}>&#8722;</span>
                 </button>
-                <span className="text-base font-semibold text-[#34495e] w-7 text-center tabular-nums">{String(duracaoMinutos).padStart(2, '0')}</span>
+                <span className="text-base font-semibold text-[#34495e] dark:text-slate-200 w-7 text-center tabular-nums">{String(duracaoMinutos).padStart(2, '0')}</span>
                 <span className="text-[11px] text-slate-400 -ml-0.5">min</span>
                 <button
                   type="button"
                   onClick={() => setDuracaoMinutos(Math.min(55, duracaoMinutos + 5))}
-                  className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] transition-colors leading-none"
+                  className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] dark:text-slate-200 transition-colors leading-none"
                 >
                   <span className="relative" style={{ top: '-0.5px' }}>+</span>
                 </button>
@@ -1206,17 +1206,17 @@ export default function TimesheetModal({
 
           {/* Total de horas - apenas no modo horário */}
           {modoRegistro === 'horario' && (
-            <div className="flex items-center justify-center gap-2 py-2 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="flex items-center justify-center gap-2 py-2 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-200 dark:border-slate-700">
               <Clock className="w-4 h-4 text-[#89bcbe]" />
-              <span className="text-sm text-slate-600">
-                Total: <strong className="text-[#34495e]">{calcularHorasDisplayUnificado()}</strong>
+              <span className="text-sm text-slate-600 dark:text-slate-400">
+                Total: <strong className="text-[#34495e] dark:text-slate-200">{calcularHorasDisplayUnificado()}</strong>
               </span>
             </div>
           )}
 
           {/* Atividade */}
           <div>
-            <Label className="text-xs text-slate-600">Atividade realizada *</Label>
+            <Label className="text-xs text-slate-600 dark:text-slate-400">Atividade realizada *</Label>
             <Textarea
               value={atividade}
               onChange={(e) => setAtividade(e.target.value)}
@@ -1228,7 +1228,7 @@ export default function TimesheetModal({
 
           {/* Faturável - Botões */}
           <div>
-            <Label className="text-xs text-slate-600 mb-2 block">Tipo de hora</Label>
+            <Label className="text-xs text-slate-600 dark:text-slate-400 mb-2 block">Tipo de hora</Label>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -1236,8 +1236,8 @@ export default function TimesheetModal({
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border transition-all",
                   faturavelEfetivo
-                    ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                    : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                    ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                    : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0"
                 )}
               >
                 <DollarSign className="w-4 h-4" />
@@ -1249,8 +1249,8 @@ export default function TimesheetModal({
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border transition-all",
                   !faturavelEfetivo
-                    ? "border-slate-500 bg-slate-100 text-slate-700"
-                    : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                    ? "border-slate-500 bg-slate-100 dark:bg-surface-2 text-slate-700 dark:text-slate-300"
+                    : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0"
                 )}
               >
                 <Ban className="w-4 h-4" />
@@ -1260,7 +1260,7 @@ export default function TimesheetModal({
 
             {/* Info sobre faturável - apenas quando automático */}
             {contratoInfo && !faturavelManual && (
-              <p className="text-[10px] text-slate-500 mt-1.5 flex items-center gap-1">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1">
                 <Info className="w-3 h-3" />
                 Padrão do contrato ({FORMA_COBRANCA_LABELS[contratoInfo.forma_cobranca]})
               </p>
@@ -1269,7 +1269,7 @@ export default function TimesheetModal({
         </div>
 
         {/* Botões */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancelar
           </Button>
@@ -1281,7 +1281,7 @@ export default function TimesheetModal({
                 onClick={() => handleSubmit(false)}
                 disabled={loading || !hasSelection || !atividade.trim() || calcularHorasDecimalUnificado() <= 0}
                 variant="outline"
-                className="border-[#34495e] text-[#34495e] hover:bg-slate-50"
+                className="border-[#34495e] text-[#34495e] dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0"
               >
                 {loading ? (
                   <>

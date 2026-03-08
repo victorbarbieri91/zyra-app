@@ -334,7 +334,7 @@ function NovoProjetoContent() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-full border-4 border-[#34495e]/20 border-t-[#34495e] animate-spin" />
-          <p className="text-slate-500">Carregando...</p>
+          <p className="text-slate-500 dark:text-slate-400">Carregando...</p>
         </div>
       </div>
     )
@@ -344,8 +344,8 @@ function NovoProjetoContent() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
         <AlertCircle className="w-16 h-16 text-slate-300 mb-4" />
-        <h2 className="text-xl font-semibold text-[#34495e] mb-2">Produto não encontrado</h2>
-        <p className="text-slate-500 mb-6">Selecione um produto do catálogo para iniciar um projeto</p>
+        <h2 className="text-xl font-semibold text-[#34495e] dark:text-slate-200 mb-2">Produto não encontrado</h2>
+        <p className="text-slate-500 dark:text-slate-400 mb-6">Selecione um produto do catálogo para iniciar um projeto</p>
         <Button onClick={() => router.push('/dashboard/portfolio')}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Voltar ao Catálogo
@@ -365,7 +365,7 @@ function NovoProjetoContent() {
           variant="ghost"
           size="sm"
           onClick={() => router.back()}
-          className="text-slate-600"
+          className="text-slate-600 dark:text-slate-400"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
           Voltar
@@ -373,17 +373,17 @@ function NovoProjetoContent() {
       </div>
 
       <div className="flex items-center gap-4">
-        <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${areaGradient} flex items-center justify-center shadow-lg`}>
+        <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${areaGradient} flex items-center justify-center shadow-lg dark:shadow-slate-900/50`}>
           <AreaIcon className="w-7 h-7 text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-[#34495e]">Iniciar Novo Projeto</h1>
-          <p className="text-slate-500">Baseado no produto: <span className="font-medium">{produto.nome}</span></p>
+          <h1 className="text-2xl font-bold text-[#34495e] dark:text-slate-200">Iniciar Novo Projeto</h1>
+          <p className="text-slate-500 dark:text-slate-400">Baseado no produto: <span className="font-medium">{produto.nome}</span></p>
         </div>
       </div>
 
       {/* Card do Produto */}
-      <Card className="border-slate-200 shadow-sm overflow-hidden">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-slate-900/30 overflow-hidden">
         <div className={`h-2 bg-gradient-to-r ${areaGradient}`} />
         <CardContent className="p-6">
           <div className="flex items-start gap-6">
@@ -395,11 +395,11 @@ function NovoProjetoContent() {
                 <Badge variant="outline" className="text-xs">{produto.codigo}</Badge>
                 <Badge className="bg-[#34495e] text-white text-xs">{AREA_JURIDICA_LABELS[produto.area_juridica]}</Badge>
               </div>
-              <h3 className="text-lg font-semibold text-[#34495e] mb-2">{produto.nome}</h3>
+              <h3 className="text-lg font-semibold text-[#34495e] dark:text-slate-200 mb-2">{produto.nome}</h3>
               {produto.descricao && (
-                <p className="text-sm text-slate-600 line-clamp-2 mb-3">{produto.descricao}</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 mb-3">{produto.descricao}</p>
               )}
-              <div className="flex flex-wrap gap-4 text-sm text-slate-500">
+              <div className="flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400">
                 <span className="flex items-center gap-1">
                   <Layers className="w-4 h-4" />
                   {produto.fases?.length || 0} fases
@@ -417,15 +417,15 @@ function NovoProjetoContent() {
       {/* Formulário */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
+          <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl text-red-700 dark:text-red-400">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <p className="text-sm">{error}</p>
           </div>
         )}
 
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-slate-900/30">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg text-[#34495e]">Informações do Projeto</CardTitle>
+            <CardTitle className="text-lg text-[#34495e] dark:text-slate-200">Informações do Projeto</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             {/* Nome do Projeto */}
@@ -436,21 +436,21 @@ function NovoProjetoContent() {
                 value={form.nome}
                 onChange={(e) => setForm(f => ({ ...f, nome: e.target.value }))}
                 placeholder={produto.nome}
-                className="border-slate-200"
+                className="border-slate-200 dark:border-slate-700"
               />
-              <p className="text-xs text-slate-500">Deixe em branco para usar o nome do produto</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Deixe em branco para usar o nome do produto</p>
             </div>
 
             {/* Cliente */}
             <div className="space-y-2">
               <Label htmlFor="cliente">Cliente *</Label>
               <Select value={form.cliente_id} onValueChange={(v) => setForm(f => ({ ...f, cliente_id: v }))}>
-                <SelectTrigger className="border-slate-200">
+                <SelectTrigger className="border-slate-200 dark:border-slate-700">
                   <SelectValue placeholder="Selecione o cliente" />
                 </SelectTrigger>
                 <SelectContent>
                   {clientes.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-slate-500">
+                    <div className="p-4 text-center text-sm text-slate-500 dark:text-slate-400">
                       Nenhum cliente cadastrado
                     </div>
                   ) : (
@@ -474,7 +474,7 @@ function NovoProjetoContent() {
             <div className="space-y-2">
               <Label htmlFor="responsavel">Responsável *</Label>
               <Select value={form.responsavel_id} onValueChange={(v) => setForm(f => ({ ...f, responsavel_id: v }))}>
-                <SelectTrigger className="border-slate-200">
+                <SelectTrigger className="border-slate-200 dark:border-slate-700">
                   <SelectValue placeholder="Selecione o responsável" />
                 </SelectTrigger>
                 <SelectContent>
@@ -498,7 +498,7 @@ function NovoProjetoContent() {
                 type="date"
                 value={form.data_inicio}
                 onChange={(e) => setForm(f => ({ ...f, data_inicio: e.target.value }))}
-                className="border-slate-200"
+                className="border-slate-200 dark:border-slate-700"
               />
             </div>
 
@@ -510,7 +510,7 @@ function NovoProjetoContent() {
                 value={form.observacoes}
                 onChange={(e) => setForm(f => ({ ...f, observacoes: e.target.value }))}
                 placeholder="Notas adicionais sobre o projeto..."
-                className="border-slate-200 min-h-[100px]"
+                className="border-slate-200 dark:border-slate-700 dark:bg-surface-1 dark:text-slate-200 min-h-[100px]"
               />
             </div>
           </CardContent>
@@ -518,9 +518,9 @@ function NovoProjetoContent() {
 
         {/* Preço */}
         {produto.precos && produto.precos.length > 0 && (
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-slate-900/30">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg text-[#34495e] flex items-center gap-2">
+              <CardTitle className="text-lg text-[#34495e] dark:text-slate-200 flex items-center gap-2">
                 <DollarSign className="w-5 h-5" />
                 Valores
               </CardTitle>
@@ -534,40 +534,40 @@ function NovoProjetoContent() {
                     onClick={() => handleSelectPreco(preco.id)}
                     className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                       form.preco_id === preco.id
-                        ? 'border-[#34495e] bg-slate-50'
-                        : 'border-slate-200 hover:border-slate-300'
+                        ? 'border-[#34495e] dark:border-[#89bcbe] bg-slate-50 dark:bg-surface-0'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-[#34495e]">{preco.nome_opcao || 'Preço Padrão'}</span>
+                          <span className="font-medium text-[#34495e] dark:text-slate-200">{preco.nome_opcao || 'Preço Padrão'}</span>
                           {preco.padrao && (
                             <Badge variant="outline" className="text-xs">Padrão</Badge>
                           )}
                         </div>
                         {preco.descricao && (
-                          <p className="text-sm text-slate-500 mt-1">{preco.descricao}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{preco.descricao}</p>
                         )}
                       </div>
                       <div className="text-right">
                         {preco.tipo === 'fixo' && preco.valor_fixo && (
-                          <span className="text-lg font-bold text-[#34495e]">
+                          <span className="text-lg font-bold text-[#34495e] dark:text-slate-200">
                             {formatCurrency(preco.valor_fixo)}
                           </span>
                         )}
                         {preco.tipo === 'faixa' && (
-                          <span className="text-lg font-bold text-[#34495e]">
+                          <span className="text-lg font-bold text-[#34495e] dark:text-slate-200">
                             {formatCurrency(preco.valor_minimo || 0)} - {formatCurrency(preco.valor_maximo || 0)}
                           </span>
                         )}
                         {preco.tipo === 'hora' && (
-                          <span className="text-lg font-bold text-[#34495e]">
+                          <span className="text-lg font-bold text-[#34495e] dark:text-slate-200">
                             {formatCurrency(preco.valor_hora || 0)}/hora
                           </span>
                         )}
                         {preco.tipo === 'exito' && (
-                          <span className="text-lg font-bold text-[#34495e]">
+                          <span className="text-lg font-bold text-[#34495e] dark:text-slate-200">
                             {preco.percentual_exito}% de êxito
                           </span>
                         )}
@@ -588,9 +588,9 @@ function NovoProjetoContent() {
                   value={form.valor_negociado}
                   onChange={(e) => setForm(f => ({ ...f, valor_negociado: e.target.value }))}
                   placeholder="0,00"
-                  className="border-slate-200"
+                  className="border-slate-200 dark:border-slate-700"
                 />
-                <p className="text-xs text-slate-500">Valor final acordado com o cliente</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Valor final acordado com o cliente</p>
               </div>
             </CardContent>
           </Card>
@@ -611,7 +611,7 @@ function NovoProjetoContent() {
           <Button
             type="submit"
             disabled={submitting || !form.cliente_id || !form.responsavel_id}
-            className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#3d566d] hover:to-[#526b8a] shadow-lg"
+            className="bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] dark:text-surface-0 hover:from-[#3d566d] hover:to-[#526b8a] shadow-lg dark:shadow-slate-900/50"
           >
             {submitting ? (
               <>
@@ -637,7 +637,7 @@ function LoadingFallback() {
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="flex flex-col items-center gap-4">
         <div className="w-12 h-12 rounded-full border-4 border-[#34495e]/20 border-t-[#34495e] animate-spin" />
-        <p className="text-slate-500">Carregando...</p>
+        <p className="text-slate-500 dark:text-slate-400">Carregando...</p>
       </div>
     </div>
   )

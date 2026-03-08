@@ -84,7 +84,7 @@ export default function KanbanAgendaCard({ item, onClick, draggable = false }: K
         <div className="flex items-start gap-2">
           <div className={cn(
             'w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5',
-            isAudiencia ? 'bg-emerald-100' : 'bg-[#aacfd0]/20'
+            isAudiencia ? 'bg-emerald-100 dark:bg-emerald-500/10' : 'bg-[#aacfd0]/20'
           )}>
             {isAudiencia
               ? <Gavel className="w-2.5 h-2.5 text-emerald-600" />
@@ -93,7 +93,7 @@ export default function KanbanAgendaCard({ item, onClick, draggable = false }: K
           </div>
           <h4
             className={cn(
-              'flex-1 text-xs font-semibold text-[#34495e] leading-snug line-clamp-2',
+              'flex-1 text-xs font-semibold text-[#34495e] dark:text-slate-200 leading-snug line-clamp-2',
               ['realizado', 'realizada'].includes(item.status) && 'line-through opacity-60'
             )}
           >
@@ -105,8 +105,8 @@ export default function KanbanAgendaCard({ item, onClick, draggable = false }: K
             className={cn(
               'w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0',
               isAudiencia
-                ? 'bg-emerald-100 hover:bg-emerald-500 text-emerald-400 hover:text-white'
-                : 'bg-slate-100 hover:bg-[#89bcbe] text-slate-400 hover:text-white',
+                ? 'bg-emerald-100 dark:bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white'
+                : 'bg-slate-100 dark:bg-surface-2 hover:bg-[#89bcbe] text-slate-400 dark:text-slate-500 hover:text-white',
               'transition-all duration-150'
             )}
             title="Ver detalhes"
@@ -119,13 +119,13 @@ export default function KanbanAgendaCard({ item, onClick, draggable = false }: K
         <div className="flex items-center gap-1.5 mt-2 ml-[26px]">
           <span className={cn(
             'text-[10px] px-1.5 py-0.5 rounded font-medium leading-none',
-            isAudiencia ? 'bg-emerald-50 text-emerald-600' : 'bg-[#f0f9f9] text-[#46627f]'
+            isAudiencia ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-[#f0f9f9] dark:bg-teal-900/20 text-[#46627f] dark:text-slate-400'
           )}>
             {tipoLabel}
           </span>
 
           {!item.dia_inteiro && (
-            <span className="text-[10px] text-slate-400 font-medium">
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
               {formatBrazilTime(item.data_inicio)}
             </span>
           )}
@@ -134,7 +134,7 @@ export default function KanbanAgendaCard({ item, onClick, draggable = false }: K
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                  <MapPin className="w-3 h-3 text-slate-400 dark:text-slate-500 flex-shrink-0" />
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs max-w-[200px]">
                   {item.local}

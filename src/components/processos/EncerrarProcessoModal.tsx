@@ -277,7 +277,7 @@ export default function EncerrarProcessoModal({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[#34495e]">
+          <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
             <Archive className="w-5 h-5" />
             Encerrar Processo {processoNumero}
           </DialogTitle>
@@ -289,7 +289,7 @@ export default function EncerrarProcessoModal({
         <div className="space-y-5 py-2">
           {/* Data do encerramento */}
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-[#34495e]">
+            <Label className="text-sm font-medium text-[#34495e] dark:text-slate-200">
               Data do encerramento
             </Label>
             <DateInput
@@ -300,23 +300,23 @@ export default function EncerrarProcessoModal({
 
           {/* Seção de toggles opcionais */}
           <div className="space-y-1">
-            <p className="text-xs font-medium text-[#46627f] uppercase tracking-wide">
+            <p className="text-xs font-medium text-[#46627f] dark:text-slate-400 uppercase tracking-wide">
               Informações opcionais
             </p>
-            <div className="border border-slate-200 rounded-lg divide-y divide-slate-100">
+            <div className="border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-100 dark:divide-slate-800">
 
               {/* Toggle: Acordo */}
               <div className="p-3 space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm text-slate-700 flex items-center gap-2 cursor-pointer">
-                    <Handshake className="w-4 h-4 text-teal-500" />
+                  <Label className="text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2 cursor-pointer">
+                    <Handshake className="w-4 h-4 text-teal-500 dark:text-teal-400" />
                     Houve acordo
                   </Label>
                   <Switch checked={houveAcordo} onCheckedChange={setHouveAcordo} />
                 </div>
                 {houveAcordo && (
                   <div className="pl-6">
-                    <Label className="text-xs text-slate-500">Valor do acordo</Label>
+                    <Label className="text-xs text-slate-500 dark:text-slate-400">Valor do acordo</Label>
                     <Input
                       type="text"
                       inputMode="decimal"
@@ -332,7 +332,7 @@ export default function EncerrarProcessoModal({
               {/* Toggle: Condenação */}
               <div className="p-3 space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm text-slate-700 flex items-center gap-2 cursor-pointer">
+                  <Label className="text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2 cursor-pointer">
                     <Scale className="w-4 h-4 text-blue-500" />
                     Houve condenação
                   </Label>
@@ -340,7 +340,7 @@ export default function EncerrarProcessoModal({
                 </div>
                 {houveCondenacao && (
                   <div className="pl-6">
-                    <Label className="text-xs text-slate-500">Valor da condenação</Label>
+                    <Label className="text-xs text-slate-500 dark:text-slate-400">Valor da condenação</Label>
                     <Input
                       type="text"
                       inputMode="decimal"
@@ -356,7 +356,7 @@ export default function EncerrarProcessoModal({
               {/* Toggle: Trânsito em Julgado */}
               <div className="p-3 space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm text-slate-700 flex items-center gap-2 cursor-pointer">
+                  <Label className="text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2 cursor-pointer">
                     <Gavel className="w-4 h-4 text-purple-500" />
                     Trânsito em julgado
                   </Label>
@@ -364,7 +364,7 @@ export default function EncerrarProcessoModal({
                 </div>
                 {transitoJulgado && (
                   <div className="pl-6">
-                    <Label className="text-xs text-slate-500">Data do trânsito</Label>
+                    <Label className="text-xs text-slate-500 dark:text-slate-400">Data do trânsito</Label>
                     <div className="mt-1">
                       <DateInput
                         value={dataTransito}
@@ -378,7 +378,7 @@ export default function EncerrarProcessoModal({
               {/* Toggle: Resultado */}
               <div className="p-3 space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm text-slate-700 flex items-center gap-2 cursor-pointer">
+                  <Label className="text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2 cursor-pointer">
                     <FileText className="w-4 h-4 text-emerald-500" />
                     Registrar resultado
                   </Label>
@@ -405,8 +405,8 @@ export default function EncerrarProcessoModal({
               {/* Toggle: Observações */}
               <div className="p-3 space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm text-slate-700 flex items-center gap-2 cursor-pointer">
-                    <ListTodo className="w-4 h-4 text-slate-500" />
+                  <Label className="text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2 cursor-pointer">
+                    <ListTodo className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                     Observações
                   </Label>
                   <Switch checked={addObservacoes} onCheckedChange={setAddObservacoes} />
@@ -428,62 +428,62 @@ export default function EncerrarProcessoModal({
 
           {/* Pendências */}
           {loadingPendencias ? (
-            <div className="flex items-center gap-2 text-sm text-slate-500 py-2">
+            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 py-2">
               <Loader2 className="w-4 h-4 animate-spin" />
               Verificando pendências...
             </div>
           ) : pendencias.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-500" />
-                <p className="text-xs font-medium text-[#46627f] uppercase tracking-wide">
+                <AlertTriangle className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+                <p className="text-xs font-medium text-[#46627f] dark:text-slate-400 uppercase tracking-wide">
                   Pendências encontradas ({pendencias.length})
                 </p>
               </div>
-              <div className="border border-amber-200 bg-amber-50/50 rounded-lg divide-y divide-amber-100">
+              <div className="border border-amber-200 dark:border-amber-700 bg-amber-50/50 rounded-lg divide-y divide-amber-100 dark:divide-amber-800">
                 {pendencias.map(p => (
                   <div
                     key={p.id}
-                    className="flex items-center gap-3 p-2.5 cursor-pointer hover:bg-amber-50"
+                    className="flex items-center gap-3 p-2.5 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-500/10"
                     onClick={() => togglePendencia(p.id)}
                   >
                     <Checkbox
                       checked={p.checked}
                       onCheckedChange={() => togglePendencia(p.id)}
-                      className="border-amber-300 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
+                      className="border-amber-300 dark:border-amber-600 data-[state=checked]:bg-amber-50 dark:bg-amber-500/10 data-[state=checked]:border-amber-500"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <Badge
                           className={`text-[9px] border ${
                             p.tipo === 'tarefa'
-                              ? 'bg-blue-50 text-blue-600 border-blue-200'
-                              : 'bg-purple-50 text-purple-600 border-purple-200'
+                              ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700'
+                              : 'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-700'
                           }`}
                         >
                           {p.tipo === 'tarefa' ? 'Tarefa' : 'Audiência'}
                         </Badge>
-                        <span className="text-xs text-slate-700 truncate">{p.titulo}</span>
+                        <span className="text-xs text-slate-700 dark:text-slate-300 truncate">{p.titulo}</span>
                       </div>
                     </div>
                     {p.data && (
-                      <span className="text-[10px] text-slate-500 flex-shrink-0">
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 flex-shrink-0">
                         {formatBrazilDate(p.data)}
                       </span>
                     )}
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-amber-600">
+              <p className="text-[11px] text-amber-600 dark:text-amber-400">
                 As {pendenciasChecadas} pendência{pendenciasChecadas !== 1 ? 's' : ''} marcada{pendenciasChecadas !== 1 ? 's' : ''} será{pendenciasChecadas !== 1 ? 'ão' : ''} cancelada{pendenciasChecadas !== 1 ? 's' : ''} automaticamente.
               </p>
             </div>
           )}
 
           {/* Status inferido */}
-          <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-surface-0 rounded-lg px-3 py-2">
             <span>Status final:</span>
-            <Badge className="text-[10px] bg-slate-200 text-slate-700 border-0">
+            <Badge className="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-0">
               {statusLabel}
             </Badge>
           </div>

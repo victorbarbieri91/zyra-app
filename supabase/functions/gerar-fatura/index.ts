@@ -17,6 +17,7 @@ interface GerarFaturaParams {
   p_data_vencimento?: string | null;
   p_observacoes?: string | null;
   p_user_id?: string | null;
+  p_conta_bancaria_id?: string | null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -40,7 +41,8 @@ Deno.serve(async (req: Request) => {
       p_data_emissao,
       p_data_vencimento,
       p_observacoes,
-      p_user_id
+      p_user_id,
+      p_conta_bancaria_id
     } = params;
 
     if (!p_escritorio_id || !p_cliente_id) {
@@ -375,7 +377,8 @@ Deno.serve(async (req: Request) => {
         observacoes: p_observacoes,
         gerada_automaticamente: false,
         valor_total: valorTotal,
-        itens: itens
+        itens: itens,
+        conta_bancaria_id: p_conta_bancaria_id || null
       })
       .select('id')
       .single();

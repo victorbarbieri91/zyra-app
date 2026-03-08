@@ -315,8 +315,8 @@ export default function ConsultivoPage() {
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      ativo: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-      arquivado: 'bg-slate-100 text-slate-700 border-slate-200',
+      ativo: 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30',
+      arquivado: 'bg-slate-100 dark:bg-surface-2 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
     }
     const labels: Record<string, string> = {
       ativo: 'Ativo',
@@ -331,10 +331,10 @@ export default function ConsultivoPage() {
 
   const getPrioridadeBadge = (prioridade: string) => {
     const styles: Record<string, string> = {
-      baixa: 'bg-slate-100 text-slate-600 border-slate-200',
-      media: 'bg-blue-100 text-blue-700 border-blue-200',
-      alta: 'bg-amber-100 text-amber-700 border-amber-200',
-      urgente: 'bg-red-100 text-red-700 border-red-200',
+      baixa: 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700',
+      media: 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30',
+      alta: 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30',
+      urgente: 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/30',
     }
     const labels: Record<string, string> = {
       baixa: 'Baixa',
@@ -449,8 +449,8 @@ export default function ConsultivoPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">Consultivo</h1>
-          <p className="text-xs md:text-sm text-slate-600 mt-0.5 font-normal">
+          <h1 className="text-xl md:text-2xl font-semibold text-[#34495e] dark:text-slate-200">Consultivo</h1>
+          <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 mt-0.5 font-normal">
             {loading ? 'Carregando...' : `${totalCount} ${totalCount === 1 ? 'consulta' : 'consultas'}`}
           </p>
         </div>
@@ -464,7 +464,7 @@ export default function ConsultivoPage() {
       </div>
 
       {/* Busca e Filtros */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardContent className="p-3 md:p-4">
           <div className="flex flex-col md:flex-row gap-2">
             <div className="relative flex-1">
@@ -489,7 +489,7 @@ export default function ConsultivoPage() {
                   setCurrentView(e.target.value as typeof currentView)
                   setCurrentPage(1)
                 }}
-                className="px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#89bcbe] flex-1 md:min-w-[160px]"
+                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-[#89bcbe] flex-1 md:min-w-[160px] dark:bg-surface-1"
               >
                 <option value="ativas">Ativas</option>
                 <option value="arquivadas">Arquivadas</option>
@@ -509,33 +509,33 @@ export default function ConsultivoPage() {
       <div className="md:hidden space-y-2">
         {loading && consultas.length === 0 && (
           <div className="flex items-center justify-center py-8 gap-3">
-            <Loader2 className="w-5 h-5 text-[#34495e] animate-spin" />
-            <span className="text-sm text-slate-600">Carregando...</span>
+            <Loader2 className="w-5 h-5 text-[#34495e] dark:text-slate-200 animate-spin" />
+            <span className="text-sm text-slate-600 dark:text-slate-400">Carregando...</span>
           </div>
         )}
         {!loading && consultas.length === 0 && (
           <div className="flex flex-col items-center py-8 gap-2">
-            <Scale className="w-10 h-10 text-slate-300" />
-            <p className="text-sm text-slate-600">Nenhuma consulta encontrada</p>
+            <Scale className="w-10 h-10 text-slate-300 dark:text-slate-600" />
+            <p className="text-sm text-slate-600 dark:text-slate-400">Nenhuma consulta encontrada</p>
           </div>
         )}
         {consultas.map((consulta) => (
           <div
             key={consulta.id}
             onClick={() => router.push(`/dashboard/consultivo/${consulta.id}`)}
-            className="bg-white rounded-xl border border-slate-200 p-3.5 active:bg-slate-50 transition-colors cursor-pointer shadow-sm"
+            className="bg-white dark:bg-surface-1 rounded-xl border border-slate-200 dark:border-slate-700 p-3.5 active:bg-slate-50 dark:active:bg-surface-2 transition-colors cursor-pointer shadow-sm"
           >
             <div className="flex items-start justify-between mb-1">
-              <p className="text-sm font-medium text-[#34495e] line-clamp-2 flex-1 mr-2">{consulta.titulo}</p>
+              <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 line-clamp-2 flex-1 mr-2">{consulta.titulo}</p>
               {getStatusBadge(consulta.status)}
             </div>
             {consulta.numero && (
               <p className="text-[11px] font-mono text-slate-400 mb-1">#{consulta.numero}</p>
             )}
-            <p className="text-xs text-slate-600 truncate">{consulta.cliente_nome}</p>
-            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+            <p className="text-xs text-slate-600 dark:text-slate-400 truncate">{consulta.cliente_nome}</p>
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-slate-500">{formatArea(consulta.area)}</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">{formatArea(consulta.area)}</span>
                 {getPrioridadeBadge(consulta.prioridade)}
               </div>
               <span className="text-[11px] text-slate-400">
@@ -548,7 +548,7 @@ export default function ConsultivoPage() {
         {/* Mobile Pagination */}
         {totalCount > 0 && (
           <div className="flex items-center justify-between pt-2">
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-slate-500 dark:text-slate-400">
               {startItem}-{endItem} de {totalCount}
             </span>
             <div className="flex items-center gap-1">
@@ -561,7 +561,7 @@ export default function ConsultivoPage() {
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <span className="text-xs font-medium text-slate-700 px-2">
+              <span className="text-xs font-medium text-slate-700 dark:text-slate-300 px-2">
                 {currentPage}/{totalPages}
               </span>
               <Button
@@ -579,10 +579,10 @@ export default function ConsultivoPage() {
       </div>
 
       {/* Desktop: Tabela de Consultas */}
-      <Card className="hidden md:block border-slate-200 shadow-sm">
+      <Card className="hidden md:block border-slate-200 dark:border-slate-700 shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full table-fixed">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-slate-50 dark:bg-surface-0 border-b border-slate-200 dark:border-slate-700">
               <tr>
                 <th className="text-center p-3 w-10">
                   <Checkbox
@@ -591,15 +591,15 @@ export default function ConsultivoPage() {
                     className="border-slate-300 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
                   />
                 </th>
-                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-20">Nº</th>
-                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-72">Título</th>
-                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-44">Cliente</th>
-                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Área</th>
-                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Status</th>
-                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-20">Prior.</th>
-                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-24">Prazo</th>
-                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-28">Responsável</th>
-                <th className="text-center p-3 text-[10px] font-semibold text-[#46627f] uppercase tracking-wide w-20">Ações</th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-20">Nº</th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-72">Título</th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-44">Cliente</th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-24">Área</th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-24">Status</th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-20">Prior.</th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-24">Prazo</th>
+                <th className="text-left p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-28">Responsável</th>
+                <th className="text-center p-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-20">Ações</th>
               </tr>
             </thead>
             <tbody className={loading ? 'opacity-50' : ''}>
@@ -608,8 +608,8 @@ export default function ConsultivoPage() {
                 <tr>
                   <td colSpan={10} className="p-8 text-center">
                     <div className="flex items-center justify-center gap-3">
-                      <Loader2 className="w-5 h-5 text-[#34495e] animate-spin" />
-                      <span className="text-sm text-slate-600">Carregando consultas...</span>
+                      <Loader2 className="w-5 h-5 text-[#34495e] dark:text-slate-200 animate-spin" />
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Carregando consultas...</span>
                     </div>
                   </td>
                 </tr>
@@ -620,8 +620,8 @@ export default function ConsultivoPage() {
                 <tr>
                   <td colSpan={10} className="p-8 text-center">
                     <div className="flex flex-col items-center gap-2">
-                      <Scale className="w-10 h-10 text-slate-300" />
-                      <p className="text-sm text-slate-600">
+                      <Scale className="w-10 h-10 text-slate-300 dark:text-slate-600" />
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
                         {debouncedSearch ? 'Nenhuma consulta encontrada para esta busca' : 'Nenhuma consulta cadastrada'}
                       </p>
                       {debouncedSearch && (
@@ -644,8 +644,8 @@ export default function ConsultivoPage() {
                   key={consulta.id}
                   onClick={() => router.push(`/dashboard/consultivo/${consulta.id}`)}
                   className={cn(
-                    'border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer',
-                    selectedIds.has(consulta.id) && 'bg-blue-50 hover:bg-blue-100'
+                    'border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors cursor-pointer',
+                    selectedIds.has(consulta.id) && 'bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20'
                   )}
                 >
                   <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
@@ -656,22 +656,22 @@ export default function ConsultivoPage() {
                     />
                   </td>
                   <td className="p-3 whitespace-nowrap">
-                    <span className="text-xs font-mono text-slate-500">
+                    <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
                       {consulta.numero || '-'}
                     </span>
                   </td>
                   <td className="p-3">
-                    <span className="text-sm font-medium text-[#34495e] truncate block" title={consulta.titulo}>
+                    <span className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate block" title={consulta.titulo}>
                       {consulta.titulo}
                     </span>
                   </td>
                   <td className="p-3">
-                    <span className="text-xs text-slate-700 block truncate" title={consulta.cliente_nome}>
+                    <span className="text-xs text-slate-700 dark:text-slate-300 block truncate" title={consulta.cliente_nome}>
                       {consulta.cliente_nome}
                     </span>
                   </td>
                   <td className="p-3 whitespace-nowrap">
-                    <span className="text-xs text-slate-600">
+                    <span className="text-xs text-slate-600 dark:text-slate-400">
                       {formatArea(consulta.area)}
                     </span>
                   </td>
@@ -687,7 +687,7 @@ export default function ConsultivoPage() {
                     </span>
                   </td>
                   <td className="p-3">
-                    <span className="text-xs text-slate-600 block truncate" title={consulta.responsavel_nome}>
+                    <span className="text-xs text-slate-600 dark:text-slate-400 block truncate" title={consulta.responsavel_nome}>
                       {consulta.responsavel_nome}
                     </span>
                   </td>
@@ -792,9 +792,9 @@ export default function ConsultivoPage() {
         </div>
 
         {/* Paginacao */}
-        <div className="flex items-center justify-between p-4 border-t border-slate-200">
+        <div className="flex items-center justify-between p-4 border-t border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-4">
-            <div className="text-xs text-slate-600">
+            <div className="text-xs text-slate-600 dark:text-slate-400">
               {loading ? (
                 'Carregando...'
               ) : totalCount > 0 ? (
@@ -804,7 +804,7 @@ export default function ConsultivoPage() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">Por página:</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Por página:</span>
               <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
                 <SelectTrigger className="w-[70px] h-8 text-xs">
                   <SelectValue />
@@ -842,7 +842,7 @@ export default function ConsultivoPage() {
                     >
                       1
                     </Button>
-                    {currentPage > 3 && <span className="text-slate-400 px-1">...</span>}
+                    {currentPage > 3 && <span className="text-slate-400 dark:text-slate-500 px-1">...</span>}
                   </>
                 )}
 
@@ -879,7 +879,7 @@ export default function ConsultivoPage() {
 
                 {currentPage < totalPages - 1 && (
                   <>
-                    {currentPage < totalPages - 2 && <span className="text-slate-400 px-1">...</span>}
+                    {currentPage < totalPages - 2 && <span className="text-slate-400 dark:text-slate-500 px-1">...</span>}
                     <Button
                       variant="outline"
                       size="sm"

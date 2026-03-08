@@ -46,10 +46,10 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 dark:from-surface-0 dark:via-surface-0 dark:to-surface-0">
       {/* Navigation Tabs - apenas nas páginas principais */}
       {!isDetailPage && (
-        <div className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="border-b border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-surface-1/80 backdrop-blur-sm sticky top-0 z-10">
           <div className="max-w-[1800px] mx-auto px-6">
             <div className="flex items-center gap-1">
               {navigationItems.map((item) => {
@@ -65,8 +65,8 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
                     className={cn(
                       'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all',
                       isActive
-                        ? 'border-[#34495e] text-[#34495e]'
-                        : 'border-transparent text-slate-500 hover:text-[#34495e] hover:border-slate-300'
+                        ? 'border-[#34495e] dark:border-[#89bcbe] text-[#34495e] dark:text-slate-200'
+                        : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600'
                     )}
                   >
                     <item.icon className="w-4 h-4" />

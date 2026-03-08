@@ -73,9 +73,9 @@ export default function NovaPublicacaoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-surface-0 dark:to-surface-0">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+      <div className="bg-white dark:bg-surface-1 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 shadow-sm">
         <div className="px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -89,17 +89,17 @@ export default function NovaPublicacaoPage() {
                 Voltar
               </Button>
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] flex items-center justify-center">
                   <Plus className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-base font-semibold text-slate-700">Nova Publicação</h1>
-                  <p className="text-xs text-slate-500">Adicionar publicação manualmente</p>
+                  <h1 className="text-base font-semibold text-slate-700 dark:text-slate-300">Nova Publicação</h1>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Adicionar publicação manualmente</p>
                 </div>
               </div>
             </div>
 
-            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+            <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30">
               Adição Manual
             </Badge>
           </div>
@@ -110,10 +110,10 @@ export default function NovaPublicacaoPage() {
       <div className="max-w-4xl mx-auto p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Card: Informações Básicas */}
-          <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
+          <div className="bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm p-5">
             <div className="flex items-center gap-2 mb-4">
-              <Calendar className="w-4 h-4 text-slate-600" />
-              <h3 className="text-sm font-semibold text-slate-700">Informações da Publicação</h3>
+              <Calendar className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Informações da Publicação</h3>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -150,10 +150,10 @@ export default function NovaPublicacaoPage() {
           </div>
 
           {/* Card: Dados Judiciais */}
-          <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
+          <div className="bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm p-5">
             <div className="flex items-center gap-2 mb-4">
-              <Building2 className="w-4 h-4 text-slate-600" />
-              <h3 className="text-sm font-semibold text-slate-700">Dados Judiciais</h3>
+              <Building2 className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Dados Judiciais</h3>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -190,7 +190,7 @@ export default function NovaPublicacaoPage() {
                   placeholder="0000000-00.0000.0.00.0000"
                   maxLength={25}
                 />
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Formato CNJ. Se informado, tentaremos vincular automaticamente ao processo.
                 </p>
               </div>
@@ -215,10 +215,10 @@ export default function NovaPublicacaoPage() {
           </div>
 
           {/* Card: Conteúdo */}
-          <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
+          <div className="bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm p-5">
             <div className="flex items-center gap-2 mb-4">
-              <FileText className="w-4 h-4 text-slate-600" />
-              <h3 className="text-sm font-semibold text-slate-700">Texto da Publicação</h3>
+              <FileText className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Texto da Publicação</h3>
             </div>
 
             <div className="space-y-4">
@@ -232,21 +232,21 @@ export default function NovaPublicacaoPage() {
                   rows={12}
                   placeholder="Cole aqui o texto completo da publicação..."
                 />
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Cole o texto completo da intimação ou publicação. A IA irá analisá-lo automaticamente.
                 </p>
               </div>
 
               <div>
                 <Label className="text-xs">PDF Original (opcional)</Label>
-                <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:border-slate-300 transition-colors cursor-pointer">
+                <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg p-6 text-center hover:border-slate-300 dark:hover:border-slate-600 transition-colors cursor-pointer">
                   <div className="flex flex-col items-center gap-2">
-                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-surface-2 flex items-center justify-center">
                       <Upload className="w-5 h-5 text-slate-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-slate-700">Clique para fazer upload</p>
-                      <p className="text-xs text-slate-500">ou arraste e solte o arquivo PDF</p>
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Clique para fazer upload</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">ou arraste e solte o arquivo PDF</p>
                     </div>
                     <p className="text-xs text-slate-400">Tamanho máximo: 10MB</p>
                   </div>
@@ -256,14 +256,14 @@ export default function NovaPublicacaoPage() {
           </div>
 
           {/* Card: Opções */}
-          <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
+          <div className="bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm p-5">
             <div className="flex items-center gap-2 mb-4">
-              <AlertTriangle className="w-4 h-4 text-slate-600" />
-              <h3 className="text-sm font-semibold text-slate-700">Opções Adicionais</h3>
+              <AlertTriangle className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Opções Adicionais</h3>
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
+              <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-500/10 dark:to-blue-500/10 rounded-lg border border-purple-200 dark:border-purple-500/30">
                 <Checkbox
                   id="analisar-ia"
                   checked={formData.analisar_ia}
@@ -271,19 +271,19 @@ export default function NovaPublicacaoPage() {
                     setFormData({ ...formData, analisar_ia: checked as boolean })
                   }
                 />
-                <label htmlFor="analisar-ia" className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                <label htmlFor="analisar-ia" className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-purple-600" />
                   Analisar com IA após salvar
                 </label>
               </div>
-              <p className="text-xs text-slate-500 pl-6">
+              <p className="text-xs text-slate-500 dark:text-slate-400 pl-6">
                 A IA irá extrair informações, identificar prazos e sugerir ações automaticamente
               </p>
             </div>
           </div>
 
           {/* Botões de Ação */}
-          <div className="flex justify-between bg-white rounded-lg border border-slate-200 shadow-sm p-4">
+          <div className="flex justify-between bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm p-4">
             <Button
               type="button"
               variant="outline"
@@ -295,7 +295,7 @@ export default function NovaPublicacaoPage() {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f]"
+              className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab]"
             >
               {isSubmitting ? (
                 <>
@@ -313,14 +313,14 @@ export default function NovaPublicacaoPage() {
         </form>
 
         {/* Dica */}
-        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-lg">
           <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-              <FileText className="w-4 h-4 text-blue-600" />
+            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+              <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-blue-900 mb-1">Dica de Uso</h4>
-              <p className="text-xs text-blue-700 leading-relaxed">
+              <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-1">Dica de Uso</h4>
+              <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
                 Use esta funcionalidade para adicionar publicações recebidas por outros meios
                 (e-mail, aplicativo do tribunal, etc.) ou para testes. A análise por IA irá
                 processar o texto e identificar automaticamente prazos, determinações e ações necessárias.

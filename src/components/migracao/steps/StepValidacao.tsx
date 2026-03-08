@@ -170,18 +170,18 @@ export function StepValidacao({ state, updateState, goToStep, setJob }: Props) {
     <div className="flex flex-col items-center justify-center py-12 space-y-8">
       {/* Ícone animado */}
       <div className="relative">
-        <div className="w-24 h-24 rounded-full bg-blue-100 flex items-center justify-center">
+        <div className="w-24 h-24 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center">
           <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
         </div>
       </div>
 
       {/* Status */}
       <div className="text-center">
-        <p className="text-xl font-medium text-slate-700">
+        <p className="text-xl font-medium text-slate-700 dark:text-slate-300">
           {getStatusText()}
         </p>
         {job && (
-          <p className="text-sm text-slate-500 mt-2">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
             {job.linhas_processadas} de {job.total_linhas} linhas
           </p>
         )}
@@ -190,7 +190,7 @@ export function StepValidacao({ state, updateState, goToStep, setJob }: Props) {
       {/* Barra de progresso */}
       <div className="w-full max-w-md">
         <Progress value={progresso} className="h-3" />
-        <p className="text-xs text-slate-400 text-center mt-2">
+        <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-2">
           {progresso}% concluído
         </p>
       </div>
@@ -200,27 +200,27 @@ export function StepValidacao({ state, updateState, goToStep, setJob }: Props) {
         <div className="flex gap-6 text-sm">
           <div className="flex items-center gap-2">
             <CheckCircle className="w-4 h-4 text-green-500" />
-            <span className="text-slate-600">{job.linhas_validas} válidas</span>
+            <span className="text-slate-600 dark:text-slate-400">{job.linhas_validas} válidas</span>
           </div>
 
           {job.linhas_com_erro > 0 && (
             <div className="flex items-center gap-2">
               <XCircle className="w-4 h-4 text-red-500" />
-              <span className="text-slate-600">{job.linhas_com_erro} com erro</span>
+              <span className="text-slate-600 dark:text-slate-400">{job.linhas_com_erro} com erro</span>
             </div>
           )}
 
           {job.linhas_duplicadas > 0 && (
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-500" />
-              <span className="text-slate-600">{job.linhas_duplicadas} duplicatas</span>
+              <span className="text-slate-600 dark:text-slate-400">{job.linhas_duplicadas} duplicatas</span>
             </div>
           )}
         </div>
       )}
 
       {/* Info */}
-      <p className="text-xs text-slate-400 text-center max-w-md">
+      <p className="text-xs text-slate-400 dark:text-slate-500 text-center max-w-md">
         Estamos validando cada linha do seu arquivo, verificando CPFs, CNPJs,
         e-mails e buscando possíveis duplicatas no sistema.
       </p>

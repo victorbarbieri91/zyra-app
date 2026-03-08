@@ -208,17 +208,17 @@ export default function PessoasPage() {
 
   const getTipoCadastroColor = (tipo: string) => {
     const colors: Record<string, string> = {
-      cliente: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      prospecto: 'bg-amber-50 text-amber-700 border-amber-200',
-      parte_contraria: 'bg-red-50 text-red-700 border-red-200',
-      correspondente: 'bg-blue-50 text-blue-700 border-blue-200',
-      testemunha: 'bg-purple-50 text-purple-700 border-purple-200',
-      perito: 'bg-teal-50 text-teal-700 border-teal-200',
-      juiz: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-      promotor: 'bg-violet-50 text-violet-700 border-violet-200',
-      outros: 'bg-slate-50 text-slate-700 border-slate-200',
+      cliente: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30',
+      prospecto: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30',
+      parte_contraria: 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/30',
+      correspondente: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30',
+      testemunha: 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/30',
+      perito: 'bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-500/30',
+      juiz: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30',
+      promotor: 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-500/30',
+      outros: 'bg-slate-50 dark:bg-surface-0 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
     };
-    return colors[tipo] || 'bg-slate-50 text-slate-700 border-slate-200';
+    return colors[tipo] || 'bg-slate-50 dark:bg-surface-0 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700';
   };
 
   const getTipoCadastroLabel = (tipo: string) => {
@@ -276,7 +276,7 @@ export default function PessoasPage() {
       {/* Lista Principal */}
       <div className="flex-1 flex flex-col space-y-3 md:space-y-4 min-w-0">
         {/* Filtros e Acoes */}
-        <div className="bg-white border border-slate-200 rounded-lg p-3 md:p-4 flex-shrink-0">
+        <div className="bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg p-3 md:p-4 flex-shrink-0">
           <div className="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center gap-2 md:gap-3">
             {/* Busca */}
             <div className="flex-1 min-w-0 md:min-w-[300px]">
@@ -351,7 +351,7 @@ export default function PessoasPage() {
           </div>
 
           {/* Contador de resultados */}
-          <div className="mt-3 flex items-center justify-between text-xs text-slate-600">
+          <div className="mt-3 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
             <span>
               {totalCount} pessoa(s) encontrada(s)
             </span>
@@ -364,7 +364,7 @@ export default function PessoasPage() {
         </div>
 
         {/* Tabela */}
-        <div className="bg-white border border-slate-200 rounded-lg flex-1 flex flex-col overflow-hidden">
+        <div className="bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg flex-1 flex flex-col overflow-hidden">
           {loading ? (
             <div className="flex-1 flex items-center justify-center p-12">
               <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
@@ -373,10 +373,10 @@ export default function PessoasPage() {
             <div className="flex-1 flex items-center justify-center p-12">
               <div className="text-center">
                 <Users className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-                <h3 className="text-lg font-semibold text-slate-600 mb-2">
+                <h3 className="text-lg font-semibold text-slate-600 dark:text-slate-400 mb-2">
                   Nenhuma pessoa encontrada
                 </h3>
-                <p className="text-sm text-slate-500 mb-6">
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
                   {busca || tipoCadastro !== 'todos' || status !== 'todos'
                     ? 'Tente ajustar os filtros ou busca'
                     : 'Comece cadastrando sua primeira pessoa'}
@@ -402,7 +402,7 @@ export default function PessoasPage() {
                         <Checkbox
                           checked={pessoas.length > 0 && selectedIds.size === pessoas.length}
                           onCheckedChange={toggleSelectAll}
-                          className="border-slate-300 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
+                          className="border-slate-300 dark:border-slate-600 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
                         />
                       </TableHead>
                       <TableHead className="w-[40px] text-xs">Tipo</TableHead>
@@ -421,38 +421,38 @@ export default function PessoasPage() {
                         key={pessoa.id}
                         onClick={() => setPessoaSelecionada(pessoa)}
                         className={`cursor-pointer text-xs ${
-                          pessoaSelecionada?.id === pessoa.id ? 'bg-blue-50' : ''
-                        } ${selectedIds.has(pessoa.id) ? 'bg-blue-50' : ''}`}
+                          pessoaSelecionada?.id === pessoa.id ? 'bg-blue-50 dark:bg-blue-500/10' : ''
+                        } ${selectedIds.has(pessoa.id) ? 'bg-blue-50 dark:bg-blue-500/10' : ''}`}
                       >
                         <TableCell className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedIds.has(pessoa.id)}
                             onCheckedChange={() => toggleSelection(pessoa.id)}
-                            className="border-slate-300 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
+                            className="border-slate-300 dark:border-slate-600 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
                           />
                         </TableCell>
                         <TableCell className="py-2">
                           <div className="flex items-center justify-center">
                             {pessoa.tipo_pessoa === 'pj' ? (
-                              <Building2 className="w-3.5 h-3.5 text-slate-600" />
+                              <Building2 className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
                             ) : (
-                              <User className="w-3.5 h-3.5 text-slate-600" />
+                              <User className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
                             )}
                           </div>
                         </TableCell>
                         <TableCell className="font-medium py-2 text-xs truncate max-w-[220px]">
                           {pessoa.nome_completo}
                         </TableCell>
-                        <TableCell className="font-mono text-[11px] text-slate-600 py-2">
+                        <TableCell className="font-mono text-[11px] text-slate-600 dark:text-slate-400 py-2">
                           {pessoa.cpf_cnpj ? formatCpfCnpj(pessoa.cpf_cnpj) : '-'}
                         </TableCell>
-                        <TableCell className="text-xs text-slate-600 py-2">
+                        <TableCell className="text-xs text-slate-600 dark:text-slate-400 py-2">
                           {pessoa.telefone || '-'}
                         </TableCell>
-                        <TableCell className="text-xs text-slate-600 truncate max-w-[180px] py-2">
+                        <TableCell className="text-xs text-slate-600 dark:text-slate-400 truncate max-w-[180px] py-2">
                           {pessoa.email || '-'}
                         </TableCell>
-                        <TableCell className="text-xs text-slate-600 py-2">
+                        <TableCell className="text-xs text-slate-600 dark:text-slate-400 py-2">
                           {pessoa.cidade && pessoa.uf ? `${pessoa.cidade}/${pessoa.uf}` : '-'}
                         </TableCell>
                         <TableCell className="py-2">
@@ -479,7 +479,7 @@ export default function PessoasPage() {
 
               {/* Paginacao */}
               {totalPages > 1 && (
-                <div className="p-4 border-t border-slate-200 flex items-center justify-between">
+                <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
                   <Button
                     variant="outline"
                     size="sm"
@@ -488,7 +488,7 @@ export default function PessoasPage() {
                   >
                     Anterior
                   </Button>
-                  <span className="text-sm text-slate-600">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">
                     Pagina {currentPage} de {totalPages}
                   </span>
                   <Button
@@ -508,10 +508,10 @@ export default function PessoasPage() {
 
       {/* Painel Lateral de Detalhes */}
       {pessoaSelecionada && (
-        <div className="w-96 bg-white border border-slate-200 rounded-lg flex flex-col overflow-hidden flex-shrink-0">
+        <div className="w-96 bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-col overflow-hidden flex-shrink-0">
           {/* Header */}
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-[#34495e]">Detalhes da Pessoa</h2>
+          <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-[#34495e] dark:text-slate-200">Detalhes da Pessoa</h2>
             <Button variant="ghost" size="sm" onClick={() => setPessoaSelecionada(null)}>
               <X className="w-4 h-4" />
             </Button>
@@ -521,10 +521,10 @@ export default function PessoasPage() {
             <div className="p-4 space-y-4">
               {/* Nome e Tipo */}
               <div>
-                <h3 className="text-base font-semibold text-slate-900 mb-1">
+                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">
                   {pessoaSelecionada.nome_completo}
                 </h3>
-                <p className="text-xs text-slate-600 mb-2">
+                <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
                   {pessoaSelecionada.tipo_pessoa === 'pj' ? 'Pessoa Juridica' : 'Pessoa Fisica'}
                 </p>
                 <div className="flex flex-wrap gap-1">
@@ -536,7 +536,7 @@ export default function PessoasPage() {
                   >
                     {getTipoCadastroLabel(pessoaSelecionada.tipo_cadastro)}
                   </Badge>
-                  <Badge variant="outline" className="text-[10px] bg-slate-100">
+                  <Badge variant="outline" className="text-[10px] bg-slate-100 dark:bg-surface-2">
                     {pessoaSelecionada.status}
                   </Badge>
                 </div>
@@ -546,11 +546,11 @@ export default function PessoasPage() {
 
               {/* Dados Cadastrais */}
               <div>
-                <h4 className="text-xs font-semibold text-slate-900 mb-2">Dados Cadastrais</h4>
-                <div className="space-y-2 text-xs text-slate-600">
+                <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-100 mb-2">Dados Cadastrais</h4>
+                <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
                   {pessoaSelecionada.cpf_cnpj && (
                     <div className="flex justify-between">
-                      <span className="text-slate-500">
+                      <span className="text-slate-500 dark:text-slate-400">
                         {pessoaSelecionada.tipo_pessoa === 'pj' ? 'CNPJ:' : 'CPF:'}
                       </span>
                       <span className="font-mono">
@@ -586,8 +586,8 @@ export default function PessoasPage() {
                 <>
                   <Separator />
                   <div>
-                    <h4 className="text-xs font-semibold text-slate-900 mb-2">Observacoes</h4>
-                    <p className="text-xs text-slate-600 whitespace-pre-wrap">
+                    <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-100 mb-2">Observacoes</h4>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap">
                       {pessoaSelecionada.observacoes}
                     </p>
                   </div>
@@ -598,7 +598,7 @@ export default function PessoasPage() {
 
               {/* Relacionamentos */}
               <div>
-                <h4 className="text-xs font-semibold text-slate-900 mb-3">Relacionamentos</h4>
+                <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-100 mb-3">Relacionamentos</h4>
                 <div className="space-y-1">
                   {/* Link Processos */}
                   <button
@@ -606,20 +606,20 @@ export default function PessoasPage() {
                     disabled={processosCount === 0 || loadingCounts}
                     className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-colors ${
                       processosCount > 0
-                        ? 'border-slate-200 hover:bg-slate-50 cursor-pointer'
-                        : 'border-slate-100 bg-slate-50/50 cursor-default'
+                        ? 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-surface-2 cursor-pointer'
+                        : 'border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-surface-0/50 cursor-default'
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                        processosCount > 0 ? 'bg-blue-100' : 'bg-slate-100'
+                        processosCount > 0 ? 'bg-blue-100 dark:bg-blue-500/20' : 'bg-slate-100 dark:bg-surface-2'
                       }`}>
                         <Scale className={`w-3.5 h-3.5 ${
-                          processosCount > 0 ? 'text-blue-600' : 'text-slate-400'
+                          processosCount > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'
                         }`} />
                       </div>
                       <span className={`text-sm ${
-                        processosCount > 0 ? 'text-slate-700' : 'text-slate-400'
+                        processosCount > 0 ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400'
                       }`}>
                         Processos
                       </span>
@@ -631,7 +631,7 @@ export default function PessoasPage() {
                         <Badge
                           variant="secondary"
                           className={`text-[10px] ${
-                            processosCount > 0 ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'
+                            processosCount > 0 ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400' : 'bg-slate-100 dark:bg-surface-2 text-slate-400'
                           }`}
                         >
                           {processosCount}
@@ -649,20 +649,20 @@ export default function PessoasPage() {
                     disabled={consultivosCount === 0 || loadingCounts}
                     className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-colors ${
                       consultivosCount > 0
-                        ? 'border-slate-200 hover:bg-slate-50 cursor-pointer'
-                        : 'border-slate-100 bg-slate-50/50 cursor-default'
+                        ? 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-surface-2 cursor-pointer'
+                        : 'border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-surface-0/50 cursor-default'
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                        consultivosCount > 0 ? 'bg-teal-100' : 'bg-slate-100'
+                        consultivosCount > 0 ? 'bg-teal-100 dark:bg-teal-500/20' : 'bg-slate-100 dark:bg-surface-2'
                       }`}>
                         <FileText className={`w-3.5 h-3.5 ${
-                          consultivosCount > 0 ? 'text-teal-600' : 'text-slate-400'
+                          consultivosCount > 0 ? 'text-teal-600 dark:text-teal-400' : 'text-slate-400'
                         }`} />
                       </div>
                       <span className={`text-sm ${
-                        consultivosCount > 0 ? 'text-slate-700' : 'text-slate-400'
+                        consultivosCount > 0 ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400'
                       }`}>
                         Consultivos
                       </span>
@@ -674,7 +674,7 @@ export default function PessoasPage() {
                         <Badge
                           variant="secondary"
                           className={`text-[10px] ${
-                            consultivosCount > 0 ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-400'
+                            consultivosCount > 0 ? 'bg-teal-100 dark:bg-teal-500/20 text-teal-700 dark:text-teal-400' : 'bg-slate-100 dark:bg-surface-2 text-slate-400'
                           }`}
                         >
                           {consultivosCount}
@@ -692,20 +692,20 @@ export default function PessoasPage() {
                     disabled={contratosCount === 0 || loadingCounts}
                     className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-colors ${
                       contratosCount > 0
-                        ? 'border-slate-200 hover:bg-slate-50 cursor-pointer'
-                        : 'border-slate-100 bg-slate-50/50 cursor-default'
+                        ? 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-surface-2 cursor-pointer'
+                        : 'border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-surface-0/50 cursor-default'
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                        contratosCount > 0 ? 'bg-amber-100' : 'bg-slate-100'
+                        contratosCount > 0 ? 'bg-amber-100 dark:bg-amber-500/20' : 'bg-slate-100 dark:bg-surface-2'
                       }`}>
                         <FileSignature className={`w-3.5 h-3.5 ${
-                          contratosCount > 0 ? 'text-amber-600' : 'text-slate-400'
+                          contratosCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'
                         }`} />
                       </div>
                       <span className={`text-sm ${
-                        contratosCount > 0 ? 'text-slate-700' : 'text-slate-400'
+                        contratosCount > 0 ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400'
                       }`}>
                         Contratos de Honorarios
                       </span>
@@ -717,7 +717,7 @@ export default function PessoasPage() {
                         <Badge
                           variant="secondary"
                           className={`text-[10px] ${
-                            contratosCount > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-400'
+                            contratosCount > 0 ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400' : 'bg-slate-100 dark:bg-surface-2 text-slate-400'
                           }`}
                         >
                           {contratosCount}

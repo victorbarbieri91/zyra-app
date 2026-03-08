@@ -35,16 +35,16 @@ const MODALIDADE_INFO: Record<string, {
   fixo: {
     label: 'Fixo',
     icon: DollarSign,
-    color: 'text-blue-700',
-    bgColor: 'bg-blue-50',
+    color: 'text-blue-700 dark:text-blue-400',
+    bgColor: 'bg-blue-50 dark:bg-blue-500/10',
     borderColor: 'border-blue-200',
     description: 'Valor fixo mensal ou único'
   },
   por_hora: {
     label: 'Por Hora',
     icon: Clock,
-    color: 'text-amber-700',
-    bgColor: 'bg-amber-50',
+    color: 'text-amber-700 dark:text-amber-400',
+    bgColor: 'bg-amber-50 dark:bg-amber-500/10',
     borderColor: 'border-amber-200',
     description: 'Cobrança por horas trabalhadas'
   },
@@ -59,16 +59,16 @@ const MODALIDADE_INFO: Record<string, {
   misto: {
     label: 'Misto',
     icon: FileText,
-    color: 'text-slate-700',
-    bgColor: 'bg-slate-50',
-    borderColor: 'border-slate-200',
+    color: 'text-slate-700 dark:text-slate-300',
+    bgColor: 'bg-slate-50 dark:bg-surface-0',
+    borderColor: 'border-slate-200 dark:border-slate-700',
     description: 'Combinação de modalidades'
   },
   por_pasta: {
     label: 'Por Pasta',
     icon: Folder,
-    color: 'text-emerald-700',
-    bgColor: 'bg-emerald-50',
+    color: 'text-emerald-700 dark:text-emerald-400',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-500/10',
     borderColor: 'border-emerald-200',
     description: 'Valor fixo por processo'
   },
@@ -118,7 +118,7 @@ export default function ModalidadeSelector({
 }: ModalidadeSelectorProps) {
   if (formas.length === 0) {
     return (
-      <div className="text-center py-6 text-slate-500">
+      <div className="text-center py-6 text-slate-500 dark:text-slate-400">
         <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" />
         <p className="text-sm">Nenhuma forma de cobrança configurada</p>
         <p className="text-xs mt-1">Configure as formas de cobrança no contrato</p>
@@ -129,10 +129,10 @@ export default function ModalidadeSelector({
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-sm font-medium text-[#34495e] mb-1">
+        <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 mb-1">
           Selecione a Modalidade de Cobrança
         </p>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           Escolha como este processo será cobrado com base nas opções configuradas no contrato
         </p>
       </div>
@@ -154,7 +154,7 @@ export default function ModalidadeSelector({
                 "relative cursor-pointer transition-all duration-200 p-4 hover:shadow-md",
                 isSelected
                   ? `ring-2 ring-[#89bcbe] ${info.bgColor} ${info.borderColor}`
-                  : "border-slate-200 hover:border-[#89bcbe]/50",
+                  : "border-slate-200 dark:border-slate-700 hover:border-[#89bcbe]/50",
                 disabled && "opacity-50 cursor-not-allowed"
               )}
               onClick={() => !disabled && onSelect(forma.forma_cobranca)}
@@ -178,13 +178,13 @@ export default function ModalidadeSelector({
                 {/* Label */}
                 <p className={cn(
                   "text-sm font-semibold mb-1",
-                  isSelected ? info.color : "text-[#34495e]"
+                  isSelected ? info.color : "text-[#34495e] dark:text-slate-200"
                 )}>
                   {info.label}
                 </p>
 
                 {/* Descrição */}
-                <p className="text-[10px] text-slate-500 leading-tight mb-2">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mb-2">
                   {info.description}
                 </p>
 
@@ -194,7 +194,7 @@ export default function ModalidadeSelector({
                     variant="outline"
                     className={cn(
                       "text-[10px] font-semibold",
-                      isSelected ? `${info.bgColor} ${info.color} ${info.borderColor}` : "bg-white"
+                      isSelected ? `${info.bgColor} ${info.color} ${info.borderColor}` : "bg-white dark:bg-surface-1"
                     )}
                   >
                     {valorDisplay}
@@ -207,13 +207,13 @@ export default function ModalidadeSelector({
       </div>
 
       {error && (
-        <p className="text-xs text-red-600 mt-2">{error}</p>
+        <p className="text-xs text-red-600 dark:text-red-400 mt-2">{error}</p>
       )}
 
       {selectedModalidade && (
-        <div className="flex items-center gap-2 p-2.5 rounded-lg bg-[#f0f9f9] border border-[#aacfd0]/30">
+        <div className="flex items-center gap-2 p-2.5 rounded-lg bg-[#f0f9f9] dark:bg-teal-900/20 border border-[#aacfd0]/30">
           <Check className="w-4 h-4 text-[#89bcbe]" />
-          <span className="text-xs text-[#34495e]">
+          <span className="text-xs text-[#34495e] dark:text-slate-200">
             Modalidade selecionada: <strong>{MODALIDADE_INFO[selectedModalidade]?.label || selectedModalidade}</strong>
           </span>
         </div>

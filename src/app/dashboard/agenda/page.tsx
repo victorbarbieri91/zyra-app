@@ -1330,8 +1330,8 @@ export default function AgendaPage() {
         <div>
           {/* Linha 1: Título */}
           <div className="mb-3 md:mb-4">
-            <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">Agenda</h1>
-            <p className="text-xs md:text-sm text-[#6c757d] mt-0.5 font-normal">
+            <h1 className="text-xl md:text-2xl font-semibold text-[#34495e] dark:text-slate-200">Agenda</h1>
+            <p className="text-xs md:text-sm text-[#6c757d] mt-0.5 font-normal dark:text-slate-400">
               {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
             </p>
           </div>
@@ -1343,7 +1343,7 @@ export default function AgendaPage() {
               <Button
                 size="sm"
                 onClick={() => handleCreateEvent(undefined, 'compromisso')}
-                className="h-8 min-w-[110px] md:w-[130px] text-xs bg-gradient-to-br from-[#aacfd0] to-[#89bcbe] hover:from-[#89bcbe] hover:to-[#6ba9ab] active:from-[#6ba9ab] text-[#34495e] border-0 shadow-sm whitespace-nowrap"
+                className="h-8 min-w-[110px] md:w-[130px] text-xs bg-gradient-to-br from-[#aacfd0] to-[#89bcbe] hover:from-[#89bcbe] hover:to-[#6ba9ab] active:from-[#6ba9ab] text-[#34495e] dark:text-slate-200 border-0 shadow-sm whitespace-nowrap"
               >
                 <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
                 Compromisso
@@ -1368,7 +1368,7 @@ export default function AgendaPage() {
 
             {/* View Mode Selector - Mobile: only list/day. Desktop: all 4 */}
             <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as typeof viewMode)}>
-              <TabsList className="bg-white border border-slate-200 shadow-sm p-1">
+              <TabsList className="bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 shadow-sm p-1">
                 <TabsTrigger
                   value="month"
                   className="hidden md:flex text-sm data-[state=active]:bg-gradient-to-br data-[state=active]:from-[#89bcbe] data-[state=active]:to-[#6ba9ab] data-[state=active]:text-white data-[state=active]:shadow-sm"
@@ -1404,10 +1404,10 @@ export default function AgendaPage() {
 
         {/* Banner de filtro ativo da URL */}
         {urlFiltroAtivo && (
-          <div className="flex items-center justify-between px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-center justify-between px-4 py-2.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-700 rounded-lg">
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-              <span className="text-sm text-amber-800 font-medium">
+              <span className="text-sm text-amber-800 dark:text-amber-400 font-medium">
                 {urlFiltroAtivo === 'vencidos'
                   ? `Mostrando prazos vencidos (${eventosFormatados.length})`
                   : `Mostrando prazos de hoje (${eventosFormatados.length})`}
@@ -1429,7 +1429,7 @@ export default function AgendaPage() {
                 }))
                 router.replace('/dashboard/agenda')
               }}
-              className="text-xs text-amber-700 hover:text-amber-900 hover:bg-amber-100 h-7"
+              className="text-xs text-amber-700 dark:text-amber-400 hover:text-amber-900 hover:bg-amber-100 h-7"
             >
               Limpar filtro
             </Button>
@@ -1438,8 +1438,8 @@ export default function AgendaPage() {
 
         {/* Layout Principal - Largura Completa */}
         {loading ? (
-          <div className="border border-slate-200 rounded-lg p-8 text-center bg-white">
-            <p className="text-sm text-[#6c757d]">Carregando eventos...</p>
+          <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-8 text-center bg-white dark:bg-surface-1">
+            <p className="text-sm text-[#6c757d] dark:text-slate-400">Carregando eventos...</p>
           </div>
         ) : (
           <>
@@ -1794,18 +1794,18 @@ export default function AgendaPage() {
         }
       }}>
         <AlertDialogContent className="max-w-md p-0 overflow-hidden border-0 z-[100]">
-          <div className="bg-white rounded-lg">
+          <div className="bg-white dark:bg-surface-1 rounded-lg">
             {/* Header */}
-            <div className="px-6 pt-5 pb-4 border-b border-slate-100">
+            <div className="px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#f0f9f9] flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-[#f0f9f9] dark:bg-teal-900/20 flex items-center justify-center">
                   <CalendarIcon className="w-5 h-5 text-[#89bcbe]" />
                 </div>
                 <div>
-                  <AlertDialogTitle className="text-base font-semibold text-[#34495e]">
+                  <AlertDialogTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
                     Reagendar Prazo Fatal
                   </AlertDialogTitle>
-                  <AlertDialogDescription className="text-xs text-[#46627f] mt-0.5">
+                  <AlertDialogDescription className="text-xs text-[#46627f] dark:text-slate-400 mt-0.5">
                     A nova data de execução é posterior ao prazo fatal atual
                   </AlertDialogDescription>
                 </div>
@@ -1815,15 +1815,15 @@ export default function AgendaPage() {
             <div className="p-6 space-y-4">
               {/* Info das datas */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-[#f0f9f9] rounded-lg border border-[#89bcbe]/30">
-                  <p className="text-[10px] text-[#46627f] mb-1">Nova Data Execução</p>
-                  <p className="text-sm font-semibold text-[#34495e]">
+                <div className="p-3 bg-[#f0f9f9] dark:bg-teal-900/20 rounded-lg border border-[#89bcbe]/30">
+                  <p className="text-[10px] text-[#46627f] dark:text-slate-400 mb-1">Nova Data Execução</p>
+                  <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                     {pendingReschedule?.newDate && format(pendingReschedule.newDate, 'dd/MM/yyyy', { locale: ptBR })}
                   </p>
                 </div>
-                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                  <p className="text-[10px] text-slate-500 mb-1">Prazo Fatal Atual</p>
-                  <p className="text-sm font-semibold text-[#34495e]">
+                <div className="p-3 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-1">Prazo Fatal Atual</p>
+                  <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                     {pendingReschedule?.prazoFatal && format(pendingReschedule.prazoFatal, 'dd/MM/yyyy', { locale: ptBR })}
                   </p>
                 </div>
@@ -1831,7 +1831,7 @@ export default function AgendaPage() {
 
               {/* Seletor de novo prazo fatal */}
               <div>
-                <p className="text-xs text-[#46627f] mb-2">
+                <p className="text-xs text-[#46627f] dark:text-slate-400 mb-2">
                   Selecione o novo prazo fatal:
                 </p>
                 <Popover open={prazoFatalCalendarOpenSidebar} onOpenChange={setPrazoFatalCalendarOpenSidebar}>
@@ -1839,12 +1839,12 @@ export default function AgendaPage() {
                     <button
                       className={cn(
                         "w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all",
-                        "bg-[#e8f5f5] border-[#89bcbe]/40 hover:border-[#89bcbe]"
+                        "bg-[#e8f5f5] dark:bg-teal-900/15 border-[#89bcbe]/40 hover:border-[#89bcbe]"
                       )}
                     >
                       <div className="text-left">
-                        <p className="text-[10px] text-[#46627f] mb-0.5">Novo Prazo Fatal</p>
-                        <p className="text-sm font-semibold text-[#34495e]">
+                        <p className="text-[10px] text-[#46627f] dark:text-slate-400 mb-0.5">Novo Prazo Fatal</p>
+                        <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                           {novoPrazoFatalSidebar ? format(novoPrazoFatalSidebar, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar data'}
                         </p>
                       </div>
@@ -1870,7 +1870,7 @@ export default function AgendaPage() {
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-surface-0/50">
               <div className="flex items-center gap-3">
                 <Button
                   variant="outline"
@@ -1879,7 +1879,7 @@ export default function AgendaPage() {
                     setPendingReschedule(null)
                     setNovoPrazoFatalSidebar(null)
                   }}
-                  className="flex-1 h-9 text-xs font-medium border-slate-200 hover:bg-white"
+                  className="flex-1 h-9 text-xs font-medium border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-surface-2"
                 >
                   Cancelar
                 </Button>

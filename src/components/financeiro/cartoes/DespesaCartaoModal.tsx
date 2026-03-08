@@ -188,7 +188,7 @@ export default function DespesaCartaoModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[#34495e]">
+          <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
             <Receipt className="w-5 h-5" />
             Novo Lançamento no Cartão
           </DialogTitle>
@@ -227,12 +227,12 @@ export default function DespesaCartaoModal({
 
           {/* Info do cartão selecionado */}
           {cartaoSelecionado && (
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200">
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700">
               <CreditCard
                 className="w-4 h-4"
                 style={{ color: cartaoSelecionado.cor }}
               />
-              <span className="text-sm text-slate-600">
+              <span className="text-sm text-slate-600 dark:text-slate-400">
                 {cartaoSelecionado.banco} - Vence dia {cartaoSelecionado.dia_vencimento}
               </span>
             </div>
@@ -250,8 +250,8 @@ export default function DespesaCartaoModal({
                   className={cn(
                     'p-3 rounded-lg border text-left transition-all',
                     formData.tipo === tipo.value
-                      ? 'border-[#1E3A8A] bg-blue-50 ring-1 ring-[#1E3A8A]'
-                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                      ? 'border-[#1E3A8A] bg-blue-50 dark:bg-blue-500/10 ring-1 ring-[#1E3A8A]'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white dark:bg-surface-1'
                   )}
                 >
                   <div className="flex items-center gap-2 mb-1">
@@ -259,19 +259,19 @@ export default function DespesaCartaoModal({
                       <Repeat className="w-4 h-4 text-purple-600" />
                     )}
                     {tipo.value === 'parcelada' && (
-                      <Calendar className="w-4 h-4 text-blue-600" />
+                      <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     )}
                     {tipo.value === 'unica' && (
-                      <Receipt className="w-4 h-4 text-slate-600" />
+                      <Receipt className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                     )}
                     <span className={cn(
                       'font-medium text-sm',
-                      formData.tipo === tipo.value ? 'text-[#1E3A8A]' : 'text-slate-700'
+                      formData.tipo === tipo.value ? 'text-[#1E3A8A]' : 'text-slate-700 dark:text-slate-300'
                     )}>
                       {tipo.label}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500">{tipo.description}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{tipo.description}</p>
                 </button>
               ))}
             </div>
@@ -354,9 +354,9 @@ export default function DespesaCartaoModal({
 
           {/* Opções para Parcelado */}
           {formData.tipo === 'parcelada' && (
-            <div className="p-4 rounded-lg border border-blue-200 bg-blue-50 space-y-3">
+            <div className="p-4 rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-500/10 space-y-3">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-blue-600" />
+                <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <span className="font-medium text-blue-800 text-sm">Configuração do Parcelamento</span>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -373,7 +373,7 @@ export default function DespesaCartaoModal({
                 </div>
                 <div>
                   <Label>Valor da Parcela</Label>
-                  <div className="h-10 flex items-center px-3 rounded-lg bg-white border border-blue-200 text-sm font-medium text-[#34495e]">
+                  <div className="h-10 flex items-center px-3 rounded-lg bg-white dark:bg-surface-1 border border-blue-200 text-sm font-medium text-[#34495e] dark:text-slate-200">
                     {new Intl.NumberFormat('pt-BR', {
                       style: 'currency',
                       currency: 'BRL',
@@ -444,9 +444,9 @@ export default function DespesaCartaoModal({
 
           {/* Info sobre faturamento */}
           {formData.tipo !== 'recorrente' && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-slate-50 border border-slate-200">
-              <Info className="w-4 h-4 text-slate-500 mt-0.5 shrink-0" />
-              <div className="text-xs text-slate-600">
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700">
+              <Info className="w-4 h-4 text-slate-500 dark:text-slate-400 mt-0.5 shrink-0" />
+              <div className="text-xs text-slate-600 dark:text-slate-400">
                 <p className="font-medium">Quando será faturado?</p>
                 <p>
                   Depende da data de fechamento do cartão. Compras feitas antes do
@@ -458,7 +458,7 @@ export default function DespesaCartaoModal({
         </div>
 
         {/* Botões */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancelar
           </Button>

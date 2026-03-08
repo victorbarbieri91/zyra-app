@@ -63,10 +63,10 @@ export default function MiniCalendar({
   }
 
   return (
-    <Card className={cn('border-slate-200 shadow-sm', className)}>
+    <Card className={cn('border-slate-200 dark:border-slate-700 shadow-sm', className)}>
       <CardHeader className="pb-3 pt-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-[#34495e] capitalize">
+          <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 capitalize">
             {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
           </CardTitle>
           <div className="flex items-center gap-1">
@@ -117,9 +117,9 @@ export default function MiniCalendar({
                 onClick={() => onDateSelect && onDateSelect(day)}
                 className={cn(
                   'relative h-8 w-full rounded-md text-xs font-normal transition-all',
-                  'hover:bg-slate-100',
-                  !isCurrentMonth && 'text-slate-300',
-                  isCurrentMonth && 'text-[#34495e]',
+                  'hover:bg-slate-100 dark:hover:bg-surface-3',
+                  !isCurrentMonth && 'text-slate-300 dark:text-slate-600',
+                  isCurrentMonth && 'text-[#34495e] dark:text-slate-200',
                   isSelected &&
                     'bg-gradient-to-br from-[#89bcbe] to-[#6ba9ab] text-white hover:from-[#6ba9ab] hover:to-[#5a979a] font-medium',
                   isTodayDate &&
@@ -147,7 +147,7 @@ export default function MiniCalendar({
           variant="outline"
           size="sm"
           onClick={goToToday}
-          className="w-full mt-3 text-xs border-slate-200 hover:border-[#89bcbe] hover:bg-[#f0f9f9]"
+          className="w-full mt-3 text-xs border-slate-200 dark:border-slate-700 hover:border-[#89bcbe] hover:bg-[#f0f9f9] dark:hover:bg-teal-900/20"
         >
           Hoje
         </Button>

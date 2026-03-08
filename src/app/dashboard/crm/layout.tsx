@@ -27,14 +27,14 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-surface-0">
       {/* Header com Navegação */}
-      <div className="bg-white border-b border-slate-200">
+      <div className="bg-white dark:bg-surface-1 border-b border-slate-200 dark:border-slate-700">
         <div className="px-4 md:px-6 py-3 md:py-4">
           <div className="flex items-center justify-between mb-3 md:mb-4">
             <div>
-              <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">CRM</h1>
-              <p className="text-xs md:text-sm text-slate-600 mt-0.5 md:mt-1">
+              <h1 className="text-xl md:text-2xl font-semibold text-[#34495e] dark:text-slate-200">CRM</h1>
+              <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 mt-0.5 md:mt-1">
                 Gestão de relacionamento com clientes
               </p>
             </div>
@@ -56,7 +56,7 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
                     ${
                       active
                         ? 'bg-gradient-to-r from-[#34495e] to-[#46627f] text-white shadow-sm'
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-surface-3 hover:text-slate-900 dark:hover:text-slate-100'
                     }
                   `}
                 >

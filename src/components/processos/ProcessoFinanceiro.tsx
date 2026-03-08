@@ -238,11 +238,11 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      pago: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-      faturado: 'bg-blue-100 text-blue-700 border-blue-200',
-      pendente: 'bg-amber-100 text-amber-700 border-amber-200',
-      aprovado: 'bg-blue-100 text-blue-700 border-blue-200',
-      cancelado: 'bg-slate-100 text-slate-500 border-slate-200',
+      pago: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-700',
+      faturado: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-700',
+      pendente: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-700',
+      aprovado: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-700',
+      cancelado: 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-surface-2 dark:text-slate-400 dark:border-slate-700',
     }
     return styles[status as keyof typeof styles] || styles.pendente
   }
@@ -328,14 +328,14 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
     <div className="space-y-6">
       {/* Card de Regras do Contrato */}
       {processo.contrato_id && (
-        <Card className="border-[#89bcbe]/40 shadow-sm bg-gradient-to-br from-white to-slate-50">
+        <Card className="border-[#89bcbe]/40 shadow-sm bg-gradient-to-br from-white to-slate-50 dark:from-surface-1 dark:to-surface-0">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#89bcbe] to-[#6ba9ab] flex items-center justify-center">
                   <FileText className="w-4 h-4 text-white" />
                 </div>
-                <CardTitle className="text-base font-medium text-[#34495e]">
+                <CardTitle className="text-base font-medium text-[#34495e] dark:text-slate-200">
                   Regras do Contrato
                 </CardTitle>
               </div>
@@ -350,51 +350,51 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
           </CardHeader>
           <CardContent>
             {loadingContrato ? (
-              <div className="text-center py-4 text-slate-500">
+              <div className="text-center py-4 text-slate-500 dark:text-slate-400">
                 <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
                 <p className="text-sm">Carregando contrato...</p>
               </div>
             ) : contrato ? (
               <div className="space-y-3">
-                <p className="text-sm font-medium text-[#34495e]">{contrato.titulo}</p>
+                <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">{contrato.titulo}</p>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {contrato.valor_fixo && (
-                    <div className="p-2.5 bg-white rounded-lg border border-slate-200">
-                      <p className="text-xs text-slate-500 mb-0.5">Valor Fixo</p>
-                      <p className="text-sm font-semibold text-emerald-600">
+                    <div className="p-2.5 bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Valor Fixo</p>
+                      <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                         {formatCurrency(contrato.valor_fixo)}
                       </p>
                     </div>
                   )}
                   {contrato.valor_hora && (
-                    <div className="p-2.5 bg-white rounded-lg border border-slate-200">
-                      <p className="text-xs text-slate-500 mb-0.5">Valor/Hora</p>
-                      <p className="text-sm font-semibold text-emerald-600">
+                    <div className="p-2.5 bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Valor/Hora</p>
+                      <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                         {formatCurrency(contrato.valor_hora)}
                       </p>
                     </div>
                   )}
                   {contrato.percentual_exito && (
-                    <div className="p-2.5 bg-white rounded-lg border border-slate-200">
-                      <p className="text-xs text-slate-500 mb-0.5">Êxito</p>
-                      <p className="text-sm font-semibold text-emerald-600">
+                    <div className="p-2.5 bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Êxito</p>
+                      <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                         {contrato.percentual_exito}%
                       </p>
                     </div>
                   )}
                   {contrato.valor_por_processo && (
-                    <div className="p-2.5 bg-white rounded-lg border border-slate-200">
-                      <p className="text-xs text-slate-500 mb-0.5">Valor/Processo</p>
-                      <p className="text-sm font-semibold text-emerald-600">
+                    <div className="p-2.5 bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Valor/Processo</p>
+                      <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                         {formatCurrency(contrato.valor_por_processo)}
                       </p>
                     </div>
                   )}
                   {contrato.dia_cobranca && (
-                    <div className="p-2.5 bg-white rounded-lg border border-slate-200">
-                      <p className="text-xs text-slate-500 mb-0.5">Dia Cobrança</p>
-                      <p className="text-sm font-semibold text-[#34495e]">
+                    <div className="p-2.5 bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Dia Cobrança</p>
+                      <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                         Dia {contrato.dia_cobranca}
                       </p>
                     </div>
@@ -403,16 +403,16 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
 
                 {/* Tabela de valores por cargo */}
                 {contrato.forma_cobranca === 'por_cargo' && valoresPorCargo.length > 0 && (
-                  <div className="mt-3 p-3 bg-slate-50 rounded-lg">
+                  <div className="mt-3 p-3 bg-slate-50 dark:bg-surface-0 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <Users className="w-3.5 h-3.5 text-slate-500" />
-                      <p className="text-xs font-medium text-slate-600">Valores por Cargo</p>
+                      <Users className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400">Valores por Cargo</p>
                     </div>
                     <div className="space-y-1.5">
                       {valoresPorCargo.map(vc => (
                         <div key={vc.cargo_id} className="flex items-center justify-between text-xs">
-                          <span className="text-slate-600">{vc.cargo_nome}</span>
-                          <span className="font-medium text-emerald-600">
+                          <span className="text-slate-600 dark:text-slate-400">{vc.cargo_nome}</span>
+                          <span className="font-medium text-emerald-600 dark:text-emerald-400">
                             {formatCurrency(vc.valor_negociado || vc.valor_padrao || 0)}/h
                             {vc.valor_negociado && vc.valor_negociado !== vc.valor_padrao && (
                               <span className="text-slate-400 line-through ml-1">
@@ -427,7 +427,7 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
                 )}
               </div>
             ) : (
-              <p className="text-sm text-slate-500">Contrato não encontrado</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Contrato não encontrado</p>
             )}
           </CardContent>
         </Card>
@@ -439,14 +439,14 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
           - fixo, por_pasta, por_ato = não cobrável (uso interno)
           - misto = configurável */}
       {contrato && (
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
                   <Clock className="w-4 h-4 text-white" />
                 </div>
-                <CardTitle className="text-base font-medium text-[#34495e]">
+                <CardTitle className="text-base font-medium text-[#34495e] dark:text-slate-200">
                   Lançar Horas
                 </CardTitle>
               </div>
@@ -465,7 +465,7 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
           </CardHeader>
           {showTimesheetForm && (
             <CardContent>
-              <div className="space-y-4 p-4 bg-slate-50 rounded-lg">
+              <div className="space-y-4 p-4 bg-slate-50 dark:bg-surface-0 rounded-lg">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <Label className="text-xs">Data</Label>
@@ -534,10 +534,10 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
                 </div>
                 {/* Preview do valor */}
                 {(timesheetData.horas || timesheetData.minutos) && (
-                  <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                  <div className="p-2.5 bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-slate-500">Valor estimado:</span>
-                      <span className="text-sm font-semibold text-emerald-600">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Valor estimado:</span>
+                      <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                         {(() => {
                           const cargoInfo = valoresPorCargo.find(v => v.cargo_id === timesheetData.cargo_id)
                           const valorHora = cargoInfo?.valor_negociado || cargoInfo?.valor_padrao || contrato?.valor_hora || 0
@@ -580,18 +580,18 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
 
       {/* Alertas de Atos Pendentes */}
       {contrato?.forma_cobranca === 'por_ato' && (
-        <Card className="border-amber-200 shadow-sm">
+        <Card className="border-amber-200 dark:border-amber-800 shadow-sm">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
                   <AlertCircle className="w-4 h-4 text-white" />
                 </div>
-                <CardTitle className="text-base font-medium text-[#34495e]">
+                <CardTitle className="text-base font-medium text-[#34495e] dark:text-slate-200">
                   Atos Pendentes de Cobrança
                 </CardTitle>
                 {alertas.length > 0 && (
-                  <Badge className="bg-amber-100 text-amber-700 border-amber-200">
+                  <Badge className="bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-700">
                     {alertas.length}
                   </Badge>
                 )}
@@ -600,12 +600,12 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
           </CardHeader>
           <CardContent>
             {loadingAlertas ? (
-              <div className="text-center py-4 text-slate-500">
+              <div className="text-center py-4 text-slate-500 dark:text-slate-400">
                 <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
                 <p className="text-sm">Carregando alertas...</p>
               </div>
             ) : alertas.length === 0 ? (
-              <div className="text-center py-6 text-slate-500">
+              <div className="text-center py-6 text-slate-500 dark:text-slate-400">
                 <Scale className="w-8 h-8 mx-auto mb-2 opacity-40" />
                 <p className="text-sm">Nenhum ato pendente de cobrança</p>
                 <p className="text-xs mt-1">Atos serão detectados automaticamente a partir das movimentações</p>
@@ -615,22 +615,22 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
                 {alertas.map(alerta => (
                   <div
                     key={alerta.id}
-                    className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200"
+                    className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-500/10 rounded-lg border border-amber-200 dark:border-amber-700"
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[10px] bg-white">
+                        <Badge variant="outline" className="text-[10px] bg-white dark:bg-surface-1">
                           {alerta.ato_codigo}
                         </Badge>
-                        <p className="text-sm font-medium text-[#34495e]">{alerta.ato_nome}</p>
+                        <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">{alerta.ato_nome}</p>
                       </div>
                       <div className="flex items-center gap-3 mt-1">
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
                           <Calendar className="w-3 h-3 inline mr-1" />
                           {new Date(alerta.data_detectado).toLocaleDateString('pt-BR')}
                         </span>
                         {alerta.valor_sugerido && (
-                          <span className="text-xs font-medium text-emerald-600">
+                          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                             Sugerido: {formatCurrency(alerta.valor_sugerido)}
                           </span>
                         )}
@@ -641,7 +641,7 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
                         variant="ghost"
                         size="sm"
                         onClick={() => handleIgnorarAlerta(alerta.id)}
-                        className="text-xs text-slate-500 hover:text-slate-700"
+                        className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
                       >
                         Ignorar
                       </Button>
@@ -664,20 +664,20 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
 
       {/* KPIs Financeiros */}
       <div className="grid grid-cols-2 gap-4">
-        <Card className="border-[#89bcbe]/30 shadow-sm bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5]">
+        <Card className="border-[#89bcbe]/30 shadow-sm bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-900/20 dark:to-teal-900/15">
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-[#46627f] mb-1">Valor da Causa</p>
-            <p className="text-2xl font-bold text-[#34495e]">
+            <p className="text-xs font-medium text-[#46627f] dark:text-slate-400 mb-1">Valor da Causa</p>
+            <p className="text-2xl font-bold text-[#34495e] dark:text-slate-200">
               {processo.valor_causa ? formatCurrency(processo.valor_causa) : 'Não definido'}
             </p>
           </CardContent>
         </Card>
 
         {processo.valor_acordo && (
-          <Card className="border-emerald-200 shadow-sm bg-gradient-to-br from-emerald-50 to-emerald-100">
+          <Card className="border-emerald-200 dark:border-emerald-800 shadow-sm bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-500/10 dark:to-emerald-500/5">
             <CardContent className="p-4">
-              <p className="text-xs font-medium text-emerald-700 mb-1">Valor do Acordo</p>
-              <p className="text-2xl font-bold text-emerald-800">
+              <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 mb-1">Valor do Acordo</p>
+              <p className="text-2xl font-bold text-emerald-800 dark:text-emerald-300">
                 {formatCurrency(processo.valor_acordo)}
               </p>
             </CardContent>
@@ -685,10 +685,10 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
         )}
 
         {processo.valor_condenacao && (
-          <Card className="border-amber-200 shadow-sm bg-gradient-to-br from-amber-50 to-amber-100">
+          <Card className="border-amber-200 dark:border-amber-800 shadow-sm bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-500/10 dark:to-amber-500/5">
             <CardContent className="p-4">
-              <p className="text-xs font-medium text-amber-700 mb-1">Valor da Condenação</p>
-              <p className="text-2xl font-bold text-amber-800">
+              <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">Valor da Condenação</p>
+              <p className="text-2xl font-bold text-amber-800 dark:text-amber-300">
                 {formatCurrency(processo.valor_condenacao)}
               </p>
             </CardContent>
@@ -708,10 +708,10 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
       </div>
 
       {/* Honorários */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-medium text-[#34495e]">
+            <CardTitle className="text-lg font-medium text-[#34495e] dark:text-slate-200">
               Honorários Relacionados
             </CardTitle>
             <Button variant="ghost" size="sm" className="text-xs text-[#89bcbe] hover:text-[#6ba9ab]">
@@ -722,12 +722,12 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
         </CardHeader>
         <CardContent>
           {loadingFinanceiro ? (
-            <div className="text-center py-6 text-slate-500">
+            <div className="text-center py-6 text-slate-500 dark:text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
               <p className="text-sm">Carregando honorários...</p>
             </div>
           ) : honorarios.length === 0 ? (
-            <div className="text-center py-6 text-slate-500">
+            <div className="text-center py-6 text-slate-500 dark:text-slate-400">
               <DollarSign className="w-8 h-8 mx-auto mb-2 opacity-40" />
               <p className="text-sm">Nenhum honorário registrado</p>
               <p className="text-xs mt-1">Honorários serão exibidos aqui após lançamento</p>
@@ -735,24 +735,24 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
+                <thead className="bg-slate-50 dark:bg-surface-0 border-b border-slate-200 dark:border-slate-700">
                   <tr>
-                    <th className="text-left p-3 text-xs font-semibold text-[#46627f]">Data</th>
-                    <th className="text-left p-3 text-xs font-semibold text-[#46627f]">Tipo</th>
-                    <th className="text-left p-3 text-xs font-semibold text-[#46627f]">Descrição</th>
-                    <th className="text-right p-3 text-xs font-semibold text-[#46627f]">Valor</th>
-                    <th className="text-center p-3 text-xs font-semibold text-[#46627f]">Status</th>
+                    <th className="text-left p-3 text-xs font-semibold text-[#46627f] dark:text-slate-400">Data</th>
+                    <th className="text-left p-3 text-xs font-semibold text-[#46627f] dark:text-slate-400">Tipo</th>
+                    <th className="text-left p-3 text-xs font-semibold text-[#46627f] dark:text-slate-400">Descrição</th>
+                    <th className="text-right p-3 text-xs font-semibold text-[#46627f] dark:text-slate-400">Valor</th>
+                    <th className="text-center p-3 text-xs font-semibold text-[#46627f] dark:text-slate-400">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {honorarios.map(h => (
-                    <tr key={h.id} className="border-b border-slate-100">
-                      <td className="p-3 text-xs text-slate-600">
+                    <tr key={h.id} className="border-b border-slate-100 dark:border-slate-800">
+                      <td className="p-3 text-xs text-slate-600 dark:text-slate-400">
                         {formatBrazilDate(new Date(h.created_at))}
                       </td>
-                      <td className="p-3 text-xs text-slate-600 capitalize">{h.tipo_honorario}</td>
-                      <td className="p-3 text-sm text-slate-700">{h.descricao}</td>
-                      <td className="p-3 text-sm text-right font-semibold text-[#34495e]">
+                      <td className="p-3 text-xs text-slate-600 dark:text-slate-400 capitalize">{h.tipo_honorario}</td>
+                      <td className="p-3 text-sm text-slate-700 dark:text-slate-300">{h.descricao}</td>
+                      <td className="p-3 text-sm text-right font-semibold text-[#34495e] dark:text-slate-200">
                         {formatCurrency(h.valor_total)}
                       </td>
                       <td className="p-3 text-center">
@@ -762,9 +762,9 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
                       </td>
                     </tr>
                   ))}
-                  <tr className="bg-slate-50 font-semibold">
-                    <td colSpan={3} className="p-3 text-sm text-[#34495e]">Total</td>
-                    <td className="p-3 text-sm text-right text-[#34495e]">
+                  <tr className="bg-slate-50 dark:bg-surface-0 font-semibold">
+                    <td colSpan={3} className="p-3 text-sm text-[#34495e] dark:text-slate-200">Total</td>
+                    <td className="p-3 text-sm text-right text-[#34495e] dark:text-slate-200">
                       {formatCurrency(resumo.totalHonorarios)}
                     </td>
                     <td></td>
@@ -777,10 +777,10 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
       </Card>
 
       {/* Despesas */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-medium text-[#34495e]">
+            <CardTitle className="text-lg font-medium text-[#34495e] dark:text-slate-200">
               Despesas do Processo
             </CardTitle>
             <Button variant="outline" size="sm" className="text-xs">
@@ -791,12 +791,12 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
         </CardHeader>
         <CardContent>
           {loadingFinanceiro ? (
-            <div className="text-center py-6 text-slate-500">
+            <div className="text-center py-6 text-slate-500 dark:text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
               <p className="text-sm">Carregando despesas...</p>
             </div>
           ) : despesas.length === 0 ? (
-            <div className="text-center py-6 text-slate-500">
+            <div className="text-center py-6 text-slate-500 dark:text-slate-400">
               <Receipt className="w-8 h-8 mx-auto mb-2 opacity-40" />
               <p className="text-sm">Nenhuma despesa registrada</p>
               <p className="text-xs mt-1">Despesas serão exibidas aqui após lançamento</p>
@@ -804,26 +804,26 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
           ) : (
             <div className="space-y-2">
               {despesas.map(d => (
-                <div key={d.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div key={d.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-surface-0 rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-[#34495e]">{d.descricao}</p>
+                      <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">{d.descricao}</p>
                       {d.reembolsavel && (
-                        <Badge variant="outline" className="text-[9px] bg-amber-50 text-amber-700 border-amber-200">
+                        <Badge variant="outline" className="text-[9px] bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-700">
                           Reembolsável
                         </Badge>
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <p className="text-xs text-slate-500">{d.categoria}</p>
-                      <span className="text-slate-300">•</span>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{d.categoria}</p>
+                      <span className="text-slate-300 dark:text-slate-600">•</span>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         {formatBrazilDate(new Date(d.data_vencimento))}
                       </p>
                       {d.status === 'pago' && (
                         <>
-                          <span className="text-slate-300">•</span>
-                          <span className="flex items-center text-xs text-emerald-600">
+                          <span className="text-slate-300 dark:text-slate-600">•</span>
+                          <span className="flex items-center text-xs text-emerald-600 dark:text-emerald-400">
                             <CheckCircle className="w-3 h-3 mr-0.5" />
                             Pago
                           </span>
@@ -831,21 +831,21 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
                       )}
                     </div>
                   </div>
-                  <p className={`text-sm font-semibold ${d.status === 'pago' ? 'text-slate-500' : 'text-red-600'}`}>
+                  <p className={`text-sm font-semibold ${d.status === 'pago' ? 'text-slate-500 dark:text-slate-400' : 'text-red-600 dark:text-red-400'}`}>
                     {formatCurrency(d.valor)}
                   </p>
                 </div>
               ))}
-              <div className="flex items-center justify-between p-3 bg-slate-100 rounded-lg font-semibold">
+              <div className="flex items-center justify-between p-3 bg-slate-100 dark:bg-surface-2 rounded-lg font-semibold">
                 <div>
-                  <p className="text-sm text-[#34495e]">Total de Despesas</p>
+                  <p className="text-sm text-[#34495e] dark:text-slate-200">Total de Despesas</p>
                   {resumo.totalDespesasReembolsaveis > 0 && (
-                    <p className="text-xs text-amber-600 font-normal">
+                    <p className="text-xs text-amber-600 dark:text-amber-400 font-normal">
                       {formatCurrency(resumo.totalDespesasReembolsaveis)} reembolsáveis pendentes
                     </p>
                   )}
                 </div>
-                <p className="text-sm text-red-700">{formatCurrency(resumo.totalDespesas)}</p>
+                <p className="text-sm text-red-700 dark:text-red-400">{formatCurrency(resumo.totalDespesas)}</p>
               </div>
             </div>
           )}

@@ -747,7 +747,7 @@ export default function ProcessoWizard({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-[#34495e]">
+          <DialogTitle className="text-xl font-semibold text-[#34495e] dark:text-slate-200">
             {isEditMode ? 'Editar Processo' : 'Novo Processo'}
           </DialogTitle>
         </DialogHeader>
@@ -760,10 +760,10 @@ export default function ProcessoWizard({
                 <div
                   className={`w-6 h-6 rounded-full flex items-center justify-center font-medium text-xs transition-all ${
                     currentStep > step.number
-                      ? 'bg-emerald-500 text-white'
+                      ? 'bg-emerald-50 dark:bg-emerald-500/10 text-white'
                       : currentStep === step.number
                       ? 'bg-[#34495e] text-white'
-                      : 'bg-slate-200 text-slate-500'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
                   }`}
                 >
                   {currentStep > step.number ? (
@@ -774,7 +774,7 @@ export default function ProcessoWizard({
                 </div>
                 <span
                   className={`text-[11px] font-medium ${
-                    currentStep >= step.number ? 'text-[#34495e]' : 'text-slate-400'
+                    currentStep >= step.number ? 'text-[#34495e] dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'
                   }`}
                 >
                   {step.title}
@@ -783,7 +783,7 @@ export default function ProcessoWizard({
               {index < steps.length - 1 && (
                 <div
                   className={`w-8 h-px mx-2 ${
-                    currentStep > step.number ? 'bg-emerald-500' : 'bg-slate-200'
+                    currentStep > step.number ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-slate-200 dark:bg-slate-700'
                   }`}
                 />
               )}
@@ -998,11 +998,11 @@ export default function ProcessoWizard({
 
                   {/* Cliente selecionado */}
                   {formData.cliente_id ? (
-                    <div className="relative bg-white border border-slate-200 rounded-lg p-3 pr-8 hover:border-slate-300 transition-colors mt-1">
-                      <div className="text-sm font-semibold text-[#34495e]">
+                    <div className="relative bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg p-3 pr-8 hover:border-slate-300 dark:hover:border-slate-600 transition-colors mt-1">
+                      <div className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                         {clientes.find(c => c.id === formData.cliente_id)?.nome_completo || 'Cliente selecionado'}
                       </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                         {clientes.find(c => c.id === formData.cliente_id)?.tipo_pessoa === 'juridica' ? 'Pessoa Juridica' : 'Pessoa Fisica'}
                       </div>
                       <button
@@ -1011,7 +1011,7 @@ export default function ProcessoWizard({
                           handleClienteChange('')
                           setClienteSearch('')
                         }}
-                        className="absolute top-3 right-3 w-4 h-4 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors"
+                        className="absolute top-3 right-3 w-4 h-4 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                         title="Remover cliente"
                       >
                         <X className="w-4 h-4" />
@@ -1021,7 +1021,7 @@ export default function ProcessoWizard({
                     <div className="mt-1">
                       {/* Input de busca */}
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                         <Input
                           value={clienteSearch}
                           onChange={(e) => setClienteSearch(e.target.value)}
@@ -1036,7 +1036,7 @@ export default function ProcessoWizard({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="w-full justify-start text-xs h-8 text-[#34495e] hover:bg-slate-100 mt-1.5"
+                        className="w-full justify-start text-xs h-8 text-[#34495e] dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-surface-2 mt-1.5"
                         onClick={() => setPessoaModalOpen(true)}
                       >
                         <Plus className="w-3.5 h-3.5 mr-2" />
@@ -1045,22 +1045,22 @@ export default function ProcessoWizard({
 
                       {/* Lista de resultados - so aparece a partir de 3 letras */}
                       {clienteSearch.length >= 3 && (
-                        <div className="mt-2 bg-white border border-slate-200 rounded-lg shadow-sm max-h-64 overflow-y-auto">
+                        <div className="mt-2 bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm max-h-64 overflow-y-auto">
                           {loadingClientes ? (
-                            <div className="flex items-center justify-center gap-2 p-5 text-sm text-slate-400">
+                            <div className="flex items-center justify-center gap-2 p-5 text-sm text-slate-400 dark:text-slate-500">
                               <Loader2 className="w-4 h-4 animate-spin" />
                               <span>Buscando clientes...</span>
                             </div>
                           ) : clientes.length === 0 ? (
                             <div className="p-5 text-center">
-                              <Search className="w-5 h-5 text-slate-300 mx-auto mb-1.5" />
-                              <p className="text-sm text-slate-400">Nenhum cliente encontrado</p>
-                              <p className="text-[11px] text-slate-300 mt-1">Tente outro termo ou crie um novo cliente</p>
+                              <Search className="w-5 h-5 text-slate-300 dark:text-slate-600 mx-auto mb-1.5" />
+                              <p className="text-sm text-slate-400 dark:text-slate-500">Nenhum cliente encontrado</p>
+                              <p className="text-[11px] text-slate-300 dark:text-slate-600 mt-1">Tente outro termo ou crie um novo cliente</p>
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="mt-3 text-xs h-8 text-[#34495e]"
+                                className="mt-3 text-xs h-8 text-[#34495e] dark:text-slate-200"
                                 onClick={() => setPessoaModalOpen(true)}
                               >
                                 <Plus className="w-3.5 h-3.5 mr-1.5" />
@@ -1069,7 +1069,7 @@ export default function ProcessoWizard({
                             </div>
                           ) : (
                             <>
-                              <div className="px-3 py-1.5 text-[10px] font-medium text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                              <div className="px-3 py-1.5 text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
                                 {clientes.length} resultado{clientes.length !== 1 ? 's' : ''}
                               </div>
                               {clientes.map((cliente) => (
@@ -1080,12 +1080,12 @@ export default function ProcessoWizard({
                                     handleClienteChange(cliente.id)
                                     setClienteSearch('')
                                   }}
-                                  className="w-full text-left px-3 py-2.5 hover:bg-[#89bcbe]/8 transition-colors border-b border-slate-100 last:border-0"
+                                  className="w-full text-left px-3 py-2.5 hover:bg-[#89bcbe]/8 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-0"
                                 >
-                                  <div className="text-sm font-medium text-[#34495e]">
+                                  <div className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                                     {cliente.nome_completo}
                                   </div>
-                                  <div className="text-[10px] text-slate-400 mt-0.5">
+                                  <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
                                     {cliente.tipo_pessoa === 'juridica' ? 'Pessoa Juridica' : 'Pessoa Fisica'}
                                   </div>
                                 </button>
@@ -1120,7 +1120,7 @@ export default function ProcessoWizard({
                     value={formData.parte_contraria}
                     onChange={(e) => updateField('parte_contraria', e.target.value)}
                   />
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Para casos com litisconsórcio, você poderá adicionar mais partes após criar o processo
                   </p>
                 </div>
@@ -1177,12 +1177,12 @@ export default function ProcessoWizard({
                     </SelectTrigger>
                     <SelectContent>
                       {membros.length === 0 && !loadingMembros && (
-                        <div className="px-2 py-1.5 text-sm text-slate-500">Nenhum membro encontrado</div>
+                        <div className="px-2 py-1.5 text-sm text-slate-500 dark:text-slate-400">Nenhum membro encontrado</div>
                       )}
                       {membros.map((membro) => (
                         <SelectItem key={membro.id} value={membro.id}>
                           {membro.nome_completo}
-                          <span className="ml-2 text-xs text-slate-400">
+                          <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">
                             ({membro.role === 'owner' ? 'Proprietário' :
                               membro.role === 'admin' ? 'Admin' :
                               membro.role === 'advogado' ? 'Advogado' :
@@ -1195,16 +1195,16 @@ export default function ProcessoWizard({
                 </div>
 
                 {/* Contrato de Honorários */}
-                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
+                <div className="p-4 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-200 dark:border-slate-700 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-[#34495e]" />
-                      <span className="text-sm font-medium text-[#34495e]">Contrato de Honorários</span>
+                      <FileText className="w-4 h-4 text-[#34495e] dark:text-slate-200" />
+                      <span className="text-sm font-medium text-[#34495e] dark:text-slate-200">Contrato de Honorários</span>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 text-xs text-[#34495e] hover:bg-slate-200"
+                      className="h-7 text-xs text-[#34495e] dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700"
                       onClick={() => setContratoModalOpen(true)}
                       disabled={!formData.cliente_id}
                     >
@@ -1214,14 +1214,14 @@ export default function ProcessoWizard({
                   </div>
 
                   {!formData.cliente_id ? (
-                    <p className="text-xs text-slate-500">Selecione um cliente primeiro (Etapa 2)</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Selecione um cliente primeiro (Etapa 2)</p>
                   ) : loadingContratos ? (
-                    <div className="flex items-center gap-2 text-slate-500">
+                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       <span className="text-sm">Carregando contratos...</span>
                     </div>
                   ) : contratos.length === 0 ? (
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
                       <p>Nenhum contrato encontrado para este cliente.</p>
                       <p className="mt-1">Crie um novo contrato ou prossiga sem vínculo.</p>
                     </div>
@@ -1246,15 +1246,15 @@ export default function ProcessoWizard({
                       {contratoSelecionado && (
                         <div className="flex flex-wrap items-center gap-1.5 px-1 mt-1">
                           {contratoSelecionado.formas_disponiveis.map((f) => (
-                            <Badge key={f.forma_cobranca} variant="outline" className="text-[10px] h-5 font-normal text-slate-600">
+                            <Badge key={f.forma_cobranca} variant="outline" className="text-[10px] h-5 font-normal text-slate-600 dark:text-slate-400">
                               {FORMA_COBRANCA_LABELS[f.forma_cobranca] || f.forma_cobranca}
                             </Badge>
                           ))}
                           {contratoSelecionado.valor_fixo && (
-                            <span className="text-[10px] text-slate-400 ml-1">{formatarValor(contratoSelecionado.valor_fixo)}</span>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-1">{formatarValor(contratoSelecionado.valor_fixo)}</span>
                           )}
                           {contratoSelecionado.valor_hora && (
-                            <span className="text-[10px] text-slate-400 ml-1">{formatarValor(contratoSelecionado.valor_hora)}/h</span>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-1">{formatarValor(contratoSelecionado.valor_hora)}/h</span>
                           )}
                         </div>
                       )}
@@ -1272,25 +1272,25 @@ export default function ProcessoWizard({
                     <SelectContent>
                       <SelectItem value="remota">
                         <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          <span className="w-2 h-2 rounded-full bg-emerald-50 dark:bg-emerald-500/10" />
                           Remota
                         </div>
                       </SelectItem>
                       <SelectItem value="possivel">
                         <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-amber-500" />
+                          <span className="w-2 h-2 rounded-full bg-amber-50 dark:bg-amber-500/10" />
                           Possível
                         </div>
                       </SelectItem>
                       <SelectItem value="provavel">
                         <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-red-500" />
+                          <span className="w-2 h-2 rounded-full bg-red-50 dark:bg-red-500/10" />
                           Provável
                         </div>
                       </SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Classificação do risco de perda para fins de provisão contábil
                   </p>
                 </div>
@@ -1313,7 +1313,7 @@ export default function ProcessoWizard({
           {currentStep === 5 && (
             <>
               <div className="space-y-2">
-                <p className="text-xs text-[#46627f] font-medium mb-3">
+                <p className="text-xs text-[#46627f] dark:text-slate-400 font-medium mb-3">
                   {isEditMode ? 'Confira os dados antes de salvar as alterações' : 'Confira os dados antes de criar o processo'}
                 </p>
 
@@ -1321,59 +1321,59 @@ export default function ProcessoWizard({
                 <div className="grid grid-cols-2 gap-2">
                   {/* Dados Básicos */}
                   <div className="border rounded p-2 space-y-1">
-                    <h4 className="text-[10px] font-semibold text-slate-400 uppercase">Dados Básicos</h4>
+                    <h4 className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase">Dados Básicos</h4>
                     <div className="text-xs space-y-0.5">
                       {formData.numero_cnj && (
-                        <p><span className="text-slate-500">CNJ:</span> <span className="font-medium">{formData.numero_cnj}</span></p>
+                        <p><span className="text-slate-500 dark:text-slate-400">CNJ:</span> <span className="font-medium">{formData.numero_cnj}</span></p>
                       )}
-                      <p><span className="text-slate-500">Área:</span> <span className="font-medium">{AREA_JURIDICA_LABELS[formData.area as keyof typeof AREA_JURIDICA_LABELS] || formData.area || '-'}</span></p>
-                      <p><span className="text-slate-500">Fase:</span> <span className="font-medium capitalize">{formData.fase}</span></p>
+                      <p><span className="text-slate-500 dark:text-slate-400">Área:</span> <span className="font-medium">{AREA_JURIDICA_LABELS[formData.area as keyof typeof AREA_JURIDICA_LABELS] || formData.area || '-'}</span></p>
+                      <p><span className="text-slate-500 dark:text-slate-400">Fase:</span> <span className="font-medium capitalize">{formData.fase}</span></p>
                       {valorCausaFormatado && (
-                        <p><span className="text-slate-500">Valor:</span> <span className="font-medium">{valorCausaFormatado}</span></p>
+                        <p><span className="text-slate-500 dark:text-slate-400">Valor:</span> <span className="font-medium">{valorCausaFormatado}</span></p>
                       )}
                     </div>
                   </div>
 
                   {/* Partes */}
                   <div className="border rounded p-2 space-y-1">
-                    <h4 className="text-[10px] font-semibold text-slate-400 uppercase">Partes</h4>
+                    <h4 className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase">Partes</h4>
                     <div className="text-xs space-y-0.5">
-                      <p><span className="text-slate-500">Cliente:</span> <span className="font-medium">{clientes.find(c => c.id === formData.cliente_id)?.nome_completo || '-'}</span></p>
-                      <p><span className="text-slate-500">Polo:</span> <span className="font-medium">{formData.polo_cliente === 'ativo' ? 'Autor' : formData.polo_cliente === 'passivo' ? 'Réu' : 'Terceiro'}</span></p>
+                      <p><span className="text-slate-500 dark:text-slate-400">Cliente:</span> <span className="font-medium">{clientes.find(c => c.id === formData.cliente_id)?.nome_completo || '-'}</span></p>
+                      <p><span className="text-slate-500 dark:text-slate-400">Polo:</span> <span className="font-medium">{formData.polo_cliente === 'ativo' ? 'Autor' : formData.polo_cliente === 'passivo' ? 'Réu' : 'Terceiro'}</span></p>
                       {formData.parte_contraria && (
-                        <p><span className="text-slate-500">Contrária:</span> <span className="font-medium">{formData.parte_contraria}</span></p>
+                        <p><span className="text-slate-500 dark:text-slate-400">Contrária:</span> <span className="font-medium">{formData.parte_contraria}</span></p>
                       )}
                     </div>
                   </div>
 
                   {/* Localização */}
                   <div className="border rounded p-2 space-y-1">
-                    <h4 className="text-[10px] font-semibold text-slate-400 uppercase">Localização</h4>
+                    <h4 className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase">Localização</h4>
                     <div className="text-xs space-y-0.5">
-                      <p><span className="text-slate-500">Tribunal:</span> <span className="font-medium">{formData.tribunal || '-'}</span></p>
+                      <p><span className="text-slate-500 dark:text-slate-400">Tribunal:</span> <span className="font-medium">{formData.tribunal || '-'}</span></p>
                       {formData.comarca && (
-                        <p><span className="text-slate-500">Comarca:</span> <span className="font-medium">{formData.comarca}</span></p>
+                        <p><span className="text-slate-500 dark:text-slate-400">Comarca:</span> <span className="font-medium">{formData.comarca}</span></p>
                       )}
                       {formData.vara && (
-                        <p><span className="text-slate-500">Vara:</span> <span className="font-medium">{formData.vara}</span></p>
+                        <p><span className="text-slate-500 dark:text-slate-400">Vara:</span> <span className="font-medium">{formData.vara}</span></p>
                       )}
                     </div>
                   </div>
 
                   {/* Gestão */}
                   <div className="border rounded p-2 space-y-1">
-                    <h4 className="text-[10px] font-semibold text-slate-400 uppercase">Gestão</h4>
+                    <h4 className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase">Gestão</h4>
                     <div className="text-xs space-y-0.5">
-                      <p><span className="text-slate-500">Responsável:</span> <span className="font-medium">{membros.find(m => m.id === formData.responsavel_id)?.nome_completo || '-'}</span></p>
+                      <p><span className="text-slate-500 dark:text-slate-400">Responsável:</span> <span className="font-medium">{membros.find(m => m.id === formData.responsavel_id)?.nome_completo || '-'}</span></p>
                       {contratoSelecionado && (
-                        <p><span className="text-slate-500">Contrato:</span> <span className="font-medium">{contratoSelecionado.titulo}</span></p>
+                        <p><span className="text-slate-500 dark:text-slate-400">Contrato:</span> <span className="font-medium">{contratoSelecionado.titulo}</span></p>
                       )}
                       {formData.provisao_perda && (
                         <p className="flex items-center gap-1">
-                          <span className="text-slate-500">Risco:</span>
+                          <span className="text-slate-500 dark:text-slate-400">Risco:</span>
                           <span className={`w-1.5 h-1.5 rounded-full ${
-                            formData.provisao_perda === 'remota' ? 'bg-emerald-500' :
-                            formData.provisao_perda === 'possivel' ? 'bg-amber-500' : 'bg-red-500'
+                            formData.provisao_perda === 'remota' ? 'bg-emerald-50 dark:bg-emerald-500/10' :
+                            formData.provisao_perda === 'possivel' ? 'bg-amber-50 dark:bg-amber-500/10' : 'bg-red-50 dark:bg-red-500/10'
                           }`} />
                           <span className="font-medium">{formData.provisao_perda === 'remota' ? 'Remota' : formData.provisao_perda === 'possivel' ? 'Possível' : 'Provável'}</span>
                         </p>
@@ -1385,8 +1385,8 @@ export default function ProcessoWizard({
                 {/* Observações - só se tiver */}
                 {formData.observacoes && (
                   <div className="border rounded p-2 mt-1">
-                    <h4 className="text-[10px] font-semibold text-slate-400 uppercase mb-1">Observações</h4>
-                    <p className="text-xs text-slate-600">{formData.observacoes.substring(0, 150)}{formData.observacoes.length > 150 ? '...' : ''}</p>
+                    <h4 className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase mb-1">Observações</h4>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">{formData.observacoes.substring(0, 150)}{formData.observacoes.length > 150 ? '...' : ''}</p>
                   </div>
                 )}
               </div>
@@ -1396,7 +1396,7 @@ export default function ProcessoWizard({
         </div>
 
         {/* Navigation Buttons */}
-        <div className="flex items-center justify-between pt-6 border-t border-slate-200">
+        <div className="flex items-center justify-between pt-6 border-t border-slate-200 dark:border-slate-700">
           <Button
             type="button"
             variant="outline"
@@ -1407,7 +1407,7 @@ export default function ProcessoWizard({
             Anterior
           </Button>
 
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
             Passo {currentStep} de {totalSteps}
           </div>
 

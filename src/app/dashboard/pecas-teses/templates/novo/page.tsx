@@ -77,7 +77,7 @@ export default function NovoTemplatePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 dark:from-surface-0 dark:via-surface-0 dark:to-surface-0 p-6">
       <div className="max-w-[1800px] mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
@@ -88,8 +88,8 @@ export default function NovoTemplatePage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-[#34495e]">Novo Template</h1>
-          <p className="text-sm text-slate-600 mt-1">
+          <h1 className="text-2xl font-bold text-[#34495e] dark:text-slate-200">Novo Template</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             Crie um novo modelo de peça processual
           </p>
         </div>
@@ -97,9 +97,9 @@ export default function NovoTemplatePage() {
 
       {/* Form */}
       <form onSubmit={handleSubmit}>
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardHeader className="pb-4 pt-6">
-            <CardTitle className="text-base font-semibold text-[#34495e]">
+            <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
               Informações do Template
             </CardTitle>
           </CardHeader>
@@ -115,7 +115,7 @@ export default function NovoTemplatePage() {
                     setFormData({ ...formData, nome: e.target.value })
                   }
                   required
-                  className="border-slate-200"
+                  className="border-slate-200 dark:border-slate-700"
                 />
               </div>
 
@@ -128,7 +128,7 @@ export default function NovoTemplatePage() {
                   }
                   required
                 >
-                  <SelectTrigger className="border-slate-200">
+                  <SelectTrigger className="border-slate-200 dark:border-slate-700">
                     <SelectValue placeholder="Selecione a categoria" />
                   </SelectTrigger>
                   <SelectContent>
@@ -159,7 +159,7 @@ export default function NovoTemplatePage() {
                   }
                   required
                 >
-                  <SelectTrigger className="border-slate-200">
+                  <SelectTrigger className="border-slate-200 dark:border-slate-700">
                     <SelectValue placeholder="Selecione a área" />
                   </SelectTrigger>
                   <SelectContent>
@@ -185,7 +185,7 @@ export default function NovoTemplatePage() {
                     setFormData({ ...formData, tipo_processo: value })
                   }
                 >
-                  <SelectTrigger className="border-slate-200">
+                  <SelectTrigger className="border-slate-200 dark:border-slate-700">
                     <SelectValue placeholder="Opcional" />
                   </SelectTrigger>
                   <SelectContent>
@@ -215,9 +215,9 @@ em face de {{nome_reu}}, {{qualificacao_reu}}, pelos fatos e fundamentos jurídi
                 onChange={(e) =>
                   setFormData({ ...formData, conteudo_template: e.target.value })
                 }
-                className="min-h-[400px] font-mono text-sm border-slate-200"
+                className="min-h-[400px] font-mono text-sm border-slate-200 dark:border-slate-700"
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Use {'{{'} e {'}}'}  para criar variáveis dinâmicas. Ex: {'{'}
                 {'{'}nome_cliente{'}'}
                 {'}'}
@@ -235,7 +235,7 @@ em face de {{nome_reu}}, {{qualificacao_reu}}, pelos fatos e fundamentos jurídi
           <Button
             type="submit"
             disabled={loading}
-            className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white hover:opacity-90"
+            className="bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] text-white hover:opacity-90"
           >
             <Save className="w-4 h-4 mr-2" />
             {loading ? 'Salvando...' : 'Salvar Template'}

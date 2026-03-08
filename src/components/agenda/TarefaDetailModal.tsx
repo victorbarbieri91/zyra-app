@@ -107,10 +107,10 @@ function DateRescheduleButton({
           className={cn(
             "inline-flex items-center gap-1 text-xs transition-all h-5",
             "cursor-pointer rounded-sm px-1.5",
-            "bg-slate-50 hover:bg-slate-100 border border-slate-200",
-            isOverdue && "text-red-600 bg-red-50 border-red-200 hover:bg-red-100",
-            isUrgent && !isOverdue && "text-amber-600 bg-amber-50 border-amber-200 hover:bg-amber-100",
-            !isOverdue && !isUrgent && "text-slate-700 hover:text-slate-900"
+            "bg-slate-50 dark:bg-surface-0 hover:bg-slate-100 dark:hover:bg-surface-3 border border-slate-200 dark:border-slate-700",
+            isOverdue && "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500/20",
+            isUrgent && !isOverdue && "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 hover:bg-amber-100 dark:hover:bg-amber-500/20",
+            !isOverdue && !isUrgent && "text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100"
           )}
           disabled={updatingDate}
         >
@@ -121,7 +121,7 @@ function DateRescheduleButton({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
-        <div className="px-2 py-1.5 text-[10px] font-medium text-slate-500">
+        <div className="px-2 py-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400">
           Reagendar para:
         </div>
         <DropdownMenuItem onClick={() => handleQuickOption('today')} className="text-xs">
@@ -398,10 +398,10 @@ export default function TarefaDetailModal({
 
   const getPrioridadeColor = (prioridade: string) => {
     const colors: Record<string, string> = {
-      baixa: 'text-slate-500',
-      normal: 'text-blue-600',
-      alta: 'text-amber-600',
-      urgente: 'text-red-600',
+      baixa: 'text-slate-500 dark:text-slate-400',
+      normal: 'text-blue-600 dark:text-blue-400',
+      alta: 'text-amber-600 dark:text-amber-400',
+      urgente: 'text-red-600 dark:text-red-400',
     }
     return colors[prioridade] || 'text-slate-600'
   }
@@ -557,18 +557,18 @@ export default function TarefaDetailModal({
         }}
       >
         <DialogTitle className="sr-only">Detalhes da Tarefa</DialogTitle>
-        <div className="bg-white rounded-lg flex flex-col max-h-[85vh]">
+        <div className="bg-white dark:bg-surface-1 rounded-lg flex flex-col max-h-[85vh]">
 
           {/* Header Minimalista */}
-          <div className="p-6 pb-4 border-b border-slate-100 flex-shrink-0">
+          <div className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
             <div>
-              <h2 className="text-lg font-semibold text-slate-900 mb-1">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">
                 {tarefa.titulo}
               </h2>
-              <div className="flex items-center gap-3 text-[10px] text-slate-500">
+              <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
                 <span>{getTipoLabel(tarefa.tipo)}</span>
                 {isFixa && (
-                  <span className="inline-flex items-center gap-1 bg-teal-50 text-teal-700 border border-teal-200 rounded px-1.5 py-0.5 text-[10px] font-medium">
+                  <span className="inline-flex items-center gap-1 bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30 rounded px-1.5 py-0.5 text-[10px] font-medium">
                     Aparece todo dia
                   </span>
                 )}
@@ -590,15 +590,15 @@ export default function TarefaDetailModal({
 
             {/* DESCRIÇÃO */}
             <div>
-              <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-2">
+              <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
                 Descrição
               </div>
               {tarefa.descricao ? (
-                <p className="text-xs text-slate-600 leading-relaxed max-h-32 overflow-y-auto">
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-h-32 overflow-y-auto">
                   {tarefa.descricao}
                 </p>
               ) : (
-                <p className="text-xs text-slate-400 italic">
+                <p className="text-xs text-slate-400 dark:text-slate-500 italic">
                   Sem descrição
                 </p>
               )}
@@ -607,26 +607,26 @@ export default function TarefaDetailModal({
             {/* PROCESSO VINCULADO */}
             {tarefa.processo_id && (
               <div>
-                <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1.5">
+                <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5">
                   Processo Vinculado
                 </div>
                 {processoInfo ? (
-                  <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-md">
+                  <div className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-surface-0 rounded-md">
                     <button
                       onClick={() => onProcessoClick?.(processoInfo.id)}
-                      className="flex-1 text-left hover:bg-slate-100 rounded transition-colors p-1 -m-1 group"
+                      className="flex-1 text-left hover:bg-slate-100 dark:hover:bg-surface-3 rounded transition-colors p-1 -m-1 group"
                     >
-                      <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
+                      <div className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
                         <span>Pasta {processoInfo.numero_pasta || 'S/N'}</span>
                         {processoInfo.status && (
-                          <span className="text-[10px] text-slate-500">• {processoInfo.status}</span>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">• {processoInfo.status}</span>
                         )}
                         <svg className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-400 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
                         </svg>
                       </div>
                       {processoInfo.numero_cnj && (
-                        <div className="text-[10px] text-slate-500 mt-0.5 font-mono">
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
                           {processoInfo.numero_cnj}
                         </div>
                       )}
@@ -643,7 +643,7 @@ export default function TarefaDetailModal({
                           navigator.clipboard.writeText(processoInfo.numero_cnj!)
                           toast.success('Número copiado!')
                         }}
-                        className="p-1.5 rounded hover:bg-slate-200 text-slate-400 hover:text-[#89bcbe] transition-colors flex-shrink-0"
+                        className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-surface-3 text-slate-400 dark:text-slate-500 hover:text-[#89bcbe] transition-colors flex-shrink-0"
                         title="Copiar número do processo"
                       >
                         <Copy className="w-3.5 h-3.5" />
@@ -651,7 +651,7 @@ export default function TarefaDetailModal({
                     )}
                   </div>
                 ) : (
-                  <div className="p-2 bg-slate-50 rounded-md text-xs text-slate-400 italic">
+                  <div className="p-2 bg-slate-50 dark:bg-surface-0 rounded-md text-xs text-slate-400 dark:text-slate-500 italic">
                     {loadingProcesso ? 'Carregando...' : 'Erro ao carregar processo'}
                   </div>
                 )}
@@ -661,20 +661,20 @@ export default function TarefaDetailModal({
             {/* CONSULTIVO VINCULADO */}
             {consultivoInfo && (
               <div>
-                <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-2">
+                <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
                   Consultivo Vinculado
                 </div>
                 <button
                   onClick={() => onConsultivoClick?.(consultivoInfo.id)}
-                  className="w-full text-left p-3 bg-slate-50 rounded-md hover:bg-slate-100 transition-colors group"
+                  className="w-full text-left p-3 bg-slate-50 dark:bg-surface-0 rounded-md hover:bg-slate-100 dark:hover:bg-surface-3 transition-colors group"
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-xs font-medium text-slate-700">
+                      <div className="text-xs font-medium text-slate-700 dark:text-slate-300">
                         {consultivoInfo.titulo}
                       </div>
                       {consultivoInfo.status && (
-                        <div className="text-[10px] text-slate-500 mt-1">
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
                           Status: {consultivoInfo.status}
                         </div>
                       )}
@@ -691,13 +691,13 @@ export default function TarefaDetailModal({
             <div className="flex flex-wrap gap-x-6 gap-y-3">
               {/* Data de Execução */}
               <div className="min-w-[140px]">
-                <div className="text-[10px] text-slate-500 mb-1 h-4">
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 h-4">
                   <CalendarDays className="w-3 h-3 text-slate-400 inline mr-1.5 align-text-bottom" />
                   {isFixa ? 'Frequência' : 'Data de Execução'}
                 </div>
                 <div className="h-5">
                   {isFixa ? (
-                    <span className="text-xs text-teal-600 font-medium">Todo dia (tarefa fixa)</span>
+                    <span className="text-xs text-teal-600 dark:text-teal-400 font-medium">Todo dia (tarefa fixa)</span>
                   ) : (
                     <DateRescheduleButton
                       field="data_inicio"
@@ -716,7 +716,7 @@ export default function TarefaDetailModal({
               {/* Prazo Fatal - Para todas as tarefas com prazo_data_limite (nunca para fixas) */}
               {!isFixa && localPrazoDataLimite && (
                 <div className="min-w-[140px]">
-                  <div className="text-[10px] text-red-600 font-medium mb-1 h-4">
+                  <div className="text-[10px] text-red-600 dark:text-red-400 font-medium mb-1 h-4">
                     <AlertCircle className="w-3 h-3 text-red-500 inline mr-1.5 align-text-bottom" />
                     Prazo Fatal
                     <span className="text-[10px] text-slate-400 font-normal ml-1">
@@ -746,29 +746,29 @@ export default function TarefaDetailModal({
 
               {/* Responsáveis */}
               <div className="min-w-[120px]">
-                <div className="text-[10px] text-slate-500 mb-1 h-4">
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 h-4">
                   {responsaveis.length > 1 ? 'Responsáveis' : 'Responsável'}
                 </div>
                 <div className="min-h-[20px] leading-5">
                   {loadingResponsaveis ? (
-                    <span className="text-xs text-slate-400 italic">Carregando...</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500 italic">Carregando...</span>
                   ) : responsaveis.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {responsaveis.map((resp, idx) => (
                         <span
                           key={resp.id}
-                          className="text-xs text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded"
+                          className="text-xs text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-surface-2 px-1.5 py-0.5 rounded"
                         >
                           {resp.nome_completo}
                         </span>
                       ))}
                     </div>
                   ) : tarefa.responsavel_nome ? (
-                    <span className="text-xs text-slate-700">
+                    <span className="text-xs text-slate-700 dark:text-slate-300">
                       {tarefa.responsavel_nome}
                     </span>
                   ) : (
-                    <span className="text-xs text-slate-400 italic">
+                    <span className="text-xs text-slate-400 dark:text-slate-500 italic">
                       Não atribuído
                     </span>
                   )}
@@ -777,7 +777,7 @@ export default function TarefaDetailModal({
 
               {/* Status */}
               <div className="min-w-[100px]">
-                <div className="text-[10px] text-slate-500 mb-1 h-4">
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 h-4">
                   Status
                 </div>
                 <div className="h-5 flex items-center gap-2">
@@ -789,7 +789,7 @@ export default function TarefaDetailModal({
                     tarefa.status === 'cancelada' ? "bg-slate-400" :
                     "bg-amber-500"
                   )} />
-                  <span className="text-xs text-slate-700 capitalize">
+                  <span className="text-xs text-slate-700 dark:text-slate-300 capitalize">
                     {tarefa.status?.replace('_', ' ') || 'Pendente'}
                   </span>
                 </div>
@@ -798,11 +798,11 @@ export default function TarefaDetailModal({
               {/* Criado por */}
               {tarefa.criado_por_nome && (
                 <div className="min-w-[120px]">
-                  <div className="text-[10px] text-slate-500 mb-1 h-4">
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 h-4">
                     Criado por
                   </div>
                   <div className="h-5 flex items-center">
-                    <span className="text-xs text-slate-600">
+                    <span className="text-xs text-slate-600 dark:text-slate-400">
                       {tarefa.criado_por_nome}
                     </span>
                   </div>
@@ -812,11 +812,11 @@ export default function TarefaDetailModal({
               {/* Data de Conclusão */}
               {tarefa.data_conclusao && (
                 <div className="min-w-[140px]">
-                  <div className="text-[10px] text-slate-500 mb-1 h-4">
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 h-4">
                     Concluído em
                   </div>
                   <div className="h-5 flex items-center">
-                    <span className="text-xs text-emerald-600">
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400">
                       {formatBrazilDate(parseDBDate(tarefa.data_conclusao))}
                     </span>
                   </div>
@@ -827,14 +827,14 @@ export default function TarefaDetailModal({
             {/* RECORRÊNCIA */}
             {recorrenciaInfo && (
               <div>
-                <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-2">
+                <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
                   Recorrência
                 </div>
-                <div className="text-xs text-slate-600">
+                <div className="text-xs text-slate-600 dark:text-slate-400">
                   {recorrenciaInfo.regra_frequencia} - A cada {recorrenciaInfo.regra_intervalo}{' '}
                   {recorrenciaInfo.regra_intervalo === 1 ? 'vez' : 'vezes'}
                   {recorrenciaInfo.data_fim && (
-                    <span className="text-[10px] text-slate-500 block mt-1">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-1">
                       Até {formatBrazilDate(parseDBDate(recorrenciaInfo.data_fim))}
                     </span>
                   )}
@@ -845,10 +845,10 @@ export default function TarefaDetailModal({
             {/* OBSERVAÇÕES */}
             {tarefa.observacoes && (
               <div>
-                <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-2">
+                <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
                   Observações
                 </div>
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                   {tarefa.observacoes}
                 </p>
               </div>
@@ -857,7 +857,7 @@ export default function TarefaDetailModal({
           </div>
 
           {/* Footer com Ações */}
-          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex-shrink-0">
+          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-surface-0/50 flex-shrink-0">
             <div className="flex items-center justify-between flex-wrap gap-y-2">
               {/* Grupo esquerdo: ações primárias + timer */}
               <div className="flex items-center gap-2">
@@ -882,7 +882,7 @@ export default function TarefaDetailModal({
                       setStatusOtimista('pendente')
                       onReabrir?.()
                     }}
-                    className="h-8 text-xs border-slate-200"
+                    className="h-8 text-xs border-slate-200 dark:border-slate-700"
                   >
                     <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
                     Reabrir
@@ -900,7 +900,7 @@ export default function TarefaDetailModal({
                       "h-8 text-xs",
                       isFixa
                         ? "bg-[#89bcbe] hover:bg-[#6ba9ab] text-white"
-                        : "border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
+                        : "border-[#89bcbe] text-[#34495e] dark:text-slate-200 hover:bg-[#f0f9f9] dark:hover:bg-teal-900/20"
                     )}
                   >
                     <Timer className="w-3.5 h-3.5 mr-1.5" />
@@ -914,11 +914,11 @@ export default function TarefaDetailModal({
                     size="sm"
                     variant="outline"
                     onClick={() => setTimesheetListOpen(true)}
-                    className="h-8 text-xs border-slate-200 text-[#34495e] hover:bg-slate-50"
+                    className="h-8 text-xs border-slate-200 dark:border-slate-700 text-[#34495e] dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-surface-2"
                   >
                     <Clock className="w-3.5 h-3.5 mr-1.5" />
                     Ver Horas
-                    <span className="ml-1 px-1.5 py-0.5 rounded-full bg-slate-100 text-[9px] font-semibold text-slate-500">
+                    <span className="ml-1 px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-surface-2 text-[9px] font-semibold text-slate-500 dark:text-slate-400">
                       {timesheetEntries.length}
                     </span>
                   </Button>
@@ -933,7 +933,7 @@ export default function TarefaDetailModal({
                     "h-8 text-xs min-w-[120px]",
                     timerExistente?.status === 'rodando'
                       ? "bg-amber-500 hover:bg-amber-600 text-white"
-                      : "border-[#89bcbe] text-[#34495e] hover:bg-[#f0f9f9]"
+                      : "border-[#89bcbe] text-[#34495e] dark:text-slate-200 hover:bg-[#f0f9f9] dark:hover:bg-teal-900/20"
                   )}
                 >
                   {timerExistente?.status === 'rodando' ? (
@@ -952,7 +952,7 @@ export default function TarefaDetailModal({
                   size="sm"
                   variant="ghost"
                   onClick={onEdit}
-                  className="h-8 text-xs text-slate-600 hover:text-slate-900"
+                  className="h-8 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                 >
                   <Edit2 className="w-3.5 h-3.5 mr-1.5" />
                   Editar
@@ -977,7 +977,7 @@ export default function TarefaDetailModal({
     {/* Calendar Dialog separado para Data Personalizada */}
     <Dialog open={calendarField !== null} onOpenChange={(open) => !open && setCalendarField(null)}>
       <DialogContent className="max-w-fit p-4">
-        <DialogTitle className="text-sm font-medium text-slate-700 mb-2">
+        <DialogTitle className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
           Selecione a nova data
         </DialogTitle>
         <CalendarComponent
@@ -1005,18 +1005,18 @@ export default function TarefaDetailModal({
       <AlertDialogContent className="max-w-md p-0 overflow-hidden border-0 z-[100]">
         <AlertDialogTitle className="sr-only">Confirmar Alteração do Prazo Fatal</AlertDialogTitle>
         <AlertDialogDescription className="sr-only">Confirme a alteração da data limite do prazo fatal</AlertDialogDescription>
-        <div className="bg-white rounded-lg">
+        <div className="bg-white dark:bg-surface-1 rounded-lg">
           {/* Header */}
-          <div className="px-6 pt-5 pb-4 border-b border-slate-100">
+          <div className="px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#f0f9f9] flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-[#f0f9f9] dark:bg-teal-900/20 flex items-center justify-center">
                 <Calendar className="w-5 h-5 text-[#89bcbe]" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-[#34495e]">
+                <h2 className="text-base font-semibold text-[#34495e] dark:text-slate-200">
                   Alterar Prazo Fatal?
                 </h2>
-                <p className="text-xs text-[#46627f] mt-0.5">
+                <p className="text-xs text-[#46627f] dark:text-slate-400 mt-0.5">
                   Confirme a alteração da data limite
                 </p>
               </div>
@@ -1024,11 +1024,11 @@ export default function TarefaDetailModal({
           </div>
 
           <div className="p-6">
-            <p className="text-sm text-[#46627f] mb-4">
-              Você está prestes a alterar o <strong className="text-[#34495e]">prazo fatal</strong> desta tarefa para:
+            <p className="text-sm text-[#46627f] dark:text-slate-400 mb-4">
+              Você está prestes a alterar o <strong className="text-[#34495e] dark:text-slate-200">prazo fatal</strong> desta tarefa para:
             </p>
-            <div className="p-3 bg-[#f0f9f9] rounded-lg border border-[#89bcbe]/30 mb-4">
-              <p className="text-sm font-semibold text-[#34495e]">
+            <div className="p-3 bg-[#f0f9f9] dark:bg-teal-900/20 rounded-lg border border-[#89bcbe]/30 mb-4">
+              <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                 {pendingPrazoFatalDate && formatBrazilDate(pendingPrazoFatalDate)}
               </p>
             </div>
@@ -1038,7 +1038,7 @@ export default function TarefaDetailModal({
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-surface-0/50">
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
@@ -1046,7 +1046,7 @@ export default function TarefaDetailModal({
                   setConfirmPrazoFatalOpen(false)
                   setPendingPrazoFatalDate(null)
                 }}
-                className="flex-1 h-9 text-xs font-medium border-slate-200 hover:bg-white"
+                className="flex-1 h-9 text-xs font-medium border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-surface-2"
               >
                 Cancelar
               </Button>
@@ -1081,18 +1081,18 @@ export default function TarefaDetailModal({
       <AlertDialogContent className="max-w-md p-0 overflow-hidden border-0 z-[100]">
         <AlertDialogTitle className="sr-only">Reagendar Prazo Fatal</AlertDialogTitle>
         <AlertDialogDescription className="sr-only">A nova data de execução é posterior ao prazo fatal atual</AlertDialogDescription>
-        <div className="bg-white rounded-lg">
+        <div className="bg-white dark:bg-surface-1 rounded-lg">
           {/* Header */}
-          <div className="px-6 pt-5 pb-4 border-b border-slate-100">
+          <div className="px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#f0f9f9] flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-[#f0f9f9] dark:bg-teal-900/20 flex items-center justify-center">
                 <Calendar className="w-5 h-5 text-[#89bcbe]" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-[#34495e]">
+                <h2 className="text-base font-semibold text-[#34495e] dark:text-slate-200">
                   Reagendar Prazo Fatal
                 </h2>
-                <p className="text-xs text-[#46627f] mt-0.5">
+                <p className="text-xs text-[#46627f] dark:text-slate-400 mt-0.5">
                   A nova data de execução é posterior ao prazo fatal atual
                 </p>
               </div>
@@ -1102,15 +1102,15 @@ export default function TarefaDetailModal({
           <div className="p-6 space-y-4">
             {/* Info das datas */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-[#f0f9f9] rounded-lg border border-[#89bcbe]/30">
-                <p className="text-[10px] text-[#46627f] mb-1">Nova Data Execução</p>
-                <p className="text-sm font-semibold text-[#34495e]">
+              <div className="p-3 bg-[#f0f9f9] dark:bg-teal-900/20 rounded-lg border border-[#89bcbe]/30">
+                <p className="text-[10px] text-[#46627f] dark:text-slate-400 mb-1">Nova Data Execução</p>
+                <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                   {pendingDataInicio && formatBrazilDate(pendingDataInicio)}
                 </p>
               </div>
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <p className="text-[10px] text-slate-500 mb-1">Prazo Fatal Atual</p>
-                <p className="text-sm font-semibold text-[#34495e]">
+              <div className="p-3 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-200 dark:border-slate-700">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-1">Prazo Fatal Atual</p>
+                <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                   {localPrazoDataLimite && formatBrazilDate(parseDBDate(localPrazoDataLimite))}
                 </p>
               </div>
@@ -1118,7 +1118,7 @@ export default function TarefaDetailModal({
 
             {/* Seletor de novo prazo fatal */}
             <div>
-              <p className="text-xs text-[#46627f] mb-2">
+              <p className="text-xs text-[#46627f] dark:text-slate-400 mb-2">
                 Selecione o novo prazo fatal:
               </p>
               <Popover open={prazoFatalCalendarOpen} onOpenChange={setPrazoFatalCalendarOpen}>
@@ -1126,12 +1126,12 @@ export default function TarefaDetailModal({
                   <button
                     className={cn(
                       "w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all",
-                      "bg-[#e8f5f5] border-[#89bcbe]/40 hover:border-[#89bcbe]"
+                      "bg-[#e8f5f5] dark:bg-teal-900/20 border-[#89bcbe]/40 hover:border-[#89bcbe]"
                     )}
                   >
                     <div className="text-left">
-                      <p className="text-[10px] text-[#46627f] mb-0.5">Novo Prazo Fatal</p>
-                      <p className="text-sm font-semibold text-[#34495e]">
+                      <p className="text-[10px] text-[#46627f] dark:text-slate-400 mb-0.5">Novo Prazo Fatal</p>
+                      <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                         {novoPrazoFatalSelecionado ? formatBrazilDate(novoPrazoFatalSelecionado) : 'Selecionar data'}
                       </p>
                     </div>
@@ -1156,7 +1156,7 @@ export default function TarefaDetailModal({
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-surface-0/50">
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
@@ -1165,7 +1165,7 @@ export default function TarefaDetailModal({
                   setPendingDataInicio(null)
                   setNovoPrazoFatalSelecionado(null)
                 }}
-                className="flex-1 h-9 text-xs font-medium border-slate-200 hover:bg-white"
+                className="flex-1 h-9 text-xs font-medium border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-surface-2"
               >
                 Cancelar
               </Button>

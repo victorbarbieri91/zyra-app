@@ -16,6 +16,7 @@ interface TransacaoExtraida {
   parcela: string | null
   categoria_sugerida: string
   confianca: number
+  tipo_transacao: 'debito' | 'credito'
 }
 
 interface ResultadoProcessamento {
@@ -34,10 +35,11 @@ Analise a fatura do cartão ${cartao.banco} - ${cartao.nome} (bandeira ${cartao.
 Para cada transação, extraia:
 - data: Data da compra no formato YYYY-MM-DD
 - descricao: Nome do estabelecimento/descrição
-- valor: Valor em reais (número decimal, sem R$)
+- valor: Valor em reais (número decimal positivo, sem R$ e sem sinal)
 - parcela: Se for compra parcelada, formato "1/3" ou null se não for
 - categoria_sugerida: Uma das categorias: custas, fornecedor, folha, impostos, aluguel, marketing, capacitacao, material, tecnologia, viagem, alimentacao, combustivel, assinatura, outras
 - confianca: Nível de confiança na extração de 0 a 1
+- tipo_transacao: "debito" para compras/gastos normais, "credito" para devoluções/estornos/pagamentos. Identifique pelo contexto: valores com "C", "+", "CR", "CREDITO", "ESTORNO", "DEVOLUCAO" ou sinal negativo geralmente são créditos. Na dúvida, assuma "debito"
 
 Também extraia:
 - valor_total: Valor total da fatura

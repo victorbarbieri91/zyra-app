@@ -57,8 +57,8 @@ export function MigracaoHub() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-[#34495e]">Migração de Dados</h1>
-          <p className="text-sm text-[#46627f] mt-1">
+          <h1 className="text-2xl font-semibold text-[#34495e] dark:text-slate-200">Migração de Dados</h1>
+          <p className="text-sm text-[#46627f] dark:text-slate-400 mt-1">
             Importe dados do seu sistema anterior para o Zyra Legal
           </p>
         </div>
@@ -71,8 +71,8 @@ export function MigracaoHub() {
       </div>
 
       {/* Aviso de ordem */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-        <p className="text-sm text-amber-800">
+      <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg p-4">
+        <p className="text-sm text-amber-800 dark:text-amber-400">
           <strong>Ordem recomendada:</strong> Migre primeiro o CRM (clientes),
           pois os outros módulos dependem dessas informações para vincular processos,
           consultas e financeiro aos clientes corretos.
@@ -91,10 +91,10 @@ export function MigracaoHub() {
               key={modulo.id}
               className={`transition-all ${
                 status === 'bloqueado'
-                  ? 'opacity-60 bg-slate-50'
+                  ? 'opacity-60 bg-slate-50 dark:bg-surface-0'
                   : status === 'migrado'
-                  ? 'border-green-200 bg-green-50/30'
-                  : 'hover:border-blue-300 hover:shadow-sm'
+                  ? 'border-green-200 dark:border-green-500/30 bg-green-50/30 dark:bg-emerald-500/10'
+                  : 'hover:border-blue-300 dark:hover:border-blue-500/30 hover:shadow-sm'
               }`}
             >
               <CardHeader className="pb-3">
@@ -105,7 +105,7 @@ export function MigracaoHub() {
                       w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
                       ${status === 'migrado' ? 'bg-green-500 text-white' :
                         status === 'disponivel' ? 'bg-blue-500 text-white' :
-                        'bg-slate-200 text-slate-500'}
+                        'bg-slate-200 dark:bg-surface-3 text-slate-500 dark:text-slate-400'}
                     `}>
                       {status === 'migrado' ? <CheckCircle className="w-4 h-4" /> : index + 1}
                     </div>
@@ -121,13 +121,13 @@ export function MigracaoHub() {
                         {modulo.nome}
 
                         {status === 'migrado' && (
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                          <Badge variant="outline" className="bg-green-50 dark:bg-emerald-500/10 text-green-700 dark:text-emerald-400 border-green-200 dark:border-emerald-500/30 text-xs">
                             {contagem} registros
                           </Badge>
                         )}
 
                         {status === 'bloqueado' && (
-                          <Badge variant="outline" className="bg-slate-100 text-slate-500 border-slate-200 text-xs">
+                          <Badge variant="outline" className="bg-slate-100 dark:bg-surface-2 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 text-xs">
                             <Lock className="w-3 h-3 mr-1" />
                             Bloqueado
                           </Badge>
@@ -165,7 +165,7 @@ export function MigracaoHub() {
               {/* Dependências */}
               {status === 'bloqueado' && modulo.dependencias.length > 0 && (
                 <CardContent className="pt-0 pb-4">
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     <Lock className="w-3 h-3 inline mr-1" />
                     Requer migração de: {getDependenciasNomes(modulo.dependencias)}
                   </p>
@@ -177,7 +177,7 @@ export function MigracaoHub() {
       </div>
 
       {/* Info adicional */}
-      <div className="bg-slate-50 rounded-lg p-4 text-sm text-slate-600">
+      <div className="bg-slate-50 dark:bg-surface-0 rounded-lg p-4 text-sm text-slate-600 dark:text-slate-400">
         <h3 className="font-medium mb-2">Como funciona:</h3>
         <ol className="list-decimal list-inside space-y-1">
           <li>Faça upload de um arquivo CSV ou Excel com os dados</li>

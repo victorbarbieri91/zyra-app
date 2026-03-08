@@ -28,45 +28,45 @@ export interface PrazoCardProps {
 
 const criticidadeConfig = {
   vencido: {
-    bg: 'bg-red-50',
+    bg: 'bg-red-50 dark:bg-red-500/10',
     border: 'border-red-300',
     badge: 'bg-red-600 text-white',
-    text: 'text-red-900',
+    text: 'text-red-900 dark:text-red-400',
     label: 'VENCIDO',
   },
   hoje: {
-    bg: 'bg-red-50',
+    bg: 'bg-red-50 dark:bg-red-500/10',
     border: 'border-red-400',
     badge: 'bg-red-500 text-white',
-    text: 'text-red-900',
+    text: 'text-red-900 dark:text-red-400',
     label: 'HOJE',
   },
   critico: {
-    bg: 'bg-orange-50',
+    bg: 'bg-orange-50 dark:bg-orange-500/10',
     border: 'border-orange-300',
     badge: 'bg-orange-500 text-white',
-    text: 'text-orange-900',
-    label: 'CRÍTICO',
+    text: 'text-orange-900 dark:text-orange-400',
+    label: 'CRITICO',
   },
   urgente: {
-    bg: 'bg-amber-50',
+    bg: 'bg-amber-50 dark:bg-amber-500/10',
     border: 'border-amber-300',
     badge: 'bg-amber-500 text-white',
-    text: 'text-amber-900',
+    text: 'text-amber-900 dark:text-amber-400',
     label: 'URGENTE',
   },
   atencao: {
-    bg: 'bg-yellow-50',
+    bg: 'bg-yellow-50 dark:bg-yellow-500/10',
     border: 'border-yellow-200',
     badge: 'bg-yellow-500 text-white',
-    text: 'text-yellow-900',
-    label: 'ATENÇÃO',
+    text: 'text-yellow-900 dark:text-yellow-400',
+    label: 'ATENCAO',
   },
   normal: {
-    bg: 'bg-white',
-    border: 'border-slate-200',
+    bg: 'bg-white dark:bg-surface-1',
+    border: 'border-slate-200 dark:border-slate-700',
     badge: 'bg-slate-400 text-white',
-    text: 'text-slate-900',
+    text: 'text-slate-900 dark:text-slate-100',
     label: 'NORMAL',
   },
 }
@@ -119,7 +119,7 @@ export default function PrazoCard({
                 <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 h-4 border font-bold', config.badge)}>
                   {config.label}
                 </Badge>
-                <span className="text-[10px] text-[#6c757d] font-medium">
+                <span className="text-[10px] text-[#6c757d] dark:text-slate-400 font-medium">
                   {tipo_prazo.charAt(0).toUpperCase() + tipo_prazo.slice(1)}
                 </span>
               </div>
@@ -139,18 +139,18 @@ export default function PrazoCard({
           <div className="grid grid-cols-2 gap-3">
             {/* Data Intimação */}
             <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5 text-[10px] text-[#6c757d] font-medium">
+              <div className="flex items-center gap-1.5 text-[10px] text-[#6c757d] dark:text-slate-400 font-medium">
                 <Calendar className="w-3 h-3" />
                 Intimação
               </div>
-              <div className="text-xs font-semibold text-[#34495e]">
+              <div className="text-xs font-semibold text-[#34495e] dark:text-slate-200">
                 {formatBrazilDate(data_intimacao)}
               </div>
             </div>
 
             {/* Data Limite */}
             <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5 text-[10px] text-[#6c757d] font-medium">
+              <div className="flex items-center gap-1.5 text-[10px] text-[#6c757d] dark:text-slate-400 font-medium">
                 <Clock className="w-3 h-3" />
                 Vencimento
               </div>
@@ -161,22 +161,22 @@ export default function PrazoCard({
           </div>
 
           {/* Quantidade de dias */}
-          <div className="text-[11px] text-[#6c757d]">
+          <div className="text-[11px] text-[#6c757d] dark:text-slate-400">
             {quantidade_dias} {dias_uteis ? 'dias úteis' : 'dias corridos'}
           </div>
         </div>
 
         {/* Informações Adicionais */}
         {(processo_numero || cliente_nome) && (
-          <div className="space-y-1.5 mb-3 pt-2 border-t border-slate-200">
+          <div className="space-y-1.5 mb-3 pt-2 border-t border-slate-200 dark:border-slate-700">
             {processo_numero && (
-              <div className="flex items-center gap-1.5 text-xs text-[#6c757d]">
+              <div className="flex items-center gap-1.5 text-xs text-[#6c757d] dark:text-slate-400">
                 <FileText className="w-3 h-3 flex-shrink-0" />
                 <span className="truncate font-medium">Processo {processo_numero}</span>
               </div>
             )}
             {cliente_nome && (
-              <div className="flex items-center gap-1.5 text-xs text-[#6c757d]">
+              <div className="flex items-center gap-1.5 text-xs text-[#6c757d] dark:text-slate-400">
                 <User className="w-3 h-3 flex-shrink-0" />
                 <span className="truncate">{cliente_nome}</span>
               </div>
@@ -200,13 +200,13 @@ export default function PrazoCard({
           )}
 
           {cumprido && (
-            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-xs">
+            <Badge className="bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 text-xs">
               ✓ Cumprido
             </Badge>
           )}
 
           {perdido && (
-            <Badge className="bg-red-100 text-red-700 border-red-200 text-xs">
+            <Badge className="bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 text-xs">
               Prazo Perdido
             </Badge>
           )}

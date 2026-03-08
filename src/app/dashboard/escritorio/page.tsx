@@ -187,7 +187,7 @@ export default function EscritorioPage() {
       <div className="p-6 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="w-12 h-12 border-3 border-slate-300 border-t-[#89bcbe] rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm text-slate-500">Carregando...</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Carregando...</p>
         </div>
       </div>
     );
@@ -197,8 +197,8 @@ export default function EscritorioPage() {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <p className="text-slate-500 mb-2">Nenhum escritório ativo</p>
-          <p className="text-xs text-slate-400">
+          <p className="text-slate-500 dark:text-slate-400 mb-2">Nenhum escritório ativo</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500">
             Selecione um escritório no menu superior
           </p>
         </div>
@@ -210,12 +210,12 @@ export default function EscritorioPage() {
     <div className="p-4 md:p-6 space-y-4 md:space-y-5">
       {/* Header da Página */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[#34495e]">Escritório</h1>
+        <h1 className="text-xl font-semibold text-[#34495e] dark:text-slate-200">Escritório</h1>
         <Button
           onClick={() => setModalCriarEscritorio(true)}
           size="sm"
           variant="outline"
-          className="text-[#34495e] border-slate-200 hover:bg-slate-50"
+          className="text-[#34495e] dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-surface-2"
         >
           <Plus className="w-4 h-4 mr-1.5" />
           Novo Escritório
@@ -223,7 +223,7 @@ export default function EscritorioPage() {
       </div>
 
       {/* Card do Escritório Ativo */}
-      <Card className="border-slate-200">
+      <Card className="border-slate-200 dark:border-slate-700">
         <CardContent className="p-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -239,11 +239,11 @@ export default function EscritorioPage() {
                 </div>
               )}
               <div>
-                <h2 className="text-base font-medium text-[#34495e]">
+                <h2 className="text-base font-medium text-[#34495e] dark:text-slate-200">
                   {escritorioAtivo.nome}
                 </h2>
                 {escritorioAtivo.cnpj && (
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {escritorioAtivo.cnpj}
                   </p>
                 )}
@@ -253,7 +253,7 @@ export default function EscritorioPage() {
               variant="ghost"
               size="sm"
               onClick={() => setModalEditarEscritorio(true)}
-              className="text-slate-500 hover:text-[#34495e]"
+              className="text-slate-500 dark:text-slate-400 hover:text-[#34495e]"
             >
               <Pencil className="w-4 h-4" />
             </Button>
@@ -264,7 +264,7 @@ export default function EscritorioPage() {
       {/* Escritórios do Grupo - Só mostra se tiver mais de 1 */}
       {escritoriosGrupo.length > 1 && (
         <div className="space-y-2">
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide px-1">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide px-1">
             Escritórios do Grupo
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -278,13 +278,13 @@ export default function EscritorioPage() {
                     flex items-center gap-3 p-3 rounded-lg border transition-all
                     ${
                       isAtivo
-                        ? 'bg-slate-50 border-[#89bcbe] ring-1 ring-[#89bcbe]/20'
-                        : 'bg-white border-slate-200 hover:border-slate-300 cursor-pointer hover:shadow-sm'
+                        ? 'bg-slate-50 dark:bg-surface-0 border-[#89bcbe] ring-1 ring-[#89bcbe]/20'
+                        : 'bg-white dark:bg-surface-1 border-slate-200 dark:border-slate-700 hover:border-slate-300 cursor-pointer hover:shadow-sm'
                     }
                   `}
                 >
                   <div
-                    className={`w-8 h-8 rounded-md flex items-center justify-center ${isAtivo ? 'bg-[#89bcbe]' : 'bg-slate-100'}`}
+                    className={`w-8 h-8 rounded-md flex items-center justify-center ${isAtivo ? 'bg-[#89bcbe]' : 'bg-slate-100 dark:bg-surface-2'}`}
                   >
                     <Building2
                       className={`w-4 h-4 ${isAtivo ? 'text-white' : 'text-slate-400'}`}
@@ -292,7 +292,7 @@ export default function EscritorioPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p
-                      className={`text-sm font-medium truncate ${isAtivo ? 'text-[#34495e]' : 'text-slate-600'}`}
+                      className={`text-sm font-medium truncate ${isAtivo ? 'text-[#34495e] dark:text-slate-200' : 'text-slate-600 dark:text-slate-400'}`}
                     >
                       {esc.nome}
                     </p>
@@ -326,10 +326,10 @@ export default function EscritorioPage() {
             ) : (
               <ChevronRight className="w-4 h-4 text-slate-400" />
             )}
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide group-hover:text-slate-600 transition-colors">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide group-hover:text-slate-600 transition-colors">
               Equipe
             </span>
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500">
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 bg-slate-100 dark:bg-surface-2 text-slate-500 dark:text-slate-400">
               {membros.length}
             </Badge>
           </button>
@@ -350,7 +350,7 @@ export default function EscritorioPage() {
               variant="ghost"
               size="sm"
               onClick={() => setModalConvidar(true)}
-              className="h-7 px-2 text-xs text-[#34495e] hover:bg-slate-100"
+              className="h-7 px-2 text-xs text-[#34495e] dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-surface-3"
             >
               <UserPlus className="w-3.5 h-3.5 mr-1" />
               Convidar
@@ -359,11 +359,11 @@ export default function EscritorioPage() {
         </div>
 
         {equipeExpandida && (
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700">
             <CardContent className="p-3">
               <div className="space-y-1">
                 {membros.length === 0 ? (
-                  <p className="text-sm text-slate-400 text-center py-4">
+                  <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">
                     Nenhum membro cadastrado
                   </p>
                 ) : (
@@ -371,11 +371,11 @@ export default function EscritorioPage() {
                     <div
                       key={membro.id}
                       onClick={() => setMembroSelecionado(membro)}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2 cursor-pointer transition-colors"
                     >
                       <Avatar className="w-8 h-8">
                         <AvatarImage src={membro.avatar_url ?? undefined} />
-                        <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
+                        <AvatarFallback className="bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400 text-xs">
                           {membro.nome
                             ?.split(' ')
                             .map((n) => n[0])
@@ -385,16 +385,16 @@ export default function EscritorioPage() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[#34495e] truncate">
+                        <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">
                           {membro.nome || membro.email}
                         </p>
-                        <p className="text-xs text-slate-400 truncate">
+                        <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
                           {membro.email}
                         </p>
                       </div>
                       <Badge
                         variant="secondary"
-                        className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600"
+                        className="text-[10px] px-1.5 py-0.5 bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400"
                       >
                         {membro.cargo?.nome_display || (membro.is_owner ? 'Sócio Administrador' : 'Membro')}
                       </Badge>
@@ -418,22 +418,22 @@ export default function EscritorioPage() {
           ) : (
             <ChevronRight className="w-4 h-4 text-slate-400" />
           )}
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide group-hover:text-slate-600 transition-colors">
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide group-hover:text-slate-600 transition-colors">
             Configurações
           </span>
           <Settings2 className="w-3.5 h-3.5 text-slate-400" />
         </button>
 
         {configExpandida && (
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700">
             <CardContent className="p-4 space-y-4">
               {/* Cargos e Permissões */}
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-[#34495e]">
+                  <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                     Cargos e Permissões
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                     {cargos.length} cargo{cargos.length !== 1 ? 's' : ''}{' '}
                     configurado{cargos.length !== 1 ? 's' : ''}
                   </p>
@@ -448,16 +448,16 @@ export default function EscritorioPage() {
                 </Button>
               </div>
 
-              <div className="border-t border-slate-100" />
+              <div className="border-t border-slate-100 dark:border-slate-800" />
 
               {/* Valores por Hora */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="text-sm font-medium text-[#34495e]">
+                    <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                       Valores por Hora
                     </p>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                       Clique para editar o valor por hora de cada cargo
                     </p>
                   </div>
@@ -466,14 +466,14 @@ export default function EscritorioPage() {
                   {cargos.map((cargo) => (
                     <div
                       key={cargo.id}
-                      className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 transition-all"
+                      className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 dark:bg-surface-0 hover:bg-slate-100 dark:hover:bg-surface-3 transition-all"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <div
                           className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                           style={{ backgroundColor: cargo.cor || '#64748b' }}
                         />
-                        <span className="text-sm text-slate-700 truncate">
+                        <span className="text-sm text-slate-700 dark:text-slate-300 truncate">
                           {cargo.nome_display}
                         </span>
                       </div>
@@ -488,9 +488,9 @@ export default function EscritorioPage() {
                           onFocus={handleValorHoraFocus}
                           onBlur={() => handleValorHoraBlur(cargo.id)}
                           onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-                          className={`w-24 h-7 px-2 text-xs text-right font-medium rounded-md border bg-white transition-colors cursor-text
+                          className={`w-24 h-7 px-2 text-xs text-right font-medium rounded-md border bg-white dark:bg-surface-1 transition-colors cursor-text
                             focus:outline-none focus:ring-1 focus:ring-[#89bcbe] focus:border-[#89bcbe]
-                            ${cargo.valor_hora_padrao ? 'text-[#34495e] border-slate-200' : 'text-slate-400 border-slate-200'}`}
+                            ${cargo.valor_hora_padrao ? 'text-[#34495e] dark:text-slate-200 border-slate-200 dark:border-slate-700' : 'text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700'}`}
                         />
                         <span className="text-[10px] text-slate-400">/h</span>
                       </div>
@@ -498,26 +498,26 @@ export default function EscritorioPage() {
                   ))}
                 </div>
                 {cargos.length === 0 && (
-                  <p className="text-xs text-slate-400 text-center py-3">
+                  <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-3">
                     Nenhum cargo configurado. Configure cargos em "Cargos e Permissões".
                   </p>
                 )}
               </div>
 
-              <div className="border-t border-slate-100" />
+              <div className="border-t border-slate-100 dark:border-slate-800" />
 
               {/* Configuração Fiscal */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-md bg-emerald-100 flex items-center justify-center">
+                    <div className="w-7 h-7 rounded-md bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center">
                       <Calculator className="w-3.5 h-3.5 text-emerald-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[#34495e]">
+                      <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                         Configuração Fiscal
                       </p>
-                      <p className="text-xs text-slate-400 mt-0.5">
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                         Regime tributário e impostos na fatura
                       </p>
                     </div>
@@ -543,9 +543,9 @@ export default function EscritorioPage() {
                     : 'Não configurado';
 
                   return (
-                    <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+                    <div className="bg-slate-50 dark:bg-surface-0 rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-slate-500">Regime Tributário</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">Regime Tributário</span>
                         <Badge
                           variant="secondary"
                           className={`text-[10px] px-1.5 py-0.5 ${
@@ -562,8 +562,8 @@ export default function EscritorioPage() {
 
                       {configFiscal?.regime_tributario === 'lucro_presumido' && configFiscal.lucro_presumido && (
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-slate-500">Retenções Ativas</span>
-                          <span className="text-xs font-medium text-[#34495e]">
+                          <span className="text-xs text-slate-500 dark:text-slate-400">Retenções Ativas</span>
+                          <span className="text-xs font-medium text-[#34495e] dark:text-slate-200">
                             {Object.values(configFiscal.lucro_presumido.impostos || {})
                               .filter((imp: any) => imp?.ativo && imp?.retido_na_fonte)
                               .reduce((sum: number, imp: any) => sum + (imp?.aliquota || 0), 0)
@@ -575,14 +575,14 @@ export default function EscritorioPage() {
                       {configFiscal?.regime_tributario === 'simples_nacional' && configFiscal.simples_nacional && (
                         <>
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-500">Anexo / Faixa</span>
-                            <span className="text-xs font-medium text-[#34495e]">
+                            <span className="text-xs text-slate-500 dark:text-slate-400">Anexo / Faixa</span>
+                            <span className="text-xs font-medium text-[#34495e] dark:text-slate-200">
                               Anexo {configFiscal.simples_nacional.anexo} - Faixa {configFiscal.simples_nacional.faixa_atual}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-500">Alíquota Efetiva</span>
-                            <span className="text-xs font-medium text-[#34495e]">
+                            <span className="text-xs text-slate-500 dark:text-slate-400">Alíquota Efetiva</span>
+                            <span className="text-xs font-medium text-[#34495e] dark:text-slate-200">
                               {configFiscal.simples_nacional.aliquota_efetiva?.toFixed(2)}%
                             </span>
                           </div>
@@ -590,8 +590,8 @@ export default function EscritorioPage() {
                       )}
 
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-slate-500">Exibir na Fatura</span>
-                        <span className={`text-xs font-medium ${configFiscal?.exibir_impostos_fatura ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">Exibir na Fatura</span>
+                        <span className={`text-xs font-medium ${configFiscal?.exibir_impostos_fatura ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
                           {configFiscal?.exibir_impostos_fatura ? 'Sim' : 'Não'}
                         </span>
                       </div>

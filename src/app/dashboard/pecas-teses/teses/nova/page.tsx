@@ -100,7 +100,7 @@ export default function NovaTestePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 dark:from-surface-0 dark:via-surface-0 dark:to-surface-0 p-6">
       <div className="max-w-[1800px] mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
@@ -111,8 +111,8 @@ export default function NovaTestePage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-[#34495e]">Nova Tese</h1>
-          <p className="text-sm text-slate-600 mt-1">
+          <h1 className="text-2xl font-bold text-[#34495e] dark:text-slate-200">Nova Tese</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             Adicione uma nova tese jurídica ao banco
           </p>
         </div>
@@ -120,9 +120,9 @@ export default function NovaTestePage() {
 
       {/* Form */}
       <form onSubmit={handleSubmit}>
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardHeader className="pb-4 pt-6">
-            <CardTitle className="text-base font-semibold text-[#34495e]">
+            <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
               Informações da Tese
             </CardTitle>
           </CardHeader>
@@ -137,7 +137,7 @@ export default function NovaTestePage() {
                   setFormData({ ...formData, titulo: e.target.value })
                 }
                 required
-                className="border-slate-200"
+                className="border-slate-200 dark:border-slate-700"
               />
             </div>
 
@@ -150,7 +150,7 @@ export default function NovaTestePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, resumo: e.target.value })
                 }
-                className="border-slate-200 h-20"
+                className="border-slate-200 dark:border-slate-700 h-20"
               />
             </div>
 
@@ -164,7 +164,7 @@ export default function NovaTestePage() {
                   }
                   required
                 >
-                  <SelectTrigger className="border-slate-200">
+                  <SelectTrigger className="border-slate-200 dark:border-slate-700">
                     <SelectValue placeholder="Selecione a área" />
                   </SelectTrigger>
                   <SelectContent>
@@ -191,7 +191,7 @@ export default function NovaTestePage() {
                   onChange={(e) =>
                     setFormData({ ...formData, subtema: e.target.value })
                   }
-                  className="border-slate-200"
+                  className="border-slate-200 dark:border-slate-700"
                 />
               </div>
             </div>
@@ -205,7 +205,7 @@ export default function NovaTestePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, texto_completo: e.target.value })
                 }
-                className="min-h-[200px] border-slate-200"
+                className="min-h-[200px] border-slate-200 dark:border-slate-700"
               />
             </div>
 
@@ -218,7 +218,7 @@ export default function NovaTestePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, fundamentacao: e.target.value })
                 }
-                className="min-h-[150px] border-slate-200"
+                className="min-h-[150px] border-slate-200 dark:border-slate-700"
               />
             </div>
 
@@ -236,7 +236,7 @@ export default function NovaTestePage() {
                       handleAddTag()
                     }
                   }}
-                  className="border-slate-200"
+                  className="border-slate-200 dark:border-slate-700"
                 />
                 <Button
                   type="button"
@@ -280,7 +280,7 @@ export default function NovaTestePage() {
           <Button
             type="submit"
             disabled={loading}
-            className="bg-gradient-to-r from-[#89bcbe] to-[#6ba9ab] text-white hover:opacity-90"
+            className="bg-gradient-to-r from-[#89bcbe] to-[#6ba9ab] dark:from-[#89bcbe] dark:to-[#6ba9ab] text-white hover:opacity-90"
           >
             <Save className="w-4 h-4 mr-2" />
             {loading ? 'Salvando...' : 'Salvar Tese'}

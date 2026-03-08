@@ -20,7 +20,7 @@ export function LancamentoSelectableItem({
   const isTimesheet = lancamento.tipo_lancamento === 'timesheet'
 
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }).format(value)
 
   return (
     <div

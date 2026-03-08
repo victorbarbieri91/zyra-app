@@ -20,6 +20,8 @@ import {
   Tag,
   AlertTriangle,
   Info,
+  ArrowDownCircle,
+  ArrowUpCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -65,6 +67,7 @@ interface TransacaoExtraida {
   confianca: number
   selecionada: boolean
   tipo: 'unica' | 'parcelada' | 'recorrente'
+  tipo_transacao: 'debito' | 'credito'
   possivelDuplicata?: boolean
 }
 
@@ -123,6 +126,7 @@ export default function ImportarFaturaPage() {
     verificarDuplicata,
     verificarFaturaExistente,
     vincularLancamentosAFatura,
+    criarFaturaCartao,
   } = useCartoesCredito(escritorioIds.length > 0 ? escritorioIds : escritorioAtivo)
 
   // Estado para fatura existente
@@ -369,6 +373,7 @@ export default function ImportarFaturaPage() {
             data: dataCorrigida,
             selecionada: true,
             tipo: t.parcela ? 'parcelada' : 'unica' as 'unica' | 'parcelada' | 'recorrente',
+            tipo_transacao: (t.tipo_transacao === 'credito' ? 'credito' : 'debito') as 'debito' | 'credito',
           }
         })
 
@@ -454,6 +459,12 @@ export default function ImportarFaturaPage() {
     )
   }
 
+  const toggleTipoTransacao = (id: string) => {
+    setTransacoes(prev =>
+      prev.map(t => (t.id === id ? { ...t, tipo_transacao: t.tipo_transacao === 'debito' ? 'credito' : 'debito' } : t))
+    )
+  }
+
   // Editar transação (modal completo)
   const handleEditTransacao = (transacao: TransacaoExtraida) => {
     setEditingTransacao({ ...transacao })
@@ -514,8 +525,8 @@ export default function ImportarFaturaPage() {
         }
       }
 
-      // Se existe fatura para este mês, vincular os lançamentos a ela
-      if (faturaExistente && lancamentosImportados.length > 0) {
+      // Vincular lançamentos à fatura do cartão (criar se não existir)
+      if (lancamentosImportados.length > 0 && mesReferenciaFatura) {
         // Buscar os IDs dos lançamentos criados (compra_id é retornado, precisamos do lancamento.id)
         const { data: lancamentos } = await supabase
           .from('cartoes_credito_lancamentos')
@@ -524,7 +535,29 @@ export default function ImportarFaturaPage() {
 
         if (lancamentos && lancamentos.length > 0) {
           const lancamentoIds = lancamentos.map((l: { id: string }) => l.id)
-          await vincularLancamentosAFatura(faturaExistente.id, lancamentoIds)
+
+          // Se já existe fatura, vincular a ela
+          let faturaParaVincular = faturaExistente
+
+          // Se NÃO existe fatura para este mês, criar uma automaticamente
+          if (!faturaParaVincular) {
+            const novaFatura = await criarFaturaCartao(
+              selectedCartao,
+              `${mesReferenciaFatura}-01`,
+              dadosFatura?.data_fechamento || null,
+              dadosFatura?.data_vencimento || null,
+              dadosFatura?.valor_total || null
+            )
+            if (novaFatura) {
+              faturaParaVincular = novaFatura
+              setFaturaExistente(novaFatura)
+            }
+          }
+
+          // Vincular lançamentos à fatura
+          if (faturaParaVincular) {
+            await vincularLancamentosAFatura(faturaParaVincular.id, lancamentoIds)
+          }
         }
       }
 
@@ -545,11 +578,7 @@ export default function ImportarFaturaPage() {
       setImportacaoConcluida(true)
       setEtapa(3)
 
-      if (faturaExistente) {
-        toast.success(`Lançamentos importados e vinculados à fatura de ${mesReferenciaFatura}!`)
-      } else {
-        toast.success('Lançamentos importados com sucesso!')
-      }
+      toast.success(`${importados} lançamentos importados e vinculados à fatura de ${mesReferenciaFatura}!`)
     } catch (error: any) {
       console.error('Erro:', error)
       toast.error(error.message || 'Erro ao importar')
@@ -560,7 +589,7 @@ export default function ImportarFaturaPage() {
 
   // Helpers
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }).format(value)
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-'
@@ -595,14 +624,14 @@ export default function ImportarFaturaPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-[#89bcbe] mx-auto mb-2" />
-          <p className="text-sm text-slate-600">Carregando...</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Carregando...</p>
         </div>
       </div>
     )
   }
 
   const transacoesSelecionadas = transacoes.filter(t => t.selecionada)
-  const totalSelecionado = transacoesSelecionadas.reduce((acc, t) => acc + t.valor, 0)
+  const totalSelecionado = transacoesSelecionadas.reduce((acc, t) => acc + (t.tipo_transacao === 'credito' ? -t.valor : t.valor), 0)
   const cartaoSelecionado = cartoes.find(c => c.id === selectedCartao)
 
   return (
@@ -618,7 +647,7 @@ export default function ImportarFaturaPage() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-base font-medium text-slate-600">Importar Fatura</h1>
+          <h1 className="text-base font-medium text-slate-600 dark:text-slate-400">Importar Fatura</h1>
           <p className="text-xs text-slate-400">
             {etapa === 1 && 'Envie o PDF da fatura do cartão'}
             {etapa === 2 && 'Revise os lançamentos antes de importar'}
@@ -636,7 +665,7 @@ export default function ImportarFaturaPage() {
                 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors',
                 etapa >= step
                   ? 'bg-[#34495e] text-white'
-                  : 'bg-slate-200 text-slate-500'
+                  : 'bg-slate-200 dark:bg-surface-2 text-slate-500 dark:text-slate-400'
               )}
             >
               {etapa > step ? <Check className="w-4 h-4" /> : step}
@@ -645,7 +674,7 @@ export default function ImportarFaturaPage() {
               <div
                 className={cn(
                   'w-16 h-1 mx-1 rounded',
-                  etapa > step ? 'bg-[#34495e]' : 'bg-slate-200'
+                  etapa > step ? 'bg-[#34495e]' : 'bg-slate-200 dark:bg-surface-2'
                 )}
               />
             )}
@@ -655,16 +684,16 @@ export default function ImportarFaturaPage() {
 
       {/* ETAPA 1: Upload */}
       {etapa === 1 && (
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardContent className="pt-6 space-y-6">
             {/* Seleção de Cartão */}
             <div>
-              <Label className="text-sm font-medium text-slate-700">Cartão</Label>
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Cartão</Label>
               {loading ? (
-                <div className="h-10 bg-slate-100 animate-pulse rounded-md mt-1.5" />
+                <div className="h-10 bg-slate-100 dark:bg-surface-2 animate-pulse rounded-md mt-1.5" />
               ) : cartoes.length === 0 ? (
-                <div className="p-4 rounded-lg border border-slate-200 bg-slate-50 mt-1.5">
-                  <p className="text-sm text-slate-500">Nenhum cartão cadastrado</p>
+                <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-surface-0 mt-1.5">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Nenhum cartão cadastrado</p>
                   <Button
                     variant="link"
                     size="sm"
@@ -704,24 +733,24 @@ export default function ImportarFaturaPage() {
 
             {/* Dropzone */}
             <div>
-              <Label className="text-sm font-medium text-slate-700">Arquivo PDF</Label>
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Arquivo PDF</Label>
               <div
                 {...getRootProps()}
                 className={cn(
                   'mt-1.5 border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all',
                   isDragActive
-                    ? 'border-[#34495e] bg-slate-50'
+                    ? 'border-[#34495e] bg-slate-50 dark:bg-surface-0'
                     : uploadedFile
-                    ? 'border-emerald-300 bg-emerald-50'
-                    : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
+                    ? 'border-emerald-300 bg-emerald-50 dark:bg-emerald-500/10'
+                    : 'border-slate-300 dark:border-slate-600 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2'
                 )}
               >
                 <input {...getInputProps()} />
                 {uploadedFile ? (
                   <div className="space-y-2">
                     <FileText className="w-12 h-12 mx-auto text-emerald-500" />
-                    <p className="text-sm font-medium text-slate-700">{uploadedFile.name}</p>
-                    <p className="text-xs text-slate-500">{formatFileSize(uploadedFile.size)}</p>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{uploadedFile.name}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{formatFileSize(uploadedFile.size)}</p>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -738,7 +767,7 @@ export default function ImportarFaturaPage() {
                 ) : (
                   <div className="space-y-2">
                     <Upload className="w-12 h-12 mx-auto text-slate-400" />
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
                       {isDragActive ? 'Solte o arquivo aqui...' : 'Arraste o PDF ou clique para selecionar'}
                     </p>
                     <p className="text-xs text-slate-400">PDF até 10MB</p>
@@ -773,7 +802,7 @@ export default function ImportarFaturaPage() {
       {etapa === 2 && (
         <div className="space-y-4">
           {/* Info do cartão e fatura */}
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700">
             <CardContent className="py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -784,10 +813,10 @@ export default function ImportarFaturaPage() {
                     <CreditCard className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-700">
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
                       {cartaoSelecionado?.nome} •••• {cartaoSelecionado?.ultimos_digitos}
                     </p>
-                    <p className="text-xs text-slate-500">{uploadedFile?.name}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{uploadedFile?.name}</p>
                   </div>
                 </div>
 
@@ -796,19 +825,19 @@ export default function ImportarFaturaPage() {
                   {dadosFatura?.data_vencimento && (
                     <div className="text-right">
                       <p className="text-[10px] text-slate-400">Vencimento</p>
-                      <p className="text-xs font-medium text-slate-600">{formatDate(dadosFatura.data_vencimento)}</p>
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400">{formatDate(dadosFatura.data_vencimento)}</p>
                     </div>
                   )}
                   {dadosFatura?.valor_total && dadosFatura.valor_total > 0 && (
                     <div className="text-right">
                       <p className="text-[10px] text-slate-400">Total PDF</p>
-                      <p className="text-xs font-medium text-slate-600">{formatCurrency(dadosFatura.valor_total)}</p>
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400">{formatCurrency(dadosFatura.valor_total)}</p>
                     </div>
                   )}
-                  <div className="pl-3 border-l border-slate-200">
+                  <div className="pl-3 border-l border-slate-200 dark:border-slate-700">
                     <p className="text-[10px] text-slate-400 mb-1">Mês da fatura</p>
                     <Select value={mesReferenciaFatura} onValueChange={setMesReferenciaFatura}>
-                      <SelectTrigger className="h-7 w-[150px] text-xs border-slate-200">
+                      <SelectTrigger className="h-7 w-[150px] text-xs border-slate-200 dark:border-slate-700">
                         <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -829,7 +858,7 @@ export default function ImportarFaturaPage() {
           {(faturaExistente || transacoes.some(t => t.possivelDuplicata)) && (
             <div className="space-y-2">
               {faturaExistente && (
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200">
                   <Info className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-xs font-medium text-amber-800">
@@ -842,13 +871,13 @@ export default function ImportarFaturaPage() {
                 </div>
               )}
               {transacoes.some(t => t.possivelDuplicata) && (
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-slate-50 border border-slate-200">
-                  <AlertTriangle className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700">
+                  <AlertTriangle className="w-4 h-4 text-slate-500 dark:text-slate-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-xs font-medium text-slate-700">
+                    <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
                       {transacoes.filter(t => t.possivelDuplicata).length} possíveis duplicatas encontradas
                     </p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                       Lançamentos marcados já podem existir no sistema
                     </p>
                   </div>
@@ -858,12 +887,12 @@ export default function ImportarFaturaPage() {
           )}
 
           {/* Lista de transações */}
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700">
             <CardContent className="py-4">
               {transacoes.length === 0 ? (
                 <div className="py-8 text-center">
                   <AlertCircle className="w-10 h-10 mx-auto text-amber-400" />
-                  <p className="text-sm text-slate-500 mt-2">Nenhum lançamento encontrado</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Nenhum lançamento encontrado</p>
                 </div>
               ) : (
                 <>
@@ -874,7 +903,7 @@ export default function ImportarFaturaPage() {
                         checked={transacoes.length > 0 && transacoes.every(t => t.selecionada)}
                         onCheckedChange={(checked) => toggleTodas(!!checked)}
                       />
-                      <span className="text-sm text-slate-600">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">
                         {transacoesSelecionadas.length} de {transacoes.length} selecionados
                       </span>
                     </div>
@@ -886,22 +915,23 @@ export default function ImportarFaturaPage() {
                   {/* Tabela de preview */}
                   <div className="border rounded-lg overflow-hidden">
                     {/* Cabeçalho da tabela */}
-                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-slate-50 border-b text-xs font-medium text-slate-500">
-                      <div className="col-span-1"></div>
-                      <div className="col-span-2 flex items-center gap-1">
+                    <div className="grid grid-cols-[2rem_5fr_8fr_1.5fr_4fr_4fr_2rem] gap-2 px-3 py-2 bg-slate-50 dark:bg-surface-0 border-b dark:border-slate-700 text-xs font-medium text-slate-500 dark:text-slate-400">
+                      <div></div>
+                      <div className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         Data
                       </div>
-                      <div className="col-span-3">Descrição</div>
-                      <div className="col-span-2 flex items-center gap-1">
+                      <div>Descrição</div>
+                      <div className="text-center">D/C</div>
+                      <div className="flex items-center gap-1">
                         <DollarSign className="w-3 h-3" />
                         Valor
                       </div>
-                      <div className="col-span-2 flex items-center gap-1">
+                      <div className="flex items-center gap-1">
                         <Tag className="w-3 h-3" />
                         Categoria
                       </div>
-                      <div className="col-span-1"></div>
+                      <div></div>
                     </div>
 
                     {/* Linhas */}
@@ -910,11 +940,11 @@ export default function ImportarFaturaPage() {
                         <div
                           key={t.id}
                           className={cn(
-                            'grid grid-cols-12 gap-2 px-3 py-2.5 items-center text-sm border-b last:border-b-0 transition-colors',
-                            t.selecionada ? 'bg-white' : 'bg-slate-50/50 opacity-60'
+                            'grid grid-cols-[2rem_5fr_8fr_1.5fr_4fr_4fr_2rem] gap-2 px-3 py-2.5 items-center text-sm border-b last:border-b-0 transition-colors',
+                            t.selecionada ? 'bg-white dark:bg-surface-1' : 'bg-slate-50/50 dark:bg-surface-0/50 opacity-60'
                           )}
                         >
-                          <div className="col-span-1 flex items-center gap-1">
+                          <div className="flex items-center gap-1">
                             <Checkbox
                               checked={t.selecionada}
                               onCheckedChange={() => toggleTransacao(t.id)}
@@ -926,7 +956,7 @@ export default function ImportarFaturaPage() {
                             )}
                           </div>
                           {/* Data editável inline */}
-                          <div className="col-span-2">
+                          <div>
                             {editingDataId === t.id ? (
                               <Input
                                 type="date"
@@ -943,7 +973,7 @@ export default function ImportarFaturaPage() {
                             ) : (
                               <div
                                 onClick={() => startEditingData(t)}
-                                className="cursor-pointer hover:bg-slate-100 rounded px-1 py-0.5 -mx-1 transition-colors text-slate-600"
+                                className="cursor-pointer hover:bg-slate-100 dark:hover:bg-surface-3 rounded px-1 py-0.5 -mx-1 transition-colors text-slate-600 dark:text-slate-400"
                                 title="Clique para editar a data"
                               >
                                 {formatDate(t.data)}
@@ -952,7 +982,7 @@ export default function ImportarFaturaPage() {
                           </div>
 
                           {/* Descrição editável inline */}
-                          <div className="col-span-3">
+                          <div>
                             {editingDescricaoId === t.id ? (
                               <Input
                                 value={editingDescricaoValue}
@@ -968,10 +998,10 @@ export default function ImportarFaturaPage() {
                             ) : (
                               <div
                                 onClick={() => startEditingDescricao(t)}
-                                className="cursor-pointer hover:bg-slate-100 rounded px-1 py-0.5 -mx-1 transition-colors"
+                                className="cursor-pointer hover:bg-slate-100 dark:hover:bg-surface-3 rounded px-1 py-0.5 -mx-1 transition-colors"
                                 title="Clique para editar"
                               >
-                                <p className="text-slate-700 truncate">{t.descricao}</p>
+                                <p className="text-slate-700 dark:text-slate-300 truncate">{t.descricao}</p>
                                 {t.parcela && (
                                   <span className="text-[10px] text-slate-400">Parcela {t.parcela}</span>
                                 )}
@@ -979,17 +1009,40 @@ export default function ImportarFaturaPage() {
                             )}
                           </div>
 
-                          <div className="col-span-2 font-medium text-slate-700">
+                          {/* Tipo D/C - toggle */}
+                          <div className="flex justify-center">
+                            <button
+                              type="button"
+                              onClick={() => toggleTipoTransacao(t.id)}
+                              className={cn(
+                                'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer',
+                                t.tipo_transacao === 'credito'
+                                  ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                                  : 'bg-red-50 text-red-600 hover:bg-red-100'
+                              )}
+                              title={`Clique para alternar: ${t.tipo_transacao === 'debito' ? 'Débito → Crédito' : 'Crédito → Débito'}`}
+                            >
+                              {t.tipo_transacao === 'credito' ? (
+                                <ArrowUpCircle className="w-3 h-3" />
+                              ) : (
+                                <ArrowDownCircle className="w-3 h-3" />
+                              )}
+                              {t.tipo_transacao === 'credito' ? 'C' : 'D'}
+                            </button>
+                          </div>
+
+                          <div className="font-medium text-slate-700 dark:text-slate-300">
+                            {t.tipo_transacao === 'credito' && <span className="text-emerald-600">- </span>}
                             {formatCurrency(t.valor)}
                           </div>
 
                           {/* Categoria com select inline */}
-                          <div className="col-span-2">
+                          <div>
                             <Select
                               value={t.categoria_sugerida}
                               onValueChange={(v) => updateCategoria(t.id, v)}
                             >
-                              <SelectTrigger className="h-7 text-[11px] border-transparent bg-slate-100 hover:bg-slate-200 focus:ring-0">
+                              <SelectTrigger className="h-7 text-[11px] border-transparent bg-slate-100 dark:bg-surface-2 hover:bg-slate-200 dark:hover:bg-surface-3 focus:ring-0">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1002,7 +1055,7 @@ export default function ImportarFaturaPage() {
                             </Select>
                           </div>
 
-                          <div className="col-span-1 flex justify-end gap-1">
+                          <div className="flex justify-end gap-1">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1066,21 +1119,21 @@ export default function ImportarFaturaPage() {
 
       {/* ETAPA 3: Resumo */}
       {etapa === 3 && (
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardContent className="py-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center">
                 <CheckCircle className="w-4 h-4 text-emerald-600" />
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-700">Importação concluída</p>
-                <p className="text-xs text-slate-500">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Importação concluída</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   {totalImportado} lançamentos · {formatCurrency(valorTotalImportado)}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center justify-between py-3 px-3 rounded-lg bg-slate-50 mb-4">
+            <div className="flex items-center justify-between py-3 px-3 rounded-lg bg-slate-50 dark:bg-surface-0 mb-4">
               <div className="flex items-center gap-2">
                 <div
                   className="w-6 h-6 rounded flex items-center justify-center"
@@ -1088,7 +1141,7 @@ export default function ImportarFaturaPage() {
                 >
                   <CreditCard className="w-3.5 h-3.5 text-white" />
                 </div>
-                <span className="text-sm text-slate-600">
+                <span className="text-sm text-slate-600 dark:text-slate-400">
                   {cartaoSelecionado?.nome} •••• {cartaoSelecionado?.ultimos_digitos}
                 </span>
               </div>
@@ -1118,7 +1171,7 @@ export default function ImportarFaturaPage() {
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[#34495e]">Editar Lançamento</DialogTitle>
+            <DialogTitle className="text-[#34495e] dark:text-slate-200">Editar Lançamento</DialogTitle>
             <DialogDescription>
               Ajuste os dados antes de importar
             </DialogDescription>
@@ -1160,7 +1213,24 @@ export default function ImportarFaturaPage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Tipo</Label>
+                  <Select
+                    value={editingTransacao.tipo_transacao}
+                    onValueChange={(v) =>
+                      setEditingTransacao({ ...editingTransacao, tipo_transacao: v as 'debito' | 'credito' })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="debito">Débito</SelectItem>
+                      <SelectItem value="credito">Crédito</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div>
                   <Label>Parcela</Label>
                   <Input

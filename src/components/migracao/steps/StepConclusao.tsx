@@ -57,17 +57,17 @@ export function StepConclusao({ state, updateState, setJob }: Props) {
       <div className="flex flex-col items-center justify-center py-12 space-y-8">
         {/* Ícone animado */}
         <div className="relative">
-          <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
+          <div className="w-24 h-24 rounded-full bg-green-100 dark:bg-emerald-500/20 flex items-center justify-center">
             <Loader2 className="w-12 h-12 text-green-500 animate-spin" />
           </div>
         </div>
 
         {/* Status */}
         <div className="text-center">
-          <p className="text-xl font-medium text-slate-700">
+          <p className="text-xl font-medium text-slate-700 dark:text-slate-300">
             Importando registros...
           </p>
-          <p className="text-sm text-slate-500 mt-2">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
             {job?.linhas_importadas || 0} de {job?.linhas_validas || 0} registros
           </p>
         </div>
@@ -75,13 +75,13 @@ export function StepConclusao({ state, updateState, setJob }: Props) {
         {/* Barra de progresso */}
         <div className="w-full max-w-md">
           <Progress value={progresso} className="h-3" />
-          <p className="text-xs text-slate-400 text-center mt-2">
+          <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-2">
             {progresso}% concluído
           </p>
         </div>
 
         {/* Info */}
-        <p className="text-xs text-slate-400 text-center">
+        <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
           Por favor, não feche esta página até a importação ser concluída.
         </p>
       </div>
@@ -92,15 +92,15 @@ export function StepConclusao({ state, updateState, setJob }: Props) {
   if (isErro) {
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-6">
-        <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center">
+        <div className="w-20 h-20 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center">
           <XCircle className="w-10 h-10 text-red-500" />
         </div>
 
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-slate-800">
+          <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200">
             Erro na Importação
           </h2>
-          <p className="text-sm text-slate-500 mt-2 max-w-md">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-md">
             {job?.resultado_final?.erro || 'Ocorreu um erro durante a importação. Por favor, tente novamente.'}
           </p>
         </div>
@@ -127,7 +127,7 @@ export function StepConclusao({ state, updateState, setJob }: Props) {
       {/* Header de sucesso */}
       <div className="flex flex-col items-center justify-center py-8">
         <div className="relative">
-          <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
+          <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-emerald-500/20 flex items-center justify-center">
             <CheckCircle className="w-10 h-10 text-green-500" />
           </div>
           <div className="absolute -top-2 -right-2">
@@ -135,46 +135,46 @@ export function StepConclusao({ state, updateState, setJob }: Props) {
           </div>
         </div>
 
-        <h2 className="text-2xl font-semibold text-slate-800 mt-6">
+        <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-200 mt-6">
           Migração Concluída!
         </h2>
-        <p className="text-slate-500 mt-2">
+        <p className="text-slate-500 dark:text-slate-400 mt-2">
           {moduloConfig?.nome} importado com sucesso
         </p>
       </div>
 
       {/* Estatísticas */}
       <Card className="p-6">
-        <h3 className="font-medium text-slate-700 mb-4">Estatísticas da Importação</h3>
+        <h3 className="font-medium text-slate-700 dark:text-slate-300 mb-4">Estatísticas da Importação</h3>
 
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-green-50 rounded-lg p-4 text-center">
-            <p className="text-3xl font-bold text-green-600">
+          <div className="bg-green-50 dark:bg-emerald-500/10 rounded-lg p-4 text-center">
+            <p className="text-3xl font-bold text-green-600 dark:text-emerald-400">
               {job?.linhas_importadas || 0}
             </p>
-            <p className="text-sm text-green-700">Importados</p>
+            <p className="text-sm text-green-700 dark:text-emerald-400">Importados</p>
           </div>
 
-          <div className="bg-amber-50 rounded-lg p-4 text-center">
-            <p className="text-3xl font-bold text-amber-600">
+          <div className="bg-amber-50 dark:bg-amber-500/10 rounded-lg p-4 text-center">
+            <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">
               {job?.linhas_duplicadas || 0}
             </p>
-            <p className="text-sm text-amber-700">Duplicatas</p>
+            <p className="text-sm text-amber-700 dark:text-amber-400">Duplicatas</p>
           </div>
 
-          <div className="bg-red-50 rounded-lg p-4 text-center">
-            <p className="text-3xl font-bold text-red-600">
+          <div className="bg-red-50 dark:bg-red-500/10 rounded-lg p-4 text-center">
+            <p className="text-3xl font-bold text-red-600 dark:text-red-400">
               {job?.linhas_com_erro || 0}
             </p>
-            <p className="text-sm text-red-700">Erros</p>
+            <p className="text-sm text-red-700 dark:text-red-400">Erros</p>
           </div>
         </div>
       </Card>
 
       {/* Detalhes adicionais */}
       {job?.campos_extras && job.campos_extras.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
-          <p className="text-blue-700">
+        <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-lg p-4 text-sm">
+          <p className="text-blue-700 dark:text-blue-400">
             <AlertTriangle className="w-4 h-4 inline mr-2" />
             Os seguintes campos foram adicionados às observações:
             <strong className="ml-1">{job.campos_extras.join(', ')}</strong>

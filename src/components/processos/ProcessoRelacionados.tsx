@@ -68,17 +68,17 @@ interface Props {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  ativo: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  suspenso: 'bg-amber-100 text-amber-700 border-amber-200',
-  arquivado: 'bg-slate-100 text-slate-600 border-slate-200',
-  baixado: 'bg-blue-100 text-blue-700 border-blue-200',
-  transito_julgado: 'bg-purple-100 text-purple-700 border-purple-200',
-  acordo: 'bg-teal-100 text-teal-700 border-teal-200',
+  ativo: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-700',
+  suspenso: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-700',
+  arquivado: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-surface-2 dark:text-slate-400 dark:border-slate-700',
+  baixado: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-700',
+  transito_julgado: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-700',
+  acordo: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-500/10 dark:text-teal-400 dark:border-teal-700',
 }
 
 const TIPO_COLORS: Record<string, string> = {
-  recurso: 'bg-blue-50 text-blue-700 border-blue-200',
-  incidente: 'bg-violet-50 text-violet-700 border-violet-200',
+  recurso: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-700',
+  incidente: 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-700',
 }
 
 function ProcessoRow({
@@ -102,7 +102,7 @@ function ProcessoRow({
   const tipoColor = TIPO_COLORS[rel.tipo] ?? 'bg-slate-100 text-slate-600'
 
   return (
-    <div className="group flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-slate-50 transition-colors">
+    <div className="group flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors">
       {/* Tipo badge */}
       <Badge
         variant="outline"
@@ -113,7 +113,7 @@ function ProcessoRow({
 
       {/* Info */}
       <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-        <span className="font-mono text-sm font-semibold text-[#34495e] truncate">
+        <span className="font-mono text-sm font-semibold text-[#34495e] dark:text-slate-200 truncate">
           {rel.processo.numero_cnj || rel.processo.numero_pasta}
         </span>
         <Badge
@@ -122,7 +122,7 @@ function ProcessoRow({
         >
           {statusLabel}
         </Badge>
-        <span className="text-xs text-slate-400 hidden sm:inline">
+        <span className="text-xs text-slate-400 dark:text-slate-500 hidden sm:inline">
           {instanciaLabel} · {areaLabel}
         </span>
       </div>
@@ -132,7 +132,7 @@ function ProcessoRow({
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-[#46627f] hover:text-[#34495e] hover:bg-[#f0f9f9]"
+          className="h-7 w-7 text-[#46627f] dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 hover:bg-[#f0f9f9] dark:hover:bg-teal-900/20"
           onClick={() => router.push(`/dashboard/processos/${rel.processo.id}`)}
           title="Abrir processo"
         >
@@ -144,7 +144,7 @@ function ProcessoRow({
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50"
+              className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
               disabled={removing}
               title="Remover vínculo"
             >
@@ -269,7 +269,7 @@ function VincularExistenteModal({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[#34495e]">
+          <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
             <Link2 className="w-4 h-4 text-[#89bcbe]" />
             Vincular processo existente
           </DialogTitle>
@@ -309,12 +309,12 @@ function VincularExistenteModal({
           </div>
 
           {resultados.length > 0 && (
-            <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-52 overflow-y-auto">
+            <div className="border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-100 dark:divide-slate-800 max-h-52 overflow-y-auto">
               {resultados.map((r) => (
                 <label
                   key={r.id}
                   className={`flex items-start gap-3 px-3 py-2 cursor-pointer transition-colors ${
-                    selecionado === r.id ? 'bg-[#f0f9f9]' : 'hover:bg-slate-50'
+                    selecionado === r.id ? 'bg-[#f0f9f9] dark:bg-teal-900/20' : 'hover:bg-slate-50 dark:hover:bg-surface-2'
                   }`}
                 >
                   <input
@@ -326,10 +326,10 @@ function VincularExistenteModal({
                     className="mt-0.5"
                   />
                   <div>
-                    <p className="font-mono text-sm font-semibold text-[#34495e]">
+                    <p className="font-mono text-sm font-semibold text-[#34495e] dark:text-slate-200">
                       {r.numero_cnj || r.numero_pasta}
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       {r.autor} x {r.reu} ·{' '}
                       {PROCESSO_INSTANCIA_LABELS[r.instancia] ?? r.instancia}
                     </p>
@@ -340,13 +340,13 @@ function VincularExistenteModal({
           )}
 
           {busca.length >= 3 && !buscando && resultados.length === 0 && (
-            <p className="text-sm text-slate-400 text-center py-2">
+            <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-2">
               Nenhum processo encontrado
             </p>
           )}
         </div>
 
-        <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
+        <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
           <Button variant="outline" onClick={onClose} disabled={saving}>
             Cancelar
           </Button>
@@ -407,10 +407,10 @@ export default function ProcessoRelacionados({ processoId, processoPrincipalData
   const temRelacionados = !!principal || todosFilhos.length > 0
 
   return (
-    <Card className="border-slate-200">
+    <Card className="border-slate-200 dark:border-slate-700">
       <CardHeader className="pb-2 pt-3 px-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm text-[#34495e] flex items-center gap-2">
+          <CardTitle className="text-sm text-[#34495e] dark:text-slate-200 flex items-center gap-2">
             <GitBranch className="w-4 h-4 text-[#89bcbe]" />
             Processos Vinculados
             {todosFilhos.length > 0 && (
@@ -425,7 +425,7 @@ export default function ProcessoRelacionados({ processoId, processoPrincipalData
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-xs text-[#46627f] hover:text-[#34495e] hover:bg-[#f0f9f9] gap-1"
+                className="h-7 text-xs text-[#46627f] dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 hover:bg-[#f0f9f9] dark:hover:bg-teal-900/20 gap-1"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Adicionar
@@ -457,7 +457,7 @@ export default function ProcessoRelacionados({ processoId, processoPrincipalData
             <Loader2 className="w-5 h-5 animate-spin text-slate-300" />
           </div>
         ) : !temRelacionados ? (
-          <div className="text-center py-5 text-slate-400 space-y-1">
+          <div className="text-center py-5 text-slate-400 dark:text-slate-500 space-y-1">
             <GitBranch className="w-7 h-7 mx-auto opacity-25" />
             <p className="text-xs">Nenhum processo vinculado</p>
           </div>
@@ -466,13 +466,13 @@ export default function ProcessoRelacionados({ processoId, processoPrincipalData
             {/* Processo Principal */}
             {principal && (
               <div
-                className="flex items-center gap-3 py-2 px-3 rounded-lg bg-[#f0f9f9] border border-[#aacfd0] cursor-pointer hover:border-[#89bcbe] transition-colors mb-2"
+                className="flex items-center gap-3 py-2 px-3 rounded-lg bg-[#f0f9f9] dark:bg-teal-900/20 border border-[#aacfd0] dark:border-teal-700 cursor-pointer hover:border-[#89bcbe] dark:hover:border-teal-500 transition-colors mb-2"
                 onClick={() => router.push(`/dashboard/processos/${principal.processo.id}`)}
               >
                 <ArrowUpRight className="w-3.5 h-3.5 text-[#89bcbe] shrink-0" />
                 <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-medium text-[#46627f]">Principal</span>
-                  <span className="font-mono text-sm font-semibold text-[#34495e] truncate">
+                  <span className="text-xs font-medium text-[#46627f] dark:text-slate-400">Principal</span>
+                  <span className="font-mono text-sm font-semibold text-[#34495e] dark:text-slate-200 truncate">
                     {principal.processo.numero_cnj || principal.processo.numero_pasta}
                   </span>
                   <Badge
@@ -490,7 +490,7 @@ export default function ProcessoRelacionados({ processoId, processoPrincipalData
 
             {/* Recursos e Incidentes em lista unificada */}
             {todosFilhos.length > 0 && (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {todosFilhos.map((rel) => (
                   <ProcessoRow
                     key={rel.relacionamentoId}

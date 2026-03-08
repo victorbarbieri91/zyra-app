@@ -251,8 +251,8 @@ export default function ReceitaModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[#34495e]">
-            <TrendingUp className="w-5 h-5 text-emerald-600" />
+          <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
+            <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             Nova Receita
           </DialogTitle>
         </DialogHeader>
@@ -261,7 +261,7 @@ export default function ReceitaModal({
           {/* Tipo e Categoria */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs text-slate-600">Tipo</Label>
+              <Label className="text-xs text-slate-600 dark:text-slate-400">Tipo</Label>
               <Select value={formData.tipo} onValueChange={(v) => updateField('tipo', v)}>
                 <SelectTrigger className="h-9 mt-1">
                   <SelectValue />
@@ -276,7 +276,7 @@ export default function ReceitaModal({
               </Select>
             </div>
             <div>
-              <Label className="text-xs text-slate-600">Categoria</Label>
+              <Label className="text-xs text-slate-600 dark:text-slate-400">Categoria</Label>
               <Select value={formData.categoria} onValueChange={(v) => updateField('categoria', v)}>
                 <SelectTrigger className="h-9 mt-1">
                   <SelectValue />
@@ -294,16 +294,16 @@ export default function ReceitaModal({
 
           {/* Cliente */}
           <div>
-            <Label className="text-xs text-slate-600">Cliente</Label>
+            <Label className="text-xs text-slate-600 dark:text-slate-400">Cliente</Label>
             {clienteSelecionado ? (
-              <div className="flex items-center gap-2 mt-1 p-2 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="flex items-center gap-2 mt-1 p-2 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-200 dark:border-slate-700">
                 <User className="w-4 h-4 text-slate-400" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[#34495e] truncate">
+                  <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">
                     {clienteSelecionado.nome}
                   </p>
                   {clienteSelecionado.documento && (
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">
                       {clienteSelecionado.tipo_pessoa === 'pf' ? 'CPF' : 'CNPJ'}: {clienteSelecionado.documento}
                     </p>
                   )}
@@ -312,7 +312,7 @@ export default function ReceitaModal({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0 text-slate-400 hover:text-slate-600"
+                  className="h-6 w-6 p-0 text-slate-400 hover:text-slate-600 dark:text-slate-400"
                   onClick={handleRemoveCliente}
                 >
                   <X className="w-3.5 h-3.5" />
@@ -348,15 +348,15 @@ export default function ReceitaModal({
                         <button
                           key={cliente.id}
                           onClick={() => handleSelectCliente(cliente)}
-                          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-left"
+                          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0 text-left"
                         >
                           <User className="w-4 h-4 text-slate-400 shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-[#34495e] truncate">
+                            <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">
                               {cliente.nome}
                             </p>
                             {cliente.documento && (
-                              <p className="text-[10px] text-slate-500">
+                              <p className="text-[10px] text-slate-500 dark:text-slate-400">
                                 {cliente.tipo_pessoa === 'pf' ? 'CPF' : 'CNPJ'}: {cliente.documento}
                               </p>
                             )}
@@ -365,7 +365,7 @@ export default function ReceitaModal({
                       ))}
                     </div>
                   ) : clienteSearch.length >= 2 ? (
-                    <div className="py-4 text-center text-sm text-slate-500">
+                    <div className="py-4 text-center text-sm text-slate-500 dark:text-slate-400">
                       Nenhum cliente encontrado
                     </div>
                   ) : null}
@@ -376,7 +376,7 @@ export default function ReceitaModal({
 
           {/* Descrição */}
           <div>
-            <Label className="text-xs text-slate-600">Descrição *</Label>
+            <Label className="text-xs text-slate-600 dark:text-slate-400">Descrição *</Label>
             <Textarea
               placeholder="Descreva a receita..."
               value={formData.descricao}
@@ -389,7 +389,7 @@ export default function ReceitaModal({
           {/* Valor e Datas */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <Label className="text-xs text-slate-600">Valor (R$) *</Label>
+              <Label className="text-xs text-slate-600 dark:text-slate-400">Valor (R$) *</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -401,7 +401,7 @@ export default function ReceitaModal({
               />
             </div>
             <div>
-              <Label className="text-xs text-slate-600">Competência</Label>
+              <Label className="text-xs text-slate-600 dark:text-slate-400">Competência</Label>
               <Input
                 type="date"
                 value={formData.data_competencia}
@@ -410,7 +410,7 @@ export default function ReceitaModal({
               />
             </div>
             <div>
-              <Label className="text-xs text-slate-600">Vencimento *</Label>
+              <Label className="text-xs text-slate-600 dark:text-slate-400">Vencimento *</Label>
               <Input
                 type="date"
                 value={formData.data_vencimento}
@@ -422,7 +422,7 @@ export default function ReceitaModal({
 
           {/* Observações */}
           <div>
-            <Label className="text-xs text-slate-600">Observações</Label>
+            <Label className="text-xs text-slate-600 dark:text-slate-400">Observações</Label>
             <Textarea
               placeholder="Observações adicionais (opcional)..."
               value={formData.observacoes}
@@ -435,7 +435,7 @@ export default function ReceitaModal({
         </div>
 
         {/* Botões */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancelar
           </Button>

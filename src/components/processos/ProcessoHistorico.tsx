@@ -77,36 +77,36 @@ export default function ProcessoHistorico({ processoId }: ProcessoHistoricoProps
 
   const getColorClass = (acao: string) => {
     const colors = {
-      criacao: 'bg-blue-100 text-blue-600',
-      edicao: 'bg-amber-100 text-amber-600',
-      movimentacao: 'bg-purple-100 text-purple-600',
-      status: 'bg-teal-100 text-teal-600',
-      arquivamento: 'bg-slate-100 text-slate-600',
-      valores: 'bg-emerald-100 text-emerald-600',
-      documento: 'bg-pink-100 text-pink-600'
+      criacao: 'bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400',
+      edicao: 'bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400',
+      movimentacao: 'bg-purple-100 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400',
+      status: 'bg-teal-100 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400',
+      arquivamento: 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400',
+      valores: 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+      documento: 'bg-pink-100 dark:bg-pink-500/10 text-pink-600 dark:text-pink-400'
     }
     return colors[acao as keyof typeof colors] || colors.edicao
   }
 
   return (
     <div className="space-y-6">
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-lg font-medium text-[#34495e]">
+          <CardTitle className="text-lg font-medium text-[#34495e] dark:text-slate-200">
             Histórico de Auditoria
           </CardTitle>
-          <p className="text-xs text-slate-600 mt-1">
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
             Registro completo de todas as alterações realizadas no processo
           </p>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8 text-slate-500">
+            <div className="text-center py-8 text-slate-500 dark:text-slate-400">
               <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
               <p className="text-sm">Carregando histórico...</p>
             </div>
           ) : historico.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">
+            <div className="text-center py-8 text-slate-500 dark:text-slate-400">
               <History className="w-10 h-10 mx-auto mb-3 opacity-40" />
               <p className="text-sm">Nenhum registro no histórico</p>
               <p className="text-xs mt-1">Alterações no processo serão registradas aqui automaticamente</p>
@@ -114,7 +114,7 @@ export default function ProcessoHistorico({ processoId }: ProcessoHistoricoProps
           ) : (
             <div className="relative space-y-6">
               {/* Linha vertical conectora */}
-              <div className="absolute left-[14px] top-0 bottom-0 w-0.5 bg-slate-200" />
+              <div className="absolute left-[14px] top-0 bottom-0 w-0.5 bg-slate-200 dark:bg-slate-700" />
 
               {historico.map((entry) => {
                 const Icon = getIconeAcao(entry.acao)
@@ -126,18 +126,18 @@ export default function ProcessoHistorico({ processoId }: ProcessoHistoricoProps
                     </div>
 
                     {/* Conteúdo do evento */}
-                    <div className="flex-1 pb-6 border-b border-slate-100 last:border-0">
+                    <div className="flex-1 pb-6 border-b border-slate-100 dark:border-slate-800 last:border-0">
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <Badge variant="secondary" className="text-[10px] capitalize">
                               {entry.acao}
                             </Badge>
-                            <span className="text-sm font-semibold text-[#34495e]">
+                            <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                               {entry.user_nome || 'Sistema'}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
                             {formatBrazilDateTime(new Date(entry.created_at))}
                           </p>
                         </div>
@@ -145,28 +145,28 @@ export default function ProcessoHistorico({ processoId }: ProcessoHistoricoProps
 
                       {/* Detalhes da alteração */}
                       {entry.campo_alterado && (
-                        <div className="mb-2 p-3 bg-slate-50 rounded-lg">
-                          <p className="text-xs font-semibold text-[#46627f] mb-1">
+                        <div className="mb-2 p-3 bg-slate-50 dark:bg-surface-0 rounded-lg">
+                          <p className="text-xs font-semibold text-[#46627f] dark:text-slate-400 mb-1">
                             Campo: {entry.campo_alterado}
                           </p>
                           <div className="flex items-center gap-2 text-xs flex-wrap">
                             {entry.valor_anterior && (
                               <>
-                                <span className="text-slate-600">De:</span>
-                                <code className="px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-700">
+                                <span className="text-slate-600 dark:text-slate-400">De:</span>
+                                <code className="px-2 py-0.5 bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded text-slate-700 dark:text-slate-300">
                                   {entry.valor_anterior}
                                 </code>
                               </>
                             )}
-                            <span className="text-slate-600">→ Para:</span>
-                            <code className="px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-700">
+                            <span className="text-slate-600 dark:text-slate-400">→ Para:</span>
+                            <code className="px-2 py-0.5 bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded text-slate-700 dark:text-slate-300">
                               {entry.valor_novo}
                             </code>
                           </div>
                         </div>
                       )}
 
-                      <p className="text-sm text-slate-700 leading-relaxed">
+                      <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                         {entry.descricao}
                       </p>
                     </div>

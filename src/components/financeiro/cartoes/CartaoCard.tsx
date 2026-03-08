@@ -48,6 +48,7 @@ export default function CartaoCard({
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
+      minimumFractionDigits: 2,
     }).format(value)
   }
 
@@ -72,21 +73,21 @@ export default function CartaoCard({
     switch (fatura.status) {
       case 'paga':
         return (
-          <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
+          <Badge className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 font-medium">
             <CheckCircle className="w-3 h-3 mr-1" />
             Paga
           </Badge>
         )
       case 'fechada':
         return (
-          <Badge className="bg-amber-50 text-amber-700 border border-amber-200 font-medium">
+          <Badge className="bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 font-medium">
             <AlertCircle className="w-3 h-3 mr-1" />
             Aguardando
           </Badge>
         )
       case 'aberta':
         return (
-          <Badge className="bg-slate-50 text-slate-600 border border-slate-200 font-medium">
+          <Badge className="bg-slate-50 dark:bg-surface-0 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 font-medium">
             <Calendar className="w-3 h-3 mr-1" />
             Aberta
           </Badge>
@@ -99,12 +100,12 @@ export default function CartaoCard({
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-xl border bg-white transition-all hover:shadow-md',
+        'relative overflow-hidden rounded-xl border bg-white dark:bg-surface-1 transition-all hover:shadow-md',
         urgency === 'overdue' && 'border-red-200 ring-1 ring-red-100',
         urgency === 'urgent' && 'border-amber-200 ring-1 ring-amber-100',
         urgency === 'warning' && 'border-yellow-200',
         urgency === 'paid' && 'border-emerald-200',
-        urgency === 'normal' && 'border-slate-200'
+        urgency === 'normal' && 'border-slate-200 dark:border-slate-700'
       )}
     >
       {/* Header do Cartão - Design fosco/mate */}
@@ -152,7 +153,7 @@ export default function CartaoCard({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="text-red-600"
+                className="text-red-600 dark:text-red-400"
                 onClick={() => onDelete(cartao.id)}
               >
                 <Trash2 className="w-4 h-4 mr-2" />
@@ -192,8 +193,8 @@ export default function CartaoCard({
         {/* Status e Valor da Fatura Atual */}
         <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="text-xs text-slate-500 mb-0.5">Fatura Atual</p>
-            <p className="text-xl font-semibold text-[#34495e]">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Fatura Atual</p>
+            <p className="text-xl font-semibold text-[#34495e] dark:text-slate-200">
               {fatura ? formatCurrency(fatura.valor_total) : formatCurrency(0)}
             </p>
           </div>
@@ -202,7 +203,7 @@ export default function CartaoCard({
 
         {/* Info de fechamento/vencimento */}
         {fatura && (
-          <div className="flex items-center gap-3 text-xs text-slate-500 mb-4">
+          <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-4">
             {fatura.status === 'aberta' && fatura.dias_para_fechamento > 0 && (
               <span className="flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
@@ -213,8 +214,8 @@ export default function CartaoCard({
               <span
                 className={cn(
                   'flex items-center gap-1',
-                  fatura.dias_para_vencimento < 0 && 'text-red-600 font-medium',
-                  fatura.dias_para_vencimento <= 5 && fatura.dias_para_vencimento >= 0 && 'text-amber-600 font-medium'
+                  fatura.dias_para_vencimento < 0 && 'text-red-600 dark:text-red-400 font-medium',
+                  fatura.dias_para_vencimento <= 5 && fatura.dias_para_vencimento >= 0 && 'text-amber-600 dark:text-amber-400 font-medium'
                 )}
               >
                 <DollarSign className="w-3 h-3" />
@@ -236,7 +237,7 @@ export default function CartaoCard({
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 h-9 text-slate-600 border-slate-200 hover:bg-slate-50"
+            className="flex-1 h-9 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0"
             onClick={() => onAddExpense(cartao.id)}
           >
             <Plus className="w-3.5 h-3.5 mr-1.5" />

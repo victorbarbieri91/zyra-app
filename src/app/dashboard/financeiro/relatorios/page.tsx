@@ -284,6 +284,7 @@ export default function RelatoriosFinanceirosPage() {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
+      minimumFractionDigits: 2,
     }).format(value)
   }
 
@@ -305,8 +306,8 @@ export default function RelatoriosFinanceirosPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-[#34495e]">Relatórios Financeiros</h1>
-          <p className="text-sm text-slate-600 mt-1">
+          <h1 className="text-2xl font-semibold text-[#34495e] dark:text-slate-200">Relatórios Financeiros</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             Análise consolidada de receitas, despesas e performance
           </p>
         </div>
@@ -314,7 +315,7 @@ export default function RelatoriosFinanceirosPage() {
           <select
             value={periodo}
             onChange={(e) => setPeriodo(e.target.value as typeof periodo)}
-            className="h-10 rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
+            className="h-10 rounded-lg border border-slate-200 dark:border-slate-700 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A] dark:bg-surface-1 dark:text-slate-200"
           >
             <option value="mes">Último Mês</option>
             <option value="trimestre">Trimestre</option>
@@ -329,54 +330,54 @@ export default function RelatoriosFinanceirosPage() {
       </div>
 
       {error && (
-        <Card className="border-amber-200 bg-amber-50">
+        <Card className="border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10">
           <CardContent className="p-4 flex items-center gap-3">
-            <AlertCircle className="h-5 w-5 text-amber-600" />
-            <p className="text-sm text-amber-700">{error}</p>
+            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            <p className="text-sm text-amber-700 dark:text-amber-400">{error}</p>
           </CardContent>
         </Card>
       )}
 
       {/* Totalizadores do Período */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-slate-200 shadow-sm bg-gradient-to-br from-emerald-50 to-emerald-100/50">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-800/10">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-emerald-700">Receitas Totais</p>
-                <p className="text-2xl font-bold text-emerald-900 mt-1">
+                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">Receitas Totais</p>
+                <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-300 mt-1">
                   {loading ? '...' : formatCurrency(totais.receitas)}
                 </p>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-emerald-200 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-emerald-700" />
+              <div className="w-10 h-10 rounded-lg bg-emerald-200 dark:bg-emerald-500/20 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 shadow-sm bg-gradient-to-br from-red-50 to-red-100/50">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm bg-gradient-to-br from-red-50 to-red-100/50 dark:from-red-900/20 dark:to-red-800/10">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-red-700">Despesas Totais</p>
-                <p className="text-2xl font-bold text-red-900 mt-1">
+                <p className="text-xs font-medium text-red-700 dark:text-red-400">Despesas Totais</p>
+                <p className="text-2xl font-bold text-red-900 dark:text-red-300 mt-1">
                   {loading ? '...' : formatCurrency(totais.despesas)}
                 </p>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-red-200 flex items-center justify-center">
-                <TrendingDown className="h-5 w-5 text-red-700" />
+              <div className="w-10 h-10 rounded-lg bg-red-200 dark:bg-red-500/20 flex items-center justify-center">
+                <TrendingDown className="h-5 w-5 text-red-700 dark:text-red-400" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 shadow-sm bg-gradient-to-br from-[#89bcbe] to-[#aacfd0]">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm bg-gradient-to-br from-[#89bcbe] to-[#aacfd0] dark:from-[#89bcbe]/20 dark:to-[#aacfd0]/10">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-[#34495e]">Saldo Líquido</p>
-                <p className="text-2xl font-bold text-[#34495e] mt-1">
+                <p className="text-xs font-medium text-[#34495e] dark:text-slate-200">Saldo Líquido</p>
+                <p className="text-2xl font-bold text-[#34495e] dark:text-slate-100 mt-1">
                   {loading ? '...' : formatCurrency(totais.saldo)}
                 </p>
               </div>
@@ -391,7 +392,7 @@ export default function RelatoriosFinanceirosPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 shadow-sm bg-gradient-to-br from-[#34495e] to-[#46627f]">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm bg-gradient-to-br from-[#34495e] to-[#46627f] dark:from-[#34495e]/80 dark:to-[#46627f]/60">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
@@ -409,9 +410,9 @@ export default function RelatoriosFinanceirosPage() {
       </div>
 
       {/* Evolução Mensal */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardHeader className="pb-2 pt-3">
-          <CardTitle className="text-sm font-medium text-slate-700">
+          <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">
             Evolução{' '}
             {periodo === 'mes'
               ? 'Mensal'
@@ -426,13 +427,13 @@ export default function RelatoriosFinanceirosPage() {
           {loading ? (
             <div className="py-12 text-center">
               <Loader2 className="h-8 w-8 mx-auto animate-spin text-[#89bcbe]" />
-              <p className="text-sm text-slate-500 mt-2">Carregando...</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Carregando...</p>
             </div>
           ) : relatorioData.length === 0 ? (
             <div className="py-12 text-center">
-              <BarChart3 className="h-12 w-12 mx-auto text-slate-300" />
-              <p className="text-sm text-slate-500 mt-2">Nenhum dado disponível para o período</p>
-              <p className="text-xs text-slate-400">
+              <BarChart3 className="h-12 w-12 mx-auto text-slate-300 dark:text-slate-600" />
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Nenhum dado disponível para o período</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500">
                 Os dados aparecerão aqui quando houver movimentações financeiras
               </p>
             </div>
@@ -441,7 +442,7 @@ export default function RelatoriosFinanceirosPage() {
               {relatorioData.map((rel) => (
                 <div
                   key={rel.mes_referencia}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-slate-50/50"
+                  className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-surface-1"
                 >
                   {/* Período */}
                   <div className="w-10 h-10 rounded-lg bg-[#89bcbe] flex items-center justify-center">
@@ -451,32 +452,32 @@ export default function RelatoriosFinanceirosPage() {
                   <div className="flex-1 grid grid-cols-12 gap-3 items-center">
                     {/* Nome Período */}
                     <div className="col-span-3">
-                      <p className="text-sm font-semibold text-slate-700 capitalize">{rel.periodo}</p>
+                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 capitalize">{rel.periodo}</p>
                     </div>
 
                     {/* Receitas */}
                     <div className="col-span-3">
-                      <p className="text-[10px] text-emerald-600">Receitas</p>
-                      <p className="text-sm font-semibold text-emerald-700">
+                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400">Receitas</p>
+                      <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
                         {formatCurrency(rel.receitas)}
                       </p>
                     </div>
 
                     {/* Despesas */}
                     <div className="col-span-3">
-                      <p className="text-[10px] text-red-600">Despesas</p>
-                      <p className="text-sm font-semibold text-red-700">
+                      <p className="text-[10px] text-red-600 dark:text-red-400">Despesas</p>
+                      <p className="text-sm font-semibold text-red-700 dark:text-red-400">
                         {formatCurrency(rel.despesas)}
                       </p>
                     </div>
 
                     {/* Saldo */}
                     <div className="col-span-3">
-                      <p className="text-[10px] text-slate-500">Saldo</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">Saldo</p>
                       <p
                         className={cn(
                           'text-sm font-bold',
-                          rel.saldo >= 0 ? 'text-emerald-700' : 'text-red-700'
+                          rel.saldo >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'
                         )}
                       >
                         {formatCurrency(rel.saldo)}
@@ -493,9 +494,9 @@ export default function RelatoriosFinanceirosPage() {
       {/* Análises Rápidas */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Top Categorias de Despesas */}
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
           <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-sm font-medium text-slate-700">
+            <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Top Categorias de Despesas
             </CardTitle>
           </CardHeader>
@@ -506,7 +507,7 @@ export default function RelatoriosFinanceirosPage() {
               </div>
             ) : categoriasDespesas.length === 0 ? (
               <div className="py-8 text-center">
-                <p className="text-sm text-slate-500">Nenhuma despesa no período</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Nenhuma despesa no período</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -514,17 +515,17 @@ export default function RelatoriosFinanceirosPage() {
                   <div key={cat.categoria} className="flex items-center gap-2">
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium text-slate-700">{cat.categoria}</span>
-                        <span className="text-xs text-slate-600">{formatCurrency(cat.valor)}</span>
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{cat.categoria}</span>
+                        <span className="text-xs text-slate-600 dark:text-slate-400">{formatCurrency(cat.valor)}</span>
                       </div>
-                      <div className="w-full bg-slate-200 rounded-full h-1.5">
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
                         <div
                           className="bg-red-600 h-1.5 rounded-full"
                           style={{ width: `${Math.min(cat.percentual, 100)}%` }}
                         />
                       </div>
                     </div>
-                    <Badge variant="secondary" className="text-[10px] bg-red-100 text-red-700">
+                    <Badge variant="secondary" className="text-[10px] bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400">
                       {cat.percentual.toFixed(1)}%
                     </Badge>
                   </div>
@@ -535,9 +536,9 @@ export default function RelatoriosFinanceirosPage() {
         </Card>
 
         {/* Top Fontes de Receita */}
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
           <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-sm font-medium text-slate-700">
+            <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Top Fontes de Receita
             </CardTitle>
           </CardHeader>
@@ -548,7 +549,7 @@ export default function RelatoriosFinanceirosPage() {
               </div>
             ) : fontesReceita.length === 0 ? (
               <div className="py-8 text-center">
-                <p className="text-sm text-slate-500">Nenhuma receita no período</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Nenhuma receita no período</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -556,17 +557,17 @@ export default function RelatoriosFinanceirosPage() {
                   <div key={fonte.fonte} className="flex items-center gap-2">
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium text-slate-700">{fonte.fonte}</span>
-                        <span className="text-xs text-slate-600">{formatCurrency(fonte.valor)}</span>
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{fonte.fonte}</span>
+                        <span className="text-xs text-slate-600 dark:text-slate-400">{formatCurrency(fonte.valor)}</span>
                       </div>
-                      <div className="w-full bg-slate-200 rounded-full h-1.5">
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
                         <div
                           className="bg-emerald-600 h-1.5 rounded-full"
                           style={{ width: `${Math.min(fonte.percentual, 100)}%` }}
                         />
                       </div>
                     </div>
-                    <Badge variant="secondary" className="text-[10px] bg-emerald-100 text-emerald-700">
+                    <Badge variant="secondary" className="text-[10px] bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
                       {fonte.percentual.toFixed(1)}%
                     </Badge>
                   </div>
@@ -578,61 +579,61 @@ export default function RelatoriosFinanceirosPage() {
       </div>
 
       {/* Indicadores de Performance */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardHeader className="pb-2 pt-3">
-          <CardTitle className="text-sm font-medium text-slate-700">
+          <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">
             Indicadores de Performance
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-2 pb-3">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="p-3 rounded-lg border border-slate-200 bg-slate-50/50">
-              <p className="text-xs text-slate-600">Margem Líquida</p>
-              <p className="text-xl font-bold text-[#34495e] mt-1">
+            <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-surface-1">
+              <p className="text-xs text-slate-600 dark:text-slate-400">Margem Líquida</p>
+              <p className="text-xl font-bold text-[#34495e] dark:text-slate-200 mt-1">
                 {loading
                   ? '...'
                   : totais.receitas > 0
                     ? `${((totais.saldo / totais.receitas) * 100).toFixed(1)}%`
                     : '0%'}
               </p>
-              <p className="text-[10px] text-slate-500 mt-1">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
                 {totais.saldo >= 0 ? 'Positiva' : 'Negativa'}
               </p>
             </div>
 
-            <div className="p-3 rounded-lg border border-slate-200 bg-slate-50/50">
-              <p className="text-xs text-slate-600">Taxa de Inadimplência</p>
-              <p className="text-xl font-bold text-amber-700 mt-1">
+            <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-surface-1">
+              <p className="text-xs text-slate-600 dark:text-slate-400">Taxa de Inadimplência</p>
+              <p className="text-xl font-bold text-amber-700 dark:text-amber-400 mt-1">
                 {loading ? '...' : `${inadimplencia.taxa.toFixed(1)}%`}
               </p>
-              <p className="text-[10px] text-slate-500 mt-1">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
                 {loading ? '' : formatCurrency(inadimplencia.valor)} em atraso
               </p>
             </div>
 
-            <div className="p-3 rounded-lg border border-slate-200 bg-slate-50/50">
-              <p className="text-xs text-slate-600">Ticket Médio</p>
-              <p className="text-xl font-bold text-emerald-700 mt-1">
+            <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-surface-1">
+              <p className="text-xs text-slate-600 dark:text-slate-400">Ticket Médio</p>
+              <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400 mt-1">
                 {loading
                   ? '...'
                   : relatorioData.length > 0
                     ? formatCurrency(totais.receitas / relatorioData.length)
                     : formatCurrency(0)}
               </p>
-              <p className="text-[10px] text-slate-500 mt-1">Por período</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Por período</p>
             </div>
 
-            <div className="p-3 rounded-lg border border-slate-200 bg-slate-50/50">
-              <p className="text-xs text-slate-600">Crescimento</p>
+            <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-surface-1">
+              <p className="text-xs text-slate-600 dark:text-slate-400">Crescimento</p>
               <p
                 className={cn(
                   'text-xl font-bold mt-1',
-                  crescimento >= 0 ? 'text-emerald-700' : 'text-red-700'
+                  crescimento >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'
                 )}
               >
                 {loading ? '...' : `${crescimento >= 0 ? '+' : ''}${crescimento.toFixed(1)}%`}
               </p>
-              <p className="text-[10px] text-slate-500 mt-1">vs período anterior</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">vs período anterior</p>
             </div>
           </div>
         </CardContent>

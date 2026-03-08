@@ -13,19 +13,19 @@ interface InsightCardProps {
 const insightConfig = {
   oportunidade: {
     dot: 'bg-emerald-500',
-    text: 'text-emerald-700',
+    text: 'text-emerald-700 dark:text-emerald-400',
   },
   alerta: {
     dot: 'bg-amber-500',
-    text: 'text-amber-700',
+    text: 'text-amber-700 dark:text-amber-400',
   },
   destaque: {
     dot: 'bg-teal-500',
-    text: 'text-teal-700',
+    text: 'text-teal-700 dark:text-teal-400',
   },
   sugestao: {
     dot: 'bg-blue-500',
-    text: 'text-blue-700',
+    text: 'text-blue-700 dark:text-blue-400',
   },
 }
 
@@ -33,12 +33,12 @@ export default function InsightCard({ type, title, description, action }: Insigh
   const config = insightConfig[type]
 
   return (
-    <div className="py-2 border-b border-slate-100 last:border-0">
+    <div className="py-2 border-b border-slate-100 dark:border-slate-800 last:border-0">
       <div className="flex items-start gap-2">
         <div className={cn('w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0', config.dot)} />
         <div className="flex-1 min-w-0">
           <h4 className={cn('font-medium text-xs leading-tight', config.text)}>{title}</h4>
-          <p className="text-[11px] text-slate-500 leading-snug mt-0.5">{description}</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug mt-0.5">{description}</p>
           {action && (
             <button
               onClick={action.onClick}

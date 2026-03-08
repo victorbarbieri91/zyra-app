@@ -18,20 +18,20 @@ interface AgendaListCardProps {
 
 const prioridadeConfig = {
   alta: {
-    bg: 'bg-red-50',
-    text: 'text-red-600',
+    bg: 'bg-red-50 dark:bg-red-500/10',
+    text: 'text-red-600 dark:text-red-400',
     border: 'border-red-200',
     label: 'Alta',
   },
   media: {
-    bg: 'bg-amber-50',
-    text: 'text-amber-600',
+    bg: 'bg-amber-50 dark:bg-amber-500/10',
+    text: 'text-amber-600 dark:text-amber-400',
     border: 'border-amber-200',
     label: 'Média',
   },
   baixa: {
-    bg: 'bg-emerald-50',
-    text: 'text-emerald-600',
+    bg: 'bg-emerald-50 dark:bg-emerald-500/10',
+    text: 'text-emerald-600 dark:text-emerald-400',
     border: 'border-emerald-200',
     label: 'Baixa',
   },
@@ -39,48 +39,48 @@ const prioridadeConfig = {
 
 const statusConfig = {
   concluida: {
-    bg: 'bg-emerald-100',
-    text: 'text-emerald-700',
+    bg: 'bg-emerald-100 dark:bg-emerald-500/10',
+    text: 'text-emerald-700 dark:text-emerald-400',
     label: 'Concluída',
   },
   realizada: {
-    bg: 'bg-emerald-100',
-    text: 'text-emerald-700',
+    bg: 'bg-emerald-100 dark:bg-emerald-500/10',
+    text: 'text-emerald-700 dark:text-emerald-400',
     label: 'Realizada',
   },
   realizado: {
-    bg: 'bg-emerald-100',
-    text: 'text-emerald-700',
+    bg: 'bg-emerald-100 dark:bg-emerald-500/10',
+    text: 'text-emerald-700 dark:text-emerald-400',
     label: 'Cumprido',
   },
   concluido: {
-    bg: 'bg-emerald-100',
-    text: 'text-emerald-700',
+    bg: 'bg-emerald-100 dark:bg-emerald-500/10',
+    text: 'text-emerald-700 dark:text-emerald-400',
     label: 'Cumprido',
   },
   em_andamento: {
-    bg: 'bg-blue-100',
-    text: 'text-blue-700',
+    bg: 'bg-blue-100 dark:bg-blue-500/10',
+    text: 'text-blue-700 dark:text-blue-400',
     label: 'Em andamento',
   },
   pendente: {
-    bg: 'bg-slate-100',
-    text: 'text-slate-700',
+    bg: 'bg-slate-100 dark:bg-surface-2',
+    text: 'text-slate-700 dark:text-slate-300',
     label: 'Pendente',
   },
   cancelada: {
-    bg: 'bg-red-100',
-    text: 'text-red-700',
+    bg: 'bg-red-100 dark:bg-red-500/10',
+    text: 'text-red-700 dark:text-red-400',
     label: 'Cancelada',
   },
   confirmada: {
-    bg: 'bg-emerald-100',
-    text: 'text-emerald-700',
+    bg: 'bg-emerald-100 dark:bg-emerald-500/10',
+    text: 'text-emerald-700 dark:text-emerald-400',
     label: 'Confirmada',
   },
   reagendada: {
-    bg: 'bg-amber-100',
-    text: 'text-amber-700',
+    bg: 'bg-amber-100 dark:bg-amber-500/10',
+    text: 'text-amber-700 dark:text-amber-400',
     label: 'Reagendada',
   },
 }
@@ -121,8 +121,8 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
     <Card
       onClick={onClick}
       className={cn(
-        'border border-slate-200 hover:border-[#89bcbe] transition-all cursor-pointer',
-        'bg-white shadow-md hover:shadow-lg',
+        'border border-slate-200 dark:border-slate-700 hover:border-[#89bcbe] transition-all cursor-pointer',
+        'bg-white dark:bg-surface-1 shadow-md hover:shadow-lg',
         isCompletedStatus(statusEfetivo) && 'opacity-60',
         'group', // Para hover effects
         className
@@ -159,7 +159,7 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
             <div className="flex items-start justify-between gap-2">
               <h4
                 className={cn(
-                  'text-xs font-bold text-[#34495e] leading-tight line-clamp-2',
+                  'text-xs font-bold text-[#34495e] dark:text-slate-200 leading-tight line-clamp-2',
                   isCompletedStatus(statusEfetivo) && 'line-through opacity-60'
                 )}
               >
@@ -181,14 +181,14 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
           {horarioDisplay && (
             <div className="flex items-center gap-1.5">
               <Clock className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
-              <span className="text-[11px] text-slate-600 font-medium">{horarioDisplay}</span>
+              <span className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">{horarioDisplay}</span>
             </div>
           )}
 
           {/* Dia Inteiro Badge */}
           {item.dia_inteiro && (
             <div className="flex items-center gap-1.5">
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-blue-50 text-blue-700 border-blue-200">
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200">
                 Dia inteiro
               </Badge>
             </div>
@@ -216,7 +216,7 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
           {item.local && (
             <div className="flex items-center gap-1.5">
               <MapPin className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
-              <span className="text-[11px] text-slate-600 truncate">{item.local}</span>
+              <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate">{item.local}</span>
             </div>
           )}
 
@@ -244,7 +244,7 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
           {item.responsavel_nome && (
             <div className="flex items-center gap-1.5">
               <User className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
-              <span className="text-[11px] text-slate-600 truncate">{item.responsavel_nome}</span>
+              <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate">{item.responsavel_nome}</span>
             </div>
           )}
 
@@ -253,7 +253,7 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
             <div className="flex items-center gap-1.5 mt-1">
               <Badge
                 variant="outline"
-                className="text-[10px] px-1.5 py-0 h-4 font-medium bg-teal-50 text-teal-700 border-teal-200"
+                className="text-[10px] px-1.5 py-0 h-4 font-medium bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-200"
               >
                 Fixa — todo dia
               </Badge>
@@ -266,7 +266,7 @@ export default function AgendaListCard({ item, onClick, onComplete, className }:
               <Repeat className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
               <Badge
                 variant="outline"
-                className="text-[10px] px-1.5 py-0 h-4 font-medium bg-blue-50 text-blue-700 border-blue-200"
+                className="text-[10px] px-1.5 py-0 h-4 font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200"
               >
                 Evento recorrente
               </Badge>

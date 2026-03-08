@@ -66,7 +66,7 @@ export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
   }
 
   return (
-    <div className="relative bg-slate-50/80 rounded-2xl">
+    <div className="relative bg-slate-50/80 dark:bg-surface-0/80 rounded-2xl">
       <div className="flex items-end gap-3 px-4 py-3">
         {/* Botão de sugestões */}
         <DropdownMenu>
@@ -74,20 +74,20 @@ export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="flex-shrink-0 h-10 w-10 text-slate-400 hover:text-[#34495e] hover:bg-transparent rounded-xl transition-colors"
+              className="flex-shrink-0 h-10 w-10 text-slate-400 dark:text-slate-500 hover:text-[#34495e] dark:hover:text-slate-200 hover:bg-transparent rounded-xl transition-colors"
               disabled={disabled}
             >
               <Lightbulb className="w-5 h-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-80 rounded-xl shadow-xl border-slate-200">
-            <DropdownMenuLabel className="text-xs text-slate-400 font-normal px-3 py-2">
+          <DropdownMenuContent align="start" className="w-80 rounded-xl shadow-xl border-slate-200 dark:border-slate-700">
+            <DropdownMenuLabel className="text-xs text-slate-400 dark:text-slate-500 font-normal px-3 py-2">
               Sugestões de comandos
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             {MENU_SUGESTOES.map((categoria: CategoriaMenu) => (
               <DropdownMenuGroup key={categoria.id}>
-                <DropdownMenuLabel className="flex items-center gap-2 text-xs font-medium text-slate-500 px-3 py-1.5">
+                <DropdownMenuLabel className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 px-3 py-1.5">
                   <span className="text-[#89bcbe]">{ICONES_CATEGORIA[categoria.icone]}</span>
                   {categoria.nome}
                 </DropdownMenuLabel>
@@ -95,11 +95,11 @@ export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
                   <DropdownMenuItem
                     key={idx}
                     onClick={() => handleSuggestionClick(cmd.texto)}
-                    className="cursor-pointer py-2.5 px-3 mx-1 rounded-lg focus:bg-slate-50"
+                    className="cursor-pointer py-2.5 px-3 mx-1 rounded-lg focus:bg-slate-50 dark:focus:bg-surface-0"
                   >
                     <div>
-                      <div className="text-sm text-slate-700">{cmd.texto}</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">{cmd.descricao}</div>
+                      <div className="text-sm text-slate-700 dark:text-slate-300">{cmd.texto}</div>
+                      <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{cmd.descricao}</div>
                     </div>
                   </DropdownMenuItem>
                 ))}
@@ -118,7 +118,7 @@ export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
             onKeyDown={handleKeyDown}
             placeholder={placeholder || "Digite sua mensagem..."}
             disabled={disabled}
-            className="min-h-[40px] max-h-[150px] resize-none border-0 focus-visible:ring-0 bg-transparent py-2 px-1 text-sm text-slate-700 placeholder:text-slate-400"
+            className="min-h-[40px] max-h-[150px] resize-none border-0 focus-visible:ring-0 bg-transparent py-2 px-1 text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-500"
             rows={1}
           />
         </div>
@@ -131,8 +131,8 @@ export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
           variant="ghost"
           className={`flex-shrink-0 h-10 w-10 rounded-xl transition-all duration-200 ${
             value.trim() && !disabled
-              ? 'text-[#34495e] hover:bg-slate-200/50'
-              : 'text-slate-300'
+              ? 'text-[#34495e] dark:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-surface-3/50'
+              : 'text-slate-300 dark:text-slate-600'
           }`}
         >
           {disabled ? (

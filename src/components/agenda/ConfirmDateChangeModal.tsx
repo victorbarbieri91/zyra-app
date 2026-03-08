@@ -100,11 +100,11 @@ export default function ConfirmDateChangeModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md p-0 overflow-hidden border-0">
         <DialogTitle className="sr-only">Confirmar Alteração de Data</DialogTitle>
-        <div className="bg-white rounded-lg">
+        <div className="bg-white dark:bg-surface-1 rounded-lg">
 
           {/* Header minimalista */}
-          <div className="px-6 pt-5 pb-4 border-b border-slate-100">
-            <h2 className="text-base font-semibold text-[#34495e]">
+          <div className="px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
+            <h2 className="text-base font-semibold text-[#34495e] dark:text-slate-200">
               Confirmar Alteração de Data
             </h2>
           </div>
@@ -120,7 +120,7 @@ export default function ConfirmDateChangeModal({
                   {config.label}
                 </span>
               </div>
-              <p className="text-sm font-medium text-[#34495e]">
+              <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                 {eventTitle}
               </p>
             </div>
@@ -130,15 +130,15 @@ export default function ConfirmDateChangeModal({
               <div className="flex items-stretch gap-3">
                 {/* Data Antiga */}
                 <div className="flex-1">
-                  <div className="text-center p-3 rounded-lg border border-slate-200 bg-white">
-                    <p className="text-[10px] text-slate-500 mb-2">
+                  <div className="text-center p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2">
                       DATA ATUAL
                     </p>
-                    <p className="text-sm font-semibold text-[#34495e]">
+                    <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                       {format(oldDate, "dd/MM/yyyy", { locale: ptBR })}
                     </p>
                     {usaHorario && (
-                      <p className="text-xs text-[#46627f] mt-1">
+                      <p className="text-xs text-[#46627f] dark:text-slate-400 mt-1">
                         {format(oldDate, 'HH:mm')}
                       </p>
                     )}
@@ -147,20 +147,20 @@ export default function ConfirmDateChangeModal({
 
                 {/* Seta */}
                 <div className="flex items-center">
-                  <ArrowRight className="w-4 h-4 text-slate-300" />
+                  <ArrowRight className="w-4 h-4 text-slate-300 dark:text-slate-600" />
                 </div>
 
                 {/* Data Nova */}
                 <div className="flex-1">
-                  <div className="text-center p-3 rounded-lg border-2 border-[#89bcbe]/30 bg-[#f0f9f9]/30">
+                  <div className="text-center p-3 rounded-lg border-2 border-[#89bcbe]/30 bg-[#f0f9f9]/30 dark:bg-teal-900/20">
                     <p className="text-[10px] text-[#89bcbe] font-medium mb-2">
                       NOVA DATA
                     </p>
-                    <p className="text-sm font-semibold text-[#34495e]">
+                    <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                       {format(newDate, "dd/MM/yyyy", { locale: ptBR })}
                     </p>
                     {usaHorario && (
-                      <p className="text-xs text-[#46627f] mt-1">
+                      <p className="text-xs text-[#46627f] dark:text-slate-400 mt-1">
                         {novoHorario || format(oldDate, 'HH:mm')}
                       </p>
                     )}
@@ -170,15 +170,15 @@ export default function ConfirmDateChangeModal({
 
               {/* Input de Horário - Apenas para compromissos e audiências */}
               {usaHorario && (
-                <div className="pt-3 border-t border-slate-100">
-                  <label className="block text-[11px] text-slate-600 mb-2">
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <label className="block text-[11px] text-slate-600 dark:text-slate-400 mb-2">
                     Ajustar horário
                   </label>
                   <input
                     type="time"
                     value={novoHorario}
                     onChange={(e) => setNovoHorario(e.target.value)}
-                    className="w-full h-9 px-3 text-sm border border-slate-200 rounded-lg hover:border-slate-300 focus:border-[#89bcbe] focus:ring-2 focus:ring-[#89bcbe]/10 focus:outline-none transition-all bg-white"
+                    className="w-full h-9 px-3 text-sm border border-slate-200 dark:border-slate-700 rounded-lg hover:border-slate-300 focus:border-[#89bcbe] focus:ring-2 focus:ring-[#89bcbe]/10 focus:outline-none transition-all bg-white dark:bg-surface-1 dark:text-slate-200"
                   />
                 </div>
               )}
@@ -186,12 +186,12 @@ export default function ConfirmDateChangeModal({
           </div>
 
           {/* Footer minimalista */}
-          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-surface-0/50">
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="flex-1 h-9 text-xs font-medium border-slate-200 hover:bg-white"
+                className="flex-1 h-9 text-xs font-medium border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-surface-2"
               >
                 Cancelar
               </Button>

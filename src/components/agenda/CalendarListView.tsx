@@ -216,7 +216,7 @@ export default function CalendarListView({
       <div className="flex items-center justify-between px-1">
         {/* Dropdown de Período */}
         <Select value={periodoSelecionado} onValueChange={setPeriodoSelecionado}>
-          <SelectTrigger className="w-[180px] h-8 text-xs border-slate-200">
+          <SelectTrigger className="w-[180px] h-8 text-xs border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-1.5">
               <Filter className="w-3 h-3 text-[#89bcbe]" />
               <SelectValue placeholder="Período" />
@@ -269,7 +269,7 @@ export default function CalendarListView({
         </Select>
 
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-[#6c757d]">
+          <span className="text-xs font-medium text-[#6c757d] dark:text-slate-400">
             {estatisticas.total} {estatisticas.total === 1 ? 'item' : 'itens'}
           </span>
         </div>
@@ -279,7 +279,7 @@ export default function CalendarListView({
       <ScrollArea className="h-[calc(100vh-200px)]">
         <div className="space-y-8 pb-4">
           {loading && (
-            <div className="flex items-center justify-center py-12 text-slate-500">
+            <div className="flex items-center justify-center py-12 text-slate-500 dark:text-slate-400">
               <Clock className="w-5 h-5 animate-spin mr-2" />
               <span>Carregando...</span>
             </div>
@@ -287,7 +287,7 @@ export default function CalendarListView({
 
           {!loading && itemsAgrupados.length === 0 && (
             <Card>
-              <CardContent className="py-12 text-center text-slate-500">
+              <CardContent className="py-12 text-center text-slate-500 dark:text-slate-400">
                 <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30" />
                 <p className="font-medium">Nenhum item encontrado</p>
                 <p className="text-sm">Tente ajustar os filtros ou período selecionado</p>
@@ -313,10 +313,10 @@ export default function CalendarListView({
                       <span className="text-sm">{format(grupo.data, 'd', { locale: ptBR })}</span>
                     </div>
                     <div>
-                      <h3 className="text-xs font-semibold text-[#34495e]">
+                      <h3 className="text-xs font-semibold text-[#34495e] dark:text-slate-200">
                         {ehHoje ? 'Hoje' : format(grupo.data, "EEEE, d 'de' MMMM", { locale: ptBR })}
                       </h3>
-                      <p className="text-[11px] text-[#6c757d]">
+                      <p className="text-[11px] text-[#6c757d] dark:text-slate-400">
                         {grupo.items.length} {grupo.items.length === 1 ? 'item' : 'itens'}
                       </p>
                     </div>

@@ -172,8 +172,8 @@ export default function PerfilPage() {
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-4 md:mb-6">
-        <h1 className="text-xl md:text-2xl font-bold text-[#34495e]">Meu Perfil</h1>
-        <p className="text-xs md:text-sm text-[#46627f] mt-1">
+        <h1 className="text-xl md:text-2xl font-bold text-[#34495e] dark:text-slate-200">Meu Perfil</h1>
+        <p className="text-xs md:text-sm text-[#46627f] dark:text-slate-400 mt-1">
           Gerencie seus dados pessoais e preferências do sistema
         </p>
       </div>
@@ -183,15 +183,15 @@ export default function PerfilPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
+          className="bg-white dark:bg-surface-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden"
         >
-          <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-[#f0f9f9] to-white">
+          <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-[#f0f9f9] dark:from-teal-900/20 to-white dark:to-surface-1">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-gradient-to-br from-[#34495e] to-[#46627f] rounded-lg flex items-center justify-center">
+              <div className="w-9 h-9 bg-gradient-to-br from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] rounded-lg flex items-center justify-center">
                 <User className="w-4.5 h-4.5 text-white" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-[#34495e]">Dados Pessoais</h2>
+                <h2 className="text-base font-semibold text-[#34495e] dark:text-slate-200">Dados Pessoais</h2>
                 <p className="text-xs text-[#89bcbe]">Informações básicas do seu perfil</p>
               </div>
             </div>
@@ -200,7 +200,7 @@ export default function PerfilPage() {
           <div className="p-5 grid gap-5">
             {/* Nome Completo */}
             <div>
-              <label className="block text-xs font-semibold text-[#46627f] mb-1.5">
+              <label className="block text-xs font-semibold text-[#46627f] dark:text-slate-400 mb-1.5">
                 Nome Completo <span className="text-red-500">*</span>
               </label>
               <input
@@ -208,14 +208,14 @@ export default function PerfilPage() {
                 value={nomeCompleto}
                 onChange={(e) => setNomeCompleto(e.target.value)}
                 placeholder="Seu nome completo"
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-[#34495e] placeholder:text-slate-400 focus:outline-none focus:border-[#89bcbe] focus:ring-1 focus:ring-[#89bcbe]/20 transition-all"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-[#34495e] dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#89bcbe] focus:ring-1 focus:ring-[#89bcbe]/20 transition-all"
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {/* CPF */}
               <div>
-                <label className="block text-xs font-semibold text-[#46627f] mb-1.5">
+                <label className="block text-xs font-semibold text-[#46627f] dark:text-slate-400 mb-1.5">
                   <CreditCard className="w-3.5 h-3.5 inline mr-1.5" />
                   CPF
                 </label>
@@ -224,13 +224,13 @@ export default function PerfilPage() {
                   value={cpf}
                   onChange={(e) => setCpf(formatCPF(e.target.value))}
                   placeholder="000.000.000-00"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-[#34495e] placeholder:text-slate-400 focus:outline-none focus:border-[#89bcbe] focus:ring-1 focus:ring-[#89bcbe]/20 transition-all"
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-[#34495e] dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#89bcbe] focus:ring-1 focus:ring-[#89bcbe]/20 transition-all"
                 />
               </div>
 
               {/* Telefone */}
               <div>
-                <label className="block text-xs font-semibold text-[#46627f] mb-1.5">
+                <label className="block text-xs font-semibold text-[#46627f] dark:text-slate-400 mb-1.5">
                   <Phone className="w-3.5 h-3.5 inline mr-1.5" />
                   Telefone
                 </label>
@@ -239,7 +239,7 @@ export default function PerfilPage() {
                   value={telefone}
                   onChange={(e) => setTelefone(formatPhone(e.target.value))}
                   placeholder="(00) 00000-0000"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-[#34495e] placeholder:text-slate-400 focus:outline-none focus:border-[#89bcbe] focus:ring-1 focus:ring-[#89bcbe]/20 transition-all"
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-[#34495e] dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#89bcbe] focus:ring-1 focus:ring-[#89bcbe]/20 transition-all"
                 />
               </div>
             </div>
@@ -247,7 +247,7 @@ export default function PerfilPage() {
             {/* OAB */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-xs font-semibold text-[#46627f] mb-1.5">
+                <label className="block text-xs font-semibold text-[#46627f] dark:text-slate-400 mb-1.5">
                   <Scale className="w-3.5 h-3.5 inline mr-1.5" />
                   Número OAB
                 </label>
@@ -256,18 +256,18 @@ export default function PerfilPage() {
                   value={oabNumero}
                   onChange={(e) => setOabNumero(e.target.value.replace(/\D/g, '').slice(0, 10))}
                   placeholder="000000"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-[#34495e] placeholder:text-slate-400 focus:outline-none focus:border-[#89bcbe] focus:ring-1 focus:ring-[#89bcbe]/20 transition-all"
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-[#34495e] dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#89bcbe] focus:ring-1 focus:ring-[#89bcbe]/20 transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#46627f] mb-1.5">
+                <label className="block text-xs font-semibold text-[#46627f] dark:text-slate-400 mb-1.5">
                   UF da OAB
                 </label>
                 <select
                   value={oabUf}
                   onChange={(e) => setOabUf(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-[#34495e] focus:outline-none focus:border-[#89bcbe] focus:ring-1 focus:ring-[#89bcbe]/20 transition-all"
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-[#34495e] dark:text-slate-200 focus:outline-none focus:border-[#89bcbe] focus:ring-1 focus:ring-[#89bcbe]/20 transition-all"
                 >
                   <option value="">Selecione</option>
                   {estadosBrasil.map((uf) => (
@@ -284,15 +284,15 @@ export default function PerfilPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
+          className="bg-white dark:bg-surface-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden"
         >
-          <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-[#f0f9f9] to-white">
+          <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-[#f0f9f9] dark:from-teal-900/20 to-white dark:to-surface-1">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-gradient-to-br from-[#89bcbe] to-[#aacfd0] rounded-lg flex items-center justify-center">
                 <Settings className="w-4.5 h-4.5 text-white" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-[#34495e]">Preferências</h2>
+                <h2 className="text-base font-semibold text-[#34495e] dark:text-slate-200">Preferências</h2>
                 <p className="text-xs text-[#89bcbe]">Personalize sua experiência no sistema</p>
               </div>
             </div>
@@ -301,7 +301,7 @@ export default function PerfilPage() {
           <div className="p-5 grid gap-6">
             {/* Sidebar */}
             <div>
-              <label className="block text-xs font-semibold text-[#46627f] mb-3">
+              <label className="block text-xs font-semibold text-[#46627f] dark:text-slate-400 mb-3">
                 Estado inicial da Sidebar
               </label>
               <div className="flex gap-3">
@@ -310,8 +310,8 @@ export default function PerfilPage() {
                   className={cn(
                     'flex-1 flex items-center justify-center gap-2.5 px-4 py-3 rounded-lg border-2 transition-all',
                     !sidebarAberta
-                      ? 'border-[#89bcbe] bg-[#f0f9f9] text-[#34495e]'
-                      : 'border-slate-200 bg-white text-[#46627f] hover:border-slate-300'
+                      ? 'border-[#89bcbe] bg-[#f0f9f9] dark:bg-teal-900/20 text-[#34495e] dark:text-slate-200'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 text-[#46627f] dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                   )}
                 >
                   <PanelLeftClose className="w-5 h-5" />
@@ -323,8 +323,8 @@ export default function PerfilPage() {
                   className={cn(
                     'flex-1 flex items-center justify-center gap-2.5 px-4 py-3 rounded-lg border-2 transition-all',
                     sidebarAberta
-                      ? 'border-[#89bcbe] bg-[#f0f9f9] text-[#34495e]'
-                      : 'border-slate-200 bg-white text-[#46627f] hover:border-slate-300'
+                      ? 'border-[#89bcbe] bg-[#f0f9f9] dark:bg-teal-900/20 text-[#34495e] dark:text-slate-200'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 text-[#46627f] dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                   )}
                 >
                   <PanelLeft className="w-5 h-5" />
@@ -336,7 +336,7 @@ export default function PerfilPage() {
 
             {/* View da Agenda */}
             <div>
-              <label className="block text-xs font-semibold text-[#46627f] mb-3">
+              <label className="block text-xs font-semibold text-[#46627f] dark:text-slate-400 mb-3">
                 Visualização padrão da Agenda
               </label>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
@@ -369,7 +369,7 @@ export default function PerfilPage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#2c3e50] hover:to-[#3d5a80] text-white rounded-lg font-semibold text-sm shadow-lg shadow-[#34495e]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] hover:from-[#2c3e50] hover:to-[#3d5a80] dark:hover:from-[#7ab0b2] dark:hover:to-[#5e9c9e] text-white dark:text-surface-0 rounded-lg font-semibold text-sm shadow-lg shadow-[#34495e]/20 dark:shadow-teal-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? (
               <Loader2 className="w-4 h-4 animate-spin" />

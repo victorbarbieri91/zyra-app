@@ -524,8 +524,8 @@ export default function TimesheetPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">Timesheet</h1>
-          <p className="text-xs md:text-sm text-slate-600 mt-1">
+          <h1 className="text-xl md:text-2xl font-semibold text-[#34495e] dark:text-slate-200">Timesheet</h1>
+          <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 mt-1">
             Aprovação e revisão de horas trabalhadas
           </p>
         </div>
@@ -546,9 +546,9 @@ export default function TimesheetPage() {
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="border-slate-200 bg-white hover:bg-slate-50"
+                className="border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 hover:bg-slate-50 dark:hover:bg-surface-2"
               >
-                <Building2 className="h-4 w-4 mr-2 text-[#34495e]" />
+                <Building2 className="h-4 w-4 mr-2 text-[#34495e] dark:text-slate-200" />
                 <span className="text-sm">{getSeletorEscritorioLabel()}</span>
                 <ChevronDown className="h-4 w-4 ml-2 text-slate-400" />
               </Button>
@@ -561,7 +561,7 @@ export default function TimesheetPage() {
                     'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors',
                     escritoriosSelecionados.length === escritoriosGrupo.length
                       ? 'bg-[#1E3A8A]/10 text-[#1E3A8A]'
-                      : 'hover:bg-slate-100 text-slate-700'
+                      : 'hover:bg-slate-100 dark:hover:bg-surface-3 text-slate-700 dark:text-slate-300'
                   )}
                 >
                   <span className="font-medium">Todos os escritórios</span>
@@ -570,12 +570,12 @@ export default function TimesheetPage() {
                   )}
                 </button>
 
-                <div className="h-px bg-slate-200 my-2" />
+                <div className="h-px bg-slate-200 dark:bg-slate-700 my-2" />
 
                 {escritoriosGrupo.map((escritorio) => (
                   <div
                     key={escritorio.id}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50"
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2"
                   >
                     <Checkbox
                       id={`esc-${escritorio.id}`}
@@ -584,7 +584,7 @@ export default function TimesheetPage() {
                     />
                     <label
                       htmlFor={`esc-${escritorio.id}`}
-                      className="flex-1 text-sm text-slate-700 cursor-pointer"
+                      className="flex-1 text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
                     >
                       {escritorio.nome}
                     </label>
@@ -610,10 +610,10 @@ export default function TimesheetPage() {
           <PopoverTrigger asChild>
             <Button
               variant="outline"
-              className="border-slate-200 bg-white hover:bg-slate-50 min-w-[180px] justify-between"
+              className="border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 hover:bg-slate-50 dark:hover:bg-surface-2 min-w-[180px] justify-between"
             >
               <div className="flex items-center">
-                <Users className="h-4 w-4 mr-2 text-slate-500" />
+                <Users className="h-4 w-4 mr-2 text-slate-500 dark:text-slate-400" />
                 <span className="text-sm truncate">{getSeletorColaboradorLabel()}</span>
               </div>
               <ChevronDown className="h-4 w-4 ml-2 text-slate-400 flex-shrink-0" />
@@ -627,7 +627,7 @@ export default function TimesheetPage() {
                   'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors',
                   colaboradoresSelecionados.length === colaboradores.length
                     ? 'bg-[#1E3A8A]/10 text-[#1E3A8A]'
-                    : 'hover:bg-slate-100 text-slate-700'
+                    : 'hover:bg-slate-100 dark:hover:bg-surface-3 text-slate-700 dark:text-slate-300'
                 )}
               >
                 <span className="font-medium">Todos os colaboradores</span>
@@ -636,13 +636,13 @@ export default function TimesheetPage() {
                 )}
               </button>
 
-              <div className="h-px bg-slate-200 my-2" />
+              <div className="h-px bg-slate-200 dark:bg-slate-700 my-2" />
 
               <div className="max-h-64 overflow-y-auto">
                 {colaboradores.map((colab) => (
                   <div
                     key={colab.user_id}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50"
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2"
                   >
                     <Checkbox
                       id={`colab-${colab.user_id}`}
@@ -651,7 +651,7 @@ export default function TimesheetPage() {
                     />
                     <label
                       htmlFor={`colab-${colab.user_id}`}
-                      className="flex-1 text-sm text-slate-700 cursor-pointer truncate"
+                      className="flex-1 text-sm text-slate-700 dark:text-slate-300 cursor-pointer truncate"
                     >
                       {colab.nome}
                     </label>
@@ -667,18 +667,18 @@ export default function TimesheetPage() {
           value={periodoSelecionado}
           onChange={setPeriodoSelecionado}
           placeholder="Selecione o período"
-          className="border-slate-200 bg-white hover:bg-slate-50"
+          className="border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 hover:bg-slate-50 dark:hover:bg-surface-2"
         />
 
         {/* Toggle Status */}
-        <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+        <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
           <button
             onClick={() => { setStatusFiltro('pendente'); setFiltroFaturavel('todos') }}
             className={cn(
               'px-4 py-2 text-sm font-medium transition-colors',
               statusFiltro === 'pendente'
-                ? 'bg-amber-100 text-amber-800'
-                : 'bg-white text-slate-600 hover:bg-slate-50'
+                ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400'
+                : 'bg-white dark:bg-surface-1 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2'
             )}
           >
             Pendentes
@@ -686,10 +686,10 @@ export default function TimesheetPage() {
           <button
             onClick={() => { setStatusFiltro('aprovado'); setFiltroFaturavel('cobravel') }}
             className={cn(
-              'px-4 py-2 text-sm font-medium transition-colors border-l border-slate-200',
+              'px-4 py-2 text-sm font-medium transition-colors border-l border-slate-200 dark:border-slate-700',
               statusFiltro === 'aprovado'
-                ? 'bg-emerald-100 text-emerald-800'
-                : 'bg-white text-slate-600 hover:bg-slate-50'
+                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400'
+                : 'bg-white dark:bg-surface-1 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2'
             )}
           >
             Aprovados
@@ -697,14 +697,14 @@ export default function TimesheetPage() {
         </div>
 
         {/* Toggle Faturável/Interno */}
-        <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+        <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
           <button
             onClick={() => setFiltroFaturavel('todos')}
             className={cn(
               'px-3 py-2 text-sm font-medium transition-colors',
               filtroFaturavel === 'todos'
-                ? 'bg-slate-200 text-slate-800'
-                : 'bg-white text-slate-600 hover:bg-slate-50'
+                ? 'bg-slate-200 dark:bg-surface-2 text-slate-800 dark:text-slate-200'
+                : 'bg-white dark:bg-surface-1 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2'
             )}
           >
             Todos
@@ -712,10 +712,10 @@ export default function TimesheetPage() {
           <button
             onClick={() => setFiltroFaturavel('cobravel')}
             className={cn(
-              'px-3 py-2 text-sm font-medium transition-colors border-l border-slate-200',
+              'px-3 py-2 text-sm font-medium transition-colors border-l border-slate-200 dark:border-slate-700',
               filtroFaturavel === 'cobravel'
-                ? 'bg-emerald-100 text-emerald-800'
-                : 'bg-white text-slate-600 hover:bg-slate-50'
+                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400'
+                : 'bg-white dark:bg-surface-1 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2'
             )}
           >
             Cobráveis
@@ -723,10 +723,10 @@ export default function TimesheetPage() {
           <button
             onClick={() => setFiltroFaturavel('nao_cobravel')}
             className={cn(
-              'px-3 py-2 text-sm font-medium transition-colors border-l border-slate-200',
+              'px-3 py-2 text-sm font-medium transition-colors border-l border-slate-200 dark:border-slate-700',
               filtroFaturavel === 'nao_cobravel'
-                ? 'bg-slate-100 text-slate-700'
-                : 'bg-white text-slate-600 hover:bg-slate-50'
+                ? 'bg-slate-100 dark:bg-surface-2 text-slate-700 dark:text-slate-300'
+                : 'bg-white dark:bg-surface-1 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2'
             )}
           >
             Não Cobráveis
@@ -735,13 +735,13 @@ export default function TimesheetPage() {
       </div>
 
       {/* Lista de Timesheets */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardHeader className="pb-2 pt-3 px-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium text-slate-700">
+            <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Registros de Horas
             </CardTitle>
-            <Badge variant="secondary" className="bg-slate-100 text-slate-600">
+            <Badge variant="secondary" className="bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400">
               {timesheets.length} {timesheets.length === 1 ? 'registro' : 'registros'} - {formatHoras(getTotalHorasLista())}
             </Badge>
           </div>
@@ -750,18 +750,18 @@ export default function TimesheetPage() {
           {loading ? (
             <div className="py-12 text-center">
               <Clock className="h-8 w-8 mx-auto text-slate-400 animate-spin" />
-              <p className="text-sm text-slate-500 mt-2">Carregando...</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Carregando...</p>
             </div>
           ) : timesheets.length === 0 ? (
             <div className="py-12 text-center">
               <Clock className="h-10 w-10 mx-auto text-slate-300" />
-              <p className="text-sm text-slate-500 mt-2">
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
                 {statusFiltro === 'pendente'
                   ? 'Nenhum registro pendente de aprovação'
                   : 'Nenhum registro aprovado encontrado'}
               </p>
               {periodoSelecionado?.from && (
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                   {periodoSelecionado.to && format(periodoSelecionado.from, 'dd/MM/yyyy') !== format(periodoSelecionado.to, 'dd/MM/yyyy')
                     ? `${format(periodoSelecionado.from, 'dd/MM/yyyy')} - ${format(periodoSelecionado.to, 'dd/MM/yyyy')}`
                     : format(periodoSelecionado.from, 'dd/MM/yyyy')}
@@ -769,10 +769,10 @@ export default function TimesheetPage() {
               )}
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {/* Header da tabela */}
               <div className={cn(
-                "grid gap-2 px-4 py-2 bg-slate-50 text-[10px] font-medium text-slate-500 uppercase tracking-wider items-center",
+                "grid gap-2 px-4 py-2 bg-slate-50 dark:bg-surface-0 text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider items-center",
                 statusFiltro === 'pendente'
                   ? 'grid-cols-[1.5rem_repeat(11,minmax(0,1fr))]'
                   : 'grid-cols-12'
@@ -810,8 +810,8 @@ export default function TimesheetPage() {
                       ? 'grid-cols-[1.5rem_repeat(11,minmax(0,1fr))]'
                       : 'grid-cols-12',
                     statusFiltro === 'pendente' && editandoId !== ts.id && 'cursor-pointer',
-                    selectedIds.has(ts.id) ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-slate-50',
-                    editandoId === ts.id && 'bg-amber-50'
+                    selectedIds.has(ts.id) ? 'bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/15' : 'hover:bg-slate-50 dark:hover:bg-surface-2',
+                    editandoId === ts.id && 'bg-amber-50 dark:bg-amber-500/10'
                   )}
                 >
                   {/* Checkbox */}
@@ -830,7 +830,7 @@ export default function TimesheetPage() {
 
                   {/* Data */}
                   <div className={statusFiltro === 'pendente' ? 'col-span-1' : 'col-span-1'}>
-                    <span className="text-xs text-slate-600">
+                    <span className="text-xs text-slate-600 dark:text-slate-400">
                       {formatBrazilDate(ts.data_trabalho)}
                     </span>
                   </div>
@@ -838,10 +838,10 @@ export default function TimesheetPage() {
                   {/* Colaborador */}
                   <div className="col-span-2">
                     <div className="flex items-center gap-1.5">
-                      <div className="w-6 h-6 rounded-full bg-[#89bcbe]/20 flex items-center justify-center flex-shrink-0">
-                        <User className="h-3 w-3 text-[#34495e]" />
+                      <div className="w-6 h-6 rounded-full bg-[#89bcbe]/20 dark:bg-[#89bcbe]/10 flex items-center justify-center flex-shrink-0">
+                        <User className="h-3 w-3 text-[#34495e] dark:text-slate-200" />
                       </div>
-                      <span className="text-xs font-medium text-slate-700 truncate">
+                      <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">
                         {ts.colaborador_nome}
                       </span>
                     </div>
@@ -849,7 +849,7 @@ export default function TimesheetPage() {
 
                   {/* Cliente/Processo - Link clicável para a pasta */}
                   <div className="col-span-2">
-                    <p className="text-xs text-slate-700 truncate">
+                    <p className="text-xs text-slate-700 dark:text-slate-300 truncate">
                       {ts.cliente_nome || '-'}
                     </p>
                     {ts.processo_id ? (
@@ -873,7 +873,7 @@ export default function TimesheetPage() {
                         <span className="truncate">{ts.consulta_titulo}</span>
                       </Link>
                     ) : (
-                      <p className="text-[10px] text-slate-400">Sem vínculo</p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500">Sem vínculo</p>
                     )}
                   </div>
 
@@ -887,10 +887,10 @@ export default function TimesheetPage() {
                         placeholder="Descreva a atividade..."
                       />
                     ) : (
-                      <p className="text-xs text-slate-600 line-clamp-2">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">
                         {ts.atividade}
                         {ts.editado && (
-                          <span className="text-[10px] text-amber-600 ml-1">(editado)</span>
+                          <span className="text-[10px] text-amber-600 dark:text-amber-400 ml-1">(editado)</span>
                         )}
                       </p>
                     )}
@@ -908,7 +908,7 @@ export default function TimesheetPage() {
                         className="h-7 text-xs w-16 ml-auto"
                       />
                     ) : (
-                      <span className="text-xs font-semibold text-[#34495e]">
+                      <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200">
                         {formatHoras(Number(ts.horas))}
                       </span>
                     )}
@@ -922,8 +922,8 @@ export default function TimesheetPage() {
                         className={cn(
                           'px-2 py-0.5 rounded text-[10px] font-medium',
                           editForm.faturavel
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-slate-100 text-slate-600'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
+                            : 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400'
                         )}
                       >
                         {editForm.faturavel ? 'Cobrável' : 'N/Cob.'}
@@ -934,8 +934,8 @@ export default function TimesheetPage() {
                         className={cn(
                           'text-[10px]',
                           ts.faturavel
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-slate-100 text-slate-600'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
+                            : 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400'
                         )}
                       >
                         {ts.faturavel ? 'Cobrável' : 'N/Cob.'}

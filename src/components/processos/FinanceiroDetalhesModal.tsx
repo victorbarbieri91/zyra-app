@@ -44,19 +44,19 @@ interface FinanceiroDetalhesModalProps {
 
 // Status configs
 const HONORARIO_STATUS: Record<string, { label: string; className: string }> = {
-  pendente: { label: 'Pendente', className: 'bg-slate-100 text-slate-700 border-slate-200' },
-  proposta: { label: 'Proposta', className: 'bg-slate-100 text-slate-700 border-slate-200' },
-  aprovado: { label: 'Aprovado', className: 'bg-blue-100 text-blue-700 border-blue-200' },
-  em_aberto: { label: 'Faturado', className: 'bg-amber-100 text-amber-700 border-amber-200' },
-  faturado: { label: 'Faturado', className: 'bg-amber-100 text-amber-700 border-amber-200' },
-  pago: { label: 'Pago', className: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  cancelado: { label: 'Cancelado', className: 'bg-red-100 text-red-700 border-red-200' },
+  pendente: { label: 'Pendente', className: 'bg-slate-100 dark:bg-surface-2 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700' },
+  proposta: { label: 'Proposta', className: 'bg-slate-100 dark:bg-surface-2 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700' },
+  aprovado: { label: 'Aprovado', className: 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-700' },
+  em_aberto: { label: 'Faturado', className: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-700' },
+  faturado: { label: 'Faturado', className: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-700' },
+  pago: { label: 'Pago', className: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700' },
+  cancelado: { label: 'Cancelado', className: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-400 border-red-200 dark:border-red-700' },
 }
 
 const DESPESA_STATUS: Record<string, { label: string; className: string }> = {
-  pendente: { label: 'Pendente', className: 'bg-amber-100 text-amber-700 border-amber-200' },
-  pago: { label: 'Pago', className: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  cancelado: { label: 'Cancelado', className: 'bg-red-100 text-red-700 border-red-200' },
+  pendente: { label: 'Pendente', className: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-700' },
+  pago: { label: 'Pago', className: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700' },
+  cancelado: { label: 'Cancelado', className: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-400 border-red-200 dark:border-red-700' },
 }
 
 export default function FinanceiroDetalhesModal({
@@ -93,9 +93,9 @@ export default function FinanceiroDetalhesModal({
   const getIcon = () => {
     switch (tipo) {
       case 'honorarios':
-        return <Banknote className="w-4 h-4 text-emerald-600" />
+        return <Banknote className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
       case 'timesheet':
-        return <Clock className="w-4 h-4 text-amber-600" />
+        return <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
       case 'despesas':
         return <Receipt className="w-4 h-4 text-rose-600" />
     }
@@ -136,15 +136,15 @@ export default function FinanceiroDetalhesModal({
 
   const getTimesheetStatus = (entry: TimesheetEntry) => {
     if (entry.reprovado) {
-      return { label: 'Reprovado', className: 'bg-red-100 text-red-700 border-red-200' }
+      return { label: 'Reprovado', className: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-400 border-red-200 dark:border-red-700' }
     }
     if (entry.faturado) {
-      return { label: 'Faturado', className: 'bg-amber-100 text-amber-700 border-amber-200' }
+      return { label: 'Faturado', className: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-700' }
     }
     if (entry.aprovado) {
-      return { label: 'Aprovado', className: 'bg-blue-100 text-blue-700 border-blue-200' }
+      return { label: 'Aprovado', className: 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-700' }
     }
-    return { label: 'Pendente', className: 'bg-slate-100 text-slate-700 border-slate-200' }
+    return { label: 'Pendente', className: 'bg-slate-100 dark:bg-surface-2 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700' }
   }
 
   const renderHonorarios = () => {
@@ -154,8 +154,8 @@ export default function FinanceiroDetalhesModal({
       <div className="space-y-3">
         {honorarios.length === 0 ? (
           <div className="text-center py-8">
-            <FileText className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-            <p className="text-sm text-slate-500">Nenhum honorário lançado</p>
+            <FileText className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+            <p className="text-sm text-slate-500 dark:text-slate-400">Nenhum honorário lançado</p>
           </div>
         ) : (
           <>
@@ -164,12 +164,12 @@ export default function FinanceiroDetalhesModal({
               return (
                 <div
                   key={hon.id}
-                  className="border border-slate-200 rounded-lg p-3 hover:border-[#89bcbe]/50 transition-colors"
+                  className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 hover:border-[#89bcbe]/50 transition-colors"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <p className="text-xs font-semibold text-[#34495e]">{hon.numero_interno}</p>
-                      <p className="text-sm text-slate-700 mt-0.5">{hon.descricao}</p>
+                      <p className="text-xs font-semibold text-[#34495e] dark:text-slate-200">{hon.numero_interno}</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">{hon.descricao}</p>
                     </div>
                     <Badge variant="outline" className={`text-[10px] h-5 ${statusConfig.className}`}>
                       {statusConfig.label}
@@ -177,7 +177,7 @@ export default function FinanceiroDetalhesModal({
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-[10px] text-slate-500">
+                    <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
                       {hon.responsavel_nome && (
                         <span className="flex items-center gap-1">
                           <User className="w-3 h-3" />
@@ -189,7 +189,7 @@ export default function FinanceiroDetalhesModal({
                         {formatBrazilDate(hon.created_at)}
                       </span>
                     </div>
-                    <p className="text-sm font-bold text-[#34495e]">
+                    <p className="text-sm font-bold text-[#34495e] dark:text-slate-200">
                       {formatCurrency(hon.valor_total)}
                     </p>
                   </div>
@@ -200,7 +200,7 @@ export default function FinanceiroDetalhesModal({
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full text-xs text-slate-500 hover:text-[#34495e]"
+                className="w-full text-xs text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200"
                 onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
               >
                 <ChevronDown className="w-3.5 h-3.5 mr-1.5" />
@@ -220,8 +220,8 @@ export default function FinanceiroDetalhesModal({
       <div className="space-y-3">
         {timesheet.length === 0 ? (
           <div className="text-center py-8">
-            <Clock className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-            <p className="text-sm text-slate-500">Nenhuma hora lançada</p>
+            <Clock className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+            <p className="text-sm text-slate-500 dark:text-slate-400">Nenhuma hora lançada</p>
           </div>
         ) : (
           <>
@@ -230,11 +230,11 @@ export default function FinanceiroDetalhesModal({
               return (
                 <div
                   key={entry.id}
-                  className="border border-slate-200 rounded-lg p-3 hover:border-[#89bcbe]/50 transition-colors"
+                  className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 hover:border-[#89bcbe]/50 transition-colors"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <p className="text-sm text-slate-700">{entry.atividade}</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300">{entry.atividade}</p>
                     </div>
                     <Badge variant="outline" className={`text-[10px] h-5 ${statusConfig.className}`}>
                       {statusConfig.label}
@@ -242,7 +242,7 @@ export default function FinanceiroDetalhesModal({
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-[10px] text-slate-500">
+                    <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
                       {entry.user_nome && (
                         <span className="flex items-center gap-1">
                           <User className="w-3 h-3" />
@@ -255,11 +255,11 @@ export default function FinanceiroDetalhesModal({
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-[#34495e]">
+                      <p className="text-sm font-bold text-[#34495e] dark:text-slate-200">
                         {formatHoras(entry.horas)}
                       </p>
                       {contratoInfo?.config?.valor_hora && (
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
                           ({formatCurrency(entry.horas * contratoInfo.config.valor_hora)})
                         </span>
                       )}
@@ -267,7 +267,7 @@ export default function FinanceiroDetalhesModal({
                   </div>
 
                   {!entry.faturavel && (
-                    <Badge variant="outline" className="text-[9px] h-4 mt-2 bg-slate-50 text-slate-500 border-slate-200">
+                    <Badge variant="outline" className="text-[9px] h-4 mt-2 bg-slate-50 dark:bg-surface-0 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700">
                       Não faturável
                     </Badge>
                   )}
@@ -278,7 +278,7 @@ export default function FinanceiroDetalhesModal({
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full text-xs text-slate-500 hover:text-[#34495e]"
+                className="w-full text-xs text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200"
                 onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
               >
                 <ChevronDown className="w-3.5 h-3.5 mr-1.5" />
@@ -298,8 +298,8 @@ export default function FinanceiroDetalhesModal({
       <div className="space-y-3">
         {despesas.length === 0 ? (
           <div className="text-center py-8">
-            <Receipt className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-            <p className="text-sm text-slate-500">Nenhuma despesa lançada</p>
+            <Receipt className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+            <p className="text-sm text-slate-500 dark:text-slate-400">Nenhuma despesa lançada</p>
           </div>
         ) : (
           <>
@@ -308,19 +308,19 @@ export default function FinanceiroDetalhesModal({
               return (
                 <div
                   key={desp.id}
-                  className="border border-slate-200 rounded-lg p-3 hover:border-[#89bcbe]/50 transition-colors"
+                  className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 hover:border-[#89bcbe]/50 transition-colors"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <p className="text-xs font-semibold text-[#34495e] uppercase">{desp.categoria}</p>
-                      <p className="text-sm text-slate-700 mt-0.5">{desp.descricao}</p>
+                      <p className="text-xs font-semibold text-[#34495e] dark:text-slate-200 uppercase">{desp.categoria}</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">{desp.descricao}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <Badge variant="outline" className={`text-[10px] h-5 ${statusConfig.className}`}>
                         {statusConfig.label}
                       </Badge>
                       {desp.reembolsavel && (
-                        <Badge variant="outline" className="text-[9px] h-4 bg-blue-50 text-blue-700 border-blue-200">
+                        <Badge variant="outline" className="text-[9px] h-4 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-700">
                           Reembolsável
                         </Badge>
                       )}
@@ -328,7 +328,7 @@ export default function FinanceiroDetalhesModal({
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-[10px] text-slate-500">
+                    <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
                       {desp.fornecedor && (
                         <span className="flex items-center gap-1">
                           <User className="w-3 h-3" />
@@ -340,7 +340,7 @@ export default function FinanceiroDetalhesModal({
                         Venc: {formatBrazilDate(desp.data_vencimento)}
                       </span>
                     </div>
-                    <p className="text-sm font-bold text-[#34495e]">
+                    <p className="text-sm font-bold text-[#34495e] dark:text-slate-200">
                       {formatCurrency(desp.valor)}
                     </p>
                   </div>
@@ -351,7 +351,7 @@ export default function FinanceiroDetalhesModal({
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full text-xs text-slate-500 hover:text-[#34495e]"
+                className="w-full text-xs text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200"
                 onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
               >
                 <ChevronDown className="w-3.5 h-3.5 mr-1.5" />
@@ -378,8 +378,8 @@ export default function FinanceiroDetalhesModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl max-h-[85vh] flex flex-col">
-        <DialogHeader className="pb-4 border-b border-slate-100">
-          <DialogTitle className="flex items-center gap-2 text-[#34495e]">
+        <DialogHeader className="pb-4 border-b border-slate-100 dark:border-slate-800">
+          <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
             {getIcon()}
             {getTitulo()}
           </DialogTitle>
@@ -392,16 +392,16 @@ export default function FinanceiroDetalhesModal({
         </ScrollArea>
 
         {/* Footer com total e botão de ação */}
-        <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Total
               {(() => {
                 const total = tipo === 'honorarios' ? honorarios.length : tipo === 'timesheet' ? timesheet.length : despesas.length
                 return total > 0 ? ` (${Math.min(visibleCount, total)} de ${total})` : ''
               })()}
             </p>
-            <p className="text-lg font-bold text-[#34495e]">{getTotal()}</p>
+            <p className="text-lg font-bold text-[#34495e] dark:text-slate-200">{getTotal()}</p>
           </div>
 
           <div className="flex gap-2">

@@ -45,11 +45,11 @@ import { STATUS_PROJETO_LABELS, AREA_JURIDICA_LABELS } from '@/types/portfolio'
 
 // Configuração de status
 const STATUS_CONFIG: Record<StatusProjeto, { icon: typeof Clock; color: string; bgColor: string; gradient: string }> = {
-  rascunho: { icon: Clock, color: 'text-slate-600', bgColor: 'bg-slate-100', gradient: 'from-slate-400 to-slate-500' },
-  em_andamento: { icon: Play, color: 'text-blue-600', bgColor: 'bg-blue-100', gradient: 'from-blue-500 to-blue-600' },
-  pausado: { icon: Pause, color: 'text-amber-600', bgColor: 'bg-amber-100', gradient: 'from-amber-500 to-amber-600' },
-  concluido: { icon: CheckCircle2, color: 'text-emerald-600', bgColor: 'bg-emerald-100', gradient: 'from-emerald-500 to-emerald-600' },
-  cancelado: { icon: XCircle, color: 'text-red-600', bgColor: 'bg-red-100', gradient: 'from-red-500 to-red-600' },
+  rascunho: { icon: Clock, color: 'text-slate-600 dark:text-slate-400', bgColor: 'bg-slate-100 dark:bg-slate-500/10', gradient: 'from-slate-400 to-slate-500' },
+  em_andamento: { icon: Play, color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-100 dark:bg-blue-500/10', gradient: 'from-blue-500 to-blue-600' },
+  pausado: { icon: Pause, color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-100 dark:bg-amber-500/10', gradient: 'from-amber-500 to-amber-600' },
+  concluido: { icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bgColor: 'bg-emerald-100 dark:bg-emerald-500/10', gradient: 'from-emerald-500 to-emerald-600' },
+  cancelado: { icon: XCircle, color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-500/10', gradient: 'from-red-500 to-red-600' },
 }
 
 // Ícones e cores por área
@@ -147,7 +147,7 @@ export default function ProjetosListPage() {
     return (
       <div
         key={projeto.id}
-        className="group relative bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer"
+        className="group relative bg-white dark:bg-surface-1 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer"
         onClick={() => handleVerProjeto(projeto.id)}
       >
         {/* Status bar no topo */}
@@ -171,8 +171,8 @@ export default function ProjetosListPage() {
                 <AreaIcon className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-xs text-slate-500 mb-0.5">{projeto.codigo}</p>
-                <h3 className="font-semibold text-[#34495e] line-clamp-1 group-hover:text-[#1E3A8A] transition-colors">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">{projeto.codigo}</p>
+                <h3 className="font-semibold text-[#34495e] dark:text-slate-200 line-clamp-1 group-hover:text-[#1E3A8A] transition-colors">
                   {projeto.nome}
                 </h3>
               </div>
@@ -194,9 +194,9 @@ export default function ProjetosListPage() {
           </div>
 
           {/* Produto */}
-          <div className="flex items-center gap-2 mb-4 p-2.5 bg-slate-50 rounded-lg">
+          <div className="flex items-center gap-2 mb-4 p-2.5 bg-slate-50 dark:bg-surface-0 rounded-lg">
             <Briefcase className="w-4 h-4 text-slate-400" />
-            <span className="text-sm text-slate-600 font-medium">{projeto.produto_nome}</span>
+            <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">{projeto.produto_nome}</span>
           </div>
 
           {/* Cliente e Responsável */}
@@ -205,7 +205,7 @@ export default function ProjetosListPage() {
               <User className="w-4 h-4 text-slate-400" />
               <div className="min-w-0">
                 <p className="text-[10px] text-slate-400 uppercase tracking-wide">Cliente</p>
-                <p className="text-sm text-slate-700 truncate">{projeto.cliente_nome}</p>
+                <p className="text-sm text-slate-700 dark:text-slate-300 truncate">{projeto.cliente_nome}</p>
               </div>
             </div>
             {projeto.responsavel_nome && (
@@ -213,7 +213,7 @@ export default function ProjetosListPage() {
                 <Users className="w-4 h-4 text-slate-400" />
                 <div className="min-w-0">
                   <p className="text-[10px] text-slate-400 uppercase tracking-wide">Responsável</p>
-                  <p className="text-sm text-slate-700 truncate">{projeto.responsavel_nome}</p>
+                  <p className="text-sm text-slate-700 dark:text-slate-300 truncate">{projeto.responsavel_nome}</p>
                 </div>
               </div>
             )}
@@ -224,13 +224,13 @@ export default function ProjetosListPage() {
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-slate-400" />
-                <span className="text-sm text-slate-600">
+                <span className="text-sm text-slate-600 dark:text-slate-400">
                   {projeto.fases_concluidas} de {projeto.total_fases} fases
                 </span>
               </div>
-              <span className="text-sm font-semibold text-[#34495e]">{projeto.progresso_percentual}%</span>
+              <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">{projeto.progresso_percentual}%</span>
             </div>
-            <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div className="relative h-2 bg-slate-100 dark:bg-surface-2 rounded-full overflow-hidden">
               <div
                 className={`absolute inset-y-0 left-0 bg-gradient-to-r ${statusConfig.gradient} rounded-full transition-all duration-500`}
                 style={{ width: `${projeto.progresso_percentual}%` }}
@@ -248,14 +248,14 @@ export default function ProjetosListPage() {
             </Badge>
 
             {projeto.valor_negociado && projeto.valor_negociado > 0 && (
-              <span className="text-sm font-semibold text-[#34495e]">
+              <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                 {formatCurrency(projeto.valor_negociado)}
               </span>
             )}
           </div>
 
           {/* Footer com datas */}
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 text-xs text-slate-500">
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
             <div className="flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5" />
               <span>Início: {projeto.data_inicio ? formatBrazilDate(projeto.data_inicio) : '-'}</span>
@@ -270,7 +270,7 @@ export default function ProjetosListPage() {
         </div>
 
         {/* Hover effect */}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-100/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-100/50 dark:from-slate-800/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
       </div>
     )
   }
@@ -280,12 +280,12 @@ export default function ProjetosListPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] flex items-center justify-center">
             <FolderKanban className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-[#34495e]">Projetos</h1>
-            <p className="text-sm text-slate-500">
+            <h1 className="text-2xl font-bold text-[#34495e] dark:text-slate-200">Projetos</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Acompanhe a execução dos seus projetos jurídicos
             </p>
           </div>
@@ -293,7 +293,7 @@ export default function ProjetosListPage() {
 
         <Button
           onClick={handleNovoProjeto}
-          className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#3d566d] hover:to-[#526b8a] shadow-md"
+          className="bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] hover:from-[#3d566d] hover:to-[#526b8a] shadow-md"
         >
           <Plus className="w-4 h-4 mr-2" />
           Novo Projeto
@@ -309,13 +309,13 @@ export default function ProjetosListPage() {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
               filtroStatus === tab.key
                 ? 'bg-[#34495e] text-white shadow-md'
-                : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:shadow-sm'
+                : 'bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 hover:shadow-sm'
             }`}
           >
             <div className={`w-2 h-2 rounded-full ${tab.color}`} />
             {tab.label}
             <span className={`px-1.5 py-0.5 rounded text-xs ${
-              filtroStatus === tab.key ? 'bg-white/20' : 'bg-slate-100'
+              filtroStatus === tab.key ? 'bg-white/20' : 'bg-slate-100 dark:bg-surface-2'
             }`}>
               {tab.count}
             </span>
@@ -330,28 +330,28 @@ export default function ProjetosListPage() {
           placeholder="Buscar por nome, cliente ou código..."
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          className="pl-10 bg-white border-slate-200"
+          className="pl-10 bg-white dark:bg-surface-1 border-slate-200 dark:border-slate-700"
         />
       </div>
 
       {/* Alerta de atrasados */}
       {projetosAtrasados.length > 0 && filtroStatus !== 'concluido' && filtroStatus !== 'cancelado' && (
-        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
-          <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-            <AlertCircle className="w-5 h-5 text-red-600" />
+        <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl">
+          <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-500/10 flex items-center justify-center flex-shrink-0">
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-medium text-red-800">
+            <p className="text-sm font-medium text-red-800 dark:text-red-400">
               {projetosAtrasados.length} projeto{projetosAtrasados.length > 1 ? 's' : ''} atrasado{projetosAtrasados.length > 1 ? 's' : ''}
             </p>
-            <p className="text-xs text-red-600">
+            <p className="text-xs text-red-600 dark:text-red-400">
               Projetos com data prevista de conclusão já ultrapassada
             </p>
           </div>
           <Button
             variant="outline"
             size="sm"
-            className="border-red-200 text-red-700 hover:bg-red-100"
+            className="border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400 hover:bg-red-100"
             onClick={() => setFiltroStatus('em_andamento')}
           >
             Ver projetos
@@ -365,37 +365,37 @@ export default function ProjetosListPage() {
         <div className="flex items-center justify-center py-16">
           <div className="flex flex-col items-center gap-3">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#34495e]" />
-            <p className="text-sm text-slate-500">Carregando projetos...</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Carregando projetos...</p>
           </div>
         </div>
       ) : error ? (
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10">
           <CardContent className="p-6 text-center">
             <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-            <p className="text-red-600 mb-4">Erro ao carregar projetos: {error.message}</p>
-            <Button onClick={() => loadProjetos()} variant="outline" className="border-red-200 text-red-700">
+            <p className="text-red-600 dark:text-red-400 mb-4">Erro ao carregar projetos: {error.message}</p>
+            <Button onClick={() => loadProjetos()} variant="outline" className="border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400">
               Tentar novamente
             </Button>
           </CardContent>
         </Card>
       ) : projetos.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mb-6">
+          <div className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-surface-2 flex items-center justify-center mb-6">
             <FolderKanban className="w-10 h-10 text-slate-400" />
           </div>
-          <h3 className="text-xl font-semibold text-[#34495e] mb-2">
+          <h3 className="text-xl font-semibold text-[#34495e] dark:text-slate-200 mb-2">
             {filtroStatus !== 'todos' || busca
               ? 'Nenhum projeto encontrado'
               : 'Nenhum projeto ainda'}
           </h3>
-          <p className="text-slate-500 mb-6 max-w-md">
+          <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md">
             {filtroStatus !== 'todos' || busca
               ? 'Tente ajustar os filtros de busca para encontrar seus projetos'
               : 'Inicie um projeto a partir de um produto do catálogo para começar a acompanhar suas execuções'}
           </p>
           <Button
             onClick={handleNovoProjeto}
-            className="bg-gradient-to-r from-[#34495e] to-[#46627f]"
+            className="bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab]"
           >
             <Plus className="w-4 h-4 mr-2" />
             {filtroStatus !== 'todos' || busca ? 'Limpar Filtros' : 'Ir para o Catálogo'}

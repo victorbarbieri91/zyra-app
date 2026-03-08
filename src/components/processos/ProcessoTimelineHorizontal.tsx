@@ -94,8 +94,8 @@ export default function ProcessoTimelineHorizontal({
     <div className={cn('space-y-2.5', className)}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-medium text-slate-500">Timeline</h3>
-        <span className="text-[10px] text-slate-400">
+        <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Timeline</h3>
+        <span className="text-[10px] text-slate-400 dark:text-slate-500">
           {movimentacoesLimitadas.length} {movimentacoesLimitadas.length === 1 ? 'evento' : 'eventos'}
         </span>
       </div>
@@ -108,9 +108,9 @@ export default function ProcessoTimelineHorizontal({
             variant="outline"
             size="sm"
             onClick={() => scroll('left')}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-7 w-7 p-0 rounded-full shadow-sm bg-white border-slate-200 hover:bg-slate-50 hover:border-[#89bcbe]"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-7 w-7 p-0 rounded-full shadow-sm bg-white dark:bg-surface-1 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-surface-2 hover:border-[#89bcbe]"
           >
-            <ChevronLeft className="w-3.5 h-3.5 text-slate-600" />
+            <ChevronLeft className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
           </Button>
         )}
 
@@ -120,9 +120,9 @@ export default function ProcessoTimelineHorizontal({
             variant="outline"
             size="sm"
             onClick={() => scroll('right')}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-7 w-7 p-0 rounded-full shadow-sm bg-white border-slate-200 hover:bg-slate-50 hover:border-[#89bcbe]"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-7 w-7 p-0 rounded-full shadow-sm bg-white dark:bg-surface-1 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-surface-2 hover:border-[#89bcbe]"
           >
-            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+            <ChevronRight className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
           </Button>
         )}
 
@@ -143,26 +143,26 @@ export default function ProcessoTimelineHorizontal({
                   <Card
                     onClick={() => onItemClick?.(mov.id)}
                     className={cn(
-                      'w-[200px] flex-shrink-0 border border-slate-200 hover:border-[#89bcbe] transition-all cursor-pointer',
-                      'bg-white shadow-sm hover:shadow-md',
+                      'w-[200px] flex-shrink-0 border border-slate-200 dark:border-slate-700 hover:border-[#89bcbe] transition-all cursor-pointer',
+                      'bg-white dark:bg-surface-1 shadow-sm hover:shadow-md',
                       mov.importante && 'border-red-200 bg-red-50/50',
                       !mov.lida && 'border-blue-200 bg-blue-50/30'
                     )}
                   >
                     <CardContent className="p-2.5">
                       {/* Data */}
-                      <p className="text-[11px] font-medium text-[#46627f] mb-1.5">
+                      <p className="text-[11px] font-medium text-[#46627f] dark:text-slate-400 mb-1.5">
                         {formatBrazilDate(mov.data_movimento)}
                       </p>
 
                       {/* Tipo */}
-                      <p className="text-[11px] font-medium text-[#34495e] leading-tight line-clamp-1 mb-1">
+                      <p className="text-[11px] font-medium text-[#34495e] dark:text-slate-200 leading-tight line-clamp-1 mb-1">
                         {mov.tipo_descricao || 'Movimentação'}
                       </p>
 
                       {/* Descrição */}
                       {mov.descricao && (
-                        <p className="text-[10px] text-slate-500 line-clamp-2 leading-relaxed">
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
                           {mov.descricao}
                         </p>
                       )}
@@ -171,7 +171,7 @@ export default function ProcessoTimelineHorizontal({
 
                   {/* Linha Conectora (exceto no último) */}
                   {index < movimentacoesLimitadas.length - 1 && (
-                    <div className="w-8 h-px bg-slate-200 flex-shrink-0" />
+                    <div className="w-8 h-px bg-slate-200 dark:bg-slate-700 flex-shrink-0" />
                   )}
               </div>
             ))}
@@ -186,7 +186,7 @@ export default function ProcessoTimelineHorizontal({
                 key={i}
                 className={cn(
                   'h-1 rounded-full transition-all duration-300',
-                  Math.floor(scrollProgress * 5) === i ? 'w-5 bg-[#89bcbe]' : 'w-1 bg-slate-300'
+                  Math.floor(scrollProgress * 5) === i ? 'w-5 bg-[#89bcbe]' : 'w-1 bg-slate-300 dark:bg-slate-600'
                 )}
               />
             ))}

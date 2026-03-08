@@ -42,7 +42,7 @@ export default function MonthlyNumbers() {
           <p className="text-text-secondary">Meta: R$ {metrics.generatedRevenue.goal.toLocaleString('pt-BR')}</p>
         </div>
 
-        <div className="border-t border-grey-200 pt-4">
+        <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
             <p className="text-sm font-medium">Horas pendentes de faturamento: <span className="font-bold">{metrics.pendingHours}h</span></p>
             <Button variant="outline" size="sm" className="mt-2 w-full">Faturar Agora</Button>
         </div>

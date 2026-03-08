@@ -78,13 +78,13 @@ export default function ListView({
     if (eventos.length === 0 && !emptyMessage) return null
 
     return (
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardHeader className="pb-3 pt-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
               {icon}
               {title}
-              <span className="text-xs font-normal text-[#6c757d] ml-1">
+              <span className="text-xs font-normal text-[#6c757d] dark:text-slate-400 ml-1">
                 ({eventos.length})
               </span>
             </CardTitle>
@@ -92,7 +92,7 @@ export default function ListView({
         </CardHeader>
         <CardContent className="pt-2 pb-4">
           {eventos.length === 0 ? (
-            <p className="text-xs text-[#6c757d] text-center py-4">{emptyMessage}</p>
+            <p className="text-xs text-[#6c757d] dark:text-slate-400 text-center py-4">{emptyMessage}</p>
           ) : (
             <div className="space-y-3">
               {eventos.map((evento) => (
@@ -128,7 +128,7 @@ export default function ListView({
     <div className={cn('space-y-4', className)}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-[#34495e]">Lista de Eventos</h2>
+        <h2 className="text-2xl font-semibold text-[#34495e] dark:text-slate-200">Lista de Eventos</h2>
         <Button
           size="sm"
           onClick={onCreateEvent}
@@ -161,12 +161,12 @@ export default function ListView({
 
         {/* Próximos 7 Dias */}
         {groupedEventos.proximos7dias.length > 0 && (
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
             <CardHeader className="pb-3 pt-4">
-              <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+              <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-[#89bcbe]" />
                 Próximos 7 Dias
-                <span className="text-xs font-normal text-[#6c757d] ml-1">
+                <span className="text-xs font-normal text-[#6c757d] dark:text-slate-400 ml-1">
                   ({groupedEventos.proximos7dias.length})
                 </span>
               </CardTitle>
@@ -176,8 +176,8 @@ export default function ListView({
                 const date = new Date(dateKey)
                 return (
                   <div key={dateKey}>
-                    <div className="mb-2 pb-1 border-b border-slate-100">
-                      <p className="text-xs font-semibold text-[#46627f] capitalize">
+                    <div className="mb-2 pb-1 border-b border-slate-100 dark:border-slate-800">
+                      <p className="text-xs font-semibold text-[#46627f] dark:text-slate-400 capitalize">
                         {format(date, "EEEE, d 'de' MMMM", { locale: ptBR })}
                       </p>
                     </div>
@@ -199,12 +199,12 @@ export default function ListView({
 
         {/* Depois */}
         {groupedEventos.depois.length > 0 && (
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
             <CardHeader className="pb-3 pt-4">
-              <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-slate-400" />
+              <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                 Eventos Futuros
-                <span className="text-xs font-normal text-[#6c757d] ml-1">
+                <span className="text-xs font-normal text-[#6c757d] dark:text-slate-400 ml-1">
                   ({groupedEventos.depois.length})
                 </span>
               </CardTitle>
@@ -219,7 +219,7 @@ export default function ListView({
                   />
                 ))}
                 {groupedEventos.depois.length > 10 && (
-                  <p className="text-xs text-center text-[#6c757d] pt-2">
+                  <p className="text-xs text-center text-[#6c757d] dark:text-slate-400 pt-2">
                     + {groupedEventos.depois.length - 10} eventos adicionais
                   </p>
                 )}
@@ -230,14 +230,14 @@ export default function ListView({
 
         {/* Mensagem vazia */}
         {eventos.length === 0 && (
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
             <CardContent className="py-12">
               <div className="text-center">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="w-8 h-8 text-slate-400" />
+                <div className="w-16 h-16 bg-slate-100 dark:bg-surface-2 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="w-8 h-8 text-slate-400 dark:text-slate-500" />
                 </div>
-                <p className="text-sm text-[#6c757d] mb-1">Nenhum evento agendado</p>
-                <p className="text-xs text-slate-400 mb-4">
+                <p className="text-sm text-[#6c757d] dark:text-slate-400 mb-1">Nenhum evento agendado</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">
                   Comece criando seu primeiro evento
                 </p>
                 <Button

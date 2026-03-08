@@ -20,32 +20,32 @@ interface MetricCardProps {
 
 const gradientSchemes = {
   kpi1: {
-    cardBg: 'bg-gradient-to-br from-[#34495e] to-[#46627f]',
+    cardBg: 'bg-gradient-to-br from-[#34495e] to-[#46627f] dark:from-[#1e3148] dark:to-[#2a4a6b]',
     iconBg: 'bg-white/20',
     iconColor: 'text-white',
     textColor: 'text-white',
     trendColor: 'text-white/90',
   },
   kpi2: {
-    cardBg: 'bg-gradient-to-br from-[#46627f] to-[#6c757d]',
+    cardBg: 'bg-gradient-to-br from-[#46627f] to-[#6c757d] dark:from-[#2a4a6b] dark:to-[#4a5568]',
     iconBg: 'bg-white/20',
     iconColor: 'text-white',
     textColor: 'text-white',
     trendColor: 'text-white/90',
   },
   kpi3: {
-    cardBg: 'bg-gradient-to-br from-[#89bcbe] to-[#aacfd0]',
-    iconBg: 'bg-white/30',
-    iconColor: 'text-[#34495e]',
-    textColor: 'text-[#34495e]',
-    trendColor: 'text-[#34495e]/80',
+    cardBg: 'bg-gradient-to-br from-[#89bcbe] to-[#aacfd0] dark:from-[#2d6a6d] dark:to-[#3d8a8d]',
+    iconBg: 'bg-white/30 dark:bg-white/10',
+    iconColor: 'text-[#34495e] dark:text-white',
+    textColor: 'text-[#34495e] dark:text-white',
+    trendColor: 'text-[#34495e]/80 dark:text-white/80',
   },
   kpi4: {
-    cardBg: 'bg-gradient-to-br from-[#aacfd0] to-[#cbe2e2]',
-    iconBg: 'bg-white/40',
-    iconColor: 'text-[#34495e]',
-    textColor: 'text-[#34495e]',
-    trendColor: 'text-[#34495e]/80',
+    cardBg: 'bg-gradient-to-br from-[#aacfd0] to-[#cbe2e2] dark:from-[#1f5154] dark:to-[#2d6a6d]',
+    iconBg: 'bg-white/40 dark:bg-white/10',
+    iconColor: 'text-[#34495e] dark:text-white',
+    textColor: 'text-[#34495e] dark:text-white',
+    trendColor: 'text-[#34495e]/80 dark:text-white/80',
   },
 }
 

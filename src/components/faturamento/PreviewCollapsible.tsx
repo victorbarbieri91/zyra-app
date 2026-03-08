@@ -55,7 +55,7 @@ interface PreviewCollapsibleProps {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }).format(value)
 
 const formatCompetencia = (competencia: string) => {
   const date = new Date(competencia + 'T00:00:00')

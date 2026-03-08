@@ -54,18 +54,18 @@ import { STATUS_PROJETO_LABELS, STATUS_FASE_LABELS, AREA_JURIDICA_LABELS } from 
 
 // Configuração de status
 const STATUS_CONFIG: Record<StatusProjeto, { icon: typeof Clock; color: string; bgColor: string }> = {
-  rascunho: { icon: Clock, color: 'text-slate-600', bgColor: 'bg-slate-100' },
-  em_andamento: { icon: Play, color: 'text-blue-600', bgColor: 'bg-blue-100' },
-  pausado: { icon: Pause, color: 'text-amber-600', bgColor: 'bg-amber-100' },
-  concluido: { icon: CheckCircle2, color: 'text-emerald-600', bgColor: 'bg-emerald-100' },
-  cancelado: { icon: XCircle, color: 'text-red-600', bgColor: 'bg-red-100' },
+  rascunho: { icon: Clock, color: 'text-slate-600 dark:text-slate-400', bgColor: 'bg-slate-100 dark:bg-slate-500/10' },
+  em_andamento: { icon: Play, color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-100 dark:bg-blue-500/10' },
+  pausado: { icon: Pause, color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-100 dark:bg-amber-500/10' },
+  concluido: { icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bgColor: 'bg-emerald-100 dark:bg-emerald-500/10' },
+  cancelado: { icon: XCircle, color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-500/10' },
 }
 
 const FASE_STATUS_CONFIG: Record<StatusFase, { color: string; bgColor: string }> = {
-  pendente: { color: 'text-slate-600', bgColor: 'bg-slate-100' },
-  em_andamento: { color: 'text-blue-600', bgColor: 'bg-blue-100' },
-  concluida: { color: 'text-emerald-600', bgColor: 'bg-emerald-100' },
-  pulada: { color: 'text-amber-600', bgColor: 'bg-amber-100' },
+  pendente: { color: 'text-slate-600 dark:text-slate-400', bgColor: 'bg-slate-100 dark:bg-slate-500/10' },
+  em_andamento: { color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-100 dark:bg-blue-500/10' },
+  concluida: { color: 'text-emerald-600 dark:text-emerald-400', bgColor: 'bg-emerald-100 dark:bg-emerald-500/10' },
+  pulada: { color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-100 dark:bg-amber-500/10' },
 }
 
 // Ícones por área
@@ -336,7 +336,7 @@ export default function ProjetoDetalhesPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-full border-4 border-[#34495e]/20 border-t-[#34495e] animate-spin" />
-          <p className="text-slate-500">Carregando projeto...</p>
+          <p className="text-slate-500 dark:text-slate-400">Carregando projeto...</p>
         </div>
       </div>
     )
@@ -346,8 +346,8 @@ export default function ProjetoDetalhesPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
         <AlertCircle className="w-16 h-16 text-slate-300 mb-4" />
-        <h2 className="text-xl font-semibold text-[#34495e] mb-2">Projeto não encontrado</h2>
-        <p className="text-slate-500 mb-6">{error}</p>
+        <h2 className="text-xl font-semibold text-[#34495e] dark:text-slate-200 mb-2">Projeto não encontrado</h2>
+        <p className="text-slate-500 dark:text-slate-400 mb-6">{error}</p>
         <Button onClick={() => router.push('/dashboard/portfolio/projetos')}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Voltar para Projetos
@@ -372,7 +372,7 @@ export default function ProjetoDetalhesPage() {
           variant="ghost"
           size="sm"
           onClick={() => router.push('/dashboard/portfolio/projetos')}
-          className="text-slate-600"
+          className="text-slate-600 dark:text-slate-400"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
           Voltar
@@ -381,7 +381,7 @@ export default function ProjetoDetalhesPage() {
 
       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
         <div className="flex items-start gap-4">
-          <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${areaGradient} flex items-center justify-center shadow-lg flex-shrink-0`}>
+          <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${areaGradient} flex items-center justify-center shadow-lg dark:shadow-slate-900/50 flex-shrink-0`}>
             <AreaIcon className="w-8 h-8 text-white" />
           </div>
           <div>
@@ -398,19 +398,19 @@ export default function ProjetoDetalhesPage() {
                 </Badge>
               )}
             </div>
-            <h1 className="text-2xl font-bold text-[#34495e]">{projeto.nome}</h1>
-            <p className="text-slate-500 mt-1">
+            <h1 className="text-2xl font-bold text-[#34495e] dark:text-slate-200">{projeto.nome}</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">
               Produto: <span className="font-medium">{projeto.produto.nome}</span>
             </p>
           </div>
         </div>
 
         {/* Progresso geral */}
-        <Card className="lg:w-64 border-slate-200">
+        <Card className="lg:w-64 border-slate-200 dark:border-slate-700">
           <CardContent className="p-4">
             <div className="text-center mb-3">
-              <span className="text-3xl font-bold text-[#34495e]">{projeto.progresso_percentual}%</span>
-              <p className="text-xs text-slate-500">Progresso Geral</p>
+              <span className="text-3xl font-bold text-[#34495e] dark:text-slate-200">{projeto.progresso_percentual}%</span>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Progresso Geral</p>
             </div>
             <Progress value={projeto.progresso_percentual} className="h-2" />
           </CardContent>
@@ -419,29 +419,29 @@ export default function ProjetoDetalhesPage() {
 
       {/* Info Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                <User className="w-5 h-5 text-blue-600" />
+              <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center">
+                <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-xs text-slate-500">Cliente</p>
-                <p className="font-medium text-[#34495e] truncate">{projeto.cliente.nome}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Cliente</p>
+                <p className="font-medium text-[#34495e] dark:text-slate-200 truncate">{projeto.cliente.nome}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                <Users className="w-5 h-5 text-purple-600" />
+              <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-500/10 flex items-center justify-center">
+                <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-xs text-slate-500">Responsável</p>
-                <p className="font-medium text-[#34495e] truncate">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Responsável</p>
+                <p className="font-medium text-[#34495e] dark:text-slate-200 truncate">
                   {projeto.responsavel?.nome || projeto.responsavel?.email || '-'}
                 </p>
               </div>
@@ -449,15 +449,15 @@ export default function ProjetoDetalhesPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-amber-600" />
+              <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <p className="text-xs text-slate-500">Previsão</p>
-                <p className={`font-medium ${isAtrasado ? 'text-red-600' : 'text-[#34495e]'}`}>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Previsão</p>
+                <p className={`font-medium ${isAtrasado ? 'text-red-600 dark:text-red-400' : 'text-[#34495e] dark:text-slate-200'}`}>
                   {projeto.data_prevista_conclusao ? formatBrazilDate(projeto.data_prevista_conclusao) : '-'}
                 </p>
               </div>
@@ -465,15 +465,15 @@ export default function ProjetoDetalhesPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-emerald-600" />
+              <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
-                <p className="text-xs text-slate-500">Valor</p>
-                <p className="font-medium text-[#34495e]">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Valor</p>
+                <p className="font-medium text-[#34495e] dark:text-slate-200">
                   {projeto.valor_negociado ? formatCurrency(projeto.valor_negociado) : '-'}
                 </p>
               </div>
@@ -483,9 +483,9 @@ export default function ProjetoDetalhesPage() {
       </div>
 
       {/* Fases */}
-      <Card className="border-slate-200">
+      <Card className="border-slate-200 dark:border-slate-700">
         <CardHeader>
-          <CardTitle className="text-lg text-[#34495e] flex items-center gap-2">
+          <CardTitle className="text-lg text-[#34495e] dark:text-slate-200 flex items-center gap-2">
             <Layers className="w-5 h-5" />
             Fases do Projeto
           </CardTitle>
@@ -498,10 +498,10 @@ export default function ProjetoDetalhesPage() {
             const checklistTotal = fase.checklist.length
 
             return (
-              <div key={fase.id} className="border border-slate-200 rounded-xl overflow-hidden">
+              <div key={fase.id} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
                 {/* Header da Fase */}
                 <div
-                  className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 transition-colors"
+                  className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors"
                   onClick={() => toggleFase(fase.id)}
                 >
                   <div className="w-8 h-8 rounded-full bg-[#34495e] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
@@ -510,26 +510,26 @@ export default function ProjetoDetalhesPage() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-medium text-[#34495e]">{fase.nome}</h4>
+                      <h4 className="font-medium text-[#34495e] dark:text-slate-200">{fase.nome}</h4>
                       <Badge className={`${faseConfig.bgColor} ${faseConfig.color} border-0 text-xs`}>
                         {STATUS_FASE_LABELS[fase.status]}
                       </Badge>
                     </div>
                     {fase.descricao && (
-                      <p className="text-sm text-slate-500 truncate">{fase.descricao}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{fase.descricao}</p>
                     )}
                   </div>
 
                   <div className="flex items-center gap-4 flex-shrink-0">
                     {checklistTotal > 0 && (
-                      <span className="text-sm text-slate-500">
+                      <span className="text-sm text-slate-500 dark:text-slate-400">
                         {checklistConcluidos}/{checklistTotal}
                       </span>
                     )}
                     <div className="w-20">
                       <Progress value={fase.progresso_percentual} className="h-2" />
                     </div>
-                    <span className="text-sm font-medium text-[#34495e] w-10 text-right">
+                    <span className="text-sm font-medium text-[#34495e] dark:text-slate-200 w-10 text-right">
                       {fase.progresso_percentual}%
                     </span>
                     {isExpanded ? (
@@ -542,27 +542,27 @@ export default function ProjetoDetalhesPage() {
 
                 {/* Conteúdo expandido */}
                 {isExpanded && (
-                  <div className="border-t border-slate-200 p-4 bg-slate-50">
+                  <div className="border-t border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-surface-0">
                     {/* Datas */}
                     <div className="flex flex-wrap gap-4 mb-4 text-sm">
                       <div>
-                        <span className="text-slate-500">Início previsto: </span>
+                        <span className="text-slate-500 dark:text-slate-400">Início previsto: </span>
                         <span className="font-medium">{formatBrazilDate(fase.data_inicio_prevista)}</span>
                       </div>
                       <div>
-                        <span className="text-slate-500">Fim previsto: </span>
+                        <span className="text-slate-500 dark:text-slate-400">Fim previsto: </span>
                         <span className="font-medium">{formatBrazilDate(fase.data_fim_prevista)}</span>
                       </div>
                       {fase.data_inicio_real && (
                         <div>
-                          <span className="text-slate-500">Início real: </span>
-                          <span className="font-medium text-blue-600">{formatBrazilDate(fase.data_inicio_real)}</span>
+                          <span className="text-slate-500 dark:text-slate-400">Início real: </span>
+                          <span className="font-medium text-blue-600 dark:text-blue-400">{formatBrazilDate(fase.data_inicio_real)}</span>
                         </div>
                       )}
                       {fase.data_fim_real && (
                         <div>
-                          <span className="text-slate-500">Fim real: </span>
-                          <span className="font-medium text-emerald-600">{formatBrazilDate(fase.data_fim_real)}</span>
+                          <span className="text-slate-500 dark:text-slate-400">Fim real: </span>
+                          <span className="font-medium text-emerald-600 dark:text-emerald-400">{formatBrazilDate(fase.data_fim_real)}</span>
                         </div>
                       )}
                     </div>
@@ -597,12 +597,12 @@ export default function ProjetoDetalhesPage() {
                     {/* Checklist */}
                     {fase.checklist.length > 0 && (
                       <div className="space-y-2">
-                        <h5 className="text-sm font-medium text-slate-700 mb-3">Checklist</h5>
+                        <h5 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Checklist</h5>
                         {fase.checklist.map((item) => (
                           <div
                             key={item.id}
                             className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
-                              item.concluido ? 'bg-emerald-50' : 'bg-white border border-slate-200'
+                              item.concluido ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700'
                             }`}
                           >
                             <Checkbox
@@ -613,11 +613,11 @@ export default function ProjetoDetalhesPage() {
                               className="mt-0.5"
                             />
                             <div className="flex-1">
-                              <span className={`text-sm ${item.concluido ? 'text-slate-500 line-through' : 'text-slate-700'}`}>
+                              <span className={`text-sm ${item.concluido ? 'text-slate-500 dark:text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>
                                 {item.item}
                               </span>
                               {item.obrigatorio && !item.concluido && (
-                                <Badge variant="outline" className="ml-2 text-[10px] text-amber-600 border-amber-200">
+                                <Badge variant="outline" className="ml-2 text-[10px] text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/30">
                                   Obrigatório
                                 </Badge>
                               )}
@@ -641,15 +641,15 @@ export default function ProjetoDetalhesPage() {
 
       {/* Observações */}
       {projeto.observacoes && (
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardHeader>
-            <CardTitle className="text-lg text-[#34495e] flex items-center gap-2">
+            <CardTitle className="text-lg text-[#34495e] dark:text-slate-200 flex items-center gap-2">
               <FileText className="w-5 h-5" />
               Observações
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-slate-600 whitespace-pre-wrap">{projeto.observacoes}</p>
+            <p className="text-slate-600 dark:text-slate-400 whitespace-pre-wrap">{projeto.observacoes}</p>
           </CardContent>
         </Card>
       )}

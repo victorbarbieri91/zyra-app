@@ -45,8 +45,8 @@ export default function ProcessosDetail({ data, loading }: Props) {
           className={cn(
             'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors',
             tab === 'novos'
-              ? 'bg-emerald-100 text-emerald-700'
-              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400'
+              : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-surface-2 dark:text-slate-400 dark:hover:bg-surface-3'
           )}
         >
           <Plus className="w-3 h-3" />
@@ -58,8 +58,8 @@ export default function ProcessosDetail({ data, loading }: Props) {
           className={cn(
             'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors',
             tab === 'encerrados'
-              ? 'bg-slate-200 text-slate-700'
-              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              ? 'bg-slate-200 text-slate-700 dark:bg-surface-3 dark:text-slate-300'
+              : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-surface-2 dark:text-slate-400 dark:hover:bg-surface-3'
           )}
         >
           <XCircle className="w-3 h-3" />
@@ -83,43 +83,43 @@ export default function ProcessosDetail({ data, loading }: Props) {
             <button
               key={p.id}
               onClick={() => router.push(`/dashboard/processos/${p.id}`)}
-              className="w-full text-left p-3 rounded-lg hover:bg-slate-50 transition-colors group flex items-center gap-3"
+              className="w-full text-left p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors group flex items-center gap-3"
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
                   {p.area && (
-                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#89bcbe]/15 text-[#46627f]">
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#89bcbe]/15 text-[#46627f] dark:text-slate-300">
                       {p.area}
                     </span>
                   )}
-                  <span className="text-xs font-medium text-slate-700 truncate">
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">
                     {p.numero_pasta || p.numero_cnj || 'Sem número'}
                   </span>
                   {tab === 'encerrados' && p.status && (
-                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 dark:bg-surface-2 dark:text-slate-400">
                       {STATUS_LABELS[p.status] || p.status}
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-500 truncate">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                   {p.autor && p.reu ? `${p.autor} x ${p.reu}` : p.autor || p.reu || '—'}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
                   {p.cliente_nome && (
-                    <span className="text-[10px] text-slate-400 truncate">{p.cliente_nome}</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{p.cliente_nome}</span>
                   )}
                   {p.cliente_nome && p.responsavel_nome && (
-                    <span className="text-[10px] text-slate-300">·</span>
+                    <span className="text-[10px] text-slate-300 dark:text-slate-600">·</span>
                   )}
                   {p.responsavel_nome && (
-                    <span className="text-[10px] text-slate-400 truncate">{p.responsavel_nome}</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{p.responsavel_nome}</span>
                   )}
-                  <span className="text-[10px] text-slate-300 ml-auto flex-shrink-0">
+                  <span className="text-[10px] text-slate-300 dark:text-slate-600 ml-auto flex-shrink-0">
                     {formatBrazilDateOnly(p.data)}
                   </span>
                 </div>
               </div>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-400 flex-shrink-0" />
+              <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-400 dark:text-slate-600 dark:group-hover:text-slate-500 flex-shrink-0" />
             </button>
           ))}
         </div>

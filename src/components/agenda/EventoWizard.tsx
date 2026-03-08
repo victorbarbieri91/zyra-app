@@ -388,7 +388,7 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
           <div className="space-y-4">
             {/* Tipo de Evento */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#34495e]">Tipo de Compromisso *</Label>
+              <Label className="text-sm font-medium text-[#34495e] dark:text-slate-200">Tipo de Compromisso *</Label>
               <div className="grid grid-cols-6 gap-2">
                 {(Object.entries(TIPO_CONFIG) as [TipoEvento, typeof TIPO_CONFIG[keyof typeof TIPO_CONFIG]][]).map(
                   ([key, config]) => {
@@ -405,14 +405,14 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
                           selected
                             ? cn(
                                 'border-current shadow-sm',
-                                config.color === 'blue' && 'bg-blue-50 text-blue-600 border-blue-300',
-                                config.color === 'purple' && 'bg-purple-50 text-purple-600 border-purple-300',
-                                config.color === 'emerald' && 'bg-emerald-50 text-emerald-600 border-emerald-300',
-                                config.color === 'amber' && 'bg-amber-50 text-amber-600 border-amber-300',
-                                config.color === 'red' && 'bg-red-50 text-red-600 border-red-300',
-                                config.color === 'slate' && 'bg-slate-50 text-slate-600 border-slate-300'
+                                config.color === 'blue' && 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-500/50',
+                                config.color === 'purple' && 'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-300 dark:border-purple-500/50',
+                                config.color === 'emerald' && 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/50',
+                                config.color === 'amber' && 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-500/50',
+                                config.color === 'red' && 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-300 dark:border-red-500/50',
+                                config.color === 'slate' && 'bg-slate-50 dark:bg-surface-0 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600'
                               )
-                            : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 text-slate-400 dark:text-slate-500 hover:border-slate-300 dark:hover:border-slate-600 hover:text-slate-600 dark:hover:text-slate-300'
                         )}
                       >
                         <Icon className="w-5 h-5" />
@@ -428,7 +428,7 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
 
             {/* Título */}
             <div className="space-y-2">
-              <Label htmlFor="titulo" className="text-sm font-medium text-[#34495e]">
+              <Label htmlFor="titulo" className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                 Título do Compromisso *
               </Label>
               <Input
@@ -438,14 +438,14 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
                 onChange={(e) => setTitulo(e.target.value)}
                 className="text-sm"
               />
-              <p className="text-xs text-slate-500">Mínimo 3 caracteres</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Mínimo 3 caracteres</p>
             </div>
 
             {/* Descrição */}
             <div className="space-y-2">
-              <Label htmlFor="descricao" className="text-sm font-medium text-[#34495e]">
+              <Label htmlFor="descricao" className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                 Descrição
-                <span className="text-xs text-slate-500 font-normal ml-2">(Opcional)</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-normal ml-2">(Opcional)</span>
               </Label>
               <Textarea
                 id="descricao"
@@ -465,7 +465,7 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
         <WizardStep title={steps[1].title} subtitle={steps[1].subtitle}>
           <div className="space-y-4">
             {/* Dia Inteiro */}
-            <div className="flex items-center space-x-2 bg-slate-50 p-3 rounded-lg">
+            <div className="flex items-center space-x-2 bg-slate-50 dark:bg-surface-0 p-3 rounded-lg">
               <Checkbox
                 id="dia-inteiro"
                 checked={diaInteiro}
@@ -478,7 +478,7 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
 
             {/* Data/Hora Início */}
             <div className="space-y-2">
-              <Label htmlFor="data-inicio" className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+              <Label htmlFor="data-inicio" className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-[#89bcbe]" />
                 {diaInteiro ? 'Data' : 'Data e Hora de Início'} *
               </Label>
@@ -500,17 +500,17 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
             {/* Data/Hora Fim */}
             {!diaInteiro && (
               <div className="space-y-2">
-                <Label htmlFor="data-fim" className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+                <Label htmlFor="data-fim" className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
                   <Clock className="w-4 h-4 text-amber-500" />
                   Data e Hora de Término
-                  <span className="text-xs text-slate-500 font-normal">(Opcional)</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">(Opcional)</span>
                 </Label>
                 <DateTimeInput
                   value={dataFim}
                   onChange={setDataFim}
                   placeholder="Selecione data e horário de término"
                 />
-                <p className="text-xs text-slate-500">Se não informado, assume mesma data/hora do início</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Se não informado, assume mesma data/hora do início</p>
               </div>
             )}
           </div>
@@ -523,10 +523,10 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
           <div className="space-y-4">
             {/* Local */}
             <div className="space-y-2">
-              <Label htmlFor="local" className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+              <Label htmlFor="local" className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-[#89bcbe]" />
                 Local
-                <span className="text-xs text-slate-500 font-normal">(Opcional)</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">(Opcional)</span>
               </Label>
               <Input
                 id="local"
@@ -555,7 +555,7 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
           <div className="space-y-4">
             {/* Vínculos */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#34495e]">
+              <Label className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                 Vincular a Processo ou Consultivo
               </Label>
               <VinculacaoSelector
@@ -581,34 +581,34 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
       {/* ETAPA 6: Revisão - Grid Estruturado */}
       {currentStep === 5 && (
         <WizardStep title={steps[5].title} subtitle={steps[5].subtitle}>
-          <div className="bg-white border border-slate-200 rounded-lg p-4">
+          <div className="bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
             {/* Grid de Informações */}
             <div className="space-y-4">
               {/* Tipo e Título */}
               <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
-                <span className="text-slate-500">Tipo</span>
-                <span className="text-[#34495e] font-medium">{getTipoLabel(tipoEvento)}</span>
+                <span className="text-slate-500 dark:text-slate-400">Tipo</span>
+                <span className="text-[#34495e] dark:text-slate-200 font-medium">{getTipoLabel(tipoEvento)}</span>
 
-                <span className="text-slate-500">Título</span>
-                <span className="text-[#34495e] font-medium">{titulo}</span>
+                <span className="text-slate-500 dark:text-slate-400">Título</span>
+                <span className="text-[#34495e] dark:text-slate-200 font-medium">{titulo}</span>
 
                 {descricao && (
                   <>
-                    <span className="text-slate-500">Descrição</span>
-                    <span className="text-slate-600 text-[11px] leading-relaxed">{descricao}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Descrição</span>
+                    <span className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">{descricao}</span>
                   </>
                 )}
               </div>
 
-              <div className="border-t border-slate-100" />
+              <div className="border-t border-slate-100 dark:border-slate-800" />
 
               {/* Data e Horário */}
               <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
-                <span className="text-slate-500">Tipo</span>
-                <span className="text-[#34495e] font-medium">{diaInteiro ? 'Dia inteiro' : 'Com horário específico'}</span>
+                <span className="text-slate-500 dark:text-slate-400">Tipo</span>
+                <span className="text-[#34495e] dark:text-slate-200 font-medium">{diaInteiro ? 'Dia inteiro' : 'Com horário específico'}</span>
 
-                <span className="text-slate-500">Início</span>
-                <span className="text-[#34495e] font-medium">
+                <span className="text-slate-500 dark:text-slate-400">Início</span>
+                <span className="text-[#34495e] dark:text-slate-200 font-medium">
                   {diaInteiro
                     ? formatBrazilDateLong(dataInicio)
                     : formatBrazilDateTime(dataInicio)}
@@ -616,8 +616,8 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
 
                 {!diaInteiro && dataFim && (
                   <>
-                    <span className="text-slate-500">Término</span>
-                    <span className="text-[#34495e] font-medium">
+                    <span className="text-slate-500 dark:text-slate-400">Término</span>
+                    <span className="text-[#34495e] dark:text-slate-200 font-medium">
                       {formatBrazilDateTime(dataFim)}
                     </span>
                   </>
@@ -625,15 +625,15 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
 
                 {local && (
                   <>
-                    <span className="text-slate-500">Local</span>
-                    <span className="text-[#34495e] font-medium">{local}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Local</span>
+                    <span className="text-[#34495e] dark:text-slate-200 font-medium">{local}</span>
                   </>
                 )}
 
                 {responsaveisIds.length > 0 && (
                   <>
-                    <span className="text-slate-500">Responsáveis</span>
-                    <span className="text-[#34495e] font-medium">
+                    <span className="text-slate-500 dark:text-slate-400">Responsáveis</span>
+                    <span className="text-[#34495e] dark:text-slate-200 font-medium">
                       {responsaveisIds
                         .map(id => membros.find(m => m.user_id === id)?.nome)
                         .filter(Boolean)
@@ -646,15 +646,15 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
               {/* Vínculos */}
               {vinculacao && (
                 <>
-                  <div className="border-t border-slate-100" />
+                  <div className="border-t border-slate-100 dark:border-slate-800" />
 
                   <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
-                    <span className="text-slate-500">Vinculado a</span>
-                    <div className="text-[#34495e]">
+                    <span className="text-slate-500 dark:text-slate-400">Vinculado a</span>
+                    <div className="text-[#34495e] dark:text-slate-200">
                       <div className="font-medium">
                         {vinculacao.metadados?.partes || vinculacao.metadados?.titulo || `Pasta ${vinculacao.metadados?.numero_pasta}`}
                       </div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                         {vinculacao.metadados?.numero_pasta && `Pasta ${vinculacao.metadados.numero_pasta}`}
                         {vinculacao.metadados?.numero_cnj && ` • CNJ: ${vinculacao.metadados.numero_cnj}`}
                       </div>
@@ -666,11 +666,11 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
               {/* Recorrência (se houver) */}
               {recorrencia?.ativa && (
                 <>
-                  <div className="border-t border-slate-100" />
+                  <div className="border-t border-slate-100 dark:border-slate-800" />
 
                   <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
-                    <span className="text-slate-500">Recorrência</span>
-                    <span className="text-[#34495e] font-medium flex items-center gap-1.5">
+                    <span className="text-slate-500 dark:text-slate-400">Recorrência</span>
+                    <span className="text-[#34495e] dark:text-slate-200 font-medium flex items-center gap-1.5">
                       <Repeat className="w-3.5 h-3.5 text-[#89bcbe]" />
                       {getRecorrenciaSummary(recorrencia)}
                     </span>

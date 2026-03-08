@@ -81,7 +81,7 @@ export default function ProcessoFinanceiroCard({
 
   if (loading) {
     return (
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardContent className="py-8">
           <div className="flex items-center justify-center">
             <Loader2 className="w-5 h-5 animate-spin text-[#89bcbe]" />
@@ -98,19 +98,19 @@ export default function ProcessoFinanceiroCard({
         <Card className="border-slate-200 shadow-sm">
           <CardContent className="py-6">
             <div className="text-center">
-              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+              <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-surface-2 flex items-center justify-center mx-auto mb-3">
                 <FileText className="w-5 h-5 text-slate-400" />
               </div>
-              <p className="text-sm font-medium text-slate-700 mb-1">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Nenhum contrato vinculado
               </p>
-              <p className="text-xs text-slate-500 mb-4">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
                 Vincule um contrato para gerenciar o financeiro deste processo
               </p>
               <Button
                 size="sm"
                 variant="outline"
-                className="text-xs h-8 border-[#89bcbe] text-[#34495e] hover:bg-[#89bcbe]/10"
+                className="text-xs h-8 border-[#89bcbe] text-[#34495e] dark:text-slate-200 hover:bg-[#89bcbe]/10"
                 onClick={() => setVincularModalOpen(true)}
               >
                 <LinkIcon className="w-3.5 h-3.5 mr-1.5" />
@@ -134,11 +134,11 @@ export default function ProcessoFinanceiroCard({
 
   return (
     <>
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         {/* Header - igual às demais seções */}
         <CardHeader className="pb-3 pt-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-[#89bcbe]" />
               Financeiro
             </CardTitle>
@@ -147,7 +147,7 @@ export default function ProcessoFinanceiroCard({
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-7 px-2.5 text-xs text-slate-500 hover:text-[#34495e] hover:bg-slate-100"
+                  className="h-7 px-2.5 text-xs text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-surface-2"
                 >
                   <Plus className="w-3.5 h-3.5 mr-1.5" />
                   Novo
@@ -158,7 +158,7 @@ export default function ProcessoFinanceiroCard({
                   onClick={() => onLancarHonorario?.()}
                   className="text-xs cursor-pointer py-2.5"
                 >
-                  <Banknote className="w-4 h-4 mr-2.5 text-slate-500" />
+                  <Banknote className="w-4 h-4 mr-2.5 text-slate-500 dark:text-slate-400" />
                   Honorário
                 </DropdownMenuItem>
                 {podelancarHoras && (
@@ -166,7 +166,7 @@ export default function ProcessoFinanceiroCard({
                     onClick={() => onLancarHoras?.()}
                     className="text-xs cursor-pointer py-2.5"
                   >
-                    <Clock className="w-4 h-4 mr-2.5 text-slate-500" />
+                    <Clock className="w-4 h-4 mr-2.5 text-slate-500 dark:text-slate-400" />
                     Timesheet
                   </DropdownMenuItem>
                 )}
@@ -174,7 +174,7 @@ export default function ProcessoFinanceiroCard({
                   onClick={() => onLancarDespesa?.()}
                   className="text-xs cursor-pointer py-2.5"
                 >
-                  <Receipt className="w-4 h-4 mr-2.5 text-slate-500" />
+                  <Receipt className="w-4 h-4 mr-2.5 text-slate-500 dark:text-slate-400" />
                   Despesa
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -183,13 +183,13 @@ export default function ProcessoFinanceiroCard({
         </CardHeader>
 
         {/* Info do Contrato - Seção separada */}
-        <div className="px-6 py-4 border-b border-slate-100">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2.5">
             <FileText className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-xs text-slate-600">
+            <span className="text-xs text-slate-600 dark:text-slate-400">
               {contratoInfo.numero_contrato}
             </span>
-            <Badge variant="outline" className="text-[10px] font-medium h-5 bg-slate-50 text-slate-600 border-slate-200">
+            <Badge variant="outline" className="text-[10px] font-medium h-5 bg-slate-50 dark:bg-surface-0 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700">
               {MODALIDADE_LABELS[contratoInfo.forma_cobranca || ''] || 'Padrão'}
             </Badge>
           </div>
@@ -199,19 +199,19 @@ export default function ProcessoFinanceiroCard({
         <CardContent className="p-5 space-y-4">
           {/* Honorários */}
           <div
-            className="group flex items-center justify-between cursor-pointer hover:bg-slate-50 -mx-3 px-3 py-3 rounded-lg transition-colors"
+            className="group flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 -mx-3 px-3 py-3 rounded-lg transition-colors"
             onClick={() => openDetalhesModal('honorarios')}
           >
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Honorários</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Honorários</p>
                 {honorarios.length > 0 && (
                   <span className="text-[10px] text-slate-400">
                     ({honorarios.length})
                   </span>
                 )}
               </div>
-              <p className="text-sm font-semibold text-[#34495e] mt-1">
+              <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200 mt-1">
                 {formatCurrency(resumo.totalHonorarios)}
               </p>
             </div>
@@ -220,19 +220,19 @@ export default function ProcessoFinanceiroCard({
 
           {/* Timesheet */}
           <div
-            className="group flex items-center justify-between cursor-pointer hover:bg-slate-50 -mx-3 px-3 py-3 rounded-lg transition-colors"
+            className="group flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 -mx-3 px-3 py-3 rounded-lg transition-colors"
             onClick={() => openDetalhesModal('timesheet')}
           >
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Timesheet</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Timesheet</p>
                 {timesheet.length > 0 && (
                   <span className="text-[10px] text-slate-400">
                     ({timesheet.length})
                   </span>
                 )}
               </div>
-              <p className="text-sm font-semibold text-[#34495e] mt-1">
+              <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200 mt-1">
                 {formatHoras(resumo.horasTrabalhadas)}
               </p>
             </div>
@@ -241,19 +241,19 @@ export default function ProcessoFinanceiroCard({
 
           {/* Despesas */}
           <div
-            className="group flex items-center justify-between cursor-pointer hover:bg-slate-50 -mx-3 px-3 py-3 rounded-lg transition-colors"
+            className="group flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 -mx-3 px-3 py-3 rounded-lg transition-colors"
             onClick={() => openDetalhesModal('despesas')}
           >
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Despesas</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Despesas</p>
                 {despesas.length > 0 && (
                   <span className="text-[10px] text-slate-400">
                     ({despesas.length})
                   </span>
                 )}
               </div>
-              <p className="text-sm font-semibold text-[#34495e] mt-1">
+              <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200 mt-1">
                 {formatCurrency(resumo.totalDespesas)}
               </p>
             </div>

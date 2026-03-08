@@ -100,32 +100,32 @@ export const typography = {
   },
 }
 
-// Classes Tailwind prontas para uso
+// Classes Tailwind prontas para uso (com dark mode variants)
 export const tw = {
   // Títulos
-  h1: 'text-3xl font-semibold text-[#34495e]',
-  h2: 'text-xl font-medium text-[#46627f]',
-  h3: 'text-lg font-medium text-[#34495e]',
+  h1: 'text-3xl font-semibold text-[#34495e] dark:text-slate-200',
+  h2: 'text-xl font-medium text-[#46627f] dark:text-slate-400',
+  h3: 'text-lg font-medium text-[#34495e] dark:text-slate-200',
 
   // Textos
-  cardTitle: 'text-base font-medium text-[#34495e]',
-  body: 'text-sm font-normal text-[#6c757d]',
-  bodyBase: 'text-base font-normal text-[#6c757d]',
-  label: 'text-xs font-normal text-[#adb5bd]',
-  labelSm: 'text-sm font-normal text-[#adb5bd]',
-  emphasis: 'font-semibold text-[#34495e]',
+  cardTitle: 'text-base font-medium text-[#34495e] dark:text-slate-200',
+  body: 'text-sm font-normal text-[#6c757d] dark:text-gray-400',
+  bodyBase: 'text-base font-normal text-[#6c757d] dark:text-gray-400',
+  label: 'text-xs font-normal text-[#adb5bd] dark:text-gray-500',
+  labelSm: 'text-sm font-normal text-[#adb5bd] dark:text-gray-500',
+  emphasis: 'font-semibold text-[#34495e] dark:text-slate-200',
 
   // Botões
-  btnPrimary: 'bg-[#34495e] hover:bg-[#2c3e50] text-white',
-  btnSecondary: 'bg-[#89bcbe] hover:bg-[#6ba9ab] text-white',
+  btnPrimary: 'bg-[#34495e] hover:bg-[#2c3e50] text-white dark:bg-[#89bcbe] dark:hover:bg-[#6ba9ab] dark:text-slate-900',
+  btnSecondary: 'bg-[#89bcbe] hover:bg-[#6ba9ab] text-white dark:bg-teal-700 dark:hover:bg-teal-600',
 
   // Badges
-  badgePrimary: 'bg-[#34495e] text-white',
-  badgeSecondary: 'bg-[#89bcbe] text-white',
+  badgePrimary: 'bg-[#34495e] text-white dark:bg-[#89bcbe] dark:text-slate-900',
+  badgeSecondary: 'bg-[#89bcbe] text-white dark:bg-teal-700',
 
-  // Gradientes KPI
-  gradientKpi1: 'bg-gradient-to-br from-[#34495e] to-[#46627f]',
-  gradientKpi2: 'bg-gradient-to-br from-[#46627f] to-[#6c757d]',
-  gradientKpi3: 'bg-gradient-to-br from-[#89bcbe] to-[#aacfd0]',
-  gradientKpi4: 'bg-gradient-to-br from-[#aacfd0] to-[#cbe2e2]',
+  // Gradientes KPI (usar CSS classes para dark mode automático)
+  gradientKpi1: 'gradient-kpi1',
+  gradientKpi2: 'gradient-kpi2',
+  gradientKpi3: 'gradient-kpi3',
+  gradientKpi4: 'gradient-kpi4',
 }

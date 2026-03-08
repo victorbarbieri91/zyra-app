@@ -196,10 +196,10 @@ export default function ConvitePage() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-surface-0 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 text-[#89bcbe] animate-spin mx-auto mb-3" />
-          <p className="text-slate-500 text-sm">Carregando convite...</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Carregando convite...</p>
         </div>
       </div>
     )
@@ -208,17 +208,17 @@ export default function ConvitePage() {
   // Success state
   if (success) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 dark:bg-surface-0 flex items-center justify-center p-4">
         <div className="w-full max-w-md text-center">
-          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-500/15 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-xl font-semibold text-[#34495e] mb-2">
+          <h1 className="text-xl font-semibold text-[#34495e] dark:text-slate-200 mb-2">
             Bem-vindo ao {convite?.escritorio_nome}!
           </h1>
-          <p className="text-slate-500 text-sm">Redirecionando...</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Redirecionando...</p>
         </div>
       </div>
     )
@@ -227,19 +227,19 @@ export default function ConvitePage() {
   // Error state (invalid/expired invite)
   if (error && !convite) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 dark:bg-surface-0 flex items-center justify-center p-4">
         <div className="w-full max-w-md text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-500/15 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <h1 className="text-xl font-semibold text-[#34495e] mb-2">Convite inválido</h1>
-          <p className="text-slate-500 text-sm mb-6">{error}</p>
+          <h1 className="text-xl font-semibold text-[#34495e] dark:text-slate-200 mb-2">Convite inválido</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{error}</p>
           <Button
             variant="outline"
             onClick={() => router.push('/login')}
-            className="border-slate-300"
+            className="border-slate-300 dark:border-slate-600"
           >
             Ir para o login
           </Button>
@@ -250,7 +250,7 @@ export default function ConvitePage() {
 
   // Main form
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 dark:bg-surface-0 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -262,11 +262,11 @@ export default function ConvitePage() {
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
           {/* Header */}
-          <div className="px-6 pt-6 pb-4 text-center border-b border-slate-100">
-            <p className="text-slate-500 text-sm mb-1">Você foi convidado para</p>
-            <h1 className="text-xl font-semibold text-[#34495e] mb-3">
+          <div className="px-6 pt-6 pb-4 text-center border-b border-slate-100 dark:border-slate-800">
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-1">Você foi convidado para</p>
+            <h1 className="text-xl font-semibold text-[#34495e] dark:text-slate-200 mb-3">
               {convite?.escritorio_nome}
             </h1>
             <span
@@ -283,7 +283,7 @@ export default function ConvitePage() {
               <form onSubmit={handleRegister} className="space-y-4">
                 {/* Email (readonly) */}
                 <div className="space-y-1.5">
-                  <Label className="text-sm text-slate-600">Email</Label>
+                  <Label className="text-sm text-slate-600 dark:text-slate-400">Email</Label>
                   <Input
                     type="email"
                     value={convite?.email || ''}
@@ -294,7 +294,7 @@ export default function ConvitePage() {
 
                 {/* Nome */}
                 <div className="space-y-1.5">
-                  <Label className="text-sm text-slate-600">Nome completo</Label>
+                  <Label className="text-sm text-slate-600 dark:text-slate-400">Nome completo</Label>
                   <Input
                     type="text"
                     placeholder="Seu nome"
@@ -308,7 +308,7 @@ export default function ConvitePage() {
 
                 {/* Senha */}
                 <div className="space-y-1.5">
-                  <Label className="text-sm text-slate-600">Criar senha</Label>
+                  <Label className="text-sm text-slate-600 dark:text-slate-400">Criar senha</Label>
                   <div className="relative">
                     <Input
                       type={showPassword ? 'text' : 'password'}
@@ -373,7 +373,7 @@ export default function ConvitePage() {
               <form onSubmit={handleLogin} className="space-y-4">
                 {/* Email (readonly) */}
                 <div className="space-y-1.5">
-                  <Label className="text-sm text-slate-600">Email</Label>
+                  <Label className="text-sm text-slate-600 dark:text-slate-400">Email</Label>
                   <Input
                     type="email"
                     value={convite?.email || ''}
@@ -384,7 +384,7 @@ export default function ConvitePage() {
 
                 {/* Senha */}
                 <div className="space-y-1.5">
-                  <Label className="text-sm text-slate-600">Senha</Label>
+                  <Label className="text-sm text-slate-600 dark:text-slate-400">Senha</Label>
                   <div className="relative">
                     <Input
                       type={showPassword ? 'text' : 'password'}

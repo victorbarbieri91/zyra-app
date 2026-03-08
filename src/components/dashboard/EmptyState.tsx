@@ -31,14 +31,14 @@ export default function EmptyState({
     <div className={cn(
       'flex flex-col items-center justify-center text-center',
       isCompact ? 'py-4 px-3' : 'py-8 px-6',
-      isCard && 'bg-slate-50/50 rounded-lg border border-dashed border-slate-200',
+      isCard && 'bg-slate-50/50 dark:bg-surface-2/50 rounded-lg border border-dashed border-slate-200 dark:border-slate-700',
       className
     )}>
       <div className={cn(
         'rounded-full flex items-center justify-center mb-3',
         isCompact
-          ? 'w-10 h-10 bg-slate-100'
-          : 'w-14 h-14 bg-gradient-to-br from-[#89bcbe]/20 to-[#aacfd0]/20'
+          ? 'w-10 h-10 bg-slate-100 dark:bg-surface-2'
+          : 'w-14 h-14 bg-gradient-to-br from-[#89bcbe]/20 to-[#aacfd0]/20 dark:from-[#89bcbe]/10 dark:to-[#89bcbe]/5'
       )}>
         <Icon className={cn(
           'text-[#89bcbe]',
@@ -47,14 +47,14 @@ export default function EmptyState({
       </div>
 
       <h3 className={cn(
-        'font-medium text-[#34495e]',
+        'font-medium text-[#34495e] dark:text-slate-200',
         isCompact ? 'text-xs' : 'text-sm'
       )}>
         {title}
       </h3>
 
       <p className={cn(
-        'text-[#6c757d] mt-1 max-w-[200px]',
+        'text-[#6c757d] dark:text-slate-400 mt-1 max-w-[200px]',
         isCompact ? 'text-[10px]' : 'text-xs'
       )}>
         {description}

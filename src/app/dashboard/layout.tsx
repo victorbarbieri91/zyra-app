@@ -19,7 +19,7 @@ export default function DashboardLayout({
       <AuthProvider>
         <EscritorioProvider>
           <TimerProvider>
-          <div className="flex h-screen overflow-hidden bg-slate-50">
+          <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-surface-0">
             <Sidebar />
             <div className="flex-1 flex flex-col overflow-hidden">
               <Header />

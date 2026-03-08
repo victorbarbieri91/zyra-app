@@ -44,7 +44,7 @@ export function ChatMessage({ mensagem, onNavigate, onOpenInputDialog, onFeedbac
   if (isUser) {
     return (
       <div className="flex justify-end mb-4">
-        <div className="max-w-[80%] bg-[#34495e] text-white rounded-2xl rounded-br-md px-4 py-3">
+        <div className="max-w-[80%] bg-[#34495e] dark:bg-[#89bcbe] text-white dark:text-slate-900 rounded-2xl rounded-br-md px-4 py-3">
           <div className="text-sm leading-relaxed whitespace-pre-wrap">{mensagem.content}</div>
         </div>
       </div>
@@ -55,7 +55,7 @@ export function ChatMessage({ mensagem, onNavigate, onOpenInputDialog, onFeedbac
       <div className="max-w-full">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xs font-medium text-[#89bcbe]">{isSystem ? 'Sistema' : 'Zyra'}</span>
-          <span className="text-[10px] text-slate-400">{formatBrazilDateTime(mensagem.timestamp)}</span>
+          <span className="text-[10px] text-slate-400 dark:text-slate-500">{formatBrazilDateTime(mensagem.timestamp)}</span>
         </div>
         {mensagem.content && <MarkdownRenderer content={mensagem.content} />}
         {mensagem.pending_input && onOpenInputDialog && <FormularioPendente pendingInput={mensagem.pending_input} onAbrirFormulario={() => onOpenInputDialog(mensagem.pending_input!)} />}
@@ -69,7 +69,7 @@ export function ChatMessage({ mensagem, onNavigate, onOpenInputDialog, onFeedbac
             </div>
           )
         })()}
-        {mensagem.erro && <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg text-xs text-amber-700">{sanitizarErroFrontend(mensagem.erro)}</div>}
+        {mensagem.erro && <div className="mt-2 px-3 py-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/30 rounded-lg text-xs text-amber-700 dark:text-amber-400">{sanitizarErroFrontend(mensagem.erro)}</div>}
         {!isUser && !isSystem && mostrarFeedback && onFeedback && onCorrecao && mensagem.id && (
           <FeedbackButtons
             mensagemId={mensagem.id}
@@ -91,29 +91,29 @@ function ToolResultDisplay({ result, onNavigate, onOpenInputDialog }: { result: 
     return (
       <Collapsible>
         <CollapsibleTrigger asChild>
-          <button className="flex items-center justify-between w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors text-left">
+          <button className="flex items-center justify-between w-full px-3 py-2 bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-surface-3 transition-colors text-left">
             <div className="flex items-center gap-2">
-              <Database className="w-3 h-3 text-slate-400" />
-              <span className="text-xs text-slate-500">{result.explicacao}</span>
-              <span className="text-[10px] text-slate-400">({result.total} registros)</span>
+              <Database className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+              <span className="text-xs text-slate-500 dark:text-slate-400">{result.explicacao}</span>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500">({result.total} registros)</span>
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 [[data-state=open]_&]:rotate-180" />
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 transition-transform duration-200 [[data-state=open]_&]:rotate-180" />
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="mt-1 border border-slate-200 rounded-lg overflow-hidden">
-            {result.dados.length > 0 ? <ResultsTable data={result.dados} /> : <div className="p-4 text-center text-sm text-slate-400">Nenhum registro encontrado</div>}
+          <div className="mt-1 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+            {result.dados.length > 0 ? <ResultsTable data={result.dados} /> : <div className="p-4 text-center text-sm text-slate-400 dark:text-slate-500">Nenhum registro encontrado</div>}
           </div>
         </CollapsibleContent>
       </Collapsible>
     )
   }
-  if (result.erro) return <div className="px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg"><p className="text-sm text-amber-700">{sanitizarErroFrontend(result.erro)}</p></div>
+  if (result.erro) return <div className="px-3 py-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/30 rounded-lg"><p className="text-sm text-amber-700 dark:text-amber-400">{sanitizarErroFrontend(result.erro)}</p></div>
   if (result.tipo === 'navegacao' && result.caminho) {
     return (
-      <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-        <p className="text-sm text-slate-600 flex-1">{result.explicacao}</p>
-        <Button size="sm" variant="outline" className="text-slate-600 border-slate-300 text-xs" onClick={() => onNavigate?.(result.caminho!)}>
+      <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700 rounded-lg">
+        <p className="text-sm text-slate-600 dark:text-slate-400 flex-1">{result.explicacao}</p>
+        <Button size="sm" variant="outline" className="text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 text-xs" onClick={() => onNavigate?.(result.caminho!)}>
           <ArrowRight className="w-3.5 h-3.5 mr-1" />Ir
         </Button>
       </div>
@@ -123,6 +123,6 @@ function ToolResultDisplay({ result, onNavigate, onOpenInputDialog }: { result: 
     const pendingInput: PendingInput = { id: result.acao_id || `legacy-${Date.now()}`, tipo: 'collection', contexto: result.contexto || 'Preciso de mais informacoes.', schema: { fields: result.campos_necessarios || [] } }
     return <FormularioPendente pendingInput={pendingInput} onAbrirFormulario={() => onOpenInputDialog(pendingInput)} />
   }
-  if (result.acao_pendente) return <div className="p-3 bg-amber-50/50 border border-amber-200/50 rounded-lg"><p className="text-sm text-amber-700">{result.explicacao}</p>{result.aviso && <p className="text-xs text-red-500 mt-2">{result.aviso}</p>}</div>
+  if (result.acao_pendente) return <div className="p-3 bg-amber-50/50 dark:bg-amber-500/5 border border-amber-200/50 dark:border-amber-500/30 rounded-lg"><p className="text-sm text-amber-700 dark:text-amber-400">{result.explicacao}</p>{result.aviso && <p className="text-xs text-red-500 dark:text-red-400 mt-2">{result.aviso}</p>}</div>
   return null
 }

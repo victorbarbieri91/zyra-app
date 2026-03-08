@@ -136,9 +136,9 @@ export default function PrazoCalculator({ onCalculate, escritorioId }: PrazoCalc
   }
 
   return (
-    <Card className="border-slate-200 shadow-sm">
+    <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
       <CardHeader className="pb-3 pt-4">
-        <CardTitle className="text-base font-medium text-[#34495e] flex items-center gap-2">
+        <CardTitle className="text-base font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
           <Calculator className="w-5 h-5 text-[#89bcbe]" />
           Calculadora de Prazos Processuais
         </CardTitle>
@@ -148,7 +148,7 @@ export default function PrazoCalculator({ onCalculate, escritorioId }: PrazoCalc
         {/* Formulário */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="data_inicio" className="text-xs font-semibold text-[#46627f]">
+            <Label htmlFor="data_inicio" className="text-xs font-semibold text-[#46627f] dark:text-slate-400">
               Data de Início (Intimação) *
             </Label>
             <Input
@@ -162,7 +162,7 @@ export default function PrazoCalculator({ onCalculate, escritorioId }: PrazoCalc
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="quantidade_dias" className="text-xs font-semibold text-[#46627f]">
+              <Label htmlFor="quantidade_dias" className="text-xs font-semibold text-[#46627f] dark:text-slate-400">
                 Quantidade de Dias *
               </Label>
               <Input
@@ -177,7 +177,7 @@ export default function PrazoCalculator({ onCalculate, escritorioId }: PrazoCalc
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tipo_dias" className="text-xs font-semibold text-[#46627f]">
+              <Label htmlFor="tipo_dias" className="text-xs font-semibold text-[#46627f] dark:text-slate-400">
                 Tipo de Dias *
               </Label>
               <Select value={tipoDias ? 'uteis' : 'corridos'} onValueChange={(value) => setTipoDias(value === 'uteis')}>
@@ -205,7 +205,7 @@ export default function PrazoCalculator({ onCalculate, escritorioId }: PrazoCalc
               <Button
                 onClick={limparCalculo}
                 variant="outline"
-                className="text-xs border-slate-200"
+                className="text-xs border-slate-200 dark:border-slate-700"
               >
                 Limpar
               </Button>
@@ -215,14 +215,14 @@ export default function PrazoCalculator({ onCalculate, escritorioId }: PrazoCalc
 
         {/* Resultado */}
         {resultado && (
-          <div className="space-y-4 pt-4 border-t border-slate-200">
+          <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
             {/* Data Limite */}
             <div className="p-4 bg-gradient-to-br from-[#89bcbe]/10 to-[#aacfd0]/10 border-2 border-[#89bcbe] rounded-lg">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-[#46627f]">Data Limite Calculada:</span>
+                <span className="text-xs font-medium text-[#46627f] dark:text-slate-400">Data Limite Calculada:</span>
                 <CheckCircle2 className="w-5 h-5 text-emerald-600" />
               </div>
-              <p className="text-2xl font-bold text-[#34495e]">
+              <p className="text-2xl font-bold text-[#34495e] dark:text-slate-200">
                 {format(resultado.data_limite, "dd/MM/yyyy", { locale: ptBR })}
               </p>
               <p className="text-xs text-[#6c757d] mt-1">
@@ -232,45 +232,45 @@ export default function PrazoCalculator({ onCalculate, escritorioId }: PrazoCalc
 
             {/* Estatísticas */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="p-3 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-200 dark:border-slate-700">
                 <p className="text-[10px] text-[#6c757d] font-medium mb-1">Dias Corridos</p>
-                <p className="text-xl font-bold text-[#34495e]">{resultado.dias_corridos}</p>
+                <p className="text-xl font-bold text-[#34495e] dark:text-slate-200">{resultado.dias_corridos}</p>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="p-3 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-200 dark:border-slate-700">
                 <p className="text-[10px] text-[#6c757d] font-medium mb-1">Dias Úteis</p>
-                <p className="text-xl font-bold text-[#34495e]">{resultado.dias_uteis_contados}</p>
+                <p className="text-xl font-bold text-[#34495e] dark:text-slate-200">{resultado.dias_uteis_contados}</p>
               </div>
 
-              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                <p className="text-[10px] text-amber-700 font-medium mb-1">Feriados</p>
-                <p className="text-xl font-bold text-amber-900">{resultado.dias_feriados}</p>
+              <div className="p-3 bg-amber-50 dark:bg-amber-500/10 rounded-lg border border-amber-200">
+                <p className="text-[10px] text-amber-700 dark:text-amber-400 font-medium mb-1">Feriados</p>
+                <p className="text-xl font-bold text-amber-900 dark:text-amber-300">{resultado.dias_feriados}</p>
               </div>
 
-              <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                <p className="text-[10px] text-purple-700 font-medium mb-1">Fins de Semana</p>
-                <p className="text-xl font-bold text-purple-900">{resultado.dias_fins_semana}</p>
+              <div className="p-3 bg-purple-50 dark:bg-purple-500/10 rounded-lg border border-purple-200">
+                <p className="text-[10px] text-purple-700 dark:text-purple-400 font-medium mb-1">Fins de Semana</p>
+                <p className="text-xl font-bold text-purple-900 dark:text-purple-300">{resultado.dias_fins_semana}</p>
               </div>
             </div>
 
             {/* Timeline */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-semibold text-[#46627f]">Timeline de Dias</h4>
+                <h4 className="text-xs font-semibold text-[#46627f] dark:text-slate-400">Timeline de Dias</h4>
                 <span className="text-[10px] text-[#6c757d]">
                   {resultado.timeline.length} dias no total
                 </span>
               </div>
 
-              <div className="max-h-[200px] overflow-y-auto space-y-1 p-2 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="max-h-[200px] overflow-y-auto space-y-1 p-2 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-200 dark:border-slate-700">
                 {resultado.timeline.map((dia, index) => (
                   <div
                     key={index}
                     className={cn(
                       'flex items-center justify-between p-2 rounded text-xs',
-                      dia.tipo === 'util' && 'bg-emerald-50 border border-emerald-200',
-                      dia.tipo === 'feriado' && 'bg-amber-50 border border-amber-200',
-                      dia.tipo === 'fim_semana' && 'bg-purple-50 border border-purple-200'
+                      dia.tipo === 'util' && 'bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200',
+                      dia.tipo === 'feriado' && 'bg-amber-50 dark:bg-amber-500/10 border border-amber-200',
+                      dia.tipo === 'fim_semana' && 'bg-purple-50 dark:bg-purple-500/10 border border-purple-200'
                     )}
                   >
                     <div className="flex items-center gap-2">
@@ -284,9 +284,9 @@ export default function PrazoCalculator({ onCalculate, escritorioId }: PrazoCalc
                     <span
                       className={cn(
                         'text-[10px] font-medium px-2 py-0.5 rounded',
-                        dia.tipo === 'util' && 'bg-emerald-100 text-emerald-700',
-                        dia.tipo === 'feriado' && 'bg-amber-100 text-amber-700',
-                        dia.tipo === 'fim_semana' && 'bg-purple-100 text-purple-700'
+                        dia.tipo === 'util' && 'bg-emerald-100 text-emerald-700 dark:text-emerald-400',
+                        dia.tipo === 'feriado' && 'bg-amber-100 text-amber-700 dark:text-amber-400',
+                        dia.tipo === 'fim_semana' && 'bg-purple-100 text-purple-700 dark:text-purple-400'
                       )}
                     >
                       {dia.tipo === 'util' && 'Dia Útil'}
@@ -299,9 +299,9 @@ export default function PrazoCalculator({ onCalculate, escritorioId }: PrazoCalc
             </div>
 
             {/* Aviso */}
-            <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-              <p className="text-[11px] text-blue-900 leading-relaxed">
+            <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 rounded-lg">
+              <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+              <p className="text-[11px] text-blue-900 dark:text-blue-300 leading-relaxed">
                 <strong>Importante:</strong> Este cálculo considera feriados cadastrados no sistema.
                 Feriados municipais e recessos forenses específicos podem alterar o prazo final.
                 Sempre verifique com o calendário oficial do tribunal.

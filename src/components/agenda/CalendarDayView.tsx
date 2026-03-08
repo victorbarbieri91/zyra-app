@@ -174,7 +174,7 @@ export default function CalendarDayView({
       {/* Header de Navegação */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-semibold text-[#34495e]">
+          <h2 className="text-2xl font-semibold text-[#34495e] dark:text-slate-200">
             {format(selectedDate, "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </h2>
           <div className="flex items-center gap-1">
@@ -182,7 +182,7 @@ export default function CalendarDayView({
               variant="outline"
               size="sm"
               onClick={previousDay}
-              className="h-8 w-8 p-0 border-slate-200"
+              className="h-8 w-8 p-0 border-slate-200 dark:border-slate-700"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -190,7 +190,7 @@ export default function CalendarDayView({
               variant="outline"
               size="sm"
               onClick={nextDay}
-              className="h-8 w-8 p-0 border-slate-200"
+              className="h-8 w-8 p-0 border-slate-200 dark:border-slate-700"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -199,12 +199,12 @@ export default function CalendarDayView({
 
         <div className="flex items-center gap-2">
           {totalTarefas > 0 && (
-            <span className="text-sm text-slate-600">
+            <span className="text-sm text-slate-600 dark:text-slate-400">
               {totalTarefas} {totalTarefas === 1 ? 'tarefa' : 'tarefas'}
             </span>
           )}
           {eventosFixosDoDia.length > 0 && (
-            <span className="text-sm text-slate-600">
+            <span className="text-sm text-slate-600 dark:text-slate-400">
               • {eventosFixosDoDia.length}{' '}
               {eventosFixosDoDia.length === 1 ? 'compromisso' : 'compromissos'}
             </span>
@@ -213,7 +213,7 @@ export default function CalendarDayView({
             variant="outline"
             size="sm"
             onClick={goToToday}
-            className="text-xs border-slate-200 hover:border-[#89bcbe] hover:bg-[#f0f9f9]"
+            className="text-xs border-slate-200 dark:border-slate-700 hover:border-[#89bcbe] hover:bg-[#f0f9f9] dark:hover:bg-teal-900/20"
           >
             Hoje
           </Button>

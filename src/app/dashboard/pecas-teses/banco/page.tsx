@@ -252,20 +252,20 @@ export default function BancoPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-slate-600">Carregando...</div>
+        <div className="text-slate-600 dark:text-slate-400">Carregando...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 dark:from-surface-0 dark:via-surface-0 dark:to-surface-0 p-6">
       <div className="max-w-[1800px] mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-[#34495e]">
+        <h1 className="text-2xl font-bold text-[#34495e] dark:text-slate-200">
           Banco de Conhecimento
         </h1>
-        <p className="text-sm text-slate-600 mt-1">
+        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
           Gerencie teses jurídicas e jurisprudências reutilizáveis
         </p>
       </div>
@@ -286,7 +286,7 @@ export default function BancoPage() {
         {/* TAB: TESES */}
         <TabsContent value="teses" className="space-y-4">
           {/* Filters */}
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700">
             <CardContent className="pt-6 pb-4">
               <div className="flex items-center gap-4">
                 <div className="relative flex-1">
@@ -295,11 +295,11 @@ export default function BancoPage() {
                     placeholder="Buscar por título, resumo, texto ou tags..."
                     value={searchTese}
                     onChange={(e) => setSearchTese(e.target.value)}
-                    className="pl-10 border-slate-200"
+                    className="pl-10 border-slate-200 dark:border-slate-700"
                   />
                 </div>
                 <Select value={filterAreaTese} onValueChange={setFilterAreaTese}>
-                  <SelectTrigger className="w-48 border-slate-200">
+                  <SelectTrigger className="w-48 border-slate-200 dark:border-slate-700">
                     <SelectValue placeholder="Área" />
                   </SelectTrigger>
                   <SelectContent>
@@ -312,7 +312,7 @@ export default function BancoPage() {
                   </SelectContent>
                 </Select>
                 <Link href="/dashboard/pecas-teses/teses/nova">
-                  <Button className="bg-gradient-to-r from-[#89bcbe] to-[#6ba9ab] text-white hover:opacity-90">
+                  <Button className="bg-gradient-to-r from-[#89bcbe] to-[#6ba9ab] dark:from-[#89bcbe] dark:to-[#6ba9ab] text-white hover:opacity-90">
                     <Plus className="w-4 h-4 mr-2" />
                     Nova Tese
                   </Button>
@@ -323,10 +323,10 @@ export default function BancoPage() {
 
           {/* Teses List */}
           {filteredTeses.length === 0 ? (
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700">
               <CardContent className="py-12 text-center">
-                <Scale className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-500">Nenhuma tese encontrada</p>
+                <Scale className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+                <p className="text-slate-500 dark:text-slate-400">Nenhuma tese encontrada</p>
               </CardContent>
             </Card>
           ) : (
@@ -336,7 +336,7 @@ export default function BancoPage() {
                 return (
                   <Card
                     key={tese.id}
-                    className={`border-slate-200 ${!tese.ativa ? 'opacity-60' : ''}`}
+                    className={`border-slate-200 dark:border-slate-700 ${!tese.ativa ? 'opacity-60' : ''}`}
                   >
                     <CardContent className="py-4">
                       <div className="space-y-3">
@@ -344,12 +344,12 @@ export default function BancoPage() {
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                              <h3 className="text-base font-semibold text-[#34495e]">
+                              <h3 className="text-base font-semibold text-[#34495e] dark:text-slate-200">
                                 {tese.titulo}
                               </h3>
                               <Badge
                                 variant="outline"
-                                className="text-[10px] px-2 py-0.5 bg-[#89bcbe]/10 text-[#34495e] border-[#89bcbe]/30"
+                                className="text-[10px] px-2 py-0.5 bg-[#89bcbe]/10 text-[#34495e] dark:text-slate-200 border-[#89bcbe]/30"
                               >
                                 {getAreaLabel(tese.area)}
                               </Badge>
@@ -359,13 +359,13 @@ export default function BancoPage() {
                                 </Badge>
                               )}
                               {!tese.ativa && (
-                                <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-slate-100">
+                                <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-slate-100 dark:bg-slate-800">
                                   Inativa
                                 </Badge>
                               )}
                             </div>
                             {tese.resumo && !isExpanded && (
-                              <p className="text-sm text-slate-600 line-clamp-2">
+                              <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
                                 {tese.resumo}
                               </p>
                             )}
@@ -384,7 +384,7 @@ export default function BancoPage() {
                             )}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs text-slate-500">
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
                               {tese.uso_count} {tese.uso_count === 1 ? 'uso' : 'usos'}
                             </span>
                             <Button
@@ -415,25 +415,25 @@ export default function BancoPage() {
 
                         {/* Expanded Content */}
                         {isExpanded && (
-                          <div className="space-y-3 pt-3 border-t border-slate-200">
+                          <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-700">
                             {tese.resumo && (
                               <div>
-                                <p className="text-xs font-semibold text-slate-700 mb-1">Resumo:</p>
-                                <p className="text-sm text-slate-600">{tese.resumo}</p>
+                                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Resumo:</p>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">{tese.resumo}</p>
                               </div>
                             )}
                             {tese.texto_completo && (
                               <div>
-                                <p className="text-xs font-semibold text-slate-700 mb-1">Texto Completo:</p>
-                                <p className="text-sm text-slate-600 whitespace-pre-wrap">
+                                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Texto Completo:</p>
+                                <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap">
                                   {tese.texto_completo}
                                 </p>
                               </div>
                             )}
                             {tese.fundamentacao && (
                               <div>
-                                <p className="text-xs font-semibold text-slate-700 mb-1">Fundamentação:</p>
-                                <p className="text-sm text-slate-600 whitespace-pre-wrap">
+                                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Fundamentação:</p>
+                                <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap">
                                   {tese.fundamentacao}
                                 </p>
                               </div>
@@ -452,7 +452,7 @@ export default function BancoPage() {
         {/* TAB: JURISPRUDÊNCIAS */}
         <TabsContent value="jurisprudencias" className="space-y-4">
           {/* Filters */}
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 dark:border-slate-700">
             <CardContent className="pt-6 pb-4">
               <div className="flex items-center gap-4">
                 <div className="relative flex-1">
@@ -461,14 +461,14 @@ export default function BancoPage() {
                     placeholder="Buscar por ementa, número, temas..."
                     value={searchJuris}
                     onChange={(e) => setSearchJuris(e.target.value)}
-                    className="pl-10 border-slate-200"
+                    className="pl-10 border-slate-200 dark:border-slate-700"
                   />
                 </div>
                 <Select
                   value={filterTribunalJuris}
                   onValueChange={setFilterTribunalJuris}
                 >
-                  <SelectTrigger className="w-48 border-slate-200">
+                  <SelectTrigger className="w-48 border-slate-200 dark:border-slate-700">
                     <SelectValue placeholder="Tribunal" />
                   </SelectTrigger>
                   <SelectContent>
@@ -481,7 +481,7 @@ export default function BancoPage() {
                   </SelectContent>
                 </Select>
                 <Link href="/dashboard/pecas-teses/jurisprudencias/nova">
-                  <Button className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white hover:opacity-90">
+                  <Button className="bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] text-white hover:opacity-90">
                     <Plus className="w-4 h-4 mr-2" />
                     Nova Jurisprudência
                   </Button>
@@ -492,10 +492,10 @@ export default function BancoPage() {
 
           {/* Jurisprudências List */}
           {filteredJuris.length === 0 ? (
-            <Card className="border-slate-200">
+            <Card className="border-slate-200 dark:border-slate-700">
               <CardContent className="py-12 text-center">
-                <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-500">Nenhuma jurisprudência encontrada</p>
+                <BookOpen className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+                <p className="text-slate-500 dark:text-slate-400">Nenhuma jurisprudência encontrada</p>
               </CardContent>
             </Card>
           ) : (
@@ -503,7 +503,7 @@ export default function BancoPage() {
               {filteredJuris.map((juris) => {
                 const isExpanded = expandedJuris.has(juris.id)
                 return (
-                  <Card key={juris.id} className="border-slate-200">
+                  <Card key={juris.id} className="border-slate-200 dark:border-slate-700">
                     <CardContent className="py-4">
                       <div className="space-y-3">
                         {/* Header */}
@@ -512,7 +512,7 @@ export default function BancoPage() {
                             <div className="flex items-center gap-2 mb-2">
                               <Badge
                                 variant="outline"
-                                className="text-[10px] px-2 py-0.5 bg-[#34495e]/10 text-[#34495e] font-medium"
+                                className="text-[10px] px-2 py-0.5 bg-[#34495e]/10 dark:bg-[#89bcbe]/10 text-[#34495e] dark:text-slate-200 font-medium"
                               >
                                 {juris.tribunal}
                               </Badge>
@@ -520,19 +520,19 @@ export default function BancoPage() {
                                 {getTipoLabel(juris.tipo)}
                               </Badge>
                               {juris.numero_acordao && (
-                                <span className="text-xs text-slate-500">
+                                <span className="text-xs text-slate-500 dark:text-slate-400">
                                   {juris.numero_acordao}
                                 </span>
                               )}
                               {juris.data_julgamento && (
-                                <span className="text-xs text-slate-400">
+                                <span className="text-xs text-slate-400 dark:text-slate-500">
                                   •{' '}
                                   {new Date(juris.data_julgamento).toLocaleDateString('pt-BR')}
                                 </span>
                               )}
                             </div>
                             {juris.ementa && (
-                              <p className={`text-sm text-slate-700 ${!isExpanded && 'line-clamp-3'}`}>
+                              <p className={`text-sm text-slate-700 dark:text-slate-300 ${!isExpanded && 'line-clamp-3'}`}>
                                 {juris.ementa}
                               </p>
                             )}
@@ -592,23 +592,23 @@ export default function BancoPage() {
 
                         {/* Expanded Content */}
                         {isExpanded && (
-                          <div className="space-y-3 pt-3 border-t border-slate-200">
+                          <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-700">
                             {juris.orgao_julgador && (
-                              <p className="text-xs text-slate-600">
+                              <p className="text-xs text-slate-600 dark:text-slate-400">
                                 <strong>Órgão:</strong> {juris.orgao_julgador}
                               </p>
                             )}
                             {juris.relator && (
-                              <p className="text-xs text-slate-600">
+                              <p className="text-xs text-slate-600 dark:text-slate-400">
                                 <strong>Relator:</strong> {juris.relator}
                               </p>
                             )}
                             {juris.texto_completo && (
                               <div>
-                                <p className="text-xs font-semibold text-slate-700 mb-1">
+                                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                                   Texto Completo:
                                 </p>
-                                <p className="text-sm text-slate-600 whitespace-pre-wrap">
+                                <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap">
                                   {juris.texto_completo}
                                 </p>
                               </div>

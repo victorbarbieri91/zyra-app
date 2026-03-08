@@ -272,10 +272,10 @@ export default function PublicacaoDetalhePage() {
 
   const getStatusBadge = (status: StatusPublicacao) => {
     const variants = {
-      pendente: 'bg-red-100 text-red-700 border-red-200',
-      em_analise: 'bg-amber-100 text-amber-700 border-amber-200',
-      processada: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-      arquivada: 'bg-slate-100 text-slate-600 border-slate-200'
+      pendente: 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/30',
+      em_analise: 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30',
+      processada: 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30',
+      arquivada: 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
     }
     const labels = {
       pendente: 'Pendente',
@@ -320,7 +320,7 @@ export default function PublicacaoDetalhePage() {
 
   if (carregando) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white p-6 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-surface-0 dark:to-surface-0 p-6 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
       </div>
     )
@@ -328,10 +328,10 @@ export default function PublicacaoDetalhePage() {
 
   if (!publicacao) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white p-6">
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-surface-0 dark:to-surface-0 p-6">
         <div className="text-center py-12">
           <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-slate-700">Publicacao nao encontrada</h2>
+          <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-300">Publicacao nao encontrada</h2>
           <Link href="/dashboard/publicacoes">
             <Button variant="outline" className="mt-4">Voltar para lista</Button>
           </Link>
@@ -344,7 +344,7 @@ export default function PublicacaoDetalhePage() {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white p-6">
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-surface-0 dark:to-surface-0 p-6">
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-4">
@@ -362,15 +362,15 @@ export default function PublicacaoDetalhePage() {
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-xl font-bold text-[#34495e]">
+                <h1 className="text-xl font-bold text-[#34495e] dark:text-slate-200">
                   {getTipoLabel(publicacao.tipo_publicacao)}
                 </h1>
                 {getStatusBadge(publicacao.status)}
               </div>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 {publicacao.tribunal} {publicacao.vara && `- ${publicacao.vara}`}
               </p>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Publicado em {new Date(publicacao.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}
               </p>
             </div>
@@ -460,15 +460,15 @@ export default function PublicacaoDetalhePage() {
           <div className="lg:col-span-2 space-y-4">
             {/* Processo vinculado */}
             {publicacao.numero_processo && (
-              <div className="bg-white rounded-lg border border-slate-200 p-4">
+              <div className="bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-slate-600" />
+                    <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-surface-2 flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500">Processo</p>
-                      <p className="text-sm font-mono font-medium text-slate-700">
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Processo</p>
+                      <p className="text-sm font-mono font-medium text-slate-700 dark:text-slate-300">
                         {publicacao.numero_processo}
                       </p>
                     </div>
@@ -496,9 +496,9 @@ export default function PublicacaoDetalhePage() {
             )}
 
             {/* Texto da publicacao */}
-            <div className="bg-white rounded-lg border border-slate-200">
-              <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-700">Texto da Publicacao</h2>
+            <div className="bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700">
+              <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Texto da Publicacao</h2>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -511,13 +511,13 @@ export default function PublicacaoDetalhePage() {
               </div>
               <div className="p-4">
                 {publicacao.is_snippet && (
-                  <div className="mb-3 p-2.5 bg-amber-50 border border-amber-200 rounded-md">
-                    <p className="text-xs text-amber-700">
+                  <div className="mb-3 p-2.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-md">
+                    <p className="text-xs text-amber-700 dark:text-amber-400">
                       Este texto pode estar incompleto. A fonte retornou apenas um trecho da publicacao original.
                     </p>
                   </div>
                 )}
-                <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
                   {publicacao.texto_completo || 'Sem texto disponivel'}
                 </p>
               </div>
@@ -527,18 +527,18 @@ export default function PublicacaoDetalhePage() {
           {/* Coluna lateral - Analise IA */}
           <div className="space-y-4">
             {/* Card de Analise IA */}
-            <div className="bg-white rounded-lg border border-slate-200">
-              <div className="p-4 border-b border-slate-200">
+            <div className="bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700">
+              <div className="p-4 border-b border-slate-200 dark:border-slate-700">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[#34495e]" />
-                  <h2 className="text-sm font-semibold text-slate-700">Analise Inteligente</h2>
+                  <Sparkles className="w-4 h-4 text-[#34495e] dark:text-slate-200" />
+                  <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Analise Inteligente</h2>
                 </div>
               </div>
 
               <div className="p-4">
                 {!analise ? (
                   <div className="text-center py-8">
-                    <p className="text-sm text-slate-500 mb-4">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
                       Extraia prazos e acoes sugeridas automaticamente
                     </p>
                     <Button
@@ -564,30 +564,30 @@ export default function PublicacaoDetalhePage() {
                   <div className="space-y-4">
                     {/* Resumo */}
                     <div>
-                      <p className="text-xs font-medium text-slate-500 mb-1">Resumo</p>
-                      <p className="text-sm text-slate-700">{analise.resumo}</p>
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Resumo</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300">{analise.resumo}</p>
                     </div>
 
                     {/* Prazo */}
                     {analise.tem_prazo && (
-                      <div className="rounded-lg p-3 bg-amber-50 border border-amber-200">
+                      <div className="rounded-lg p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
                         <div className="flex items-center gap-2 mb-2">
-                          <Clock className="w-4 h-4 text-amber-600" />
-                          <span className="text-sm font-medium text-amber-700">
+                          <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                          <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
                             Prazo Identificado
                           </span>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-sm text-slate-700">
+                          <p className="text-sm text-slate-700 dark:text-slate-300">
                             <strong>{analise.prazo_dias}</strong> dias {analise.prazo_tipo}
                           </p>
                           {analise.data_limite_sugerida && (
-                            <p className="text-sm text-slate-600">
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
                               Data limite: <strong>{new Date(analise.data_limite_sugerida + 'T00:00:00').toLocaleDateString('pt-BR')}</strong>
                             </p>
                           )}
                           {analise.fundamentacao_legal && (
-                            <p className="text-xs text-slate-500 mt-1">{analise.fundamentacao_legal}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{analise.fundamentacao_legal}</p>
                           )}
                         </div>
                       </div>
@@ -596,14 +596,14 @@ export default function PublicacaoDetalhePage() {
                     {/* Acao sugerida */}
                     {analise.acao_sugerida && (
                       <div>
-                        <p className="text-xs font-medium text-slate-500 mb-1">Acao Sugerida</p>
-                        <p className="text-sm text-slate-700">{analise.acao_sugerida}</p>
+                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Acao Sugerida</p>
+                        <p className="text-sm text-slate-700 dark:text-slate-300">{analise.acao_sugerida}</p>
                       </div>
                     )}
 
                     {/* Botoes de acao - Abre Wizards padrão */}
-                    <div className="pt-3 border-t border-slate-100 space-y-2">
-                      <p className="text-xs font-medium text-slate-500 mb-2">Agendar a partir desta analise:</p>
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Agendar a partir desta analise:</p>
                       <div className="flex flex-col gap-2">
                         <Button
                           variant="outline"
@@ -641,7 +641,7 @@ export default function PublicacaoDetalhePage() {
                       size="sm"
                       onClick={analisarComIA}
                       disabled={analisando}
-                      className="w-full text-slate-500 hover:text-slate-700"
+                      className="w-full text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
                     >
                       {analisando ? (
                         <Loader2 className="w-4 h-4 animate-spin mr-2" />

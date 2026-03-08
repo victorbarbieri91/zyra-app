@@ -459,15 +459,15 @@ export default function ConfiguracoesPublicacoesPage() {
   const getStatusBadge = (status: TermoEscavador['escavador_status'], temMonitoramentoId: boolean) => {
     // Se não tem monitoramento_id, mostrar como "Não Registrado"
     if (!temMonitoramentoId) {
-      return { label: 'Não Registrado', class: 'bg-orange-50 text-orange-700 border-orange-200' }
+      return { label: 'Não Registrado', class: 'bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-500/30' }
     }
 
     const configs = {
-      ativo: { label: 'Ativo', class: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-      pendente: { label: 'Pendente', class: 'bg-amber-50 text-amber-700 border-amber-200' },
-      pausado: { label: 'Pausado', class: 'bg-slate-100 text-slate-600 border-slate-200' },
-      erro: { label: 'Erro', class: 'bg-red-50 text-red-700 border-red-200' },
-      removido: { label: 'Removido', class: 'bg-slate-100 text-slate-500 border-slate-200' }
+      ativo: { label: 'Ativo', class: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30' },
+      pendente: { label: 'Pendente', class: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30' },
+      pausado: { label: 'Pausado', class: 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700' },
+      erro: { label: 'Erro', class: 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/30' },
+      removido: { label: 'Removido', class: 'bg-slate-100 dark:bg-surface-2 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700' }
     }
     return configs[status] || configs.pendente
   }
@@ -505,19 +505,19 @@ export default function ConfiguracoesPublicacoesPage() {
   // Loading inicial do escritório
   if (loadingEscritorio || !escritorioId) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-surface-0 dark:to-surface-0 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-slate-400 mx-auto mb-3" />
-          <p className="text-sm text-slate-500">Carregando...</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Carregando...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-surface-0 dark:to-surface-0">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+      <div className="bg-white dark:bg-surface-1 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 shadow-sm">
         <div className="px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -528,12 +528,12 @@ export default function ConfiguracoesPublicacoesPage() {
                 </Button>
               </Link>
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] flex items-center justify-center">
                   <Settings className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-base font-semibold text-slate-700">Configurações de Publicações</h1>
-                  <p className="text-xs text-slate-500">AASP e Diário Oficial</p>
+                  <h1 className="text-base font-semibold text-slate-700 dark:text-slate-300">Configurações de Publicações</h1>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">AASP e Diário Oficial</p>
                 </div>
               </div>
             </div>
@@ -544,8 +544,8 @@ export default function ConfiguracoesPublicacoesPage() {
                 className={cn(
                   'text-xs border',
                   temAssociadosAtivos
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-slate-100 text-slate-600 border-slate-200'
+                    ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30'
+                    : 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                 )}
               >
                 {temAssociadosAtivos ? `${associados.filter(a => a.ativo).length} AASP` : 'AASP Inativo'}
@@ -556,9 +556,9 @@ export default function ConfiguracoesPublicacoesPage() {
                   'text-xs border',
                   termosEscavador.length > 0
                     ? temErrosEscavador
-                      ? 'bg-amber-50 text-amber-700 border-amber-200'
-                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-slate-100 text-slate-600 border-slate-200'
+                      ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30'
+                      : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30'
+                    : 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                 )}
               >
                 {termosEscavador.length > 0 ? `${termosEscavador.length} Termo(s)` : 'Diário Inativo'}
@@ -588,16 +588,16 @@ export default function ConfiguracoesPublicacoesPage() {
 
           {/* TAB 1: Associados */}
           <TabsContent value="associados" className="space-y-4">
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
-              <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+            <div className="bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-700">Advogados Associados</h3>
-                  <p className="text-xs text-slate-500">Cadastre os advogados que terão publicações monitoradas</p>
+                  <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Advogados Associados</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Cadastre os advogados que terão publicações monitoradas</p>
                 </div>
                 <Button
                   size="sm"
                   onClick={() => handleAbrirModal()}
-                  className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f]"
+                  className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab]"
                 >
                   <UserPlus className="w-4 h-4" />
                   Adicionar Associado
@@ -611,8 +611,8 @@ export default function ConfiguracoesPublicacoesPage() {
               ) : associados.length === 0 ? (
                 <div className="p-8 text-center">
                   <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                  <p className="text-sm text-slate-600 font-medium">Nenhum associado cadastrado</p>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Nenhum associado cadastrado</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Adicione os advogados do escritório para começar a receber publicações
                   </p>
                   <Button
@@ -626,27 +626,27 @@ export default function ConfiguracoesPublicacoesPage() {
                   </Button>
                 </div>
               ) : (
-                <div className="divide-y divide-slate-200">
+                <div className="divide-y divide-slate-200 dark:divide-slate-700">
                   {associados.map((associado) => (
                     <div
                       key={associado.id}
                       className={cn(
                         'px-5 py-4 flex items-center justify-between',
-                        !associado.ativo && 'bg-slate-50 opacity-60'
+                        !associado.ativo && 'bg-slate-50 dark:bg-surface-0 opacity-60'
                       )}
                     >
                       <div className="flex items-center gap-4">
                         <div className={cn(
                           'w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-sm',
                           associado.ativo
-                            ? 'bg-gradient-to-br from-[#34495e] to-[#46627f]'
+                            ? 'bg-gradient-to-br from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab]'
                             : 'bg-slate-400'
                         )}>
                           {associado.nome.charAt(0).toUpperCase()}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-slate-700">
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                               {associado.nome}
                             </span>
                             <Badge
@@ -654,15 +654,15 @@ export default function ConfiguracoesPublicacoesPage() {
                               className={cn(
                                 'text-[10px]',
                                 associado.ativo
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                  : 'bg-slate-100 text-slate-500 border-slate-200'
+                                  ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30'
+                                  : 'bg-slate-100 dark:bg-surface-2 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                               )}
                             >
                               {associado.ativo ? 'Ativo' : 'Inativo'}
                             </Badge>
                           </div>
                           <div className="flex items-center gap-3 mt-0.5">
-                            <span className="text-xs text-slate-500">
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
                               OAB {associado.oab_numero}/{associado.oab_uf}
                             </span>
                             {associado.ultima_sync && (
@@ -725,12 +725,12 @@ export default function ConfiguracoesPublicacoesPage() {
             </div>
 
             {/* Info sobre API */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-lg p-4">
               <div className="flex gap-3">
-                <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-medium text-blue-800">Como obter a chave API?</h4>
-                  <p className="text-xs text-blue-700 mt-1">
+                  <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300">Como obter a chave API?</h4>
+                  <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
                     Acesse o portal da AASP em{' '}
                     <a
                       href="https://intimacaoapi-cadastro.aasp.org.br/cadastroassoc"
@@ -749,11 +749,11 @@ export default function ConfiguracoesPublicacoesPage() {
 
           {/* TAB 2: Escavador Termos */}
           <TabsContent value="escavador" className="space-y-4">
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
-              <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+            <div className="bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-700">Termos Monitorados</h3>
-                  <p className="text-xs text-slate-500">Monitore publicações por termos nos Diários Oficiais</p>
+                  <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Termos Monitorados</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Monitore publicações por termos nos Diários Oficiais</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -773,7 +773,7 @@ export default function ConfiguracoesPublicacoesPage() {
                   <Button
                     size="sm"
                     onClick={() => handleAbrirModalTermo()}
-                    className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f]"
+                    className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab]"
                   >
                     <Plus className="w-4 h-4" />
                     Adicionar Termo
@@ -788,8 +788,8 @@ export default function ConfiguracoesPublicacoesPage() {
               ) : termosEscavador.length === 0 ? (
                 <div className="p-8 text-center">
                   <Search className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                  <p className="text-sm text-slate-600 font-medium">Nenhum termo cadastrado</p>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Nenhum termo cadastrado</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Adicione termos para monitorar publicações em Diários Oficiais
                   </p>
                   <Button
@@ -803,7 +803,7 @@ export default function ConfiguracoesPublicacoesPage() {
                   </Button>
                 </div>
               ) : (
-                <div className="divide-y divide-slate-200">
+                <div className="divide-y divide-slate-200 dark:divide-slate-700">
                   {termosEscavador.map((termo) => {
                     const temMonitoramentoId = !!termo.escavador_monitoramento_id
                     const statusConfig = getStatusBadge(termo.escavador_status, temMonitoramentoId)
@@ -812,7 +812,7 @@ export default function ConfiguracoesPublicacoesPage() {
                         key={termo.id}
                         className={cn(
                           'px-5 py-4 flex items-center justify-between',
-                          !termo.ativo && 'bg-slate-50 opacity-60'
+                          !termo.ativo && 'bg-slate-50 dark:bg-surface-0 opacity-60'
                         )}
                       >
                         <div className="flex items-center gap-4">
@@ -823,14 +823,14 @@ export default function ConfiguracoesPublicacoesPage() {
                               : termo.escavador_status === 'erro'
                               ? 'bg-red-500'
                               : termo.ativo
-                                ? 'bg-gradient-to-br from-[#34495e] to-[#46627f]'
+                                ? 'bg-gradient-to-br from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab]'
                                 : 'bg-slate-400'
                           )}>
                             <FileText className="w-5 h-5" />
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-slate-700">
+                              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                                 {termo.termo}
                               </span>
                               <Badge
@@ -842,28 +842,28 @@ export default function ConfiguracoesPublicacoesPage() {
                             </div>
                             <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                               {termo.descricao && (
-                                <span className="text-xs text-slate-500">
+                                <span className="text-xs text-slate-500 dark:text-slate-400">
                                   {termo.descricao}
                                 </span>
                               )}
                               {termo.variacoes && termo.variacoes.length > 0 && (
-                                <span className="text-xs text-slate-400">
+                                <span className="text-xs text-slate-400 dark:text-slate-500">
                                   +{termo.variacoes.length} variações
                                 </span>
                               )}
                               {termo.total_aparicoes > 0 && (
-                                <span className="text-xs text-slate-400">
+                                <span className="text-xs text-slate-400 dark:text-slate-500">
                                   {termo.total_aparicoes} aparições
                                 </span>
                               )}
                               {termo.ultima_sync && (
-                                <span className="text-xs text-slate-400">
+                                <span className="text-xs text-slate-400 dark:text-slate-500">
                                   Sync: {formatBrazilDateTime(termo.ultima_sync)}
                                 </span>
                               )}
                             </div>
                             {termo.escavador_erro && (
-                              <p className="text-xs text-red-600 mt-1">
+                              <p className="text-xs text-red-600 dark:text-red-400 mt-1">
                                 Erro: {termo.escavador_erro}
                               </p>
                             )}
@@ -938,12 +938,12 @@ export default function ConfiguracoesPublicacoesPage() {
 
             {/* Alerta de termos não registrados */}
             {temTermosPendentes && (
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/30 rounded-lg p-4">
                 <div className="flex gap-3">
-                  <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="text-sm font-medium text-orange-800">Termos aguardando ativação</h4>
-                    <p className="text-xs text-orange-700 mt-1">
+                    <h4 className="text-sm font-medium text-orange-800 dark:text-orange-300">Termos aguardando ativação</h4>
+                    <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
                       Alguns termos não foram registrados no Escavador. Clique em &quot;Ativar&quot; em cada termo
                       para registrá-los e começar a receber publicações.
                     </p>
@@ -953,12 +953,12 @@ export default function ConfiguracoesPublicacoesPage() {
             )}
 
             {/* Info sobre Diário Oficial */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-lg p-4">
               <div className="flex gap-3">
-                <Link2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <Link2 className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-medium text-blue-800">Vinculação Automática com Processos</h4>
-                  <p className="text-xs text-blue-700 mt-1">
+                  <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300">Vinculação Automática com Processos</h4>
+                  <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
                     As publicações do Diário Oficial são automaticamente vinculadas aos processos cadastrados
                     quando o número CNJ é identificado no texto da publicação.
                   </p>
@@ -970,15 +970,15 @@ export default function ConfiguracoesPublicacoesPage() {
           {/* TAB 3: Sincronização */}
           <TabsContent value="sincronizacao" className="space-y-4">
             {/* Card de Sincronização Unificada */}
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
+            <div className="bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-700">Sincronização Manual</h3>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Sincronização Manual</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Busca publicações de todas as fontes configuradas (AASP e Diário Oficial)
                   </p>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-slate-500">
+                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                   <Clock className="w-4 h-4" />
                   <span>Automático: 07h e 15h</span>
                 </div>
@@ -990,7 +990,7 @@ export default function ConfiguracoesPublicacoesPage() {
                     'w-2 h-2 rounded-full',
                     temAssociadosAtivos ? 'bg-emerald-500' : 'bg-slate-300'
                   )} />
-                  <span className="text-xs text-slate-600">
+                  <span className="text-xs text-slate-600 dark:text-slate-400">
                     AASP: {temAssociadosAtivos ? `${associados.filter(a => a.ativo).length} associado(s)` : 'Inativo'}
                   </span>
                 </div>
@@ -999,7 +999,7 @@ export default function ConfiguracoesPublicacoesPage() {
                     'w-2 h-2 rounded-full',
                     termosEscavador.length > 0 ? 'bg-emerald-500' : 'bg-slate-300'
                   )} />
-                  <span className="text-xs text-slate-600">
+                  <span className="text-xs text-slate-600 dark:text-slate-400">
                     Diário Oficial: {termosEscavador.length > 0 ? `${termosEscavador.length} termo(s)` : 'Inativo'}
                   </span>
                 </div>
@@ -1069,17 +1069,17 @@ export default function ConfiguracoesPublicacoesPage() {
               </Button>
 
               {(!temAssociadosAtivos && termosEscavador.length === 0) && (
-                <p className="text-xs text-amber-600 text-center mt-3">
+                <p className="text-xs text-amber-600 dark:text-amber-400 text-center mt-3">
                   Configure pelo menos uma fonte de publicações (AASP ou Diário Oficial)
                 </p>
               )}
             </div>
 
             {/* Histórico Unificado */}
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
-              <div className="px-5 py-3 border-b border-slate-200">
-                <h3 className="text-sm font-semibold text-slate-700">Histórico de Sincronizações</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Últimas sincronizações realizadas (manual e automático)</p>
+            <div className="bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-700">
+                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Histórico de Sincronizações</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Últimas sincronizações realizadas (manual e automático)</p>
               </div>
 
               {carregandoHistorico ? (
@@ -1089,21 +1089,21 @@ export default function ConfiguracoesPublicacoesPage() {
               ) : (historicoSync.length === 0 && historicoEscavador.length === 0) ? (
                 <div className="p-8 text-center">
                   <Clock className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                  <p className="text-sm text-slate-500">Nenhuma sincronização realizada</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Nenhuma sincronização realizada</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-slate-50 border-b border-slate-200">
+                    <thead className="bg-slate-50 dark:bg-surface-0 border-b border-slate-200 dark:border-slate-700">
                       <tr>
-                        <th className="text-left text-xs font-medium text-slate-600 p-3">Data/Hora</th>
-                        <th className="text-left text-xs font-medium text-slate-600 p-3">Fonte</th>
-                        <th className="text-left text-xs font-medium text-slate-600 p-3">Tipo</th>
-                        <th className="text-left text-xs font-medium text-slate-600 p-3">Status</th>
-                        <th className="text-left text-xs font-medium text-slate-600 p-3">Novas</th>
+                        <th className="text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Data/Hora</th>
+                        <th className="text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Fonte</th>
+                        <th className="text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Tipo</th>
+                        <th className="text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Status</th>
+                        <th className="text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Novas</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200">
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                       {/* Combina e ordena histórico de ambas as fontes */}
                       {[
                         ...historicoSync.map(s => ({ ...s, fonte: 'AASP' as const })),
@@ -1112,9 +1112,9 @@ export default function ConfiguracoesPublicacoesPage() {
                         .sort((a, b) => new Date(b.data_inicio).getTime() - new Date(a.data_inicio).getTime())
                         .slice(0, 15)
                         .map((sync) => (
-                          <tr key={`${sync.fonte}-${sync.id}`} className="hover:bg-slate-50">
+                          <tr key={`${sync.fonte}-${sync.id}`} className="hover:bg-slate-50 dark:hover:bg-surface-2">
                             <td className="p-3">
-                              <div className="text-sm text-slate-700">
+                              <div className="text-sm text-slate-700 dark:text-slate-300">
                                 {formatBrazilDateTime(sync.data_inicio)}
                               </div>
                             </td>
@@ -1124,8 +1124,8 @@ export default function ConfiguracoesPublicacoesPage() {
                                 className={cn(
                                   'text-xs',
                                   sync.fonte === 'AASP'
-                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                    : 'bg-slate-100 text-slate-700 border-slate-200'
+                                    ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30'
+                                    : 'bg-slate-100 dark:bg-surface-2 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                                 )}
                               >
                                 {sync.fonte}
@@ -1138,19 +1138,19 @@ export default function ConfiguracoesPublicacoesPage() {
                             </td>
                             <td className="p-3">
                               {sync.sucesso ? (
-                                <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
+                                <Badge variant="outline" className="text-xs bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30">
                                   <CheckCircle2 className="w-3 h-3 mr-1" />
                                   Sucesso
                                 </Badge>
                               ) : (
-                                <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                                <Badge variant="outline" className="text-xs bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/30">
                                   <XCircle className="w-3 h-3 mr-1" />
                                   Erro
                                 </Badge>
                               )}
                             </td>
                             <td className="p-3">
-                              <span className="text-sm font-medium text-slate-700">
+                              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                                 {sync.publicacoes_novas || 0}
                               </span>
                             </td>
@@ -1256,7 +1256,7 @@ export default function ConfiguracoesPublicacoesPage() {
                   Testar
                 </Button>
               </div>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Obtenha a chave no portal da AASP
               </p>
             </div>
@@ -1269,7 +1269,7 @@ export default function ConfiguracoesPublicacoesPage() {
             <Button
               onClick={handleSalvarAssociado}
               disabled={salvando}
-              className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f]"
+              className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab]"
             >
               {salvando && <Loader2 className="w-4 h-4 animate-spin" />}
               {associadoEditando ? 'Salvar' : 'Adicionar'}
@@ -1327,11 +1327,11 @@ export default function ConfiguracoesPublicacoesPage() {
                 disabled={!!termoEditando}
               />
               {termoEditando ? (
-                <p className="text-xs text-amber-600 mt-1">
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
                   O termo principal não pode ser alterado após o cadastro
                 </p>
               ) : (
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Nome ou termo exato a ser monitorado (mínimo 3 caracteres)
                 </p>
               )}
@@ -1371,7 +1371,7 @@ export default function ConfiguracoesPublicacoesPage() {
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Formas alternativas do termo (abreviações, variações de nome)
               </p>
               {formTermo.variacoes && formTermo.variacoes.length > 0 && (
@@ -1403,7 +1403,7 @@ export default function ConfiguracoesPublicacoesPage() {
             <Button
               onClick={handleSalvarTermo}
               disabled={salvandoTermo || (!termoEditando && (!formTermo.termo || formTermo.termo.trim().length < 3))}
-              className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f]"
+              className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab]"
             >
               {salvandoTermo && <Loader2 className="w-4 h-4 animate-spin" />}
               {termoEditando ? 'Salvar Alterações' : 'Adicionar Termo'}
@@ -1453,7 +1453,7 @@ export default function ConfiguracoesPublicacoesPage() {
             {diagnosticando ? (
               <div className="p-8 flex flex-col items-center justify-center gap-3">
                 <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
-                <p className="text-sm text-slate-500">Consultando API...</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Consultando API...</p>
               </div>
             ) : diagnosticoResultado ? (
               <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg text-xs overflow-auto max-h-[55vh] whitespace-pre-wrap break-words">

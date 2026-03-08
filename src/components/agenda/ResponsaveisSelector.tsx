@@ -104,7 +104,7 @@ export default function ResponsaveisSelector({
   return (
     <div className={cn('space-y-2', className)}>
       {label && (
-        <Label className="text-sm font-medium text-[#46627f]">{label}</Label>
+        <Label className="text-sm font-medium text-[#46627f] dark:text-slate-400">{label}</Label>
       )}
 
       <Popover open={open} onOpenChange={setOpen}>
@@ -115,14 +115,14 @@ export default function ResponsaveisSelector({
             aria-expanded={open}
             disabled={disabled || carregando}
             className={cn(
-              'w-full justify-between border-slate-200 hover:bg-slate-50',
-              selectedIds.length === 0 && 'text-slate-500'
+              'w-full justify-between border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-surface-2',
+              selectedIds.length === 0 && 'text-slate-500 dark:text-slate-400'
             )}
           >
             <div className="flex items-center gap-2 overflow-hidden">
               {selectedIds.length === 0 ? (
                 <>
-                  <Users className="w-4 h-4 text-slate-400 shrink-0" />
+                  <Users className="w-4 h-4 text-slate-400 dark:text-slate-400 shrink-0" />
                   <span className="truncate">{placeholder}</span>
                 </>
               ) : (
@@ -150,12 +150,12 @@ export default function ResponsaveisSelector({
                       </div>
                     ))}
                     {selectedMembros.length > maxDisplay && (
-                      <div className="w-6 h-6 rounded-full bg-slate-300 flex items-center justify-center text-[10px] font-medium text-slate-700 ring-2 ring-white">
+                      <div className="w-6 h-6 rounded-full bg-slate-300 dark:bg-slate-600 flex items-center justify-center text-[10px] font-medium text-slate-700 dark:text-slate-300 ring-2 ring-white dark:ring-surface-1">
                         +{selectedMembros.length - maxDisplay}
                       </div>
                     )}
                   </div>
-                  <span className="text-sm text-slate-600 ml-1">
+                  <span className="text-sm text-slate-600 dark:text-slate-400 ml-1">
                     {selectedIds.length === 1
                       ? selectedMembros[0]?.nome
                       : `${selectedIds.length} selecionados`}
@@ -163,20 +163,20 @@ export default function ResponsaveisSelector({
                 </div>
               )}
             </div>
-            <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
+            <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-400 shrink-0 ml-2" />
           </Button>
         </PopoverTrigger>
 
         <PopoverContent className="w-[320px] p-0" align="start">
           {/* Busca */}
-          <div className="p-2 border-b border-slate-100">
+          <div className="p-2 border-b border-slate-100 dark:border-slate-800">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 placeholder="Buscar membro..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 h-9 border-slate-200"
+                className="pl-8 h-9 border-slate-200 dark:border-slate-700"
               />
             </div>
           </div>
@@ -184,11 +184,11 @@ export default function ResponsaveisSelector({
           {/* Lista de membros */}
           <div className="max-h-[240px] overflow-y-auto py-1">
             {carregando ? (
-              <div className="px-3 py-6 text-center text-sm text-slate-500">
+              <div className="px-3 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
                 Carregando membros...
               </div>
             ) : membrosFiltrados.length === 0 ? (
-              <div className="px-3 py-6 text-center text-sm text-slate-500">
+              <div className="px-3 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
                 {search ? 'Nenhum membro encontrado' : 'Nenhum membro disponível'}
               </div>
             ) : (
@@ -200,7 +200,7 @@ export default function ResponsaveisSelector({
                     type="button"
                     onClick={() => handleToggle(membro.user_id)}
                     className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-slate-50 transition-colors',
+                      'w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors',
                       isSelected && 'bg-[#89bcbe]/10'
                     )}
                   >
@@ -224,11 +224,11 @@ export default function ResponsaveisSelector({
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#34495e] truncate">
+                      <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">
                         {membro.nome}
                       </p>
                       {membro.email && (
-                        <p className="text-xs text-slate-500 truncate">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                           {membro.email}
                         </p>
                       )}
@@ -253,15 +253,15 @@ export default function ResponsaveisSelector({
 
           {/* Footer com ações */}
           {selectedIds.length > 0 && (
-            <div className="p-2 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-xs text-slate-500">
+            <div className="p-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
                 {selectedIds.length} selecionado{selectedIds.length !== 1 && 's'}
               </span>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleClear}
-                className="h-7 text-xs text-slate-600 hover:text-red-600"
+                className="h-7 text-xs text-slate-600 dark:text-slate-400 hover:text-red-600"
               >
                 Limpar
               </Button>
@@ -294,7 +294,7 @@ export default function ResponsaveisSelector({
                   getInitials(membro.nome)
                 )}
               </div>
-              <span className="text-[#34495e] font-medium max-w-[100px] truncate">
+              <span className="text-[#34495e] dark:text-slate-200 font-medium max-w-[100px] truncate">
                 {membro.nome.split(' ')[0]}
               </span>
               {!disabled && (

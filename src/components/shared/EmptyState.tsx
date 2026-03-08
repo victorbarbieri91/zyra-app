@@ -23,17 +23,17 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className={cn('flex flex-col items-center justify-center py-12 px-4', className)}>
-      <div className="w-16 h-16 rounded-lg bg-slate-100 flex items-center justify-center mb-4">
-        <Icon className="w-8 h-8 text-slate-400" />
+      <div className="w-16 h-16 rounded-lg bg-slate-100 dark:bg-surface-2 flex items-center justify-center mb-4">
+        <Icon className="w-8 h-8 text-slate-400 dark:text-slate-500" />
       </div>
-      <h3 className={cn(typography.cardTitle, 'text-[#34495e] mb-2')}>{title}</h3>
-      <p className={cn(typography.content, 'text-slate-600 text-center max-w-sm mb-6')}>
+      <h3 className={cn(typography.cardTitle, 'text-[#34495e] dark:text-slate-200 mb-2')}>{title}</h3>
+      <p className={cn(typography.content, 'text-slate-600 dark:text-slate-400 text-center max-w-sm mb-6')}>
         {description}
       </p>
       {actionLabel && onAction && (
         <Button
           onClick={onAction}
-          className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:opacity-90"
+          className="bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] hover:opacity-90"
         >
           {actionLabel}
         </Button>

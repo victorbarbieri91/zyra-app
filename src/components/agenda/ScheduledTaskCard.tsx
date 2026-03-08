@@ -19,20 +19,20 @@ interface ScheduledTaskCardProps {
 
 const prioridadeConfig = {
   alta: {
-    color: 'text-red-600',
-    bg: 'bg-red-50',
+    color: 'text-red-600 dark:text-red-400',
+    bg: 'bg-red-50 dark:bg-red-500/10',
     border: 'border-red-200',
     label: 'Alta',
   },
   media: {
-    color: 'text-amber-600',
-    bg: 'bg-amber-50',
+    color: 'text-amber-600 dark:text-amber-400',
+    bg: 'bg-amber-50 dark:bg-amber-500/10',
     border: 'border-amber-200',
     label: 'Média',
   },
   baixa: {
-    color: 'text-emerald-600',
-    bg: 'bg-emerald-50',
+    color: 'text-emerald-600 dark:text-emerald-400',
+    bg: 'bg-emerald-50 dark:bg-emerald-500/10',
     border: 'border-emerald-200',
     label: 'Baixa',
   },
@@ -149,8 +149,8 @@ export default function ScheduledTaskCard({
         height: `${alturaCard}px`,
       }}
       className={cn(
-        'group border border-slate-200 hover:border-[#89bcbe] transition-all shadow-sm hover:shadow-md',
-        'bg-white absolute left-1 right-1 overflow-hidden',
+        'group border border-slate-200 dark:border-slate-700 hover:border-[#89bcbe] transition-all shadow-sm hover:shadow-md',
+        'bg-white dark:bg-surface-1 absolute left-1 right-1 overflow-hidden',
         isDragging && 'opacity-50 border-dashed shadow-2xl z-50',
         isResizing && 'ring-2 ring-[#89bcbe]'
       )}
@@ -171,18 +171,18 @@ export default function ScheduledTaskCard({
             <div className="flex items-center gap-0.5 pl-4 pr-4">
               <h4
                 className={cn(
-                  'text-[8px] font-semibold text-[#34495e] leading-none truncate flex-1 min-w-0',
+                  'text-[8px] font-semibold text-[#34495e] dark:text-slate-200 leading-none truncate flex-1 min-w-0',
                   tarefa.status === 'concluida' && 'line-through opacity-60'
                 )}
               >
                 {tarefa.titulo}
               </h4>
               {tarefa.horario_planejado_dia && (
-                <span className="text-[7px] text-slate-600 whitespace-nowrap font-medium">
+                <span className="text-[7px] text-slate-600 dark:text-slate-400 whitespace-nowrap font-medium">
                   {formatTimeDisplay(tarefa.horario_planejado_dia)}
-                  <span className="text-slate-400">-</span>
+                  <span className="text-slate-400 dark:text-slate-500">-</span>
                   {calcularHorarioFim(tarefa.horario_planejado_dia, localDuracao)}
-                  <span className="text-slate-400">•</span>
+                  <span className="text-slate-400 dark:text-slate-500">•</span>
                   {localDuracao >= 60 ? `${(localDuracao / 60).toFixed(localDuracao % 60 === 0 ? 0 : 1)}h` : `${localDuracao}m`}
                 </span>
               )}
@@ -200,18 +200,18 @@ export default function ScheduledTaskCard({
             <div className="flex items-center gap-0.5 pl-5 pr-5">
               <h4
                 className={cn(
-                  'text-[8px] font-semibold text-[#34495e] leading-none truncate flex-1 min-w-0',
+                  'text-[8px] font-semibold text-[#34495e] dark:text-slate-200 leading-none truncate flex-1 min-w-0',
                   tarefa.status === 'concluida' && 'line-through opacity-60'
                 )}
               >
                 {tarefa.titulo}
               </h4>
               {tarefa.horario_planejado_dia && (
-                <span className="text-[7px] text-slate-600 whitespace-nowrap font-medium">
+                <span className="text-[7px] text-slate-600 dark:text-slate-400 whitespace-nowrap font-medium">
                   {formatTimeDisplay(tarefa.horario_planejado_dia)}
-                  <span className="text-slate-400">-</span>
+                  <span className="text-slate-400 dark:text-slate-500">-</span>
                   {calcularHorarioFim(tarefa.horario_planejado_dia, localDuracao)}
-                  <span className="text-slate-400">•</span>
+                  <span className="text-slate-400 dark:text-slate-500">•</span>
                   {localDuracao >= 60 ? `${(localDuracao / 60).toFixed(localDuracao % 60 === 0 ? 0 : 1)}h` : `${localDuracao}m`}
                 </span>
               )}
@@ -230,7 +230,7 @@ export default function ScheduledTaskCard({
               <div className="flex items-center gap-1.5 mb-1 pl-5 pr-5">
                 <h4
                   className={cn(
-                    'text-[10px] font-bold text-[#34495e] leading-tight line-clamp-1 flex-1 min-w-0',
+                    'text-[10px] font-bold text-[#34495e] dark:text-slate-200 leading-tight line-clamp-1 flex-1 min-w-0',
                     tarefa.status === 'concluida' && 'line-through opacity-60'
                   )}
                 >
@@ -239,14 +239,14 @@ export default function ScheduledTaskCard({
               </div>
               <div className="flex items-center gap-1.5 pl-5 pr-5">
                 {tarefa.horario_planejado_dia && (
-                  <div className="flex items-center gap-0.5 text-[9px] text-slate-600 font-medium">
+                  <div className="flex items-center gap-0.5 text-[9px] text-slate-600 dark:text-slate-400 font-medium">
                     <Clock className="w-2 h-2 text-[#89bcbe] flex-shrink-0" />
                     <span className="whitespace-nowrap">
                       {formatTimeDisplay(tarefa.horario_planejado_dia)}
-                      <span className="text-slate-400 mx-0.5">-</span>
+                      <span className="text-slate-400 dark:text-slate-500 mx-0.5">-</span>
                       {calcularHorarioFim(tarefa.horario_planejado_dia, localDuracao)}
                     </span>
-                    <span className="text-slate-400 mx-0.5">•</span>
+                    <span className="text-slate-400 dark:text-slate-500 mx-0.5">•</span>
                     <span className="text-[#34495e] font-semibold">
                       {duracaoEmHoras >= 1
                         ? `${duracaoEmHoras.toFixed(duracaoEmHoras % 1 === 0 ? 0 : 1)}h`
@@ -272,7 +272,7 @@ export default function ScheduledTaskCard({
                 <div className="flex-1 min-w-0">
                   <h4
                     className={cn(
-                      'text-[11px] font-bold text-[#34495e] leading-tight line-clamp-2',
+                      'text-[11px] font-bold text-[#34495e] dark:text-slate-200 leading-tight line-clamp-2',
                       tarefa.status === 'concluida' && 'line-through opacity-60'
                     )}
                   >
@@ -285,12 +285,12 @@ export default function ScheduledTaskCard({
               <div className="flex items-center gap-1.5 mb-1.5 pl-5 pr-5">
                 <Clock className="w-2.5 h-2.5 text-[#89bcbe] flex-shrink-0" />
                 {tarefa.horario_planejado_dia && (
-                  <div className="flex items-center gap-1 text-[10px] text-slate-600 font-medium">
+                  <div className="flex items-center gap-1 text-[10px] text-slate-600 dark:text-slate-400 font-medium">
                     <span>{formatTimeDisplay(tarefa.horario_planejado_dia)}</span>
-                    <span className="text-slate-400">-</span>
+                    <span className="text-slate-400 dark:text-slate-500">-</span>
                     <span>{calcularHorarioFim(tarefa.horario_planejado_dia, localDuracao)}</span>
-                    <span className="text-slate-400">•</span>
-                    <span className="font-semibold text-[#34495e]">
+                    <span className="text-slate-400 dark:text-slate-500">•</span>
+                    <span className="font-semibold text-[#34495e] dark:text-slate-200">
                       {duracaoEmHoras >= 1
                         ? `${duracaoEmHoras.toFixed(duracaoEmHoras % 1 === 0 ? 0 : 1)}h`
                         : `${localDuracao}m`}
@@ -332,7 +332,7 @@ export default function ScheduledTaskCard({
             className={cn(
               'absolute pointer-events-auto rounded-full border-2 flex items-center justify-center',
               'transition-all duration-150',
-              'border-slate-300 hover:border-emerald-500 hover:bg-emerald-50 bg-white',
+              'border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:bg-emerald-50 bg-white dark:bg-surface-1',
               'focus:outline-none focus:ring-1 focus:ring-emerald-500',
               'shadow-sm',
               tarefa.status === 'concluida' && 'bg-emerald-500 border-emerald-500',
@@ -400,7 +400,7 @@ export default function ScheduledTaskCard({
         >
           {/* Linha indicadora sempre visível */}
           <div className={cn(
-            'rounded-full bg-slate-400',
+            'rounded-full bg-slate-400 dark:bg-slate-500',
             'group-hover:bg-[#89bcbe] transition-colors',
             isResizing && 'bg-[#89bcbe] scale-110',
             isUltraCompact ? 'w-6 h-0.5' : isCompact ? 'w-8 h-0.5' : 'w-12 h-1' // Linha progressiva

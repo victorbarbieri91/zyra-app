@@ -130,22 +130,22 @@ export default function Sidebar() {
       initial={false}
       animate={{ width: collapsed ? 72 : 280 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="hidden md:flex bg-gradient-to-b from-white to-slate-50/50 border-r border-slate-200 flex-col relative shadow-sm"
+      className="hidden md:flex bg-gradient-to-b from-white to-slate-50/50 dark:from-surface-1 dark:to-surface-1 border-r border-slate-200 dark:border-slate-700 flex-col relative shadow-sm dark:shadow-none"
     >
       {/* Collapse Button */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-4 top-[3.75rem] z-50 w-10 h-10 bg-gradient-to-br from-[#34495e] to-[#1E3A8A] border-2 border-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all group"
+        className="absolute -right-4 top-[3.75rem] z-50 w-10 h-10 bg-gradient-to-br from-[#34495e] to-[#1E3A8A] dark:from-[#89bcbe] dark:to-[#6ba9ab] border-2 border-white dark:border-surface-1 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all group"
       >
         {collapsed ? (
-          <ChevronRight className="w-5.5 h-5.5 text-white" />
+          <ChevronRight className="w-5.5 h-5.5 text-white dark:text-slate-900" />
         ) : (
-          <ChevronLeft className="w-5.5 h-5.5 text-white" />
+          <ChevronLeft className="w-5.5 h-5.5 text-white dark:text-slate-900" />
         )}
       </button>
 
       {/* Logo */}
-      <div className="px-3 py-3 border-b border-slate-200">
+      <div className="px-3 py-3 border-b border-slate-200 dark:border-slate-700">
         <div className="flex items-center justify-center">
           <AnimatePresence mode="wait">
             {!collapsed ? (
@@ -198,10 +198,10 @@ export default function Sidebar() {
                 'flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-300 group relative mb-1',
                 collapsed ? 'justify-center' : '',
                 isDisabled
-                  ? 'text-slate-400 opacity-60 cursor-not-allowed'
+                  ? 'text-slate-400 dark:text-slate-600 opacity-60 cursor-not-allowed'
                   : isActive
-                  ? 'bg-gradient-to-r from-[#34495e] to-[#46627f] text-white shadow-lg shadow-[#34495e]/20'
-                  : 'text-slate-600 hover:bg-gradient-to-r hover:from-slate-50 hover:to-slate-100/80 hover:text-[#34495e] hover:shadow-md'
+                  ? 'bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe]/20 dark:to-[#89bcbe]/10 text-white dark:text-[#89bcbe] shadow-lg shadow-[#34495e]/20 dark:shadow-none dark:border-l-2 dark:border-[#89bcbe]'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-gradient-to-r hover:from-slate-50 hover:to-slate-100/80 dark:hover:from-surface-2 dark:hover:to-surface-3 hover:text-[#34495e] dark:hover:text-slate-200 hover:shadow-md dark:hover:shadow-none'
               )}
             >
               <div className={cn(
@@ -217,8 +217,8 @@ export default function Sidebar() {
                   <span className={cn(
                     "absolute -top-1 -right-1 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-bold px-1 leading-none",
                     isActive
-                      ? "bg-white text-[#34495e]"
-                      : "bg-amber-500 text-white"
+                      ? "bg-white text-[#34495e] dark:bg-[#89bcbe] dark:text-slate-900"
+                      : "bg-amber-500 text-white dark:bg-amber-400 dark:text-slate-900"
                   )}>
                     {Number(dynamicBadge) > 99 ? '99+' : dynamicBadge}
                   </span>
@@ -239,10 +239,10 @@ export default function Sidebar() {
                       <Badge className={cn(
                         "text-[10px] px-2 py-0.5 h-5 border-0 font-medium ml-auto",
                         isActive
-                          ? "bg-white/30 text-white backdrop-blur-sm"
+                          ? "bg-white/30 text-white dark:bg-[#89bcbe]/30 dark:text-[#89bcbe] backdrop-blur-sm"
                           : item.href === '/dashboard/publicacoes'
-                            ? "bg-amber-500 text-white"
-                            : "bg-gradient-to-r from-[#89bcbe] to-[#6ba9ab] text-white"
+                            ? "bg-amber-500 text-white dark:bg-amber-400 dark:text-slate-900"
+                            : "bg-gradient-to-r from-[#89bcbe] to-[#6ba9ab] text-white dark:from-teal-700 dark:to-teal-600"
                       )}>
                         {dynamicBadge}
                       </Badge>
@@ -270,17 +270,17 @@ export default function Sidebar() {
       </nav>
 
       {/* Logout */}
-      <div className="px-3 py-1.5 border-t border-slate-200">
+      <div className="px-3 py-1.5 border-t border-slate-200 dark:border-slate-700">
         <button
           onClick={handleLogout}
           className={cn(
-            'flex items-center gap-3 w-full px-3 py-1.5 text-slate-600 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100/80 hover:text-red-600 rounded-xl transition-all duration-300 group hover:shadow-md',
+            'flex items-center gap-3 w-full px-3 py-1.5 text-slate-600 dark:text-slate-400 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100/80 dark:hover:from-red-500/10 dark:hover:to-red-500/5 hover:text-red-600 dark:hover:text-red-400 rounded-xl transition-all duration-300 group hover:shadow-md dark:hover:shadow-none',
             collapsed && 'justify-center'
           )}
           title={collapsed ? 'Sair' : ''}
         >
           <div className="flex items-center justify-center rounded-lg transition-all duration-300 group-hover:bg-red-100/50 group-hover:scale-110 w-8 h-8">
-            <LogOut className="w-[18px] h-[18px]" />
+            <LogOut className="w-[18px] h-[18px] dark:group-hover:text-red-400" />
           </div>
           <AnimatePresence>
             {!collapsed && (

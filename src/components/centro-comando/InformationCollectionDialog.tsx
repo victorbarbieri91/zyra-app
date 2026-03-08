@@ -122,36 +122,36 @@ export function InformationCollectionDialog({ pendingInput, onSubmit, onCancel, 
 
   return (
     <Dialog open={!!pendingInput} onOpenChange={() => onCancel()}>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="sm:max-w-[450px] dark:bg-surface-1 dark:border-slate-700">
         <DialogHeader>
-          <DialogTitle className="text-lg font-medium text-[#34495e]">Informacoes necessarias</DialogTitle>
-          <DialogDescription className="text-sm text-slate-500">{pendingInput.contexto}</DialogDescription>
+          <DialogTitle className="text-lg font-medium text-[#34495e] dark:text-slate-200">Informacoes necessarias</DialogTitle>
+          <DialogDescription className="text-sm text-slate-500 dark:text-slate-400">{pendingInput.contexto}</DialogDescription>
         </DialogHeader>
         <div className="py-3 space-y-4">
           {pendingInput.tipo === 'disambiguation' && options.length > 0 && (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
+            <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-surface-0 p-3 space-y-2">
               {options.map((opcao) => (
-                <div key={opcao.id} className="text-xs text-slate-600">
+                <div key={opcao.id} className="text-xs text-slate-600 dark:text-slate-400">
                   <div className="font-medium">{opcao.label}</div>
-                  {opcao.description && <div className="text-slate-400">{opcao.description}</div>}
+                  {opcao.description && <div className="text-slate-400 dark:text-slate-500">{opcao.description}</div>}
                 </div>
               ))}
             </div>
           )}
           {campos.map((campo) => (
             <div key={campo.campo} className="space-y-1.5">
-              <Label htmlFor={campo.campo} className="text-xs font-medium text-slate-600">
+              <Label htmlFor={campo.campo} className="text-xs font-medium text-slate-600 dark:text-slate-400">
                 {campo.descricao}
-                {campo.obrigatorio && <span className="text-red-400 ml-0.5">*</span>}
+                {campo.obrigatorio && <span className="text-red-400 dark:text-red-400 ml-0.5">*</span>}
               </Label>
               {renderInput(campo)}
-              {errors[campo.campo] && <p className="text-[11px] text-red-500">{errors[campo.campo]}</p>}
+              {errors[campo.campo] && <p className="text-[11px] text-red-500 dark:text-red-400">{errors[campo.campo]}</p>}
             </div>
           ))}
         </div>
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={onCancel} disabled={loading} size="sm" className="text-xs">Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={loading} size="sm" className="bg-[#34495e] hover:bg-[#46627f] text-xs">
+          <Button onClick={handleSubmit} disabled={loading} size="sm" className="bg-[#34495e] hover:bg-[#46627f] dark:bg-[#89bcbe] dark:hover:bg-[#6ba9ab] dark:text-slate-900 text-xs">
             {loading ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Enviando...</> : 'Enviar'}
           </Button>
         </DialogFooter>

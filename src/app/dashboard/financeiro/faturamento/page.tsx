@@ -16,6 +16,7 @@ import {
   FolderOpen,
   Search,
   X,
+  Landmark,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -43,6 +44,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { useFaturamento } from '@/hooks/useFaturamento'
 import { useFechamentosPasta } from '@/hooks/useFechamentosPasta'
@@ -79,6 +87,7 @@ export default function FaturamentoPage() {
     gerarFatura,
     desmontarFatura,
     loadContractLimits,
+    loadContasBancarias,
   } = useFaturamento(escritoriosSelecionados)
 
   const {
@@ -143,6 +152,8 @@ export default function FaturamentoPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [dataEmissao, setDataEmissao] = useState('')
   const [dataVencimento, setDataVencimento] = useState('')
+  const [contasBancarias, setContasBancarias] = useState<{ id: string; banco: string; agencia: string; numero_conta: string; saldo_atual: number }[]>([])
+  const [contaBancariaSelecionada, setContaBancariaSelecionada] = useState<string>('')
 
   // Limites contratuais para preview
   const [contractLimits, setContractLimits] = useState<Record<string, ContractLimits>>({})
@@ -239,7 +250,7 @@ export default function FaturamentoPage() {
     )
   }
 
-  const handleGerarFatura = () => {
+  const handleGerarFatura = async () => {
     if (!selectedCliente) return
 
     // Calcular defaults — input type="date" precisa de yyyy-MM-dd
@@ -250,6 +261,12 @@ export default function FaturamentoPage() {
     const toYMD = (d: Date) => d.toISOString().split('T')[0]
     setDataEmissao(toYMD(hoje))
     setDataVencimento(toYMD(vencimento))
+    setContaBancariaSelecionada('')
+
+    // Carregar contas bancárias disponíveis
+    const contas = await loadContasBancarias()
+    setContasBancarias(contas)
+
     setShowConfirmModal(true)
   }
 
@@ -280,7 +297,8 @@ export default function FaturamentoPage() {
       selectedCliente.escritorio_id, // escritorioIdOverride — gerar no escritório correto
       fechamentosIds,
       undefined, // despesasIds
-      dataEmissao || undefined
+      dataEmissao || undefined,
+      contaBancariaSelecionada || undefined
     )
 
     if (faturaId) {
@@ -374,6 +392,7 @@ export default function FaturamentoPage() {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
+      minimumFractionDigits: 2,
     }).format(value)
   }
 
@@ -382,8 +401,8 @@ export default function FaturamentoPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-semibold text-[#34495e]">Faturamento Inteligente</h1>
-          <p className="text-xs md:text-sm text-slate-600 mt-1">
+          <h1 className="text-xl md:text-2xl font-semibold text-[#34495e] dark:text-slate-200">Faturamento Inteligente</h1>
+          <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 mt-1">
             Gere faturas consolidadas automaticamente
           </p>
         </div>
@@ -394,11 +413,11 @@ export default function FaturamentoPage() {
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="border-slate-200 bg-white hover:bg-slate-50"
+                  className="border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 hover:bg-slate-50 dark:hover:bg-surface-2"
                 >
-                  <Building2 className="h-4 w-4 mr-2 text-[#34495e]" />
+                  <Building2 className="h-4 w-4 mr-2 text-[#34495e] dark:text-slate-200" />
                   <span className="text-sm">{getSeletorLabel()}</span>
-                  <ChevronDown className="h-4 w-4 ml-2 text-slate-400" />
+                  <ChevronDown className="h-4 w-4 ml-2 text-slate-400 dark:text-slate-400" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-72 p-2" align="end">
@@ -410,7 +429,7 @@ export default function FaturamentoPage() {
                       'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors',
                       escritoriosSelecionados.length === escritoriosGrupo.length
                         ? 'bg-[#1E3A8A]/10 text-[#1E3A8A]'
-                        : 'hover:bg-slate-100 text-slate-700'
+                        : 'hover:bg-slate-100 dark:hover:bg-surface-3 text-slate-700 dark:text-slate-300'
                     )}
                   >
                     <span className="font-medium">Todos os escritórios</span>
@@ -419,13 +438,13 @@ export default function FaturamentoPage() {
                     )}
                   </button>
 
-                  <div className="h-px bg-slate-200 my-2" />
+                  <div className="h-px bg-slate-200 dark:bg-slate-700 my-2" />
 
                   {/* Lista de escritórios */}
                   {escritoriosGrupo.map((escritorio) => (
                     <div
                       key={escritorio.id}
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50"
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2"
                     >
                       <Checkbox
                         id={`esc-${escritorio.id}`}
@@ -434,7 +453,7 @@ export default function FaturamentoPage() {
                       />
                       <label
                         htmlFor={`esc-${escritorio.id}`}
-                        className="flex-1 text-sm text-slate-700 cursor-pointer"
+                        className="flex-1 text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
                       >
                         {escritorio.nome}
                       </label>
@@ -458,7 +477,7 @@ export default function FaturamentoPage() {
               setCompetenciaManual(`${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`)
               setShowExecutarModal(true)
             }}
-            className="border-amber-200 text-amber-700 hover:bg-amber-50"
+            className="border-amber-200 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10"
           >
             <FolderOpen className="h-4 w-4 md:mr-2" />
             <span className="hidden md:inline">Fechamento de Pastas</span>
@@ -468,7 +487,7 @@ export default function FaturamentoPage() {
             size="sm"
             onClick={loadData}
             disabled={loading}
-            className="border-slate-200"
+            className="border-slate-200 dark:border-slate-700"
           >
             <RefreshCw className={cn('h-4 w-4 md:mr-2', loading && 'animate-spin')} />
             <span className="hidden md:inline">Atualizar</span>
@@ -482,7 +501,7 @@ export default function FaturamentoPage() {
           <TabsTrigger value="prontos">
             Prontos para Faturar
             {clientes.length > 0 && (
-              <Badge variant="secondary" className="ml-2 bg-emerald-100 text-emerald-700">
+              <Badge variant="secondary" className="ml-2 bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
                 {clientes.length}
               </Badge>
             )}
@@ -490,7 +509,7 @@ export default function FaturamentoPage() {
           <TabsTrigger value="faturados">
             Faturados
             {faturas.length > 0 && (
-              <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-700">
+              <Badge variant="secondary" className="ml-2 bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400">
                 {faturas.length}
               </Badge>
             )}
@@ -543,14 +562,14 @@ export default function FaturamentoPage() {
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
             {/* Coluna Esquerda - Lista de Faturas */}
             <div className={cn(showFaturaDetails ? 'xl:col-span-7' : 'xl:col-span-12')}>
-              <Card className="border-slate-200 shadow-sm">
+              <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
                 <CardHeader className="pb-2 pt-3 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <CardTitle className="text-sm font-medium text-slate-700">
+                      <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">
                         Faturas Geradas
                       </CardTitle>
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                      <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400">
                         {faturasFiltradas.length === faturas.length
                           ? `${faturas.length} ${faturas.length === 1 ? 'fatura' : 'faturas'}`
                           : `${faturasFiltradas.length} de ${faturas.length}`}
@@ -580,17 +599,17 @@ export default function FaturamentoPage() {
                   <div className="space-y-2">
                     {/* Pesquisa */}
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-400" />
                       <Input
                         placeholder="Buscar por n\u00famero da fatura ou nome do cliente..."
                         value={searchFaturas}
                         onChange={(e) => setSearchFaturas(e.target.value)}
-                        className="pl-9 pr-8 h-9 text-sm border-slate-200"
+                        className="pl-9 pr-8 h-9 text-sm border-slate-200 dark:border-slate-700"
                       />
                       {searchFaturas && (
                         <button
                           onClick={() => setSearchFaturas('')}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
@@ -605,7 +624,7 @@ export default function FaturamentoPage() {
                           'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
                           statusFilter === null
                             ? 'bg-[#34495e] text-white'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            : 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-surface-3'
                         )}
                       >
                         Todas
@@ -617,10 +636,23 @@ export default function FaturamentoPage() {
                             'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
                             statusFilter === 'pendente'
                               ? 'bg-blue-600 text-white'
-                              : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                              : 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 hover:bg-blue-100'
                           )}
                         >
                           Pendentes ({statusContagem['pendente']})
+                        </button>
+                      )}
+                      {statusContagem['parcial'] && (
+                        <button
+                          onClick={() => setStatusFilter('parcial')}
+                          className={cn(
+                            'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
+                            statusFilter === 'parcial'
+                              ? 'bg-amber-600 text-white'
+                              : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-100'
+                          )}
+                        >
+                          Parciais ({statusContagem['parcial']})
                         </button>
                       )}
                       {statusContagem['atrasado'] && (
@@ -630,7 +662,7 @@ export default function FaturamentoPage() {
                             'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
                             statusFilter === 'atrasado'
                               ? 'bg-red-600 text-white'
-                              : 'bg-red-50 text-red-700 hover:bg-red-100'
+                              : 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-100'
                           )}
                         >
                           Atrasadas ({statusContagem['atrasado']})
@@ -643,7 +675,7 @@ export default function FaturamentoPage() {
                             'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
                             statusFilter === 'pago'
                               ? 'bg-emerald-600 text-white'
-                              : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                              : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100'
                           )}
                         >
                           Pagas ({statusContagem['pago']})
@@ -656,7 +688,7 @@ export default function FaturamentoPage() {
                             'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
                             statusFilter === 'cancelado'
                               ? 'bg-slate-600 text-white'
-                              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                              : 'bg-slate-100 dark:bg-surface-2 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-surface-3'
                           )}
                         >
                           Canceladas ({statusContagem['cancelado']})
@@ -670,12 +702,12 @@ export default function FaturamentoPage() {
                     loading ? (
                       <div className="py-12 text-center">
                         <Clock className="h-8 w-8 mx-auto text-slate-400 animate-spin" />
-                        <p className="text-sm text-slate-500 mt-2">Carregando...</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Carregando...</p>
                       </div>
                     ) : faturasFiltradas.length === 0 ? (
                       <div className="py-12 text-center">
                         <FileText className="h-12 w-12 mx-auto text-slate-300" />
-                        <p className="text-sm text-slate-500 mt-2">
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
                           {faturas.length === 0
                             ? 'Nenhuma fatura gerada ainda'
                             : 'Nenhuma fatura encontrada com os filtros aplicados'}
@@ -781,7 +813,7 @@ export default function FaturamentoPage() {
       <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#34495e] text-sm">
+            <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200 text-sm">
               <FileText className="h-4 w-4" />
               Confirmar Geração de Fatura
             </DialogTitle>
@@ -790,21 +822,21 @@ export default function FaturamentoPage() {
           {selectedCliente && (
             <div className="space-y-3">
               {/* Resumo */}
-              <div className="bg-slate-50 rounded-lg p-2.5 space-y-1">
+              <div className="bg-slate-50 dark:bg-surface-0 rounded-lg p-2.5 space-y-1">
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">Cliente</span>
-                  <span className="font-medium text-[#34495e]">{selectedCliente.cliente_nome}</span>
+                  <span className="text-slate-500 dark:text-slate-400">Cliente</span>
+                  <span className="font-medium text-[#34495e] dark:text-slate-200">{selectedCliente.cliente_nome}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">Itens</span>
-                  <span className="font-medium text-[#34495e]">
+                  <span className="text-slate-500 dark:text-slate-400">Itens</span>
+                  <span className="font-medium text-[#34495e] dark:text-slate-200">
                     {selectedLancamentosIds.length} {selectedLancamentosIds.length === 1 ? 'lançamento' : 'lançamentos'}
                   </span>
                 </div>
                 <Separator />
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">Valor Total</span>
-                  <span className="font-bold text-emerald-600 text-sm">
+                  <span className="text-slate-500 dark:text-slate-400">Valor Total</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
                     {(() => {
                       const selectedLancs = lancamentos.filter(l => selectedLancamentosIds.includes(l.lancamento_id))
                       let total = selectedLancs.reduce((sum, l) => sum + (l.valor || 0), 0)
@@ -834,7 +866,7 @@ export default function FaturamentoPage() {
               {/* Datas */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label htmlFor="data-emissao" className="text-[11px] text-slate-600">
+                  <Label htmlFor="data-emissao" className="text-[11px] text-slate-600 dark:text-slate-400">
                     Data de Emissão
                   </Label>
                   <Input
@@ -846,7 +878,7 @@ export default function FaturamentoPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="data-vencimento" className="text-[11px] text-slate-600">
+                  <Label htmlFor="data-vencimento" className="text-[11px] text-slate-600 dark:text-slate-400">
                     Data de Vencimento
                   </Label>
                   <Input
@@ -858,6 +890,28 @@ export default function FaturamentoPage() {
                   />
                 </div>
               </div>
+
+              {/* Conta Bancária */}
+              {contasBancarias.length > 0 && (
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                    <Landmark className="h-3 w-3" />
+                    Conta Bancária
+                  </Label>
+                  <Select value={contaBancariaSelecionada} onValueChange={setContaBancariaSelecionada}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Selecione uma conta (opcional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {contasBancarias.map((conta) => (
+                        <SelectItem key={conta.id} value={conta.id} className="text-xs">
+                          {conta.banco} — Ag {conta.agencia} / CC {conta.numero_conta}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           )}
 
@@ -865,7 +919,7 @@ export default function FaturamentoPage() {
             <Button
               variant="outline"
               onClick={() => setShowConfirmModal(false)}
-              className="border-slate-200 text-xs h-8"
+              className="border-slate-200 dark:border-slate-700 text-xs h-8"
             >
               Cancelar
             </Button>
@@ -890,7 +944,7 @@ export default function FaturamentoPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
               Gera fechamentos mensais para todos os contratos por pasta ativos. Se já existe um
               fechamento ativo para o mês selecionado, ele não será duplicado.
             </p>

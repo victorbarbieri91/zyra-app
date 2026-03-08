@@ -385,10 +385,10 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
-        <p className="text-lg font-medium text-slate-700 mt-4">
+        <p className="text-lg font-medium text-slate-700 dark:text-slate-300 mt-4">
           Carregando dados para revisão...
         </p>
-        <p className="text-sm text-slate-500 mt-2">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
           Isso pode levar alguns segundos para arquivos grandes
         </p>
       </div>
@@ -399,26 +399,26 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
     <div className="space-y-6">
       {/* Resumo de Cards */}
       <div className="grid grid-cols-4 gap-4">
-        <Card className="p-4 bg-green-50 border-green-200">
-          <p className="text-2xl font-bold text-green-600">{job.linhas_validas}</p>
-          <p className="text-sm text-green-700">Registros válidos</p>
+        <Card className="p-4 bg-green-50 dark:bg-emerald-500/10 border-green-200 dark:border-emerald-500/30">
+          <p className="text-2xl font-bold text-green-600 dark:text-emerald-400">{job.linhas_validas}</p>
+          <p className="text-sm text-green-700 dark:text-emerald-400">Registros válidos</p>
         </Card>
-        <Card className="p-4 bg-blue-50 border-blue-200">
-          <p className="text-2xl font-bold text-blue-600">{nomesParaNormalizar.length}</p>
-          <p className="text-sm text-blue-700">Nomes a normalizar</p>
+        <Card className="p-4 bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30">
+          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{nomesParaNormalizar.length}</p>
+          <p className="text-sm text-blue-700 dark:text-blue-400">Nomes a normalizar</p>
         </Card>
-        <Card className="p-4 bg-red-50 border-red-200">
-          <p className="text-2xl font-bold text-red-600">{erros.length}</p>
-          <p className="text-sm text-red-700">Com erros</p>
+        <Card className="p-4 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30">
+          <p className="text-2xl font-bold text-red-600 dark:text-red-400">{erros.length}</p>
+          <p className="text-sm text-red-700 dark:text-red-400">Com erros</p>
         </Card>
-        <Card className="p-4 bg-amber-50 border-amber-200">
-          <p className="text-2xl font-bold text-amber-600">{duplicatas.length}</p>
-          <p className="text-sm text-amber-700">Duplicatas</p>
+        <Card className="p-4 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30">
+          <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{duplicatas.length}</p>
+          <p className="text-sm text-amber-700 dark:text-amber-400">Duplicatas</p>
         </Card>
       </div>
 
       {/* Tabs de navegação */}
-      <div className="flex gap-2 border-b border-slate-200 pb-2">
+      <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700 pb-2">
         <Button
           variant={activeTab === 'resumo' ? 'default' : 'ghost'}
           size="sm"
@@ -477,7 +477,7 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
         <div className="space-y-4">
           {/* Resumo dos tipos de contato */}
           <Card className="p-4">
-            <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-3">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-3">
               <Users className="w-4 h-4 text-blue-500" />
               Distribuição por Tipo de Contato
             </h3>
@@ -492,16 +492,16 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
 
           {/* Preview de amostra */}
           <Card className="p-4">
-            <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-3">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-3">
               <Eye className="w-4 h-4 text-slate-500" />
               Preview dos Primeiros Registros
             </h3>
             <ScrollArea className="h-48">
               <div className="space-y-2">
                 {dadosValidados.slice(0, 10).map((item, index) => (
-                  <div key={index} className="text-xs bg-slate-50 p-2 rounded flex justify-between items-center">
+                  <div key={index} className="text-xs bg-slate-50 dark:bg-surface-0 p-2 rounded flex justify-between items-center">
                     <div>
-                      <span className="font-medium text-slate-700">
+                      <span className="font-medium text-slate-700 dark:text-slate-300">
                         {normalizarNome(item.dados?.nome_completo as string)}
                       </span>
                       {(() => {
@@ -513,11 +513,11 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
                         ) : null
                       })()}
                     </div>
-                    <span className="text-slate-400">Linha {item.linha}</span>
+                    <span className="text-slate-400 dark:text-slate-500">Linha {item.linha}</span>
                   </div>
                 ))}
                 {dadosValidados.length > 10 && (
-                  <p className="text-xs text-slate-400 text-center py-2">
+                  <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-2">
                     ... e mais {dadosValidados.length - 10} registros
                   </p>
                 )}
@@ -527,11 +527,11 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
 
           {/* Status geral */}
           {!temProblemas && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
+            <div className="bg-green-50 dark:bg-emerald-500/10 border border-green-200 dark:border-emerald-500/30 rounded-lg p-4 flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-emerald-400" />
               <div>
-                <p className="text-sm font-medium text-green-800">Tudo certo!</p>
-                <p className="text-sm text-green-600">
+                <p className="text-sm font-medium text-green-800 dark:text-emerald-400">Tudo certo!</p>
+                <p className="text-sm text-green-600 dark:text-emerald-400">
                   Nenhum erro ou duplicata encontrada. Os nomes serão normalizados automaticamente durante a importação.
                 </p>
               </div>
@@ -544,7 +544,7 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
         <div className="space-y-4">
           <Card className="p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                 <Type className="w-4 h-4 text-blue-500" />
                 Nomes que Serão Normalizados
               </h3>
@@ -554,21 +554,21 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
             </div>
 
             {nomesParaNormalizar.length === 0 ? (
-              <p className="text-sm text-slate-500 text-center py-4">
+              <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
                 Nenhum nome precisa de normalização. Todos já estão formatados corretamente.
               </p>
             ) : (
               <ScrollArea className="h-64">
                 <div className="space-y-2">
                   {nomesParaNormalizar.slice(0, 50).map((item, index) => (
-                    <div key={index} className="text-xs bg-slate-50 p-3 rounded">
+                    <div key={index} className="text-xs bg-slate-50 dark:bg-surface-0 p-3 rounded">
                       <div className="flex items-center gap-2">
-                        <span className="text-slate-400 w-12">L.{item.linha}</span>
+                        <span className="text-slate-400 dark:text-slate-500 w-12">L.{item.linha}</span>
                         <span className="text-red-500 line-through flex-1">{item.original}</span>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="w-12"></span>
-                        <span className="text-green-600 flex-1 flex items-center gap-1">
+                        <span className="text-green-600 dark:text-emerald-400 flex-1 flex items-center gap-1">
                           <Check className="w-3 h-3" />
                           {item.normalizado}
                         </span>
@@ -576,7 +576,7 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
                     </div>
                   ))}
                   {nomesParaNormalizar.length > 50 && (
-                    <p className="text-xs text-slate-400 text-center py-2">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-2">
                       ... e mais {nomesParaNormalizar.length - 50} nomes
                     </p>
                   )}
@@ -584,7 +584,7 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
               </ScrollArea>
             )}
 
-            <p className="text-xs text-slate-500 mt-4 border-t pt-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-4 border-t dark:border-slate-700 pt-3">
               A normalização será aplicada automaticamente durante a importação.
               Siglas como S/A, LTDA, ME serão preservadas. Preposições (da, de, do) ficarão em minúsculo.
             </p>
@@ -595,11 +595,11 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
       {activeTab === 'erros' && erros.length > 0 && (
         <div className="space-y-4">
           {/* Barra de ações em lote */}
-          <Card className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
+          <Card className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-500/10 dark:to-blue-500/10 border-purple-200 dark:border-purple-500/30">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-purple-500" />
-                <span className="font-medium text-slate-700">
+                <span className="font-medium text-slate-700 dark:text-slate-300">
                   {sugestoesCarregadas
                     ? `${errosComSugestao} de ${erros.length} erros com sugestão de correção`
                     : `${erros.length} erros encontrados`
@@ -643,7 +643,7 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
                 <Button
                   variant="outline"
                   onClick={pularTodosErros}
-                  className="border-red-300 text-red-600 hover:bg-red-50"
+                  className="border-red-300 dark:border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
                 >
                   <SkipForward className="w-4 h-4 mr-2" />
                   Pular todos
@@ -652,7 +652,7 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
             </div>
 
             {sugestoesCarregadas && errosComSugestao > 0 && (
-              <p className="text-xs text-purple-600 mt-3">
+              <p className="text-xs text-purple-600 dark:text-purple-400 mt-3">
                 💡 A IA encontrou sugestões de correção analisando os dados. Clique em &quot;Aplicar sugestões&quot; para aceitar todas ou revise individualmente abaixo.
               </p>
             )}
@@ -666,17 +666,17 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
             const temSugestao = sugestoesLinha.length > 0
 
             return (
-              <Card key={erro.linha} className={`overflow-hidden ${temSugestao && !correcao ? 'border-purple-300 bg-purple-50/30' : 'border-red-200'}`}>
+              <Card key={erro.linha} className={`overflow-hidden ${temSugestao && !correcao ? 'border-purple-300 dark:border-purple-500/30 bg-purple-50/30 dark:bg-purple-500/10' : 'border-red-200 dark:border-red-500/30'}`}>
                 {/* Header */}
                 <div
-                  className={`p-4 flex items-center justify-between cursor-pointer ${temSugestao && !correcao ? 'bg-purple-50' : 'bg-red-50'}`}
+                  className={`p-4 flex items-center justify-between cursor-pointer ${temSugestao && !correcao ? 'bg-purple-50 dark:bg-purple-500/10' : 'bg-red-50 dark:bg-red-500/10'}`}
                   onClick={() => toggleError(erro.linha)}
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-slate-700">Linha {erro.linha}</span>
+                      <span className="font-medium text-slate-700 dark:text-slate-300">Linha {erro.linha}</span>
                       {temSugestao && !correcao && (
-                        <Badge className="bg-purple-100 text-purple-700 text-[10px]">
+                        <Badge className="bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400 text-[10px]">
                           <Sparkles className="w-3 h-3 mr-1" />
                           IA sugeriu correção
                         </Badge>
@@ -692,7 +692,7 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
 
                     {/* Preview da sugestão */}
                     {temSugestao && !correcao && (
-                      <div className="mt-2 text-xs text-purple-700 bg-purple-100/50 rounded px-2 py-1 inline-block">
+                      <div className="mt-2 text-xs text-purple-700 dark:text-purple-400 bg-purple-100/50 dark:bg-purple-500/20 rounded px-2 py-1 inline-block">
                         Sugestão: {sugestoesLinha.map(s => `${s.campo} = "${s.valorSugerido}"`).join(', ')}
                       </div>
                     )}
@@ -717,7 +717,7 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="text-xs border-red-300 text-red-600"
+                        className="text-xs border-red-300 dark:border-red-500/30 text-red-600 dark:text-red-400"
                         onClick={(e) => {
                           e.stopPropagation()
                           setCorrecao(erro.linha, { tipo: 'pular' })
@@ -727,41 +727,41 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
                       </Button>
                     )}
                     {correcao && (
-                      <Badge variant="outline" className="bg-white">
+                      <Badge variant="outline" className="bg-white dark:bg-surface-1">
                         {correcao.tipo === 'pular' ? '⏭️ Pulada' :
                          correcao.tipo === 'remover_campo' ? '✂️ Sem CPF' :
                          '✅ Corrigido'}
                       </Badge>
                     )}
                     {isExpanded ? (
-                      <ChevronUp className="w-4 h-4 text-slate-400" />
+                      <ChevronUp className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
+                      <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     )}
                   </div>
                 </div>
 
                 {/* Conteúdo expandido */}
                 {isExpanded && (
-                  <div className="p-4 border-t space-y-4">
+                  <div className="p-4 border-t dark:border-slate-700 space-y-4">
                     {/* Dados da linha - original e saneado */}
-                    <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded">
+                    <div className="text-sm text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-surface-0 p-3 rounded">
                       <p className="font-medium mb-2">Dados da linha:</p>
                       {Object.entries(erro.dados).map(([key, value]) => (
                         <p key={key} className="text-xs">
-                          <span className="text-slate-400">{key}:</span> {String(value || '-')}
+                          <span className="text-slate-400 dark:text-slate-500">{key}:</span> {String(value || '-')}
                         </p>
                       ))}
                     </div>
 
                     {/* Mostrar dados saneados se diferentes */}
                     {(erro as any).dadosSaneados && (
-                      <div className="text-sm bg-blue-50 p-3 rounded border border-blue-200">
-                        <p className="font-medium mb-2 text-blue-700">Dados após saneamento automático:</p>
+                      <div className="text-sm bg-blue-50 dark:bg-blue-500/10 p-3 rounded border border-blue-200 dark:border-blue-500/30">
+                        <p className="font-medium mb-2 text-blue-700 dark:text-blue-400">Dados após saneamento automático:</p>
                         {Object.entries((erro as any).dadosSaneados).map(([key, value]) => (
                           <p key={key} className="text-xs">
-                            <span className="text-blue-400">{key}:</span>{' '}
-                            <span className="text-blue-700">{String(value || '-')}</span>
+                            <span className="text-blue-400 dark:text-blue-500">{key}:</span>{' '}
+                            <span className="text-blue-700 dark:text-blue-300">{String(value || '-')}</span>
                           </p>
                         ))}
                       </div>
@@ -822,7 +822,7 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
                             Pular esta linha
                           </Button>
                         </div>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           💡 O cliente precisa existir no CRM. Verifique se o nome está correto ou importe os clientes primeiro.
                         </p>
                       </div>
@@ -852,7 +852,7 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-slate-500">ou corrigir:</span>
+                          <span className="text-sm text-slate-500 dark:text-slate-400">ou corrigir:</span>
                           <Input
                             placeholder="Digite o CPF/CNPJ correto"
                             className="w-48"
@@ -893,11 +893,11 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
       {activeTab === 'duplicatas' && duplicatas.length > 0 && (
         <div className="space-y-4">
           {/* Barra de ações em lote para duplicatas */}
-          <Card className="p-4 bg-amber-50 border-amber-200">
+          <Card className="p-4 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
-                <span className="font-medium text-slate-700">
+                <span className="font-medium text-slate-700 dark:text-slate-300">
                   {duplicatas.length} registros já existem no sistema
                 </span>
               </div>
@@ -906,14 +906,14 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
                 <Button
                   variant="outline"
                   onClick={pularTodasDuplicatas}
-                  className="border-amber-300 text-amber-700 hover:bg-amber-100"
+                  className="border-amber-300 dark:border-amber-500/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/10"
                 >
                   <SkipForward className="w-4 h-4 mr-2" />
                   Pular todas
                 </Button>
               </div>
             </div>
-            <p className="text-xs text-amber-600 mt-2">
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
               💡 Duplicatas são registros que já existem no sistema. Você pode pular todos ou decidir individualmente.
             </p>
           </Card>
@@ -923,35 +923,35 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
             const correcao = correcoes[dup.linha]
 
             return (
-              <Card key={dup.linha} className="border-amber-200 overflow-hidden">
+              <Card key={dup.linha} className="border-amber-200 dark:border-amber-500/30 overflow-hidden">
                 {/* Header */}
                 <div
-                  className="p-4 bg-amber-50 flex items-center justify-between cursor-pointer"
+                  className="p-4 bg-amber-50 dark:bg-amber-500/10 flex items-center justify-between cursor-pointer"
                   onClick={() => toggleDup(dup.linha)}
                 >
                   <div>
-                    <span className="font-medium text-slate-700">Linha {dup.linha}</span>
-                    <p className="text-sm text-amber-700 mt-1">
+                    <span className="font-medium text-slate-700 dark:text-slate-300">Linha {dup.linha}</span>
+                    <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
                       {dup.campo}: <strong>{dup.valor}</strong> já existe como &quot;{dup.existente.nome || dup.existente.numero}&quot;
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     {correcao && (
-                      <Badge variant="outline" className="bg-white">
+                      <Badge variant="outline" className="bg-white dark:bg-surface-1">
                         {correcao.tipo === 'pular' ? 'Será pulada' : 'Atualizar existente'}
                       </Badge>
                     )}
                     {isExpanded ? (
-                      <ChevronUp className="w-4 h-4 text-slate-400" />
+                      <ChevronUp className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
+                      <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     )}
                   </div>
                 </div>
 
                 {/* Conteúdo expandido */}
                 {isExpanded && (
-                  <div className="p-4 border-t space-y-4">
+                  <div className="p-4 border-t dark:border-slate-700 space-y-4">
                     <RadioGroup
                       value={correcao?.tipo || ''}
                       onValueChange={(value) => setCorrecao(dup.linha, { tipo: value as 'pular' | 'atualizar' })}
@@ -981,11 +981,11 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
       {activeTab === 'pendencias' && pendencias.length > 0 && (
         <div className="space-y-4">
           {/* Barra de ações em lote */}
-          <Card className="p-4 bg-blue-50 border-blue-200">
+          <Card className="p-4 bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-blue-500" />
-                <span className="font-medium text-slate-700">
+                <span className="font-medium text-slate-700 dark:text-slate-300">
                   {pendencias.length} clientes não encontrados no CRM
                 </span>
               </div>
@@ -1011,14 +1011,14 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
                 <Button
                   variant="outline"
                   onClick={pularTodasPendencias}
-                  className="border-red-300 text-red-600 hover:bg-red-50"
+                  className="border-red-300 dark:border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
                 >
                   <SkipForward className="w-4 h-4 mr-2" />
                   Pular todos
                 </Button>
               </div>
             </div>
-            <p className="text-xs text-blue-600 mt-2">
+            <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
               💡 Esses clientes precisam existir no CRM para vincular aos processos. Você pode criá-los agora ou pular (não importar os processos).
             </p>
           </Card>
@@ -1029,22 +1029,22 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
             const decisao = decisoesPendencias[pendencia.linha]
 
             return (
-              <Card key={pendencia.linha} className="border-blue-200 overflow-hidden">
+              <Card key={pendencia.linha} className="border-blue-200 dark:border-blue-500/30 overflow-hidden">
                 {/* Header */}
                 <div
-                  className="p-4 bg-blue-50 flex items-center justify-between cursor-pointer"
+                  className="p-4 bg-blue-50 dark:bg-blue-500/10 flex items-center justify-between cursor-pointer"
                   onClick={() => togglePendencia(pendencia.linha)}
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-slate-700">Linha {pendencia.linha}</span>
+                      <span className="font-medium text-slate-700 dark:text-slate-300">Linha {pendencia.linha}</span>
                       {!decisao && pendencia.sugestoes && pendencia.sugestoes.length > 0 && (
-                        <Badge className="bg-green-100 text-green-700 text-[10px]">
+                        <Badge className="bg-green-100 dark:bg-emerald-500/20 text-green-700 dark:text-emerald-400 text-[10px]">
                           {pendencia.sugestoes.length} sugestões
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-blue-700 mt-1">
+                    <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
                       Cliente: <strong>&quot;{pendencia.valor}&quot;</strong> não encontrado
                     </p>
                   </div>
@@ -1074,7 +1074,7 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-xs border-red-300 text-red-600"
+                          className="text-xs border-red-300 dark:border-red-500/30 text-red-600 dark:text-red-400"
                           onClick={(e) => {
                             e.stopPropagation()
                             pularPendencia(pendencia.linha)
@@ -1085,33 +1085,33 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
                       </>
                     )}
                     {decisao && (
-                      <Badge variant="outline" className="bg-white">
+                      <Badge variant="outline" className="bg-white dark:bg-surface-1">
                         {decisao.tipo === 'pular' ? '⏭️ Pulado' :
                          decisao.tipo === 'criar' ? '✅ Cliente criado' :
                          '🔗 Vinculado'}
                       </Badge>
                     )}
                     {isExpanded ? (
-                      <ChevronUp className="w-4 h-4 text-slate-400" />
+                      <ChevronUp className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
+                      <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     )}
                   </div>
                 </div>
 
                 {/* Conteúdo expandido */}
                 {isExpanded && (
-                  <div className="p-4 border-t space-y-4">
+                  <div className="p-4 border-t dark:border-slate-700 space-y-4">
                     {/* Sugestões de clientes similares */}
                     {pendencia.sugestoes && pendencia.sugestoes.length > 0 && (
-                      <div className="bg-green-50 border border-green-200 rounded p-3">
-                        <p className="text-sm font-medium text-green-700 mb-2 flex items-center gap-2">
+                      <div className="bg-green-50 dark:bg-emerald-500/10 border border-green-200 dark:border-emerald-500/30 rounded p-3">
+                        <p className="text-sm font-medium text-green-700 dark:text-emerald-400 mb-2 flex items-center gap-2">
                           <Link2 className="w-4 h-4" />
                           Clientes similares encontrados:
                         </p>
                         <div className="space-y-2">
                           {pendencia.sugestoes.map((sug) => (
-                            <div key={sug.id} className="flex items-center justify-between bg-white rounded p-2">
+                            <div key={sug.id} className="flex items-center justify-between bg-white dark:bg-surface-1 rounded p-2">
                               <span className="text-sm">
                                 {sug.nome}
                                 <Badge variant="outline" className="ml-2 text-[10px]">
@@ -1154,7 +1154,7 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
                       </Button>
                       <Button
                         variant="outline"
-                        className="border-red-300 text-red-600 hover:bg-red-50"
+                        className="border-red-300 dark:border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
                         onClick={() => pularPendencia(pendencia.linha)}
                       >
                         <SkipForward className="w-4 h-4 mr-2" />
@@ -1171,7 +1171,7 @@ export function StepRevisao({ state, updateState, goToStep }: Props) {
 
       {/* Aviso se faltam decisões */}
       {temProblemas && !todasDecisoesTomadas() && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
+        <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg p-4 text-sm text-amber-700 dark:text-amber-400">
           <AlertTriangle className="w-4 h-4 inline mr-2" />
           Revise todas as pendências nas abas acima para continuar.
         </div>

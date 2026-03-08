@@ -183,7 +183,7 @@ export default function CalendarWeekView({
       {/* Header de Navegação */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-semibold text-[#34495e]">
+          <h2 className="text-2xl font-semibold text-[#34495e] dark:text-slate-200">
             {format(weekStart, "d 'de' MMMM", { locale: ptBR })} -{' '}
             {format(weekEnd, "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </h2>
@@ -192,7 +192,7 @@ export default function CalendarWeekView({
               variant="outline"
               size="sm"
               onClick={previousWeek}
-              className="h-8 w-8 p-0 border-slate-200"
+              className="h-8 w-8 p-0 border-slate-200 dark:border-slate-700"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -200,7 +200,7 @@ export default function CalendarWeekView({
               variant="outline"
               size="sm"
               onClick={nextWeek}
-              className="h-8 w-8 p-0 border-slate-200"
+              className="h-8 w-8 p-0 border-slate-200 dark:border-slate-700"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -211,30 +211,30 @@ export default function CalendarWeekView({
           variant="outline"
           size="sm"
           onClick={goToToday}
-          className="text-xs border-slate-200 hover:border-[#89bcbe] hover:bg-[#f0f9f9]"
+          className="text-xs border-slate-200 dark:border-slate-700 hover:border-[#89bcbe] hover:bg-[#f0f9f9] dark:hover:bg-teal-900/20"
         >
           Hoje
         </Button>
       </div>
 
       {/* Grade Semanal */}
-      <Card className="border-slate-200 shadow-sm overflow-hidden">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <div className="min-w-[800px]">
             {/* Cabeçalho - Dias da Semana */}
-            <div className="grid grid-cols-8 border-b border-slate-200 bg-slate-50">
-              <div className="p-3 text-xs font-medium text-[#6c757d] border-r border-slate-200">
+            <div className="grid grid-cols-8 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-surface-0">
+              <div className="p-3 text-xs font-medium text-[#6c757d] dark:text-slate-400 border-r border-slate-200 dark:border-slate-700">
                 Horário
               </div>
               {weekDays.map((day) => (
                 <div
                   key={day.toISOString()}
                   className={cn(
-                    'p-3 text-center border-r border-slate-200 last:border-r-0',
-                    isToday(day) && 'bg-[#f0f9f9]'
+                    'p-3 text-center border-r border-slate-200 dark:border-slate-700 last:border-r-0',
+                    isToday(day) && 'bg-[#f0f9f9] dark:bg-teal-900/20'
                   )}
                 >
-                  <div className="text-xs font-medium text-[#46627f] capitalize">
+                  <div className="text-xs font-medium text-[#46627f] dark:text-slate-400 capitalize">
                     {format(day, 'EEE', { locale: ptBR })}
                   </div>
                   <div
@@ -242,7 +242,7 @@ export default function CalendarWeekView({
                       'text-lg font-semibold mt-1',
                       isToday(day)
                         ? 'w-8 h-8 mx-auto rounded-full bg-gradient-to-br from-[#89bcbe] to-[#6ba9ab] text-white flex items-center justify-center'
-                        : 'text-[#34495e]'
+                        : 'text-[#34495e] dark:text-slate-200'
                     )}
                   >
                     {format(day, 'd')}
@@ -267,11 +267,11 @@ export default function CalendarWeekView({
             >
               <div className="grid grid-cols-8">
                 {/* Coluna de horários */}
-                <div className="border-r border-slate-200">
+                <div className="border-r border-slate-200 dark:border-slate-700">
                   {HOURS.map((hour) => (
                     <div
                       key={hour}
-                      className="h-[60px] p-2 text-xs text-[#6c757d] border-b border-slate-100 text-right"
+                      className="h-[60px] p-2 text-xs text-[#6c757d] dark:text-slate-400 border-b border-slate-100 dark:border-slate-800 text-right"
                     >
                       {String(hour).padStart(2, '0')}:00
                     </div>
@@ -286,8 +286,8 @@ export default function CalendarWeekView({
                   <div
                     key={day.toISOString()}
                     className={cn(
-                      'relative border-r border-slate-200 last:border-r-0',
-                      isToday(day) && 'bg-[#f0f9f9]/20'
+                      'relative border-r border-slate-200 dark:border-slate-700 last:border-r-0',
+                      isToday(day) && 'bg-[#f0f9f9]/20 dark:bg-teal-900/10'
                     )}
                   >
                     {/* Linha da hora atual (só aparece na coluna de hoje) */}
@@ -296,7 +296,7 @@ export default function CalendarWeekView({
                     {HOURS.map((hour) => (
                       <div
                         key={hour}
-                        className="h-[60px] border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors group"
+                        className="h-[60px] border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-surface-2 cursor-pointer transition-colors group"
                         onClick={() => {
                           const newDate = set(day, { hours: hour, minutes: 0 })
                           onCreateEvent(newDate)
@@ -322,9 +322,9 @@ export default function CalendarWeekView({
                             'p-1.5 rounded border cursor-pointer text-[10px]',
                             'hover:shadow-md transition-all overflow-hidden',
                             evento.tipo === 'audiencia' && 'bg-[#1E3A8A]/10 border-[#1E3A8A]/30 text-[#1E3A8A]',
-                            evento.tipo === 'prazo' && 'bg-amber-100 border-amber-200 text-amber-800',
-                            evento.tipo === 'compromisso' && 'bg-blue-100 border-blue-200 text-blue-800',
-                            evento.tipo === 'tarefa' && 'bg-slate-100 border-slate-200 text-slate-800'
+                            evento.tipo === 'prazo' && 'bg-amber-100 dark:bg-amber-500/10 border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-400',
+                            evento.tipo === 'compromisso' && 'bg-blue-100 dark:bg-blue-500/10 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-400',
+                            evento.tipo === 'tarefa' && 'bg-slate-100 dark:bg-surface-2 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'
                           )}
                         >
                           <div className="font-semibold truncate">{evento.titulo}</div>

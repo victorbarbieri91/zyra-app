@@ -83,7 +83,7 @@ export default function SearchDropdown() {
     <div ref={containerRef} className="relative w-full">
       {/* Input */}
       <div className="relative group">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-gradient-to-br from-[#89bcbe]/10 to-[#aacfd0]/10 rounded-md flex items-center justify-center group-focus-within:from-[#89bcbe]/20 group-focus-within:to-[#aacfd0]/20 transition-all">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-gradient-to-br from-[#89bcbe]/10 to-[#aacfd0]/10 dark:from-[#89bcbe]/15 dark:to-[#89bcbe]/10 rounded-md flex items-center justify-center group-focus-within:from-[#89bcbe]/20 group-focus-within:to-[#aacfd0]/20 transition-all">
           {isLoading ? (
             <Loader2 className="w-4 h-4 text-[#89bcbe] animate-spin" />
           ) : (
@@ -98,21 +98,21 @@ export default function SearchDropdown() {
           onFocus={() => setIsFocused(true)}
           onKeyDown={handleKeyDown}
           placeholder="Buscar processos ou consultivo..."
-          className="w-full pl-12 pr-4 py-2.5 bg-white border-2 border-[#89bcbe]/30 rounded-lg text-sm text-[#34495e] placeholder:text-slate-400 focus:outline-none focus:border-[#89bcbe] focus:shadow-sm focus:shadow-[#89bcbe]/10 transition-all"
+          className="w-full pl-12 pr-4 py-2.5 bg-white dark:bg-surface-2 border-2 border-[#89bcbe]/30 dark:border-slate-600 rounded-lg text-sm text-[#34495e] dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#89bcbe] focus:shadow-sm focus:shadow-[#89bcbe]/10 transition-all"
         />
       </div>
 
       {/* Dropdown */}
       {showDropdown && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden z-50 max-h-80 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-surface-2 rounded-lg shadow-xl dark:shadow-black/30 border border-slate-200 dark:border-slate-700 overflow-hidden z-50 max-h-80 overflow-y-auto">
           {isLoading && resultados.length === 0 && (
-            <div className="px-4 py-3 text-sm text-slate-500 text-center">
+            <div className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400 text-center">
               Buscando...
             </div>
           )}
 
           {!isLoading && query.length >= 2 && resultados.length === 0 && (
-            <div className="px-4 py-3 text-sm text-slate-500 text-center">
+            <div className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400 text-center">
               Nenhum resultado encontrado
             </div>
           )}
@@ -126,7 +126,7 @@ export default function SearchDropdown() {
                 key={`${resultado.tipo}-${resultado.id}`}
                 onClick={() => handleSelect(resultado)}
                 className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
-                  idx === selectedIndex ? 'bg-[#f0f9f9]' : 'hover:bg-slate-50'
+                  idx === selectedIndex ? 'bg-[#f0f9f9] dark:bg-teal-900/20' : 'hover:bg-slate-50 dark:hover:bg-surface-3'
                 }`}
               >
                 <div
@@ -137,7 +137,7 @@ export default function SearchDropdown() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-[#34495e] truncate">
+                    <span className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">
                       {resultado.titulo}
                     </span>
                     <span
@@ -148,7 +148,7 @@ export default function SearchDropdown() {
                     </span>
                   </div>
                   {resultado.subtitulo && (
-                    <p className="text-xs text-slate-500 truncate">{resultado.subtitulo}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{resultado.subtitulo}</p>
                   )}
                 </div>
               </button>

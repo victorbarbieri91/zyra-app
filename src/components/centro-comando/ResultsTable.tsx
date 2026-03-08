@@ -58,20 +58,20 @@ const COLUMN_FORMATTERS: Record<string, (value: any) => string | React.ReactNode
   status: (v) => {
     if (!v) return '-'
     const colors: Record<string, string> = {
-      ativo: 'bg-green-100 text-green-700',
-      pendente: 'bg-amber-100 text-amber-700',
-      concluida: 'bg-green-100 text-green-700',
-      concluido: 'bg-green-100 text-green-700',
-      cancelado: 'bg-red-100 text-red-700',
-      cancelada: 'bg-red-100 text-red-700',
-      em_andamento: 'bg-blue-100 text-blue-700',
-      arquivado: 'bg-slate-100 text-slate-700',
-      suspenso: 'bg-orange-100 text-orange-700',
-      pago: 'bg-green-100 text-green-700',
-      atrasado: 'bg-red-100 text-red-700',
+      ativo: 'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400',
+      pendente: 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400',
+      concluida: 'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400',
+      concluido: 'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400',
+      cancelado: 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400',
+      cancelada: 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400',
+      em_andamento: 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400',
+      arquivado: 'bg-slate-100 dark:bg-slate-500/15 text-slate-700 dark:text-slate-300',
+      suspenso: 'bg-orange-100 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400',
+      pago: 'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400',
+      atrasado: 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400',
     }
     return (
-      <Badge className={colors[v] || 'bg-slate-100 text-slate-700'}>
+      <Badge className={colors[v] || 'bg-slate-100 dark:bg-slate-500/15 text-slate-700 dark:text-slate-300'}>
         {v.replace(/_/g, ' ')}
       </Badge>
     )
@@ -81,13 +81,13 @@ const COLUMN_FORMATTERS: Record<string, (value: any) => string | React.ReactNode
   prioridade: (v) => {
     if (!v) return '-'
     const colors: Record<string, string> = {
-      baixa: 'bg-slate-100 text-slate-700',
-      media: 'bg-blue-100 text-blue-700',
-      alta: 'bg-orange-100 text-orange-700',
-      urgente: 'bg-red-100 text-red-700',
+      baixa: 'bg-slate-100 dark:bg-slate-500/15 text-slate-700 dark:text-slate-300',
+      media: 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400',
+      alta: 'bg-orange-100 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400',
+      urgente: 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400',
     }
     return (
-      <Badge className={colors[v] || 'bg-slate-100 text-slate-700'}>
+      <Badge className={colors[v] || 'bg-slate-100 dark:bg-slate-500/15 text-slate-700 dark:text-slate-300'}>
         {v}
       </Badge>
     )
@@ -97,14 +97,14 @@ const COLUMN_FORMATTERS: Record<string, (value: any) => string | React.ReactNode
   area: (v) => {
     if (!v) return '-'
     const colors: Record<string, string> = {
-      civel: 'bg-blue-100 text-blue-700',
-      trabalhista: 'bg-amber-100 text-amber-700',
-      tributaria: 'bg-green-100 text-green-700',
-      criminal: 'bg-red-100 text-red-700',
-      familia: 'bg-pink-100 text-pink-700',
+      civel: 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400',
+      trabalhista: 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400',
+      tributaria: 'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400',
+      criminal: 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400',
+      familia: 'bg-pink-100 dark:bg-pink-500/10 text-pink-700 dark:text-pink-400',
     }
     return (
-      <Badge className={colors[v] || 'bg-slate-100 text-slate-700'}>
+      <Badge className={colors[v] || 'bg-slate-100 dark:bg-slate-500/15 text-slate-700 dark:text-slate-300'}>
         {v}
       </Badge>
     )
@@ -180,12 +180,12 @@ export function ResultsTable({ data, maxRows = 10 }: ResultsTableProps) {
 
     // Valores nulos
     if (value === null || value === undefined) {
-      return <span className="text-slate-400">-</span>
+      return <span className="text-slate-400 dark:text-slate-500">-</span>
     }
 
     // Detectar UUIDs e mostrar truncado
     if (typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/.test(value)) {
-      return <span className="text-slate-400 text-[10px]">...{value.slice(-6)}</span>
+      return <span className="text-slate-400 dark:text-slate-500 text-[10px]">...{value.slice(-6)}</span>
     }
 
     // Arrays
@@ -213,7 +213,7 @@ export function ResultsTable({ data, maxRows = 10 }: ResultsTableProps) {
 
   if (!data.length || !columns.length) {
     return (
-      <div className="p-4 text-center text-sm text-slate-500">
+      <div className="p-4 text-center text-sm text-slate-500 dark:text-slate-400">
         Nenhum dado para exibir
       </div>
     )
@@ -223,9 +223,9 @@ export function ResultsTable({ data, maxRows = 10 }: ResultsTableProps) {
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow className="bg-slate-50">
+          <TableRow className="bg-slate-50 dark:bg-surface-0">
             {columns.map(col => (
-              <TableHead key={col} className="text-xs font-medium text-slate-600 whitespace-nowrap">
+              <TableHead key={col} className="text-xs font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap">
                 {COLUMN_LABELS[col] || col.replace(/_/g, ' ')}
               </TableHead>
             ))}
@@ -233,9 +233,9 @@ export function ResultsTable({ data, maxRows = 10 }: ResultsTableProps) {
         </TableHeader>
         <TableBody>
           {displayData.map((row, rowIndex) => (
-            <TableRow key={rowIndex} className="hover:bg-slate-50">
+            <TableRow key={rowIndex} className="hover:bg-slate-50 dark:hover:bg-surface-2">
               {columns.map(col => (
-                <TableCell key={col} className="text-xs text-slate-700 whitespace-nowrap">
+                <TableCell key={col} className="text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">
                   {formatCell(col, row[col])}
                 </TableCell>
               ))}
@@ -245,7 +245,7 @@ export function ResultsTable({ data, maxRows = 10 }: ResultsTableProps) {
       </Table>
 
       {hasMore && (
-        <div className="p-2 text-center text-xs text-slate-500 bg-slate-50 border-t">
+        <div className="p-2 text-center text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-surface-0 border-t dark:border-slate-700">
           Mostrando {maxRows} de {data.length} registros
         </div>
       )}

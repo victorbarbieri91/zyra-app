@@ -43,7 +43,7 @@ const tipoStyles = {
   },
   compromisso: {
     bg: 'bg-gradient-to-r from-[#89bcbe] to-[#aacfd0]',
-    text: 'text-[#34495e]',
+    text: 'text-[#34495e] dark:text-slate-200',
     border: 'border-l-4 border-[#89bcbe]',
   },
   // PRAZO FATAL HOJE - laranja vibrante (qualquer tipo)

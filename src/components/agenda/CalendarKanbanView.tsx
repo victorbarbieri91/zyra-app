@@ -693,7 +693,7 @@ export default function CalendarKanbanView({
       {/* Header de Navegação */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold text-[#34495e]">
+          <h2 className="text-xl font-semibold text-[#34495e] dark:text-slate-200">
             {isRangeActive
               ? `${format(dateRange!.from!, "d MMM", { locale: ptBR }).replace('.', '')} — ${format(dateRange!.to!, "d MMM", { locale: ptBR }).replace('.', '')}`
               : format(selectedDate, "d 'de' MMMM", { locale: ptBR })}
@@ -703,7 +703,7 @@ export default function CalendarKanbanView({
               variant="outline"
               size="sm"
               onClick={previousDay}
-              className="h-7 w-7 p-0 border-slate-200"
+              className="h-7 w-7 p-0 border-slate-200 dark:border-slate-700"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </Button>
@@ -711,7 +711,7 @@ export default function CalendarKanbanView({
               variant="outline"
               size="sm"
               onClick={nextDay}
-              className="h-7 w-7 p-0 border-slate-200"
+              className="h-7 w-7 p-0 border-slate-200 dark:border-slate-700"
             >
               <ChevronRight className="h-3.5 w-3.5" />
             </Button>
@@ -722,8 +722,8 @@ export default function CalendarKanbanView({
                 variant="outline"
                 size="sm"
                 className={cn(
-                  'h-7 w-7 p-0 border-slate-200',
-                  isRangeActive && 'border-[#89bcbe] bg-[#f0f9f9] text-[#89bcbe]'
+                  'h-7 w-7 p-0 border-slate-200 dark:border-slate-700',
+                  isRangeActive && 'border-[#89bcbe] bg-[#f0f9f9] dark:bg-teal-900/20 text-[#89bcbe]'
                 )}
                 title="Selecionar período"
               >
@@ -744,7 +744,7 @@ export default function CalendarKanbanView({
             variant="outline"
             size="sm"
             onClick={goToToday}
-            className="h-7 text-xs border-slate-200 hover:border-[#89bcbe] hover:bg-[#f0f9f9] px-2.5"
+            className="h-7 text-xs border-slate-200 dark:border-slate-700 hover:border-[#89bcbe] hover:bg-[#f0f9f9] dark:hover:bg-teal-900/20 px-2.5"
           >
             Hoje
           </Button>
@@ -761,7 +761,7 @@ export default function CalendarKanbanView({
                   'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
                   activeFilter === key
                     ? 'bg-[#34495e] text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+                    : 'bg-slate-100 dark:bg-surface-2 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-surface-3 hover:text-slate-700 dark:hover:text-slate-300'
                 )}
               >
                 {label}
@@ -770,7 +770,7 @@ export default function CalendarKanbanView({
           </div>
 
           {totalItems > 0 && (
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-slate-400 dark:text-slate-500">
               {totalItems} {totalItems === 1 ? 'item' : 'itens'}
             </span>
           )}
@@ -791,7 +791,7 @@ export default function CalendarKanbanView({
             tarefas={filterTarefas(pendente)}
             agendaItems={filterAgendaItems(agendaPendente)}
             corBarra="bg-[#34495e]"
-            corIconeBg="bg-slate-100"
+            corIconeBg="bg-slate-100 dark:bg-surface-2"
             onClickTarefa={onClickTarefa}
             onClickAgendaItem={handleClickAgendaItem}
             onCreateTarefa={() => onCreateTarefa('pendente')}
@@ -804,7 +804,7 @@ export default function CalendarKanbanView({
             tarefas={filterTarefas(em_andamento)}
             agendaItems={filterAgendaItems(agendaEmAndamento)}
             corBarra="bg-[#89bcbe]"
-            corIconeBg="bg-[#f0f9f9]"
+            corIconeBg="bg-[#f0f9f9] dark:bg-teal-900/20"
             onClickTarefa={onClickTarefa}
             onClickAgendaItem={handleClickAgendaItem}
           />
@@ -816,7 +816,7 @@ export default function CalendarKanbanView({
             tarefas={filterTarefas(em_pausa)}
             agendaItems={filterAgendaItems(agendaEmPausa)}
             corBarra="bg-amber-400"
-            corIconeBg="bg-amber-50"
+            corIconeBg="bg-amber-50 dark:bg-amber-500/10"
             onClickTarefa={onClickTarefa}
             onClickAgendaItem={handleClickAgendaItem}
           />
@@ -828,7 +828,7 @@ export default function CalendarKanbanView({
             tarefas={filterTarefas(concluida)}
             agendaItems={filterAgendaItems(agendaConcluida)}
             corBarra="bg-emerald-500"
-            corIconeBg="bg-emerald-50"
+            corIconeBg="bg-emerald-50 dark:bg-emerald-500/10"
             onClickTarefa={onClickTarefa}
             onClickAgendaItem={handleClickAgendaItem}
           />

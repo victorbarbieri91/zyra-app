@@ -237,7 +237,7 @@ export function BulkEditModal({
       case 'responsavel':
         if (loadingProfiles) {
           return (
-            <div className="flex items-center gap-2 text-sm text-slate-500">
+            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
               <Loader2 className="w-4 h-4 animate-spin" />
               Carregando membros...
             </div>
@@ -327,9 +327,9 @@ export function BulkEditModal({
 
         <div className="py-4 space-y-4">
           {/* Contagem de processos */}
-          <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg">
-            <AlertTriangle className="w-4 h-4 text-amber-600" />
-            <span className="text-sm text-slate-700">
+          <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-surface-0 rounded-lg">
+            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <span className="text-sm text-slate-700 dark:text-slate-300">
               Esta acao afetara{' '}
               <span className="font-semibold">{selectedIds.length}</span>{' '}
               {selectedIds.length === 1 ? 'processo' : 'processos'}
@@ -347,8 +347,8 @@ export function BulkEditModal({
             <div
               className={`flex items-center gap-2 p-3 rounded-lg ${
                 result.failed > 0
-                  ? 'bg-red-50 text-red-700'
-                  : 'bg-emerald-50 text-emerald-700'
+                  ? 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400'
+                  : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
               }`}
             >
               {result.failed > 0 ? (

@@ -49,18 +49,18 @@ export default function ReceitasDespesasChart({ data }: ReceitasDespesasChartPro
               const receitas = payload.find(p => p.dataKey === 'receitas')?.value || 0
               const despesas = payload.find(p => p.dataKey === 'despesas')?.value || 0
               return (
-                <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3">
-                  <p className="text-xs font-semibold text-[#34495e] mb-2">{label}</p>
+                <div className="bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-3">
+                  <p className="text-xs font-semibold text-[#34495e] dark:text-slate-200 mb-2">{label}</p>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full bg-[#89bcbe]" />
-                      <span className="text-xs text-slate-600">Receitas:</span>
-                      <span className="text-xs font-semibold text-[#34495e]">{formatCurrency(Number(receitas))}</span>
+                      <span className="text-xs text-slate-600 dark:text-slate-400">Receitas:</span>
+                      <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200">{formatCurrency(Number(receitas))}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full bg-[#46627f]" />
-                      <span className="text-xs text-slate-600">Despesas:</span>
-                      <span className="text-xs font-semibold text-[#34495e]">{formatCurrency(Number(despesas))}</span>
+                      <span className="text-xs text-slate-600 dark:text-slate-400">Despesas:</span>
+                      <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200">{formatCurrency(Number(despesas))}</span>
                     </div>
                   </div>
                 </div>

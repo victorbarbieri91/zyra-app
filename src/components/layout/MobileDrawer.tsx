@@ -48,13 +48,13 @@ export default function MobileDrawer({ open, onOpenChange }: MobileDrawerProps) 
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-40 bg-black/40" />
         <Drawer.Content
-          className="fixed left-0 top-0 bottom-0 z-50 w-[280px] bg-white flex flex-col outline-none"
+          className="fixed left-0 top-0 bottom-0 z-50 w-[280px] bg-white dark:bg-surface-1 flex flex-col outline-none"
           aria-label="Menu de navegação"
         >
           <Drawer.Title className="sr-only">Menu de navegação</Drawer.Title>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
             <img
               src="/zyra.logo.png"
               alt="Zyra Legal"
@@ -62,7 +62,7 @@ export default function MobileDrawer({ open, onOpenChange }: MobileDrawerProps) 
             />
             <button
               onClick={() => onOpenChange(false)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-surface-2"
             >
               <X className="w-5 h-5" />
             </button>
@@ -72,13 +72,13 @@ export default function MobileDrawer({ open, onOpenChange }: MobileDrawerProps) 
           {escritorioAtivo && (
             <button
               onClick={() => handleNavigate('/dashboard/escritorio')}
-              className="mx-3 mt-3 flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-[#f0f9f9] to-[#e8f5f5] rounded-lg border border-[#89bcbe]/20"
+              className="mx-3 mt-3 flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-900/20 dark:to-teal-900/10 rounded-lg border border-[#89bcbe]/20 dark:border-teal-600/20"
             >
               <div className="w-7 h-7 bg-gradient-to-br from-[#89bcbe] to-[#aacfd0] rounded-md flex items-center justify-center">
                 <Building2 className="w-3.5 h-3.5 text-white" />
               </div>
               <div className="text-left flex-1 min-w-0">
-                <p className="text-xs font-semibold text-[#34495e] truncate">{escritorioAtivo.nome}</p>
+                <p className="text-xs font-semibold text-[#34495e] dark:text-slate-200 truncate">{escritorioAtivo.nome}</p>
               </div>
             </button>
           )}
@@ -91,7 +91,7 @@ export default function MobileDrawer({ open, onOpenChange }: MobileDrawerProps) 
 
               return (
                 <div key={group} className="mb-4">
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-3 mb-1">
+                  <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-1">
                     {groupLabels[group]}
                   </p>
                   {items.map((item) => {
@@ -106,8 +106,8 @@ export default function MobileDrawer({ open, onOpenChange }: MobileDrawerProps) 
                         className={cn(
                           'flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all mb-0.5',
                           isActive
-                            ? 'bg-gradient-to-r from-[#34495e] to-[#46627f] text-white shadow-md'
-                            : 'text-slate-600 hover:bg-slate-50 active:bg-slate-100'
+                            ? 'bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe]/20 dark:to-[#89bcbe]/10 text-white dark:text-[#89bcbe] shadow-md dark:shadow-none'
+                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2 active:bg-slate-100 dark:active:bg-surface-3'
                         )}
                       >
                         <Icon className="w-5 h-5 flex-shrink-0" />
@@ -121,17 +121,17 @@ export default function MobileDrawer({ open, onOpenChange }: MobileDrawerProps) 
           </nav>
 
           {/* Footer */}
-          <div className="px-3 py-2 border-t border-slate-200 space-y-1">
+          <div className="px-3 py-2 border-t border-slate-200 dark:border-slate-700 space-y-1">
             <button
               onClick={() => handleNavigate('/dashboard/perfil')}
-              className="flex items-center gap-3 w-full px-3 py-2.5 text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
+              className="flex items-center gap-3 w-full px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2 rounded-xl transition-all"
             >
               <User className="w-5 h-5" />
               <span className="text-sm font-semibold">Meu Perfil</span>
             </button>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-3 w-full px-3 py-2.5 text-red-600 hover:bg-red-50 rounded-xl transition-all"
+              className="flex items-center gap-3 w-full px-3 py-2.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all"
             >
               <LogOut className="w-5 h-5" />
               <span className="text-sm font-semibold">Sair</span>

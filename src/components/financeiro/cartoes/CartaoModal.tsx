@@ -187,7 +187,7 @@ export default function CartaoModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[#34495e]">
+          <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
             <CreditCard className="w-5 h-5" />
             {isEditing ? 'Editar Cartão' : 'Novo Cartão de Crédito'}
           </DialogTitle>
@@ -296,7 +296,7 @@ export default function CartaoModal({
                 value={formData.dia_vencimento}
                 onChange={(e) => updateField('dia_vencimento', parseInt(e.target.value) || 1)}
               />
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Dia do mês em que a fatura vence
               </p>
             </div>
@@ -310,7 +310,7 @@ export default function CartaoModal({
                 value={formData.dias_antes_fechamento}
                 onChange={(e) => updateField('dias_antes_fechamento', parseInt(e.target.value) || 7)}
               />
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Quantos dias antes do vencimento a fatura fecha
               </p>
             </div>
@@ -369,7 +369,7 @@ export default function CartaoModal({
         </div>
 
         {/* Botões */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancelar
           </Button>

@@ -125,26 +125,26 @@ export default function JurisprudenciasPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-slate-600">Carregando...</div>
+        <div className="text-slate-600 dark:text-slate-400">Carregando...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 dark:from-surface-0 dark:via-surface-0 dark:to-surface-0 p-6">
       <div className="max-w-[1800px] mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#34495e]">
+          <h1 className="text-2xl font-bold text-[#34495e] dark:text-slate-200">
             Banco de Jurisprudências
           </h1>
-          <p className="text-sm text-slate-600 mt-1">
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             Gerencie jurisprudências e acórdãos relevantes
           </p>
         </div>
         <Link href="/dashboard/pecas-teses/jurisprudencias/nova">
-          <Button className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white hover:opacity-90">
+          <Button className="bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] text-white hover:opacity-90">
             <Plus className="w-4 h-4 mr-2" />
             Nova Jurisprudência
           </Button>
@@ -152,7 +152,7 @@ export default function JurisprudenciasPage() {
       </div>
 
       {/* Filters */}
-      <Card className="border-slate-200">
+      <Card className="border-slate-200 dark:border-slate-700">
         <CardContent className="pt-6 pb-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
@@ -161,11 +161,11 @@ export default function JurisprudenciasPage() {
                 placeholder="Buscar por ementa, número, tema..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 border-slate-200"
+                className="pl-10 border-slate-200 dark:border-slate-700"
               />
             </div>
             <Select value={selectedTribunal} onValueChange={setSelectedTribunal}>
-              <SelectTrigger className="border-slate-200">
+              <SelectTrigger className="border-slate-200 dark:border-slate-700">
                 <SelectValue placeholder="Tribunal" />
               </SelectTrigger>
               <SelectContent>
@@ -179,7 +179,7 @@ export default function JurisprudenciasPage() {
               </SelectContent>
             </Select>
             <Select value={selectedTipo} onValueChange={setSelectedTipo}>
-              <SelectTrigger className="border-slate-200">
+              <SelectTrigger className="border-slate-200 dark:border-slate-700">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
@@ -198,11 +198,11 @@ export default function JurisprudenciasPage() {
 
       {/* Jurisprudências List */}
       {filteredJuris.length === 0 ? (
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700">
           <CardContent className="py-12">
             <div className="text-center">
-              <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 mb-4">
+              <BookOpen className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+              <p className="text-slate-500 dark:text-slate-400 mb-4">
                 {jurisprudencias.length === 0
                   ? 'Nenhuma jurisprudência cadastrada ainda'
                   : 'Nenhuma jurisprudência encontrada com os filtros aplicados'}
@@ -225,14 +225,14 @@ export default function JurisprudenciasPage() {
               key={juris.id}
               href={`/dashboard/pecas-teses/jurisprudencias/${juris.id}`}
             >
-              <Card className="border-slate-200 hover:shadow-md transition-shadow">
+              <Card className="border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
                 <CardContent className="py-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <Badge
                           variant="outline"
-                          className="text-[10px] px-2 py-0.5 bg-[#34495e]/10 text-[#34495e] font-medium"
+                          className="text-[10px] px-2 py-0.5 bg-[#34495e]/10 dark:bg-[#89bcbe]/10 text-[#34495e] dark:text-slate-200 font-medium"
                         >
                           {juris.tribunal}
                         </Badge>
@@ -243,31 +243,31 @@ export default function JurisprudenciasPage() {
                           {getTipoLabel(juris.tipo)}
                         </Badge>
                         {juris.numero_acordao && (
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
                             {juris.numero_acordao}
                           </span>
                         )}
                         {juris.data_julgamento && (
-                          <span className="text-xs text-slate-400">
+                          <span className="text-xs text-slate-400 dark:text-slate-500">
                             • {formatDate(juris.data_julgamento)}
                           </span>
                         )}
                       </div>
 
                       {juris.ementa && (
-                        <p className="text-sm text-slate-700 line-clamp-3 mb-2">
+                        <p className="text-sm text-slate-700 dark:text-slate-300 line-clamp-3 mb-2">
                           {juris.ementa}
                         </p>
                       )}
 
                       <div className="flex items-center gap-2">
                         {juris.orgao_julgador && (
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
                             {juris.orgao_julgador}
                           </span>
                         )}
                         {juris.relator && (
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
                             • Rel. {juris.relator}
                           </span>
                         )}

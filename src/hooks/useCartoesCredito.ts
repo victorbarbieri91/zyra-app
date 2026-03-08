@@ -958,6 +958,66 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
     }
   }, [supabase])
 
+  // Criar fatura do cartão para um mês específico (usada durante importação)
+  const criarFaturaCartao = useCallback(async (
+    cartaoId: string,
+    mesReferencia: string, // formato: YYYY-MM-01
+    dataFechamento?: string | null,
+    dataVencimento?: string | null,
+    valorTotal?: number | null
+  ): Promise<FaturaCartao | null> => {
+    try {
+      // Buscar dados do cartão para calcular datas se não fornecidas
+      const { data: cartao } = await supabase
+        .from('cartoes_credito')
+        .select('*')
+        .eq('id', cartaoId)
+        .single()
+
+      if (!cartao) throw new Error('Cartão não encontrado')
+
+      const mesDate = new Date(mesReferencia + 'T12:00:00')
+      const ano = mesDate.getFullYear()
+      const mes = mesDate.getMonth()
+
+      // Calcular data de fechamento se não fornecida
+      let fechamento = dataFechamento
+      if (!fechamento) {
+        const diaFechamento = cartao.dia_vencimento - (cartao.dias_antes_fechamento || 7)
+        const diaFechAjustado = diaFechamento > 0 ? diaFechamento : 1
+        fechamento = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(diaFechAjustado).padStart(2, '0')}`
+      }
+
+      // Calcular data de vencimento se não fornecida
+      let vencimento = dataVencimento
+      if (!vencimento) {
+        const ultimoDia = new Date(ano, mes + 1, 0).getDate()
+        const diaVenc = Math.min(cartao.dia_vencimento, ultimoDia)
+        vencimento = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(diaVenc).padStart(2, '0')}`
+      }
+
+      const { data: novaFatura, error: insertError } = await supabase
+        .from('cartoes_credito_faturas')
+        .insert({
+          escritorio_id: cartao.escritorio_id,
+          cartao_id: cartaoId,
+          mes_referencia: mesReferencia,
+          data_fechamento: fechamento,
+          data_vencimento: vencimento,
+          valor_total: valorTotal || 0,
+          status: 'aberta',
+        })
+        .select()
+        .single()
+
+      if (insertError) throw insertError
+      return novaFatura
+    } catch (err) {
+      console.error('Erro ao criar fatura do cartão:', err)
+      return null
+    }
+  }, [supabase])
+
   // Verificar duplicatas em lote (para importação)
   const verificarDuplicatasEmLote = useCallback(async (
     cartaoId: string,
@@ -1172,6 +1232,7 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
     verificarDuplicatasEmLote,
     verificarFaturaExistente,
     vincularLancamentosAFatura,
+    criarFaturaCartao,
     // Ações em massa
     deleteLancamentosEmMassa,
     atualizarCategoriaEmMassa,

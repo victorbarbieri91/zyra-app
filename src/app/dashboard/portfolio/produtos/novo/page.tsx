@@ -74,19 +74,19 @@ const AREA_STYLES: Record<AreaJuridica, { bg: string; text: string; border: stri
     gradient: 'from-[#4a4168] to-[#6a6188]',
   },
   outro: {
-    bg: 'bg-slate-100',
-    text: 'text-slate-600',
-    border: 'border-slate-300',
+    bg: 'bg-slate-100 dark:bg-slate-500/10',
+    text: 'text-slate-600 dark:text-slate-400',
+    border: 'border-slate-300 dark:border-slate-600',
     gradient: 'from-slate-500 to-slate-600',
   },
 }
 
 const COMPLEXIDADE_COLORS: Record<Complexidade, string> = {
-  simples: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  baixa: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  media: 'bg-amber-50 text-amber-700 border-amber-200',
-  alta: 'bg-rose-50 text-rose-700 border-rose-200',
-  complexa: 'bg-rose-50 text-rose-700 border-rose-200',
+  simples: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30',
+  baixa: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30',
+  media: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30',
+  alta: 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/30',
+  complexa: 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/30',
 }
 
 type WizardStep = 'info' | 'fases' | 'revisao'
@@ -289,12 +289,12 @@ export default function NovoProdutoPage() {
   const totalChecklistItems = fases.reduce((acc, f) => acc + f.checklist.filter(c => c.trim()).length, 0)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-surface-0 dark:via-surface-0 dark:to-surface-0">
       <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
         {/* Header */}
         <div className="flex items-center gap-4">
           <Link href="/dashboard/portfolio">
-            <Button variant="ghost" size="sm" className="text-slate-500 hover:text-[#34495e]">
+            <Button variant="ghost" size="sm" className="text-slate-500 dark:text-slate-400 hover:text-[#34495e]">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar ao Catálogo
             </Button>
@@ -304,11 +304,11 @@ export default function NovoProdutoPage() {
         {/* Progress Steps */}
         <div className="relative">
           {/* Progress Line Background */}
-          <div className="absolute top-6 left-0 right-0 h-0.5 bg-slate-200 mx-auto" style={{ width: 'calc(100% - 200px)', left: '100px' }} />
+          <div className="absolute top-6 left-0 right-0 h-0.5 bg-slate-200 dark:bg-slate-700 mx-auto" style={{ width: 'calc(100% - 200px)', left: '100px' }} />
 
           {/* Progress Line Active */}
           <div
-            className="absolute top-6 h-0.5 bg-gradient-to-r from-[#34495e] to-[#46627f] transition-all duration-500"
+            className="absolute top-6 h-0.5 bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] transition-all duration-500"
             style={{
               width: `calc((100% - 200px) * ${currentStepIndex / (steps.length - 1)})`,
               left: '100px'
@@ -331,10 +331,10 @@ export default function NovoProdutoPage() {
                   <div
                     className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
                       isCompleted
-                        ? 'bg-gradient-to-br from-emerald-400 to-emerald-500 text-white shadow-lg shadow-emerald-200'
+                        ? 'bg-gradient-to-br from-emerald-400 to-emerald-500 text-white shadow-lg shadow-emerald-200 dark:shadow-emerald-900/30'
                         : isActive
-                        ? 'bg-gradient-to-br from-[#34495e] to-[#46627f] text-white shadow-lg shadow-slate-300'
-                        : 'bg-white border-2 border-slate-200 text-slate-400'
+                        ? 'bg-gradient-to-br from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] text-white shadow-lg shadow-slate-300 dark:shadow-slate-900/30'
+                        : 'bg-white dark:bg-surface-1 border-2 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500'
                     }`}
                   >
                     {isCompleted ? (
@@ -347,12 +347,12 @@ export default function NovoProdutoPage() {
                   {/* Step Label */}
                   <div className="mt-3 text-center">
                     <p className={`text-sm font-semibold transition-colors ${
-                      isActive ? 'text-[#34495e]' : isCompleted ? 'text-emerald-600' : 'text-slate-400'
+                      isActive ? 'text-[#34495e] dark:text-slate-200' : isCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'
                     }`}>
                       {step.label}
                     </p>
                     <p className={`text-xs mt-0.5 transition-colors ${
-                      isActive ? 'text-slate-500' : 'text-slate-400'
+                      isActive ? 'text-slate-500 dark:text-slate-400' : 'text-slate-400 dark:text-slate-500'
                     }`}>
                       {step.description}
                     </p>
@@ -364,7 +364,7 @@ export default function NovoProdutoPage() {
         </div>
 
         {/* Main Content Card */}
-        <Card className="border-0 shadow-xl shadow-slate-200/50 overflow-hidden">
+        <Card className="border-0 shadow-xl shadow-slate-200/50 dark:shadow-slate-900/30 dark:bg-surface-1 overflow-hidden">
           {/* Step Header Gradient */}
           <div className={`h-1.5 bg-gradient-to-r ${areaStyle.gradient}`} />
 
@@ -373,19 +373,19 @@ export default function NovoProdutoPage() {
             {currentStep === 'info' && (
               <div className="space-y-8 animate-in fade-in duration-300">
                 {/* Section Header */}
-                <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center">
+                <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-700">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] flex items-center justify-center">
                     <FileText className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-[#34495e]">Informações Básicas</h2>
-                    <p className="text-sm text-slate-500">Defina os dados principais do produto</p>
+                    <h2 className="text-lg font-semibold text-[#34495e] dark:text-slate-200">Informações Básicas</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Defina os dados principais do produto</p>
                   </div>
                 </div>
 
                 {/* Nome do Produto - Destaque */}
                 <div className="relative">
-                  <Label htmlFor="nome" className="text-sm font-medium text-slate-700">
+                  <Label htmlFor="nome" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                     Nome do Produto <span className="text-rose-500">*</span>
                   </Label>
                   <Input
@@ -393,13 +393,13 @@ export default function NovoProdutoPage() {
                     value={nome}
                     onChange={(e) => setNome(e.target.value)}
                     placeholder="Ex: Planejamento Tributário Completo"
-                    className="mt-2 h-12 text-lg border-slate-200 focus:border-[#34495e] focus:ring-[#34495e]/20 transition-all"
+                    className="mt-2 h-12 text-lg border-slate-200 dark:border-slate-700 focus:border-[#34495e] focus:ring-[#34495e]/20 dark:bg-surface-2 dark:text-slate-200 transition-all"
                   />
                 </div>
 
                 {/* Área Jurídica - Cards Selecionáveis */}
                 <div>
-                  <Label className="text-sm font-medium text-slate-700">
+                  <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                     Área Jurídica <span className="text-rose-500">*</span>
                   </Label>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3">
@@ -416,7 +416,7 @@ export default function NovoProdutoPage() {
                           className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${
                             isSelected
                               ? `${style.bg} ${style.border} ${style.text} shadow-md`
-                              : 'border-slate-200 hover:border-slate-300 text-slate-500 hover:text-slate-600'
+                              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                           }`}
                         >
                           {isSelected && (
@@ -438,7 +438,7 @@ export default function NovoProdutoPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Complexidade */}
                   <div>
-                    <Label className="text-sm font-medium text-slate-700">Complexidade</Label>
+                    <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Complexidade</Label>
                     <div className="flex gap-2 mt-2">
                       {(Object.keys(COMPLEXIDADE_LABELS) as Complexidade[]).map((c) => (
                         <button
@@ -448,7 +448,7 @@ export default function NovoProdutoPage() {
                           className={`flex-1 py-2.5 px-3 rounded-lg border-2 transition-all text-sm font-medium ${
                             complexidade === c
                               ? COMPLEXIDADE_COLORS[c]
-                              : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                              : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                           }`}
                         >
                           {COMPLEXIDADE_LABELS[c]}
@@ -459,27 +459,27 @@ export default function NovoProdutoPage() {
 
                   {/* Categoria */}
                   <div>
-                    <Label htmlFor="categoria" className="text-sm font-medium text-slate-700">Categoria</Label>
+                    <Label htmlFor="categoria" className="text-sm font-medium text-slate-700 dark:text-slate-300">Categoria</Label>
                     <Input
                       id="categoria"
                       value={categoria}
                       onChange={(e) => setCategoria(e.target.value)}
                       placeholder="Ex: Compliance"
-                      className="mt-2 border-slate-200 focus:border-[#34495e] focus:ring-[#34495e]/20"
+                      className="mt-2 border-slate-200 dark:border-slate-700 focus:border-[#34495e] focus:ring-[#34495e]/20 dark:bg-surface-2 dark:text-slate-200"
                     />
                   </div>
 
                   {/* Duração */}
                   <div>
-                    <Label htmlFor="duracao" className="text-sm font-medium text-slate-700">Duração (dias)</Label>
+                    <Label htmlFor="duracao" className="text-sm font-medium text-slate-700 dark:text-slate-300">Duração (dias)</Label>
                     <div className="relative mt-2">
-                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                       <Input
                         id="duracao"
                         type="number"
                         value={duracaoEstimada}
                         onChange={(e) => setDuracaoEstimada(parseInt(e.target.value) || 0)}
-                        className="pl-10 border-slate-200 focus:border-[#34495e] focus:ring-[#34495e]/20"
+                        className="pl-10 border-slate-200 dark:border-slate-700 focus:border-[#34495e] focus:ring-[#34495e]/20 dark:bg-surface-2 dark:text-slate-200"
                       />
                     </div>
                   </div>
@@ -488,32 +488,32 @@ export default function NovoProdutoPage() {
                 {/* Descrições */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label htmlFor="descricao" className="text-sm font-medium text-slate-700">
+                    <Label htmlFor="descricao" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                       Descrição Interna
                     </Label>
-                    <p className="text-xs text-slate-400 mt-0.5 mb-2">Visível apenas para a equipe</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 mb-2">Visível apenas para a equipe</p>
                     <Textarea
                       id="descricao"
                       value={descricao}
                       onChange={(e) => setDescricao(e.target.value)}
                       placeholder="Descrição técnica do produto..."
                       rows={4}
-                      className="border-slate-200 focus:border-[#34495e] focus:ring-[#34495e]/20 resize-none"
+                      className="border-slate-200 dark:border-slate-700 focus:border-[#34495e] focus:ring-[#34495e]/20 dark:bg-surface-2 dark:text-slate-200 resize-none"
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="descricaoComercial" className="text-sm font-medium text-slate-700">
+                    <Label htmlFor="descricaoComercial" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                       Descrição Comercial
                     </Label>
-                    <p className="text-xs text-slate-400 mt-0.5 mb-2">Usada no PDF de vendas</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 mb-2">Usada no PDF de vendas</p>
                     <Textarea
                       id="descricaoComercial"
                       value={descricaoComercial}
                       onChange={(e) => setDescricaoComercial(e.target.value)}
                       placeholder="Descrição para apresentação ao cliente..."
                       rows={4}
-                      className="border-slate-200 focus:border-[#34495e] focus:ring-[#34495e]/20 resize-none"
+                      className="border-slate-200 dark:border-slate-700 focus:border-[#34495e] focus:ring-[#34495e]/20 dark:bg-surface-2 dark:text-slate-200 resize-none"
                     />
                   </div>
                 </div>
@@ -524,20 +524,20 @@ export default function NovoProdutoPage() {
             {currentStep === 'fases' && (
               <div className="space-y-6 animate-in fade-in duration-300">
                 {/* Section Header */}
-                <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-700">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] flex items-center justify-center">
                       <Layers className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-semibold text-[#34495e]">Fases de Execução</h2>
-                      <p className="text-sm text-slate-500">Defina as etapas para execução do serviço</p>
+                      <h2 className="text-lg font-semibold text-[#34495e] dark:text-slate-200">Fases de Execução</h2>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Defina as etapas para execução do serviço</p>
                     </div>
                   </div>
                   <Button
                     variant="outline"
                     onClick={addFase}
-                    className="border-[#34495e]/20 text-[#34495e] hover:bg-[#34495e]/5"
+                    className="border-[#34495e]/20 dark:border-slate-600 text-[#34495e] dark:text-slate-300 hover:bg-[#34495e]/5 dark:hover:bg-surface-2"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Nova Fase
@@ -545,34 +545,34 @@ export default function NovoProdutoPage() {
                 </div>
 
                 {/* Summary Bar */}
-                <div className="flex items-center gap-6 p-4 bg-slate-50 rounded-xl">
+                <div className="flex items-center gap-6 p-4 bg-slate-50 dark:bg-surface-2 rounded-xl">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-[#34495e]/10 flex items-center justify-center">
-                      <Layers className="w-4 h-4 text-[#34495e]" />
+                    <div className="w-8 h-8 rounded-lg bg-[#34495e]/10 dark:bg-[#89bcbe]/10 flex items-center justify-center">
+                      <Layers className="w-4 h-4 text-[#34495e] dark:text-[#89bcbe]" />
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500">Total de Fases</p>
-                      <p className="text-sm font-semibold text-[#34495e]">{fases.length}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-400">Total de Fases</p>
+                      <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">{fases.length}</p>
                     </div>
                   </div>
-                  <div className="w-px h-8 bg-slate-200" />
+                  <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-[#89bcbe]/20 flex items-center justify-center">
-                      <Clock className="w-4 h-4 text-[#34495e]" />
+                    <div className="w-8 h-8 rounded-lg bg-[#89bcbe]/20 dark:bg-[#89bcbe]/10 flex items-center justify-center">
+                      <Clock className="w-4 h-4 text-[#34495e] dark:text-[#89bcbe]" />
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500">Duração Total</p>
-                      <p className="text-sm font-semibold text-[#34495e]">{totalDuracaoFases} dias</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-400">Duração Total</p>
+                      <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">{totalDuracaoFases} dias</p>
                     </div>
                   </div>
-                  <div className="w-px h-8 bg-slate-200" />
+                  <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-                      <ListChecks className="w-4 h-4 text-emerald-600" />
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center">
+                      <ListChecks className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500">Itens Checklist</p>
-                      <p className="text-sm font-semibold text-[#34495e]">{totalChecklistItems}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-400">Itens Checklist</p>
+                      <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">{totalChecklistItems}</p>
                     </div>
                   </div>
                 </div>
@@ -582,7 +582,7 @@ export default function NovoProdutoPage() {
                   {fases.map((fase, index) => (
                     <div
                       key={fase.id}
-                      className="group relative bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow"
+                      className="group relative bg-white dark:bg-surface-2 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden hover:shadow-md dark:hover:shadow-slate-900/30 transition-shadow"
                     >
                       {/* Fase Number Badge */}
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#34495e] to-[#46627f]" />
@@ -591,7 +591,7 @@ export default function NovoProdutoPage() {
                         <div className="flex items-start gap-4">
                           {/* Drag Handle & Number */}
                           <div className="flex items-center gap-2 pt-1">
-                            <GripVertical className="w-4 h-4 text-slate-300 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <GripVertical className="w-4 h-4 text-slate-300 dark:text-slate-600 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity" />
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#34495e] to-[#46627f] text-white flex items-center justify-center text-sm font-semibold shadow-sm">
                               {index + 1}
                             </div>
@@ -601,16 +601,16 @@ export default function NovoProdutoPage() {
                           <div className="flex-1 space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                               <div className="md:col-span-3">
-                                <Label className="text-xs text-slate-500">Nome da Fase *</Label>
+                                <Label className="text-xs text-slate-500 dark:text-slate-400">Nome da Fase *</Label>
                                 <Input
                                   value={fase.nome}
                                   onChange={(e) => updateFase(fase.id, 'nome', e.target.value)}
                                   placeholder="Ex: Levantamento de Dados"
-                                  className="mt-1 border-slate-200 focus:border-[#34495e] focus:ring-[#34495e]/20"
+                                  className="mt-1 border-slate-200 dark:border-slate-700 focus:border-[#34495e] focus:ring-[#34495e]/20 dark:bg-surface-2 dark:text-slate-200"
                                 />
                               </div>
                               <div>
-                                <Label className="text-xs text-slate-500">Duração</Label>
+                                <Label className="text-xs text-slate-500 dark:text-slate-400">Duração</Label>
                                 <div className="relative mt-1">
                                   <Input
                                     type="number"
@@ -622,32 +622,32 @@ export default function NovoProdutoPage() {
                                         parseInt(e.target.value) || 0
                                       )
                                     }
-                                    className="pr-12 border-slate-200 focus:border-[#34495e] focus:ring-[#34495e]/20"
+                                    className="pr-12 border-slate-200 dark:border-slate-700 focus:border-[#34495e] focus:ring-[#34495e]/20 dark:bg-surface-2 dark:text-slate-200"
                                   />
-                                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">dias</span>
+                                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 dark:text-slate-500">dias</span>
                                 </div>
                               </div>
                             </div>
 
                             <div>
-                              <Label className="text-xs text-slate-500">Descrição</Label>
+                              <Label className="text-xs text-slate-500 dark:text-slate-400">Descrição</Label>
                               <Textarea
                                 value={fase.descricao}
                                 onChange={(e) => updateFase(fase.id, 'descricao', e.target.value)}
                                 placeholder="Descreva o que será feito nesta fase..."
                                 rows={2}
-                                className="mt-1 border-slate-200 focus:border-[#34495e] focus:ring-[#34495e]/20 resize-none"
+                                className="mt-1 border-slate-200 dark:border-slate-700 focus:border-[#34495e] focus:ring-[#34495e]/20 dark:bg-surface-2 dark:text-slate-200 resize-none"
                               />
                             </div>
 
                             {/* Checklist Section */}
-                            <div className="pt-3 border-t border-slate-100">
+                            <div className="pt-3 border-t border-slate-100 dark:border-slate-700">
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2">
-                                  <ListChecks className="w-4 h-4 text-slate-400" />
-                                  <Label className="text-xs text-slate-500">Checklist da Fase</Label>
+                                  <ListChecks className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                                  <Label className="text-xs text-slate-500 dark:text-slate-400">Checklist da Fase</Label>
                                   {fase.checklist.length > 0 && (
-                                    <span className="px-2 py-0.5 text-xs bg-slate-100 text-slate-500 rounded-full">
+                                    <span className="px-2 py-0.5 text-xs bg-slate-100 dark:bg-surface-3 text-slate-500 dark:text-slate-400 rounded-full">
                                       {fase.checklist.length} {fase.checklist.length === 1 ? 'item' : 'itens'}
                                     </span>
                                   )}
@@ -656,7 +656,7 @@ export default function NovoProdutoPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => addChecklistItem(fase.id)}
-                                  className="h-7 text-xs text-[#34495e] hover:bg-[#34495e]/5"
+                                  className="h-7 text-xs text-[#34495e] dark:text-slate-300 hover:bg-[#34495e]/5 dark:hover:bg-surface-3"
                                 >
                                   <Plus className="w-3 h-3 mr-1" />
                                   Adicionar Item
@@ -667,7 +667,7 @@ export default function NovoProdutoPage() {
                                 <div className="space-y-2">
                                   {fase.checklist.map((item, itemIndex) => (
                                     <div key={itemIndex} className="flex items-center gap-2 group/item">
-                                      <div className="w-5 h-5 rounded border border-slate-200 flex items-center justify-center flex-shrink-0">
+                                      <div className="w-5 h-5 rounded border border-slate-200 dark:border-slate-700 flex items-center justify-center flex-shrink-0">
                                         <span className="text-[10px] text-slate-400">{itemIndex + 1}</span>
                                       </div>
                                       <Input
@@ -676,13 +676,13 @@ export default function NovoProdutoPage() {
                                           updateChecklistItem(fase.id, itemIndex, e.target.value)
                                         }
                                         placeholder="Item do checklist..."
-                                        className="flex-1 h-9 text-sm border-slate-200 focus:border-[#34495e] focus:ring-[#34495e]/20"
+                                        className="flex-1 h-9 text-sm border-slate-200 dark:border-slate-700 focus:border-[#34495e] focus:ring-[#34495e]/20 dark:bg-surface-2 dark:text-slate-200"
                                       />
                                       <Button
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => removeChecklistItem(fase.id, itemIndex)}
-                                        className="h-9 w-9 p-0 text-slate-400 hover:text-rose-500 hover:bg-rose-50 opacity-0 group-hover/item:opacity-100 transition-opacity"
+                                        className="h-9 w-9 p-0 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-red-500/10 opacity-0 group-hover/item:opacity-100 transition-opacity"
                                       >
                                         <Trash2 className="w-4 h-4" />
                                       </Button>
@@ -699,7 +699,7 @@ export default function NovoProdutoPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => removeFase(fase.id)}
-                              className="h-8 w-8 p-0 text-slate-400 hover:text-rose-500 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="h-8 w-8 p-0 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -716,18 +716,18 @@ export default function NovoProdutoPage() {
             {currentStep === 'revisao' && (
               <div className="space-y-6 animate-in fade-in duration-300">
                 {/* Section Header */}
-                <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-700">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center">
                     <CheckCircle2 className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-[#34495e]">Revisão Final</h2>
-                    <p className="text-sm text-slate-500">Confira os dados antes de criar o produto</p>
+                    <h2 className="text-lg font-semibold text-[#34495e] dark:text-slate-200">Revisão Final</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Confira os dados antes de criar o produto</p>
                   </div>
                 </div>
 
                 {/* Product Preview Card */}
-                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                <div className="bg-white dark:bg-surface-2 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
                   {/* Header com faixa colorida */}
                   <div className={`h-2 bg-gradient-to-r ${areaStyle.gradient}`} />
 
@@ -741,13 +741,13 @@ export default function NovoProdutoPage() {
 
                       {/* Title & Area */}
                       <div className="flex-1">
-                        <h3 className="text-xl font-bold text-[#34495e]">{nome || 'Sem nome'}</h3>
+                        <h3 className="text-xl font-bold text-[#34495e] dark:text-slate-200">{nome || 'Sem nome'}</h3>
                         <div className="flex items-center gap-2 mt-2">
                           <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${areaStyle.bg} ${areaStyle.text}`}>
                             {AREA_JURIDICA_LABELS[areaJuridica]}
                           </span>
                           {categoria && (
-                            <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-600">
+                            <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-surface-3 text-slate-600 dark:text-slate-400">
                               {categoria}
                             </span>
                           )}
@@ -757,39 +757,39 @@ export default function NovoProdutoPage() {
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-4 gap-3 mt-6">
-                      <div className="p-4 bg-slate-50 rounded-xl text-center">
-                        <p className="text-2xl font-bold text-[#34495e]">{fases.length}</p>
-                        <p className="text-xs text-slate-500 mt-1">Fases</p>
+                      <div className="p-4 bg-slate-50 dark:bg-surface-0 rounded-xl text-center">
+                        <p className="text-2xl font-bold text-[#34495e] dark:text-slate-200">{fases.length}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Fases</p>
                       </div>
-                      <div className="p-4 bg-slate-50 rounded-xl text-center">
-                        <p className="text-2xl font-bold text-[#34495e]">{totalDuracaoFases}</p>
-                        <p className="text-xs text-slate-500 mt-1">Dias</p>
+                      <div className="p-4 bg-slate-50 dark:bg-surface-0 rounded-xl text-center">
+                        <p className="text-2xl font-bold text-[#34495e] dark:text-slate-200">{totalDuracaoFases}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Dias</p>
                       </div>
-                      <div className="p-4 bg-slate-50 rounded-xl text-center">
-                        <p className="text-2xl font-bold text-[#34495e]">{totalChecklistItems}</p>
-                        <p className="text-xs text-slate-500 mt-1">Checklist</p>
+                      <div className="p-4 bg-slate-50 dark:bg-surface-0 rounded-xl text-center">
+                        <p className="text-2xl font-bold text-[#34495e] dark:text-slate-200">{totalChecklistItems}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Checklist</p>
                       </div>
-                      <div className="p-4 bg-slate-50 rounded-xl text-center">
+                      <div className="p-4 bg-slate-50 dark:bg-surface-0 rounded-xl text-center">
                         <p className={`text-sm font-semibold ${COMPLEXIDADE_COLORS[complexidade].split(' ')[1]}`}>
                           {COMPLEXIDADE_LABELS[complexidade]}
                         </p>
-                        <p className="text-xs text-slate-500 mt-1">Complexidade</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Complexidade</p>
                       </div>
                     </div>
 
                     {/* Description */}
                     {descricao && (
-                      <div className="mt-5 p-4 bg-slate-50 rounded-xl">
-                        <p className="text-xs font-medium text-slate-500 mb-1">Descrição Interna</p>
-                        <p className="text-sm text-slate-600">{descricao}</p>
+                      <div className="mt-5 p-4 bg-slate-50 dark:bg-surface-0 rounded-xl">
+                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Descrição Interna</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-300">{descricao}</p>
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Phases Timeline */}
-                <div className="bg-white border border-slate-200 rounded-xl p-6">
-                  <h4 className="text-sm font-semibold text-[#34495e] mb-4 flex items-center gap-2">
+                <div className="bg-white dark:bg-surface-2 border border-slate-200 dark:border-slate-700 rounded-xl p-6">
+                  <h4 className="text-sm font-semibold text-[#34495e] dark:text-slate-200 mb-4 flex items-center gap-2">
                     <Layers className="w-4 h-4" />
                     Fases de Execução
                   </h4>
@@ -797,16 +797,16 @@ export default function NovoProdutoPage() {
                     {fases.map((fase, index) => (
                       <div
                         key={fase.id}
-                        className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg"
+                        className="flex items-center gap-4 p-3 bg-slate-50 dark:bg-surface-0 rounded-lg"
                       >
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#34495e] to-[#46627f] text-white flex items-center justify-center text-sm font-medium flex-shrink-0">
                           {index + 1}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-[#34495e] truncate">
+                          <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">
                             {fase.nome || 'Sem nome'}
                           </p>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
                             {fase.duracao_estimada_dias} dias
                             {fase.checklist.filter(c => c.trim()).length > 0 &&
                               ` • ${fase.checklist.filter(c => c.trim()).length} itens no checklist`}
@@ -821,13 +821,13 @@ export default function NovoProdutoPage() {
                 </div>
 
                 {/* Info Notice */}
-                <div className="flex items-start gap-3 p-4 bg-[#34495e]/5 border border-[#34495e]/10 rounded-xl">
-                  <div className="w-8 h-8 rounded-full bg-[#34495e]/10 flex items-center justify-center flex-shrink-0">
-                    <Sparkles className="w-4 h-4 text-[#34495e]" />
+                <div className="flex items-start gap-3 p-4 bg-[#34495e]/5 dark:bg-[#89bcbe]/5 border border-[#34495e]/10 dark:border-[#89bcbe]/10 rounded-xl">
+                  <div className="w-8 h-8 rounded-full bg-[#34495e]/10 dark:bg-[#89bcbe]/10 flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-4 h-4 text-[#34495e] dark:text-[#89bcbe]" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-[#34495e]">Próximos Passos</p>
-                    <p className="text-sm text-slate-600 mt-1">
+                    <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">Próximos Passos</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                       O produto será criado como <strong>Rascunho</strong>. Após a criação, você poderá
                       adicionar preços, configurar a equipe padrão, anexar recursos e então ativá-lo
                       para aparecer no catálogo.
@@ -845,7 +845,7 @@ export default function NovoProdutoPage() {
             variant="ghost"
             onClick={goBack}
             disabled={currentStep === 'info'}
-            className={`${currentStep === 'info' ? 'invisible' : ''} text-slate-600 hover:text-[#34495e]`}
+            className={`${currentStep === 'info' ? 'invisible' : ''} text-slate-600 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200`}
           >
             <ChevronLeft className="w-4 h-4 mr-2" />
             Voltar
@@ -856,7 +856,7 @@ export default function NovoProdutoPage() {
               <Button
                 onClick={goNext}
                 disabled={!canGoNext()}
-                className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#3d566d] hover:to-[#526b8a] shadow-md shadow-slate-300/50 px-6"
+                className="bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] hover:from-[#3d566d] hover:to-[#526b8a] shadow-md shadow-slate-300/50 dark:shadow-slate-900/30 px-6"
               >
                 Continuar
                 <ChevronRight className="w-4 h-4 ml-2" />
@@ -865,7 +865,7 @@ export default function NovoProdutoPage() {
               <Button
                 onClick={handleSave}
                 disabled={saving}
-                className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-md shadow-emerald-300/50 px-8"
+                className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-md shadow-emerald-300/50 dark:shadow-emerald-900/30 px-8"
               >
                 {saving ? (
                   <>

@@ -200,10 +200,10 @@ export default function FunilPage() {
     <div className="space-y-4">
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="bg-white border border-slate-200 rounded-lg">
-          <div className="p-3 md:p-4 border-b border-slate-200">
+        <div className="bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg">
+          <div className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-700">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-              <TabsList className="bg-slate-100 w-full md:w-auto">
+              <TabsList className="bg-slate-100 dark:bg-surface-2 w-full md:w-auto">
                 <TabsTrigger value="funil" className="gap-1.5 flex-1 md:flex-none text-xs md:text-sm">
                   <TrendingUp className="w-4 h-4" />
                   <span className="hidden md:inline">Funil de Vendas</span>
@@ -245,12 +245,12 @@ export default function FunilPage() {
           {/* Tab: Funil de Vendas */}
           <TabsContent value="funil" className="p-3 md:p-6 mt-0 overflow-x-auto">
             {oportunidades.length === 0 ? (
-              <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-lg p-12 text-center">
+              <div className="bg-slate-50 dark:bg-surface-0 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg p-12 text-center">
                 <Target className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                <h3 className="text-sm font-semibold text-slate-600 mb-2">
+                <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
                   Nenhuma oportunidade cadastrada
                 </h3>
-                <p className="text-xs text-slate-500 mb-4 max-w-md mx-auto">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 max-w-md mx-auto">
                   Comece adicionando oportunidades de negócio para acompanhar o progresso das negociações no funil de vendas
                 </p>
                 <Button
@@ -279,7 +279,7 @@ export default function FunilPage() {
                 <>
                   {/* Filtros Rápidos */}
                   <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                    <Button variant="outline" size="sm" className="bg-white">
+                    <Button variant="outline" size="sm" className="bg-white dark:bg-surface-1">
                       Todas
                     </Button>
                     <Button variant="ghost" size="sm">
@@ -294,19 +294,19 @@ export default function FunilPage() {
                   </div>
 
                   {/* Timeline de Interações */}
-                  <div className="bg-white border border-slate-200 rounded-lg p-3 md:p-6">
+                  <div className="bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg p-3 md:p-6">
                     <InteracaoTimeline interacoes={todasInteracoes} />
                   </div>
                 </>
               )}
 
               {todasInteracoes.length === 0 && (
-                <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-lg p-12 text-center">
+                <div className="bg-slate-50 dark:bg-surface-0 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg p-12 text-center">
                   <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                  <h3 className="text-sm font-semibold text-slate-600 mb-2">
+                  <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">
                     Nenhuma interação registrada
                   </h3>
-                  <p className="text-xs text-slate-500 mb-4 max-w-md mx-auto">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 max-w-md mx-auto">
                     {oportunidades.length === 0
                       ? 'Crie uma oportunidade primeiro para começar a registrar interações'
                       : 'Comece registrando suas interações com clientes e prospectos'

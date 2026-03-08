@@ -36,9 +36,9 @@ export default function TimeSlotDropZone({
       onClick={onCreateEvent}
       className={cn(
         'h-[22.5px] border-b transition-colors cursor-pointer group relative',
-        isHourStart ? 'border-slate-200' : 'border-slate-100',
+        isHourStart ? 'border-slate-200 dark:border-slate-700' : 'border-slate-100 dark:border-slate-800',
         isOver && 'bg-[#89bcbe]/10 border-[#89bcbe]',
-        'hover:bg-slate-50',
+        'hover:bg-slate-50 dark:hover:bg-surface-2',
         className
       )}
     >

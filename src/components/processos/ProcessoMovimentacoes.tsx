@@ -216,10 +216,10 @@ export default function ProcessoMovimentacoes({ processoId: _processoId }: Proce
     <div className="space-y-6">
 
       {/* Header com Filtros */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between mb-3">
-            <CardTitle className="text-lg font-medium text-[#34495e]">
+            <CardTitle className="text-lg font-medium text-[#34495e] dark:text-slate-200">
               Movimentações
             </CardTitle>
             <Button
@@ -272,8 +272,8 @@ export default function ProcessoMovimentacoes({ processoId: _processoId }: Proce
             key={mov.id}
             className={`shadow-sm transition-all ${
               !mov.lida
-                ? 'bg-blue-50 border-blue-200'
-                : 'bg-white border-slate-200 hover:border-slate-300'
+                ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30'
+                : 'bg-white dark:bg-surface-1 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
             } ${
               mov.importante ? 'border-l-4 border-l-amber-500' : ''
             }`}
@@ -298,10 +298,10 @@ export default function ProcessoMovimentacoes({ processoId: _processoId }: Proce
                   </Badge>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="text-xs font-medium text-[#34495e]">
+                  <span className="text-xs font-medium text-[#34495e] dark:text-slate-200">
                     {format(new Date(mov.data_movimento), "dd/MM/yyyy", { locale: ptBR })}
                   </span>
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
                     {getTimestamp(mov.data_movimento)}
                   </span>
                 </div>
@@ -310,10 +310,10 @@ export default function ProcessoMovimentacoes({ processoId: _processoId }: Proce
               {/* Tipo da Movimentação */}
               {mov.tipo_descricao && (
                 <div className="mb-2">
-                  <p className="text-sm font-semibold text-[#34495e]">
+                  <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                     {mov.tipo_descricao}
                     {mov.tipo_codigo && (
-                      <span className="text-xs text-slate-500 ml-2">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">
                         (Código: {mov.tipo_codigo})
                       </span>
                     )}
@@ -324,7 +324,7 @@ export default function ProcessoMovimentacoes({ processoId: _processoId }: Proce
               {/* Descrição */}
               <div className="mb-3">
                 <p className={`text-sm leading-relaxed ${
-                  !mov.lida ? 'text-blue-900' : 'text-slate-700'
+                  !mov.lida ? 'text-blue-900 dark:text-blue-300' : 'text-slate-700 dark:text-slate-300'
                 }`}>
                   {expandedMovimentacao === mov.id
                     ? mov.descricao
@@ -351,21 +351,21 @@ export default function ProcessoMovimentacoes({ processoId: _processoId }: Proce
               {mov.comentarios && mov.comentarios.length > 0 && (
                 <div className="mb-3 space-y-2">
                   {mov.comentarios.map((comentario, index) => (
-                    <div key={index} className="bg-slate-100 rounded-lg p-2.5">
+                    <div key={index} className="bg-slate-100 dark:bg-surface-2 rounded-lg p-2.5">
                       <div className="flex items-center gap-2 mb-1">
                         <div className="w-5 h-5 rounded-full bg-[#34495e] flex items-center justify-center">
                           <span className="text-[10px] font-semibold text-white">
                             {comentario.user.charAt(0)}
                           </span>
                         </div>
-                        <span className="text-xs font-semibold text-[#34495e]">
+                        <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200">
                           {comentario.user}
                         </span>
-                        <span className="text-[10px] text-slate-500">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">
                           {getTimestamp(comentario.data)}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-700 pl-7">
+                      <p className="text-xs text-slate-700 dark:text-slate-300 pl-7">
                         "{comentario.texto}"
                       </p>
                     </div>
@@ -374,7 +374,7 @@ export default function ProcessoMovimentacoes({ processoId: _processoId }: Proce
               )}
 
               {/* Ações */}
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -444,11 +444,11 @@ export default function ProcessoMovimentacoes({ processoId: _processoId }: Proce
         ))}
 
         {filteredMovimentacoes.length === 0 && (
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
             <CardContent className="p-12 text-center">
-              <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <p className="text-sm text-slate-600">Nenhuma movimentação encontrada</p>
-              <p className="text-xs text-slate-500 mt-1">
+              <FileText className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+              <p className="text-sm text-slate-600 dark:text-slate-400">Nenhuma movimentação encontrada</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Ajuste os filtros ou adicione uma movimentação manual
               </p>
             </CardContent>
@@ -458,10 +458,10 @@ export default function ProcessoMovimentacoes({ processoId: _processoId }: Proce
 
       {/* Paginação */}
       {filteredMovimentacoes.length > 0 && totalPages > 1 && (
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Exibindo {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredMovimentacoes.length)} de {filteredMovimentacoes.length} movimentações
               </p>
               <div className="flex items-center gap-2">
@@ -506,11 +506,11 @@ export default function ProcessoMovimentacoes({ processoId: _processoId }: Proce
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-[#34495e]">Editar Movimentação</DialogTitle>
+            <DialogTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">Editar Movimentação</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Tipo</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Tipo</label>
               <Input
                 placeholder="Ex: Sentença, Despacho, Juntada..."
                 value={editForm.tipo_descricao}
@@ -519,7 +519,7 @@ export default function ProcessoMovimentacoes({ processoId: _processoId }: Proce
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Descrição *</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Descrição *</label>
               <Textarea
                 placeholder="Descreva a movimentação..."
                 value={editForm.descricao}
@@ -546,8 +546,8 @@ export default function ProcessoMovimentacoes({ processoId: _processoId }: Proce
       <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-[#34495e]">Excluir Movimentação</DialogTitle>
-            <DialogDescription className="text-sm text-slate-600">
+            <DialogTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">Excluir Movimentação</DialogTitle>
+            <DialogDescription className="text-sm text-slate-600 dark:text-slate-400">
               Tem certeza que deseja excluir esta movimentação? Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>

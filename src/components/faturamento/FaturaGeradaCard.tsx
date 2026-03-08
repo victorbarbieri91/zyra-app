@@ -24,13 +24,15 @@ export function FaturaGeradaCard({
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(value)
   }
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('pt-BR', {
+    // Append T12:00:00 to avoid UTC midnight → previous day in Brazil (UTC-3)
+    const d = date.length === 10 ? new Date(date + 'T12:00:00') : new Date(date)
+    return d.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'short',
     })
@@ -56,6 +58,13 @@ export function FaturaGeradaCard({
           <Badge variant="secondary" className="bg-teal-100 text-teal-700 text-[10px]">
             <CheckCircle className="h-3 w-3 mr-1" />
             Enviada
+          </Badge>
+        )
+      case 'parcialmente_paga':
+        return (
+          <Badge variant="secondary" className="bg-amber-100 text-amber-700 text-[10px]">
+            <Clock className="h-3 w-3 mr-1" />
+            Parcial
           </Badge>
         )
       case 'paga':

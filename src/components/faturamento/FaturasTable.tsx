@@ -29,13 +29,14 @@ export function FaturasTable({
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(value)
   }
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('pt-BR', {
+    const d = date.length === 10 ? new Date(date + 'T12:00:00') : new Date(date)
+    return d.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'short',
     })
@@ -59,6 +60,12 @@ export function FaturasTable({
         return (
           <Badge variant="secondary" className="bg-teal-100 text-teal-700 text-[10px]">
             Enviada
+          </Badge>
+        )
+      case 'parcialmente_paga':
+        return (
+          <Badge variant="secondary" className="bg-amber-100 text-amber-700 text-[10px]">
+            Parcial
           </Badge>
         )
       case 'paga':
@@ -102,7 +109,7 @@ export function FaturasTable({
       <div className="border rounded-lg bg-white">
         <div className="p-12 text-center">
           <FileText className="h-12 w-12 mx-auto text-slate-300" />
-          <p className="text-sm text-slate-500 mt-2">Nenhuma fatura gerada ainda</p>
+          <p className="text-sm text-slate-500 mt-2">Nenhuma fatura encontrada</p>
         </div>
       </div>
     )

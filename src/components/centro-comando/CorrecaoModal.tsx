@@ -74,15 +74,15 @@ export function CorrecaoModal({
         <div className="space-y-4 py-4">
           {/* Contexto */}
           <div className="space-y-2">
-            <Label className="text-xs text-slate-500">Sua pergunta</Label>
-            <div className="p-3 bg-slate-50 rounded-lg text-sm text-slate-600 max-h-20 overflow-y-auto">
+            <Label className="text-xs text-slate-500 dark:text-slate-400">Sua pergunta</Label>
+            <div className="p-3 bg-slate-50 dark:bg-surface-0 rounded-lg text-sm text-slate-600 dark:text-slate-400 max-h-20 overflow-y-auto">
               {mensagemOriginal}
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs text-slate-500">Resposta da Zyra</Label>
-            <div className="p-3 bg-slate-50 rounded-lg text-sm text-slate-600 max-h-20 overflow-y-auto">
+            <Label className="text-xs text-slate-500 dark:text-slate-400">Resposta da Zyra</Label>
+            <div className="p-3 bg-slate-50 dark:bg-surface-0 rounded-lg text-sm text-slate-600 dark:text-slate-400 max-h-20 overflow-y-auto">
               {respostaOriginal || '(sem texto)'}
             </div>
           </div>
@@ -118,9 +118,9 @@ export function CorrecaoModal({
           </div>
 
           {/* Info */}
-          <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+          <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg border border-blue-100 dark:border-blue-500/30">
             <AlertCircle className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-blue-600">
+            <p className="text-xs text-blue-600 dark:text-blue-400">
               Sua correcao sera salva como uma memoria de alta prioridade.
               A Zyra aprendera com isso e nao repetira o mesmo erro.
             </p>
@@ -138,7 +138,7 @@ export function CorrecaoModal({
           <Button
             onClick={handleEnviar}
             disabled={!respostaEsperada.trim() || enviando}
-            className="bg-[#34495e] hover:bg-[#46627f]"
+            className="bg-[#34495e] hover:bg-[#46627f] dark:bg-[#89bcbe] dark:hover:bg-[#6ba9ab] dark:text-slate-900"
           >
             {enviando ? (
               <>

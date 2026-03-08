@@ -16,7 +16,7 @@ export function AtoConfigCard({ ato, onUpdate, onRemove }: AtoConfigCardProps) {
   const modo = ato.modo_cobranca || 'percentual'
 
   return (
-    <div className="p-2 rounded-md bg-slate-50 border border-slate-100">
+    <div className="p-2 rounded-md bg-slate-50 dark:bg-surface-0 border border-slate-100 dark:border-slate-800">
       {/* Header: Nome + Modo + Remove */}
       <div className="flex items-center gap-1.5 mb-1.5">
         <Input
@@ -24,7 +24,7 @@ export function AtoConfigCard({ ato, onUpdate, onRemove }: AtoConfigCardProps) {
           value={ato.ato_nome || ''}
           onChange={(e) => onUpdate({ ato_nome: e.target.value })}
           placeholder="Nome do ato"
-          className="h-6 text-[10px] font-medium text-[#34495e] bg-white border border-slate-200 hover:border-[#89bcbe] focus:border-[#89bcbe] px-1.5 flex-1 min-w-0"
+          className="h-6 text-[10px] font-medium text-[#34495e] dark:text-slate-200 bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 hover:border-[#89bcbe] focus:border-[#89bcbe] px-1.5 flex-1 min-w-0"
         />
         <Select
           value={modo}
@@ -42,7 +42,7 @@ export function AtoConfigCard({ ato, onUpdate, onRemove }: AtoConfigCardProps) {
           type="button"
           variant="ghost"
           size="sm"
-          className="h-5 w-5 p-0 text-slate-300 hover:text-red-500 hover:bg-red-50 shrink-0"
+          className="h-5 w-5 p-0 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:bg-red-500/10 shrink-0"
           onClick={onRemove}
         >
           <X className="h-2.5 w-2.5" />
@@ -63,11 +63,11 @@ export function AtoConfigCard({ ato, onUpdate, onRemove }: AtoConfigCardProps) {
               }
               className="h-6 w-12 text-[10px] text-center px-1"
             />
-            <span className="text-[9px] text-slate-500">%</span>
+            <span className="text-[9px] text-slate-500 dark:text-slate-400">%</span>
           </div>
           <span className="text-[9px] text-slate-400">mín:</span>
           <div className="flex items-center gap-0.5">
-            <span className="text-[9px] text-slate-500">R$</span>
+            <span className="text-[9px] text-slate-500 dark:text-slate-400">R$</span>
             <Input
               type="number"
               step="0.01"
@@ -87,7 +87,7 @@ export function AtoConfigCard({ ato, onUpdate, onRemove }: AtoConfigCardProps) {
         <div className="space-y-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <div className="flex items-center gap-0.5">
-              <span className="text-[9px] text-slate-500">R$</span>
+              <span className="text-[9px] text-slate-500 dark:text-slate-400">R$</span>
               <Input
                 type="number"
                 step="0.01"
@@ -131,7 +131,7 @@ export function AtoConfigCard({ ato, onUpdate, onRemove }: AtoConfigCardProps) {
           </div>
           {/* Preview de valores calculados */}
           {ato.valor_hora && (ato.horas_minimas || ato.horas_maximas) && (
-            <div className="text-[8px] text-slate-400 bg-slate-100 rounded px-1.5 py-0.5">
+            <div className="text-[8px] text-slate-400 bg-slate-100 dark:bg-surface-2 rounded px-1.5 py-0.5">
               {ato.horas_minimas && (
                 <span>
                   Min: R${(ato.valor_hora * ato.horas_minimas).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}

@@ -77,27 +77,27 @@ export function StepConfirmacao({ state, updateState, goToStep }: Props) {
       {/* Card principal */}
       <Card className="p-6">
         <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-            <FileSpreadsheet className="w-7 h-7 text-blue-600" />
+          <div className="w-14 h-14 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+            <FileSpreadsheet className="w-7 h-7 text-blue-600 dark:text-blue-400" />
           </div>
 
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-slate-800">
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
               Resumo da Importação
             </h3>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
               {job.arquivo_nome}
             </p>
 
             <div className="mt-4 grid grid-cols-2 gap-4">
-              <div className="bg-slate-50 rounded-lg p-4">
-                <p className="text-3xl font-bold text-slate-800">{totalFinal}</p>
-                <p className="text-sm text-slate-500">Registros a importar</p>
+              <div className="bg-slate-50 dark:bg-surface-0 rounded-lg p-4">
+                <p className="text-3xl font-bold text-slate-800 dark:text-slate-200">{totalFinal}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Registros a importar</p>
               </div>
 
-              <div className="bg-slate-50 rounded-lg p-4">
-                <p className="text-3xl font-bold text-slate-800">{moduloConfig?.nome}</p>
-                <p className="text-sm text-slate-500">Módulo destino</p>
+              <div className="bg-slate-50 dark:bg-surface-0 rounded-lg p-4">
+                <p className="text-3xl font-bold text-slate-800 dark:text-slate-200">{moduloConfig?.nome}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Módulo destino</p>
               </div>
             </div>
           </div>
@@ -110,8 +110,8 @@ export function StepConfirmacao({ state, updateState, goToStep }: Props) {
           <div className="flex items-center gap-3">
             <CheckCircle className="w-5 h-5 text-green-500" />
             <div>
-              <p className="text-xl font-bold text-slate-800">{job.linhas_validas}</p>
-              <p className="text-xs text-slate-500">Linhas válidas</p>
+              <p className="text-xl font-bold text-slate-800 dark:text-slate-200">{job.linhas_validas}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Linhas válidas</p>
             </div>
           </div>
         </Card>
@@ -121,8 +121,8 @@ export function StepConfirmacao({ state, updateState, goToStep }: Props) {
             <div className="flex items-center gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-500" />
               <div>
-                <p className="text-xl font-bold text-slate-800">{linhasPuladas}</p>
-                <p className="text-xs text-slate-500">Serão ignoradas</p>
+                <p className="text-xl font-bold text-slate-800 dark:text-slate-200">{linhasPuladas}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Serão ignoradas</p>
               </div>
             </div>
           </Card>
@@ -133,8 +133,8 @@ export function StepConfirmacao({ state, updateState, goToStep }: Props) {
             <div className="flex items-center gap-3">
               <Info className="w-5 h-5 text-blue-500" />
               <div>
-                <p className="text-xl font-bold text-slate-800">{linhasAtualizar}</p>
-                <p className="text-xs text-slate-500">Serão atualizadas</p>
+                <p className="text-xl font-bold text-slate-800 dark:text-slate-200">{linhasAtualizar}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Serão atualizadas</p>
               </div>
             </div>
           </Card>
@@ -143,22 +143,22 @@ export function StepConfirmacao({ state, updateState, goToStep }: Props) {
 
       {/* Mapeamento resumido */}
       <Card className="p-4">
-        <h4 className="text-sm font-medium text-slate-700 mb-3">Mapeamento de campos:</h4>
+        <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Mapeamento de campos:</h4>
         <div className="grid grid-cols-2 gap-2 text-sm">
           {Object.entries(state.mapeamento)
             .filter(([_, campo]) => campo)
             .map(([header, campo]) => (
-              <div key={header} className="flex items-center gap-2 text-slate-600">
-                <span className="text-slate-400">{header}</span>
-                <ArrowRight className="w-3 h-3 text-slate-300" />
+              <div key={header} className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                <span className="text-slate-400 dark:text-slate-500">{header}</span>
+                <ArrowRight className="w-3 h-3 text-slate-300 dark:text-slate-600" />
                 <span className="font-medium">{campo}</span>
               </div>
             ))}
         </div>
 
         {job.campos_extras?.length > 0 && (
-          <div className="mt-3 pt-3 border-t">
-            <p className="text-xs text-slate-500">
+          <div className="mt-3 pt-3 border-t dark:border-slate-700">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               <Info className="w-3 h-3 inline mr-1" />
               Campos adicionais serão salvos nas observações:
               <span className="font-medium ml-1">{job.campos_extras.join(', ')}</span>
@@ -168,7 +168,7 @@ export function StepConfirmacao({ state, updateState, goToStep }: Props) {
       </Card>
 
       {/* Checkbox de confirmação */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-lg p-4">
         <div className="flex items-start gap-3">
           <Checkbox
             id="confirmar"
@@ -176,7 +176,7 @@ export function StepConfirmacao({ state, updateState, goToStep }: Props) {
             onCheckedChange={(checked) => setConfirmado(!!checked)}
             className="mt-0.5"
           />
-          <label htmlFor="confirmar" className="text-sm text-blue-800 cursor-pointer">
+          <label htmlFor="confirmar" className="text-sm text-blue-800 dark:text-blue-400 cursor-pointer">
             <span className="font-medium">Confirmo que revisei os dados</span> e desejo
             prosseguir com a importação de {totalFinal} registros para o módulo{' '}
             <strong>{moduloConfig?.nome}</strong>.
@@ -185,7 +185,7 @@ export function StepConfirmacao({ state, updateState, goToStep }: Props) {
       </div>
 
       {/* Aviso */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
+      <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg p-4 text-sm text-amber-700 dark:text-amber-400">
         <AlertTriangle className="w-4 h-4 inline mr-2" />
         <strong>Atenção:</strong> Esta ação irá criar novos registros no sistema.
         Revise os dados com atenção antes de confirmar.

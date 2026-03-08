@@ -79,7 +79,7 @@ export default function ProcessoDocumentos({ processoId }: ProcessoDocumentosPro
 
   if (loading) {
     return (
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardContent className="py-12">
           <div className="flex items-center justify-center">
             <Loader2 className="w-6 h-6 animate-spin text-[#89bcbe]" />
@@ -92,10 +92,10 @@ export default function ProcessoDocumentos({ processoId }: ProcessoDocumentosPro
   return (
     <div className="space-y-6">
       {/* Upload Area */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardContent className="p-6 text-center">
-          <Upload className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-sm text-slate-600 mb-4">Arraste arquivos ou clique para fazer upload</p>
+          <Upload className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">Arraste arquivos ou clique para fazer upload</p>
           <Button className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e] text-white">
             <Upload className="w-4 h-4 mr-2" />
             Selecionar Arquivos
@@ -105,13 +105,13 @@ export default function ProcessoDocumentos({ processoId }: ProcessoDocumentosPro
 
       {/* Empty State */}
       {documentos.length === 0 ? (
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
           <CardContent className="py-12 text-center">
-            <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-surface-2 flex items-center justify-center mx-auto mb-4">
               <FolderOpen className="w-8 h-8 text-slate-400" />
             </div>
-            <p className="text-sm font-medium text-slate-600 mb-1">Nenhum documento cadastrado</p>
-            <p className="text-xs text-slate-500">
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Nenhum documento cadastrado</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Faça upload de documentos relacionados a este processo
             </p>
           </CardContent>
@@ -120,18 +120,18 @@ export default function ProcessoDocumentos({ processoId }: ProcessoDocumentosPro
         /* Document Grid */
         <div className="grid grid-cols-3 gap-4">
           {documentos.map(doc => (
-            <Card key={doc.id} className="border-slate-200 shadow-sm hover:shadow-lg transition-shadow">
+            <Card key={doc.id} className="border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-red-600" />
+                  <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-500/10 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-red-600 dark:text-red-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[#34495e] truncate">{doc.nome}</p>
-                    <p className="text-xs text-slate-500">{formatFileSize(doc.tamanho)}</p>
+                    <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200 truncate">{doc.nome}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{formatFileSize(doc.tamanho)}</p>
                   </div>
                 </div>
-                <div className="text-xs text-slate-600 mb-3">
+                <div className="text-xs text-slate-600 dark:text-slate-400 mb-3">
                   <p><strong>Tipo:</strong> {doc.tipo}</p>
                   <p><strong>Data:</strong> {formatBrazilDate(doc.created_at)}</p>
                   <p><strong>Por:</strong> {doc.created_by_nome}</p>

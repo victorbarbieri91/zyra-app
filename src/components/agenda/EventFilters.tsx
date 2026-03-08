@@ -99,10 +99,10 @@ export default function EventFilters({
   }
 
   return (
-    <Card className={cn('border-slate-200 shadow-sm', className)}>
+    <Card className={cn('border-slate-200 dark:border-slate-700 shadow-sm', className)}>
       <CardHeader className="pb-3 pt-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2">
+          <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
             <Filter className="w-4 h-4 text-[#89bcbe]" />
             Filtros
           </CardTitle>
@@ -120,7 +120,7 @@ export default function EventFilters({
       <CardContent className="pt-2 pb-4 space-y-4">
         {/* Filtro por Tipo */}
         <div>
-          <Label className="text-xs font-semibold text-[#46627f] mb-2.5 block">
+          <Label className="text-xs font-semibold text-[#46627f] dark:text-slate-400 mb-2.5 block">
             Tipo de Evento
           </Label>
           <div className="space-y-2.5">
@@ -136,7 +136,7 @@ export default function EventFilters({
                 />
                 <Label
                   htmlFor={`tipo-${key}`}
-                  className="text-xs font-normal text-[#34495e] cursor-pointer flex items-center gap-1.5"
+                  className="text-xs font-normal text-[#34495e] dark:text-slate-200 cursor-pointer flex items-center gap-1.5"
                 >
                   <Icon className={cn('w-3.5 h-3.5', color)} />
                   {label}
@@ -150,7 +150,7 @@ export default function EventFilters({
 
         {/* Filtro por Status */}
         <div>
-          <Label className="text-xs font-semibold text-[#46627f] mb-2.5 block">
+          <Label className="text-xs font-semibold text-[#46627f] dark:text-slate-400 mb-2.5 block">
             Status
           </Label>
           <div className="space-y-2.5">
@@ -210,7 +210,7 @@ export default function EventFilters({
           <>
             <Separator />
             <div>
-              <Label className="text-xs font-semibold text-[#46627f] mb-2.5 block">
+              <Label className="text-xs font-semibold text-[#46627f] dark:text-slate-400 mb-2.5 block">
                 Responsável
               </Label>
               <div className="space-y-2.5 max-h-[200px] overflow-y-auto">
@@ -226,7 +226,7 @@ export default function EventFilters({
                     />
                     <Label
                       htmlFor={`responsavel-${responsavel.id}`}
-                      className="text-xs font-normal text-[#34495e] cursor-pointer flex items-center gap-1.5"
+                      className="text-xs font-normal text-[#34495e] dark:text-slate-200 cursor-pointer flex items-center gap-1.5"
                     >
                       <User className="w-3.5 h-3.5 text-[#6c757d]" />
                       {responsavel.nome}
@@ -243,13 +243,13 @@ export default function EventFilters({
         <div className="flex gap-2">
           <button
             onClick={() => toggleAll(true)}
-            className="flex-1 text-xs py-2 px-3 rounded-md border border-slate-200 hover:border-[#89bcbe] hover:bg-[#f0f9f9] text-[#34495e] font-medium transition-all"
+            className="flex-1 text-xs py-2 px-3 rounded-md border border-slate-200 dark:border-slate-700 hover:border-[#89bcbe] hover:bg-[#f0f9f9] dark:hover:bg-teal-900/20 text-[#34495e] dark:text-slate-200 font-medium transition-all"
           >
             Selecionar Todos
           </button>
           <button
             onClick={() => toggleAll(false)}
-            className="flex-1 text-xs py-2 px-3 rounded-md border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-[#6c757d] font-medium transition-all"
+            className="flex-1 text-xs py-2 px-3 rounded-md border border-slate-200 dark:border-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-surface-2 text-[#6c757d] font-medium transition-all"
           >
             Limpar Todos
           </button>

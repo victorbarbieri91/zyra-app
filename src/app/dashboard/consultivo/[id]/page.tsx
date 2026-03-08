@@ -468,8 +468,8 @@ export default function ConsultaDetalhePage() {
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      ativo: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-      arquivado: 'bg-slate-100 text-slate-700 border-slate-200',
+      ativo: 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30',
+      arquivado: 'bg-slate-100 dark:bg-surface-2 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
     }
     const labels: Record<string, string> = {
       ativo: 'Ativo', arquivado: 'Arquivado',
@@ -631,10 +631,10 @@ export default function ConsultaDetalhePage() {
 
   const getPrioridadeBadge = (prioridade: string) => {
     const styles: Record<string, string> = {
-      baixa: 'bg-slate-100 text-slate-600 border-slate-200',
-      media: 'bg-blue-100 text-blue-700 border-blue-200',
-      alta: 'bg-amber-100 text-amber-700 border-amber-200',
-      urgente: 'bg-red-100 text-red-700 border-red-200',
+      baixa: 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700',
+      media: 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30',
+      alta: 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30',
+      urgente: 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/30',
     }
     const labels: Record<string, string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta', urgente: 'Urgente' }
     return <Badge className={cn('text-[10px] border', styles[prioridade] || styles.media)}>{labels[prioridade] || prioridade}</Badge>
@@ -652,8 +652,8 @@ export default function ConsultaDetalhePage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <Scale className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <h2 className="text-lg font-semibold text-[#34495e] mb-2">Consulta não encontrada</h2>
+          <Scale className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+          <h2 className="text-lg font-semibold text-[#34495e] dark:text-slate-200 mb-2">Consulta não encontrada</h2>
           <Button onClick={() => router.push('/dashboard/consultivo')}>Voltar para lista</Button>
         </div>
       </div>
@@ -661,7 +661,7 @@ export default function ConsultaDetalhePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 dark:from-surface-0 dark:via-surface-0 dark:to-surface-0 p-6">
       <div className="max-w-[1600px] mx-auto space-y-6">
 
         {/* Header */}
@@ -755,54 +755,54 @@ export default function ConsultaDetalhePage() {
           <div className="xl:col-span-8 space-y-6">
 
             {/* Informações Gerais */}
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-sm font-medium text-[#34495e]">Informações da Consulta</CardTitle>
+                <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200">Informações da Consulta</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
-                      <p className="text-xs font-medium text-slate-500 mb-1">Cliente</p>
-                      <p className="text-sm font-semibold text-[#34495e]">{consulta.cliente_nome}</p>
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Cliente</p>
+                      <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">{consulta.cliente_nome}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-slate-500 mb-1">Área</p>
-                      <p className="text-sm text-slate-700">{formatArea(consulta.area)}</p>
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Área</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300">{formatArea(consulta.area)}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-slate-500 mb-1">Prazo</p>
-                      <p className="text-sm text-slate-700">
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Prazo</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300">
                         {consulta.prazo ? format(new Date(consulta.prazo + 'T00:00:00'), 'dd/MM/yyyy') : 'Não definido'}
                       </p>
                     </div>
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <p className="text-xs font-medium text-slate-500 mb-1">Responsável</p>
-                      <p className="text-sm font-semibold text-[#34495e]">{consulta.responsavel_nome}</p>
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Responsável</p>
+                      <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">{consulta.responsavel_nome}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-slate-500 mb-1">Criado em</p>
-                      <p className="text-sm text-slate-700">{format(new Date(consulta.created_at), 'dd/MM/yyyy', { locale: ptBR })}</p>
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Criado em</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300">{format(new Date(consulta.created_at), 'dd/MM/yyyy', { locale: ptBR })}</p>
                     </div>
                   </div>
                 </div>
 
                 {consulta.descricao && (
-                  <div className="mt-6 pt-4 border-t border-slate-100">
-                    <p className="text-xs font-medium text-slate-500 mb-2">Descrição</p>
-                    <p className="text-sm text-slate-700 leading-relaxed">{consulta.descricao}</p>
+                  <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Descrição</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{consulta.descricao}</p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
             {/* Andamentos */}
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between mb-1">
-                  <CardTitle className="text-sm font-medium text-[#34495e]">
+                  <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                     Últimos Andamentos
                   </CardTitle>
                   <Dialog open={novoAndamentoOpen} onOpenChange={setNovoAndamentoOpen}>
@@ -814,7 +814,7 @@ export default function ConsultaDetalhePage() {
                     </DialogTrigger>
                     <DialogContent className="max-w-2xl">
                       <DialogHeader>
-                        <DialogTitle className="text-lg font-semibold text-[#34495e]">
+                        <DialogTitle className="text-lg font-semibold text-[#34495e] dark:text-slate-200">
                           Novo Andamento
                         </DialogTitle>
                       </DialogHeader>
@@ -822,7 +822,7 @@ export default function ConsultaDetalhePage() {
                       <div className="space-y-4 pt-4">
                         <div className="grid grid-cols-3 gap-4">
                           <div>
-                            <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                            <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">
                               Data
                             </label>
                             <Input
@@ -833,7 +833,7 @@ export default function ConsultaDetalhePage() {
                             />
                           </div>
                           <div className="col-span-2">
-                            <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                            <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">
                               Tipo de Andamento
                             </label>
                             <Input
@@ -846,7 +846,7 @@ export default function ConsultaDetalhePage() {
                         </div>
 
                         <div>
-                          <label className="text-xs font-medium text-slate-600 mb-1.5 block">
+                          <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">
                             Descrição
                           </label>
                           <Textarea
@@ -888,8 +888,8 @@ export default function ConsultaDetalhePage() {
               <CardContent>
                 {!consulta.andamentos || consulta.andamentos.length === 0 ? (
                   <div className="text-center py-8">
-                    <FileText className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                    <p className="text-sm text-slate-600">Nenhum andamento registrado</p>
+                    <FileText className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Nenhum andamento registrado</p>
                   </div>
                 ) : (
                   <>
@@ -902,13 +902,13 @@ export default function ConsultaDetalhePage() {
                         return paginated.map((andamento: Andamento, index) => (
                           <div
                             key={index}
-                            className="transition-colors duration-300 cursor-pointer hover:bg-slate-50 rounded-md p-2 -mx-2 group border-b border-slate-100 last:border-0"
+                            className="transition-colors duration-300 cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 rounded-md p-2 -mx-2 group border-b border-slate-100 dark:border-slate-800 last:border-0"
                             onClick={() => setSelectedAndamento(andamento)}
                           >
                             <div className="flex gap-3">
                               {/* Data */}
                               <div className="flex-shrink-0 w-20">
-                                <p className="text-xs font-medium text-slate-700">
+                                <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
                                   {format(new Date(andamento.data), "dd/MM/yyyy", { locale: ptBR })}
                                 </p>
                               </div>
@@ -916,11 +916,11 @@ export default function ConsultaDetalhePage() {
                               {/* Conteúdo */}
                               <div className="flex-1">
                                 {andamento.tipo && (
-                                  <p className="text-xs font-semibold text-[#34495e] mb-0.5">
+                                  <p className="text-xs font-semibold text-[#34495e] dark:text-slate-200 mb-0.5">
                                     {formatTipoAndamento(andamento.tipo)}
                                   </p>
                                 )}
-                                <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
+                                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-2">
                                   {andamento.descricao}
                                 </p>
                               </div>
@@ -931,7 +931,7 @@ export default function ConsultaDetalhePage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={(e) => { e.stopPropagation(); handleEditAndamento(startIndex + index) }}
-                                  className="h-7 w-7 p-0 text-slate-400 hover:text-[#34495e]"
+                                  className="h-7 w-7 p-0 text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200"
                                 >
                                   <Pencil className="w-3.5 h-3.5" />
                                 </Button>
@@ -939,7 +939,7 @@ export default function ConsultaDetalhePage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={(e) => { e.stopPropagation(); handleDeleteAndamentoClick(startIndex + index) }}
-                                  className="h-7 w-7 p-0 text-slate-400 hover:text-red-600"
+                                  className="h-7 w-7 p-0 text-slate-400 hover:text-red-600 dark:hover:text-red-400"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </Button>
@@ -952,8 +952,8 @@ export default function ConsultaDetalhePage() {
 
                     {/* Paginação de Andamentos */}
                     {consulta.andamentos.length > andamentosPerPage && (
-                      <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100">
-                        <p className="text-xs text-slate-500">
+                      <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           {Math.min((andamentoPage - 1) * andamentosPerPage + 1, consulta.andamentos.length)}-{Math.min(andamentoPage * andamentosPerPage, consulta.andamentos.length)} de {consulta.andamentos.length}
                         </p>
                         <div className="flex items-center gap-1">
@@ -995,10 +995,10 @@ export default function ConsultaDetalhePage() {
             </Card>
 
             {/* Anexos */}
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-[#34495e]">Anexos ({consulta.anexos?.length || 0})</CardTitle>
+                  <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200">Anexos ({consulta.anexos?.length || 0})</CardTitle>
                   <Button variant="outline" size="sm" className="h-8 text-xs">
                     <Upload className="w-3.5 h-3.5 mr-1.5" />
                     Upload
@@ -1008,19 +1008,19 @@ export default function ConsultaDetalhePage() {
               <CardContent>
                 {!consulta.anexos || consulta.anexos.length === 0 ? (
                   <div className="text-center py-8">
-                    <FileText className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                    <p className="text-sm text-slate-600">Nenhum anexo</p>
-                    <p className="text-xs text-slate-500 mt-1">Clique em Upload para adicionar arquivos</p>
+                    <FileText className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Nenhum anexo</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Clique em Upload para adicionar arquivos</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {consulta.anexos.map((anexo: any, index: number) => (
-                      <div key={index} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
+                      <div key={index} className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2">
                         <div className="flex items-center gap-3">
                           <FileText className="w-4 h-4 text-slate-400" />
                           <div>
-                            <p className="text-sm font-medium text-[#34495e]">{anexo.nome}</p>
-                            <p className="text-xs text-slate-500">{anexo.tamanho ? `${(anexo.tamanho / 1024).toFixed(0)} KB` : ''}</p>
+                            <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">{anexo.nome}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{anexo.tamanho ? `${(anexo.tamanho / 1024).toFixed(0)} KB` : ''}</p>
                           </div>
                         </div>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -1038,10 +1038,10 @@ export default function ConsultaDetalhePage() {
           <div className="xl:col-span-4 space-y-6">
 
             {/* Agenda */}
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-[#34495e] flex items-center gap-2 mb-1">
+                  <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2 mb-1">
                     <Calendar className="w-4 h-4 text-[#89bcbe]" />
                     Agenda
                   </CardTitle>
@@ -1057,7 +1057,7 @@ export default function ConsultaDetalhePage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem onClick={() => setShowTarefaWizard(true)}>
-                        <ListTodo className="w-4 h-4 mr-2 text-[#34495e]" />
+                        <ListTodo className="w-4 h-4 mr-2 text-[#34495e] dark:text-slate-200" />
                         <span className="text-sm">Nova Tarefa</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setShowEventoWizard(true)}>
@@ -1065,7 +1065,7 @@ export default function ConsultaDetalhePage() {
                         <span className="text-sm">Novo Compromisso</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setShowAudienciaWizard(true)}>
-                        <Gavel className="w-4 h-4 mr-2 text-emerald-600" />
+                        <Gavel className="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-400" />
                         <span className="text-sm">Nova Audiência</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -1075,11 +1075,11 @@ export default function ConsultaDetalhePage() {
               <CardContent>
                 {loadingAgenda ? (
                   <div className="text-center py-3">
-                    <div className="w-5 h-5 mx-auto border-2 border-teal-200 border-t-teal-500 rounded-full animate-spin"></div>
+                    <div className="w-5 h-5 mx-auto border-2 border-teal-200 dark:border-teal-700 border-t-teal-500 dark:border-t-teal-400 rounded-full animate-spin"></div>
                   </div>
                 ) : agendaItems.length === 0 ? (
                   <div className="text-center py-4">
-                    <p className="text-xs text-slate-500">Nenhum agendamento vinculado</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Nenhum agendamento vinculado</p>
                   </div>
                 ) : (
                   <div className="space-y-3.5">
@@ -1090,10 +1090,10 @@ export default function ConsultaDetalhePage() {
                       return paginatedAgenda
                     })().map((item) => {
                       const statusConfig: Record<string, { bg: string; text: string }> = {
-                        pendente: { bg: 'bg-amber-100', text: 'text-amber-700' },
-                        em_andamento: { bg: 'bg-blue-100', text: 'text-blue-700' },
-                        concluida: { bg: 'bg-emerald-100', text: 'text-emerald-700' },
-                        agendada: { bg: 'bg-blue-100', text: 'text-blue-700' },
+                        pendente: { bg: 'bg-amber-100 dark:bg-amber-500/10', text: 'text-amber-700 dark:text-amber-400' },
+                        em_andamento: { bg: 'bg-blue-100 dark:bg-blue-500/10', text: 'text-blue-700 dark:text-blue-400' },
+                        concluida: { bg: 'bg-emerald-100 dark:bg-emerald-500/10', text: 'text-emerald-700 dark:text-emerald-400' },
+                        agendada: { bg: 'bg-blue-100 dark:bg-blue-500/10', text: 'text-blue-700 dark:text-blue-400' },
                       }
                       const statusStyle = statusConfig[item.status] || statusConfig.pendente
 
@@ -1117,12 +1117,12 @@ export default function ConsultaDetalhePage() {
                         <div
                           key={item.id}
                           onClick={handleClick}
-                          className="border border-slate-200 rounded-lg p-4 hover:border-[#89bcbe] hover:shadow-sm transition-all cursor-pointer"
+                          className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-[#89bcbe] hover:shadow-sm transition-all cursor-pointer"
                         >
                           {/* Header com título e status */}
                           <div className="flex items-start gap-2.5 mb-2.5">
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-[#34495e] leading-tight truncate">
+                              <p className="text-xs font-semibold text-[#34495e] dark:text-slate-200 leading-tight truncate">
                                 {item.titulo}
                               </p>
                             </div>
@@ -1136,7 +1136,7 @@ export default function ConsultaDetalhePage() {
                             {/* Data/Horário */}
                             <div className="flex items-center gap-1.5">
                               <Clock className="w-3 h-3 text-[#89bcbe]" />
-                              <span className="text-[10px] text-slate-600">
+                              <span className="text-[10px] text-slate-600 dark:text-slate-400">
                                 {item.tipo_entidade === 'tarefa'
                                   ? formatBrazilDate(item.data_inicio)
                                   : formatBrazilDateTime(item.data_inicio)}
@@ -1147,7 +1147,7 @@ export default function ConsultaDetalhePage() {
                             {item.responsavel_nome && (
                               <div className="flex items-center gap-1.5">
                                 <User className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
-                                <span className="text-[10px] text-slate-600 truncate">
+                                <span className="text-[10px] text-slate-600 dark:text-slate-400 truncate">
                                   {item.responsavel_nome}
                                 </span>
                               </div>
@@ -1156,8 +1156,8 @@ export default function ConsultaDetalhePage() {
                             {/* Prazo Fatal (apenas para tarefas) */}
                             {item.tipo_entidade === 'tarefa' && item.prazo_data_limite && (
                               <div className="flex items-center gap-1.5">
-                                <CalendarClock className="w-3 h-3 text-red-500" />
-                                <span className="text-[10px] text-red-600 font-medium">
+                                <CalendarClock className="w-3 h-3 text-red-500 dark:text-red-400" />
+                                <span className="text-[10px] text-red-600 dark:text-red-400 font-medium">
                                   Fatal: {formatBrazilDate(item.prazo_data_limite)}
                                 </span>
                               </div>
@@ -1169,8 +1169,8 @@ export default function ConsultaDetalhePage() {
 
                     {/* Paginação da Agenda */}
                     {agendaItems.length > agendaPerPage && (
-                      <div className="flex items-center justify-between pt-3 mt-2 border-t border-slate-100">
-                        <p className="text-xs text-slate-500">
+                      <div className="flex items-center justify-between pt-3 mt-2 border-t border-slate-100 dark:border-slate-800">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           {((agendaPage - 1) * agendaPerPage) + 1}-{Math.min(agendaPage * agendaPerPage, agendaItems.length)} de {agendaItems.length}
                         </p>
                         <div className="flex items-center gap-1">
@@ -1422,8 +1422,8 @@ export default function ConsultaDetalhePage() {
       <Dialog open={confirmSemHoras} onOpenChange={setConfirmSemHoras}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[#34495e]">Concluir sem registrar horas?</DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
+            <DialogTitle className="text-[#34495e] dark:text-slate-200">Concluir sem registrar horas?</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
               Você não registrou horas para esta tarefa. Deseja concluí-la mesmo assim?
             </DialogDescription>
           </DialogHeader>
@@ -1458,7 +1458,7 @@ export default function ConsultaDetalhePage() {
       <Dialog open={!!selectedAndamento} onOpenChange={(open) => !open && setSelectedAndamento(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-[#34495e]">
+            <DialogTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
               Detalhe do Andamento
             </DialogTitle>
           </DialogHeader>
@@ -1466,17 +1466,17 @@ export default function ConsultaDetalhePage() {
           {selectedAndamento && (
             <div className="space-y-4 pt-2">
               {/* Data e Tipo */}
-              <div className="flex items-baseline gap-4 pb-3 border-b border-slate-100">
+              <div className="flex items-baseline gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Data</p>
-                  <p className="text-sm font-medium text-[#34495e]">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Data</p>
+                  <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                     {format(new Date(selectedAndamento.data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                   </p>
                 </div>
                 {selectedAndamento.tipo && (
                   <div className="flex-1">
-                    <p className="text-xs text-slate-500 mb-1">Tipo</p>
-                    <p className="text-sm font-medium text-[#34495e]">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Tipo</p>
+                    <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">
                       {formatTipoAndamento(selectedAndamento.tipo)}
                     </p>
                   </div>
@@ -1485,9 +1485,9 @@ export default function ConsultaDetalhePage() {
 
               {/* Descrição Completa */}
               <div>
-                <p className="text-xs text-slate-500 mb-2">Descrição</p>
-                <div className="bg-slate-50 rounded-lg p-4 max-h-[400px] overflow-y-auto">
-                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Descrição</p>
+                <div className="bg-slate-50 dark:bg-surface-0 rounded-lg p-4 max-h-[400px] overflow-y-auto">
+                  <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
                     {selectedAndamento.descricao}
                   </p>
                 </div>
@@ -1501,11 +1501,11 @@ export default function ConsultaDetalhePage() {
       <Dialog open={editAndamentoOpen} onOpenChange={setEditAndamentoOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-[#34495e]">Editar Andamento</DialogTitle>
+            <DialogTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">Editar Andamento</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Tipo</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Tipo</label>
               <Input
                 placeholder="Ex: Reunião, Análise, Parecer..."
                 value={editandoAndamento?.tipo || ''}
@@ -1514,7 +1514,7 @@ export default function ConsultaDetalhePage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Descrição *</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Descrição *</label>
               <Textarea
                 placeholder="Descreva o andamento..."
                 value={editandoAndamento?.descricao || ''}
@@ -1541,9 +1541,9 @@ export default function ConsultaDetalhePage() {
       <Dialog open={deleteAndamentoOpen} onOpenChange={setDeleteAndamentoOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-[#34495e]">Excluir Andamento</DialogTitle>
+            <DialogTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">Excluir Andamento</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             Tem certeza que deseja excluir este andamento? Esta ação não pode ser desfeita.
           </p>
           <DialogFooter>

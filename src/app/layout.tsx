@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'sonner'
 import { RegisterSW } from '@/components/layout/RegisterSW'
+import { ThemeProvider } from '@/components/layout/ThemeProvider'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -40,19 +41,20 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="pt-BR" className={inter.variable}>
+    <html lang="pt-BR" className={inter.variable} suppressHydrationWarning>
       <body className={`${inter.className} antialiased`}>
-        <RegisterSW />
-        {children}
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            style: {
-              background: 'white',
-              border: '1px solid #D4DCE8',
-            },
-          }}
-        />
+        <ThemeProvider>
+          <RegisterSW />
+          {children}
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              classNames: {
+                toast: 'bg-white dark:bg-surface-2 border-slate-200 dark:border-slate-700 text-foreground',
+              },
+            }}
+          />
+        </ThemeProvider>
       </body>
     </html>
   )

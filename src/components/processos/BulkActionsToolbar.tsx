@@ -102,11 +102,11 @@ export function BulkActionsToolbar({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
             <DropdownMenuItem onClick={() => onAction('ativar_monitoramento')}>
-              <Eye className="w-4 h-4 mr-2 text-emerald-600" />
+              <Eye className="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-400" />
               <span>Ativar Monitoramento</span>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onAction('desativar_monitoramento')}>
-              <EyeOff className="w-4 h-4 mr-2 text-slate-500" />
+              <EyeOff className="w-4 h-4 mr-2 text-slate-500 dark:text-slate-400" />
               <span>Desativar Monitoramento</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -128,25 +128,25 @@ export function BulkActionsToolbar({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
             <DropdownMenuItem onClick={() => onAction('alterar_area')}>
-              <Briefcase className="w-4 h-4 mr-2 text-blue-600" />
+              <Briefcase className="w-4 h-4 mr-2 text-blue-600 dark:text-blue-400" />
               <span>Alterar Área</span>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onAction('alterar_responsavel')}>
-              <User className="w-4 h-4 mr-2 text-violet-600" />
+              <User className="w-4 h-4 mr-2 text-violet-600 dark:text-violet-400" />
               <span>Alterar Responsável</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onAction('alterar_status')}>
-              <Activity className="w-4 h-4 mr-2 text-emerald-600" />
+              <Activity className="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-400" />
               <span>Alterar Status</span>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onAction('alterar_prioridade')}>
-              <AlertTriangle className="w-4 h-4 mr-2 text-amber-600" />
+              <AlertTriangle className="w-4 h-4 mr-2 text-amber-600 dark:text-amber-400" />
               <span>Alterar Prioridade</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onAction('adicionar_tags')}>
-              <Tag className="w-4 h-4 mr-2 text-teal-600" />
+              <Tag className="w-4 h-4 mr-2 text-teal-600 dark:text-teal-400" />
               <span>Adicionar Tags</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

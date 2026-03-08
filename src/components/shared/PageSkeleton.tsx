@@ -21,7 +21,7 @@ interface PageSkeletonProps {
 
 function SkeletonPulse({ className }: { className?: string }) {
   return (
-    <div className={`animate-pulse bg-slate-200 rounded ${className || ''}`} />
+    <div className={`animate-pulse bg-slate-200 dark:bg-slate-700 rounded ${className || ''}`} />
   )
 }
 
@@ -38,7 +38,7 @@ export function PageSkeleton({
       <div className="flex items-center justify-between">
         <div className="space-y-2">
           {title ? (
-            <h1 className="text-2xl font-bold text-[#34495e]">{title}</h1>
+            <h1 className="text-2xl font-bold text-[#34495e] dark:text-slate-200">{title}</h1>
           ) : (
             <SkeletonPulse className="h-8 w-48" />
           )}
@@ -54,7 +54,7 @@ export function PageSkeleton({
       {kpiCards > 0 && (
         <div className={`grid grid-cols-2 md:grid-cols-${Math.min(kpiCards, 4)} gap-4`}>
           {Array.from({ length: kpiCards }).map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+            <div key={i} className="bg-white dark:bg-surface-1 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <SkeletonPulse className="h-4 w-20" />
                 <SkeletonPulse className="h-8 w-8 rounded-lg" />
@@ -68,9 +68,9 @@ export function PageSkeleton({
 
       {/* Table/List Area */}
       {showTable && (
-        <div className="bg-white rounded-xl border border-slate-200">
+        <div className="bg-white dark:bg-surface-1 rounded-xl border border-slate-200 dark:border-slate-700">
           {/* Table Header */}
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <SkeletonPulse className="h-5 w-32" />
             <div className="flex gap-2">
               <SkeletonPulse className="h-8 w-24 rounded-lg" />
@@ -78,7 +78,7 @@ export function PageSkeleton({
             </div>
           </div>
           {/* Table Rows */}
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-50 dark:divide-slate-800">
             {Array.from({ length: tableRows }).map((_, i) => (
               <div key={i} className="p-4 flex items-center gap-4">
                 <SkeletonPulse className="h-4 w-4 rounded" />
@@ -95,7 +95,7 @@ export function PageSkeleton({
 
       {/* Calendar Area */}
       {showCalendar && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-white dark:bg-surface-1 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
           <div className="flex items-center justify-between mb-4">
             <SkeletonPulse className="h-5 w-32" />
             <div className="flex gap-2">
@@ -136,7 +136,7 @@ export function DashboardSkeleton() {
       {/* KPI Cards - 4 colunas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+          <div key={i} className="bg-white dark:bg-surface-1 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <SkeletonPulse className="h-4 w-20" />
               <SkeletonPulse className="h-8 w-8 rounded-lg" />
@@ -149,7 +149,7 @@ export function DashboardSkeleton() {
 
       {/* Meus Numeros + Agenda */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-4">
+        <div className="bg-white dark:bg-surface-1 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-4">
           <SkeletonPulse className="h-5 w-40" />
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="flex justify-between">
@@ -158,7 +158,7 @@ export function DashboardSkeleton() {
             </div>
           ))}
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+        <div className="bg-white dark:bg-surface-1 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
           <SkeletonPulse className="h-5 w-32" />
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3">

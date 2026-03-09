@@ -23,7 +23,8 @@ import {
   ChevronDown,
   ChevronRight,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Undo2
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -460,6 +461,26 @@ export default function PublicacoesPage() {
     }
   }
 
+  const voltarParaPendenteMassa = async () => {
+    if (selecionados.size === 0) return
+
+    try {
+      const { error } = await supabase
+        .from('publicacoes_publicacoes')
+        .update({ status: 'pendente' })
+        .in('id', Array.from(selecionados))
+
+      if (error) throw error
+
+      toast.success(`${selecionados.size} publicação(ões) voltou(aram) para pendente`)
+      limparSelecao()
+      await carregarPublicacoes()
+    } catch (err) {
+      console.error('Erro ao atualizar:', err)
+      toast.error('Erro ao atualizar publicações')
+    }
+  }
+
   const marcarComoProcessada = async () => {
     if (selecionados.size === 0) return
 
@@ -540,6 +561,25 @@ export default function PublicacoesPage() {
       } else if (expandedId === id) {
         setExpandedId(null)
       }
+
+      await carregarPublicacoes()
+    } catch (err) {
+      console.error('Erro ao atualizar:', err)
+      toast.error('Erro ao atualizar')
+    }
+  }
+
+  const voltarParaPendente = async (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+
+    try {
+      const { error } = await supabase
+        .from('publicacoes_publicacoes')
+        .update({ status: 'pendente' })
+        .eq('id', id)
+
+      if (error) throw error
+      toast.success('Publicação voltou para pendente')
 
       await carregarPublicacoes()
     } catch (err) {
@@ -919,6 +959,15 @@ export default function PublicacoesPage() {
               variant="secondary"
               size="sm"
               className="h-8 gap-1.5"
+              onClick={voltarParaPendenteMassa}
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Voltar para</span> Pendente
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-8 gap-1.5"
               onClick={marcarComoProcessada}
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
@@ -1103,6 +1152,17 @@ export default function PublicacoesPage() {
                     <div className="space-y-3">
                       {/* Botões de ação mobile */}
                       <div className="flex flex-wrap gap-1.5 pt-2">
+                        {(pub.status === 'processada' || pub.status === 'arquivada') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs gap-1.5 border-amber-200 text-amber-600"
+                            onClick={(e) => voltarParaPendente(pub.id, e)}
+                          >
+                            <Undo2 className="w-3.5 h-3.5" />
+                            Pendente
+                          </Button>
+                        )}
                         {pub.status !== 'processada' && pub.status !== 'arquivada' && (
                           <Button
                             variant="outline"
@@ -1285,6 +1345,25 @@ export default function PublicacoesPage() {
                       <td className="p-3">
                         <TooltipProvider delayDuration={200}>
                           <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                            {/* Botão Voltar Pendente - Só aparece se já foi tratada ou arquivada */}
+                            {(pub.status === 'processada' || pub.status === 'arquivada') && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 hover:bg-amber-50 text-amber-600 hover:text-amber-700"
+                                    onClick={(e) => voltarParaPendente(pub.id, e)}
+                                  >
+                                    <Undo2 className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Voltar para pendente</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+
                             {/* Botão Check Verde - Marcar como Tratada */}
                             {pub.status !== 'processada' && pub.status !== 'arquivada' && (
                               <Tooltip>

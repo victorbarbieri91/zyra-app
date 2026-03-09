@@ -268,7 +268,7 @@ export default function DashboardPage() {
   // Hooks de dados
   const { metrics, loading: loadingMetrics } = useDashboardMetrics()
   const { items: agendaItems, loading: loadingAgenda, isEmpty: isAgendaEmpty, audienciasHoje, prazosHoje, refresh: refreshAgenda } = useDashboardAgenda()
-  const { equipe, totalHorasEquipe, currentUserId, loading: loadingPerformance } = useDashboardPerformance()
+  const { equipe, totalHorasEquipe, currentUserId, loading: loadingPerformance, refresh: refreshPerformance } = useDashboardPerformance()
   // publicações removido do dashboard
   const { resumo, loading: loadingResumo, refresh: refreshResumo, tempoDesdeAtualizacao } = useDashboardResumoIA()
   const { insights, loading: loadingInsights, hasPermission: hasInsightsPermission, refresh: refreshInsights } = useDashboardInsightsIA()
@@ -1071,19 +1071,29 @@ export default function DashboardPage() {
             <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] dark:hover:shadow-[0_10px_35px_-6px_rgba(0,0,0,0.4)] transition-all duration-300 overflow-hidden">
               <div className="flex items-center justify-between px-5 pt-5 pb-3">
                 <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200">Performance da Equipe</h2>
-                <div className="flex items-center gap-1 p-0.5 bg-slate-100 dark:bg-surface-2 rounded-lg">
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setHorasViewMode('list')}
-                    className={cn("p-1.5 rounded-md transition-all", horasViewMode === 'list' ? 'bg-white dark:bg-surface-2 shadow-sm dark:shadow-none' : 'hover:bg-slate-200 dark:hover:bg-surface-3')}
+                    onClick={refreshPerformance}
+                    disabled={loadingPerformance}
+                    className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-surface-2 transition-all"
+                    title="Atualizar"
                   >
-                    <List className={cn("w-3.5 h-3.5", horasViewMode === 'list' ? 'text-[#1E3A8A] dark:text-blue-400' : 'text-slate-400 dark:text-slate-500')} />
+                    <RefreshCw className={cn("w-3.5 h-3.5 text-slate-400 dark:text-slate-500", loadingPerformance && "animate-spin")} />
                   </button>
-                  <button
-                    onClick={() => setHorasViewMode('bars')}
-                    className={cn("p-1.5 rounded-md transition-all", horasViewMode === 'bars' ? 'bg-white dark:bg-surface-2 shadow-sm dark:shadow-none' : 'hover:bg-slate-200 dark:hover:bg-surface-3')}
-                  >
-                    <BarChart3 className={cn("w-3.5 h-3.5", horasViewMode === 'bars' ? 'text-[#1E3A8A] dark:text-blue-400' : 'text-slate-400 dark:text-slate-500')} />
-                  </button>
+                  <div className="flex items-center gap-1 p-0.5 bg-slate-100 dark:bg-surface-2 rounded-lg">
+                    <button
+                      onClick={() => setHorasViewMode('list')}
+                      className={cn("p-1.5 rounded-md transition-all", horasViewMode === 'list' ? 'bg-white dark:bg-surface-2 shadow-sm dark:shadow-none' : 'hover:bg-slate-200 dark:hover:bg-surface-3')}
+                    >
+                      <List className={cn("w-3.5 h-3.5", horasViewMode === 'list' ? 'text-[#1E3A8A] dark:text-blue-400' : 'text-slate-400 dark:text-slate-500')} />
+                    </button>
+                    <button
+                      onClick={() => setHorasViewMode('bars')}
+                      className={cn("p-1.5 rounded-md transition-all", horasViewMode === 'bars' ? 'bg-white dark:bg-surface-2 shadow-sm dark:shadow-none' : 'hover:bg-slate-200 dark:hover:bg-surface-3')}
+                    >
+                      <BarChart3 className={cn("w-3.5 h-3.5", horasViewMode === 'bars' ? 'text-[#1E3A8A] dark:text-blue-400' : 'text-slate-400 dark:text-slate-500')} />
+                    </button>
+                  </div>
                 </div>
               </div>
 

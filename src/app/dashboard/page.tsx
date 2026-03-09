@@ -1101,7 +1101,7 @@ export default function DashboardPage() {
                   />
                 ) : horasViewMode === 'list' ? (
                   <div className="space-y-3">
-                    <ScrollArea className={equipe.length > 5 ? "h-[200px] pr-2" : ""}>
+                    <ScrollArea className={equipe.length > 10 ? "h-[420px] pr-2" : ""}>
                       <div className="space-y-2">
                         {equipe.map((membro, index) => {
                           const isCurrentUser = membro.id === currentUserId

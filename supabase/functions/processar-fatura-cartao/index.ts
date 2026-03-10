@@ -1,5 +1,6 @@
 // Edge Function: processar-fatura-cartao
-// Processa PDFs de faturas de cartão de crédito usando IA (OpenAI GPT ou Claude)
+// Processa PDFs de faturas de cartão de crédito usando IA
+// Prioridade: Claude Sonnet 4.6 (principal) → GPT-5 (fallback)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -8,6 +9,12 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+const MAX_PDF_SIZE_MB = 20
+const MAX_PDF_SIZE_BYTES = MAX_PDF_SIZE_MB * 1024 * 1024
+
+const CLAUDE_MODEL = 'claude-sonnet-4-6'
+const GPT_MODEL = 'gpt-5'
 
 interface TransacaoExtraida {
   data: string
@@ -57,56 +64,7 @@ Retorne APENAS um JSON válido no formato:
 IMPORTANTE: Retorne APENAS o JSON, sem explicações ou markdown.`
 }
 
-// Processar com OpenAI GPT-4o
-async function processWithOpenAI(
-  pdfBase64: string,
-  prompt: string,
-  apiKey: string
-): Promise<{ text: string; model: string }> {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      max_tokens: 8192,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:application/pdf;base64,${pdfBase64}`,
-                detail: 'high',
-              },
-            },
-            {
-              type: 'text',
-              text: prompt,
-            },
-          ],
-        },
-      ],
-    }),
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error('Erro na API OpenAI:', errorText)
-    throw new Error(`Erro na API do OpenAI: ${response.status}`)
-  }
-
-  const data = await response.json()
-  return {
-    text: data.choices[0].message.content,
-    model: 'gpt-4o',
-  }
-}
-
-// Processar com Claude
+// Processar com Claude Sonnet 4.6 (principal - com skill PDF para extração otimizada)
 async function processWithClaude(
   pdfBase64: string,
   prompt: string,
@@ -118,10 +76,15 @@ async function processWithClaude(
       'Content-Type': 'application/json',
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
+      'anthropic-beta': 'code-execution-2025-08-25,skills-2025-10-02',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: CLAUDE_MODEL,
       max_tokens: 8192,
+      container: {
+        skills: [{ type: 'anthropic', skill_id: 'pdf', version: 'latest' }],
+      },
+      tools: [{ type: 'code_execution_20250825', name: 'code_execution' }],
       messages: [
         {
           role: 'user',
@@ -147,14 +110,117 @@ async function processWithClaude(
   if (!response.ok) {
     const errorText = await response.text()
     console.error('Erro na API Anthropic:', errorText)
-    throw new Error(`Erro na API do Claude: ${response.status}`)
+    throw new Error(`Erro na API do Claude: ${response.status} - ${errorText}`)
+  }
+
+  const data = await response.json()
+
+  // Com skills, a resposta pode ter múltiplos content blocks (text, tool_use, etc.)
+  // Precisamos encontrar o bloco de texto com o JSON
+  let resultText = ''
+  for (const block of data.content) {
+    if (block.type === 'text' && block.text) {
+      resultText += block.text
+    }
+  }
+
+  if (!resultText) {
+    throw new Error('Claude não retornou texto na resposta')
+  }
+
+  return {
+    text: resultText,
+    model: CLAUDE_MODEL,
+  }
+}
+
+// Processar com GPT (fallback - envia PDF como base64 via file input)
+async function processWithGPT(
+  pdfBase64: string,
+  prompt: string,
+  apiKey: string
+): Promise<{ text: string; model: string }> {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: GPT_MODEL,
+      max_completion_tokens: 8192,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'file',
+              file: {
+                filename: 'fatura.pdf',
+                file_data: `data:application/pdf;base64,${pdfBase64}`,
+              },
+            },
+            {
+              type: 'text',
+              text: prompt,
+            },
+          ],
+        },
+      ],
+    }),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('Erro na API OpenAI:', errorText)
+    throw new Error(`Erro na API do GPT: ${response.status} - ${errorText}`)
   }
 
   const data = await response.json()
   return {
-    text: data.content[0].text,
-    model: 'claude-sonnet-4-20250514',
+    text: data.choices[0].message.content,
+    model: GPT_MODEL,
   }
+}
+
+// Processar com fallback automático: Claude (principal) → GPT (fallback)
+async function processWithFallback(
+  pdfBase64: string,
+  prompt: string,
+  anthropicApiKey: string | undefined,
+  openaiApiKey: string | undefined
+): Promise<{ text: string; model: string }> {
+  // Tentar Claude primeiro (principal - suporta PDF nativo)
+  if (anthropicApiKey) {
+    try {
+      console.log(`Processando com Claude (${CLAUDE_MODEL})...`)
+      return await processWithClaude(pdfBase64, prompt, anthropicApiKey)
+    } catch (claudeError: any) {
+      console.error('Claude falhou:', claudeError.message)
+
+      // Se tem GPT disponível, tentar como fallback
+      if (openaiApiKey) {
+        console.log(`Tentando fallback com GPT (${GPT_MODEL})...`)
+        try {
+          return await processWithGPT(pdfBase64, prompt, openaiApiKey)
+        } catch (gptError: any) {
+          console.error('GPT também falhou:', gptError.message)
+          throw new Error(`Claude falhou: ${claudeError.message}. GPT (${GPT_MODEL}) também falhou: ${gptError.message}`)
+        }
+      }
+
+      // Sem fallback disponível
+      throw claudeError
+    }
+  }
+
+  // Se não tem Claude, tentar GPT direto
+  if (openaiApiKey) {
+    console.log(`Claude não configurado. Tentando GPT (${GPT_MODEL}) direto...`)
+    return await processWithGPT(pdfBase64, prompt, openaiApiKey)
+  }
+
+  throw new Error('Nenhuma API key configurada (ANTHROPIC_API_KEY ou OPENAI_API_KEY)')
 }
 
 // Extrair JSON da resposta
@@ -186,31 +252,19 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { importacao_id, arquivo_url, cartao_id, provider } = await req.json()
+    const { importacao_id, arquivo_url, cartao_id } = await req.json()
 
     if (!importacao_id || !arquivo_url || !cartao_id) {
       throw new Error('Parâmetros obrigatórios: importacao_id, arquivo_url, cartao_id')
     }
 
-    // Determinar qual provider usar (prioridade: parâmetro > OpenAI > Claude)
-    let selectedProvider: 'openai' | 'anthropic' | null = null
-
-    if (provider === 'openai' && openaiApiKey) {
-      selectedProvider = 'openai'
-    } else if (provider === 'anthropic' && anthropicApiKey) {
-      selectedProvider = 'anthropic'
-    } else if (openaiApiKey) {
-      selectedProvider = 'openai'
-    } else if (anthropicApiKey) {
-      selectedProvider = 'anthropic'
-    }
-
-    if (!selectedProvider) {
+    // Verificar se ao menos uma API key existe
+    if (!anthropicApiKey && !openaiApiKey) {
       await supabase
         .from('cartoes_credito_importacoes')
         .update({
           status: 'erro',
-          erro_mensagem: 'Nenhuma API key configurada. Configure OPENAI_API_KEY ou ANTHROPIC_API_KEY nas variáveis de ambiente.',
+          erro_mensagem: 'Nenhuma API key configurada. Configure ANTHROPIC_API_KEY ou OPENAI_API_KEY nas variáveis de ambiente.',
           processado_em: new Date().toISOString(),
         })
         .eq('id', importacao_id)
@@ -218,7 +272,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'Nenhuma API key configurada (OPENAI_API_KEY ou ANTHROPIC_API_KEY)',
+          error: 'Nenhuma API key configurada (ANTHROPIC_API_KEY ou OPENAI_API_KEY)',
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -254,25 +308,31 @@ serve(async (req) => {
       }
 
       const pdfBuffer = await pdfResponse.arrayBuffer()
-      pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)))
-    } catch (error) {
+
+      // Validar tamanho do PDF
+      if (pdfBuffer.byteLength > MAX_PDF_SIZE_BYTES) {
+        const sizeMB = (pdfBuffer.byteLength / (1024 * 1024)).toFixed(1)
+        throw new Error(`PDF muito grande (${sizeMB}MB). O tamanho máximo permitido é ${MAX_PDF_SIZE_MB}MB.`)
+      }
+
+      const bytes = new Uint8Array(pdfBuffer)
+      const chunkSize = 8192
+      let binaryString = ''
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize)
+        binaryString += String.fromCharCode(...chunk)
+      }
+      pdfBase64 = btoa(binaryString)
+    } catch (error: any) {
       console.error('Erro ao baixar PDF:', error)
-      throw new Error('Não foi possível baixar o arquivo PDF')
+      throw new Error(error.message || 'Não foi possível baixar o arquivo PDF')
     }
 
     // Construir prompt
     const prompt = buildPrompt(cartao)
 
-    // Processar com o provider selecionado
-    let aiResponse: { text: string; model: string }
-
-    console.log(`Processando com ${selectedProvider}...`)
-
-    if (selectedProvider === 'openai') {
-      aiResponse = await processWithOpenAI(pdfBase64, prompt, openaiApiKey!)
-    } else {
-      aiResponse = await processWithClaude(pdfBase64, prompt, anthropicApiKey!)
-    }
+    // Processar com fallback automático (Claude → GPT)
+    const aiResponse = await processWithFallback(pdfBase64, prompt, anthropicApiKey, openaiApiKey)
 
     // Extrair JSON da resposta
     const resultado = parseResponse(aiResponse.text)
@@ -290,7 +350,7 @@ serve(async (req) => {
       .update({
         status: 'concluido',
         transacoes_encontradas: transacoesValidas.length,
-        transacoes_importadas: 0, // Será atualizado quando o usuário confirmar
+        transacoes_importadas: 0,
         modelo_ia: aiResponse.model,
         confianca_media: Math.round(confiancaMedia * 100),
         dados_extraidos: resultado,
@@ -302,7 +362,6 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         importacao_id,
-        provider: selectedProvider,
         model: aiResponse.model,
         transacoes_encontradas: transacoesValidas.length,
         confianca_media: Math.round(confiancaMedia * 100),

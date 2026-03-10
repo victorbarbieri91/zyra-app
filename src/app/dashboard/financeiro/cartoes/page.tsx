@@ -47,6 +47,7 @@ import {
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 import { cn } from '@/lib/utils'
 import CartaoModal from '@/components/financeiro/cartoes/CartaoModal'
+import ImportarFaturaModal from '@/components/financeiro/cartoes/ImportarFaturaModal'
 import { toast } from 'sonner'
 
 export default function CartoesPage() {
@@ -64,6 +65,7 @@ export default function CartoesPage() {
   const [seletorAberto, setSeletorAberto] = useState(false)
 
   // Modais
+  const [importModalOpen, setImportModalOpen] = useState(false)
   const [modalCartaoOpen, setModalCartaoOpen] = useState(false)
   const [cartaoParaEditar, setCartaoParaEditar] = useState<CartaoComFaturaAtual | null>(null)
   const [cartaoParaExcluir, setCartaoParaExcluir] = useState<string | null>(null)
@@ -267,11 +269,11 @@ export default function CartoesPage() {
             </Popover>
           )}
           <Button
-            variant="outline"
-            onClick={() => router.push('/dashboard/financeiro/cartoes/importar')}
+            onClick={() => setImportModalOpen(true)}
+            className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white hover:from-emerald-700 hover:to-emerald-800 shadow-sm"
           >
             <Upload className="h-4 w-4 md:mr-2" />
-            <span className="hidden md:inline">Importar PDF</span>
+            <span className="hidden md:inline">Importar PDF com IA</span>
           </Button>
           <Button
             onClick={handleNewCartao}
@@ -454,6 +456,13 @@ export default function CartoesPage() {
           </Table>
         </div>
       )}
+
+      {/* Modal de Importação de Fatura */}
+      <ImportarFaturaModal
+        open={importModalOpen}
+        onOpenChange={setImportModalOpen}
+        onSuccess={loadData}
+      />
 
       {/* Modal de Cartão */}
       {escritorioAtivo && (

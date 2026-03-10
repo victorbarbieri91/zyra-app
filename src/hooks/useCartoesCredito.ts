@@ -1024,15 +1024,85 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
     transacoes: Array<{ data: string; descricao: string; valor: number }>
   ): Promise<Map<string, boolean>> => {
     const resultados = new Map<string, boolean>()
+    if (transacoes.length === 0) return resultados
 
-    for (const t of transacoes) {
-      const key = `${t.data}|${t.descricao}|${t.valor}`
-      const isDuplicate = await verificarDuplicata(cartaoId, t.data, t.descricao, t.valor)
-      resultados.set(key, isDuplicate)
+    try {
+      // Gerar todos os hashes de uma vez
+      const hashPromises = transacoes.map(async (t) => {
+        const hashInput = `${t.data}|${t.descricao.toLowerCase().trim()}|${t.valor.toFixed(2)}`
+        const hashBuffer = await crypto.subtle.digest(
+          'SHA-256',
+          new TextEncoder().encode(hashInput)
+        )
+        const hash = Array.from(new Uint8Array(hashBuffer))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('')
+          .substring(0, 32)
+        return { key: `${t.data}|${t.descricao}|${t.valor}`, hash }
+      })
+
+      const hashResults = await Promise.all(hashPromises)
+      const allHashes = hashResults.map(h => h.hash)
+
+      // Única consulta ao banco com todos os hashes
+      const { data: existentes } = await supabase
+        .from('cartoes_credito_lancamentos')
+        .select('hash_transacao')
+        .eq('cartao_id', cartaoId)
+        .in('hash_transacao', allHashes)
+
+      const hashesExistentes = new Set((existentes || []).map((e: { hash_transacao: string }) => e.hash_transacao))
+
+      // Mapear resultados
+      for (const { key, hash } of hashResults) {
+        resultados.set(key, hashesExistentes.has(hash))
+      }
+    } catch (err) {
+      console.error('Erro ao verificar duplicatas em lote:', err)
+      // Em caso de erro, marca tudo como não-duplicata
+      for (const t of transacoes) {
+        resultados.set(`${t.data}|${t.descricao}|${t.valor}`, false)
+      }
     }
 
     return resultados
-  }, [verificarDuplicata])
+  }, [supabase])
+
+  // ============================================
+  // IMPORTAÇÃO EM LOTE
+  // ============================================
+
+  const importarLancamentosEmLote = useCallback(async (
+    cartaoId: string,
+    mesReferencia: string, // formato: YYYY-MM-01
+    transacoes: Array<{ descricao: string; categoria: string; valor: number; data_compra: string }>
+  ): Promise<{ total_importados: number; lancamento_ids: string[] }> => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const { data, error: rpcError } = await supabase
+        .rpc('importar_lancamentos_cartao_em_lote', {
+          p_cartao_id: cartaoId,
+          p_mes_referencia: mesReferencia,
+          p_transacoes: JSON.stringify(transacoes),
+        })
+
+      if (rpcError) throw rpcError
+
+      const result = data?.[0] || { total_importados: 0, lancamento_ids: [] }
+      return {
+        total_importados: result.total_importados,
+        lancamento_ids: result.lancamento_ids || [],
+      }
+    } catch (err: any) {
+      console.error('Erro ao importar lançamentos em lote:', err)
+      setError(err.message)
+      return { total_importados: 0, lancamento_ids: [] }
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase])
 
   // ============================================
   // AÇÕES EM MASSA
@@ -1233,6 +1303,8 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
     verificarFaturaExistente,
     vincularLancamentosAFatura,
     criarFaturaCartao,
+    // Importação em lote
+    importarLancamentosEmLote,
     // Ações em massa
     deleteLancamentosEmMassa,
     atualizarCategoriaEmMassa,

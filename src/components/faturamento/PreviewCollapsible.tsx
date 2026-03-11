@@ -234,7 +234,7 @@ export function PreviewCollapsible({
 
             {/* Sidebar — apenas se 2+ contratos */}
             {contratoGroups.length > 1 && (
-              <div className="w-52 flex-shrink-0 border-r border-slate-200 bg-slate-50/50 overflow-y-auto">
+              <div className="w-52 flex-shrink-0 border-r border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-[hsl(var(--surface-1))] overflow-y-auto">
                 <div className="py-2">
                   {contratoGroups.map(group => {
                     const total = [...group.honorarios, ...group.timesheet, ...group.pastas]
@@ -248,14 +248,14 @@ export function PreviewCollapsible({
                         className={cn(
                           'w-full text-left px-4 py-3 transition-colors border-l-2 flex items-start gap-2',
                           isActive
-                            ? 'bg-white border-l-[#1E3A8A] text-[#1E3A8A]'
-                            : 'border-l-transparent text-slate-600 hover:bg-white/70 hover:text-slate-800'
+                            ? 'bg-white dark:bg-[hsl(var(--surface-3))] border-l-[#1E3A8A] dark:border-l-blue-400 text-[#1E3A8A] dark:text-blue-300'
+                            : 'border-l-transparent text-slate-600 dark:text-slate-400 hover:bg-white/70 dark:hover:bg-[hsl(var(--surface-2))] hover:text-slate-800 dark:hover:text-slate-200'
                         )}
                       >
-                        <Building2 className={cn('h-3.5 w-3.5 mt-0.5 shrink-0', isActive ? 'text-[#1E3A8A]' : 'text-slate-400')} />
+                        <Building2 className={cn('h-3.5 w-3.5 mt-0.5 shrink-0', isActive ? 'text-[#1E3A8A] dark:text-blue-300' : 'text-slate-400')} />
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <p className={cn('text-xs font-medium truncate', isActive ? 'text-[#1E3A8A]' : 'text-slate-700')}>
+                            <p className={cn('text-xs font-medium truncate', isActive ? 'text-[#1E3A8A] dark:text-blue-300' : 'text-slate-700 dark:text-slate-300')}>
                               {group.label}
                             </p>
                             {hasAdj && <Scale className="h-3 w-3 shrink-0 text-amber-500" />}
@@ -263,7 +263,7 @@ export function PreviewCollapsible({
                           {group.numero_contrato && group.contrato_titulo && (
                             <p className="text-[10px] text-slate-400 truncate mt-0.5">{group.numero_contrato}</p>
                           )}
-                          <p className={cn('text-[10px] mt-0.5', isActive ? 'text-[#1E3A8A]/70' : 'text-slate-400')}>
+                          <p className={cn('text-[10px] mt-0.5', isActive ? 'text-[#1E3A8A]/70 dark:text-blue-300/70' : 'text-slate-400')}>
                             {selCount}/{total.length} selecionado{selCount !== 1 ? 's' : ''}
                           </p>
                         </div>
@@ -283,13 +283,13 @@ export function PreviewCollapsible({
                     {contratoGroups.length > 1 && (
                       <div className="flex items-center justify-between">
                         <div>
-                          <h3 className="text-sm font-semibold text-[#34495e]">{activeGroup.label}</h3>
+                          <h3 className="text-sm font-semibold text-[#34495e] dark:text-slate-100">{activeGroup.label}</h3>
                           {activeGroup.numero_contrato && (
-                            <p className="text-xs text-slate-500 mt-0.5">{activeGroup.numero_contrato}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{activeGroup.numero_contrato}</p>
                           )}
                         </div>
                         <div className="text-right">
-                          <p className="text-xs text-slate-500">Selecionado neste contrato</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Selecionado neste contrato</p>
                           <p className="text-sm font-bold text-emerald-600">{formatCurrency(getGroupTotal(activeGroup))}</p>
                         </div>
                       </div>
@@ -304,8 +304,8 @@ export function PreviewCollapsible({
                         <div className={cn(
                           'flex items-center justify-between px-4 py-2.5 rounded-lg border text-xs',
                           isMin
-                            ? 'bg-amber-50 border-amber-200 text-amber-800'
-                            : 'bg-blue-50 border-blue-200 text-blue-800'
+                            ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-700/50 text-amber-800 dark:text-amber-300'
+                            : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-700/50 text-blue-800 dark:text-blue-300'
                         )}>
                           <div className="flex items-center gap-2">
                             <Scale className="h-3.5 w-3.5 shrink-0" />
@@ -399,7 +399,7 @@ export function PreviewCollapsible({
                       activeGroup.timesheet.length === 0 &&
                       activeGroup.pastas.length === 0 && (
                         <div className="py-12 text-center">
-                          <p className="text-sm text-slate-400">Nenhum lançamento neste contrato</p>
+                          <p className="text-sm text-slate-400 dark:text-slate-500">Nenhum lançamento neste contrato</p>
                         </div>
                       )}
                   </>
@@ -409,15 +409,15 @@ export function PreviewCollapsible({
           </div>
 
           {/* ── FOOTER ──────────────────────────────────────────────────── */}
-          <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex-shrink-0 rounded-b-lg">
+          <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[hsl(var(--surface-1))] flex-shrink-0 rounded-b-lg">
             <div className="flex items-center justify-between">
               <div>
                 {totalSelecionados > 0 ? (
                   <>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       {totalSelecionados} item{totalSelecionados !== 1 ? 's' : ''} selecionado{totalSelecionados !== 1 ? 's' : ''}
                       {totalAjustes !== 0 && (
-                        <span className={cn('ml-2', totalAjustes > 0 ? 'text-amber-600' : 'text-blue-600')}>
+                        <span className={cn('ml-2', totalAjustes > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-blue-600 dark:text-blue-400')}>
                           ({totalAjustes > 0 ? '+' : ''}{formatCurrency(totalAjustes)} ajuste contratual)
                         </span>
                       )}
@@ -425,14 +425,14 @@ export function PreviewCollapsible({
                     <p className="text-lg font-bold text-emerald-600 mt-0.5">{formatCurrency(totalValor + totalAjustes)}</p>
                   </>
                 ) : (
-                  <p className="text-sm text-slate-400">Selecione itens para gerar a fatura</p>
+                  <p className="text-sm text-slate-400 dark:text-slate-500">Selecione itens para gerar a fatura</p>
                 )}
               </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   onClick={() => onOpenChange(false)}
-                  className="border-slate-200 text-sm h-9"
+                  className="border-slate-200 dark:border-slate-600 text-sm h-9"
                 >
                   Cancelar
                 </Button>
@@ -461,13 +461,13 @@ export function PreviewCollapsible({
           </DialogHeader>
           {selectedPasta && (
             <div className="space-y-4">
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="p-3 bg-slate-50 dark:bg-[hsl(var(--surface-2))] rounded-lg border border-slate-200 dark:border-slate-700">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-800">
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                       Competência: {formatCompetencia(selectedPasta.competencia)}
                     </p>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                       {selectedPasta.qtd_processos} processos × {formatCurrency(selectedPasta.valor_unitario)}
                     </p>
                   </div>
@@ -477,30 +477,30 @@ export function PreviewCollapsible({
                 </div>
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500 mb-2">Processos incluídos:</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Processos incluídos:</p>
                 <ScrollArea className="h-[250px]">
                   <div className="space-y-2">
                     {selectedPasta.processos_lista.length === 0 ? (
                       <p className="text-xs text-slate-400 text-center py-4">Nenhum processo encontrado</p>
                     ) : (
                       selectedPasta.processos_lista.map((processo) => (
-                        <div key={processo.id} className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg">
+                        <div key={processo.id} className="flex items-center justify-between p-2.5 bg-white dark:bg-[hsl(var(--surface-2))] border border-slate-200 dark:border-slate-700 rounded-lg">
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-800 truncate">
+                            <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
                               {processo.numero_pasta || 'Sem pasta'}
                             </p>
-                            <p className="text-xs text-slate-500 truncate">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                               {processo.numero_cnj || processo.titulo || 'Sem identificação'}
                             </p>
                             {processo.cliente_nome && (
-                              <p className="text-[10px] text-slate-400 truncate">{processo.cliente_nome}</p>
+                              <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{processo.cliente_nome}</p>
                             )}
                           </div>
                           {onRemoverProcessoPasta && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
                               onClick={() => {
                                 onRemoverProcessoPasta(selectedPasta.fechamento_id, processo.id)
                                 setSelectedPasta(prev =>
@@ -564,16 +564,16 @@ function CollapsibleSection({
   const allSelected = items.length > 0 && items.every(l => selectedIds.includes(l.lancamento_id))
 
   return (
-    <div className="border border-slate-200 rounded-lg overflow-hidden">
+    <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
       {/* Header colapsável */}
       <button
         onClick={onToggleCollapse}
-        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left"
+        className="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-[hsl(var(--surface-2))] hover:bg-slate-50 dark:hover:bg-[hsl(var(--surface-3))] transition-colors text-left"
       >
         <div className="flex items-center gap-2">
           {icon}
-          <span className="text-sm font-semibold text-slate-700">{label}</span>
-          <Badge variant="secondary" className="bg-slate-100 text-slate-600 text-[10px] font-medium h-5 px-1.5">
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</span>
+          <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-[10px] font-medium h-5 px-1.5">
             {selectedCount}/{items.length}
           </Badge>
         </div>
@@ -584,7 +584,7 @@ function CollapsibleSection({
           <Button
             variant="ghost"
             size="sm"
-            className="text-[11px] text-slate-500 hover:text-slate-700 h-6 px-2"
+            className="text-[11px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 h-6 px-2"
             onClick={(e) => { e.stopPropagation(); onToggleAll() }}
           >
             {allSelected ? 'Desmarcar' : 'Selecionar todos'}
@@ -597,7 +597,7 @@ function CollapsibleSection({
 
       {/* Body — expandido por padrão (collapsed = false → visível) */}
       {!collapsed && (
-        <div className="divide-y divide-slate-100 border-t border-slate-100">
+        <div className="divide-y divide-slate-100 dark:divide-slate-700/50 border-t border-slate-100 dark:border-slate-700/50">
           {items.map(item => renderItem(item))}
         </div>
       )}
@@ -625,7 +625,7 @@ function PastaItem({ pasta, selected, onToggle, onVerProcessos, onExcluir }: Pas
     <div
       className={cn(
         'flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors',
-        selected ? 'bg-[#1E3A8A]/5' : 'hover:bg-slate-50'
+        selected ? 'bg-[#1E3A8A]/5 dark:bg-blue-500/10' : 'hover:bg-slate-50 dark:hover:bg-[hsl(var(--surface-3))]'
       )}
       onClick={() => onToggle(pasta.lancamento_id)}
     >
@@ -634,18 +634,18 @@ function PastaItem({ pasta, selected, onToggle, onVerProcessos, onExcluir }: Pas
         checked={selected}
         onChange={() => onToggle(pasta.lancamento_id)}
         onClick={(e) => e.stopPropagation()}
-        className="rounded border-slate-300 text-[#1E3A8A] focus:ring-[#1E3A8A] h-4 w-4 mt-0.5 shrink-0"
+        className="rounded border-slate-300 dark:border-slate-600 text-[#1E3A8A] focus:ring-[#1E3A8A] h-4 w-4 mt-0.5 shrink-0"
       />
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-slate-800">Fechamento Mensal</p>
-        <p className="text-[11px] text-slate-500 mt-0.5">
+        <p className="text-xs font-medium text-slate-800 dark:text-slate-200">Fechamento Mensal</p>
+        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
           {pasta.competencia ? formatComp(pasta.competencia) : 'Competência não definida'}
         </p>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
-          <Badge variant="outline" className="text-[10px] bg-slate-50 px-1.5 py-0 h-4">
+          <Badge variant="outline" className="text-[10px] bg-slate-50 dark:bg-slate-700/50 dark:border-slate-600 dark:text-slate-300 px-1.5 py-0 h-4">
             {pasta.qtd_processos || 0} processos
           </Badge>
-          <Badge variant="outline" className="text-[10px] bg-slate-50 px-1.5 py-0 h-4">
+          <Badge variant="outline" className="text-[10px] bg-slate-50 dark:bg-slate-700/50 dark:border-slate-600 dark:text-slate-300 px-1.5 py-0 h-4">
             {formatCurrency(pasta.valor_unitario || 0)}/pasta
           </Badge>
         </div>
@@ -655,7 +655,7 @@ function PastaItem({ pasta, selected, onToggle, onVerProcessos, onExcluir }: Pas
         <Button
           variant="ghost"
           size="sm"
-          className="text-[10px] text-[#1E3A8A] h-5 px-1.5"
+          className="text-[10px] text-[#1E3A8A] dark:text-blue-400 h-5 px-1.5"
           onClick={(e) => { e.stopPropagation(); onVerProcessos(pasta) }}
         >
           Ver processos
@@ -664,7 +664,7 @@ function PastaItem({ pasta, selected, onToggle, onVerProcessos, onExcluir }: Pas
           <Button
             variant="ghost"
             size="sm"
-            className="text-[10px] text-red-500 hover:text-red-700 h-5 px-1.5"
+            className="text-[10px] text-red-500 hover:text-red-700 dark:hover:text-red-400 h-5 px-1.5"
             title="Excluir fechamento (remove do disponível para faturar)"
             onClick={(e) => { e.stopPropagation(); onExcluir(pasta.fechamento_id!) }}
           >

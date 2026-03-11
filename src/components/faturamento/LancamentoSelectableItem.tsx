@@ -26,7 +26,7 @@ export function LancamentoSelectableItem({
     <div
       className={cn(
         'flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors',
-        selected ? 'bg-[#1E3A8A]/5' : 'hover:bg-slate-50'
+        selected ? 'bg-[#1E3A8A]/5 dark:bg-blue-500/10' : 'hover:bg-slate-50 dark:hover:bg-[hsl(var(--surface-3))]'
       )}
       onClick={() => onToggle(lancamento.lancamento_id)}
     >
@@ -36,12 +36,12 @@ export function LancamentoSelectableItem({
         checked={selected}
         onChange={() => onToggle(lancamento.lancamento_id)}
         onClick={(e) => e.stopPropagation()}
-        className="rounded border-slate-300 text-[#1E3A8A] focus:ring-[#1E3A8A] h-4 w-4 mt-0.5 shrink-0"
+        className="rounded border-slate-300 dark:border-slate-600 text-[#1E3A8A] focus:ring-[#1E3A8A] h-4 w-4 mt-0.5 shrink-0"
       />
 
       {/* Conteúdo */}
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-slate-800 leading-snug">
+        <p className="text-xs font-medium text-slate-800 dark:text-slate-200 leading-snug">
           {formatDescricaoFatura(lancamento.descricao)}
         </p>
         <p className="text-[11px] text-slate-400 mt-0.5">{lancamento.categoria}</p>
@@ -53,7 +53,7 @@ export function LancamentoSelectableItem({
               ? `/dashboard/processos/${lancamento.processo_id}`
               : `/dashboard/consultivo/${lancamento.consulta_id}`
             }
-            className="inline-flex items-center gap-1 text-[10px] text-blue-600 hover:underline mt-1"
+            className="inline-flex items-center gap-1 text-[10px] text-blue-600 dark:text-blue-400 hover:underline mt-1"
             onClick={(e) => e.stopPropagation()}
             target="_blank"
           >
@@ -77,7 +77,7 @@ export function LancamentoSelectableItem({
                 <User className="h-2.5 w-2.5 shrink-0" />
                 {lancamento.profissional_nome}
                 {lancamento.cargo_nome && (
-                  <span className="text-slate-300">· {lancamento.cargo_nome}</span>
+                  <span className="text-slate-300 dark:text-slate-500">· {lancamento.cargo_nome}</span>
                 )}
               </span>
             )}

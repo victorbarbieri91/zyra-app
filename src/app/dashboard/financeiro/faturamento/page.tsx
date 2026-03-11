@@ -17,6 +17,7 @@ import {
   Search,
   X,
   Landmark,
+  FileOutput,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -60,6 +61,7 @@ import { FaturaGeradaCard } from '@/components/faturamento/FaturaGeradaCard'
 import { FaturasTable } from '@/components/faturamento/FaturasTable'
 import { FaturaDetalhesPanel } from '@/components/faturamento/FaturaDetalhesPanel'
 import { ClientesTable } from '@/components/faturamento/ClientesTable'
+import NotasDebitoContent from '@/components/financeiro/NotasDebitoContent'
 import { cn, formatHoras } from '@/lib/utils'
 import { toast } from 'sonner'
 import type {
@@ -97,7 +99,7 @@ export default function FaturamentoPage() {
     executarFechamentoManual,
   } = useFechamentosPasta(escritoriosSelecionados)
 
-  const [activeTab, setActiveTab] = useState<'prontos' | 'faturados'>('prontos')
+  const [activeTab, setActiveTab] = useState<'prontos' | 'faturados' | 'notas_debito'>('prontos')
 
   const [clientes, setClientes] = useState<ClienteParaFaturar[]>([])
   const [faturas, setFaturas] = useState<FaturaGerada[]>([])
@@ -477,7 +479,7 @@ export default function FaturamentoPage() {
               setCompetenciaManual(`${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`)
               setShowExecutarModal(true)
             }}
-            className="border-amber-200 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+            className="border-amber-200 dark:border-amber-700/50 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10"
           >
             <FolderOpen className="h-4 w-4 md:mr-2" />
             <span className="hidden md:inline">Fechamento de Pastas</span>
@@ -496,8 +498,8 @@ export default function FaturamentoPage() {
       </div>
 
       {/* Tabs: Prontos para Faturar | Faturados */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'prontos' | 'faturados')}>
-        <TabsList className="grid w-full max-w-xl grid-cols-2">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'prontos' | 'faturados' | 'notas_debito')}>
+        <TabsList className="grid w-full max-w-2xl grid-cols-3">
           <TabsTrigger value="prontos">
             Prontos para Faturar
             {clientes.length > 0 && (
@@ -513,6 +515,10 @@ export default function FaturamentoPage() {
                 {faturas.length}
               </Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="notas_debito">
+            <FileOutput className="w-3.5 h-3.5 mr-1.5" />
+            Notas de Débito
           </TabsTrigger>
         </TabsList>
 
@@ -776,6 +782,11 @@ export default function FaturamentoPage() {
               </div>
             )}
           </div>
+        </TabsContent>
+
+        {/* Tab: Notas de Débito */}
+        <TabsContent value="notas_debito" className="mt-6">
+          <NotasDebitoContent embedded />
         </TabsContent>
 
       </Tabs>

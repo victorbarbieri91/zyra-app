@@ -218,11 +218,11 @@ export default function ConsultivoPage() {
           responsavel_nome
         `, { count: 'exact' })
 
-      // Apply search filter - busca por título, número, cliente e responsável
+      // Apply search filter - busca por título, número e cliente
       const isSearching = debouncedSearch.trim().length > 0
       if (isSearching) {
         const searchTerm = `%${debouncedSearch.trim()}%`
-        query = query.or(`titulo.ilike.${searchTerm},numero.ilike.${searchTerm},cliente_nome.ilike.${searchTerm},responsavel_nome.ilike.${searchTerm}`)
+        query = query.or(`titulo.ilike.${searchTerm},numero.ilike.${searchTerm},cliente_nome.ilike.${searchTerm}`)
       }
 
       // Apply view filter

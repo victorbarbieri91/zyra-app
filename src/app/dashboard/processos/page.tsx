@@ -238,10 +238,10 @@ export default function ProcessosPage() {
           movimentacoes_nao_lidas
         `, { count: 'exact' })
 
-      // Apply search filter - busca por CNJ, pasta, parte contrária, cliente e responsável
+      // Apply search filter - busca por CNJ, pasta, parte contrária e cliente
       if (debouncedSearch.trim()) {
         const searchTerm = `%${debouncedSearch.trim()}%`
-        query = query.or(`numero_cnj.ilike.${searchTerm},numero_pasta.ilike.${searchTerm},parte_contraria.ilike.${searchTerm},cliente_nome.ilike.${searchTerm},responsavel_nome.ilike.${searchTerm}`)
+        query = query.or(`numero_cnj.ilike.${searchTerm},numero_pasta.ilike.${searchTerm},parte_contraria.ilike.${searchTerm},cliente_nome.ilike.${searchTerm}`)
       }
 
       // Apply view filter

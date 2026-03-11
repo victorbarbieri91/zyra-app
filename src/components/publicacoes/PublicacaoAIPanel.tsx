@@ -86,8 +86,8 @@ export default function PublicacaoAIPanel({
     return (
       <div className="space-y-3">
         <div className="flex items-center gap-2 mb-1">
-          <Loader2 className="w-4 h-4 animate-spin text-[#34495e]" />
-          <span className="text-xs font-medium text-slate-500">Analisando...</span>
+          <Loader2 className="w-4 h-4 animate-spin text-[#34495e] dark:text-[#89bcbe]" />
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Analisando...</span>
         </div>
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-3/4" />
@@ -101,10 +101,10 @@ export default function PublicacaoAIPanel({
   if (!analise) {
     return (
       <div className={cn('text-center', compact ? 'py-4' : 'py-6')}>
-        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-[hsl(var(--surface-3))] flex items-center justify-center mx-auto mb-3">
           <Sparkles className="w-5 h-5 text-slate-400" />
         </div>
-        <p className="text-xs text-slate-500 mb-3">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           Extraia prazos e ações sugeridas
         </p>
         <Button
@@ -126,24 +126,24 @@ export default function PublicacaoAIPanel({
       {/* Resumo */}
       <div>
         <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Resumo</p>
-        <p className="text-xs text-slate-700 leading-relaxed">{analise.resumo}</p>
+        <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">{analise.resumo}</p>
       </div>
 
       {/* Prazo */}
       {analise.tem_prazo && (
-        <div className="rounded-lg p-2.5 bg-amber-50 border border-amber-200">
+        <div className="rounded-lg p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700/50">
           <div className="flex items-center gap-1.5 mb-1.5">
-            <Clock className="w-3.5 h-3.5 text-amber-600" />
-            <span className="text-xs font-semibold text-amber-700">
+            <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+            <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
               Prazo Identificado
             </span>
           </div>
           <div className="space-y-0.5">
-            <p className="text-xs text-slate-700">
+            <p className="text-xs text-slate-700 dark:text-slate-300">
               <strong>{analise.prazo_dias}</strong> dias {analise.prazo_tipo}
             </p>
             {analise.data_limite_sugerida && (
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
                 Limite: <strong>{new Date(analise.data_limite_sugerida + 'T00:00:00').toLocaleDateString('pt-BR')}</strong>
               </p>
             )}
@@ -161,12 +161,12 @@ export default function PublicacaoAIPanel({
             <Lightbulb className="w-3 h-3 text-amber-500" />
             <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Ação Sugerida</p>
           </div>
-          <p className="text-xs text-slate-700">{analise.acao_sugerida}</p>
+          <p className="text-xs text-slate-700 dark:text-slate-300">{analise.acao_sugerida}</p>
         </div>
       )}
 
       {/* Botoes de agendamento */}
-      <div className="pt-2 border-t border-slate-100 space-y-1.5">
+      <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50 space-y-1.5">
         <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Agendar</p>
         <div className="flex flex-col gap-1.5">
           <Button

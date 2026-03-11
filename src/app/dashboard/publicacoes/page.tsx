@@ -677,10 +677,10 @@ export default function PublicacoesPage() {
 
   const getStatusBadge = (status: StatusPublicacao) => {
     const variants = {
-      pendente: 'bg-red-100 text-red-700 border-red-200',
-      em_analise: 'bg-amber-100 text-amber-700 border-amber-200',
-      processada: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-      arquivada: 'bg-slate-100 text-slate-600 border-slate-200'
+      pendente: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700/50',
+      em_analise: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700/50',
+      processada: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700/50',
+      arquivada: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800/50 dark:text-slate-400 dark:border-slate-600/50'
     }
 
     const labels = {
@@ -994,7 +994,7 @@ export default function PublicacoesPage() {
             <TabsList className="bg-slate-100 dark:bg-surface-2 p-1 h-9 w-max md:w-auto">
               <TabsTrigger
                 value="todas"
-                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
+                className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
               >
                 Todas
                 <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-slate-200/80 dark:bg-surface-3 text-slate-600 dark:text-slate-400">
@@ -1003,27 +1003,27 @@ export default function PublicacoesPage() {
               </TabsTrigger>
               <TabsTrigger
                 value="com_processo"
-                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
+                className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
               >
                 <span className="hidden md:inline">Com Pasta</span>
                 <span className="md:hidden">Pasta</span>
-                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-[#89bcbe]/30 text-[#34495e]">
+                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-[#89bcbe]/30 text-[#34495e] dark:bg-[#89bcbe]/20 dark:text-[#89bcbe]">
                   {stats.comProcesso}
                 </Badge>
               </TabsTrigger>
               <TabsTrigger
                 value="sem_processo"
-                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
+                className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
               >
                 <span className="hidden md:inline">Sem Pasta</span>
                 <span className="md:hidden">S/ Pasta</span>
-                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-[#34495e]/10 text-[#46627f]">
+                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-[#34495e]/10 text-[#46627f] dark:bg-slate-600/30 dark:text-slate-300">
                   {stats.semProcesso}
                 </Badge>
               </TabsTrigger>
               <TabsTrigger
                 value="tratadas"
-                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
+                className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
               >
                 <span className="hidden md:inline">Tratadas</span>
                 <span className="md:hidden">Trat.</span>
@@ -1033,7 +1033,7 @@ export default function PublicacoesPage() {
               </TabsTrigger>
               <TabsTrigger
                 value="arquivadas"
-                className="data-[state=active]:bg-white data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
+                className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
               >
                 <span className="hidden md:inline">Arquivadas</span>
                 <span className="md:hidden">Arq.</span>
@@ -1108,8 +1108,8 @@ export default function PublicacoesPage() {
                 <div
                   onClick={() => toggleExpand(pub.id)}
                   className={cn(
-                    'p-3.5 active:bg-slate-50 transition-colors cursor-pointer',
-                    expandedId === pub.id && 'bg-blue-50/40'
+                    'p-3.5 active:bg-slate-50 dark:active:bg-surface-2 transition-colors cursor-pointer',
+                    expandedId === pub.id && 'bg-blue-50/40 dark:bg-blue-950/20'
                   )}
                 >
                   <div className="flex items-center justify-between mb-1.5">
@@ -1120,7 +1120,7 @@ export default function PublicacoesPage() {
                       )} />
                       {getStatusBadge(pub.status)}
                       {pub.is_snippet && (
-                        <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                        <Badge variant="outline" className="text-[10px] bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/50">
                           Trecho
                         </Badge>
                       )}
@@ -1136,7 +1136,7 @@ export default function PublicacoesPage() {
                     {pub.numero_processo ? (
                       <span className={cn(
                         'text-[11px] font-mono truncate max-w-[160px]',
-                        pub.processo_id ? 'text-blue-600' : 'text-slate-600'
+                        pub.processo_id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400'
                       )}>
                         {pub.numero_processo}
                       </span>
@@ -1148,7 +1148,7 @@ export default function PublicacoesPage() {
 
                 {/* Expansão mobile - single column */}
                 {expandedId === pub.id && (
-                  <div className="border-l-[3px] border-[#1E3A8A] bg-blue-50/30 px-3 pb-3">
+                  <div className="border-l-[3px] border-[#1E3A8A] dark:border-blue-400/40 bg-blue-50/30 dark:bg-blue-950/20 px-3 pb-3">
                     <div className="space-y-3">
                       {/* Botões de ação mobile */}
                       <div className="flex flex-wrap gap-1.5 pt-2">
@@ -1270,8 +1270,8 @@ export default function PublicacoesPage() {
                     <tr
                       className={cn(
                         'hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors cursor-pointer group',
-                        selecionados.has(pub.id) && 'bg-blue-50 hover:bg-blue-100',
-                        expandedId === pub.id && 'bg-blue-50/40 border-b-0'
+                        selecionados.has(pub.id) && 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/30 dark:hover:bg-blue-950/40',
+                        expandedId === pub.id && 'bg-blue-50/40 dark:bg-blue-950/20 border-b-0'
                       )}
                       onClick={() => toggleExpand(pub.id)}
                     >
@@ -1289,7 +1289,7 @@ export default function PublicacoesPage() {
                           )} />
                           {getStatusBadge(pub.status)}
                           {pub.agendamento_tipo && (
-                            <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">
+                            <Badge variant="outline" className="text-[10px] bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700/50">
                               {pub.agendamento_tipo === 'tarefa' && <CheckSquare className="w-3 h-3 mr-1" />}
                               {pub.agendamento_tipo === 'compromisso' && <Calendar className="w-3 h-3 mr-1" />}
                               {pub.agendamento_tipo === 'audiencia' && <Gavel className="w-3 h-3 mr-1" />}
@@ -1297,7 +1297,7 @@ export default function PublicacoesPage() {
                             </Badge>
                           )}
                           {pub.is_snippet && (
-                            <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                            <Badge variant="outline" className="text-[10px] bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/50">
                               Trecho
                             </Badge>
                           )}
@@ -1333,7 +1333,7 @@ export default function PublicacoesPage() {
                           ) : (
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-mono text-slate-700 dark:text-slate-300">{pub.numero_processo}</span>
-                              <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                              <Badge variant="outline" className="text-[10px] bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/50">
                                 Sem pasta
                               </Badge>
                             </div>
@@ -1392,8 +1392,8 @@ export default function PublicacoesPage() {
                                   className={cn(
                                     'h-8 w-8 p-0',
                                     expandedId === pub.id
-                                      ? 'bg-[#34495e]/10 text-[#34495e]'
-                                      : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'
+                                      ? 'bg-[#34495e]/10 text-[#34495e] dark:bg-[#89bcbe]/20 dark:text-[#89bcbe]'
+                                      : 'hover:bg-slate-100 dark:hover:bg-surface-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                                   )}
                                   onClick={(e) => { e.stopPropagation(); toggleExpand(pub.id) }}
                                 >
@@ -1413,7 +1413,7 @@ export default function PublicacoesPage() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-8 w-8 p-0 hover:bg-blue-50 text-blue-600 hover:text-blue-700"
+                                      className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
                                     >
                                       <CalendarPlus className="w-4 h-4" />
                                     </Button>
@@ -1455,7 +1455,7 @@ export default function PublicacoesPage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-8 w-8 p-0 hover:bg-slate-100 text-slate-500 hover:text-slate-700"
+                                    className="h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-surface-3 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
                                     onClick={(e) => abrirWizardProcesso(pub.numero_processo!, e)}
                                   >
                                     <FolderPlus className="w-4 h-4" />
@@ -1474,7 +1474,7 @@ export default function PublicacoesPage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-8 w-8 p-0 hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+                                    className="h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-surface-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                                     onClick={(e) => arquivarPublicacao(pub.id, e)}
                                   >
                                     <Archive className="w-4 h-4" />

@@ -152,7 +152,7 @@ export default function PublicacaoExpandedRow({
   return (
     <tr>
       <td colSpan={7} className="p-0">
-        <div className="border-l-[3px] border-[#1E3A8A] bg-blue-50/30">
+        <div className="border-l-[3px] border-[#1E3A8A] bg-blue-50/30 dark:bg-blue-950/20 dark:border-blue-400/40">
           <div className="p-4">
             {/* Layout 2 colunas desktop / 1 coluna mobile */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
@@ -160,14 +160,14 @@ export default function PublicacaoExpandedRow({
               <div className="lg:col-span-3 space-y-3">
                 {/* Card processo - se vinculado */}
                 {publicacao.numero_processo && (
-                  <div className="flex items-center justify-between bg-white rounded-lg border border-slate-200 p-2.5">
+                  <div className="flex items-center justify-between bg-white dark:bg-[hsl(var(--surface-2))] rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center">
-                        <FileText className="w-4 h-4 text-slate-600" />
+                      <div className="w-8 h-8 rounded-md bg-slate-100 dark:bg-[hsl(var(--surface-3))] flex items-center justify-center">
+                        <FileText className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                       </div>
                       <div>
                         <p className="text-[10px] text-slate-400 leading-none mb-0.5">Processo</p>
-                        <p className="text-xs font-mono font-medium text-slate-700">
+                        <p className="text-xs font-mono font-medium text-slate-700 dark:text-slate-200">
                           {publicacao.numero_processo}
                         </p>
                       </div>
@@ -195,9 +195,9 @@ export default function PublicacaoExpandedRow({
 
                 {/* Aviso snippet */}
                 {publicacao.is_snippet && (
-                  <div className="p-2 bg-amber-50 border border-amber-200 rounded-md flex items-start gap-2">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
-                    <p className="text-[11px] text-amber-700">
+                  <div className="p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700/50 rounded-md flex items-start gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                    <p className="text-[11px] text-amber-700 dark:text-amber-300">
                       Texto possivelmente incompleto. A fonte retornou apenas um trecho.
                     </p>
                   </div>
@@ -205,7 +205,7 @@ export default function PublicacaoExpandedRow({
 
                 {/* Texto */}
                 {carregandoTexto ? (
-                  <div className="space-y-2 bg-white rounded-lg border border-slate-200 p-4">
+                  <div className="space-y-2 bg-white dark:bg-[hsl(var(--surface-2))] rounded-lg border border-slate-200 dark:border-slate-700 p-4">
                     <Skeleton className="h-4 w-full" />
                     <Skeleton className="h-4 w-11/12" />
                     <Skeleton className="h-4 w-full" />
@@ -214,14 +214,14 @@ export default function PublicacaoExpandedRow({
                     <Skeleton className="h-4 w-7/12" />
                   </div>
                 ) : (
-                  <div className="bg-white rounded-lg border border-slate-200">
-                    <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100">
+                  <div className="bg-white dark:bg-[hsl(var(--surface-2))] rounded-lg border border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 dark:border-slate-700/50">
                       <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Texto da Publicação</span>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={(e) => { e.stopPropagation(); copiarTexto() }}
-                        className="h-6 px-2 text-[10px] gap-1 text-slate-400 hover:text-slate-600"
+                        className="h-6 px-2 text-[10px] gap-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                         disabled={!texto}
                       >
                         {copiado ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
@@ -231,14 +231,14 @@ export default function PublicacaoExpandedRow({
                     <div className="relative">
                       <ScrollArea className="max-h-[500px]">
                         <div className="p-3 pb-6">
-                          <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
+                          <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
                             {texto || 'Sem texto disponível'}
                           </p>
                         </div>
                       </ScrollArea>
                       {/* Gradiente fade indicando mais conteúdo */}
                       {texto && texto.length > 800 && (
-                        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent pointer-events-none rounded-b-lg" />
+                        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-[hsl(var(--surface-2))] to-transparent pointer-events-none rounded-b-lg" />
                       )}
                     </div>
                   </div>
@@ -247,14 +247,14 @@ export default function PublicacaoExpandedRow({
 
               {/* Coluna IA (40%) */}
               <div className="lg:col-span-2">
-                <div className="bg-white rounded-lg border border-slate-200 lg:sticky lg:top-4">
-                  <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-100">
-                    <div className="w-5 h-5 rounded bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center">
+                <div className="bg-white dark:bg-[hsl(var(--surface-2))] rounded-lg border border-slate-200 dark:border-slate-700 lg:sticky lg:top-4">
+                  <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-100 dark:border-slate-700/50">
+                    <div className="w-5 h-5 rounded bg-gradient-to-br from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] flex items-center justify-center">
                       <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
                       </svg>
                     </div>
-                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Análise IA</span>
+                    <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Análise IA</span>
                   </div>
                   <div className="p-3">
                     <PublicacaoAIPanel

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
   FileText,
+  FileOutput,
   Eye,
   Clock,
   CheckCircle,
@@ -17,7 +18,6 @@ import {
   Search,
   X,
   Landmark,
-  FileOutput,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -517,7 +517,7 @@ export default function FaturamentoPage() {
             )}
           </TabsTrigger>
           <TabsTrigger value="notas_debito">
-            <FileOutput className="w-3.5 h-3.5 mr-1.5" />
+            <FileOutput className="h-4 w-4 mr-1.5" />
             Notas de Débito
           </TabsTrigger>
         </TabsList>

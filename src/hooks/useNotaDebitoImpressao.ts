@@ -17,7 +17,7 @@ export interface ClienteND {
   nome_fantasia: string | null
   tipo_pessoa: 'pf' | 'pj'
   cpf_cnpj: string | null
-  email_principal: string | null
+  email: string | null
   logradouro: string | null
   numero: string | null
   complemento: string | null
@@ -82,7 +82,7 @@ export function useNotaDebitoImpressao() {
           .single(),
         supabase
           .from('crm_pessoas')
-          .select('nome_completo, nome_fantasia, tipo_pessoa, cpf_cnpj, email_principal, logradouro, numero, complemento, bairro, cidade, uf, cep')
+          .select('nome_completo, nome_fantasia, tipo_pessoa, cpf_cnpj, email, logradouro, numero, complemento, bairro, cidade, uf, cep')
           .eq('id', nota.cliente_id)
           .single(),
         supabase

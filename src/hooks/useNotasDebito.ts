@@ -35,6 +35,13 @@ export interface NotaDebitoItem {
   processo_titulo: string | null
 }
 
+export interface ClienteComDespesasReembolsaveis {
+  cliente_id: string
+  cliente_nome: string
+  total_valor: number
+  qtd_despesas: number
+}
+
 export interface DespesaReembolsavel {
   id: string
   descricao: string
@@ -56,6 +63,8 @@ export function useNotasDebito() {
   const [notas, setNotas] = useState<NotaDebito[]>([])
   const [loading, setLoading] = useState(true)
   const [filtroStatus, setFiltroStatus] = useState('todos')
+  const [clientesComDespesas, setClientesComDespesas] = useState<ClienteComDespesasReembolsaveis[]>([])
+  const [loadingClientes, setLoadingClientes] = useState(false)
 
   const carregarNotas = useCallback(async () => {
     if (!escritorioAtivo) return
@@ -109,9 +118,62 @@ export function useNotasDebito() {
     }
   }, [escritorioAtivo, filtroStatus, supabase])
 
+  // Carregar clientes com despesas reembolsáveis pendentes (agregado)
+  const carregarClientesComDespesas = useCallback(async () => {
+    if (!escritorioAtivo) return
+
+    try {
+      setLoadingClientes(true)
+
+      const { data, error } = await supabase
+        .from('financeiro_despesas')
+        .select(`
+          cliente_id, valor,
+          cliente:crm_pessoas!cliente_id(nome_completo)
+        `)
+        .eq('escritorio_id', escritorioAtivo)
+        .eq('reembolsavel', true)
+        .eq('fluxo_status', 'pago')
+        .eq('reembolsado', false)
+        .not('cliente_id', 'is', null)
+
+      if (error) throw error
+
+      // Agrupar por cliente_id
+      const clientesMap = new Map<string, ClienteComDespesasReembolsaveis>()
+
+      ;(data || []).forEach((d: any) => {
+        const cid = d.cliente_id
+        if (!clientesMap.has(cid)) {
+          clientesMap.set(cid, {
+            cliente_id: cid,
+            cliente_nome: d.cliente?.nome_completo || 'Cliente não identificado',
+            total_valor: 0,
+            qtd_despesas: 0,
+          })
+        }
+        const cliente = clientesMap.get(cid)!
+        cliente.total_valor += Number(d.valor)
+        cliente.qtd_despesas += 1
+      })
+
+      // Ordenar por total_valor desc
+      const resultado = Array.from(clientesMap.values()).sort(
+        (a, b) => b.total_valor - a.total_valor
+      )
+
+      setClientesComDespesas(resultado)
+    } catch (error) {
+      console.error('Erro ao carregar clientes com despesas reembolsáveis:', error)
+    } finally {
+      setLoadingClientes(false)
+    }
+  }, [escritorioAtivo, supabase])
+
   useEffect(() => {
     carregarNotas()
-  }, [carregarNotas])
+    carregarClientesComDespesas()
+  }, [carregarNotas, carregarClientesComDespesas])
 
   // Buscar despesas reembolsáveis pagas de um cliente (não faturadas)
   const buscarDespesasReembolsaveis = async (clienteId: string): Promise<DespesaReembolsavel[]> => {
@@ -184,15 +246,18 @@ export function useNotasDebito() {
     // Obter user atual
     const { data: { user } } = await supabase.auth.getUser()
 
-    // Inserir nota
+    const dataEmissao = new Date().toISOString().split('T')[0]
+
+    // Inserir nota já como emitida
     const { data: nota, error: notaError } = await supabase
       .from('financeiro_notas_debito')
       .insert({
         escritorio_id: escritorioAtivo,
         numero,
         cliente_id: clienteId,
-        status: 'rascunho',
+        status: 'emitida',
         valor_total: valorTotal,
+        data_emissao: dataEmissao,
         data_vencimento: dataVencimento,
         observacoes: observacoes || null,
         created_by: user?.id || null,
@@ -228,6 +293,31 @@ export function useNotasDebito() {
 
     if (itensError) throw itensError
 
+    // Criar receita vinculada
+    const { data: receita, error: recError } = await supabase
+      .from('financeiro_receitas')
+      .insert({
+        escritorio_id: escritorioAtivo,
+        tipo: 'reembolso',
+        categoria: 'custas_reembolsadas',
+        cliente_id: clienteId,
+        descricao: `Nota de Débito ${numero}`,
+        valor: valorTotal,
+        data_competencia: dataVencimento,
+        data_vencimento: dataVencimento,
+        status: 'pendente',
+      })
+      .select('id')
+      .single()
+
+    if (recError) throw recError
+
+    // Vincular receita à nota
+    await supabase
+      .from('financeiro_notas_debito')
+      .update({ receita_id: receita.id })
+      .eq('id', nota.id)
+
     // Marcar despesas como reembolsadas
     const { error: updError } = await supabase
       .from('financeiro_despesas')
@@ -240,58 +330,70 @@ export function useNotasDebito() {
 
     if (updError) throw updError
 
-    toast.success(`Nota de Débito ${numero} criada com sucesso!`)
-    await carregarNotas()
+    toast.success(`Nota de Débito ${numero} emitida com sucesso!`)
+    await Promise.all([carregarNotas(), carregarClientesComDespesas()])
     return nota.id
   }
 
-  // Emitir nota → gerar receita
-  const emitirNota = async (id: string) => {
-    if (!escritorioAtivo) return
+  // Desmontar nota — reverte despesas e cancela receita
+  const desmontarNota = async (id: string) => {
+    try {
+      // Buscar itens para reverter despesas
+      const { data: itens } = await supabase
+        .from('financeiro_notas_debito_itens')
+        .select('despesa_id')
+        .eq('nota_debito_id', id)
 
-    // Buscar dados da nota
-    const { data: nota, error: fetchErr } = await supabase
-      .from('financeiro_notas_debito')
-      .select('*')
-      .eq('id', id)
-      .single()
+      // Buscar nota para cancelar receita
+      const { data: nota } = await supabase
+        .from('financeiro_notas_debito')
+        .select('receita_id')
+        .eq('id', id)
+        .single()
 
-    if (fetchErr || !nota) throw fetchErr
+      // Reverter despesas
+      if (itens && itens.length > 0) {
+        await supabase
+          .from('financeiro_despesas')
+          .update({
+            reembolsado: false,
+            reembolso_status: 'pendente',
+            updated_at: new Date().toISOString(),
+          })
+          .in('id', itens.map((i: any) => i.despesa_id))
+      }
 
-    // Criar receita vinculada
-    const { data: receita, error: recError } = await supabase
-      .from('financeiro_receitas')
-      .insert({
-        escritorio_id: escritorioAtivo,
-        tipo: 'reembolso',
-        categoria: 'custas_reembolsadas',
-        cliente_id: nota.cliente_id,
-        descricao: `Nota de Débito ${nota.numero}`,
-        valor: nota.valor_total,
-        data_competencia: nota.data_vencimento,
-        data_vencimento: nota.data_vencimento,
-        status: 'pendente',
-      })
-      .select('id')
-      .single()
+      // Cancelar receita vinculada
+      if (nota?.receita_id) {
+        await supabase
+          .from('financeiro_receitas')
+          .update({
+            status: 'cancelado',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', nota.receita_id)
+      }
 
-    if (recError) throw recError
+      // Deletar itens da nota
+      await supabase
+        .from('financeiro_notas_debito_itens')
+        .delete()
+        .eq('nota_debito_id', id)
 
-    // Atualizar nota
-    const { error: updError } = await supabase
-      .from('financeiro_notas_debito')
-      .update({
-        status: 'emitida',
-        data_emissao: new Date().toISOString().split('T')[0],
-        receita_id: receita.id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
+      // Deletar a nota
+      await supabase
+        .from('financeiro_notas_debito')
+        .delete()
+        .eq('id', id)
 
-    if (updError) throw updError
-
-    toast.success('Nota de Débito emitida!')
-    await carregarNotas()
+      toast.success('Nota de Débito desmontada com sucesso!')
+      await Promise.all([carregarNotas(), carregarClientesComDespesas()])
+      return true
+    } catch (error) {
+      console.error('Erro ao desmontar nota:', error)
+      toast.error('Erro ao desmontar nota de débito')
+      return false
+    }
   }
 
   const marcarEnviada = async (id: string) => {
@@ -414,7 +516,7 @@ export function useNotasDebito() {
     }
 
     toast.success('Nota de Débito cancelada')
-    await carregarNotas()
+    await Promise.all([carregarNotas(), carregarClientesComDespesas()])
   }
 
   // Carregar itens de uma nota
@@ -441,15 +543,21 @@ export function useNotasDebito() {
     }))
   }
 
+  const recarregar = useCallback(async () => {
+    await Promise.all([carregarNotas(), carregarClientesComDespesas()])
+  }, [carregarNotas, carregarClientesComDespesas])
+
   return {
     notas,
     loading,
     filtroStatus,
     setFiltroStatus,
-    recarregar: carregarNotas,
+    clientesComDespesas,
+    loadingClientes,
+    recarregar,
     buscarDespesasReembolsaveis,
     criarNota,
-    emitirNota,
+    desmontarNota,
     marcarEnviada,
     marcarPaga,
     cancelarNota,

@@ -85,6 +85,7 @@ export function useCustasDespesas() {
         .eq('escritorio_id', escritorioAtivo)
         .not('fluxo_status', 'is', null)
         .neq('fluxo_status', 'cancelado')
+        .neq('fluxo_status', 'pago')
         .order('created_at', { ascending: false })
 
       if (filtros.fluxo_status !== 'todos') {

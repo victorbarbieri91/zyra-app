@@ -286,8 +286,8 @@ export default function CustasDespesasPage() {
     return '—'
   }
 
-  const valorEditavel = (item: CustaDespesa) => {
-    return item.fluxo_status !== 'pago'
+  const valorEditavel = () => {
+    return true
   }
 
   return (
@@ -337,7 +337,6 @@ export default function CustasDespesasPage() {
                 <SelectItem value="pendente">Pendentes</SelectItem>
                 <SelectItem value="agendado">Agendados</SelectItem>
                 <SelectItem value="liberado">Liberados</SelectItem>
-                <SelectItem value="pago">Pagos</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -459,13 +458,11 @@ export default function CustasDespesasPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
-                              {/* Editar - disponível até liberado */}
-                              {item.fluxo_status !== 'pago' && (
-                                <DropdownMenuItem onClick={() => handleAbrirEditar(item)}>
-                                  <Pencil className="w-4 h-4 mr-2" />
-                                  Editar
-                                </DropdownMenuItem>
-                              )}
+                              {/* Editar */}
+                              <DropdownMenuItem onClick={() => handleAbrirEditar(item)}>
+                                <Pencil className="w-4 h-4 mr-2" />
+                                Editar
+                              </DropdownMenuItem>
 
                               {/* Pendente → Agendar */}
                               {item.fluxo_status === 'pendente' && (

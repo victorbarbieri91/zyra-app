@@ -51,6 +51,8 @@ interface ContratoDisponivel {
     valor_fixo?: number
     valor_por_processo?: number
   }
+  is_grupo: boolean
+  cliente_pagador_nome?: string
 }
 
 interface VincularContratoModalProps {
@@ -125,12 +127,12 @@ export default function VincularContratoModal({
       setSelectedModalidade(null)
 
       try {
-        // Buscar contratos ativos do cliente (config e formas são JSONB na tabela principal)
+        // Buscar contratos ativos do cliente OU onde o cliente é membro do grupo
         const { data, error: queryError } = await supabase
           .from('financeiro_contratos_honorarios')
-          .select('id, numero_contrato, forma_cobranca, data_inicio, data_fim, config, formas_pagamento')
-          .eq('cliente_id', clienteId)
+          .select('id, numero_contrato, forma_cobranca, data_inicio, data_fim, config, formas_pagamento, grupo_clientes, cliente:crm_pessoas!cliente_id(nome_completo, razao_social)')
           .eq('ativo', true)
+          .or(`cliente_id.eq.${clienteId},grupo_clientes->clientes.cs.[{"cliente_id":"${clienteId}"}]`)
           .order('created_at', { ascending: false })
 
         if (queryError) throw queryError
@@ -151,6 +153,13 @@ export default function VincularContratoModal({
             if (configData.valor_por_processo) config.valor_por_processo = Number(configData.valor_por_processo)
           }
 
+          // Verificar se é contrato de grupo
+          const grupoClientes = c.grupo_clientes as { habilitado?: boolean; cliente_pagador_id?: string; clientes?: Array<{ cliente_id: string; nome: string }> } | null
+          const isGrupo = grupoClientes?.habilitado === true && (grupoClientes?.clientes?.length || 0) > 1
+          const clientePagadorNome = isGrupo
+            ? (c.cliente?.razao_social || c.cliente?.nome_completo || undefined)
+            : undefined
+
           return {
             id: c.id,
             numero_contrato: c.numero_contrato,
@@ -159,6 +168,8 @@ export default function VincularContratoModal({
             data_inicio: c.data_inicio,
             data_fim: c.data_fim,
             config,
+            is_grupo: isGrupo,
+            cliente_pagador_nome: clientePagadorNome,
           }
         })
 
@@ -339,9 +350,22 @@ export default function VincularContratoModal({
                       >
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
-                              {contrato.numero_contrato}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
+                                {contrato.numero_contrato}
+                              </p>
+                              {contrato.is_grupo && (
+                                <Badge className="text-[9px] px-1.5 py-0 bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-400">
+                                  <Users className="w-2.5 h-2.5 mr-0.5" />
+                                  Grupo
+                                </Badge>
+                              )}
+                            </div>
+                            {contrato.is_grupo && contrato.cliente_pagador_nome && (
+                              <p className="text-[11px] text-violet-600 dark:text-violet-400 mt-0.5">
+                                Pagador: {contrato.cliente_pagador_nome}
+                              </p>
+                            )}
                             <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
                               <Calendar className="w-3 h-3" />
                               <span>

@@ -60,6 +60,7 @@ export interface DespesaEditData {
   data_pagamento?: string | null
   conta_bancaria_id?: string | null
   forma_pagamento?: string | null
+  fornecedor?: string | null
 }
 
 interface DespesaModalProps {
@@ -106,6 +107,7 @@ interface FormData {
   data_pagamento: string
   conta_bancaria_id: string
   forma_pagamento: string
+  fornecedor: string
 }
 
 const CATEGORIAS_PROCESSUAIS = [
@@ -169,6 +171,7 @@ const makeInitialFormData = (hasVinculo: boolean): FormData => ({
   data_pagamento: formatDateForInput(),
   conta_bancaria_id: '',
   forma_pagamento: '',
+  fornecedor: '',
 })
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -313,6 +316,7 @@ export default function DespesaModal({
           data_pagamento: editData.data_pagamento || formatDateForInput(),
           conta_bancaria_id: editData.conta_bancaria_id || '',
           forma_pagamento: editData.forma_pagamento || '',
+          fornecedor: editData.fornecedor || '',
         })
         setSearchTerm('')
         setProcessoSelecionado(null)
@@ -622,6 +626,7 @@ export default function DespesaModal({
           processo_id: processoSelecionado?.id || null,
           consultivo_id: consultaSelecionada?.id || null,
           cliente_id: derivedClienteId || clienteId || null,
+          fornecedor: formData.fornecedor.trim() || null,
           updated_at: new Date().toISOString(),
         }
 
@@ -658,6 +663,7 @@ export default function DespesaModal({
           reembolsavel: formData.reembolsavel,
           reembolso_status: formData.reembolsavel ? 'pendente' : null,
           advogado_id: currentUser?.id || null,
+          fornecedor: formData.fornecedor.trim() || null,
         }
 
         if (formData.ja_pago) {
@@ -926,6 +932,17 @@ export default function DespesaModal({
               value={formData.descricao}
               onChange={(e) => updateField('descricao', e.target.value)}
               rows={2}
+            />
+          </div>
+
+          {/* Beneficiário */}
+          <div>
+            <Label htmlFor="fornecedor">Beneficiário</Label>
+            <Input
+              id="fornecedor"
+              placeholder="Nome do beneficiário / fornecedor..."
+              value={formData.fornecedor}
+              onChange={(e) => updateField('fornecedor', e.target.value)}
             />
           </div>
 

@@ -226,22 +226,45 @@ const { data } = await supabase.from('tabela').select('*')
 import { createClient } from '@supabase/supabase-js'
 ```
 
-### Multitenancy (CRÍTICO)
+### Multitenancy e Isolamento de Dados (CRÍTICO E IMPERATIVO)
+
+**O isolamento por `escritorio_id` é a regra mais importante do sistema. NUNCA misturar dados entre escritórios.**
+
+#### Regra Geral
+- **TODAS** as queries de leitura DEVEM filtrar por `escritorio_id`
+- **TODOS** os inserts DEVEM incluir `escritorio_id`
+- **TODAS** as buscas em tabelas relacionadas (processos, consultas, clientes, contas bancárias, despesas, etc.) DEVEM filtrar por `escritorio_id`
+- RLS policies são a última camada de segurança, mas **NÃO confiar apenas no RLS** — sempre filtrar explicitamente
+- Uploads ao Storage devem usar path `{escritorio_id}/...` para isolar arquivos
+
+#### Escritórios em Grupo (Matriz/Filial)
+- Um escritório pode ter `grupo_id` apontando para o escritório matriz
+- `getEscritoriosDoGrupo()` em `src/lib/supabase/escritorio-helpers.ts` retorna todos do mesmo grupo
+- **Quando o contexto é grupo**: usar `.in('escritorio_id', escritoriosDoGrupo)` para consolidar dados
+- **Quando o contexto é individual**: usar `.eq('escritorio_id', escritorioAtivo)` — NUNCA mostrar dados de outro escritório do grupo sem que o contexto explicitamente permita
+- **Na dúvida, isolar**: sempre filtrar pelo escritório ativo. Só agregar grupo quando a funcionalidade explicitamente exigir (ex: relatório consolidado)
 
 ```typescript
-// Todas as queries DEVEM filtrar por escritorio_id
-// RLS policies aplicam automaticamente, mas VERIFICAR em queries manuais
-
-// ✅ CORRETO
+// ✅ CORRETO - Filtro por escritório ativo (padrão para todas as queries)
 const { data } = await supabase
   .from('processos_processos')
   .select('*')
-  .eq('escritorio_id', escritorioId)
+  .eq('escritorio_id', escritorioAtivo)
+
+// ✅ CORRETO - Contexto de grupo (apenas quando explicitamente necessário)
+const escritoriosIds = escritoriosDoGrupo.map(e => e.id)
+const { data } = await supabase
+  .from('financeiro_despesas')
+  .select('*')
+  .in('escritorio_id', escritoriosIds)
 
 // ❌ ERRADO - Nunca ignorar escritorio_id
 const { data } = await supabase
   .from('processos_processos')
   .select('*') // PERIGO: pode vazar dados de outros escritórios
+
+// ❌ ERRADO - Nunca assumir que RLS resolve tudo
+// Mesmo com RLS, SEMPRE filtrar explicitamente
 ```
 
 ### Reutilização de Hooks
@@ -414,10 +437,12 @@ pt-2 pb-3/pb-4 - Card content
 ### Regras de Segurança Obrigatórias
 
 1. **RLS (Row Level Security) é OBRIGATÓRIO** em TODAS as tabelas
-2. **Multitenancy via `escritorio_id`** - TODOS os dados filtrados por escritório
-3. **NUNCA** expor `service_role` key no frontend
-4. **NUNCA** bypassar RLS para "resolver" problemas rapidamente
-5. **NUNCA** fazer queries sem filtro de `escritorio_id` (mesmo com RLS)
+2. **Isolamento por `escritorio_id` é IMPERATIVO** - TODOS os dados DEVEM ser filtrados por escritório. Misturar dados entre escritórios é o bug mais grave possível
+3. **Grupo (matriz/filial)**: escritórios podem compartilhar dados via `grupo_id`, mas APENAS quando a funcionalidade exigir explicitamente. O padrão é isolar por `escritorio_id` do escritório ativo
+4. **NUNCA** expor `service_role` key no frontend
+5. **NUNCA** bypassar RLS para "resolver" problemas rapidamente
+6. **NUNCA** fazer queries sem filtro de `escritorio_id` (mesmo com RLS)
+7. **Storage**: uploads DEVEM usar path `{escritorio_id}/...` para isolar arquivos por escritório
 
 ### Ao Encontrar Erro de Permissão
 

@@ -3034,7 +3034,7 @@ export default function ExtratoFinanceiroPage() {
                 <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Pago</th>
                 <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Tipo</th>
                 <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-[30%]">Descrição</th>
-                <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Beneficiário</th>
+                <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Benf./Cliente</th>
                 <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Categoria</th>
                 <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Conta</th>
                 <th className="text-center py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Status</th>
@@ -3856,7 +3856,7 @@ export default function ExtratoFinanceiroPage() {
 
               {modalDetalhes.entidade && (
                 <div>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">Entidade</p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">{modalDetalhes.tipo_movimento === 'despesa' ? 'Beneficiário' : 'Cliente'}</p>
                   <p className="text-sm text-slate-700 dark:text-slate-300">{modalDetalhes.entidade}</p>
                 </div>
               )}

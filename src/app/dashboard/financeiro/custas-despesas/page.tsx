@@ -684,6 +684,7 @@ export default function CustasDespesasPage() {
             data_pagamento: modalEditar.data_pagamento,
             conta_bancaria_id: modalEditar.conta_bancaria_id,
             forma_pagamento: modalEditar.forma_pagamento,
+            fornecedor: modalEditar.fornecedor,
           }}
           onSuccess={recarregar}
         />

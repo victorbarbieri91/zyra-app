@@ -127,15 +127,35 @@ export default function VincularContratoModal({
       setSelectedModalidade(null)
 
       try {
-        // Buscar contratos ativos do cliente OU onde o cliente é membro do grupo
-        const { data, error: queryError } = await supabase
-          .from('financeiro_contratos_honorarios')
-          .select('id, numero_contrato, forma_cobranca, data_inicio, data_fim, config, formas_pagamento, grupo_clientes, cliente:crm_pessoas!cliente_id(nome_completo, razao_social)')
-          .eq('ativo', true)
-          .or(`cliente_id.eq.${clienteId},grupo_clientes->clientes.cs.[{"cliente_id":"${clienteId}"}]`)
-          .order('created_at', { ascending: false })
+        const selectFields = 'id, numero_contrato, forma_cobranca, data_inicio, data_fim, config, formas_pagamento, grupo_clientes, cliente:crm_pessoas!cliente_id(nome_completo, razao_social)'
 
-        if (queryError) throw queryError
+        // Query 1: contratos onde o cliente é o titular direto
+        // Query 2: contratos onde o cliente é membro do grupo (JSONB contains)
+        const [directResult, grupoResult] = await Promise.all([
+          supabase
+            .from('financeiro_contratos_honorarios')
+            .select(selectFields)
+            .eq('cliente_id', clienteId)
+            .eq('ativo', true)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('financeiro_contratos_honorarios')
+            .select(selectFields)
+            .eq('ativo', true)
+            .contains('grupo_clientes', { clientes: [{ cliente_id: clienteId }] })
+            .order('created_at', { ascending: false }),
+        ])
+
+        if (directResult.error) throw directResult.error
+        if (grupoResult.error) throw grupoResult.error
+
+        // Merge e deduplica (um contrato pode aparecer em ambas queries)
+        const seen = new Set<string>()
+        const data = [...(directResult.data || []), ...(grupoResult.data || [])].filter((c: any) => {
+          if (seen.has(c.id)) return false
+          seen.add(c.id)
+          return true
+        })
 
         // Processar dados usando colunas JSONB
         const contratosProcessados: ContratoDisponivel[] = (data || []).map((c: any) => {

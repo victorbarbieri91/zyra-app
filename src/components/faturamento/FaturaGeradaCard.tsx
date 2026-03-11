@@ -42,48 +42,48 @@ export function FaturaGeradaCard({
     switch (fatura.status) {
       case 'rascunho':
         return (
-          <Badge variant="secondary" className="bg-slate-100 text-slate-700 text-[10px]">
+          <Badge variant="secondary" className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 text-[10px]">
             Rascunho
           </Badge>
         )
       case 'emitida':
         return (
-          <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-[10px]">
+          <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-[10px]">
             <CheckCircle className="h-3 w-3 mr-1" />
             Emitida
           </Badge>
         )
       case 'enviada':
         return (
-          <Badge variant="secondary" className="bg-teal-100 text-teal-700 text-[10px]">
+          <Badge variant="secondary" className="bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 text-[10px]">
             <CheckCircle className="h-3 w-3 mr-1" />
             Enviada
           </Badge>
         )
       case 'parcialmente_paga':
         return (
-          <Badge variant="secondary" className="bg-amber-100 text-amber-700 text-[10px]">
+          <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px]">
             <Clock className="h-3 w-3 mr-1" />
             Parcial
           </Badge>
         )
       case 'paga':
         return (
-          <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 text-[10px]">
+          <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[10px]">
             <CheckCircle className="h-3 w-3 mr-1" />
             Paga
           </Badge>
         )
       case 'atrasada':
         return (
-          <Badge variant="secondary" className="bg-red-100 text-red-700 text-[10px]">
+          <Badge variant="secondary" className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[10px]">
             <AlertCircle className="h-3 w-3 mr-1" />
             Atrasada
           </Badge>
         )
       case 'cancelada':
         return (
-          <Badge variant="secondary" className="bg-slate-100 text-slate-500 text-[10px]">
+          <Badge variant="secondary" className="bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 text-[10px]">
             Cancelada
           </Badge>
         )
@@ -95,18 +95,18 @@ export function FaturaGeradaCard({
   const podeDesmontar = ['rascunho', 'emitida', 'enviada'].includes(fatura.status)
 
   return (
-    <Card className="border-slate-200 shadow-sm hover:border-[#46627f] hover:shadow-md transition-all">
+    <Card className="border-slate-200 dark:border-slate-700 dark:bg-surface-1 shadow-sm hover:border-[#46627f] hover:shadow-md transition-all">
       <CardContent className="p-0">
         {/* Header - Estilo Nota Fiscal */}
-        <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 rounded-t-lg">
+        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-surface-2 rounded-t-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-[#46627f]" />
+              <FileText className="h-4 w-4 text-[#46627f] dark:text-teal-400" />
               <div>
-                <h3 className="text-sm font-bold text-[#34495e] leading-tight">
+                <h3 className="text-sm font-bold text-[#34495e] dark:text-slate-200 leading-tight">
                   {fatura.numero_fatura}
                 </h3>
-                <p className="text-[10px] text-slate-500">Fatura</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">Fatura</p>
               </div>
             </div>
             {getStatusBadge()}
@@ -117,10 +117,10 @@ export function FaturaGeradaCard({
         <div className="px-4 py-3">
           {/* Cliente */}
           <div className="mb-3">
-            <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">Cliente</p>
-            <p className="text-sm font-semibold text-[#34495e]">{fatura.cliente_nome}</p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Cliente</p>
+            <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">{fatura.cliente_nome}</p>
             {escritorioNome && (
-              <Badge variant="outline" className="mt-1 text-[10px] font-normal text-slate-500 border-slate-200">
+              <Badge variant="outline" className="mt-1 text-[10px] font-normal text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600">
                 {escritorioNome}
               </Badge>
             )}
@@ -128,17 +128,17 @@ export function FaturaGeradaCard({
 
           {/* Discriminação de Serviços - Estilo Tabela */}
           <div className="mb-3 pb-3">
-            <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-2">Discriminação</p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Discriminação</p>
             <div className="space-y-1.5">
               {fatura.qtd_honorarios > 0 && (
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <DollarSign className="h-3 w-3 text-slate-400" />
-                    <span className="text-slate-700">
+                    <DollarSign className="h-3 w-3 text-slate-400 dark:text-slate-500" />
+                    <span className="text-slate-700 dark:text-slate-300">
                       Honorários ({fatura.qtd_honorarios} {fatura.qtd_honorarios === 1 ? 'item' : 'itens'})
                     </span>
                   </div>
-                  <span className="font-semibold text-slate-700">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
                     {formatCurrency(fatura.total_honorarios)}
                   </span>
                 </div>
@@ -147,12 +147,12 @@ export function FaturaGeradaCard({
               {fatura.qtd_horas > 0 && (
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <Clock className="h-3 w-3 text-slate-400" />
-                    <span className="text-slate-700">
+                    <Clock className="h-3 w-3 text-slate-400 dark:text-slate-500" />
+                    <span className="text-slate-700 dark:text-slate-300">
                       Horas trabalhadas ({formatHoras(fatura.soma_horas, 'curto')})
                     </span>
                   </div>
-                  <span className="font-semibold text-slate-700">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
                     {formatCurrency(fatura.total_horas)}
                   </span>
                 </div>
@@ -161,33 +161,33 @@ export function FaturaGeradaCard({
           </div>
 
           {/* Valor Total - Destaque */}
-          <div className="mb-3 pt-3 border-t border-slate-200">
+          <div className="mb-3 pt-3 border-t border-slate-200 dark:border-slate-700">
             <div className="flex items-baseline justify-between">
-              <p className="text-xs font-bold text-slate-700 uppercase tracking-wide">Valor Total</p>
-              <p className="text-2xl font-bold text-[#34495e]">
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Valor Total</p>
+              <p className="text-2xl font-bold text-[#34495e] dark:text-slate-200">
                 {formatCurrency(fatura.valor_total)}
               </p>
             </div>
           </div>
 
           {/* Informações de Datas */}
-          <div className="mb-3 text-xs text-slate-600 space-y-1">
+          <div className="mb-3 text-xs text-slate-600 dark:text-slate-300 space-y-1">
             <div className="flex justify-between">
-              <span className="text-slate-500">Emissão:</span>
+              <span className="text-slate-500 dark:text-slate-400">Emissão:</span>
               <span className="font-medium">{formatDate(fatura.data_emissao)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Vencimento:</span>
+              <span className="text-slate-500 dark:text-slate-400">Vencimento:</span>
               <span className="font-medium">{formatDate(fatura.data_vencimento)}</span>
             </div>
           </div>
 
           {/* Ações */}
-          <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
             <Button
               size="sm"
               variant="outline"
-              className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-50 text-xs h-8"
+              className="flex-1 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-surface-2 text-xs h-8"
               onClick={() => onVisualizarItens(fatura.fatura_id)}
             >
               <Eye className="h-3.5 w-3.5 mr-1.5" />
@@ -197,7 +197,7 @@ export function FaturaGeradaCard({
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-red-600 hover:bg-red-50 hover:text-red-700 text-xs h-8 px-2"
+                className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/30 dark:hover:text-red-400 text-xs h-8 px-2"
                 onClick={() => onDesmontar(fatura.fatura_id)}
                 title="Desmontar fatura"
               >

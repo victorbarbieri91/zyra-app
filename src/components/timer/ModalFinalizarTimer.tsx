@@ -44,25 +44,25 @@ export function ModalFinalizarTimer({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/60">
+      <div className="bg-white dark:bg-[hsl(var(--dialog))] dark:ring-1 dark:ring-white/[0.08] dark-dialog-glow rounded-xl shadow-2xl w-full max-w-md mx-4">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-          <h3 className="text-base font-semibold text-[#34495e]">Finalizar Timer</h3>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+          <h3 className="text-base font-semibold text-[#34495e] dark:text-slate-100">Finalizar Timer</h3>
           <button
             onClick={onCancel}
-            className="p-1 rounded hover:bg-slate-100 transition-colors"
+            className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
-            <X className="w-5 h-5 text-slate-500" />
+            <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
           </button>
         </div>
 
         {/* Conteúdo */}
         <div className="p-4 space-y-4">
           {/* Info do Timer */}
-          <div className="p-3 rounded-lg bg-slate-50">
+          <div className="p-3 rounded-lg bg-slate-50 dark:bg-surface-2">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-slate-700">{timer.titulo}</span>
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{timer.titulo}</span>
               <div className="flex items-center gap-2">
                 {timer.faturavel && (
                   <span className="text-emerald-500" title="Faturável">
@@ -71,12 +71,12 @@ export function ModalFinalizarTimer({
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
               <FileText className="w-3 h-3" />
               <span>{timer.processo_numero || timer.consulta_titulo || 'Sem vínculo'}</span>
               {timer.cliente_nome && (
                 <>
-                  <span className="text-slate-300">|</span>
+                  <span className="text-slate-300 dark:text-slate-600">|</span>
                   <span>{timer.cliente_nome}</span>
                 </>
               )}
@@ -85,48 +85,48 @@ export function ModalFinalizarTimer({
 
           {/* Tempo */}
           <div className="text-center py-4">
-            <p className="text-xs text-slate-500 mb-1">Tempo total</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Tempo total</p>
             <TimerDisplay segundos={tempoFinal} size="lg" />
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
               {formatHoras(horasDecimais)}
             </p>
           </div>
 
           {/* Ajuste de Tempo */}
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-2">
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-2">
               Ajustar tempo (minutos)
             </label>
             <div className="flex items-center justify-center gap-2">
               <button
                 onClick={() => handleAjuste(-15)}
-                className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+                className="p-2 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-surface-3 transition-colors"
               >
-                <Minus className="w-4 h-4 text-slate-600" />
+                <Minus className="w-4 h-4 text-slate-600 dark:text-slate-300" />
                 <span className="sr-only">-15</span>
               </button>
               <button
                 onClick={() => handleAjuste(-5)}
-                className="px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm"
+                className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-surface-3 transition-colors text-sm dark:text-slate-300"
               >
                 -5
               </button>
               <span className={`w-20 text-center text-sm font-medium ${
-                ajusteMinutos > 0 ? 'text-emerald-600' : ajusteMinutos < 0 ? 'text-red-600' : 'text-slate-600'
+                ajusteMinutos > 0 ? 'text-emerald-600 dark:text-emerald-400' : ajusteMinutos < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-300'
               }`}>
                 {ajusteMinutos > 0 ? `+${ajusteMinutos}` : ajusteMinutos} min
               </span>
               <button
                 onClick={() => handleAjuste(5)}
-                className="px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm"
+                className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-surface-3 transition-colors text-sm dark:text-slate-300"
               >
                 +5
               </button>
               <button
                 onClick={() => handleAjuste(15)}
-                className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+                className="p-2 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-surface-3 transition-colors"
               >
-                <Plus className="w-4 h-4 text-slate-600" />
+                <Plus className="w-4 h-4 text-slate-600 dark:text-slate-300" />
                 <span className="sr-only">+15</span>
               </button>
             </div>
@@ -134,25 +134,25 @@ export function ModalFinalizarTimer({
 
           {/* Descrição */}
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
               Atividade realizada
             </label>
             <textarea
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#34495e] focus:border-transparent resize-none"
+              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 dark:bg-surface-2 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#34495e] focus:border-transparent resize-none"
               placeholder="Descreva a atividade realizada..."
             />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-t border-slate-200 rounded-b-xl">
+        <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-surface-1 border-t border-slate-200 dark:border-slate-700 rounded-b-xl">
           <button
             onClick={onDiscard}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
           >
             <Trash2 className="w-4 h-4" />
             Descartar
@@ -161,14 +161,14 @@ export function ModalFinalizarTimer({
             <button
               onClick={onCancel}
               disabled={loading}
-              className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-surface-3 rounded-lg transition-colors"
             >
               Cancelar
             </button>
             <button
               onClick={handleConfirm}
               disabled={loading || tempoFinal <= 0}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm text-white bg-[#34495e] rounded-lg hover:bg-[#46627f] transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-2 text-sm text-white bg-[#34495e] dark:bg-[#89bcbe] dark:text-slate-900 rounded-lg hover:bg-[#46627f] dark:hover:bg-[#6ba9ab] transition-colors disabled:opacity-50"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

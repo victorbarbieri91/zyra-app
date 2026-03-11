@@ -136,13 +136,13 @@ export function ClientesTable({
             placeholder={showEscritorio ? "Buscar cliente ou escritório..." : "Buscar cliente..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-9 text-sm border-slate-200"
+            className="pl-9 h-9 text-sm border-slate-200 dark:border-slate-700 dark:bg-surface-2"
           />
         </div>
 
         {/* Densidade */}
         <Select value={density} onValueChange={(v) => setDensity(v as Density)}>
-          <SelectTrigger className="w-[140px] h-9 border-slate-200">
+          <SelectTrigger className="w-[140px] h-9 border-slate-200 dark:border-slate-700 dark:bg-surface-2">
             <div className="flex items-center gap-2">
               {densityIcons[density]}
               <span className="text-xs capitalize">{density === 'compact' ? 'Compacto' : density === 'comfortable' ? 'Confortável' : 'Espaçoso'}</span>
@@ -156,20 +156,20 @@ export function ClientesTable({
         </Select>
 
         {/* Contador */}
-        <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 h-9 px-3">
+        <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 h-9 px-3">
           {filteredAndSortedClientes.length} {filteredAndSortedClientes.length === 1 ? 'cliente' : 'clientes'}
         </Badge>
       </div>
 
       {/* Tabela */}
-      <div className="border border-slate-200 rounded-lg overflow-hidden">
+      <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
         {/* Header */}
-        <div className="bg-slate-50 border-b border-slate-200">
+        <div className="bg-slate-50 dark:bg-surface-2 border-b border-slate-200 dark:border-slate-700">
           <div className="grid grid-cols-12 gap-3 px-4 py-2.5">
             <div className={showEscritorio ? "col-span-3" : "col-span-4"}>
               <button
                 onClick={() => handleSort('nome')}
-                className="flex items-center gap-1.5 text-xs font-medium text-slate-700 hover:text-[#1E3A8A] transition-colors"
+                className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-400 hover:text-[#1E3A8A] transition-colors"
               >
                 CLIENTE
                 <SortIcon field="nome" />
@@ -177,13 +177,13 @@ export function ClientesTable({
             </div>
             {showEscritorio && (
               <div className="col-span-1">
-                <span className="text-xs font-medium text-slate-700">ESCRITÓRIO</span>
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-400">ESCRITÓRIO</span>
               </div>
             )}
             <div className="col-span-2 text-center">
               <button
                 onClick={() => handleSort('horas')}
-                className="flex items-center gap-1.5 text-xs font-medium text-slate-700 hover:text-[#1E3A8A] transition-colors mx-auto"
+                className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-400 hover:text-[#1E3A8A] transition-colors mx-auto"
               >
                 HORAS
                 <SortIcon field="horas" />
@@ -192,7 +192,7 @@ export function ClientesTable({
             <div className="col-span-2 text-center">
               <button
                 onClick={() => handleSort('honorarios')}
-                className="flex items-center gap-1.5 text-xs font-medium text-slate-700 hover:text-[#1E3A8A] transition-colors mx-auto"
+                className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-400 hover:text-[#1E3A8A] transition-colors mx-auto"
               >
                 HONORÁRIOS
                 <SortIcon field="honorarios" />
@@ -201,7 +201,7 @@ export function ClientesTable({
             <div className="col-span-2 text-center">
               <button
                 onClick={() => handleSort('pastas')}
-                className="flex items-center gap-1.5 text-xs font-medium text-slate-700 hover:text-[#1E3A8A] transition-colors mx-auto"
+                className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-400 hover:text-[#1E3A8A] transition-colors mx-auto"
               >
                 PASTAS
                 <SortIcon field="pastas" />
@@ -210,7 +210,7 @@ export function ClientesTable({
             <div className="col-span-1 text-right">
               <button
                 onClick={() => handleSort('total')}
-                className="flex items-center gap-1.5 text-xs font-medium text-slate-700 hover:text-[#1E3A8A] transition-colors ml-auto"
+                className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-400 hover:text-[#1E3A8A] transition-colors ml-auto"
               >
                 TOTAL
                 <SortIcon field="total" />
@@ -221,16 +221,16 @@ export function ClientesTable({
         </div>
 
         {/* Body */}
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
           {loading ? (
             <div className="py-12 text-center">
               <Clock className="h-8 w-8 mx-auto text-slate-400 animate-spin" />
-              <p className="text-sm text-slate-500 mt-2">Carregando...</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Carregando...</p>
             </div>
           ) : filteredAndSortedClientes.length === 0 ? (
             <div className="py-12 text-center">
               <Search className="h-12 w-12 mx-auto text-slate-300" />
-              <p className="text-sm text-slate-500 mt-2">
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
                 {searchTerm ? 'Nenhum cliente encontrado' : 'Nenhum cliente pronto para faturar'}
               </p>
             </div>
@@ -242,14 +242,14 @@ export function ClientesTable({
                   'grid grid-cols-12 gap-3 px-4 cursor-pointer transition-all',
                   densityClasses[density],
                   isSelected(cliente)
-                    ? 'bg-blue-50 border-l-2 border-l-[#1E3A8A]'
-                    : 'hover:bg-slate-50'
+                    ? 'bg-blue-50 dark:bg-blue-950/30 border-l-2 border-l-[#1E3A8A]'
+                    : 'hover:bg-slate-50 dark:hover:bg-surface-2'
                 )}
                 onClick={() => onSelectCliente(cliente)}
               >
                 {/* Nome do Cliente */}
                 <div className={cn("flex items-center", showEscritorio ? "col-span-3" : "col-span-4")}>
-                  <p className="text-sm font-medium text-[#34495e] truncate">
+                  <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">
                     {cliente.cliente_nome}
                   </p>
                 </div>
@@ -257,7 +257,7 @@ export function ClientesTable({
                 {/* Escritório */}
                 {showEscritorio && (
                   <div className="col-span-1 flex items-center">
-                    <Badge variant="outline" className="text-[10px] font-normal text-slate-500 border-slate-200 truncate max-w-full">
+                    <Badge variant="outline" className="text-[10px] font-normal text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 truncate max-w-full">
                       {cliente.escritorio_nome || '-'}
                     </Badge>
                   </div>
@@ -267,10 +267,10 @@ export function ClientesTable({
                 <div className="col-span-2 flex items-center justify-center">
                   {cliente.qtd_horas > 0 ? (
                     <div className="text-center">
-                      <p className="text-xs font-semibold text-slate-700">
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                         {formatHoras(cliente.soma_horas, 'curto')}
                       </p>
-                      <p className="text-[10px] text-slate-500">
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
                         {formatCurrency(cliente.total_horas)}
                       </p>
                     </div>
@@ -283,10 +283,10 @@ export function ClientesTable({
                 <div className="col-span-2 flex items-center justify-center">
                   {cliente.qtd_honorarios > 0 ? (
                     <div className="text-center">
-                      <p className="text-xs font-semibold text-slate-700">
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                         {cliente.qtd_honorarios} item{cliente.qtd_honorarios !== 1 ? 's' : ''}
                       </p>
-                      <p className="text-[10px] text-slate-500">
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
                         {formatCurrency(cliente.total_honorarios)}
                       </p>
                     </div>
@@ -299,10 +299,10 @@ export function ClientesTable({
                 <div className="col-span-2 flex items-center justify-center">
                   {cliente.qtd_pastas > 0 ? (
                     <div className="text-center">
-                      <p className="text-xs font-semibold text-slate-700">
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                         {cliente.qtd_processos_pasta} processo{cliente.qtd_processos_pasta !== 1 ? 's' : ''}
                       </p>
-                      <p className="text-[10px] text-slate-500">
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
                         {formatCurrency(cliente.total_pastas)}
                       </p>
                     </div>
@@ -313,7 +313,7 @@ export function ClientesTable({
 
                 {/* Total */}
                 <div className="col-span-1 flex items-center justify-end">
-                  <p className="text-sm font-bold text-emerald-600">
+                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                     {formatCurrency(cliente.total_faturar)}
                   </p>
                 </div>
@@ -329,7 +329,7 @@ export function ClientesTable({
                       onSelectCliente(cliente)
                     }}
                   >
-                    <Eye className="h-3.5 w-3.5 text-[#46627f]" />
+                    <Eye className="h-3.5 w-3.5 text-[#46627f] dark:text-slate-400" />
                   </Button>
                 </div>
               </div>

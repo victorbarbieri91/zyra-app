@@ -261,6 +261,14 @@
   background: #4b5563;
 }
 
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
 /* ═══════════════════════════════════════════════════════════ */
 /* Gradient Utility Classes (CSS vars for dark mode support)  */
 /* ═══════════════════════════════════════════════════════════ */

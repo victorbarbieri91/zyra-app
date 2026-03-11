@@ -1,6 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import {
@@ -12,6 +13,8 @@ import {
   TrendingUpDown,
   CreditCard,
   Receipt,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 
 const financeiroMenuItems = [
@@ -23,7 +26,7 @@ const financeiroMenuItems = [
   },
   {
     title: 'Receitas/Despesas',
-    shortTitle: 'Receitas',
+    shortTitle: 'Rec/Desp',
     icon: TrendingUpDown,
     href: '/dashboard/financeiro/receitas-despesas',
   },
@@ -63,12 +66,6 @@ const financeiroMenuItems = [
     icon: FileText,
     href: '/dashboard/financeiro/faturamento',
   },
-  // TODO: Reativar quando implementar relatórios
-  // {
-  //   title: 'Relatórios',
-  //   icon: BarChart3,
-  //   href: '/dashboard/financeiro/relatorios',
-  // },
 ]
 
 export default function FinanceiroLayout({
@@ -77,13 +74,75 @@ export default function FinanceiroLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  const checkScroll = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    setCanScrollLeft(el.scrollLeft > 4)
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4)
+  }, [])
+
+  useEffect(() => {
+    checkScroll()
+    const el = scrollRef.current
+    if (!el) return
+    el.addEventListener('scroll', checkScroll, { passive: true })
+    const obs = new ResizeObserver(checkScroll)
+    obs.observe(el)
+    return () => {
+      el.removeEventListener('scroll', checkScroll)
+      obs.disconnect()
+    }
+  }, [checkScroll])
+
+  // Scroll active item into view on mount
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const active = el.querySelector('[data-active="true"]') as HTMLElement | null
+    if (active) {
+      active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+    }
+  }, [pathname])
+
+  const scroll = (dir: 'left' | 'right') => {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollBy({ left: dir === 'left' ? -200 : 200, behavior: 'smooth' })
+  }
 
   return (
     <div className="h-full flex flex-col">
       {/* Submenu */}
       <div className="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1">
-        <div className="px-2 sm:px-3 md:px-6 py-1.5 sm:py-2 md:py-3">
-          <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 overflow-x-auto scrollbar-thin">
+        <div className="relative">
+          {/* Left fade + arrow */}
+          {canScrollLeft && (
+            <button
+              onClick={() => scroll('left')}
+              className="absolute left-0 top-0 bottom-0 z-10 flex items-center pl-1 pr-2 bg-gradient-to-r from-white via-white/90 to-transparent dark:from-surface-1 dark:via-surface-1/90"
+            >
+              <ChevronLeft className="w-4 h-4 text-slate-400" />
+            </button>
+          )}
+
+          {/* Right fade + arrow */}
+          {canScrollRight && (
+            <button
+              onClick={() => scroll('right')}
+              className="absolute right-0 top-0 bottom-0 z-10 flex items-center pr-1 pl-2 bg-gradient-to-l from-white via-white/90 to-transparent dark:from-surface-1 dark:via-surface-1/90"
+            >
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </button>
+          )}
+
+          <div
+            ref={scrollRef}
+            className="flex items-center gap-0.5 sm:gap-1 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 overflow-x-auto scrollbar-none"
+          >
             {financeiroMenuItems.map((item) => {
               const isActive = pathname === item.href
               const Icon = item.icon
@@ -92,16 +151,18 @@ export default function FinanceiroLayout({
                 <Link
                   key={item.href}
                   href={item.href}
+                  data-active={isActive}
+                  title={item.title}
                   className={cn(
-                    'flex items-center gap-1 sm:gap-1.5 md:gap-2 px-2 sm:px-2.5 md:px-4 py-1.5 md:py-2 rounded-lg text-[11px] sm:text-xs md:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0',
+                    'flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 md:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-medium transition-all whitespace-nowrap flex-shrink-0',
                     isActive
-                      ? 'bg-gradient-to-r from-[#34495e] to-[#46627f] text-white shadow-md'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-surface-3 hover:text-[#34495e] dark:hover:text-slate-200'
+                      ? 'bg-gradient-to-r from-[#34495e] to-[#46627f] text-white shadow-sm'
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-surface-3 hover:text-[#34495e] dark:hover:text-slate-200'
                   )}
                 >
-                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-                  <span className="hidden lg:inline">{item.title}</span>
-                  <span className="lg:hidden">{item.shortTitle}</span>
+                  <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="hidden md:inline xl:hidden">{item.shortTitle}</span>
+                  <span className="hidden xl:inline">{item.title}</span>
                 </Link>
               )
             })}

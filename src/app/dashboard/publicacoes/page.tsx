@@ -23,7 +23,8 @@ import {
   ChevronDown,
   ChevronRight,
   ExternalLink,
-  Undo2
+  Undo2,
+  MessageSquare
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -87,6 +88,7 @@ interface Publicacao {
   created_at?: string
   source?: string
   escritorio_id?: string
+  comentarios_count?: number
 }
 
 interface Stats {
@@ -178,7 +180,7 @@ export default function PublicacoesPage() {
     try {
       const { data: rawData, error } = await supabase
         .from('publicacoes_publicacoes')
-        .select(`id, data_publicacao, tribunal, vara, tipo_publicacao, numero_processo, processo_id, status, agendamento_id, agendamento_tipo, hash_conteudo, duplicata_revisada, is_snippet, updated_at, created_at, escritorio_id, source, processos_processos!processo_id(autor, reu)`)
+        .select(`id, data_publicacao, tribunal, vara, tipo_publicacao, numero_processo, processo_id, status, agendamento_id, agendamento_tipo, hash_conteudo, duplicata_revisada, is_snippet, updated_at, created_at, escritorio_id, source, processos_processos!processo_id(autor, reu), publicacoes_comentarios(count)`)
         .eq('escritorio_id', escritorioAtivo)
         .neq('status', 'duplicada')
         .order('data_publicacao', { ascending: false })
@@ -195,7 +197,9 @@ export default function PublicacoesPage() {
         ...d,
         processo_autor: d.processos_processos?.autor || undefined,
         processo_reu: d.processos_processos?.reu || undefined,
+        comentarios_count: d.publicacoes_comentarios?.[0]?.count || 0,
         processos_processos: undefined,
+        publicacoes_comentarios: undefined,
       }))
 
       // Auto-deduplicação: agrupar por hash e manter apenas a mais recente de cada grupo
@@ -1134,6 +1138,12 @@ export default function PublicacoesPage() {
                           Trecho
                         </Badge>
                       )}
+                      {(pub.comentarios_count ?? 0) > 0 && (
+                        <Badge variant="outline" className="text-[10px] bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 gap-0.5">
+                          <MessageSquare className="w-3 h-3" />
+                          {pub.comentarios_count}
+                        </Badge>
+                      )}
                     </div>
                     <span className="text-[11px] text-slate-400">
                       {new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}
@@ -1313,6 +1323,12 @@ export default function PublicacoesPage() {
                           {pub.is_snippet && (
                             <Badge variant="outline" className="text-[10px] bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/50">
                               Trecho
+                            </Badge>
+                          )}
+                          {(pub.comentarios_count ?? 0) > 0 && (
+                            <Badge variant="outline" className="text-[10px] bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 gap-0.5">
+                              <MessageSquare className="w-3 h-3" />
+                              {pub.comentarios_count}
                             </Badge>
                           )}
                         </div>

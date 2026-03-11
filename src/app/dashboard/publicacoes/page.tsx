@@ -23,7 +23,6 @@ import {
   ChevronDown,
   ChevronRight,
   ExternalLink,
-  Sparkles,
   Undo2
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -63,7 +62,6 @@ import { BuscaCNJModal } from '@/components/processos/BuscaCNJModal'
 import ProcessoWizardAutomatico from '@/components/processos/ProcessoWizardAutomatico'
 import type { ProcessoEscavadorNormalizado } from '@/lib/escavador/types'
 import PublicacaoExpandedRow from '@/components/publicacoes/PublicacaoExpandedRow'
-import type { AnaliseIA } from '@/components/publicacoes/PublicacaoAIPanel'
 
 // Tipos
 type StatusPublicacao = 'pendente' | 'em_analise' | 'processada' | 'arquivada'
@@ -77,6 +75,8 @@ interface Publicacao {
   tipo_publicacao: TipoPublicacao
   numero_processo?: string
   processo_id?: string
+  processo_autor?: string
+  processo_reu?: string
   status: StatusPublicacao
   agendamento_id?: string
   agendamento_tipo?: 'tarefa' | 'compromisso' | 'audiencia'
@@ -146,7 +146,7 @@ export default function PublicacoesPage() {
 
   // Row expandida (single-expansion)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const expandedCacheRef = useRef<Map<string, { texto: string | null; analise: AnaliseIA | null }>>(new Map())
+  const expandedCacheRef = useRef<Map<string, { texto: string | null }>>(new Map())
 
   // Estado para criação de processo (fluxo com busca automática)
   const [buscaCNJModal, setBuscaCNJModal] = useState<{ open: boolean; cnj: string }>({ open: false, cnj: '' })
@@ -166,7 +166,7 @@ export default function PublicacoesPage() {
   }, [])
 
   // Cache callback para lazy-load
-  const handleExpandedDataLoaded = useCallback((id: string, data: { texto: string | null; analise: AnaliseIA | null }) => {
+  const handleExpandedDataLoaded = useCallback((id: string, data: { texto: string | null }) => {
     expandedCacheRef.current.set(id, data)
   }, [])
 
@@ -176,9 +176,9 @@ export default function PublicacoesPage() {
 
     setCarregando(true)
     try {
-      const { data, error } = await supabase
+      const { data: rawData, error } = await supabase
         .from('publicacoes_publicacoes')
-        .select('id, data_publicacao, tribunal, vara, tipo_publicacao, numero_processo, processo_id, status, agendamento_id, agendamento_tipo, hash_conteudo, duplicata_revisada, is_snippet, updated_at, created_at, escritorio_id, source')
+        .select(`id, data_publicacao, tribunal, vara, tipo_publicacao, numero_processo, processo_id, status, agendamento_id, agendamento_tipo, hash_conteudo, duplicata_revisada, is_snippet, updated_at, created_at, escritorio_id, source, processos_processos!processo_id(autor, reu)`)
         .eq('escritorio_id', escritorioAtivo)
         .neq('status', 'duplicada')
         .order('data_publicacao', { ascending: false })
@@ -190,8 +190,16 @@ export default function PublicacoesPage() {
         return
       }
 
+      // Mapear dados do JOIN para campos planos
+      const data = (rawData || []).map((d: any) => ({
+        ...d,
+        processo_autor: d.processos_processos?.autor || undefined,
+        processo_reu: d.processos_processos?.reu || undefined,
+        processos_processos: undefined,
+      }))
+
       // Auto-deduplicação: agrupar por hash e manter apenas a mais recente de cada grupo
-      const publicacoesUnicas = dedupPublicacoes(data || [])
+      const publicacoesUnicas = dedupPublicacoes(data)
       setPublicacoes(publicacoesUnicas)
 
       // Calcular estatísticas
@@ -363,7 +371,9 @@ export default function PublicacoesPage() {
         const matchBusca =
           pub.numero_processo?.toLowerCase().includes(busca) ||
           pub.tribunal?.toLowerCase().includes(busca) ||
-          pub.vara?.toLowerCase().includes(busca)
+          pub.vara?.toLowerCase().includes(busca) ||
+          pub.processo_autor?.toLowerCase().includes(busca) ||
+          pub.processo_reu?.toLowerCase().includes(busca)
         if (!matchBusca) return false
       }
       // Não aplicar filtro de status nas abas de status fixo
@@ -1135,10 +1145,13 @@ export default function PublicacoesPage() {
                     <span className="text-[11px] text-slate-500 dark:text-slate-400">{getTipoLabel(pub.tipo_publicacao)}</span>
                     {pub.numero_processo ? (
                       <span className={cn(
-                        'text-[11px] font-mono truncate max-w-[160px]',
+                        'text-[11px] truncate max-w-[180px] text-right',
                         pub.processo_id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400'
                       )}>
-                        {pub.numero_processo}
+                        {pub.processo_id && (pub.processo_autor || pub.processo_reu)
+                          ? `${pub.processo_autor} x ${pub.processo_reu}`
+                          : pub.numero_processo
+                        }
                       </span>
                     ) : (
                       <span className="text-[11px] text-slate-400">Sem processo</span>
@@ -1219,6 +1232,7 @@ export default function PublicacoesPage() {
                         <PublicacaoExpandedRow
                           publicacao={pub}
                           isExpanded={true}
+                          escritorioId={escritorioAtivo || ''}
                           onCriarTarefa={() => abrirWizardTarefa(pub)}
                           onCriarEvento={() => abrirWizardEvento(pub)}
                           onCriarAudiencia={() => abrirWizardAudiencia(pub)}
@@ -1321,14 +1335,28 @@ export default function PublicacoesPage() {
                         {pub.numero_processo ? (
                           pub.processo_id ? (
                             <span
-                              className="inline-flex items-center gap-1.5 text-sm font-mono font-medium text-[#3B82F6] hover:text-[#2563EB] cursor-pointer hover:underline underline-offset-2"
+                              className="inline-flex flex-col cursor-pointer group/proc"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 router.push(`/dashboard/processos/${pub.processo_id}`)
                               }}
                             >
-                              {pub.numero_processo}
-                              <ExternalLink className="w-3 h-3 opacity-60" />
+                              {(pub.processo_autor || pub.processo_reu) ? (
+                                <>
+                                  <span className="text-sm font-medium text-[#3B82F6] hover:text-[#2563EB] group-hover/proc:underline underline-offset-2 truncate max-w-[220px]">
+                                    {pub.processo_autor} x {pub.processo_reu}
+                                  </span>
+                                  <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                    {pub.numero_processo}
+                                    <ExternalLink className="w-3 h-3 opacity-60" />
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-sm font-mono font-medium text-[#3B82F6] hover:text-[#2563EB] group-hover/proc:underline underline-offset-2 flex items-center gap-1.5">
+                                  {pub.numero_processo}
+                                  <ExternalLink className="w-3 h-3 opacity-60" />
+                                </span>
+                              )}
                             </span>
                           ) : (
                             <div className="flex items-center gap-2">
@@ -1382,28 +1410,6 @@ export default function PublicacoesPage() {
                                 </TooltipContent>
                               </Tooltip>
                             )}
-
-                            {/* Botão IA - Expandir para análise */}
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className={cn(
-                                    'h-8 w-8 p-0',
-                                    expandedId === pub.id
-                                      ? 'bg-[#34495e]/10 text-[#34495e] dark:bg-[#89bcbe]/20 dark:text-[#89bcbe]'
-                                      : 'hover:bg-slate-100 dark:hover:bg-surface-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-                                  )}
-                                  onClick={(e) => { e.stopPropagation(); toggleExpand(pub.id) }}
-                                >
-                                  <Sparkles className="w-3.5 h-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{expandedId === pub.id ? 'Fechar análise' : 'Expandir e analisar'}</p>
-                              </TooltipContent>
-                            </Tooltip>
 
                             {/* Botão Calendário Azul - Dropdown para Agendamentos */}
                             <DropdownMenu>
@@ -1494,6 +1500,7 @@ export default function PublicacoesPage() {
                     <PublicacaoExpandedRow
                       publicacao={pub}
                       isExpanded={expandedId === pub.id}
+                      escritorioId={escritorioAtivo || ''}
                       onCriarTarefa={() => abrirWizardTarefa(pub)}
                       onCriarEvento={() => abrirWizardEvento(pub)}
                       onCriarAudiencia={() => abrirWizardAudiencia(pub)}

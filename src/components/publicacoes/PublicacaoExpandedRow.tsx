@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import {
   FileText,
@@ -12,12 +12,11 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import PublicacaoAIPanel, { type AnaliseIA } from './PublicacaoAIPanel'
+import PublicacaoComentarios from './PublicacaoComentarios'
 
 // ============================================
 // TIPOS
@@ -31,6 +30,8 @@ interface PublicacaoBasica {
   tipo_publicacao: string
   numero_processo?: string
   processo_id?: string
+  processo_autor?: string
+  processo_reu?: string
   status: string
   is_snippet?: boolean
   escritorio_id?: string
@@ -39,13 +40,14 @@ interface PublicacaoBasica {
 interface PublicacaoExpandedRowProps {
   publicacao: PublicacaoBasica
   isExpanded: boolean
+  escritorioId: string
   onCriarTarefa: () => void
   onCriarEvento: () => void
   onCriarAudiencia: () => void
   onCriarProcesso: (cnj: string) => void
   /** Cache externo para evitar re-fetch ao re-expandir */
-  cachedData?: { texto: string | null; analise: AnaliseIA | null }
-  onDataLoaded?: (id: string, data: { texto: string | null; analise: AnaliseIA | null }) => void
+  cachedData?: { texto: string | null }
+  onDataLoaded?: (id: string, data: { texto: string | null }) => void
 }
 
 // ============================================
@@ -55,6 +57,7 @@ interface PublicacaoExpandedRowProps {
 export default function PublicacaoExpandedRow({
   publicacao,
   isExpanded,
+  escritorioId,
   onCriarTarefa,
   onCriarEvento,
   onCriarAudiencia,
@@ -63,13 +66,13 @@ export default function PublicacaoExpandedRow({
   onDataLoaded,
 }: PublicacaoExpandedRowProps) {
   const [texto, setTexto] = useState<string | null>(cachedData?.texto ?? null)
-  const [analise, setAnalise] = useState<AnaliseIA | null>(cachedData?.analise ?? null)
   const [carregandoTexto, setCarregandoTexto] = useState(false)
+  const [comentariosAbertos, setComentariosAbertos] = useState(true)
   const [copiado, setCopiado] = useState(false)
   const supabaseRef = useRef(createClient())
   const fetchedRef = useRef(false)
 
-  // Lazy-load texto + analise ao expandir
+  // Lazy-load texto ao expandir
   useEffect(() => {
     if (!isExpanded || fetchedRef.current) return
     if (cachedData) {
@@ -82,31 +85,17 @@ export default function PublicacaoExpandedRow({
       const supabase = supabaseRef.current
 
       try {
-        // Buscar texto completo + analise em paralelo
-        const [textoRes, analiseRes] = await Promise.all([
-          supabase
-            .from('publicacoes_publicacoes')
-            .select('texto_completo')
-            .eq('id', publicacao.id)
-            .single(),
-          supabase
-            .from('publicacoes_analises')
-            .select('resultado')
-            .eq('publicacao_id', publicacao.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-        ])
+        const { data } = await supabase
+          .from('publicacoes_publicacoes')
+          .select('texto_completo')
+          .eq('id', publicacao.id)
+          .single()
 
-        const textoCompleto = textoRes.data?.texto_completo || null
-        const analiseData = analiseRes.data?.resultado as AnaliseIA | null
-
+        const textoCompleto = data?.texto_completo || null
         setTexto(textoCompleto)
-        setAnalise(analiseData)
         fetchedRef.current = true
 
-        // Notificar cache externo
-        onDataLoaded?.(publicacao.id, { texto: textoCompleto, analise: analiseData })
+        onDataLoaded?.(publicacao.id, { texto: textoCompleto })
       } catch (err) {
         console.error('Erro ao carregar dados expandidos:', err)
       } finally {
@@ -128,15 +117,9 @@ export default function PublicacaoExpandedRow({
   useEffect(() => {
     if (cachedData) {
       setTexto(cachedData.texto)
-      setAnalise(cachedData.analise)
       fetchedRef.current = true
     }
   }, [cachedData])
-
-  const handleAnaliseLoaded = useCallback((novaAnalise: AnaliseIA) => {
-    setAnalise(novaAnalise)
-    onDataLoaded?.(publicacao.id, { texto, analise: novaAnalise })
-  }, [publicacao.id, texto, onDataLoaded])
 
   const copiarTexto = () => {
     if (texto) {
@@ -149,61 +132,73 @@ export default function PublicacaoExpandedRow({
 
   if (!isExpanded) return null
 
+  const temPartes = publicacao.processo_autor || publicacao.processo_reu
+
   return (
     <tr>
       <td colSpan={7} className="p-0">
         <div className="border-l-[3px] border-[#1E3A8A] bg-blue-50/30 dark:bg-blue-950/20 dark:border-blue-400/40">
           <div className="p-4">
-            {/* Layout 2 colunas desktop / 1 coluna mobile */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-              {/* Coluna Texto (60%) */}
-              <div className="lg:col-span-3 space-y-3">
-                {/* Card processo - se vinculado */}
-                {publicacao.numero_processo && (
-                  <div className="flex items-center justify-between bg-white dark:bg-[hsl(var(--surface-2))] rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-md bg-slate-100 dark:bg-[hsl(var(--surface-3))] flex items-center justify-center">
-                        <FileText className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-slate-400 leading-none mb-0.5">Processo</p>
-                        <p className="text-xs font-mono font-medium text-slate-700 dark:text-slate-200">
-                          {publicacao.numero_processo}
-                        </p>
-                      </div>
-                    </div>
-                    {publicacao.processo_id ? (
-                      <Link href={`/dashboard/processos/${publicacao.processo_id}`} onClick={(e) => e.stopPropagation()}>
-                        <Button variant="outline" size="sm" className="gap-1.5 h-7 text-xs">
-                          <ExternalLink className="w-3 h-3" />
-                          Ver
-                        </Button>
-                      </Link>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5 h-7 text-xs"
-                        onClick={(e) => { e.stopPropagation(); onCriarProcesso(publicacao.numero_processo!) }}
-                      >
-                        <FolderPlus className="w-3 h-3" />
-                        Criar Pasta
-                      </Button>
-                    )}
+            {/* Card processo - se vinculado */}
+            {publicacao.numero_processo && (
+              <div className="flex items-center justify-between bg-white dark:bg-[hsl(var(--surface-2))] rounded-lg border border-slate-200 dark:border-slate-700 p-2.5 mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-md bg-slate-100 dark:bg-[hsl(var(--surface-3))] flex items-center justify-center">
+                    <FileText className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                   </div>
-                )}
-
-                {/* Aviso snippet */}
-                {publicacao.is_snippet && (
-                  <div className="p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700/50 rounded-md flex items-start gap-2">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-                    <p className="text-[11px] text-amber-700 dark:text-amber-300">
-                      Texto possivelmente incompleto. A fonte retornou apenas um trecho.
+                  <div>
+                    <p className="text-[10px] text-slate-400 leading-none mb-0.5">Processo</p>
+                    {temPartes && (
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate max-w-[280px]">
+                        {publicacao.processo_autor} x {publicacao.processo_reu}
+                      </p>
+                    )}
+                    <p className={cn(
+                      'font-mono text-slate-500 dark:text-slate-400',
+                      temPartes ? 'text-[10px]' : 'text-xs font-medium text-slate-700 dark:text-slate-200'
+                    )}>
+                      {publicacao.numero_processo}
                     </p>
                   </div>
+                </div>
+                {publicacao.processo_id ? (
+                  <Link href={`/dashboard/processos/${publicacao.processo_id}`} onClick={(e) => e.stopPropagation()}>
+                    <Button variant="outline" size="sm" className="gap-1.5 h-7 text-xs">
+                      <ExternalLink className="w-3 h-3" />
+                      Ver
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 h-7 text-xs"
+                    onClick={(e) => { e.stopPropagation(); onCriarProcesso(publicacao.numero_processo!) }}
+                  >
+                    <FolderPlus className="w-3 h-3" />
+                    Criar Pasta
+                  </Button>
                 )}
+              </div>
+            )}
 
-                {/* Texto */}
+            {/* Aviso snippet */}
+            {publicacao.is_snippet && (
+              <div className="p-2 mb-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700/50 rounded-md flex items-start gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                  Texto possivelmente incompleto. A fonte retornou apenas um trecho.
+                </p>
+              </div>
+            )}
+
+            {/* Layout flex: texto expande quando comentários colapsados */}
+            <div className="flex gap-4 flex-col lg:flex-row">
+              {/* Coluna Texto - expande para full quando comentários fechados */}
+              <div className={cn(
+                'flex flex-col min-w-0 transition-all duration-300',
+                comentariosAbertos ? 'lg:flex-1' : 'lg:flex-[1_1_100%]'
+              )}>
                 {carregandoTexto ? (
                   <div className="space-y-2 bg-white dark:bg-[hsl(var(--surface-2))] rounded-lg border border-slate-200 dark:border-slate-700 p-4">
                     <Skeleton className="h-4 w-full" />
@@ -214,8 +209,8 @@ export default function PublicacaoExpandedRow({
                     <Skeleton className="h-4 w-7/12" />
                   </div>
                 ) : (
-                  <div className="bg-white dark:bg-[hsl(var(--surface-2))] rounded-lg border border-slate-200 dark:border-slate-700">
-                    <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 dark:border-slate-700/50">
+                  <div className="bg-white dark:bg-[hsl(var(--surface-2))] rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col h-[380px]">
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 dark:border-slate-700/50 shrink-0">
                       <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Texto da Publicação</span>
                       <Button
                         variant="ghost"
@@ -228,14 +223,14 @@ export default function PublicacaoExpandedRow({
                         {copiado ? 'Copiado' : 'Copiar'}
                       </Button>
                     </div>
-                    <div className="relative">
-                      <ScrollArea className="max-h-[500px]">
-                        <div className="p-3 pb-6">
+                    <div className="relative flex-1 min-h-0">
+                      <div className="absolute inset-0 overflow-y-auto">
+                        <div className="p-3">
                           <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
                             {texto || 'Sem texto disponível'}
                           </p>
                         </div>
-                      </ScrollArea>
+                      </div>
                       {/* Gradiente fade indicando mais conteúdo */}
                       {texto && texto.length > 800 && (
                         <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-[hsl(var(--surface-2))] to-transparent pointer-events-none rounded-b-lg" />
@@ -245,29 +240,18 @@ export default function PublicacaoExpandedRow({
                 )}
               </div>
 
-              {/* Coluna IA (40%) */}
-              <div className="lg:col-span-2">
-                <div className="bg-white dark:bg-[hsl(var(--surface-2))] rounded-lg border border-slate-200 dark:border-slate-700 lg:sticky lg:top-4">
-                  <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-100 dark:border-slate-700/50">
-                    <div className="w-5 h-5 rounded bg-gradient-to-br from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab] flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
-                      </svg>
-                    </div>
-                    <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Análise IA</span>
-                  </div>
-                  <div className="p-3">
-                    <PublicacaoAIPanel
-                      publicacaoId={publicacao.id}
-                      analise={analise}
-                      onAnaliseLoaded={handleAnaliseLoaded}
-                      onCriarTarefa={onCriarTarefa}
-                      onCriarEvento={onCriarEvento}
-                      onCriarAudiencia={onCriarAudiencia}
-                      compact
-                    />
-                  </div>
-                </div>
+              {/* Coluna Comentários - retrai para só header quando colapsado */}
+              <div className={cn(
+                'flex flex-col transition-all duration-300',
+                comentariosAbertos ? 'lg:flex-1 h-[380px]' : 'lg:w-auto h-auto'
+              )}>
+                <PublicacaoComentarios
+                  publicacaoId={publicacao.id}
+                  escritorioId={escritorioId}
+                  className={comentariosAbertos ? 'h-full' : ''}
+                  aberto={comentariosAbertos}
+                  onToggle={() => setComentariosAbertos(prev => !prev)}
+                />
               </div>
             </div>
           </div>

@@ -127,26 +127,39 @@ export default function VincularContratoModal({
       setSelectedModalidade(null)
 
       try {
-        // Buscar contratos do cliente (direto ou membro do grupo) via RPC
-        const { data: rpcData, error: rpcError } = await supabase
-          .rpc('buscar_contratos_por_cliente_ou_grupo', { p_cliente_id: clienteId })
+        const selectFields = 'id, numero_contrato, forma_cobranca, data_inicio, data_fim, config, formas_pagamento, grupo_clientes, cliente_id, cliente:crm_pessoas!cliente_id(nome_completo, razao_social)'
 
-        if (rpcError) throw rpcError
+        // Query 1: contratos onde o cliente é o titular direto
+        const { data: directData, error: directError } = await supabase
+          .from('financeiro_contratos_honorarios')
+          .select(selectFields)
+          .eq('cliente_id', clienteId)
+          .eq('ativo', true)
+          .order('created_at', { ascending: false })
 
-        // Buscar nome do cliente titular para cada contrato (para exibir pagador do grupo)
-        const clienteIds = [...new Set((rpcData || []).map((c: any) => c.cliente_id))]
-        const { data: clientesData } = clienteIds.length > 0
-          ? await supabase
-              .from('crm_pessoas')
-              .select('id, nome_completo, razao_social')
-              .in('id', clienteIds)
-          : { data: [] }
+        if (directError) throw directError
 
-        const clientesMap = new Map((clientesData || []).map((p: any) => [p.id, p]))
-        const data = (rpcData || []).map((c: any) => ({
-          ...c,
-          cliente: clientesMap.get(c.cliente_id) || null,
-        }))
+        // Query 2: contratos de grupo que contenham este cliente como membro
+        // Busca todos contratos com grupo habilitado e filtra client-side
+        const { data: grupoData, error: grupoError } = await supabase
+          .from('financeiro_contratos_honorarios')
+          .select(selectFields)
+          .eq('ativo', true)
+          .not('grupo_clientes', 'is', null)
+          .neq('cliente_id', clienteId)
+          .order('created_at', { ascending: false })
+
+        if (grupoError) throw grupoError
+
+        // Filtrar client-side: apenas contratos onde o cliente está no grupo
+        const grupoFiltrado = (grupoData || []).filter((c: any) => {
+          const grupo = c.grupo_clientes
+          if (!grupo?.habilitado || !Array.isArray(grupo?.clientes)) return false
+          return grupo.clientes.some((m: any) => m.cliente_id === clienteId)
+        })
+
+        // Merge (sem duplicatas pois a query de grupo exclui cliente_id direto)
+        const data = [...(directData || []), ...grupoFiltrado]
 
         // Processar dados usando colunas JSONB
         const contratosProcessados: ContratoDisponivel[] = (data || []).map((c: any) => {

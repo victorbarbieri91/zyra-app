@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import {
   Filter,
   Search,
-  RefreshCw,
   Settings,
   Archive,
   CheckCircle2,
@@ -52,8 +51,6 @@ import { cn } from '@/lib/utils'
 import MetricCard from '@/components/dashboard/MetricCard'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
-import { useAaspSync } from '@/hooks/useAaspSync'
-import { useEscavadorTermos } from '@/hooks/useEscavadorTermos'
 import { toast } from 'sonner'
 import TarefaWizard from '@/components/agenda/TarefaWizard'
 import EventoWizard from '@/components/agenda/EventoWizard'
@@ -104,17 +101,6 @@ interface Stats {
 
 type AbaPublicacoes = 'todas' | 'com_processo' | 'sem_processo' | 'tratadas' | 'arquivadas'
 
-// Filtros rápidos pré-definidos
-const FILTROS_RAPIDOS: Array<{
-  id: string
-  label: string
-  filtro: { status?: string; tipo?: string; semPasta?: boolean }
-}> = [
-  { id: 'pendentes', label: 'Pendentes', filtro: { status: 'pendente' } },
-  { id: 'intimacoes', label: 'Intimações', filtro: { tipo: 'intimacao' } },
-  { id: 'sentencas', label: 'Sentenças', filtro: { tipo: 'sentenca' } },
-]
-
 export default function PublicacoesPage() {
   const [filtros, setFiltros] = useState({
     busca: '',
@@ -122,7 +108,6 @@ export default function PublicacoesPage() {
     tipo: 'todos',
     semPasta: false
   })
-  const [filtroRapidoAtivo, setFiltroRapidoAtivo] = useState<string | null>(null)
   const [publicacoes, setPublicacoes] = useState<Publicacao[]>([])
   const [stats, setStats] = useState<Stats>({
     pendentes: 0,
@@ -140,6 +125,7 @@ export default function PublicacoesPage() {
   // Seleção em massa
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [mostrarFiltrosAvancados, setMostrarFiltrosAvancados] = useState(false)
+  const [buscaInline, setBuscaInline] = useState('')
 
   // Wizards para ações rápidas
   const [wizardTarefa, setWizardTarefa] = useState<{ open: boolean; pub: Publicacao | null }>({ open: false, pub: null })
@@ -158,9 +144,6 @@ export default function PublicacoesPage() {
   const router = useRouter()
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
-  const { sincronizarTodos, sincronizando: sincronizandoAasp } = useAaspSync(escritorioAtivo || undefined)
-  const { sincronizar: sincronizarEscavador, sincronizando: sincronizandoEscavador, termos: termosEscavador } = useEscavadorTermos(escritorioAtivo || undefined)
-  const sincronizando = sincronizandoAasp || sincronizandoEscavador
 
   // Toggle expand row
   const toggleExpand = useCallback((id: string) => {
@@ -280,77 +263,10 @@ export default function PublicacoesPage() {
     carregarPublicacoes()
   }, [carregarPublicacoes])
 
-  // Sincronizar todas as fontes (AASP + Escavador)
-  const handleSincronizar = async () => {
-    toast.info('Iniciando sincronização...')
-
-    let totalNovas = 0
-    let erros: string[] = []
-
-    // Sincronizar AASP
-    try {
-      const resultadoAasp = await sincronizarTodos()
-      if (resultadoAasp.sucesso) {
-        totalNovas += resultadoAasp.publicacoes_novas || 0
-      } else {
-        erros.push(`AASP: ${resultadoAasp.mensagem}`)
-      }
-    } catch (e: any) {
-      erros.push(`AASP: ${e.message}`)
-    }
-
-    // Sincronizar Escavador (se tiver termos cadastrados)
-    if (termosEscavador.length > 0) {
-      try {
-        const resultadoEscavador = await sincronizarEscavador()
-        if (resultadoEscavador.sucesso) {
-          totalNovas += resultadoEscavador.publicacoes_novas || 0
-        } else {
-          erros.push(`Diário Oficial: ${resultadoEscavador.mensagem}`)
-        }
-      } catch (e: any) {
-        erros.push(`Diário Oficial: ${e.message}`)
-      }
-    }
-
-    // Recarregar publicações após sync
-    await carregarPublicacoes()
-
-    // Mostrar resultado
-    if (erros.length === 0) {
-      toast.success('Sincronização concluída!')
-      if (totalNovas > 0) {
-        toast.info(`${totalNovas} novas publicações encontradas!`)
-      }
-    } else {
-      toast.warning(`Sincronização parcial: ${erros.join(', ')}`)
-    }
-  }
-
-  // Aplicar filtro rápido
-  const aplicarFiltroRapido = (id: string) => {
-    if (filtroRapidoAtivo === id) {
-      // Desativar filtro
-      setFiltroRapidoAtivo(null)
-      setFiltros({ busca: '', status: 'todos', tipo: 'todos', semPasta: false })
-    } else {
-      setFiltroRapidoAtivo(id)
-      const config = FILTROS_RAPIDOS.find(f => f.id === id)
-      if (config) {
-        setFiltros({
-          busca: '',
-          status: config.filtro.status || 'todos',
-          tipo: config.filtro.tipo || 'todos',
-          semPasta: config.filtro.semPasta || false
-        })
-      }
-    }
-  }
-
   // Limpar todos os filtros
   const limparFiltros = () => {
-    setFiltroRapidoAtivo(null)
     setFiltros({ busca: '', status: 'todos', tipo: 'todos', semPasta: false })
+    setBuscaInline('')
   }
 
   // Filtrar publicações
@@ -369,15 +285,15 @@ export default function PublicacoesPage() {
         if (abaAtiva === 'sem_processo' && pub.processo_id) return false
       }
 
-      // Filtros adicionais
-      if (filtros.busca) {
-        const busca = filtros.busca.toLowerCase()
+      // Filtros adicionais (busca inline + busca avançada)
+      const termoBusca = (buscaInline || filtros.busca).toLowerCase()
+      if (termoBusca) {
         const matchBusca =
-          pub.numero_processo?.toLowerCase().includes(busca) ||
-          pub.tribunal?.toLowerCase().includes(busca) ||
-          pub.vara?.toLowerCase().includes(busca) ||
-          pub.processo_autor?.toLowerCase().includes(busca) ||
-          pub.processo_reu?.toLowerCase().includes(busca)
+          pub.numero_processo?.toLowerCase().includes(termoBusca) ||
+          pub.tribunal?.toLowerCase().includes(termoBusca) ||
+          pub.vara?.toLowerCase().includes(termoBusca) ||
+          pub.processo_autor?.toLowerCase().includes(termoBusca) ||
+          pub.processo_reu?.toLowerCase().includes(termoBusca)
         if (!matchBusca) return false
       }
       // Não aplicar filtro de status nas abas de status fixo
@@ -387,7 +303,7 @@ export default function PublicacoesPage() {
       if (filtros.semPasta && !pub.numero_processo) return false // Precisa ter número mas não ter pasta
       return true
     })
-  }, [publicacoes, filtros, abaAtiva])
+  }, [publicacoes, filtros, abaAtiva, buscaInline])
 
   // Keyboard shortcuts para triagem rápida
   useEffect(() => {
@@ -423,7 +339,7 @@ export default function PublicacoesPage() {
   }, [expandedId, publicacoesFiltradas, wizardTarefa.open, wizardEvento.open, wizardAudiencia.open, buscaCNJModal.open])
 
   // Verificar se há filtros ativos
-  const temFiltrosAtivos = filtros.busca || filtros.status !== 'todos' || filtros.tipo !== 'todos' || filtros.semPasta
+  const temFiltrosAtivos = buscaInline || filtros.busca || filtros.status !== 'todos' || filtros.tipo !== 'todos' || filtros.semPasta
 
   // ========================================
   // Seleção em Massa
@@ -734,130 +650,55 @@ export default function PublicacoesPage() {
             <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400">Gestão de publicações e intimações</p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={handleSincronizar}
-              disabled={sincronizando}
-            >
-              {sincronizando ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4" />
-              )}
-              <span className="hidden md:inline">{sincronizando ? 'Sincronizando...' : 'Sincronizar'}</span>
+          <Link href="/dashboard/publicacoes/config">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Settings className="w-4 h-4" />
+              <span className="hidden md:inline">Configurações</span>
             </Button>
-            <Link href="/dashboard/publicacoes/config">
-              <Button variant="outline" size="sm" className="gap-1.5">
-                <Settings className="w-4 h-4" />
-                <span className="hidden md:inline">Configurações</span>
-              </Button>
-            </Link>
-          </div>
+          </Link>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 mb-4 md:mb-6">
+      {/* KPI Cards - Compact */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
         <MetricCard
           title="Pendentes"
           value={stats.pendentes}
           subtitle="Aguardando análise"
           icon={Clock}
           gradient="kpi1"
+          compact
         />
-
         <MetricCard
           title="Tratadas Hoje"
           value={stats.processadasHoje}
           subtitle="Nas últimas 24h"
           icon={CheckCircle2}
           gradient="kpi2"
+          compact
         />
-
         <MetricCard
           title="Tratadas"
           value={stats.tratadas}
           subtitle="Total processadas"
           icon={CheckSquare}
           gradient="kpi3"
+          compact
         />
-
         <MetricCard
           title="Prazos Criados"
           value={stats.prazosCriados}
           subtitle="A partir de publicações"
           icon={Calendar}
           gradient="kpi4"
+          compact
         />
-      </div>
-
-      {/* Filtros Rápidos */}
-      <div className="flex items-center gap-2 mb-4 overflow-x-auto no-scrollbar whitespace-nowrap pb-1">
-        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mr-1">Filtros rápidos:</span>
-        {FILTROS_RAPIDOS.map(filtro => (
-          <Button
-            key={filtro.id}
-            variant={filtroRapidoAtivo === filtro.id ? 'default' : 'outline'}
-            size="sm"
-            className={cn(
-              'h-7 text-xs px-3',
-              filtroRapidoAtivo === filtro.id && 'bg-[#34495e] hover:bg-[#46627f]'
-            )}
-            onClick={() => aplicarFiltroRapido(filtro.id)}
-          >
-            {filtro.label}
-            {filtro.id === 'pendentes' && stats.pendentes > 0 && (
-              <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">
-                {stats.pendentes}
-              </Badge>
-            )}
-          </Button>
-        ))}
-
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 text-xs px-2 text-slate-500 dark:text-slate-400"
-          onClick={() => setMostrarFiltrosAvancados(!mostrarFiltrosAvancados)}
-        >
-          <Filter className="w-3.5 h-3.5 mr-1" />
-          Mais filtros
-          <ChevronDown className={cn('w-3.5 h-3.5 ml-1 transition-transform', mostrarFiltrosAvancados && 'rotate-180')} />
-        </Button>
-
-        {temFiltrosAtivos && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
-            onClick={limparFiltros}
-          >
-            <X className="w-3.5 h-3.5 mr-1" />
-            Limpar
-          </Button>
-        )}
       </div>
 
       {/* Filtros Avançados (colapsável) */}
       {mostrarFiltrosAvancados && (
         <div className="bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 p-4 mb-4 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                placeholder="Buscar por processo, tribunal..."
-                className="pl-9 h-9"
-                value={filtros.busca}
-                onChange={(e) => {
-                  setFiltroRapidoAtivo(null)
-                  setFiltros({ ...filtros, busca: e.target.value })
-                }}
-              />
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="h-9 justify-between">
@@ -885,10 +726,7 @@ export default function PublicacoesPage() {
                       'w-full justify-start h-8 text-sm',
                       filtros.status === opt.value && 'bg-slate-100 dark:bg-surface-2'
                     )}
-                    onClick={() => {
-                      setFiltroRapidoAtivo(null)
-                      setFiltros({ ...filtros, status: opt.value })
-                    }}
+                    onClick={() => setFiltros({ ...filtros, status: opt.value })}
                   >
                     {opt.label}
                   </Button>
@@ -923,10 +761,7 @@ export default function PublicacoesPage() {
                       'w-full justify-start h-8 text-sm',
                       filtros.tipo === opt.value && 'bg-slate-100 dark:bg-surface-2'
                     )}
-                    onClick={() => {
-                      setFiltroRapidoAtivo(null)
-                      setFiltros({ ...filtros, tipo: opt.value })
-                    }}
+                    onClick={() => setFiltros({ ...filtros, tipo: opt.value })}
                   >
                     {opt.label}
                   </Button>
@@ -938,10 +773,7 @@ export default function PublicacoesPage() {
               <Checkbox
                 id="sem-pasta"
                 checked={filtros.semPasta}
-                onCheckedChange={(checked) => {
-                  setFiltroRapidoAtivo(null)
-                  setFiltros({ ...filtros, semPasta: !!checked })
-                }}
+                onCheckedChange={(checked) => setFiltros({ ...filtros, semPasta: !!checked })}
               />
               <label htmlFor="sem-pasta" className="text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
                 Sem pasta vinculada
@@ -1002,81 +834,122 @@ export default function PublicacoesPage() {
 
       {/* Publicações */}
       <div className="bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-        {/* Abas dentro do card */}
-        <div className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-700 overflow-x-auto no-scrollbar">
-          <Tabs value={abaAtiva} onValueChange={(v) => setAbaAtiva(v as AbaPublicacoes)}>
-            <TabsList className="bg-slate-100 dark:bg-surface-2 p-1 h-9 w-max md:w-auto">
-              <TabsTrigger
-                value="todas"
-                className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
+        {/* Abas + Busca */}
+        <div className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="overflow-x-auto no-scrollbar">
+              <Tabs value={abaAtiva} onValueChange={(v) => setAbaAtiva(v as AbaPublicacoes)}>
+                <TabsList className="bg-slate-100 dark:bg-surface-2 p-1 h-9 w-max">
+                  <TabsTrigger
+                    value="todas"
+                    className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
+                  >
+                    Todas
+                    <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-slate-200/80 dark:bg-surface-3 text-slate-600 dark:text-slate-400">
+                      {stats.total}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="com_processo"
+                    className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
+                  >
+                    <span className="hidden md:inline">Com Pasta</span>
+                    <span className="md:hidden">Pasta</span>
+                    <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-[#89bcbe]/30 text-[#34495e] dark:bg-[#89bcbe]/20 dark:text-[#89bcbe]">
+                      {stats.comProcesso}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="sem_processo"
+                    className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
+                  >
+                    <span className="hidden md:inline">Sem Pasta</span>
+                    <span className="md:hidden">S/ Pasta</span>
+                    <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-[#34495e]/10 text-[#46627f] dark:bg-slate-600/30 dark:text-slate-300">
+                      {stats.semProcesso}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="tratadas"
+                    className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
+                  >
+                    <span className="hidden md:inline">Tratadas</span>
+                    <span className="md:hidden">Trat.</span>
+                    <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-emerald-100/80 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                      {stats.tratadas}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="arquivadas"
+                    className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
+                  >
+                    <span className="hidden md:inline">Arquivadas</span>
+                    <span className="md:hidden">Arq.</span>
+                    <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-slate-200/80 dark:bg-surface-3 text-slate-500 dark:text-slate-400">
+                      {stats.arquivadas}
+                    </Badge>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 md:w-64">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <Input
+                  placeholder="Buscar cliente ou processo..."
+                  className="pl-8 h-8 text-xs"
+                  value={buscaInline}
+                  onChange={(e) => setBuscaInline(e.target.value)}
+                />
+                {buscaInline && (
+                  <button
+                    onClick={() => setBuscaInline('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'h-8 px-2 text-slate-500 dark:text-slate-400 shrink-0',
+                  mostrarFiltrosAvancados && 'bg-slate-100 dark:bg-surface-2 text-slate-700 dark:text-slate-200'
+                )}
+                onClick={() => setMostrarFiltrosAvancados(!mostrarFiltrosAvancados)}
               >
-                Todas
-                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-slate-200/80 dark:bg-surface-3 text-slate-600 dark:text-slate-400">
-                  {stats.total}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger
-                value="com_processo"
-                className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
-              >
-                <span className="hidden md:inline">Com Pasta</span>
-                <span className="md:hidden">Pasta</span>
-                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-[#89bcbe]/30 text-[#34495e] dark:bg-[#89bcbe]/20 dark:text-[#89bcbe]">
-                  {stats.comProcesso}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger
-                value="sem_processo"
-                className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
-              >
-                <span className="hidden md:inline">Sem Pasta</span>
-                <span className="md:hidden">S/ Pasta</span>
-                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-[#34495e]/10 text-[#46627f] dark:bg-slate-600/30 dark:text-slate-300">
-                  {stats.semProcesso}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger
-                value="tratadas"
-                className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
-              >
-                <span className="hidden md:inline">Tratadas</span>
-                <span className="md:hidden">Trat.</span>
-                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-emerald-100/80 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  {stats.tratadas}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger
-                value="arquivadas"
-                className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
-              >
-                <span className="hidden md:inline">Arquivadas</span>
-                <span className="md:hidden">Arq.</span>
-                <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-slate-200/80 dark:bg-surface-3 text-slate-500 dark:text-slate-400">
-                  {stats.arquivadas}
-                </Badge>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+                <Filter className="w-3.5 h-3.5" />
+              </Button>
+              {temFiltrosAtivos && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs px-2 text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0"
+                  onClick={limparFiltros}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-slate-600 dark:text-slate-400">
+        <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
             {publicacoesFiltradas.length} {publicacoesFiltradas.length === 1 ? 'publicação' : 'publicações'}
-            {temFiltrosAtivos && (
-              <span className="text-slate-400 font-normal ml-1">
-                (filtradas)
-              </span>
-            )}
-          </h2>
+            {temFiltrosAtivos && ' (filtradas)'}
+          </span>
 
           {publicacoesFiltradas.length > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-xs gap-1.5 text-slate-500 dark:text-slate-400"
+              className="h-6 text-[11px] gap-1 text-slate-500 dark:text-slate-400"
               onClick={selecionarTodos}
             >
-              <ListChecks className="w-3.5 h-3.5" />
+              <ListChecks className="w-3 h-3" />
               {selecionados.size === publicacoesFiltradas.length ? 'Desmarcar todos' : 'Selecionar todos'}
             </Button>
           )}
@@ -1260,21 +1133,21 @@ export default function PublicacoesPage() {
 
           {/* Desktop: Table */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full table-fixed">
               <thead className="bg-slate-50 dark:bg-surface-0 border-b border-slate-200 dark:border-slate-700">
                 <tr>
-                  <th className="w-10 p-3">
+                  <th className="w-[40px] p-3">
                     <Checkbox
                       checked={selecionados.size === publicacoesFiltradas.length && publicacoesFiltradas.length > 0}
                       onCheckedChange={selecionarTodos}
                     />
                   </th>
-                  <th className="text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Status</th>
-                  <th className="text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">
+                  <th className="w-[200px] text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Status</th>
+                  <th className="w-[90px] text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">
                     <TooltipProvider delayDuration={200}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="cursor-help border-b border-dashed border-slate-400">Disp.</span>
+                          <span className="cursor-help border-b border-dashed border-slate-400">Data</span>
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>Data de Disponibilização</p>
@@ -1282,10 +1155,10 @@ export default function PublicacoesPage() {
                       </Tooltip>
                     </TooltipProvider>
                   </th>
-                  <th className="text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Tribunal</th>
-                  <th className="text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Tipo</th>
-                  <th className="text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Processo</th>
-                  <th className="text-right text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Ações</th>
+                  <th className="w-[15%] text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Tribunal</th>
+                  <th className="w-[80px] text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Tipo</th>
+                  <th className="text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Processo / Partes</th>
+                  <th className="w-[130px] text-right text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -1306,7 +1179,7 @@ export default function PublicacoesPage() {
                         />
                       </td>
                       <td className="p-3">
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 whitespace-nowrap">
                           <ChevronRight className={cn(
                             'w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0',
                             expandedId === pub.id && 'rotate-90 text-[#1E3A8A]'
@@ -1334,24 +1207,22 @@ export default function PublicacoesPage() {
                         </div>
                       </td>
                       <td className="p-3">
-                        <span className="text-sm text-slate-700 dark:text-slate-300">
+                        <span className="text-xs text-slate-600 dark:text-slate-400">
                           {new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}
                         </span>
                       </td>
-                      <td className="p-3">
-                        <div>
-                          <div className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate max-w-[200px]" title={pub.tribunal}>{pub.tribunal}</div>
-                          {pub.vara && <div className="text-xs text-slate-500 dark:text-slate-400">{pub.vara}</div>}
-                        </div>
+                      <td className="p-3 truncate" title={pub.tribunal}>
+                        <div className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{pub.tribunal}</div>
+                        {pub.vara && <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{pub.vara}</div>}
                       </td>
-                      <td className="p-3">
-                        <span className="text-sm text-slate-700 dark:text-slate-300">{getTipoLabel(pub.tipo_publicacao)}</span>
+                      <td className="p-3 truncate">
+                        <span className="text-xs text-slate-700 dark:text-slate-300">{getTipoLabel(pub.tipo_publicacao)}</span>
                       </td>
-                      <td className="p-3">
+                      <td className="p-3 overflow-hidden">
                         {pub.numero_processo ? (
                           pub.processo_id ? (
                             <span
-                              className="inline-flex flex-col cursor-pointer group/proc"
+                              className="flex flex-col cursor-pointer group/proc min-w-0"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 router.push(`/dashboard/processos/${pub.processo_id}`)
@@ -1359,12 +1230,12 @@ export default function PublicacoesPage() {
                             >
                               {(pub.processo_autor || pub.processo_reu) ? (
                                 <>
-                                  <span className="text-sm font-medium text-[#3B82F6] hover:text-[#2563EB] group-hover/proc:underline underline-offset-2 truncate max-w-[220px]">
+                                  <span className="text-sm font-medium text-[#3B82F6] hover:text-[#2563EB] group-hover/proc:underline underline-offset-2 truncate" title={`${pub.processo_autor} x ${pub.processo_reu}`}>
                                     {pub.processo_autor} x {pub.processo_reu}
                                   </span>
-                                  <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                  <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 flex items-center gap-1">
                                     {pub.numero_processo}
-                                    <ExternalLink className="w-3 h-3 opacity-60" />
+                                    <ExternalLink className="w-2.5 h-2.5 opacity-60" />
                                   </span>
                                 </>
                               ) : (

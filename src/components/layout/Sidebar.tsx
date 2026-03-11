@@ -200,7 +200,7 @@ export default function Sidebar() {
                 isDisabled
                   ? 'text-slate-400 dark:text-slate-600 opacity-60 cursor-not-allowed'
                   : isActive
-                  ? 'bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe]/20 dark:to-[#89bcbe]/10 text-white dark:text-[#89bcbe] shadow-lg shadow-[#34495e]/20 dark:shadow-none dark:border-l-2 dark:border-[#89bcbe]'
+                  ? 'bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe]/20 dark:to-[#89bcbe]/10 text-white dark:text-[#89bcbe] shadow-lg shadow-[#34495e]/20 dark:shadow-none'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-gradient-to-r hover:from-slate-50 hover:to-slate-100/80 dark:hover:from-surface-2 dark:hover:to-surface-3 hover:text-[#34495e] dark:hover:text-slate-200 hover:shadow-md dark:hover:shadow-none'
               )}
             >

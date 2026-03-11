@@ -127,35 +127,26 @@ export default function VincularContratoModal({
       setSelectedModalidade(null)
 
       try {
-        const selectFields = 'id, numero_contrato, forma_cobranca, data_inicio, data_fim, config, formas_pagamento, grupo_clientes, cliente:crm_pessoas!cliente_id(nome_completo, razao_social)'
+        // Buscar contratos do cliente (direto ou membro do grupo) via RPC
+        const { data: rpcData, error: rpcError } = await supabase
+          .rpc('buscar_contratos_por_cliente_ou_grupo', { p_cliente_id: clienteId })
 
-        // Query 1: contratos onde o cliente é o titular direto
-        // Query 2: contratos onde o cliente é membro do grupo (JSONB contains)
-        const [directResult, grupoResult] = await Promise.all([
-          supabase
-            .from('financeiro_contratos_honorarios')
-            .select(selectFields)
-            .eq('cliente_id', clienteId)
-            .eq('ativo', true)
-            .order('created_at', { ascending: false }),
-          supabase
-            .from('financeiro_contratos_honorarios')
-            .select(selectFields)
-            .eq('ativo', true)
-            .contains('grupo_clientes', { clientes: [{ cliente_id: clienteId }] })
-            .order('created_at', { ascending: false }),
-        ])
+        if (rpcError) throw rpcError
 
-        if (directResult.error) throw directResult.error
-        if (grupoResult.error) throw grupoResult.error
+        // Buscar nome do cliente titular para cada contrato (para exibir pagador do grupo)
+        const clienteIds = [...new Set((rpcData || []).map((c: any) => c.cliente_id))]
+        const { data: clientesData } = clienteIds.length > 0
+          ? await supabase
+              .from('crm_pessoas')
+              .select('id, nome_completo, razao_social')
+              .in('id', clienteIds)
+          : { data: [] }
 
-        // Merge e deduplica (um contrato pode aparecer em ambas queries)
-        const seen = new Set<string>()
-        const data = [...(directResult.data || []), ...(grupoResult.data || [])].filter((c: any) => {
-          if (seen.has(c.id)) return false
-          seen.add(c.id)
-          return true
-        })
+        const clientesMap = new Map((clientesData || []).map((p: any) => [p.id, p]))
+        const data = (rpcData || []).map((c: any) => ({
+          ...c,
+          cliente: clientesMap.get(c.cliente_id) || null,
+        }))
 
         // Processar dados usando colunas JSONB
         const contratosProcessados: ContratoDisponivel[] = (data || []).map((c: any) => {

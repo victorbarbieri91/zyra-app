@@ -185,6 +185,13 @@ export function useEscritorioMembros(escritorioId: string | undefined): UseEscri
     const novaExpiracao = new Date();
     novaExpiracao.setDate(novaExpiracao.getDate() + 7);
 
+    // Buscar dados do convite para reenviar email
+    const { data: conviteData, error: fetchError } = await supabase
+      .from('escritorios_convites')
+      .select('token, email, expira_em, escritorio_id, cargo:cargo_id(nome_display)')
+      .eq('id', conviteId)
+      .single();
+
     const { error } = await supabase
       .from('escritorios_convites')
       .update({ expira_em: novaExpiracao.toISOString() })
@@ -196,7 +203,36 @@ export function useEscritorioMembros(escritorioId: string | undefined): UseEscri
       return false;
     }
 
-    // TODO: Enviar email de convite novamente
+    // Enviar email de convite novamente
+    if (conviteData?.token) {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('nome_completo')
+          .eq('id', userData?.user?.id)
+          .single();
+
+        const { data: escritorioData } = await supabase
+          .from('escritorios')
+          .select('nome')
+          .eq('id', conviteData.escritorio_id)
+          .single();
+
+        await supabase.functions.invoke('enviar-convite-email', {
+          body: {
+            token: conviteData.token,
+            email: conviteData.email,
+            escritorio_nome: escritorioData?.nome || 'Escritório',
+            cargo_nome: (conviteData.cargo as any)?.nome_display || 'Membro',
+            convidado_por_nome: profileData?.nome_completo || 'Um administrador',
+            expira_em: novaExpiracao.toISOString(),
+          },
+        });
+      } catch (emailErr) {
+        console.warn('Falha ao reenviar email de convite:', emailErr);
+      }
+    }
 
     await recarregar();
     return true;

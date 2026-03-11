@@ -312,20 +312,27 @@ export async function convidarUsuario(dados: {
   email: string;
   role: 'admin' | 'advogado' | 'assistente' | 'readonly';
   escritorioId: string;
+  cargoId?: string;
 }): Promise<{ token: string; expira_em: string }> {
   const supabase = createClient();
 
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) throw new Error('Usuário não autenticado');
 
+  const insertData: Record<string, any> = {
+    escritorio_id: dados.escritorioId,
+    email: dados.email,
+    role: dados.role,
+    convidado_por: userData.user.id,
+  };
+
+  if (dados.cargoId) {
+    insertData.cargo_id = dados.cargoId;
+  }
+
   const { data, error } = await supabase
     .from('escritorios_convites')
-    .insert({
-      escritorio_id: dados.escritorioId,
-      email: dados.email,
-      role: dados.role,
-      convidado_por: userData.user.id,
-    })
+    .insert(insertData)
     .select('token, expira_em')
     .single();
 
@@ -339,72 +346,26 @@ export async function convidarUsuario(dados: {
 
 /**
  * Aceita um convite e adiciona usuário ao escritório
+ * Usa função SQL SECURITY DEFINER que faz tudo atomicamente:
+ * - Valida o convite (token, expiração, email)
+ * - Cria vínculo escritorios_usuarios (com cargo_id)
+ * - Marca convite como aceito
+ * - Atualiza profile (pula onboarding)
+ * - Seta escritório ativo
  */
-export async function aceitarConvite(token: string): Promise<boolean> {
+export async function aceitarConvite(token: string): Promise<string> {
   const supabase = createClient();
 
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) throw new Error('Usuário não autenticado');
+  const { data: escritorioId, error } = await supabase.rpc('aceitar_convite_v2', {
+    p_token: token,
+  });
 
-  // 1. Buscar convite
-  const { data: convite, error: errorConvite } = await supabase
-    .from('escritorios_convites')
-    .select('*')
-    .eq('token', token)
-    .eq('aceito', false)
-    .gt('expira_em', new Date().toISOString())
-    .single();
-
-  if (errorConvite || !convite) {
-    throw new Error('Convite inválido ou expirado');
+  if (error) {
+    console.error('Erro ao aceitar convite:', error);
+    throw new Error(error.message || 'Erro ao aceitar convite');
   }
 
-  // 2. Criar relacionamento usuário-escritório
-  const { error: errorRelacao } = await supabase
-    .from('escritorios_usuarios')
-    .insert({
-      user_id: userData.user.id,
-      escritorio_id: convite.escritorio_id,
-      role: convite.role,
-      is_owner: false,
-      ativo: true,
-      convidado_por: convite.convidado_por,
-    });
-
-  if (errorRelacao) {
-    console.error('Erro ao aceitar convite:', errorRelacao);
-    throw errorRelacao;
-  }
-
-  // 3. Marcar convite como aceito
-  const { error: errorUpdate } = await supabase
-    .from('escritorios_convites')
-    .update({
-      aceito: true,
-      aceito_por: userData.user.id,
-      aceito_em: new Date().toISOString(),
-    })
-    .eq('id', convite.id);
-
-  if (errorUpdate) {
-    console.error('Erro ao atualizar convite:', errorUpdate);
-  }
-
-  // 4. Atualizar profile para vincular ao escritório e pular onboarding
-  await supabase
-    .from('profiles')
-    .update({
-      escritorio_id: convite.escritorio_id,
-      primeiro_acesso: false,
-      onboarding_completo: true,
-      onboarding_completado_em: new Date().toISOString(),
-    })
-    .eq('id', userData.user.id);
-
-  // 5. Trocar para o novo escritório
-  await trocarEscritorio(convite.escritorio_id);
-
-  return true;
+  return escritorioId;
 }
 
 /**

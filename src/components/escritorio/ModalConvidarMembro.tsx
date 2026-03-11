@@ -44,6 +44,7 @@ interface ModalConvidarMembroProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   escritorioId: string;
+  escritorioNome?: string;
   cargos: Cargo[];
   onSuccess?: () => void;
 }
@@ -52,12 +53,14 @@ export function ModalConvidarMembro({
   open,
   onOpenChange,
   escritorioId,
+  escritorioNome,
   cargos,
   onSuccess,
 }: ModalConvidarMembroProps) {
   const [enviando, setEnviando] = useState(false);
   const [linkConvite, setLinkConvite] = useState<string | null>(null);
   const [linkCopiado, setLinkCopiado] = useState(false);
+  const [emailEnviado, setEmailEnviado] = useState(false);
 
   const supabase = createClient();
 
@@ -120,9 +123,40 @@ export function ModalConvidarMembro({
       if (error) throw error;
 
       if (conviteData?.token) {
-        toast.success('Convite enviado com sucesso');
         const link = `${window.location.origin}/convite/${conviteData.token}`;
         setLinkConvite(link);
+
+        // Buscar nome do convidante para o email
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('nome_completo')
+          .eq('id', userData.user.id)
+          .single();
+
+        // Tentar enviar email automaticamente (não-bloqueante)
+        try {
+          const emailResponse = await supabase.functions.invoke('enviar-convite-email', {
+            body: {
+              token: conviteData.token,
+              email: data.email,
+              escritorio_nome: escritorioNome || 'Escritório',
+              cargo_nome: cargoSelecionado?.nome_display || 'Membro',
+              convidado_por_nome: profileData?.nome_completo || 'Um administrador',
+              expira_em: conviteData.expira_em,
+            },
+          });
+
+          if (emailResponse.error) {
+            console.warn('Email não enviado (serviço pode não estar configurado):', emailResponse.error);
+            toast.success('Convite criado! Compartilhe o link abaixo com o novo membro.');
+          } else {
+            setEmailEnviado(true);
+            toast.success(`Convite enviado por email para ${data.email}`);
+          }
+        } catch (emailErr) {
+          console.warn('Falha ao enviar email de convite:', emailErr);
+          toast.success('Convite criado! Compartilhe o link abaixo com o novo membro.');
+        }
       }
     } catch (error) {
       console.error('Erro ao enviar convite:', error);
@@ -139,6 +173,7 @@ export function ModalConvidarMembro({
     });
     setLinkConvite(null);
     setLinkCopiado(false);
+    setEmailEnviado(false);
     onOpenChange(false);
     if (linkConvite && onSuccess) onSuccess();
   };
@@ -153,7 +188,9 @@ export function ModalConvidarMembro({
           </DialogTitle>
           <DialogDescription className="text-[#6c757d]">
             {linkConvite
-              ? 'Convite enviado! Compartilhe o link abaixo com o novo membro.'
+              ? emailEnviado
+                ? 'Email de convite enviado! O link abaixo também pode ser compartilhado diretamente.'
+                : 'Convite criado! Compartilhe o link abaixo com o novo membro.'
               : 'Envie um convite por email para adicionar um novo membro ao escritorio.'}
           </DialogDescription>
         </DialogHeader>

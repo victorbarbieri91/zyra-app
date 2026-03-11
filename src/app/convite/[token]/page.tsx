@@ -49,22 +49,11 @@ export default function ConvitePage() {
     setError(null)
 
     try {
-      // Load invite with cargo details
-      const { data: conviteData, error: conviteError } = await supabase
-        .from('escritorios_convites')
-        .select(`
-          id,
-          email,
-          expira_em,
-          aceito,
-          escritorio_id,
-          cargo:cargo_id (
-            nome_display,
-            cor
-          )
-        `)
-        .eq('token', token)
-        .single()
+      // Buscar convite via função SECURITY DEFINER (não depende de RLS)
+      const { data: conviteRows, error: conviteError } = await supabase
+        .rpc('get_convite_por_token', { p_token: token })
+
+      const conviteData = conviteRows?.[0]
 
       if (conviteError || !conviteData) {
         setError('Convite não encontrado. Verifique se o link está correto.')
@@ -81,8 +70,11 @@ export default function ConvitePage() {
         return
       }
 
-      // Get escritorio name
+      // Buscar nome do escritório e dados do cargo
       let escritorioNome = 'Escritório'
+      let cargoNome = 'Membro'
+      let cargoCor = '#64748b'
+
       const { data: escritorioData } = await supabase
         .from('escritorios')
         .select('nome')
@@ -93,15 +85,27 @@ export default function ConvitePage() {
         escritorioNome = escritorioData.nome
       }
 
-      const cargoData = conviteData.cargo as any
+      if (conviteData.cargo_id) {
+        const { data: cargoData } = await supabase
+          .from('escritorios_cargos')
+          .select('nome_display, cor')
+          .eq('id', conviteData.cargo_id)
+          .single()
+
+        if (cargoData) {
+          cargoNome = cargoData.nome_display || 'Membro'
+          cargoCor = cargoData.cor || '#64748b'
+        }
+      }
+
       setConvite({
         id: conviteData.id,
         email: conviteData.email,
         expira_em: conviteData.expira_em,
         escritorio_id: conviteData.escritorio_id,
         escritorio_nome: escritorioNome,
-        cargo_nome: cargoData?.nome_display || 'Membro',
-        cargo_cor: cargoData?.cor || '#64748b'
+        cargo_nome: cargoNome,
+        cargo_cor: cargoCor
       })
     } catch (err) {
       console.error('Erro ao carregar convite:', err)
@@ -141,10 +145,27 @@ export default function ConvitePage() {
         throw signUpError
       }
 
-      // Wait a moment for profile trigger to create profile
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Aguardar profile trigger criar o profile antes de aceitar convite
+      // A função aceitar_convite_v2 precisa que o profile exista
+      let profileReady = false
+      for (let i = 0; i < 10; i++) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', data.user?.id)
+          .maybeSingle()
+        if (profile) {
+          profileReady = true
+          break
+        }
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
 
-      // Accept invite (links to office)
+      if (!profileReady) {
+        throw new Error('Erro ao criar perfil. Tente fazer login abaixo.')
+      }
+
+      // Aceitar convite via RPC atômico (cria vínculo, seta cargo, pula onboarding)
       await aceitarConvite(token)
 
       setSuccess(true)

@@ -11,6 +11,7 @@ import {
   DollarSign,
   TrendingUpDown,
   CreditCard,
+  Receipt,
 } from 'lucide-react'
 
 const financeiroMenuItems = [
@@ -25,6 +26,12 @@ const financeiroMenuItems = [
     shortTitle: 'Receitas',
     icon: TrendingUpDown,
     href: '/dashboard/financeiro/receitas-despesas',
+  },
+  {
+    title: 'Custas e Despesas',
+    shortTitle: 'Custas',
+    icon: Receipt,
+    href: '/dashboard/financeiro/custas-despesas',
   },
   {
     title: 'Timesheet',

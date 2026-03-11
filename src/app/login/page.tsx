@@ -60,15 +60,6 @@ export default function LoginPage() {
         } catch { /* browser may block, ignore */ }
       }
 
-      // Check if there's a pending invite to process
-      const pendingInviteToken = sessionStorage.getItem('pendingInviteToken')
-      if (pendingInviteToken) {
-        sessionStorage.removeItem('pendingInviteToken')
-        router.push(`/convite/${pendingInviteToken}`)
-        router.refresh()
-        return
-      }
-
       router.push('/dashboard')
       router.refresh()
     } catch (err: any) {
@@ -107,15 +98,6 @@ export default function LoginPage() {
       })
 
       if (signUpError) throw signUpError
-
-      // Check if there's a pending invite to process
-      const pendingInviteToken = sessionStorage.getItem('pendingInviteToken')
-      if (pendingInviteToken) {
-        sessionStorage.removeItem('pendingInviteToken')
-        router.push(`/convite/${pendingInviteToken}`)
-        router.refresh()
-        return
-      }
 
       router.push('/dashboard')
       router.refresh()

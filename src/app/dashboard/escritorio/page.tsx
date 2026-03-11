@@ -609,6 +609,7 @@ export default function EscritorioPage() {
         open={modalConvidar}
         onOpenChange={setModalConvidar}
         escritorioId={escritorioAtivo.id}
+        escritorioNome={escritorioAtivo.nome}
         cargos={cargos}
         onSuccess={handleSuccessModal}
       />

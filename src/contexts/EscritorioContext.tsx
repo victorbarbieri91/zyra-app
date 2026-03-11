@@ -9,7 +9,7 @@ import {
   trocarEscritorio as trocarEscritorioHelper,
 } from '@/lib/supabase/escritorio-helpers';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { logger } from '@/lib/logger';
 
 interface EscritorioContextData {
@@ -39,6 +39,7 @@ export function EscritorioProvider({ children }: { children: React.ReactNode }) 
   const [isOwner, setIsOwner] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
   // Usar useRef para manter a mesma referência do supabase client
   const supabaseRef = useRef(createClient());
@@ -64,12 +65,29 @@ export function EscritorioProvider({ children }: { children: React.ReactNode }) 
           setIsOwner(escritorioAtivoComRole.is_owner);
         }
       }
+
+      // Gate de onboarding: se não tem escritório, redirecionar para onboarding
+      if (!ativo && disponiveis.length === 0) {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('onboarding_completo')
+            .eq('id', userData.user.id)
+            .single();
+
+          if (!profile?.onboarding_completo) {
+            router.replace('/onboarding');
+            return;
+          }
+        }
+      }
     } catch (error) {
       logger.error('Erro ao carregar dados do escritorio', { module: 'escritorio', action: 'carregar' }, error instanceof Error ? error : undefined);
     } finally {
       setCarregando(false);
     }
-  }, []);
+  }, [supabase, router]);
 
   const trocarEscritorio = async (id: string) => {
     try {

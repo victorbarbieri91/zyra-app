@@ -40,6 +40,7 @@ import {
   Clock,
   Plus,
   Heart,
+  Repeat,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -264,6 +265,9 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
               valor: number
               atualizacao_monetaria?: boolean
               atualizacao_indice?: 'ipca' | 'ipca_e' | 'inpc' | 'igpm'
+              periodicidade?: 'mensal_fixo' | 'parcelado'
+              dia_vencimento?: number
+              numero_parcelas?: number
             }>
             valoresFixos = valoresData.map(v => ({
               id: v.id || crypto.randomUUID(),
@@ -271,6 +275,9 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
               valor: v.valor || 0,
               atualizacao_monetaria: v.atualizacao_monetaria || false,
               atualizacao_indice: v.atualizacao_indice || 'ipca',
+              periodicidade: v.periodicidade,
+              dia_vencimento: v.dia_vencimento,
+              numero_parcelas: v.numero_parcelas,
             }))
           } else if (configJsonb.valor_fixo) {
             // Formato antigo: valor único - converter para array para compatibilidade
@@ -1408,6 +1415,87 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                               </Select>
                             )}
                           </div>
+
+                          {/* Periodicidade */}
+                          <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800 mt-1.5">
+                            <Label className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mb-1.5">
+                              <Repeat className="h-3 w-3" />
+                              Periodicidade
+                            </Label>
+                            <div className="flex gap-1 p-0.5 bg-slate-100 dark:bg-surface-0 rounded-md w-fit">
+                              {([
+                                { value: undefined, label: 'Avulso' },
+                                { value: 'mensal_fixo', label: 'Mensal fixo' },
+                                { value: 'parcelado', label: 'Parcelado' },
+                              ] as const).map((opt) => (
+                                <button
+                                  key={opt.label}
+                                  type="button"
+                                  className={cn(
+                                    'h-6 px-2.5 text-[10px] rounded transition-all',
+                                    (valorFixo.periodicidade || undefined) === opt.value
+                                      ? 'bg-white dark:bg-slate-700 shadow-sm text-[#34495e] dark:text-slate-200 font-medium'
+                                      : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                                  )}
+                                  onClick={() => {
+                                    const novosValores = [...(formData.valores_fixos || [])]
+                                    novosValores[index] = {
+                                      ...novosValores[index],
+                                      periodicidade: opt.value,
+                                      dia_vencimento: opt.value ? (novosValores[index].dia_vencimento || 10) : undefined,
+                                      numero_parcelas: opt.value === 'parcelado' ? (novosValores[index].numero_parcelas || 6) : undefined,
+                                    }
+                                    setFormData((prev) => ({ ...prev, valores_fixos: novosValores }))
+                                  }}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+
+                            {valorFixo.periodicidade && (
+                              <div className="flex items-center gap-3 mt-2">
+                                <div>
+                                  <Label className="text-[10px] text-slate-500 dark:text-slate-400">Dia vencimento</Label>
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    max={31}
+                                    value={valorFixo.dia_vencimento || 10}
+                                    onChange={(e) => {
+                                      const novosValores = [...(formData.valores_fixos || [])]
+                                      novosValores[index] = {
+                                        ...novosValores[index],
+                                        dia_vencimento: Math.min(31, Math.max(1, parseInt(e.target.value) || 1)),
+                                      }
+                                      setFormData((prev) => ({ ...prev, valores_fixos: novosValores }))
+                                    }}
+                                    className="h-7 w-20 text-xs mt-0.5"
+                                  />
+                                </div>
+                                {valorFixo.periodicidade === 'parcelado' && (
+                                  <div>
+                                    <Label className="text-[10px] text-slate-500 dark:text-slate-400">Nº parcelas</Label>
+                                    <Input
+                                      type="number"
+                                      min={2}
+                                      max={120}
+                                      value={valorFixo.numero_parcelas || 6}
+                                      onChange={(e) => {
+                                        const novosValores = [...(formData.valores_fixos || [])]
+                                        novosValores[index] = {
+                                          ...novosValores[index],
+                                          numero_parcelas: Math.min(120, Math.max(2, parseInt(e.target.value) || 2)),
+                                        }
+                                        setFormData((prev) => ({ ...prev, valores_fixos: novosValores }))
+                                      }}
+                                      className="h-7 w-20 text-xs mt-0.5"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1967,16 +2055,26 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                       <div className="mb-2">
                         <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Valores Fixos:</p>
                         {formData.valores_fixos.filter(v => v.valor > 0).map((vf) => (
-                          <div key={vf.id} className="flex justify-between text-sm">
-                            <span className="text-slate-600 dark:text-slate-400">
-                              {vf.descricao || 'Valor Fixo'}
-                              {vf.atualizacao_monetaria && (
-                                <span className="text-[10px] text-[#89bcbe] ml-1">
-                                  (atualizar por {vf.atualizacao_indice?.toUpperCase()})
-                                </span>
-                              )}
-                            </span>
-                            <span className="font-medium">{formatCurrency(vf.valor)}</span>
+                          <div key={vf.id}>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-slate-600 dark:text-slate-400">
+                                {vf.descricao || 'Valor Fixo'}
+                                {vf.atualizacao_monetaria && (
+                                  <span className="text-[10px] text-[#89bcbe] ml-1">
+                                    (atualizar por {vf.atualizacao_indice?.toUpperCase()})
+                                  </span>
+                                )}
+                              </span>
+                              <span className="font-medium">{formatCurrency(vf.valor)}</span>
+                            </div>
+                            {vf.periodicidade && (
+                              <p className="text-[10px] text-[#46627f] dark:text-slate-500 ml-1 mt-0.5">
+                                → {vf.periodicidade === 'mensal_fixo'
+                                  ? `Mensal fixo, vencimento dia ${vf.dia_vencimento || 10}`
+                                  : `${vf.numero_parcelas || 6}x parcelas, vencimento dia ${vf.dia_vencimento || 10}`
+                                }
+                              </p>
+                            )}
                           </div>
                         ))}
                       </div>

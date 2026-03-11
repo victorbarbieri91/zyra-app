@@ -110,6 +110,10 @@ export interface ValorFixoItem {
   valor: number
   atualizacao_monetaria?: boolean
   atualizacao_indice?: 'ipca' | 'ipca_e' | 'inpc' | 'igpm'
+  // Periodicidade: undefined = avulso (sem recorrência)
+  periodicidade?: 'mensal_fixo' | 'parcelado'
+  dia_vencimento?: number // 1-31
+  numero_parcelas?: number // apenas quando periodicidade === 'parcelado'
 }
 
 // Cliente no grupo econômico
@@ -446,6 +450,14 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
     }
   }, [idsParaConsulta, supabase])
 
+  // Helper: calcular data de vencimento baseada na data início e dia preferido
+  const calcularDataVencimento = (dataInicio: string, diaVencimento?: number): string => {
+    const [ano, mes] = dataInicio.split('-').map(Number)
+    const ultimoDiaMes = new Date(ano, mes, 0).getDate()
+    const dia = Math.min(diaVencimento || 10, ultimoDiaMes)
+    return `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
+  }
+
   // Criar novo contrato
   const createContrato = useCallback(
     async (data: ContratoFormData): Promise<string | null> => {
@@ -596,6 +608,67 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
             .eq('id', novoContrato.id)
 
           if (updateError) throw updateError
+        }
+
+        // Gerar receitas automaticamente para valores fixos com periodicidade
+        const valoresComPeriodicidade = (data.valores_fixos || []).filter(
+          v => v.valor > 0 && v.periodicidade
+        )
+
+        if (valoresComPeriodicidade.length > 0) {
+          const { data: userData } = await supabase.auth.getUser()
+          const userId = userData?.user?.id
+
+          for (const valorFixo of valoresComPeriodicidade) {
+            const dataVencimento = calcularDataVencimento(data.data_inicio, valorFixo.dia_vencimento)
+
+            if (valorFixo.periodicidade === 'mensal_fixo') {
+              // Criar receita-template recorrente (gera lançamentos virtuais automaticamente)
+              await supabase.from('financeiro_receitas').insert({
+                escritorio_id: ownerEscritorioId,
+                tipo: 'honorario',
+                cliente_id: data.cliente_id,
+                contrato_id: novoContrato.id,
+                descricao: valorFixo.descricao || 'Mensalidade',
+                categoria: 'honorario',
+                valor: valorFixo.valor,
+                data_competencia: data.data_inicio.substring(0, 7) + '-01',
+                data_vencimento: dataVencimento,
+                status: 'pendente',
+                recorrente: true,
+                config_recorrencia: {
+                  frequencia: 'mensal',
+                  dia_vencimento: valorFixo.dia_vencimento || 10,
+                  data_inicio: data.data_inicio,
+                  data_fim: data.data_fim || null,
+                  gerar_automatico: true,
+                },
+                parcelado: false,
+                numero_parcelas: 1,
+                responsavel_id: userId,
+                created_by: userId,
+              })
+            } else if (valorFixo.periodicidade === 'parcelado') {
+              // Criar receita parcelada (trigger gerar_parcelas_receita cria as parcelas)
+              await supabase.from('financeiro_receitas').insert({
+                escritorio_id: ownerEscritorioId,
+                tipo: 'honorario',
+                cliente_id: data.cliente_id,
+                contrato_id: novoContrato.id,
+                descricao: valorFixo.descricao || 'Honorário',
+                categoria: 'honorario',
+                valor: valorFixo.valor,
+                data_competencia: data.data_inicio.substring(0, 7) + '-01',
+                data_vencimento: dataVencimento,
+                status: 'pendente',
+                recorrente: false,
+                parcelado: true,
+                numero_parcelas: valorFixo.numero_parcelas || 6,
+                responsavel_id: userId,
+                created_by: userId,
+              })
+            }
+          }
         }
 
         // Recarregar lista
@@ -793,6 +866,83 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
 
         // Nota: Tabelas auxiliares de cargo e atos foram removidas
         // Agora todos os dados ficam no JSONB config (já atualizado acima)
+
+        // Gerar receitas para novos itens com periodicidade
+        // Buscar receitas existentes deste contrato para evitar duplicatas
+        const valoresComPeriodicidade = (data.valores_fixos || []).filter(
+          v => v.valor > 0 && v.periodicidade
+        )
+
+        if (valoresComPeriodicidade.length > 0) {
+          const { data: receitasExistentes } = await supabase
+            .from('financeiro_receitas')
+            .select('descricao, recorrente, parcelado')
+            .eq('contrato_id', id)
+            .is('receita_pai_id', null) // Apenas templates/principais, não parcelas filhas
+
+          const descricaoExistentes = new Set(
+            (receitasExistentes || []).map((r: { descricao: string }) => r.descricao)
+          )
+
+          const { data: userData } = await supabase.auth.getUser()
+          const userId = userData?.user?.id
+          const ownerEscritorioId = data.escritorio_contrato_id || escritorioAtivo
+          const dataInicio = data.data_inicio || new Date().toISOString().split('T')[0]
+
+          for (const valorFixo of valoresComPeriodicidade) {
+            const descricao = valorFixo.descricao || (valorFixo.periodicidade === 'mensal_fixo' ? 'Mensalidade' : 'Honorário')
+
+            // Não criar se já existe receita com mesma descrição para este contrato
+            if (descricaoExistentes.has(descricao)) continue
+
+            const dataVencimento = calcularDataVencimento(dataInicio, valorFixo.dia_vencimento)
+
+            if (valorFixo.periodicidade === 'mensal_fixo') {
+              await supabase.from('financeiro_receitas').insert({
+                escritorio_id: ownerEscritorioId,
+                tipo: 'honorario',
+                cliente_id: data.cliente_id,
+                contrato_id: id,
+                descricao,
+                categoria: 'honorario',
+                valor: valorFixo.valor,
+                data_competencia: dataInicio.substring(0, 7) + '-01',
+                data_vencimento: dataVencimento,
+                status: 'pendente',
+                recorrente: true,
+                config_recorrencia: {
+                  frequencia: 'mensal',
+                  dia_vencimento: valorFixo.dia_vencimento || 10,
+                  data_inicio: dataInicio,
+                  data_fim: data.data_fim || null,
+                  gerar_automatico: true,
+                },
+                parcelado: false,
+                numero_parcelas: 1,
+                responsavel_id: userId,
+                created_by: userId,
+              })
+            } else if (valorFixo.periodicidade === 'parcelado') {
+              await supabase.from('financeiro_receitas').insert({
+                escritorio_id: ownerEscritorioId,
+                tipo: 'honorario',
+                cliente_id: data.cliente_id,
+                contrato_id: id,
+                descricao,
+                categoria: 'honorario',
+                valor: valorFixo.valor,
+                data_competencia: dataInicio.substring(0, 7) + '-01',
+                data_vencimento: dataVencimento,
+                status: 'pendente',
+                recorrente: false,
+                parcelado: true,
+                numero_parcelas: valorFixo.numero_parcelas || 6,
+                responsavel_id: userId,
+                created_by: userId,
+              })
+            }
+          }
+        }
 
         console.log('[updateContrato] Sucesso! Recarregando lista...')
         // Recarregar lista

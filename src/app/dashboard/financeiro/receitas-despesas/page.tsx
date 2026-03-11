@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -276,7 +277,7 @@ export default function ExtratoFinanceiroPage() {
   // Form edição
   const [editForm, setEditForm] = useState({
     descricao: '',
-    valor: '',
+    valor: 0 as number,
     data_vencimento: '',
     categoria: '',
     fornecedor: '',
@@ -900,6 +901,40 @@ export default function ExtratoFinanceiroPage() {
           .from('financeiro_faturamento_faturas')
           .update({ status: 'paga', paga_em: new Date().toISOString() })
           .eq('id', item.origem_id)
+      } else if (item.origem === 'nota_debito') {
+        // Buscar nota para obter receita_id
+        const { data: nota } = await supabase
+          .from('financeiro_notas_debito')
+          .select('receita_id')
+          .eq('id', item.origem_id)
+          .single()
+
+        const hoje = new Date().toISOString().split('T')[0]
+
+        await supabase
+          .from('financeiro_notas_debito')
+          .update({ status: 'paga', data_pagamento: hoje, conta_bancaria_id: contaId })
+          .eq('id', item.origem_id)
+
+        if (nota?.receita_id) {
+          await supabase
+            .from('financeiro_receitas')
+            .update({ status: 'pago', valor_pago: item.valor, data_pagamento: hoje, conta_bancaria_id: contaId })
+            .eq('id', nota.receita_id)
+        }
+
+        // Marcar despesas vinculadas como reembolsadas
+        const { data: itensNota } = await supabase
+          .from('financeiro_notas_debito_itens')
+          .select('despesa_id')
+          .eq('nota_debito_id', item.origem_id)
+
+        if (itensNota && itensNota.length > 0) {
+          await supabase
+            .from('financeiro_despesas')
+            .update({ reembolso_status: 'reembolsado' })
+            .in('id', itensNota.map((i: any) => i.despesa_id))
+        }
       } else {
         await supabase
           .from('financeiro_receitas')
@@ -974,6 +1009,36 @@ export default function ExtratoFinanceiroPage() {
             .from('financeiro_faturamento_faturas')
             .update({ status: 'paga', paga_em: new Date().toISOString() })
             .eq('id', item.origem_id)
+        } else if (item.origem === 'nota_debito') {
+          const { data: nota } = await supabase
+            .from('financeiro_notas_debito')
+            .select('receita_id')
+            .eq('id', item.origem_id)
+            .single()
+
+          await supabase
+            .from('financeiro_notas_debito')
+            .update({ status: 'paga', data_pagamento: hoje, conta_bancaria_id: contaSelecionada })
+            .eq('id', item.origem_id)
+
+          if (nota?.receita_id) {
+            await supabase
+              .from('financeiro_receitas')
+              .update({ status: 'pago', valor_pago: item.valor, data_pagamento: hoje, conta_bancaria_id: contaSelecionada })
+              .eq('id', nota.receita_id)
+          }
+
+          const { data: itensNota } = await supabase
+            .from('financeiro_notas_debito_itens')
+            .select('despesa_id')
+            .eq('nota_debito_id', item.origem_id)
+
+          if (itensNota && itensNota.length > 0) {
+            await supabase
+              .from('financeiro_despesas')
+              .update({ reembolso_status: 'reembolsado' })
+              .in('id', itensNota.map((i: any) => i.despesa_id))
+          }
         } else {
           await supabase
             .from('financeiro_receitas')
@@ -1065,6 +1130,32 @@ export default function ExtratoFinanceiroPage() {
               paga_em: novoStatus === 'pago' ? new Date().toISOString() : null,
             })
             .eq('id', item.origem_id)
+        } else if (item.origem === 'nota_debito') {
+          const statusND = novoStatus === 'pago' ? 'paga' : novoStatus === 'vencido' ? 'emitida' : 'emitida'
+          const { data: nota } = await supabase
+            .from('financeiro_notas_debito')
+            .select('receita_id')
+            .eq('id', item.origem_id)
+            .single()
+
+          await supabase
+            .from('financeiro_notas_debito')
+            .update({
+              status: statusND,
+              data_pagamento: novoStatus === 'pago' ? hoje : null,
+            })
+            .eq('id', item.origem_id)
+
+          if (nota?.receita_id) {
+            await supabase
+              .from('financeiro_receitas')
+              .update({
+                status: statusBanco,
+                data_pagamento: novoStatus === 'pago' ? hoje : null,
+                valor_pago: novoStatus === 'pago' ? item.valor : null,
+              })
+              .eq('id', nota.receita_id)
+          }
         } else {
           await supabase
             .from('financeiro_receitas')
@@ -1180,6 +1271,11 @@ export default function ExtratoFinanceiroPage() {
             .from('financeiro_faturamento_faturas')
             .update({ data_vencimento: novaDataVencimento })
             .eq('id', item.origem_id)
+        } else if (item.origem === 'nota_debito') {
+          await supabase
+            .from('financeiro_notas_debito')
+            .update({ data_vencimento: novaDataVencimento })
+            .eq('id', item.origem_id)
         } else {
           await supabase
             .from('financeiro_receitas')
@@ -1278,7 +1374,7 @@ export default function ExtratoFinanceiroPage() {
       let temParcelas = 0
       const jaPago = item.status === 'efetivado'
 
-      if (item.tipo_movimento === 'receita' && item.origem !== 'fatura') {
+      if (item.tipo_movimento === 'receita' && item.origem !== 'fatura' && item.origem !== 'nota_debito') {
         // Verificar parcelas filhas
         const { count } = await supabase
           .from('financeiro_receitas')
@@ -1351,6 +1447,45 @@ export default function ExtratoFinanceiroPage() {
             .eq('id', item.origem_id)
 
           if (error) throw error
+        } else if (item.origem === 'nota_debito') {
+          // Cancelar nota de débito + reverter despesas + cancelar receita vinculada
+          const { data: nota } = await supabase
+            .from('financeiro_notas_debito')
+            .select('receita_id')
+            .eq('id', item.origem_id)
+            .single()
+
+          await supabase
+            .from('financeiro_notas_debito')
+            .update({ status: 'cancelada' })
+            .eq('id', item.origem_id)
+
+          // Reverter despesas vinculadas
+          const { data: itensNota } = await supabase
+            .from('financeiro_notas_debito_itens')
+            .select('despesa_id')
+            .eq('nota_debito_id', item.origem_id)
+
+          if (itensNota && itensNota.length > 0) {
+            await supabase
+              .from('financeiro_despesas')
+              .update({ reembolsado: false, reembolso_status: 'pendente' })
+              .in('id', itensNota.map((i: any) => i.despesa_id))
+          }
+
+          // Cancelar receita vinculada
+          if (nota?.receita_id) {
+            await supabase
+              .from('financeiro_receitas')
+              .update({ status: 'cancelado' })
+              .eq('id', nota.receita_id)
+          }
+
+          toast.success('Nota de débito cancelada!')
+          setModalExcluir(null)
+          setExclusaoInfo(null)
+          loadExtrato()
+          return
         } else {
           // Deletar receita (CASCADE vai deletar parcelas)
           const { error } = await supabase
@@ -1419,7 +1554,7 @@ export default function ExtratoFinanceiroPage() {
       setSubmitting(true)
 
       // Buscar dados completos do registro
-      if (item.tipo_movimento === 'receita' && item.origem !== 'fatura') {
+      if (item.tipo_movimento === 'receita' && item.origem !== 'fatura' && item.origem !== 'nota_debito') {
         const { data } = await supabase
           .from('financeiro_receitas')
           .select('*')
@@ -1429,7 +1564,7 @@ export default function ExtratoFinanceiroPage() {
         if (data) {
           setEditForm({
             descricao: data.descricao || '',
-            valor: String(data.valor || ''),
+            valor: Number(data.valor) || 0,
             data_vencimento: data.data_vencimento || '',
             categoria: data.categoria || '',
             fornecedor: '',
@@ -1447,7 +1582,7 @@ export default function ExtratoFinanceiroPage() {
         if (data) {
           setEditForm({
             descricao: data.descricao || '',
-            valor: String(data.valor || ''),
+            valor: Number(data.valor) || 0,
             data_vencimento: data.data_vencimento || '',
             categoria: data.categoria || '',
             fornecedor: data.fornecedor || '',
@@ -1483,7 +1618,7 @@ export default function ExtratoFinanceiroPage() {
       if (pai) {
         setEditForm({
           descricao: pai.descricao || '',
-          valor: String(pai.valor || ''),
+          valor: Number(pai.valor) || 0,
           data_vencimento: item.data_vencimento || '', // Usa data do virtual, não do pai
           categoria: pai.categoria || '',
           fornecedor: pai.fornecedor || '',
@@ -1513,13 +1648,13 @@ export default function ExtratoFinanceiroPage() {
       setSubmitting(true)
 
       // Validar campos obrigatórios
-      if (!editForm.descricao || !editForm.valor || !editForm.data_vencimento) {
+      if (!editForm.descricao || !editForm.data_vencimento) {
         toast.error('Preencha os campos obrigatórios')
         return
       }
 
-      const valor = parseFloat(editForm.valor)
-      if (isNaN(valor) || valor <= 0) {
+      const valor = editForm.valor
+      if (!valor || valor <= 0) {
         toast.error('Valor inválido')
         return
       }
@@ -1621,7 +1756,7 @@ export default function ExtratoFinanceiroPage() {
         return
       }
 
-      if (item.tipo_movimento === 'receita' && item.origem !== 'fatura') {
+      if (item.tipo_movimento === 'receita' && item.origem !== 'fatura' && item.origem !== 'nota_debito') {
         await supabase
           .from('financeiro_receitas')
           .update({
@@ -1673,7 +1808,7 @@ export default function ExtratoFinanceiroPage() {
       // Separar por tipo (receitas e despesas)
       const itensSelecionadosData = extrato.filter(item => itensSelecionados.includes(item.id))
 
-      const receitas = itensSelecionadosData.filter(i => i.tipo_movimento === 'receita' && i.origem !== 'fatura')
+      const receitas = itensSelecionadosData.filter(i => i.tipo_movimento === 'receita' && i.origem !== 'fatura' && i.origem !== 'nota_debito')
       const despesas = itensSelecionadosData.filter(i => i.tipo_movimento === 'despesa')
 
       // Atualizar receitas
@@ -1738,6 +1873,24 @@ export default function ExtratoFinanceiroPage() {
             .from('financeiro_faturamento_faturas')
             .update({ status: 'paga', paga_em: new Date().toISOString() })
             .eq('id', receita.origem_id)
+        } else if (receita.origem === 'nota_debito') {
+          const { data: nota } = await supabase
+            .from('financeiro_notas_debito')
+            .select('receita_id')
+            .eq('id', receita.origem_id)
+            .single()
+
+          await supabase
+            .from('financeiro_notas_debito')
+            .update({ status: 'paga', data_pagamento: hoje, conta_bancaria_id: contaEfetivarMassa })
+            .eq('id', receita.origem_id)
+
+          if (nota?.receita_id) {
+            await supabase
+              .from('financeiro_receitas')
+              .update({ status: 'pago', valor_pago: receita.valor, data_pagamento: hoje, conta_bancaria_id: contaEfetivarMassa })
+              .eq('id', nota.receita_id)
+          }
         } else {
           await supabase
             .from('financeiro_receitas')
@@ -1976,7 +2129,7 @@ export default function ExtratoFinanceiroPage() {
       const itensSelecionadosData = extrato.filter(item =>
         itensSelecionados.includes(item.id) &&
         (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa') &&
-        item.origem !== 'fatura' // Não permite alterar faturas
+        item.origem !== 'fatura' && item.origem !== 'nota_debito' // Não permite alterar faturas
       )
 
       if (itensSelecionadosData.length === 0) {
@@ -2096,7 +2249,7 @@ export default function ExtratoFinanceiroPage() {
 
       const itensSelecionadosData = extrato.filter(item => itensSelecionados.includes(item.id))
 
-      const receitas = itensSelecionadosData.filter(i => i.tipo_movimento === 'receita' && i.origem !== 'fatura')
+      const receitas = itensSelecionadosData.filter(i => i.tipo_movimento === 'receita' && i.origem !== 'fatura' && i.origem !== 'nota_debito')
       const despesas = itensSelecionadosData.filter(i => i.tipo_movimento === 'despesa')
 
       // Atualizar receitas
@@ -2796,14 +2949,14 @@ export default function ExtratoFinanceiroPage() {
                                 <Eye className="w-4 h-4 mr-2" />
                                 Ver Detalhes
                               </DropdownMenuItem>
-                              {item.origem !== 'fatura' && (
+                              {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
                                 <DropdownMenuItem onClick={() => handlePrepararEdicao(item)}>
                                   <Pencil className="w-4 h-4 mr-2" />
                                   Editar
                                 </DropdownMenuItem>
                               )}
                               {/* Voltar para Previsto (mobile) */}
-                              {isPendente && item.origem !== 'fatura' && (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa') && (
+                              {isPendente && item.origem !== 'fatura' && item.origem !== 'nota_debito' && (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa') && (
                                 <DropdownMenuItem
                                   disabled={submitting}
                                   onClick={() => handleVoltarParaPrevisto(item)}
@@ -3178,7 +3331,7 @@ export default function ExtratoFinanceiroPage() {
                             )}
 
                             {/* Recebimento Parcial */}
-                            {item.tipo_movimento === 'receita' && item.origem !== 'fatura' && (
+                            {item.tipo_movimento === 'receita' && item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
                               <DropdownMenuItem
                                 onClick={() => {
                                   setModalRecebimentoParcial(item)
@@ -3211,7 +3364,7 @@ export default function ExtratoFinanceiroPage() {
                             </DropdownMenuItem>
 
                             {/* Editar - apenas receitas e despesas (não faturas) */}
-                            {item.origem !== 'fatura' && (
+                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
                               <DropdownMenuItem onClick={() => handlePrepararEdicao(item)}>
                                 <Pencil className="w-4 h-4 mr-2" />
                                 Editar
@@ -3219,7 +3372,7 @@ export default function ExtratoFinanceiroPage() {
                             )}
 
                             {/* Alterar Categoria - apenas receitas e despesas (não faturas) */}
-                            {item.origem !== 'fatura' && (
+                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
                               <DropdownMenuItem
                                 onClick={() => {
                                   setModalAlterarCategoriaItem(item)
@@ -3232,7 +3385,7 @@ export default function ExtratoFinanceiroPage() {
                             )}
 
                             {/* Alterar Tipo - converter entre receita e despesa */}
-                            {item.origem !== 'fatura' && (
+                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
                               <DropdownMenuItem
                                 onClick={() => {
                                   setItemParaAlterarTipo(item)
@@ -3257,7 +3410,7 @@ export default function ExtratoFinanceiroPage() {
                             </DropdownMenuItem>
 
                             {/* Voltar para Previsto - apenas receitas/despesas (não faturas) */}
-                            {item.origem !== 'fatura' && (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa') && (
+                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa') && (
                               <DropdownMenuItem
                                 disabled={submitting}
                                 onClick={() => handleVoltarParaPrevisto(item)}
@@ -3295,7 +3448,7 @@ export default function ExtratoFinanceiroPage() {
                             </DropdownMenuItem>
 
                             {/* Editar - apenas receitas e despesas (não faturas) */}
-                            {item.origem !== 'fatura' && (
+                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
                               <DropdownMenuItem onClick={() => handlePrepararEdicao(item)}>
                                 <Pencil className="w-4 h-4 mr-2" />
                                 Editar
@@ -3303,7 +3456,7 @@ export default function ExtratoFinanceiroPage() {
                             )}
 
                             {/* Alterar Categoria - apenas receitas e despesas (não faturas) */}
-                            {item.origem !== 'fatura' && (
+                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
                               <DropdownMenuItem
                                 onClick={() => {
                                   setModalAlterarCategoriaItem(item)
@@ -3316,7 +3469,7 @@ export default function ExtratoFinanceiroPage() {
                             )}
 
                             {/* Alterar Tipo - converter entre receita e despesa */}
-                            {item.origem !== 'fatura' && (
+                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
                               <DropdownMenuItem
                                 onClick={() => {
                                   setItemParaAlterarTipo(item)
@@ -3988,13 +4141,9 @@ export default function ExtratoFinanceiroPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Valor *</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
+                  <CurrencyInput
                     value={editForm.valor}
-                    onChange={(e) => setEditForm({ ...editForm, valor: e.target.value })}
-                    placeholder="0,00"
+                    onChange={(val) => setEditForm({ ...editForm, valor: val })}
                     disabled={!previstoParaEditar && modalEditar.status === 'efetivado'}
                     className={!previstoParaEditar && modalEditar.status === 'efetivado' ? 'bg-slate-100 dark:bg-surface-2' : ''}
                   />

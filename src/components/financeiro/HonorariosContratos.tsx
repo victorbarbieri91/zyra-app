@@ -986,7 +986,6 @@ export default function HonorariosContratos({ escritorioId }: HonorariosContrato
           setSelectedContrato(null)
           handleEditContrato(contrato)
         }}
-        onReceitasGeradas={() => loadContratos()}
       />
     </div>
   )

@@ -70,42 +70,16 @@ export default function ConvitePage() {
         return
       }
 
-      // Buscar nome do escritório e dados do cargo
-      let escritorioNome = 'Escritório'
-      let cargoNome = 'Membro'
-      let cargoCor = '#64748b'
-
-      const { data: escritorioData } = await supabase
-        .from('escritorios')
-        .select('nome')
-        .eq('id', conviteData.escritorio_id)
-        .single()
-
-      if (escritorioData?.nome) {
-        escritorioNome = escritorioData.nome
-      }
-
-      if (conviteData.cargo_id) {
-        const { data: cargoData } = await supabase
-          .from('escritorios_cargos')
-          .select('nome_display, cor')
-          .eq('id', conviteData.cargo_id)
-          .single()
-
-        if (cargoData) {
-          cargoNome = cargoData.nome_display || 'Membro'
-          cargoCor = cargoData.cor || '#64748b'
-        }
-      }
-
+      // Dados vêm enriquecidos da função get_convite_por_token (JOINs internos)
+      // Fallback para valores genéricos caso a função ainda não tenha sido atualizada
       setConvite({
         id: conviteData.id,
         email: conviteData.email,
         expira_em: conviteData.expira_em,
         escritorio_id: conviteData.escritorio_id,
-        escritorio_nome: escritorioNome,
-        cargo_nome: cargoNome,
-        cargo_cor: cargoCor
+        escritorio_nome: conviteData.escritorio_nome || 'Escritório',
+        cargo_nome: conviteData.cargo_nome || 'Membro',
+        cargo_cor: conviteData.cargo_cor || '#64748b'
       })
     } catch (err) {
       console.error('Erro ao carregar convite:', err)

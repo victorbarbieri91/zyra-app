@@ -511,7 +511,8 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
         const configJsonb: Record<string, unknown> = {}
 
         // Valores Fixos (array com atualização monetária individual)
-        if ((formas.includes('fixo') || formas.includes('misto')) && data.valores_fixos && data.valores_fixos.length > 0) {
+        // Contratos por_hora podem ter valores fixos mensais adicionais (ex: mensalidade + horas)
+        if ((formas.includes('fixo') || formas.includes('misto') || formas.includes('por_hora')) && data.valores_fixos && data.valores_fixos.length > 0) {
           configJsonb.valores_fixos = data.valores_fixos.filter(v => v.valor > 0)
         }
         // Compatibilidade: valor_fixo único (deprecated)
@@ -623,14 +624,14 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
             const dataVencimento = calcularDataVencimento(data.data_inicio, valorFixo.dia_vencimento)
 
             if (valorFixo.periodicidade === 'mensal_fixo') {
-              // Criar receita-template recorrente (gera lançamentos virtuais automaticamente)
-              await supabase.from('financeiro_receitas').insert({
+              // Criar receita-template recorrente (gera lançamentos automaticamente via cron)
+              const { error: receitaError } = await supabase.from('financeiro_receitas').insert({
                 escritorio_id: ownerEscritorioId,
                 tipo: 'honorario',
                 cliente_id: data.cliente_id,
                 contrato_id: novoContrato.id,
                 descricao: valorFixo.descricao || 'Mensalidade',
-                categoria: 'honorario',
+                categoria: 'honorarios',
                 valor: valorFixo.valor,
                 data_competencia: data.data_inicio.substring(0, 7) + '-01',
                 data_vencimento: dataVencimento,
@@ -648,15 +649,18 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
                 responsavel_id: userId,
                 created_by: userId,
               })
+              if (receitaError) {
+                console.error('[criarContrato] Erro ao criar receita recorrente:', receitaError)
+              }
             } else if (valorFixo.periodicidade === 'parcelado') {
               // Criar receita parcelada (trigger gerar_parcelas_receita cria as parcelas)
-              await supabase.from('financeiro_receitas').insert({
+              const { error: parcelaError } = await supabase.from('financeiro_receitas').insert({
                 escritorio_id: ownerEscritorioId,
                 tipo: 'honorario',
                 cliente_id: data.cliente_id,
                 contrato_id: novoContrato.id,
                 descricao: valorFixo.descricao || 'Honorário',
-                categoria: 'honorario',
+                categoria: 'honorarios',
                 valor: valorFixo.valor,
                 data_competencia: data.data_inicio.substring(0, 7) + '-01',
                 data_vencimento: dataVencimento,
@@ -667,6 +671,9 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
                 responsavel_id: userId,
                 created_by: userId,
               })
+              if (parcelaError) {
+                console.error('[criarContrato] Erro ao criar receita parcelada:', parcelaError)
+              }
             }
           }
         }
@@ -749,7 +756,8 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
         const configJsonb: Record<string, unknown> = {}
 
         // Valores Fixos (array com atualização monetária individual)
-        if ((formas.includes('fixo') || formas.includes('misto')) && data.valores_fixos && data.valores_fixos.length > 0) {
+        // Contratos por_hora podem ter valores fixos mensais adicionais (ex: mensalidade + horas)
+        if ((formas.includes('fixo') || formas.includes('misto') || formas.includes('por_hora')) && data.valores_fixos && data.valores_fixos.length > 0) {
           configJsonb.valores_fixos = data.valores_fixos.filter(v => v.valor > 0)
         }
         // Compatibilidade: valor_fixo único (deprecated)
@@ -898,13 +906,13 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
             const dataVencimento = calcularDataVencimento(dataInicio, valorFixo.dia_vencimento)
 
             if (valorFixo.periodicidade === 'mensal_fixo') {
-              await supabase.from('financeiro_receitas').insert({
+              const { error: receitaError } = await supabase.from('financeiro_receitas').insert({
                 escritorio_id: ownerEscritorioId,
                 tipo: 'honorario',
                 cliente_id: data.cliente_id,
                 contrato_id: id,
                 descricao,
-                categoria: 'honorario',
+                categoria: 'honorarios',
                 valor: valorFixo.valor,
                 data_competencia: dataInicio.substring(0, 7) + '-01',
                 data_vencimento: dataVencimento,
@@ -922,14 +930,17 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
                 responsavel_id: userId,
                 created_by: userId,
               })
+              if (receitaError) {
+                console.error('[editarContrato] Erro ao criar receita recorrente:', receitaError)
+              }
             } else if (valorFixo.periodicidade === 'parcelado') {
-              await supabase.from('financeiro_receitas').insert({
+              const { error: parcelaError } = await supabase.from('financeiro_receitas').insert({
                 escritorio_id: ownerEscritorioId,
                 tipo: 'honorario',
                 cliente_id: data.cliente_id,
                 contrato_id: id,
                 descricao,
-                categoria: 'honorario',
+                categoria: 'honorarios',
                 valor: valorFixo.valor,
                 data_competencia: dataInicio.substring(0, 7) + '-01',
                 data_vencimento: dataVencimento,

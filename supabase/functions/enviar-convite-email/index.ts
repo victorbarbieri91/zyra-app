@@ -19,7 +19,7 @@ interface ConviteEmailRequest {
   expira_em: string
 }
 
-function buildEmailHtml(data: ConviteEmailRequest, inviteLink: string): string {
+function buildEmailHtml(data: ConviteEmailRequest, inviteLink: string, siteUrl: string): string {
   const expirationDate = new Date(data.expira_em).toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: 'long',
@@ -42,18 +42,8 @@ function buildEmailHtml(data: ConviteEmailRequest, inviteLink: string): string {
 
           <!-- Header -->
           <tr>
-            <td style="background:linear-gradient(135deg,#34495e 0%,#46627f 100%);padding:36px 40px;text-align:center;">
-              <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto;">
-                <tr>
-                  <td style="width:36px;height:36px;background-color:rgba(137,188,190,0.25);border-radius:10px;text-align:center;vertical-align:middle;padding:0;">
-                    <span style="font-size:18px;font-weight:700;color:#89bcbe;line-height:36px;">Z</span>
-                  </td>
-                  <td style="padding-left:12px;">
-                    <span style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">Zyra</span>
-                    <span style="font-size:22px;font-weight:300;color:rgba(255,255,255,0.7);letter-spacing:-0.5px;"> Legal</span>
-                  </td>
-                </tr>
-              </table>
+            <td style="background:linear-gradient(135deg,#34495e 0%,#46627f 100%);padding:32px 40px;text-align:center;">
+              <img src="${siteUrl}/zyra.logo.png" alt="Zyra Legal" height="40" style="display:inline-block;max-width:180px;" />
             </td>
           </tr>
 
@@ -151,7 +141,7 @@ serve(async (req) => {
 
     const inviteLink = `${SITE_URL}/convite/${body.token}`
 
-    const emailHtml = buildEmailHtml(body, inviteLink)
+    const emailHtml = buildEmailHtml(body, inviteLink, SITE_URL)
 
     // Enviar email via Resend
     const resendResponse = await fetch('https://api.resend.com/emails', {

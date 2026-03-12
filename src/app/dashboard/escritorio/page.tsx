@@ -38,9 +38,14 @@ import { ModalConvitesPendentes } from '@/components/escritorio/ModalConvitesPen
 export default function EscritorioPage() {
   const {
     escritorioAtivo,
+    isOwner,
+    roleAtual,
     carregando: carregandoEscritorio,
     recarregar: recarregarEscritorio,
   } = useEscritorio();
+
+  // Apenas dono e sócio podem gerenciar convites (alinhado com RLS policy is_dono_or_socio)
+  const podeConvidar = isOwner || roleAtual === 'admin';
 
   // Estado para escritórios do grupo
   const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>(
@@ -249,14 +254,16 @@ export default function EscritorioPage() {
                 )}
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setModalEditarEscritorio(true)}
-              className="text-slate-500 dark:text-slate-400 hover:text-[#34495e]"
-            >
-              <Pencil className="w-4 h-4" />
-            </Button>
+            {podeConvidar && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setModalEditarEscritorio(true)}
+                className="text-slate-500 dark:text-slate-400 hover:text-[#34495e]"
+              >
+                <Pencil className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -333,29 +340,31 @@ export default function EscritorioPage() {
               {membros.length}
             </Badge>
           </button>
-          <div className="flex items-center gap-2">
-            {convitesPendentes.length > 0 && (
+          {podeConvidar && (
+            <div className="flex items-center gap-2">
+              {convitesPendentes.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setModalConvites(true)}
+                  className="h-7 px-2 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                >
+                  <Mail className="w-3.5 h-3.5 mr-1" />
+                  {convitesPendentes.length} pendente
+                  {convitesPendentes.length > 1 ? 's' : ''}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setModalConvites(true)}
-                className="h-7 px-2 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                onClick={() => setModalConvidar(true)}
+                className="h-7 px-2 text-xs text-[#34495e] dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-surface-3"
               >
-                <Mail className="w-3.5 h-3.5 mr-1" />
-                {convitesPendentes.length} pendente
-                {convitesPendentes.length > 1 ? 's' : ''}
+                <UserPlus className="w-3.5 h-3.5 mr-1" />
+                Convidar
               </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setModalConvidar(true)}
-              className="h-7 px-2 text-xs text-[#34495e] dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-surface-3"
-            >
-              <UserPlus className="w-3.5 h-3.5 mr-1" />
-              Convidar
-            </Button>
-          </div>
+            </div>
+          )}
         </div>
 
         {equipeExpandida && (

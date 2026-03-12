@@ -99,6 +99,35 @@ export function ModalConvidarMembro({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error('Usuario nao autenticado');
 
+      // Verificar se já existe convite pendente para este email
+      const { data: conviteExistente } = await supabase
+        .from('escritorios_convites')
+        .select('id')
+        .eq('escritorio_id', escritorioId)
+        .eq('email', data.email)
+        .eq('aceito', false)
+        .gt('expira_em', new Date().toISOString())
+        .maybeSingle();
+
+      if (conviteExistente) {
+        toast.warning('Já existe um convite pendente para este email.');
+        setEnviando(false);
+        return;
+      }
+
+      // Verificar se já é membro do escritório (via email no profile)
+      const { data: membroExistente } = await supabase
+        .from('escritorios_usuarios')
+        .select('id, profile:profiles!usuarios_escritorios_user_id_fkey(email)')
+        .eq('escritorio_id', escritorioId)
+        .eq('ativo', true);
+
+      if (membroExistente?.some((m: any) => m.profile?.email === data.email)) {
+        toast.warning('Este email já pertence a um membro ativo do escritório.');
+        setEnviando(false);
+        return;
+      }
+
       // Buscar cargo selecionado para pegar o role antigo (compatibilidade)
       const cargoSelecionado = cargos.find((c) => c.id === data.cargo_id);
       const roleLegacy = cargoSelecionado?.nome === 'socio' ? 'admin' :
@@ -148,14 +177,14 @@ export function ModalConvidarMembro({
 
           if (emailResponse.error) {
             console.warn('Email não enviado (serviço pode não estar configurado):', emailResponse.error);
-            toast.success('Convite criado! Compartilhe o link abaixo com o novo membro.');
+            toast.info('Convite criado, mas o email não pôde ser enviado. Compartilhe o link manualmente.');
           } else {
             setEmailEnviado(true);
             toast.success(`Convite enviado por email para ${data.email}`);
           }
         } catch (emailErr) {
           console.warn('Falha ao enviar email de convite:', emailErr);
-          toast.success('Convite criado! Compartilhe o link abaixo com o novo membro.');
+          toast.info('Convite criado, mas o email não pôde ser enviado. Compartilhe o link manualmente.');
         }
       }
     } catch (error) {

@@ -121,8 +121,8 @@ serve(async (req) => {
       throw new Error('RESEND_API_KEY não configurada. Configure via: supabase secrets set RESEND_API_KEY=re_...')
     }
 
-    const SITE_URL = Deno.env.get('SITE_URL') || Deno.env.get('NEXT_PUBLIC_SITE_URL') || 'https://app.zyralegal.com.br'
-    const FROM_EMAIL = Deno.env.get('CONVITE_FROM_EMAIL') || 'Zyra Legal <convites@zyralegal.com.br>'
+    const SITE_URL = Deno.env.get('SITE_URL') || Deno.env.get('NEXT_PUBLIC_SITE_URL') || 'https://www.zyralegal.app.br'
+    const FROM_EMAIL = Deno.env.get('CONVITE_FROM_EMAIL') || 'Zyra Legal <convites@zyralegal.app.br>'
 
     // Autenticar request
     const authHeader = req.headers.get('Authorization')

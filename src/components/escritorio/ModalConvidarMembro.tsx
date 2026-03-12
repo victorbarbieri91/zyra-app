@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { UserPlus, Copy, Check } from 'lucide-react';
+import { UserPlus, Copy, Check, Mail, Send, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { Cargo } from '@/types/escritorio';
@@ -60,7 +60,10 @@ export function ModalConvidarMembro({
   const [enviando, setEnviando] = useState(false);
   const [linkConvite, setLinkConvite] = useState<string | null>(null);
   const [linkCopiado, setLinkCopiado] = useState(false);
-  const [emailEnviado, setEmailEnviado] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
+  const [conviteEmail, setConviteEmail] = useState<string>('');
+  // Dados para reenvio de email
+  const [emailPayload, setEmailPayload] = useState<Record<string, string> | null>(null);
 
   const supabase = createClient();
 
@@ -154,6 +157,7 @@ export function ModalConvidarMembro({
       if (conviteData?.token) {
         const link = `${window.location.origin}/convite/${conviteData.token}`;
         setLinkConvite(link);
+        setConviteEmail(data.email);
 
         // Buscar nome do convidante para o email
         const { data: profileData } = await supabase
@@ -162,29 +166,33 @@ export function ModalConvidarMembro({
           .eq('id', userData.user.id)
           .single();
 
-        // Tentar enviar email automaticamente (não-bloqueante)
+        const payload = {
+          token: conviteData.token,
+          email: data.email,
+          escritorio_nome: escritorioNome || 'Escritório',
+          cargo_nome: cargoSelecionado?.nome_display || 'Membro',
+          convidado_por_nome: profileData?.nome_completo || 'Um administrador',
+          expira_em: conviteData.expira_em,
+        };
+        setEmailPayload(payload);
+
+        // Tentar enviar email automaticamente
+        setEmailStatus('sending');
         try {
           const emailResponse = await supabase.functions.invoke('enviar-convite-email', {
-            body: {
-              token: conviteData.token,
-              email: data.email,
-              escritorio_nome: escritorioNome || 'Escritório',
-              cargo_nome: cargoSelecionado?.nome_display || 'Membro',
-              convidado_por_nome: profileData?.nome_completo || 'Um administrador',
-              expira_em: conviteData.expira_em,
-            },
+            body: payload,
           });
 
           if (emailResponse.error) {
-            console.warn('Email não enviado (serviço pode não estar configurado):', emailResponse.error);
-            toast.info('Convite criado, mas o email não pôde ser enviado. Compartilhe o link manualmente.');
+            console.warn('Email não enviado:', emailResponse.error);
+            setEmailStatus('failed');
           } else {
-            setEmailEnviado(true);
+            setEmailStatus('sent');
             toast.success(`Convite enviado por email para ${data.email}`);
           }
         } catch (emailErr) {
           console.warn('Falha ao enviar email de convite:', emailErr);
-          toast.info('Convite criado, mas o email não pôde ser enviado. Compartilhe o link manualmente.');
+          setEmailStatus('failed');
         }
       }
     } catch (error) {
@@ -195,6 +203,29 @@ export function ModalConvidarMembro({
     }
   };
 
+  const handleEnviarEmail = async () => {
+    if (!emailPayload) return;
+    setEmailStatus('sending');
+    try {
+      const emailResponse = await supabase.functions.invoke('enviar-convite-email', {
+        body: emailPayload,
+      });
+
+      if (emailResponse.error) {
+        console.warn('Email não enviado:', emailResponse.error);
+        setEmailStatus('failed');
+        toast.error('Falha ao enviar email. Tente novamente ou compartilhe o link.');
+      } else {
+        setEmailStatus('sent');
+        toast.success(`Email enviado para ${conviteEmail}`);
+      }
+    } catch (err) {
+      console.warn('Falha ao enviar email:', err);
+      setEmailStatus('failed');
+      toast.error('Falha ao enviar email. Tente novamente ou compartilhe o link.');
+    }
+  };
+
   const handleClose = () => {
     form.reset({
       email: '',
@@ -202,7 +233,9 @@ export function ModalConvidarMembro({
     });
     setLinkConvite(null);
     setLinkCopiado(false);
-    setEmailEnviado(false);
+    setEmailStatus('idle');
+    setConviteEmail('');
+    setEmailPayload(null);
     onOpenChange(false);
     if (linkConvite && onSuccess) onSuccess();
   };
@@ -217,10 +250,8 @@ export function ModalConvidarMembro({
           </DialogTitle>
           <DialogDescription className="text-[#6c757d]">
             {linkConvite
-              ? emailEnviado
-                ? 'Email de convite enviado! O link abaixo também pode ser compartilhado diretamente.'
-                : 'Convite criado! Compartilhe o link abaixo com o novo membro.'
-              : 'Envie um convite por email para adicionar um novo membro ao escritorio.'}
+              ? 'Convite criado com sucesso! Envie por email ou compartilhe o link.'
+              : 'Envie um convite por email para adicionar um novo membro ao escritório.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -302,34 +333,94 @@ export function ModalConvidarMembro({
           </Form>
         ) : (
           <div className="space-y-4">
+            {/* Status do Email */}
+            <div className={`p-3 rounded-lg border flex items-center gap-3 ${
+              emailStatus === 'sent'
+                ? 'bg-emerald-50 border-emerald-200'
+                : emailStatus === 'failed'
+                ? 'bg-amber-50 border-amber-200'
+                : emailStatus === 'sending'
+                ? 'bg-blue-50 border-blue-200'
+                : 'bg-slate-50 border-slate-200'
+            }`}>
+              {emailStatus === 'sent' && (
+                <>
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-emerald-700">Email enviado</p>
+                    <p className="text-xs text-emerald-600">Convite enviado para {conviteEmail}</p>
+                  </div>
+                </>
+              )}
+              {emailStatus === 'failed' && (
+                <>
+                  <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-700">Email não enviado</p>
+                    <p className="text-xs text-amber-600">Envie manualmente ou compartilhe o link</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={handleEnviarEmail}
+                    className="h-8 px-3 text-xs bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    <Send className="w-3.5 h-3.5 mr-1" />
+                    Tentar novamente
+                  </Button>
+                </>
+              )}
+              {emailStatus === 'sending' && (
+                <>
+                  <div className="w-5 h-5 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-700">Enviando email...</p>
+                    <p className="text-xs text-blue-600">Aguarde um momento</p>
+                  </div>
+                </>
+              )}
+              {emailStatus === 'idle' && (
+                <>
+                  <Mail className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-slate-600">Enviar por email</p>
+                    <p className="text-xs text-slate-500">{conviteEmail}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={handleEnviarEmail}
+                    className="h-8 px-3 text-xs bg-gradient-to-r from-[#89bcbe] to-[#6ba9ab] hover:from-[#6ba9ab] hover:to-[#89bcbe] text-white"
+                  >
+                    <Send className="w-3.5 h-3.5 mr-1" />
+                    Enviar
+                  </Button>
+                </>
+              )}
+            </div>
+
             {/* Link do Convite */}
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
               <p className="text-xs text-[#adb5bd] mb-2">Link do Convite</p>
-              <p className="text-sm text-[#34495e] break-all font-mono">{linkConvite}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-[#34495e] break-all font-mono flex-1">{linkConvite}</p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleCopiarLink}
+                  className="h-8 w-8 p-0 flex-shrink-0 text-slate-500 hover:text-[#89bcbe]"
+                >
+                  {linkCopiado ? (
+                    <Check className="w-4 h-4 text-emerald-500" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
             </div>
 
-            {/* Botoes */}
-            <div className="flex gap-3">
-              <Button
-                onClick={handleCopiarLink}
-                className="flex-1 bg-gradient-to-r from-[#89bcbe] to-[#6ba9ab] hover:from-[#6ba9ab] hover:to-[#89bcbe] text-white"
-              >
-                {linkCopiado ? (
-                  <>
-                    <Check className="w-4 h-4 mr-2" />
-                    Copiado!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copiar Link
-                  </>
-                )}
-              </Button>
-              <Button onClick={handleClose} variant="outline" className="flex-1">
-                Fechar
-              </Button>
-            </div>
+            {/* Botão Fechar */}
+            <Button onClick={handleClose} variant="outline" className="w-full">
+              Fechar
+            </Button>
           </div>
         )}
       </DialogContent>

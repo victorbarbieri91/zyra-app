@@ -38,40 +38,48 @@ function buildEmailHtml(data: ConviteEmailRequest, inviteLink: string): string {
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f1f5f9;padding:40px 20px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07);">
+        <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
 
           <!-- Header -->
           <tr>
-            <td style="background:linear-gradient(135deg,#34495e 0%,#46627f 100%);padding:32px 40px;text-align:center;">
-              <img src="https://zyralegal.com.br/zyra.logo.png" alt="Zyra Legal" height="40" style="display:inline-block;" />
+            <td style="background:linear-gradient(135deg,#34495e 0%,#46627f 100%);padding:36px 40px;text-align:center;">
+              <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto;">
+                <tr>
+                  <td style="width:36px;height:36px;background-color:rgba(137,188,190,0.25);border-radius:10px;text-align:center;vertical-align:middle;padding:0;">
+                    <span style="font-size:18px;font-weight:700;color:#89bcbe;line-height:36px;">Z</span>
+                  </td>
+                  <td style="padding-left:12px;">
+                    <span style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">Zyra</span>
+                    <span style="font-size:22px;font-weight:300;color:rgba(255,255,255,0.7);letter-spacing:-0.5px;"> Legal</span>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
           <!-- Body -->
           <tr>
-            <td style="padding:40px;">
-              <h1 style="color:#34495e;font-size:22px;font-weight:600;margin:0 0 8px;">
-                Você foi convidado!
-              </h1>
-              <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0 0 24px;">
-                <strong style="color:#34495e;">${data.convidado_por_nome}</strong> convidou você para fazer parte do escritório <strong style="color:#34495e;">${data.escritorio_nome}</strong> na plataforma Zyra Legal.
+            <td style="padding:44px 40px 40px;">
+              <!-- Greeting -->
+              <p style="color:#94a3b8;font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:1px;margin:0 0 12px;">
+                Convite
               </p>
+              <h1 style="color:#34495e;font-size:24px;font-weight:700;margin:0 0 20px;line-height:1.3;">
+                Você foi convidado para o escritório ${data.escritorio_nome}
+              </h1>
 
-              <!-- Cargo Badge -->
-              <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 32px;">
-                <tr>
-                  <td style="background-color:#f0f9f9;border:1px solid #89bcbe;border-radius:8px;padding:12px 20px;">
-                    <span style="color:#46627f;font-size:13px;">Cargo atribuído:</span>
-                    <strong style="color:#34495e;font-size:15px;display:block;margin-top:2px;">${data.cargo_nome}</strong>
-                  </td>
-                </tr>
-              </table>
+              <!-- Divider -->
+              <div style="width:48px;height:3px;background-color:#89bcbe;border-radius:2px;margin:0 0 24px;"></div>
+
+              <p style="color:#64748b;font-size:15px;line-height:1.7;margin:0 0 32px;">
+                <strong style="color:#34495e;">${data.convidado_por_nome}</strong> convidou você para fazer parte da equipe na plataforma Zyra Legal. Clique no botão abaixo para aceitar o convite e começar.
+              </p>
 
               <!-- CTA Button -->
               <table role="presentation" cellspacing="0" cellpadding="0" width="100%">
                 <tr>
-                  <td align="center">
-                    <a href="${inviteLink}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#34495e 0%,#46627f 100%);color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;padding:14px 40px;border-radius:10px;box-shadow:0 4px 12px rgba(52,73,94,0.3);">
+                  <td align="center" style="padding:0 0 8px;">
+                    <a href="${inviteLink}" target="_blank" style="display:inline-block;background-color:#34495e;color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;padding:16px 48px;border-radius:12px;letter-spacing:0.2px;">
                       Aceitar Convite
                     </a>
                   </td>
@@ -79,18 +87,18 @@ function buildEmailHtml(data: ConviteEmailRequest, inviteLink: string): string {
               </table>
 
               <!-- Link fallback -->
-              <p style="color:#94a3b8;font-size:12px;line-height:1.5;margin:24px 0 0;text-align:center;">
+              <p style="color:#94a3b8;font-size:12px;line-height:1.5;margin:28px 0 0;text-align:center;">
                 Ou copie e cole este link no navegador:<br/>
-                <a href="${inviteLink}" style="color:#89bcbe;word-break:break-all;">${inviteLink}</a>
+                <a href="${inviteLink}" style="color:#89bcbe;word-break:break-all;text-decoration:none;">${inviteLink}</a>
               </p>
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td style="background-color:#f8fafc;padding:20px 40px;border-top:1px solid #e2e8f0;">
-              <p style="color:#94a3b8;font-size:12px;line-height:1.5;margin:0;text-align:center;">
-                Este convite expira em <strong>${expirationDate}</strong>.<br/>
+            <td style="background-color:#f8fafc;padding:24px 40px;border-top:1px solid #e2e8f0;">
+              <p style="color:#94a3b8;font-size:12px;line-height:1.6;margin:0;text-align:center;">
+                Este convite expira em <strong style="color:#64748b;">${expirationDate}</strong>.<br/>
                 Se você não esperava receber este convite, pode ignorar este email.
               </p>
             </td>
@@ -99,8 +107,8 @@ function buildEmailHtml(data: ConviteEmailRequest, inviteLink: string): string {
         </table>
 
         <!-- Copyright -->
-        <p style="color:#94a3b8;font-size:11px;margin:20px 0 0;text-align:center;">
-          &copy; ${new Date().getFullYear()} Zyra Legal. Todos os direitos reservados.
+        <p style="color:#b0b8c4;font-size:11px;margin:24px 0 0;text-align:center;">
+          &copy; ${new Date().getFullYear()} Zyra Legal &middot; Todos os direitos reservados
         </p>
       </td>
     </tr>

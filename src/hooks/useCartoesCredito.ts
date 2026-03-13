@@ -134,9 +134,11 @@ export interface LancamentoFormData {
   valor: number
   tipo: 'unica' | 'parcelada' | 'recorrente'
   parcelas?: number // Para parceladas
+  parcela_inicial?: number // Para parceladas - parcela de início (default: 1)
   data_compra: string
-  mes_referencia?: string // Para importações - força o mês de referência (formato: YYYY-MM-DD)
+  mes_referencia?: string // Força o mês de referência (formato: YYYY-MM-DD)
   processo_id?: string | null
+  consulta_id?: string | null
   documento_fiscal?: string | null
   observacoes?: string | null
   importado_de_fatura?: boolean
@@ -520,9 +522,11 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
           p_data_compra: data.data_compra,
           p_mes_referencia: data.mes_referencia || null,
           p_processo_id: data.processo_id || null,
+          p_consulta_id: data.consulta_id || null,
           p_documento_fiscal: data.documento_fiscal || null,
           p_observacoes: data.observacoes || null,
           p_importado_de_fatura: data.importado_de_fatura || false,
+          p_parcela_inicial: data.parcela_inicial || 1,
         })
 
       if (rpcError) throw rpcError

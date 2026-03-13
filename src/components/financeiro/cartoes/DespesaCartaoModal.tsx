@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -29,19 +29,70 @@ import {
   TIPOS_LANCAMENTO,
 } from '@/hooks/useCartoesCredito'
 import { cn } from '@/lib/utils'
+import VinculacaoSelector, { Vinculacao } from '@/components/agenda/VinculacaoSelector'
 
 interface DespesaCartaoModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   escritorioId: string
-  cartaoId?: string // Se especificado, pré-seleciona o cartão
+  cartaoId?: string
   onSuccess?: () => void
 }
 
-interface ProcessoOption {
-  id: string
-  numero_cnj: string
-  pasta: string
+interface FaturaInfo {
+  mes_referencia: string // YYYY-MM-01
+  label: string // "Março/2026"
+  status: 'aberta' | 'fechada'
+}
+
+const MESES_PT = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+]
+
+function gerarMesesDisponiveis(cartao: CartaoCredito | undefined): FaturaInfo[] {
+  if (!cartao) return []
+  const hoje = new Date()
+  const meses: FaturaInfo[] = []
+  const diaFechamento = cartao.dia_vencimento - (cartao.dias_antes_fechamento || 7)
+
+  for (let offset = -2; offset <= 4; offset++) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() + offset, 1)
+    const mesRef = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+    const label = `${MESES_PT[d.getMonth()]}/${d.getFullYear()}`
+
+    // Calcular data de fechamento real deste mês
+    const dataFechamento = diaFechamento > 0
+      ? new Date(d.getFullYear(), d.getMonth(), diaFechamento)
+      : new Date(d.getFullYear(), d.getMonth(), 0 + diaFechamento) // mês anterior se dia negativo
+
+    // Fatura está fechada se a data de fechamento já passou
+    const isFechada = hoje > dataFechamento
+    meses.push({
+      mes_referencia: mesRef,
+      label,
+      status: isFechada ? 'fechada' : 'aberta',
+    })
+  }
+  return meses
+}
+
+function calcularMesReferenciaLocal(cartao: CartaoCredito | undefined, dataCompra: string): string | null {
+  if (!cartao || !dataCompra) return null
+  const compra = new Date(dataCompra + 'T12:00:00')
+  const diaFechamento = cartao.dia_vencimento - (cartao.dias_antes_fechamento || 7)
+
+  const mesCompra = new Date(compra.getFullYear(), compra.getMonth(), 1)
+  const fechamento = diaFechamento > 0
+    ? new Date(compra.getFullYear(), compra.getMonth(), diaFechamento)
+    : new Date(compra.getFullYear(), compra.getMonth() - 1, 28 + diaFechamento) // ajusta mês anterior
+
+  if (compra <= fechamento) {
+    return `${mesCompra.getFullYear()}-${String(mesCompra.getMonth() + 1).padStart(2, '0')}-01`
+  } else {
+    const proximo = new Date(mesCompra.getFullYear(), mesCompra.getMonth() + 1, 1)
+    return `${proximo.getFullYear()}-${String(proximo.getMonth() + 1).padStart(2, '0')}-01`
+  }
 }
 
 const initialFormData: LancamentoFormData = {
@@ -52,9 +103,11 @@ const initialFormData: LancamentoFormData = {
   valor: 0,
   tipo: 'unica',
   parcelas: 2,
+  parcela_inicial: 1,
   data_compra: new Date().toISOString().split('T')[0],
+  mes_referencia: undefined,
   processo_id: null,
-  documento_fiscal: null,
+  consulta_id: null,
   observacoes: null,
 }
 
@@ -68,11 +121,14 @@ export default function DespesaCartaoModal({
   const [formData, setFormData] = useState<LancamentoFormData>(initialFormData)
   const [submitting, setSubmitting] = useState(false)
   const [cartoes, setCartoes] = useState<CartaoCredito[]>([])
-  const [processos, setProcessos] = useState<ProcessoOption[]>([])
   const [loadingCartoes, setLoadingCartoes] = useState(false)
+  const [vinculacao, setVinculacao] = useState<Vinculacao | null>(null)
 
   const supabase = createClient()
   const { loadCartoes, createLancamento } = useCartoesCredito(escritorioId)
+
+  const cartaoSelecionado = cartoes.find((c) => c.id === formData.cartao_id)
+  const mesesDisponiveis = useMemo(() => gerarMesesDisponiveis(cartaoSelecionado), [cartaoSelecionado])
 
   // Carregar cartões
   useEffect(() => {
@@ -86,24 +142,6 @@ export default function DespesaCartaoModal({
     fetchCartoes()
   }, [escritorioId, open, loadCartoes])
 
-  // Carregar processos
-  useEffect(() => {
-    const fetchProcessos = async () => {
-      if (!escritorioId || !open) return
-
-      const { data } = await supabase
-        .from('processos_processos')
-        .select('id, numero_cnj, pasta')
-        .eq('escritorio_id', escritorioId)
-        .eq('status', 'ativo')
-        .order('created_at', { ascending: false })
-        .limit(100)
-
-      setProcessos(data || [])
-    }
-    fetchProcessos()
-  }, [escritorioId, open, supabase])
-
   // Reset form ao abrir
   useEffect(() => {
     if (open) {
@@ -111,56 +149,65 @@ export default function DespesaCartaoModal({
         ...initialFormData,
         cartao_id: cartaoId || '',
       })
+      setVinculacao(null)
     }
   }, [open, cartaoId])
+
+  // Auto-calcular mês de referência quando data de compra ou cartão mudam
+  useEffect(() => {
+    if (!formData.cartao_id || !formData.data_compra) return
+    const mesCalculado = calcularMesReferenciaLocal(cartaoSelecionado, formData.data_compra)
+    if (mesCalculado) {
+      setFormData((prev) => ({ ...prev, mes_referencia: mesCalculado }))
+    }
+  }, [formData.cartao_id, formData.data_compra, cartaoSelecionado])
 
   const updateField = (field: keyof LancamentoFormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
+  const handleVinculacaoChange = (v: Vinculacao | null) => {
+    setVinculacao(v)
+    if (!v) {
+      updateField('processo_id', null)
+      updateField('consulta_id', null)
+    } else if (v.modulo === 'processo') {
+      setFormData((prev) => ({ ...prev, processo_id: v.modulo_registro_id, consulta_id: null }))
+    } else {
+      setFormData((prev) => ({ ...prev, consulta_id: v.modulo_registro_id, processo_id: null }))
+    }
+  }
+
   const handleSubmit = async () => {
-    // Validações
-    if (!formData.cartao_id) {
-      toast.error('Selecione um cartão')
-      return
-    }
-    if (!formData.descricao.trim()) {
-      toast.error('Informe a descrição')
-      return
-    }
-    if (!formData.categoria) {
-      toast.error('Selecione uma categoria')
-      return
-    }
-    if (!formData.valor || formData.valor <= 0) {
-      toast.error('Informe um valor válido')
-      return
-    }
-    if (!formData.data_compra) {
-      toast.error('Informe a data da compra')
-      return
-    }
+    if (!formData.cartao_id) { toast.error('Selecione um cartão'); return }
+    if (!formData.descricao.trim()) { toast.error('Informe a descrição'); return }
+    if (!formData.categoria) { toast.error('Selecione uma categoria'); return }
+    if (!formData.valor || formData.valor <= 0) { toast.error('Informe um valor válido'); return }
+    if (!formData.data_compra) { toast.error('Informe a data da compra'); return }
     if (formData.tipo === 'parcelada' && (!formData.parcelas || formData.parcelas < 2)) {
-      toast.error('Número de parcelas deve ser pelo menos 2')
-      return
+      toast.error('Número de parcelas deve ser pelo menos 2'); return
+    }
+    if (formData.tipo === 'parcelada' && formData.parcela_inicial && formData.parcelas &&
+      formData.parcela_inicial > formData.parcelas) {
+      toast.error('Parcela inicial não pode ser maior que o total'); return
     }
 
     try {
       setSubmitting(true)
-
       const compraId = await createLancamento(formData)
 
       if (compraId) {
         let mensagem = ''
-        switch (formData.tipo) {
-          case 'parcelada':
-            mensagem = `Compra parcelada em ${formData.parcelas}x criada com sucesso!`
-            break
-          case 'recorrente':
-            mensagem = 'Assinatura recorrente criada com sucesso!'
-            break
-          default:
-            mensagem = 'Lançamento registrado com sucesso!'
+        if (formData.tipo === 'parcelada') {
+          const inicio = formData.parcela_inicial || 1
+          const total = formData.parcelas || 2
+          mensagem = inicio > 1
+            ? `Parcelas ${inicio}/${total} a ${total}/${total} criadas com sucesso!`
+            : `Compra parcelada em ${total}x criada com sucesso!`
+        } else if (formData.tipo === 'recorrente') {
+          mensagem = 'Assinatura recorrente criada com sucesso!'
+        } else {
+          mensagem = 'Lançamento registrado com sucesso!'
         }
         toast.success(mensagem)
         setFormData(initialFormData)
@@ -177,12 +224,22 @@ export default function DespesaCartaoModal({
     }
   }
 
-  const cartaoSelecionado = cartoes.find((c) => c.id === formData.cartao_id)
-
   // Calcula valor da parcela
   const valorParcela = formData.tipo === 'parcelada' && formData.parcelas
     ? formData.valor / formData.parcelas
     : formData.valor
+
+  // Texto informativo do parcelamento
+  const parcelamentoInfo = useMemo(() => {
+    if (formData.tipo !== 'parcelada' || !formData.parcelas) return null
+    const inicio = formData.parcela_inicial || 1
+    const total = formData.parcelas
+    const qtd = total - inicio + 1
+    return `Serão criadas ${qtd} parcela${qtd > 1 ? 's' : ''} (${inicio}/${total} a ${total}/${total}) nos próximos ${qtd} mês${qtd > 1 ? 'es' : ''}`
+  }, [formData.tipo, formData.parcelas, formData.parcela_inicial])
+
+  // Mês selecionado label
+  const mesSelecionado = mesesDisponiveis.find((m) => m.mes_referencia === formData.mes_referencia)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -198,9 +255,9 @@ export default function DespesaCartaoModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Cartão + Info inline */}
-          <div className="flex items-end gap-4">
-            <div className="flex-1">
+          {/* Cartão + Fatura (mês) */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
               <Label htmlFor="cartao">Cartão *</Label>
               <Select
                 value={formData.cartao_id}
@@ -224,18 +281,41 @@ export default function DespesaCartaoModal({
                   ))}
                 </SelectContent>
               </Select>
+              {cartaoSelecionado && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  {cartaoSelecionado.banco} — vence dia {cartaoSelecionado.dia_vencimento}, fecha {cartaoSelecionado.dias_antes_fechamento || 7} dias antes
+                </p>
+              )}
             </div>
-            {cartaoSelecionado && (
-              <div className="flex items-center gap-2 h-10 px-3 rounded-lg bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700 shrink-0">
-                <CreditCard
-                  className="w-4 h-4"
-                  style={{ color: cartaoSelecionado.cor }}
-                />
-                <span className="text-sm text-slate-600 dark:text-slate-400">
-                  {cartaoSelecionado.banco} - Vence dia {cartaoSelecionado.dia_vencimento}
-                </span>
-              </div>
-            )}
+            <div>
+              <Label>Fatura (mês de referência)</Label>
+              <Select
+                value={formData.mes_referencia || ''}
+                onValueChange={(v) => updateField('mes_referencia', v)}
+                disabled={!cartaoSelecionado}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={cartaoSelecionado ? 'Selecione...' : 'Selecione um cartão primeiro'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {mesesDisponiveis.map((mes) => (
+                    <SelectItem key={mes.mes_referencia} value={mes.mes_referencia}>
+                      <div className="flex items-center gap-2">
+                        {mes.label}
+                        {mes.status === 'fechada' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Fechada</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {mesSelecionado && mesSelecionado.status === 'fechada' && (
+                <p className="text-xs text-amber-600 mt-1">
+                  Fatura já fechada — lançamento retroativo
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Tipo de Lançamento */}
@@ -321,8 +401,8 @@ export default function DespesaCartaoModal({
             </div>
           </div>
 
-          {/* Valor + Data + Parcelas/Processo em 3 colunas */}
-          <div className="grid grid-cols-3 gap-4">
+          {/* Valor + Data em 2 colunas */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="valor">
                 {formData.tipo === 'parcelada' ? 'Valor Total (R$) *' : 'Valor (R$) *'}
@@ -348,38 +428,40 @@ export default function DespesaCartaoModal({
                 onChange={(e) => updateField('data_compra', e.target.value)}
               />
             </div>
-            <div>
-              <Label htmlFor="processo">Vincular a Processo</Label>
-              <Select
-                value={formData.processo_id || 'none'}
-                onValueChange={(v) => updateField('processo_id', v === 'none' ? null : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Nenhum" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhum</SelectItem>
-                  {processos.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.pasta || p.numero_cnj}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          </div>
+
+          {/* Vincular a Pasta (busca unificada processo/consultivo) */}
+          <div>
+            <Label>Vincular a Pasta</Label>
+            <VinculacaoSelector
+              vinculacao={vinculacao}
+              onChange={handleVinculacaoChange}
+            />
           </div>
 
           {/* Opções para Parcelado */}
           {formData.tipo === 'parcelada' && (
-            <div className="p-3 rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-500/10">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 shrink-0">
-                  <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <span className="font-medium text-blue-800 text-sm">Parcelamento</span>
-                </div>
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="w-32">
-                    <Label htmlFor="numero_parcelas" className="text-xs">Nº Parcelas</Label>
+            <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#34495e]/5 to-[#46627f]/5 border-b border-slate-200 dark:border-slate-700">
+                <Calendar className="w-4 h-4 text-[#46627f]" />
+                <span className="font-medium text-[#34495e] dark:text-slate-200 text-sm">Parcelamento</span>
+              </div>
+              <div className="p-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="parcela_inicial" className="text-xs">Parcela Atual</Label>
+                    <Input
+                      id="parcela_inicial"
+                      type="number"
+                      min={1}
+                      max={formData.parcelas || 48}
+                      value={formData.parcela_inicial || 1}
+                      onChange={(e) => updateField('parcela_inicial', parseInt(e.target.value) || 1)}
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="numero_parcelas" className="text-xs">Total de Parcelas</Label>
                     <Input
                       id="numero_parcelas"
                       type="number"
@@ -390,9 +472,9 @@ export default function DespesaCartaoModal({
                       className="h-9"
                     />
                   </div>
-                  <div className="w-40">
+                  <div>
                     <Label className="text-xs">Valor da Parcela</Label>
-                    <div className="h-9 flex items-center px-3 rounded-lg bg-white dark:bg-surface-1 border border-blue-200 text-sm font-medium text-[#34495e] dark:text-slate-200">
+                    <div className="h-9 flex items-center px-3 rounded-md bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-[#34495e] dark:text-slate-200">
                       {new Intl.NumberFormat('pt-BR', {
                         style: 'currency',
                         currency: 'BRL',
@@ -400,6 +482,11 @@ export default function DespesaCartaoModal({
                     </div>
                   </div>
                 </div>
+                {parcelamentoInfo && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2.5">
+                    {parcelamentoInfo}
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -414,37 +501,16 @@ export default function DespesaCartaoModal({
             </div>
           )}
 
-          {/* Documento + Observações + Info em linha */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="documento_fiscal">Nº Documento/NF</Label>
-              <Input
-                id="documento_fiscal"
-                placeholder="Opcional"
-                value={formData.documento_fiscal || ''}
-                onChange={(e) => updateField('documento_fiscal', e.target.value || null)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="observacoes">Observações</Label>
-              <Input
-                id="observacoes"
-                placeholder="Opcional"
-                value={formData.observacoes || ''}
-                onChange={(e) => updateField('observacoes', e.target.value || null)}
-              />
-            </div>
+          {/* Observações (largura total) */}
+          <div>
+            <Label htmlFor="observacoes">Observações</Label>
+            <Input
+              id="observacoes"
+              placeholder="Opcional"
+              value={formData.observacoes || ''}
+              onChange={(e) => updateField('observacoes', e.target.value || null)}
+            />
           </div>
-
-          {/* Info sobre faturamento */}
-          {formData.tipo !== 'recorrente' && (
-            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700">
-              <Info className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" />
-              <p className="text-xs text-slate-600 dark:text-slate-400">
-                <span className="font-medium">Quando será faturado?</span> Compras antes do fechamento entram na fatura atual, após entram na próxima.
-              </p>
-            </div>
-          )}
         </div>
 
         {/* Botões */}

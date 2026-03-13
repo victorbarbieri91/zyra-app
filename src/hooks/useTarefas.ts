@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatDateForDB, formatDateTimeForDB, getNowInBrazil } from '@/lib/timezone'
+import { format } from 'date-fns'
 import { expandirRecorrencias, type RecorrenciaRegra } from '@/lib/recorrencia-utils'
 
 export interface Tarefa {
@@ -317,7 +318,7 @@ export function useTarefas(escritorioId?: string) {
       }
       // Fixa tasks: set fixa_status_data to today so view preserves today's status
       if (tarefa?.tipo === 'fixa') {
-        updateData.fixa_status_data = new Date().toISOString().split('T')[0]
+        updateData.fixa_status_data = format(getNowInBrazil(), 'yyyy-MM-dd')
       }
 
       const { error } = await supabase
@@ -344,7 +345,7 @@ export function useTarefas(escritorioId?: string) {
       }
       // Fixa tasks: set fixa_status_data to today so view shows 'pendente' (not auto-reset)
       if (tarefa?.tipo === 'fixa') {
-        updateData.fixa_status_data = new Date().toISOString().split('T')[0]
+        updateData.fixa_status_data = format(getNowInBrazil(), 'yyyy-MM-dd')
       }
 
       const { error } = await supabase

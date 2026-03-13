@@ -37,6 +37,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-picker'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -64,6 +65,18 @@ import type {
   FaturaGerada,
   ContractLimits,
 } from '@/hooks/useFaturamento'
+
+/** Adiciona N dias úteis a uma data (pula sáb/dom) */
+function addBusinessDays(date: Date, days: number): Date {
+  const result = new Date(date)
+  let added = 0
+  while (added < days) {
+    result.setDate(result.getDate() + 1)
+    const dow = result.getDay()
+    if (dow !== 0 && dow !== 6) added++
+  }
+  return result
+}
 
 export default function FaturamentoPage() {
   const { escritorioAtivo } = useEscritorioAtivo()
@@ -310,10 +323,9 @@ export default function FaturamentoPage() {
   const handleGerarFatura = async () => {
     if (!selectedCliente) return
 
-    // Calcular defaults — input type="date" precisa de yyyy-MM-dd
+    // Calcular defaults — 5 dias úteis à frente
     const hoje = new Date()
-    const vencimento = new Date(hoje)
-    vencimento.setDate(vencimento.getDate() + 30)
+    const vencimento = addBusinessDays(hoje, 5)
 
     const toYMD = (d: Date) => d.toISOString().split('T')[0]
     setDataEmissao(toYMD(hoje))
@@ -819,26 +831,22 @@ export default function FaturamentoPage() {
               {/* Datas */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label htmlFor="data-emissao" className="text-[11px] text-slate-600 dark:text-slate-400">
+                  <Label className="text-[11px] text-slate-600 dark:text-slate-400">
                     Data de Emissão
                   </Label>
-                  <Input
-                    id="data-emissao"
-                    type="date"
+                  <DateInput
                     value={dataEmissao}
-                    onChange={(e) => setDataEmissao(e.target.value)}
+                    onChange={setDataEmissao}
                     className="h-8 text-xs"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="data-vencimento" className="text-[11px] text-slate-600 dark:text-slate-400">
+                  <Label className="text-[11px] text-slate-600 dark:text-slate-400">
                     Data de Vencimento
                   </Label>
-                  <Input
-                    id="data-vencimento"
-                    type="date"
+                  <DateInput
                     value={dataVencimento}
-                    onChange={(e) => setDataVencimento(e.target.value)}
+                    onChange={setDataVencimento}
                     className="h-8 text-xs"
                   />
                 </div>

@@ -1,12 +1,12 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { DndContext, DragOverlay, DragEndEvent, DragStartEvent, closestCenter } from '@dnd-kit/core'
 import { Button } from '@/components/ui/button'
 import { CalendarDays, ChevronLeft, ChevronRight, ListTodo, PlayCircle, PauseCircle, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { parseDBDate } from '@/lib/timezone'
-import { format, addDays, subDays, isSameDay, startOfDay } from 'date-fns'
+import { parseDBDate, isToday as isTodayBrazil, getNowInBrazil, startOfDayInBrazil } from '@/lib/timezone'
+import { format, addDays, subDays, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Tarefa, useTarefas } from '@/hooks/useTarefas'
 import { useEventos, Evento } from '@/hooks/useEventos'
@@ -92,6 +92,56 @@ export default function CalendarKanbanView({
     timerId: string | null
   }>({ open: false, tarefa: null, agendaItem: null, timerId: null })
 
+  // Auto-pausar timers de tarefas fixas de dias anteriores
+  const staleTimersCheckedRef = useRef(false)
+
+  useEffect(() => {
+    if (staleTimersCheckedRef.current) return
+    if (!todasTarefas || todasTarefas.length === 0) return
+    if (timersAtivos.length === 0) return
+
+    const staleFixaTimers = timersAtivos.filter(timer => {
+      if (timer.status !== 'rodando') return false
+      if (!timer.tarefa_id) return false
+      const tarefa = todasTarefas.find(t => t.id === timer.tarefa_id)
+      if (!tarefa || tarefa.tipo !== 'fixa') return false
+      return !isTodayBrazil(timer.hora_inicio)
+    })
+
+    if (staleFixaTimers.length === 0) {
+      staleTimersCheckedRef.current = true
+      return
+    }
+
+    staleTimersCheckedRef.current = true
+
+    const autoPauseStaleTimers = async () => {
+      const todayStr = format(getNowInBrazil(), 'yyyy-MM-dd')
+      for (const timer of staleFixaTimers) {
+        try {
+          await pausarTimer(timer.id)
+          // Resetar status da tarefa fixa no DB para consistência
+          await supabase
+            .from('agenda_tarefas')
+            .update({ status: 'pendente', data_conclusao: null, fixa_status_data: todayStr })
+            .eq('id', timer.tarefa_id!)
+        } catch (err) {
+          console.error('Erro ao auto-pausar timer de tarefa fixa:', err)
+        }
+      }
+      await refetchTarefas()
+
+      const nomes = staleFixaTimers.map(t => `"${t.titulo}"`).join(', ')
+      toast.info(
+        `Timer${staleFixaTimers.length > 1 ? 's' : ''} de ${nomes} pausado${staleFixaTimers.length > 1 ? 's' : ''} automaticamente (dia anterior). Ajuste no widget de horas.`,
+        { duration: 8000 }
+      )
+    }
+
+    autoPauseStaleTimers()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timersAtivos, todasTarefas])
+
   const previousDay = () => { setDateRange(undefined); onDateSelect(subDays(selectedDate, 1)) }
   const nextDay = () => { setDateRange(undefined); onDateSelect(addDays(selectedDate, 1)) }
   const goToToday = () => { setDateRange(undefined); onDateSelect(new Date()) }
@@ -101,8 +151,8 @@ export default function CalendarKanbanView({
 
   const isDateInView = (date: Date) => {
     if (isRangeActive) {
-      const day = startOfDay(date)
-      return day >= startOfDay(dateRange!.from!) && day <= startOfDay(dateRange!.to!)
+      const day = startOfDayInBrazil(date)
+      return day >= startOfDayInBrazil(dateRange!.from!) && day <= startOfDayInBrazil(dateRange!.to!)
     }
     return isSameDay(date, selectedDate)
   }
@@ -151,7 +201,7 @@ export default function CalendarKanbanView({
       }
       // Fixa tasks: set fixa_status_data to today on every status change
       if (tarefa?.tipo === 'fixa') {
-        updateData.fixa_status_data = new Date().toISOString().split('T')[0]
+        updateData.fixa_status_data = format(getNowInBrazil(), 'yyyy-MM-dd')
       }
 
       const { error } = await supabase
@@ -258,7 +308,7 @@ export default function CalendarKanbanView({
     }
 
     // Filtrar tarefas do dia e do usuário logado
-    const hoje = startOfDay(new Date())
+    const hoje = startOfDayInBrazil(new Date())
     const tarefasDoDia = todasTarefas.filter((tarefa) => {
       // Fixa tasks always appear when viewing today (their DB data_inicio is the original creation date)
       if (tarefa.tipo === 'fixa') {
@@ -274,7 +324,7 @@ export default function CalendarKanbanView({
     })
 
     // Apply client-side daily reset for fixa tasks (useTarefas reads raw table, not view)
-    const todayStr = hoje.toISOString().split('T')[0]
+    const todayStr = format(getNowInBrazil(), 'yyyy-MM-dd')
     const tarefasComReset = tarefasDoDia.map((tarefa) => {
       if (tarefa.tipo === 'fixa' && tarefa.fixa_status_data !== todayStr) {
         return { ...tarefa, status: 'pendente' as const, data_conclusao: undefined }
@@ -463,7 +513,12 @@ export default function CalendarKanbanView({
       const tarefa = todasTarefas?.find((t) => t.id === tarefaId)
 
       if (!tarefa) return
-      if (tarefa.status === novoStatus) return
+      // Para tarefas fixas resetadas, usar status efetivo (display), não o DB raw
+      const todayCheck = format(getNowInBrazil(), 'yyyy-MM-dd')
+      const effectiveStatus = (tarefa.tipo === 'fixa' && tarefa.fixa_status_data !== todayCheck)
+        ? 'pendente'
+        : tarefa.status
+      if (effectiveStatus === novoStatus) return
 
       const timerExistente = getTimerParaTarefa(tarefa.id)
 

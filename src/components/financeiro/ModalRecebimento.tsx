@@ -221,7 +221,7 @@ export function ModalRecebimento({
       if (temParticipacao && advogadoSelecionado && percentualParticipacao > 0) {
         const advogado = advogados.find(a => a.id === advogadoSelecionado)
 
-        await supabase.from('financeiro_despesas').insert({
+        const { error: comissaoError } = await supabase.from('financeiro_despesas').insert({
           escritorio_id: item.escritorio_id,
           categoria: 'comissao',
           descricao: `Participação ${advogado?.nome || 'Advogado'} - ${item.descricao}`,
@@ -233,6 +233,10 @@ export function ModalRecebimento({
           processo_id: item.processo_id,
           cliente_id: item.cliente_id,
         })
+        if (comissaoError) {
+          console.error('Erro ao criar despesa de comissão:', comissaoError)
+          toast.error('Recebimento registrado, mas houve erro ao criar a despesa de comissão')
+        }
       }
 
       // Recalcular saldo da conta bancária

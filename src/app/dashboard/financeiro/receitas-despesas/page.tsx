@@ -202,7 +202,7 @@ export default function ExtratoFinanceiroPage() {
   const [totalCount, setTotalCount] = useState(0)
 
   // Ordenação
-  const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc') // desc = mais recente primeiro
+  const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('asc') // asc = cronológico crescente
 
   // Totais filtrados (soma de TODOS os itens filtrados, não só da página)
   const [totalReceitas, setTotalReceitas] = useState(0)
@@ -536,17 +536,8 @@ export default function ExtratoFinanceiroPage() {
         )
       }
 
-      // Ordenação por data de vencimento com direção configurável
+      // Ordenação cronológica por data de vencimento
       combinedData.sort((a, b) => {
-        // Vencidos sempre no topo
-        if (a.status === 'vencido' && b.status !== 'vencido') return -1
-        if (b.status === 'vencido' && a.status !== 'vencido') return 1
-        if (a.status === 'vencido' && b.status === 'vencido') {
-          // Vencidos: mais antigo primeiro (mais urgente)
-          return new Date(a.data_vencimento || a.data_referencia).getTime() -
-            new Date(b.data_vencimento || b.data_referencia).getTime()
-        }
-        // Demais: conforme direção selecionada
         const dataA = new Date(a.data_vencimento || a.data_referencia).getTime()
         const dataB = new Date(b.data_vencimento || b.data_referencia).getTime()
         return sortDirection === 'desc' ? dataB - dataA : dataA - dataB

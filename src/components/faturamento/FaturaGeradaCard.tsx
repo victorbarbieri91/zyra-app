@@ -170,6 +170,27 @@ export function FaturaGeradaCard({
             </div>
           </div>
 
+          {/* Barra de progresso - Pagamento parcial */}
+          {fatura.status === 'parcialmente_paga' && fatura.valor_pago > 0 && (
+            <div className="mb-3 space-y-1.5">
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="text-emerald-600 dark:text-emerald-400 font-medium">Pago: {formatCurrency(fatura.valor_pago)}</span>
+                <span className="text-amber-600 dark:text-amber-400 font-medium">Saldo: {formatCurrency(fatura.valor_total - fatura.valor_pago)}</span>
+              </div>
+              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
+                <div
+                  className="bg-emerald-500 h-1.5 rounded-full transition-all"
+                  style={{ width: `${Math.min(100, (fatura.valor_pago / fatura.valor_total) * 100)}%` }}
+                />
+              </div>
+              {fatura.data_vencimento_saldo && (
+                <p className="text-[10px] text-amber-500 dark:text-amber-400">
+                  Venc. saldo: {formatDate(fatura.data_vencimento_saldo)}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Informações de Datas */}
           <div className="mb-3 text-xs text-slate-600 dark:text-slate-300 space-y-1">
             <div className="flex justify-between">

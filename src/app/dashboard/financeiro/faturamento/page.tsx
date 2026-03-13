@@ -4,13 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import {
   FileText,
   FileOutput,
-  Eye,
-  Clock,
-  CheckCircle,
-  AlertCircle,
   RefreshCw,
-  LayoutGrid,
-  List,
   Building2,
   ChevronDown,
   Check,
@@ -57,11 +51,11 @@ import { useFaturamento } from '@/hooks/useFaturamento'
 import { useFechamentosPasta } from '@/hooks/useFechamentosPasta'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 import { PreviewCollapsible } from '@/components/faturamento/PreviewCollapsible'
-import { FaturaGeradaCard } from '@/components/faturamento/FaturaGeradaCard'
 import { FaturasTable } from '@/components/faturamento/FaturasTable'
-import { FaturaDetalhesPanel } from '@/components/faturamento/FaturaDetalhesPanel'
 import { ClientesTable } from '@/components/faturamento/ClientesTable'
+import { ModalRecebimento, type ModalRecebimentoItem } from '@/components/financeiro/ModalRecebimento'
 import NotasDebitoContent from '@/components/financeiro/NotasDebitoContent'
+import { createClient } from '@/lib/supabase/client'
 import { cn, formatHoras } from '@/lib/utils'
 import { toast } from 'sonner'
 import type {
@@ -108,43 +102,77 @@ export default function FaturamentoPage() {
   const [selectedLancamentosIds, setSelectedLancamentosIds] = useState<string[]>([])
   const [showPreview, setShowPreview] = useState(false)
 
-  // Estados para faturas geradas
-  const [selectedFatura, setSelectedFatura] = useState<FaturaGerada | null>(null)
-  const [showFaturaDetails, setShowFaturaDetails] = useState(false)
-  const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
+  // Estado para modal de recebimento
+  const [faturaParaReceber, setFaturaParaReceber] = useState<FaturaGerada | null>(null)
 
   // Pesquisa e filtros de faturas
   const [searchFaturas, setSearchFaturas] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string | null>(null)
+  const [filtrosAtivos, setFiltrosAtivos] = useState<Set<string>>(new Set())
+
+  const toggleFiltro = (filtro: string) => {
+    setFiltrosAtivos(prev => {
+      const next = new Set(prev)
+      if (next.has(filtro)) {
+        next.delete(filtro)
+      } else {
+        next.add(filtro)
+      }
+      return next
+    })
+  }
 
   const faturasFiltradas = useMemo(() => {
-    let resultado = faturas
+    let resultado = [...faturas]
 
-    // Filtro por texto (número da fatura ou nome do cliente)
+    // Filtro por texto (número, cliente ou valor)
     if (searchFaturas.trim()) {
       const termo = searchFaturas.toLowerCase().trim()
       resultado = resultado.filter(
         (f) =>
           f.numero_fatura.toLowerCase().includes(termo) ||
-          f.cliente_nome.toLowerCase().includes(termo)
+          f.cliente_nome.toLowerCase().includes(termo) ||
+          f.valor_total.toFixed(2).includes(termo)
       )
     }
 
-    // Filtro por status
-    if (statusFilter) {
-      resultado = resultado.filter((f) => f.categoria_status === statusFilter)
+    // Filtros toggle (combinação OR entre ativos)
+    if (filtrosAtivos.size > 0) {
+      resultado = resultado.filter((f) => {
+        const cat = f.categoria_status
+        if (filtrosAtivos.has('em_dia') && ['pendente', 'parcial'].includes(cat)) return true
+        if (filtrosAtivos.has('vencidas') && ['vencido', 'parcial_vencido', 'atrasado'].includes(cat)) return true
+        if (filtrosAtivos.has('quitadas') && cat === 'pago') return true
+        if (filtrosAtivos.has('canceladas') && cat === 'cancelado') return true
+        return false
+      })
     }
+
+    // Ordenação: em dia (recentes primeiro) → vencidas → pagas/canceladas
+    resultado.sort((a, b) => {
+      const catOrder = (cat: string) => {
+        if (['pago', 'cancelado'].includes(cat)) return 2
+        if (['vencido', 'parcial_vencido', 'atrasado'].includes(cat)) return 1
+        return 0
+      }
+      const ordemA = catOrder(a.categoria_status)
+      const ordemB = catOrder(b.categoria_status)
+      if (ordemA !== ordemB) return ordemA - ordemB
+      return new Date(b.data_emissao).getTime() - new Date(a.data_emissao).getTime()
+    })
 
     return resultado
-  }, [faturas, searchFaturas, statusFilter])
+  }, [faturas, searchFaturas, filtrosAtivos])
 
-  const statusContagem = useMemo(() => {
-    const contagem: Record<string, number> = {}
+  const filtroContagem = useMemo(() => {
+    let emDia = 0, vencidas = 0, quitadas = 0, canceladas = 0
     for (const f of faturas) {
-      const cat = f.categoria_status || f.status
-      contagem[cat] = (contagem[cat] || 0) + 1
+      const cat = f.categoria_status
+      if (['pendente', 'parcial'].includes(cat)) emDia++
+      else if (['vencido', 'parcial_vencido', 'atrasado'].includes(cat)) vencidas++
+      else if (cat === 'pago') quitadas++
+      else if (cat === 'cancelado') canceladas++
     }
-    return contagem
+    return { em_dia: emDia, vencidas, quitadas, canceladas }
   }, [faturas])
 
   // Dialog de confirmação para desmontar fatura
@@ -156,6 +184,8 @@ export default function FaturamentoPage() {
   const [dataVencimento, setDataVencimento] = useState('')
   const [contasBancarias, setContasBancarias] = useState<{ id: string; banco: string; agencia: string; numero_conta: string; saldo_atual: number }[]>([])
   const [contaBancariaSelecionada, setContaBancariaSelecionada] = useState<string>('')
+  const [advogadosEscritorio, setAdvogadosEscritorio] = useState<Array<{ id: string; user_id: string; nome: string; percentual_comissao: number | null }>>([])
+
 
   // Limites contratuais para preview
   const [contractLimits, setContractLimits] = useState<Record<string, ContractLimits>>({})
@@ -219,6 +249,7 @@ export default function FaturamentoPage() {
   }, [escritoriosSelecionados])
 
   const loadData = async () => {
+    const supabase = createClient()
     const [clientesData, faturasData] = await Promise.all([
       loadClientesParaFaturar(),
       loadFaturasGeradas(),
@@ -230,6 +261,30 @@ export default function FaturamentoPage() {
     }))
     setClientes(enriched)
     setFaturas(faturasData)
+
+    // Carregar advogados do escritório para participação
+    if (advogadosEscritorio.length === 0) {
+      const { data: advData } = await supabase
+        .from('escritorios_usuarios')
+        .select('id, user_id, percentual_comissao, profiles!usuarios_escritorios_user_id_fkey!inner(nome_completo)')
+        .in('escritorio_id', escritoriosSelecionados)
+        .eq('ativo', true)
+      if (advData) {
+        // Deduplicar por user_id (mesmo usuário pode estar em múltiplos escritórios do grupo)
+        const seen = new Set<string>()
+        const unique = advData.filter((u: any) => {
+          if (seen.has(u.user_id)) return false
+          seen.add(u.user_id)
+          return true
+        })
+        setAdvogadosEscritorio(unique.map((u: any) => ({
+          id: u.id,
+          user_id: u.user_id,
+          nome: u.profiles?.nome_completo || 'Usuário',
+          percentual_comissao: u.percentual_comissao,
+        })))
+      }
+    }
   }
 
   const handlePreview = async (cliente: ClienteParaFaturar) => {
@@ -317,26 +372,12 @@ export default function FaturamentoPage() {
     }
   }
 
-  const handleVisualizarFatura = (fatura: FaturaGerada) => {
-    // Se clicar na mesma fatura, toggle o painel
-    if (selectedFatura?.fatura_id === fatura.fatura_id && showFaturaDetails) {
-      setShowFaturaDetails(false)
-      setSelectedFatura(null)
-      return
-    }
-
-    setSelectedFatura(fatura)
-    setShowFaturaDetails(true)
-  }
-
   const handleDesmontarFatura = async (faturaId: string) => {
     const success = await desmontarFatura(faturaId)
 
     if (success) {
       toast.success('Fatura desmontada com sucesso!')
       setFaturaParaDesmontar(null)
-      setSelectedFatura(null)
-      setShowFaturaDetails(false)
       loadData()
       setActiveTab('prontos')
     } else {
@@ -565,223 +606,124 @@ export default function FaturamentoPage() {
 
         {/* Tab: Faturados */}
         <TabsContent value="faturados" className="mt-6">
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-            {/* Coluna Esquerda - Lista de Faturas */}
-            <div className={cn(showFaturaDetails ? 'xl:col-span-7' : 'xl:col-span-12')}>
-              <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-                <CardHeader className="pb-2 pt-3 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                        Faturas Geradas
-                      </CardTitle>
-                      <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400">
-                        {faturasFiltradas.length === faturas.length
-                          ? `${faturas.length} ${faturas.length === 1 ? 'fatura' : 'faturas'}`
-                          : `${faturasFiltradas.length} de ${faturas.length}`}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant={viewMode === 'card' ? 'default' : 'outline'}
-                        onClick={() => setViewMode('card')}
-                        className="h-8 px-2.5"
-                      >
-                        <LayoutGrid className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={viewMode === 'list' ? 'default' : 'outline'}
-                        onClick={() => setViewMode('list')}
-                        className="h-8 px-2.5"
-                      >
-                        <List className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Barra de pesquisa e filtros de status */}
-                  <div className="space-y-2">
-                    {/* Pesquisa */}
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-400" />
-                      <Input
-                        placeholder="Buscar por n\u00famero da fatura ou nome do cliente..."
-                        value={searchFaturas}
-                        onChange={(e) => setSearchFaturas(e.target.value)}
-                        className="pl-9 pr-8 h-9 text-sm border-slate-200 dark:border-slate-700"
-                      />
-                      {searchFaturas && (
-                        <button
-                          onClick={() => setSearchFaturas('')}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Filtros de status */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <button
-                        onClick={() => setStatusFilter(null)}
-                        className={cn(
-                          'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
-                          statusFilter === null
-                            ? 'bg-[#34495e] text-white'
-                            : 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-surface-3'
-                        )}
-                      >
-                        Todas
-                      </button>
-                      {statusContagem['pendente'] && (
-                        <button
-                          onClick={() => setStatusFilter('pendente')}
-                          className={cn(
-                            'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
-                            statusFilter === 'pendente'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 hover:bg-blue-100'
-                          )}
-                        >
-                          Pendentes ({statusContagem['pendente']})
-                        </button>
-                      )}
-                      {statusContagem['parcial'] && (
-                        <button
-                          onClick={() => setStatusFilter('parcial')}
-                          className={cn(
-                            'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
-                            statusFilter === 'parcial'
-                              ? 'bg-amber-600 text-white'
-                              : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-100'
-                          )}
-                        >
-                          Parciais ({statusContagem['parcial']})
-                        </button>
-                      )}
-                      {statusContagem['atrasado'] && (
-                        <button
-                          onClick={() => setStatusFilter('atrasado')}
-                          className={cn(
-                            'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
-                            statusFilter === 'atrasado'
-                              ? 'bg-red-600 text-white'
-                              : 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-100'
-                          )}
-                        >
-                          Atrasadas ({statusContagem['atrasado']})
-                        </button>
-                      )}
-                      {statusContagem['pago'] && (
-                        <button
-                          onClick={() => setStatusFilter('pago')}
-                          className={cn(
-                            'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
-                            statusFilter === 'pago'
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100'
-                          )}
-                        >
-                          Pagas ({statusContagem['pago']})
-                        </button>
-                      )}
-                      {statusContagem['cancelado'] && (
-                        <button
-                          onClick={() => setStatusFilter('cancelado')}
-                          className={cn(
-                            'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
-                            statusFilter === 'cancelado'
-                              ? 'bg-slate-600 text-white'
-                              : 'bg-slate-100 dark:bg-surface-2 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-surface-3'
-                          )}
-                        >
-                          Canceladas ({statusContagem['cancelado']})
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-2 pb-3">
-                  {viewMode === 'card' ? (
-                    loading ? (
-                      <div className="py-12 text-center">
-                        <Clock className="h-8 w-8 mx-auto text-slate-400 animate-spin" />
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Carregando...</p>
-                      </div>
-                    ) : faturasFiltradas.length === 0 ? (
-                      <div className="py-12 text-center">
-                        <FileText className="h-12 w-12 mx-auto text-slate-300" />
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                          {faturas.length === 0
-                            ? 'Nenhuma fatura gerada ainda'
-                            : 'Nenhuma fatura encontrada com os filtros aplicados'}
-                        </p>
-                        {(searchFaturas || statusFilter) && faturas.length > 0 && (
-                          <Button
-                            variant="link"
-                            size="sm"
-                            onClick={() => { setSearchFaturas(''); setStatusFilter(null) }}
-                            className="mt-1 text-xs text-blue-600"
-                          >
-                            Limpar filtros
-                          </Button>
-                        )}
-                      </div>
-                    ) : (
-                      <div className={cn(
-                        "grid gap-4",
-                        showFaturaDetails
-                          ? "grid-cols-1 xl:grid-cols-2"
-                          : "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"
-                      )}>
-                        {faturasFiltradas.map((fatura) => (
-                          <FaturaGeradaCard
-                            key={fatura.fatura_id}
-                            fatura={fatura}
-                            onDesmontar={(id) => setFaturaParaDesmontar(id)}
-                            onVisualizarItens={() => handleVisualizarFatura(fatura)}
-                            escritorioNome={escritoriosGrupo.length > 1 ? escritoriosGrupo.find(e => e.id === fatura.escritorio_id)?.nome : undefined}
-                          />
-                        ))}
-                      </div>
-                    )
-                  ) : (
-                    <FaturasTable
-                      faturas={faturasFiltradas}
-                      selectedFatura={selectedFatura}
-                      onSelectFatura={handleVisualizarFatura}
-                      onDesmontar={(id) => setFaturaParaDesmontar(id)}
-                      loading={loading}
-                      showEscritorio={escritoriosGrupo.length > 1}
-                      escritoriosMap={new Map(escritoriosGrupo.map(e => [e.id, e.nome]))}
-                    />
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Coluna Direita - Detalhes da Fatura */}
-            {showFaturaDetails && selectedFatura && (
-              <div className="xl:col-span-5">
-                <FaturaDetalhesPanel
-                  fatura={selectedFatura}
-                  escritorioId={selectedFatura?.escritorio_id || escritorioAtivo}
-                  onClose={() => {
-                    setShowFaturaDetails(false)
-                    setSelectedFatura(null)
-                  }}
-                  onPagamentoRealizado={() => {
-                    // Recarregar dados após pagamento
-                    loadData()
-                    setShowFaturaDetails(false)
-                    setSelectedFatura(null)
-                  }}
-                />
+          <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
+            <CardHeader className="pb-2 pt-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Faturas Geradas
+                  </CardTitle>
+                  <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400">
+                    {faturasFiltradas.length === faturas.length
+                      ? `${faturas.length} ${faturas.length === 1 ? 'fatura' : 'faturas'}`
+                      : `${faturasFiltradas.length} de ${faturas.length}`}
+                  </Badge>
+                </div>
               </div>
-            )}
-          </div>
+
+              {/* Barra de pesquisa e filtros toggle */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                {/* Pesquisa */}
+                <div className="relative flex-1 w-full sm:max-w-xs">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <Input
+                    placeholder="Buscar fatura, cliente ou valor..."
+                    value={searchFaturas}
+                    onChange={(e) => setSearchFaturas(e.target.value)}
+                    className="pl-9 pr-8 h-8 text-sm border-slate-200 dark:border-slate-700"
+                  />
+                  {searchFaturas && (
+                    <button
+                      onClick={() => setSearchFaturas('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filtros toggle on/off */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {filtroContagem.em_dia > 0 && (
+                    <button
+                      onClick={() => toggleFiltro('em_dia')}
+                      className={cn(
+                        'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors border',
+                        filtrosAtivos.has('em_dia')
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white dark:bg-surface-2 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30 hover:bg-blue-50 dark:hover:bg-blue-500/10'
+                      )}
+                    >
+                      Em dia ({filtroContagem.em_dia})
+                    </button>
+                  )}
+                  {filtroContagem.vencidas > 0 && (
+                    <button
+                      onClick={() => toggleFiltro('vencidas')}
+                      className={cn(
+                        'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors border',
+                        filtrosAtivos.has('vencidas')
+                          ? 'bg-red-600 text-white border-red-600'
+                          : 'bg-white dark:bg-surface-2 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/30 hover:bg-red-50 dark:hover:bg-red-500/10'
+                      )}
+                    >
+                      Vencidas ({filtroContagem.vencidas})
+                    </button>
+                  )}
+                  {filtroContagem.quitadas > 0 && (
+                    <button
+                      onClick={() => toggleFiltro('quitadas')}
+                      className={cn(
+                        'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors border',
+                        filtrosAtivos.has('quitadas')
+                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          : 'bg-white dark:bg-surface-2 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'
+                      )}
+                    >
+                      Quitadas ({filtroContagem.quitadas})
+                    </button>
+                  )}
+                  {filtroContagem.canceladas > 0 && (
+                    <button
+                      onClick={() => toggleFiltro('canceladas')}
+                      className={cn(
+                        'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors border',
+                        filtrosAtivos.has('canceladas')
+                          ? 'bg-slate-600 text-white border-slate-600'
+                          : 'bg-white dark:bg-surface-2 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-500/30 hover:bg-slate-50 dark:hover:bg-slate-500/10'
+                      )}
+                    >
+                      Canceladas ({filtroContagem.canceladas})
+                    </button>
+                  )}
+                  {(filtrosAtivos.size > 0 || searchFaturas) && (
+                    <button
+                      onClick={() => { setFiltrosAtivos(new Set()); setSearchFaturas('') }}
+                      className="px-2 py-1 rounded-full text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                    >
+                      Limpar
+                    </button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-2 pb-3">
+              <FaturasTable
+                faturas={faturasFiltradas}
+                onDesmontar={(id) => setFaturaParaDesmontar(id)}
+                onReceber={async (fatura) => {
+                  if (contasBancarias.length === 0) {
+                    const contas = await loadContasBancarias()
+                    setContasBancarias(contas)
+                  }
+                  setFaturaParaReceber(fatura)
+                }}
+                loading={loading}
+                showEscritorio={escritoriosGrupo.length > 1}
+                escritoriosMap={new Map(escritoriosGrupo.map(e => [e.id, e.nome]))}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Tab: Notas de Débito */}
@@ -944,6 +886,29 @@ export default function FaturamentoPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Recebimento */}
+      <ModalRecebimento
+        open={faturaParaReceber !== null}
+        onClose={() => setFaturaParaReceber(null)}
+        item={faturaParaReceber ? {
+          id: faturaParaReceber.fatura_id,
+          origem_id: faturaParaReceber.fatura_id,
+          origem: 'fatura',
+          descricao: `Fatura ${faturaParaReceber.numero_fatura}`,
+          valor: faturaParaReceber.valor_total,
+          valor_pago: faturaParaReceber.valor_pago || 0,
+          data_vencimento: faturaParaReceber.data_vencimento,
+          conta_bancaria_id: faturaParaReceber.conta_bancaria_id,
+          cliente_id: faturaParaReceber.cliente_id,
+          processo_id: null,
+          escritorio_id: faturaParaReceber.escritorio_id,
+          entidade: faturaParaReceber.cliente_nome,
+        } : null}
+        contasBancarias={contasBancarias}
+        advogados={advogadosEscritorio.map(a => ({ id: a.id, user_id: a.user_id, nome: a.nome, percentual_comissao: a.percentual_comissao }))}
+        onPagamentoRealizado={loadData}
+      />
 
       {/* Dialog: Executar Fechamento de Pastas */}
       <Dialog open={showExecutarModal} onOpenChange={setShowExecutarModal}>

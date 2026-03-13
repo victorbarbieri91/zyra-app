@@ -103,12 +103,9 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
     }
 
     const valorAberto = fatura.valor_total - (fatura.valor_pago || 0)
-    if (valorPago > valorAberto) {
-      toast.error('Valor pago não pode exceder o saldo restante')
-      return
-    }
 
     const isParcial = valorPago < valorAberto
+    const isExcedente = valorPago > valorAberto
 
     const pagamentoId = await pagarFatura(
       fatura.fatura_id,
@@ -123,7 +120,9 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
     if (pagamentoId) {
       const saldoGerado = valorAberto - valorPago
       if (isParcial) {
-        toast.success(`Pagamento parcial registrado! Saldo de ${formatCurrency(saldoGerado)} gerado com novo vencimento.`)
+        toast.success(`Pagamento parcial de ${formatCurrency(valorPago)} registrado! Saldo de ${formatCurrency(saldoGerado)} com novo vencimento.`)
+      } else if (isExcedente) {
+        toast.success(`Pagamento registrado com crédito excedente de ${formatCurrency(valorPago - valorAberto)}!`)
       } else {
         toast.success('Pagamento total registrado com sucesso!')
       }
@@ -245,6 +244,13 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
             <p className="text-slate-500 text-[10px]">Vencimento: <span className="font-semibold text-slate-700">{formatDate(fatura.data_vencimento)}</span></p>
           </div>
         </div>
+        {fatura.status === 'parcialmente_paga' && fatura.data_vencimento_saldo && (
+          <div className="mt-1.5 text-right">
+            <p className="text-[10px] text-amber-700">
+              Venc. Saldo: <span className="font-semibold">{formatDate(fatura.data_vencimento_saldo)}</span>
+            </p>
+          </div>
+        )}
       </div>
 
       <CardContent className="flex-1 overflow-hidden p-0">
@@ -652,6 +658,13 @@ export function FaturaDetalhesPanel({ fatura, escritorioId, onClose, onPagamento
                   return (
                     <p className="text-[11px] text-amber-600">
                       Pagamento parcial — saldo de {formatCurrency(valorAberto - valorDigitado)} será gerado como nova obrigação
+                    </p>
+                  )
+                }
+                if (valorDigitado > valorAberto) {
+                  return (
+                    <p className="text-[11px] text-blue-600">
+                      Pagamento excedente — crédito complementar de {formatCurrency(valorDigitado - valorAberto)} será registrado automaticamente
                     </p>
                   )
                 }

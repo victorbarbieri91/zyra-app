@@ -98,6 +98,7 @@ export interface FaturaGerada {
   categoria_status: string
   dias_ate_vencimento: number | null
   conta_bancaria_id: string | null
+  data_vencimento_saldo: string | null
 }
 
 export interface ContractLimits {

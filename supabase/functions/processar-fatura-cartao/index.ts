@@ -1,6 +1,6 @@
 // Edge Function: processar-fatura-cartao
 // Processa PDFs de faturas de cartão de crédito usando IA
-// Prioridade: Claude Sonnet 4.6 (principal) → GPT-5 (fallback)
+// Prioridade: Claude Haiku 4.5 (principal) → GPT-5 (fallback)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -13,7 +13,7 @@ const corsHeaders = {
 const MAX_PDF_SIZE_MB = 20
 const MAX_PDF_SIZE_BYTES = MAX_PDF_SIZE_MB * 1024 * 1024
 
-const CLAUDE_MODEL = 'claude-sonnet-4-6'
+const CLAUDE_MODEL = 'claude-haiku-4-5'
 const GPT_MODEL = 'gpt-5'
 
 interface TransacaoExtraida {
@@ -64,7 +64,7 @@ Retorne APENAS um JSON válido no formato:
 IMPORTANTE: Retorne APENAS o JSON, sem explicações ou markdown.`
 }
 
-// Processar com Claude Sonnet 4.6 (principal - com skill PDF para extração otimizada)
+// Processar com Claude Haiku 4.5 (principal - com skill PDF para extração otimizada)
 async function processWithClaude(
   pdfBase64: string,
   prompt: string,

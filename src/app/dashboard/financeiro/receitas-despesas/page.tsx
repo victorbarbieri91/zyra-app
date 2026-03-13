@@ -69,12 +69,13 @@ import { cn } from '@/lib/utils'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 import ReceitaModal from '@/components/financeiro/ReceitaModal'
 import DespesaModal from '@/components/financeiro/DespesaModal'
+import { ModalRecebimento, type ModalRecebimentoItem } from '@/components/financeiro/ModalRecebimento'
 
 interface ExtratoItem {
   id: string
   escritorio_id: string
   tipo_movimento: 'receita' | 'despesa' | 'transferencia_saida' | 'transferencia_entrada'
-  status: 'pendente' | 'efetivado' | 'vencido' | 'cancelado' | 'previsto'
+  status: 'pendente' | 'efetivado' | 'vencido' | 'cancelado' | 'previsto' | 'parcial'
   origem: string
   categoria: string
   descricao: string
@@ -214,6 +215,9 @@ export default function ExtratoFinanceiroPage() {
   const [modalVincularConta, setModalVincularConta] = useState(false)
   const [contaParaVincular, setContaParaVincular] = useState('')
 
+  // Modal unificado de recebimento
+  const [itemParaReceber, setItemParaReceber] = useState<ExtratoItem | null>(null)
+
   // Modais
   const [modalRecebimentoParcial, setModalRecebimentoParcial] = useState<ExtratoItem | null>(null)
   const [modalAlterarVencimento, setModalAlterarVencimento] = useState<ExtratoItem | null>(null)
@@ -239,6 +243,7 @@ export default function ExtratoFinanceiroPage() {
   const [temParticipacao, setTemParticipacao] = useState(false)
   const [advogadoSelecionado, setAdvogadoSelecionado] = useState('')
   const [percentualParticipacao, setPercentualParticipacao] = useState<number>(0)
+  const [dataVencimentoParticipacao, setDataVencimentoParticipacao] = useState('')
   const [advogadosEscritorio, setAdvogadosEscritorio] = useState<Array<{
     id: string
     user_id: string
@@ -271,6 +276,8 @@ export default function ExtratoFinanceiroPage() {
   const [valorParcial, setValorParcial] = useState('')
   const [novaDataVencimento, setNovaDataVencimento] = useState('')
   const [contaSelecionada, setContaSelecionada] = useState('')
+  const [dataEfetivacaoParcial, setDataEfetivacaoParcial] = useState('')
+  const [dataVencimentoSaldo, setDataVencimentoSaldo] = useState('')
   const [contasBancarias, setContasBancarias] = useState<any[]>([])
   const [submitting, setSubmitting] = useState(false)
 
@@ -470,7 +477,7 @@ export default function ExtratoFinanceiroPage() {
         id: item.id,
         escritorio_id: item.escritorio_id,
         tipo_movimento: item.tipo_movimento as 'receita' | 'despesa',
-        status: item.virtual ? 'previsto' : (item.status === 'parcial' ? 'efetivado' : item.status),
+        status: item.virtual ? 'previsto' : item.status,
         origem: item.origem,
         categoria: item.categoria,
         descricao: item.descricao,
@@ -512,7 +519,10 @@ export default function ExtratoFinanceiroPage() {
       }
 
       if (statusFiltro !== 'todos') {
-        combinedData = combinedData.filter((item) => item.status === statusFiltro)
+        combinedData = combinedData.filter((item) => {
+          if (statusFiltro === 'pendente') return item.status === 'pendente' || item.status === 'parcial'
+          return item.status === statusFiltro
+        })
       } else {
         // No filtro "todos", virtuais aparecem junto com os reais (já incluídos)
       }
@@ -589,13 +599,20 @@ export default function ExtratoFinanceiroPage() {
         id,
         user_id,
         percentual_comissao,
-        profiles!inner(nome_completo)
+        profiles!usuarios_escritorios_user_id_fkey!inner(nome_completo)
       `)
       .in('escritorio_id', escritoriosSelecionados)
       .eq('ativo', true)
 
     if (data) {
-      setAdvogadosEscritorio(data.map((u: any) => ({
+      // Deduplicar por user_id (mesmo usuário pode estar em múltiplos escritórios do grupo)
+      const seen = new Set<string>()
+      const unique = data.filter((u: any) => {
+        if (seen.has(u.user_id)) return false
+        seen.add(u.user_id)
+        return true
+      })
+      setAdvogadosEscritorio(unique.map((u: any) => ({
         id: u.id,
         user_id: u.user_id,
         nome: u.profiles?.nome_completo || 'Usuário',
@@ -818,6 +835,7 @@ export default function ExtratoFinanceiroPage() {
       setTemParticipacao(false)
       setAdvogadoSelecionado('')
       setPercentualParticipacao(0)
+      setDataVencimentoParticipacao('')
     } catch (error) {
       console.error('Erro:', error)
       toast.error('Erro ao processar')
@@ -1005,10 +1023,20 @@ export default function ExtratoFinanceiroPage() {
       // 1. Efetivar a receita
       if (item.tipo_movimento === 'receita') {
         if (item.origem === 'fatura') {
-          await supabase
-            .from('financeiro_faturamento_faturas')
-            .update({ status: 'paga', paga_em: new Date().toISOString() })
-            .eq('id', item.origem_id)
+          // Usar pagar_fatura RPC para suporte a parcial/excedente
+          const { data: { user } } = await supabase.auth.getUser()
+          const valorAberto = item.valor - (item.valor_pago || 0)
+          const { error: rpcError } = await supabase.rpc('pagar_fatura', {
+            p_fatura_id: item.origem_id,
+            p_valor_pago: valorAberto,
+            p_data_pagamento: hoje,
+            p_forma_pagamento: 'pix',
+            p_conta_bancaria_id: contaSelecionada,
+            p_user_id: user?.id || null,
+            p_observacoes: null,
+            p_data_vencimento_saldo: null,
+          })
+          if (rpcError) throw rpcError
         } else if (item.origem === 'nota_debito') {
           const { data: nota } = await supabase
             .from('financeiro_notas_debito')
@@ -1062,26 +1090,29 @@ export default function ExtratoFinanceiroPage() {
           .eq('id', item.origem_id)
       }
 
-      // 2. Se tem participação, criar despesa para o advogado
+      // 2. Se tem participação, criar despesa pendente para o advogado
       if (temParticipacao && advogadoSelecionado && percentualParticipacao > 0) {
         const valorParticipacao = (item.valor * percentualParticipacao) / 100
         const advogado = advogadosEscritorio.find(a => a.id === advogadoSelecionado)
+        const vencPart = dataVencimentoParticipacao || (() => {
+          const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]
+        })()
 
         await supabase.from('financeiro_despesas').insert({
           escritorio_id: item.escritorio_id,
-          categoria: 'pessoal',
+          categoria: 'comissao',
           descricao: `Participação ${advogado?.nome || 'Advogado'} - ${item.descricao}`,
           valor: valorParticipacao,
-          data_vencimento: hoje,
-          data_pagamento: hoje,
-          status: 'pago',
-          conta_bancaria_id: contaSelecionada,
+          data_vencimento: vencPart,
+          status: 'pendente',
+          advogado_id: advogado?.user_id || null,
           observacoes: `Participação de ${percentualParticipacao}% sobre receita de R$ ${item.valor.toFixed(2)}`,
           processo_id: item.processo_id,
           cliente_id: item.cliente_id,
         })
 
-        toast.success(`Efetivado! Participação de R$ ${valorParticipacao.toFixed(2)} gerada para ${advogado?.nome}`)
+        const dtVenc = new Date(vencPart + 'T12:00:00').toLocaleDateString('pt-BR')
+        toast.success(`Efetivado! Participação de R$ ${valorParticipacao.toFixed(2)} pendente para ${advogado?.nome} (venc. ${dtVenc})`)
       } else {
         toast.success(item.tipo_movimento === 'receita' ? 'Receita recebida!' : 'Despesa paga!')
       }
@@ -1094,6 +1125,7 @@ export default function ExtratoFinanceiroPage() {
       setTemParticipacao(false)
       setAdvogadoSelecionado('')
       setPercentualParticipacao(0)
+      setDataVencimentoParticipacao('')
       setContaSelecionada('')
       loadExtrato()
     } catch (error) {
@@ -1122,7 +1154,7 @@ export default function ExtratoFinanceiroPage() {
       if (item.tipo_movimento === 'receita') {
         if (item.origem === 'fatura') {
           // Faturas têm status diferente
-          const statusFatura = novoStatus === 'pago' ? 'paga' : novoStatus === 'vencido' ? 'atrasada' : 'pendente'
+          const statusFatura = novoStatus === 'pago' ? 'paga' : novoStatus === 'vencido' ? 'atrasada' : 'emitida'
           await supabase
             .from('financeiro_faturamento_faturas')
             .update({
@@ -1201,42 +1233,62 @@ export default function ExtratoFinanceiroPage() {
 
     const item = modalRecebimentoParcial
     const valorRecebido = parseFloat(valorParcial)
+    const valorAberto = item.valor - (item.valor_pago || 0)
 
-    if (valorRecebido <= 0 || valorRecebido >= item.valor) {
+    if (valorRecebido <= 0 || valorRecebido > valorAberto) {
       toast.error('Valor inválido')
       return
     }
 
     try {
       setSubmitting(true)
+      const dataEfetivacao = dataEfetivacaoParcial || new Date().toISOString().split('T')[0]
+      const novaDataVenc = dataVencimentoSaldo || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
-      const valorRestante = item.valor - valorRecebido
-
-      // Atualizar receita original como parcialmente paga
-      await supabase
-        .from('financeiro_receitas')
-        .update({
-          status: 'parcial',
-          valor_pago: valorRecebido,
-          data_pagamento: new Date().toISOString().split('T')[0],
-          conta_bancaria_id: contaSelecionada,
+      if (item.origem === 'fatura') {
+        // Para faturas: usar pagar_fatura RPC (suporta parcial/excedente)
+        const { data: { user } } = await supabase.auth.getUser()
+        const { error: rpcError } = await supabase.rpc('pagar_fatura', {
+          p_fatura_id: item.origem_id,
+          p_valor_pago: valorRecebido,
+          p_data_pagamento: dataEfetivacao,
+          p_forma_pagamento: 'pix',
+          p_conta_bancaria_id: contaSelecionada,
+          p_user_id: user?.id || null,
+          p_observacoes: null,
+          p_data_vencimento_saldo: novaDataVenc,
         })
-        .eq('id', item.origem_id)
+        if (rpcError) throw rpcError
+      } else {
+        // Para receitas normais: fluxo existente
+        const valorRestante = valorAberto - valorRecebido
 
-      // Criar nova receita para o saldo restante
-      await supabase.from('financeiro_receitas').insert({
-        escritorio_id: escritorioAtivo,
-        tipo: 'saldo',
-        cliente_id: item.cliente_id,
-        processo_id: item.processo_id,
-        receita_origem_id: item.origem_id,
-        descricao: `Saldo - ${item.descricao}`,
-        categoria: item.categoria,
-        valor: valorRestante,
-        data_competencia: new Date().toISOString().split('T')[0].substring(0, 7) + '-01',
-        data_vencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        status: 'pendente',
-      })
+        // Atualizar receita original como parcialmente paga
+        await supabase
+          .from('financeiro_receitas')
+          .update({
+            status: 'parcial',
+            valor_pago: (item.valor_pago || 0) + valorRecebido,
+            data_pagamento: dataEfetivacao,
+            conta_bancaria_id: contaSelecionada,
+          })
+          .eq('id', item.origem_id)
+
+        // Criar nova receita para o saldo restante
+        await supabase.from('financeiro_receitas').insert({
+          escritorio_id: escritorioAtivo,
+          tipo: 'saldo',
+          cliente_id: item.cliente_id,
+          processo_id: item.processo_id,
+          receita_origem_id: item.origem_id,
+          descricao: `Saldo - ${item.descricao}`,
+          categoria: item.categoria,
+          valor: valorRestante,
+          data_competencia: dataEfetivacao.substring(0, 7) + '-01',
+          data_vencimento: novaDataVenc,
+          status: 'pendente',
+        })
+      }
 
       // Recalcular saldo da conta bancária
       await supabase.rpc('recalcular_saldo_conta', { p_conta_id: contaSelecionada })
@@ -1245,6 +1297,8 @@ export default function ExtratoFinanceiroPage() {
       setModalRecebimentoParcial(null)
       setValorParcial('')
       setContaSelecionada('')
+      setDataEfetivacaoParcial('')
+      setDataVencimentoSaldo('')
       loadExtrato()
     } catch (error) {
       console.error('Erro:', error)
@@ -2840,6 +2894,11 @@ export default function ExtratoFinanceiroPage() {
                             <CheckCircle className="w-2.5 h-2.5" />
                             Pago
                           </span>
+                        ) : item.status === 'parcial' ? (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30">
+                            <Clock className="w-2.5 h-2.5" />
+                            Parcial
+                          </span>
                         ) : item.status === 'vencido' ? (
                           <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30">
                             <AlertTriangle className="w-2.5 h-2.5" />
@@ -2882,81 +2941,92 @@ export default function ExtratoFinanceiroPage() {
                         {categoriaConfig.label}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {isPrevisto ? (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-xs hover:bg-emerald-50 text-emerald-700"
-                            disabled={submitting}
-                            onClick={() => handleAbrirModalPrevisto(item)}
-                          >
-                            <PlayCircle className="w-3.5 h-3.5 mr-1" />
-                            Efetivar
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                                <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuItem onClick={() => handleAbrirModalPrevisto(item)}>
-                                <PlayCircle className="w-4 h-4 mr-2" />
-                                {item.tipo_movimento === 'receita' ? 'Receber' : 'Pagar'}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handlePrepararEdicaoPrevisto(item)}>
+                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                      {/* Botão icon primário */}
+                      {isPrevisto && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400"
+                          disabled={submitting}
+                          onClick={() => handleAbrirModalPrevisto(item)}
+                        >
+                          <PlayCircle className="w-3.5 h-3.5 mr-1" />
+                          Efetivar
+                        </Button>
+                      )}
+                      {isPendente && contasBancarias.length > 0 && item.tipo_movimento === 'receita' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                          title="Receber"
+                          onClick={() => setItemParaReceber(item)}
+                        >
+                          <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        </Button>
+                      )}
+                      {isPendente && contasBancarias.length > 0 && item.tipo_movimento === 'despesa' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                          title="Pagar"
+                          onClick={() => {
+                            setModalEfetivarItem(item)
+                            setContaSelecionada(item.conta_bancaria_id || contasBancarias[0]?.id || '')
+                            setTemParticipacao(false)
+                            setAdvogadoSelecionado('')
+                            setPercentualParticipacao(0)
+                            setDataVencimentoParticipacao('')
+                          }}
+                        >
+                          <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        </Button>
+                      )}
+
+                      {/* Dropdown */}
+                      {isPrevisto && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                              <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-44">
+                            <DropdownMenuItem onClick={() => handlePrepararEdicaoPrevisto(item)}>
+                              <Pencil className="w-4 h-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Ver Detalhes
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+
+                      {isPendente && item.tipo_movimento !== 'transferencia_saida' && item.tipo_movimento !== 'transferencia_entrada' && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                              <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Ver Detalhes
+                            </DropdownMenuItem>
+                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
+                              <DropdownMenuItem onClick={() => handlePrepararEdicao(item)}>
                                 <Pencil className="w-4 h-4 mr-2" />
                                 Editar
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                Ver Detalhes
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </>
-                      ) : (
-                        <>
-                          {isPendente && contasBancarias.length > 0 && (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa') && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 hover:bg-emerald-50"
-                              title={item.tipo_movimento === 'receita' ? 'Receber' : 'Pagar'}
-                              onClick={() => {
-                                const contaId = contasBancarias[0].id
-                                if (item.tipo_movimento === 'receita') {
-                                  handleReceberTotal(item, contaId)
-                                } else {
-                                  handlePagarDespesa(item, contaId)
-                                }
-                              }}
-                            >
-                              <CheckCircle className="w-4 h-4 text-emerald-600" />
-                            </Button>
-                          )}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                                <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                Ver Detalhes
-                              </DropdownMenuItem>
-                              {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
-                                <DropdownMenuItem onClick={() => handlePrepararEdicao(item)}>
-                                  <Pencil className="w-4 h-4 mr-2" />
-                                  Editar
-                                </DropdownMenuItem>
-                              )}
-                              {/* Voltar para Previsto (mobile) */}
-                              {isPendente && item.origem !== 'fatura' && item.origem !== 'nota_debito' && (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa') && (
+                            )}
+                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa') && (
+                              <>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   disabled={submitting}
                                   onClick={() => handleVoltarParaPrevisto(item)}
@@ -2965,18 +3035,66 @@ export default function ExtratoFinanceiroPage() {
                                   <Undo2 className="w-4 h-4 mr-2" />
                                   Voltar para Previsto
                                 </DropdownMenuItem>
-                              )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handlePrepararExclusao(item)}
-                                className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Excluir
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </>
+                              </>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handlePrepararExclusao(item)}
+                              className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+
+                      {!isPrevisto && !isPendente && item.tipo_movimento !== 'transferencia_saida' && item.tipo_movimento !== 'transferencia_entrada' && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                              <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Ver Detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handlePrepararExclusao(item)}
+                              className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+
+                      {(item.tipo_movimento === 'transferencia_saida' || item.tipo_movimento === 'transferencia_entrada') && !isPrevisto && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                              <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-44">
+                            <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Ver Detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handlePrepararExclusao(item)}
+                              className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                     </div>
                   </div>
@@ -3068,7 +3186,7 @@ export default function ExtratoFinanceiroPage() {
               {extrato.map((item) => {
                 const diasVenc = getDiasVencimento(item.data_vencimento)
                 const isVencido = item.status === 'vencido' || (diasVenc !== null && diasVenc < 0)
-                const isPendente = item.status === 'pendente' || item.status === 'vencido'
+                const isPendente = item.status === 'pendente' || item.status === 'vencido' || item.status === 'parcial'
                 const isPrevisto = item.virtual === true
                 const categoriaConfig = getCategoriaConfig(item.categoria)
                 const isSelected = itensSelecionados.includes(item.id)
@@ -3195,6 +3313,11 @@ export default function ExtratoFinanceiroPage() {
                           <CheckCircle className="w-3 h-3" />
                           Pago
                         </span>
+                      ) : item.status === 'parcial' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30 whitespace-nowrap">
+                          <Clock className="w-3 h-3" />
+                          Parcial
+                        </span>
                       ) : item.status === 'vencido' ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30 whitespace-nowrap">
                           <AlertTriangle className="w-3 h-3" />
@@ -3227,287 +3350,251 @@ export default function ExtratoFinanceiroPage() {
 
                     {/* Ações */}
                     <td className="py-2.5 px-2 text-center">
-                      {isPrevisto ? (
-                      <div className="flex items-center justify-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-xs hover:bg-emerald-50 text-emerald-700"
-                          disabled={submitting}
-                          onClick={() => handleAbrirModalPrevisto(item)}
-                        >
-                          <PlayCircle className="w-3.5 h-3.5 mr-1" />
-                          Efetivar
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                              <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={() => handleAbrirModalPrevisto(item)}>
-                              <PlayCircle className="w-4 h-4 mr-2" />
-                              {item.tipo_movimento === 'receita' ? 'Receber' : 'Pagar'}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handlePrepararEdicaoPrevisto(item)}>
-                              <Pencil className="w-4 h-4 mr-2" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              Ver Detalhes
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                      ) : (
-                      <div className="flex items-center justify-center gap-1">
-                      {/* Botão Efetivar Rápido - apenas para pendentes/vencidos */}
-                      {isPendente && contasBancarias.length > 0 && (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa') && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 hover:bg-emerald-50"
-                          title={item.tipo_movimento === 'receita' ? 'Receber' : 'Pagar'}
-                          onClick={() => {
-                            const contaId = contasBancarias[0].id
-                            if (item.tipo_movimento === 'receita') {
-                              handleReceberTotal(item, contaId)
-                            } else {
-                              handlePagarDespesa(item, contaId)
-                            }
-                          }}
-                        >
-                          <CheckCircle className="w-4 h-4 text-emerald-600" />
-                        </Button>
-                      )}
-                      {/* Transferências têm menu simplificado */}
-                      {(item.tipo_movimento === 'transferencia_saida' || item.tipo_movimento === 'transferencia_entrada') ? (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                              <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              Ver Detalhes
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handlePrepararExclusao(item)}
-                              className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Excluir Transferência
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      ) : isPendente ? (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                              <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            {/* Receber/Pagar com opção de participação */}
-                            {contasBancarias.length > 0 && (
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setModalEfetivarItem(item)
-                                  setContaSelecionada(contasBancarias[0]?.id || '')
-                                  setTemParticipacao(false)
-                                  setAdvogadoSelecionado('')
-                                  setPercentualParticipacao(0)
-                                }}
-                              >
-                                <Check className="w-4 h-4 mr-2" />
-                                {item.tipo_movimento === 'receita' ? 'Receber' : 'Pagar'}
-                              </DropdownMenuItem>
-                            )}
+                      <div className="flex items-center justify-center gap-0.5">
+                        {/* Botão icon primário */}
+                        {isPrevisto && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400"
+                            disabled={submitting}
+                            onClick={() => handleAbrirModalPrevisto(item)}
+                          >
+                            <PlayCircle className="w-3.5 h-3.5 mr-1" />
+                            Efetivar
+                          </Button>
+                        )}
+                        {isPendente && contasBancarias.length > 0 && item.tipo_movimento === 'receita' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                            title="Receber"
+                            onClick={() => setItemParaReceber(item)}
+                          >
+                            <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          </Button>
+                        )}
+                        {isPendente && contasBancarias.length > 0 && item.tipo_movimento === 'despesa' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                            title="Pagar"
+                            onClick={() => {
+                              setModalEfetivarItem(item)
+                              setContaSelecionada(item.conta_bancaria_id || contasBancarias[0]?.id || '')
+                              setTemParticipacao(false)
+                              setAdvogadoSelecionado('')
+                              setPercentualParticipacao(0)
+                              setDataVencimentoParticipacao('')
+                            }}
+                          >
+                            <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          </Button>
+                        )}
 
-                            {/* Recebimento Parcial */}
-                            {item.tipo_movimento === 'receita' && item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setModalRecebimentoParcial(item)
-                                  setValorParcial('')
-                                  setContaSelecionada(contasBancarias[0]?.id || '')
-                                }}
-                              >
-                                <Banknote className="w-4 h-4 mr-2" />
-                                Receber Parcial
-                              </DropdownMenuItem>
-                            )}
-
-                            <DropdownMenuSeparator />
-
-                            {/* Alterar Vencimento */}
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setModalAlterarVencimento(item)
-                                setNovaDataVencimento(item.data_vencimento || '')
-                              }}
-                            >
-                              <CalendarDays className="w-4 h-4 mr-2" />
-                              Alterar Vencimento
-                            </DropdownMenuItem>
-
-                            {/* Ver Detalhes */}
-                            <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              Ver Detalhes
-                            </DropdownMenuItem>
-
-                            {/* Editar - apenas receitas e despesas (não faturas) */}
-                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
-                              <DropdownMenuItem onClick={() => handlePrepararEdicao(item)}>
+                        {/* Dropdown — condicional por estado */}
+                        {isPrevisto && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              <DropdownMenuItem onClick={() => handlePrepararEdicaoPrevisto(item)}>
                                 <Pencil className="w-4 h-4 mr-2" />
                                 Editar
                               </DropdownMenuItem>
-                            )}
+                              <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Ver Detalhes
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
 
-                            {/* Alterar Categoria - apenas receitas e despesas (não faturas) */}
-                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
+                        {(item.tipo_movimento === 'transferencia_saida' || item.tipo_movimento === 'transferencia_entrada') && !isPrevisto && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Ver Detalhes
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handlePrepararExclusao(item)}
+                                className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+
+                        {isPendente && item.tipo_movimento !== 'transferencia_saida' && item.tipo_movimento !== 'transferencia_entrada' && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
                               <DropdownMenuItem
                                 onClick={() => {
-                                  setModalAlterarCategoriaItem(item)
-                                  setNovaCategoriaItem(item.categoria || '')
+                                  setModalAlterarVencimento(item)
+                                  setNovaDataVencimento(item.data_vencimento || '')
                                 }}
                               >
-                                <FileText className="w-4 h-4 mr-2" />
-                                Alterar Categoria
+                                <CalendarDays className="w-4 h-4 mr-2" />
+                                Alterar Vencimento
                               </DropdownMenuItem>
-                            )}
 
-                            {/* Alterar Tipo - converter entre receita e despesa */}
-                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
+                              <DropdownMenuSeparator />
+
+                              <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Ver Detalhes
+                              </DropdownMenuItem>
+                              {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
+                                <DropdownMenuItem onClick={() => handlePrepararEdicao(item)}>
+                                  <Pencil className="w-4 h-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                              )}
+                              {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setModalAlterarCategoriaItem(item)
+                                    setNovaCategoriaItem(item.categoria || '')
+                                  }}
+                                >
+                                  <FileText className="w-4 h-4 mr-2" />
+                                  Alterar Categoria
+                                </DropdownMenuItem>
+                              )}
+                              {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setItemParaAlterarTipo(item)
+                                    setNovoTipo(item.tipo_movimento === 'receita' ? 'despesa' : 'receita')
+                                    setModalAlterarTipo(true)
+                                  }}
+                                >
+                                  <ArrowLeftRight className="w-4 h-4 mr-2" />
+                                  Alterar Tipo
+                                </DropdownMenuItem>
+                              )}
+
+                              <DropdownMenuSeparator />
+
                               <DropdownMenuItem
                                 onClick={() => {
-                                  setItemParaAlterarTipo(item)
-                                  setNovoTipo(item.tipo_movimento === 'receita' ? 'despesa' : 'receita')
-                                  setModalAlterarTipo(true)
+                                  setModalAlterarStatus(item)
+                                  setNovoStatus(item.status === 'pendente' ? 'vencido' : 'pendente')
                                 }}
                               >
-                                <ArrowLeftRight className="w-4 h-4 mr-2" />
-                                Alterar Tipo
+                                <RefreshCw className="w-4 h-4 mr-2" />
+                                Alterar Status
                               </DropdownMenuItem>
-                            )}
+                              {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa') && (
+                                <DropdownMenuItem
+                                  disabled={submitting}
+                                  onClick={() => handleVoltarParaPrevisto(item)}
+                                  className="text-slate-500 focus:text-slate-600"
+                                >
+                                  <Undo2 className="w-4 h-4 mr-2" />
+                                  Voltar para Previsto
+                                </DropdownMenuItem>
+                              )}
 
-                            {/* Alterar Status */}
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setModalAlterarStatus(item)
-                                setNovoStatus(item.status === 'pendente' ? 'vencido' : 'pendente')
-                              }}
-                            >
-                              <RefreshCw className="w-4 h-4 mr-2" />
-                              Alterar Status
-                            </DropdownMenuItem>
+                              <DropdownMenuSeparator />
 
-                            {/* Voltar para Previsto - apenas receitas/despesas (não faturas) */}
-                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa') && (
                               <DropdownMenuItem
-                                disabled={submitting}
-                                onClick={() => handleVoltarParaPrevisto(item)}
-                                className="text-slate-500 focus:text-slate-600"
+                                onClick={() => handlePrepararExclusao(item)}
+                                className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
                               >
-                                <Undo2 className="w-4 h-4 mr-2" />
-                                Voltar para Previsto
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Excluir
                               </DropdownMenuItem>
-                            )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
 
-                            <DropdownMenuSeparator />
-
-                            {/* Excluir */}
-                            <DropdownMenuItem
-                              onClick={() => handlePrepararExclusao(item)}
-                              className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      ) : (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                              <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            {/* Ver Detalhes */}
-                            <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              Ver Detalhes
-                            </DropdownMenuItem>
-
-                            {/* Editar - apenas receitas e despesas (não faturas) */}
-                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
-                              <DropdownMenuItem onClick={() => handlePrepararEdicao(item)}>
-                                <Pencil className="w-4 h-4 mr-2" />
-                                Editar
+                        {!isPrevisto && !isPendente && item.tipo_movimento !== 'transferencia_saida' && item.tipo_movimento !== 'transferencia_entrada' && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Ver Detalhes
                               </DropdownMenuItem>
-                            )}
+                              {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
+                                <DropdownMenuItem onClick={() => handlePrepararEdicao(item)}>
+                                  <Pencil className="w-4 h-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                              )}
+                              {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setModalAlterarCategoriaItem(item)
+                                    setNovaCategoriaItem(item.categoria || '')
+                                  }}
+                                >
+                                  <FileText className="w-4 h-4 mr-2" />
+                                  Alterar Categoria
+                                </DropdownMenuItem>
+                              )}
+                              {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setItemParaAlterarTipo(item)
+                                    setNovoTipo(item.tipo_movimento === 'receita' ? 'despesa' : 'receita')
+                                    setModalAlterarTipo(true)
+                                  }}
+                                >
+                                  <ArrowLeftRight className="w-4 h-4 mr-2" />
+                                  Alterar Tipo
+                                </DropdownMenuItem>
+                              )}
 
-                            {/* Alterar Categoria - apenas receitas e despesas (não faturas) */}
-                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setModalAlterarCategoriaItem(item)
-                                  setNovaCategoriaItem(item.categoria || '')
-                                }}
-                              >
-                                <FileText className="w-4 h-4 mr-2" />
-                                Alterar Categoria
-                              </DropdownMenuItem>
-                            )}
+                              <DropdownMenuSeparator />
 
-                            {/* Alterar Tipo - converter entre receita e despesa */}
-                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
                               <DropdownMenuItem
                                 onClick={() => {
-                                  setItemParaAlterarTipo(item)
-                                  setNovoTipo(item.tipo_movimento === 'receita' ? 'despesa' : 'receita')
-                                  setModalAlterarTipo(true)
+                                  setModalAlterarStatus(item)
+                                  setNovoStatus('pendente')
                                 }}
                               >
-                                <ArrowLeftRight className="w-4 h-4 mr-2" />
-                                Alterar Tipo
+                                <RefreshCw className="w-4 h-4 mr-2" />
+                                Alterar Status
                               </DropdownMenuItem>
-                            )}
 
-                            {/* Alterar Status - voltar para pendente ou vencido */}
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setModalAlterarStatus(item)
-                                setNovoStatus('pendente')
-                              }}
-                            >
-                              <RefreshCw className="w-4 h-4 mr-2" />
-                              Alterar Status
-                            </DropdownMenuItem>
+                              <DropdownMenuSeparator />
 
-                            <DropdownMenuSeparator />
-
-                            {/* Excluir */}
-                            <DropdownMenuItem
-                              onClick={() => handlePrepararExclusao(item)}
-                              className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
+                              <DropdownMenuItem
+                                onClick={() => handlePrepararExclusao(item)}
+                                className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
-                      )}
                     </td>
                   </tr>
                 )
@@ -3636,11 +3723,30 @@ export default function ExtratoFinanceiroPage() {
           <DialogHeader>
             <DialogTitle className="text-[#34495e] dark:text-slate-200">Recebimento Parcial</DialogTitle>
           </DialogHeader>
-          {modalRecebimentoParcial && (
+          {modalRecebimentoParcial && (() => {
+            const jaPago = modalRecebimentoParcial.valor_pago || 0
+            const valorAberto = modalRecebimentoParcial.valor - jaPago
+            const valorDigitado = parseFloat(valorParcial) || 0
+            const saldoRestante = valorAberto - valorDigitado
+            return (
             <div className="space-y-4">
               <div className="p-3 bg-slate-50 dark:bg-surface-2 rounded-lg">
                 <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{modalRecebimentoParcial.descricao}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Valor total: {formatCurrency(modalRecebimentoParcial.valor)}</p>
+                <div className="mt-1 space-y-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Valor total: {formatCurrency(modalRecebimentoParcial.valor)}
+                  </p>
+                  {jaPago > 0 && (
+                    <>
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                        Já pago: {formatCurrency(jaPago)}
+                      </p>
+                      <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                        Saldo em aberto: {formatCurrency(valorAberto)}
+                      </p>
+                    </>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -3649,16 +3755,30 @@ export default function ExtratoFinanceiroPage() {
                   type="number"
                   step="0.01"
                   min="0.01"
-                  max={modalRecebimentoParcial.valor - 0.01}
+                  max={valorAberto - 0.01}
                   value={valorParcial}
                   onChange={(e) => setValorParcial(e.target.value)}
                   placeholder="0,00"
                 />
-                {valorParcial && parseFloat(valorParcial) > 0 && (
-                  <p className="text-[10px] text-slate-500 mt-1">
-                    Saldo restante: {formatCurrency(modalRecebimentoParcial.valor - parseFloat(valorParcial))}
+                {valorDigitado > 0 && saldoRestante > 0.01 && (
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                    Saldo restante após recebimento: {formatCurrency(saldoRestante)}
                   </p>
                 )}
+                {valorDigitado > 0 && saldoRestante <= 0.01 && saldoRestante >= -0.01 && (
+                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1">
+                    Pagamento total — fatura será quitada
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label className="text-xs">Data de Efetivação</Label>
+                <Input
+                  type="date"
+                  value={dataEfetivacaoParcial}
+                  onChange={(e) => setDataEfetivacaoParcial(e.target.value)}
+                />
               </div>
 
               <div>
@@ -3677,6 +3797,20 @@ export default function ExtratoFinanceiroPage() {
                 </select>
               </div>
 
+              {valorDigitado > 0 && saldoRestante > 0.01 && (
+                <div>
+                  <Label className="text-xs">Nova Data de Vencimento do Saldo</Label>
+                  <Input
+                    type="date"
+                    value={dataVencimentoSaldo}
+                    onChange={(e) => setDataVencimentoSaldo(e.target.value)}
+                  />
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                    Vencimento para o saldo restante de {formatCurrency(saldoRestante)}
+                  </p>
+                </div>
+              )}
+
               <div className="flex justify-end gap-2">
                 <Button variant="outline" size="sm" onClick={() => setModalRecebimentoParcial(null)}>
                   Cancelar
@@ -3686,7 +3820,8 @@ export default function ExtratoFinanceiroPage() {
                 </Button>
               </div>
             </div>
-          )}
+            )
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -4730,7 +4865,10 @@ export default function ExtratoFinanceiroPage() {
               {modalEfetivarItem?.tipo_movimento === 'receita' ? 'Receber Receita' : 'Pagar Despesa'}
             </DialogTitle>
           </DialogHeader>
-          {modalEfetivarItem && (
+          {modalEfetivarItem && (() => {
+            const jaPagoEfetivar = modalEfetivarItem.valor_pago || 0
+            const valorAbertoEfetivar = modalEfetivarItem.valor - jaPagoEfetivar
+            return (
             <div className="space-y-4">
               {/* Info do lançamento */}
               <div className="p-3 bg-slate-50 dark:bg-surface-2 rounded-lg space-y-1">
@@ -4745,8 +4883,18 @@ export default function ExtratoFinanceiroPage() {
                   modalEfetivarItem.tipo_movimento === 'receita' ? 'text-emerald-600' : 'text-red-600'
                 }`}>
                   {modalEfetivarItem.tipo_movimento === 'receita' ? '+ ' : '- '}
-                  R$ {modalEfetivarItem.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {valorAbertoEfetivar.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
+                {jaPagoEfetivar > 0 && (
+                  <div className="text-[10px] space-y-0.5 pt-1 border-t border-slate-200 dark:border-slate-700 mt-1">
+                    <p className="text-slate-500 dark:text-slate-400">
+                      Valor total: R$ {modalEfetivarItem.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-emerald-600 dark:text-emerald-400">
+                      Já pago: R$ {jaPagoEfetivar.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Conta Bancária */}
@@ -4779,6 +4927,10 @@ export default function ExtratoFinanceiroPage() {
                           if (!checked) {
                             setAdvogadoSelecionado('')
                             setPercentualParticipacao(0)
+                            setDataVencimentoParticipacao('')
+                          } else if (!dataVencimentoParticipacao) {
+                            const d30 = new Date(); d30.setDate(d30.getDate() + 30)
+                            setDataVencimentoParticipacao(d30.toISOString().split('T')[0])
                           }
                         }}
                       />
@@ -4827,18 +4979,22 @@ export default function ExtratoFinanceiroPage() {
                           />
                         </div>
                         <div>
-                          <Label className="text-xs">Valor da Participação</Label>
-                          <div className="mt-1 h-9 flex items-center px-3 bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-md">
-                            <span className="text-sm font-medium text-amber-700">
-                              R$ {((modalEfetivarItem.valor * (percentualParticipacao || 0)) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </span>
-                          </div>
+                          <Label className="text-xs">Vencimento</Label>
+                          <Input
+                            type="date"
+                            value={dataVencimentoParticipacao}
+                            onChange={(e) => setDataVencimentoParticipacao(e.target.value)}
+                            className="mt-1"
+                          />
                         </div>
                       </div>
 
-                      <p className="text-[10px] text-amber-600">
-                        Uma despesa será criada automaticamente para registrar esta participação.
-                      </p>
+                      {percentualParticipacao > 0 && (
+                        <p className="text-[10px] text-amber-600">
+                          Despesa pendente de R$ {((modalEfetivarItem.valor * percentualParticipacao) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          {dataVencimentoParticipacao ? ` com vencimento em ${new Date(dataVencimentoParticipacao + 'T12:00:00').toLocaleDateString('pt-BR')}` : ''}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -4853,6 +5009,7 @@ export default function ExtratoFinanceiroPage() {
                     setTemParticipacao(false)
                     setAdvogadoSelecionado('')
                     setPercentualParticipacao(0)
+                    setDataVencimentoParticipacao('')
                     setContaSelecionada('')
                   }}
                   disabled={submitting}
@@ -4879,7 +5036,8 @@ export default function ExtratoFinanceiroPage() {
                 </Button>
               </div>
             </div>
-          )}
+            )
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -4964,6 +5122,29 @@ export default function ExtratoFinanceiroPage() {
         open={modalDespesa}
         onOpenChange={setModalDespesa}
         onSuccess={() => loadExtrato()}
+      />
+
+      {/* Modal Unificado de Recebimento */}
+      <ModalRecebimento
+        open={itemParaReceber !== null}
+        onClose={() => setItemParaReceber(null)}
+        item={itemParaReceber ? {
+          id: itemParaReceber.id,
+          origem_id: itemParaReceber.origem_id || itemParaReceber.id,
+          origem: itemParaReceber.origem,
+          descricao: itemParaReceber.descricao,
+          valor: itemParaReceber.valor,
+          valor_pago: itemParaReceber.valor_pago || 0,
+          data_vencimento: itemParaReceber.data_vencimento,
+          conta_bancaria_id: itemParaReceber.conta_bancaria_id,
+          cliente_id: itemParaReceber.cliente_id,
+          processo_id: itemParaReceber.processo_id,
+          escritorio_id: itemParaReceber.escritorio_id,
+          entidade: itemParaReceber.entidade,
+        } : null}
+        contasBancarias={contasBancarias}
+        advogados={advogadosEscritorio.map(a => ({ id: a.id, user_id: a.user_id, nome: a.nome, percentual_comissao: a.percentual_comissao }))}
+        onPagamentoRealizado={loadExtrato}
       />
     </div>
   )

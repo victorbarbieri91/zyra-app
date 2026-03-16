@@ -291,6 +291,95 @@
   background-image: linear-gradient(to right, var(--sidebar-active-from), var(--sidebar-active-to));
 }
 
+/* ═══════════════════════════════════════════════════════════ */
+/* Dark Mode Global Overrides                                  */
+/* Remap hardcoded Tailwind classes → CSS vars in .dark        */
+/* Safe: only applies inside .dark, explicit dark: wins over   */
+/* ═══════════════════════════════════════════════════════════ */
+
+/* --- Backgrounds --- */
+.dark .bg-white:not(.print-force-light *) {
+  background-color: hsl(var(--card)) !important;
+}
+.dark .bg-slate-50:not(.print-force-light *) {
+  background-color: hsl(var(--surface-0)) !important;
+}
+.dark .bg-slate-100:not(.print-force-light *) {
+  background-color: hsl(var(--surface-2)) !important;
+}
+.dark .hover\:bg-slate-50:hover {
+  background-color: hsl(var(--surface-2)) !important;
+}
+.dark .hover\:bg-slate-100:hover {
+  background-color: hsl(var(--surface-3)) !important;
+}
+
+/* --- Borders --- */
+.dark .border-slate-200:not(.print-force-light *) {
+  border-color: hsl(var(--border)) !important;
+}
+.dark .border-slate-100:not(.print-force-light *) {
+  border-color: hsl(var(--border)) !important;
+}
+.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: hsl(var(--border)) !important;
+}
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: hsl(var(--border)) !important;
+}
+
+/* --- Text: Brand hex colors --- */
+.dark .text-\[\#34495e\] {
+  color: hsl(var(--foreground)) !important;
+}
+.dark .text-\[\#46627f\] {
+  color: hsl(var(--muted-foreground)) !important;
+}
+.dark .hover\:text-\[\#34495e\]:hover {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* --- Text: Slate scale --- */
+.dark .text-slate-700:not(.print-force-light *) {
+  color: hsl(var(--foreground)) !important;
+}
+.dark .text-slate-600:not(.print-force-light *) {
+  color: var(--text-secondary) !important;
+}
+.dark .text-slate-500:not(.print-force-light *) {
+  color: hsl(var(--muted-foreground)) !important;
+}
+.dark .text-slate-400:not(.print-force-light *) {
+  color: var(--text-muted) !important;
+}
+.dark .text-slate-300:not(.print-force-light *) {
+  color: var(--text-light) !important;
+}
+
+/* --- Hover text --- */
+.dark .hover\:text-slate-600:hover {
+  color: var(--text-secondary) !important;
+}
+.dark .hover\:text-slate-700:hover {
+  color: hsl(var(--foreground)) !important;
+}
+.dark .hover\:text-slate-900:hover {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* --- Financial surfaces --- */
+.dark .bg-\[\#f0f9f9\] {
+  background-color: hsl(var(--financial-surface)) !important;
+}
+.dark .bg-\[\#e8f5f5\] {
+  background-color: hsl(var(--financial-surface-alt)) !important;
+}
+
+/* --- Ring offset (focus rings) --- */
+.dark .ring-offset-white {
+  --tw-ring-offset-color: hsl(var(--background));
+}
+
 /* Dark mode transition for smooth theme switch */
 html.transitioning,
 html.transitioning *,

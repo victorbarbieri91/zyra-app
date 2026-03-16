@@ -396,9 +396,9 @@ export function ConsultaWizardModal({
                   <SelectValue placeholder="Selecione o cliente" />
                 </SelectTrigger>
                 <SelectContent>
-                  <div className="px-2 py-1.5 sticky top-0 bg-white">
+                  <div className="px-2 py-1.5 sticky top-0 bg-popover">
                     <div className="relative">
-                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                       <Input
                         value={clienteSearch}
                         onChange={(e) => setClienteSearch(e.target.value)}
@@ -408,11 +408,11 @@ export function ConsultaWizardModal({
                     </div>
                   </div>
                   {/* Botao para criar novo cliente */}
-                  <div className="px-2 py-1.5 border-b">
+                  <div className="px-2 py-1.5 border-b border-border">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-full justify-start text-xs h-8 text-[#34495e] hover:bg-slate-100"
+                      className="w-full justify-start text-xs h-8 text-popover-foreground hover:bg-accent"
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
@@ -428,7 +428,7 @@ export function ConsultaWizardModal({
                       <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
                     </div>
                   ) : clientes.length === 0 ? (
-                    <div className="text-center py-4 text-xs text-slate-500">
+                    <div className="text-center py-4 text-xs text-muted-foreground">
                       Nenhum cliente encontrado.
                       <br />
                       <button
@@ -474,11 +474,11 @@ export function ConsultaWizardModal({
                 </SelectTrigger>
                 <SelectContent>
                   {/* Botão para criar novo contrato */}
-                  <div className="px-2 py-1.5 border-b">
+                  <div className="px-2 py-1.5 border-b border-border">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-full justify-start text-xs h-8 text-[#34495e] hover:bg-slate-100"
+                      className="w-full justify-start text-xs h-8 text-popover-foreground hover:bg-accent"
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
@@ -494,7 +494,7 @@ export function ConsultaWizardModal({
                       <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
                     </div>
                   ) : contratos.length === 0 ? (
-                    <div className="text-center py-4 text-xs text-slate-500">
+                    <div className="text-center py-4 text-xs text-muted-foreground">
                       Nenhum contrato encontrado.
                       <br />
                       <button

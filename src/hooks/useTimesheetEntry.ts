@@ -13,6 +13,13 @@ export interface EditarTimesheetData {
   horas: number;
   atividade: string;
   faturavel: boolean;
+  // Campos extras (quando presente, atualiza todos)
+  data_trabalho?: string;
+  hora_inicio?: string | null;
+  hora_fim?: string | null;
+  processo_id?: string | null;
+  consulta_id?: string | null;
+  ato_tipo_id?: string | null;
 }
 
 interface UseTimesheetEntryReturn {
@@ -198,12 +205,21 @@ export function useTimesheetEntry(escritorioId: string | null): UseTimesheetEntr
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Usuário não autenticado');
 
+    const hasExtras = dados.data_trabalho !== undefined;
+
     const { error } = await supabase.rpc('editar_timesheet', {
       p_timesheet_id: timesheetId,
       p_horas: dados.horas,
       p_atividade: dados.atividade,
       p_faturavel: dados.faturavel,
       p_editado_por: user.id,
+      p_data_trabalho: hasExtras ? dados.data_trabalho : null,
+      p_hora_inicio: hasExtras ? dados.hora_inicio ?? null : null,
+      p_hora_fim: hasExtras ? dados.hora_fim ?? null : null,
+      p_processo_id: hasExtras ? dados.processo_id ?? null : null,
+      p_consulta_id: hasExtras ? dados.consulta_id ?? null : null,
+      p_ato_tipo_id: hasExtras ? dados.ato_tipo_id ?? null : null,
+      p_atualizar_campos_extras: hasExtras,
     });
 
     if (error) throw error;

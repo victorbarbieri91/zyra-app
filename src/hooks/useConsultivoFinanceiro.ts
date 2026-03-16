@@ -41,7 +41,11 @@ export interface TimesheetEntry {
   id: string
   user_id: string
   consultivo_id: string | null
+  processo_id: string | null
+  consulta_id: string | null
   data_trabalho: string
+  hora_inicio: string | null
+  hora_fim: string | null
   horas: number
   atividade: string
   faturavel: boolean

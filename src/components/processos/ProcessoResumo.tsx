@@ -128,6 +128,8 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
   const [showAudienciaWizard, setShowAudienciaWizard] = useState(false)
   const [showTimesheetModal, setShowTimesheetModal] = useState(false)
   const [showDespesaModal, setShowDespesaModal] = useState(false)
+  const [editTimesheetEntry, setEditTimesheetEntry] = useState<import('@/hooks/useProcessoFinanceiro').TimesheetEntry | null>(null)
+  const [editTimesheetModalOpen, setEditTimesheetModalOpen] = useState(false)
   const [escritorioId, setEscritorioId] = useState<string | null>(null)
   const [financeiroRefreshTrigger, setFinanceiroRefreshTrigger] = useState(0)
 
@@ -1178,6 +1180,10 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
           }}
           onLancarHoras={() => setShowTimesheetModal(true)}
           onLancarDespesa={() => setShowDespesaModal(true)}
+          onEditTimesheet={(entry) => {
+            setEditTimesheetEntry(entry)
+            setEditTimesheetModalOpen(true)
+          }}
           refreshTrigger={financeiroRefreshTrigger}
         />
 
@@ -1388,6 +1394,33 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
           }
         }}
       />
+
+      {/* Modal Editar Timesheet */}
+      {editTimesheetEntry && (
+        <TimesheetModal
+          open={editTimesheetModalOpen}
+          onOpenChange={(open) => {
+            setEditTimesheetModalOpen(open)
+            if (!open) setEditTimesheetEntry(null)
+          }}
+          editTimesheetId={editTimesheetEntry.id}
+          processoId={editTimesheetEntry.processo_id}
+          consultaId={editTimesheetEntry.consulta_id}
+          defaultModoRegistro={editTimesheetEntry.hora_inicio ? 'horario' : 'duracao'}
+          defaultDuracaoHoras={Math.floor(Number(editTimesheetEntry.horas))}
+          defaultDuracaoMinutos={Math.round((Number(editTimesheetEntry.horas) % 1) * 60)}
+          defaultAtividade={editTimesheetEntry.atividade}
+          defaultDataTrabalho={editTimesheetEntry.data_trabalho}
+          defaultHoraInicio={editTimesheetEntry.hora_inicio || undefined}
+          defaultHoraFim={editTimesheetEntry.hora_fim || undefined}
+          defaultFaturavel={editTimesheetEntry.faturavel}
+          onSuccess={() => {
+            setEditTimesheetEntry(null)
+            setEditTimesheetModalOpen(false)
+            setFinanceiroRefreshTrigger(prev => prev + 1)
+          }}
+        />
+      )}
 
       {/* Dialog: concluir sem horas */}
       <Dialog open={confirmSemHoras} onOpenChange={setConfirmSemHoras}>

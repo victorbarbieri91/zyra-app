@@ -20,7 +20,7 @@ import {
   FileText,
   ChevronDown,
 } from 'lucide-react'
-import { formatCurrency, formatHoras } from '@/lib/utils'
+import { formatCurrency, formatHoras, cn } from '@/lib/utils'
 import { formatBrazilDate } from '@/lib/timezone'
 import type { Honorario, Despesa, TimesheetEntry, ResumoFinanceiro, ContratoInfo } from '@/hooks/useConsultivoFinanceiro'
 
@@ -39,6 +39,7 @@ interface ConsultivoFinanceiroDetalhesModalProps {
   onLancarHonorario?: () => void
   onLancarHoras?: () => void
   onLancarDespesa?: () => void
+  onEditTimesheet?: (entry: TimesheetEntry) => void
   onRefresh?: () => void
 }
 
@@ -71,6 +72,7 @@ export default function ConsultivoFinanceiroDetalhesModal({
   onLancarHonorario,
   onLancarHoras,
   onLancarDespesa,
+  onEditTimesheet,
 }: ConsultivoFinanceiroDetalhesModalProps) {
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE)
 
@@ -230,7 +232,15 @@ export default function ConsultivoFinanceiroDetalhesModal({
               return (
                 <div
                   key={entry.id}
-                  className="border border-slate-200 rounded-lg p-3 hover:border-[#89bcbe]/50 transition-colors"
+                  className={cn(
+                    "border border-slate-200 rounded-lg p-3 hover:border-[#89bcbe]/50 transition-colors",
+                    onEditTimesheet && !entry.aprovado && !entry.faturado && !entry.reprovado && "cursor-pointer"
+                  )}
+                  onClick={() => {
+                    if (onEditTimesheet && !entry.aprovado && !entry.faturado && !entry.reprovado) {
+                      onEditTimesheet(entry)
+                    }
+                  }}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>

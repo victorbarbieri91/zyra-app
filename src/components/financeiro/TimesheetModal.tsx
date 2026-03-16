@@ -738,6 +738,12 @@ export default function TimesheetModal({
           horas: horasDecimal,
           atividade: atividade.trim(),
           faturavel: faturavelEfetivo,
+          data_trabalho: dataTrabalho,
+          hora_inicio: modoRegistro === 'horario' ? horaInicio : null,
+          hora_fim: modoRegistro === 'horario' ? horaFim : null,
+          processo_id: processoSelecionado?.id || null,
+          consulta_id: consultaSelecionada?.id || null,
+          ato_tipo_id: atoSelecionado || null,
         })
 
         // Invalidar queries para atualizar listas

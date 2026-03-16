@@ -3,13 +3,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Clock, CheckCircle, XCircle, User, Building2, ChevronDown, Check, Pencil, X, Save, Users, Plus, Briefcase, FileText, Trash2, DollarSign } from 'lucide-react'
+import { Clock, CheckCircle, XCircle, User, Building2, ChevronDown, Check, Pencil, X, Users, Plus, Briefcase, FileText, Trash2, DollarSign } from 'lucide-react'
 import { toast } from 'sonner'
 import { format, subDays } from 'date-fns'
 import { DateRange } from 'react-day-picker'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -52,12 +51,6 @@ interface Colaborador {
   escritorio_id: string
 }
 
-interface EditForm {
-  horas: number
-  atividade: string
-  faturavel: boolean
-}
-
 export default function TimesheetPage() {
   const { escritorioAtivo } = useEscritorioAtivo()
   const supabase = createClient()
@@ -80,10 +73,9 @@ export default function TimesheetPage() {
   const [colaboradoresSelecionados, setColaboradoresSelecionados] = useState<string[]>([])
   const [seletorColaboradorAberto, setSeletorColaboradorAberto] = useState(false)
 
-  // Estados para edição inline
-  const [editandoId, setEditandoId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState<EditForm>({ horas: 0, atividade: '', faturavel: true })
-  const [salvandoEdicao, setSalvandoEdicao] = useState(false)
+  // Estado para edição via modal
+  const [editTimesheetEntry, setEditTimesheetEntry] = useState<TimesheetRow | null>(null)
+  const [editModalOpen, setEditModalOpen] = useState(false)
 
   // Estado para aprovação/desaprovação/exclusão individual
   const [aprovandoId, setAprovandoId] = useState<string | null>(null)
@@ -456,55 +448,10 @@ export default function TimesheetPage() {
     }
   }
 
-  // Funções de edição
+  // Função para abrir edição via modal
   const iniciarEdicao = (ts: TimesheetRow) => {
-    setEditandoId(ts.id)
-    setEditForm({
-      horas: ts.horas,
-      atividade: ts.atividade,
-      faturavel: ts.faturavel,
-    })
-  }
-
-  const cancelarEdicao = () => {
-    setEditandoId(null)
-    setEditForm({ horas: 0, atividade: '', faturavel: true })
-  }
-
-  const salvarEdicao = async () => {
-    if (!editandoId) return
-
-    if (editForm.horas <= 0) {
-      toast.error('Horas deve ser maior que zero')
-      return
-    }
-
-    if (editForm.atividade.trim().length < 3) {
-      toast.error('Atividade deve ter pelo menos 3 caracteres')
-      return
-    }
-
-    setSalvandoEdicao(true)
-    try {
-      const { error } = await supabase.rpc('editar_timesheet', {
-        p_timesheet_id: editandoId,
-        p_horas: editForm.horas,
-        p_atividade: editForm.atividade.trim(),
-        p_faturavel: editForm.faturavel,
-        p_editado_por: (await supabase.auth.getUser()).data.user?.id,
-      })
-
-      if (error) throw error
-
-      toast.success('Registro atualizado com sucesso!')
-      setEditandoId(null)
-      loadTimesheets()
-    } catch (error: any) {
-      toast.error(error?.message || 'Erro ao salvar edição')
-      console.error('Erro ao editar:', error)
-    } finally {
-      setSalvandoEdicao(false)
-    }
+    setEditTimesheetEntry(ts)
+    setEditModalOpen(true)
   }
 
   const getTotalHoras = () => {
@@ -800,7 +747,7 @@ export default function TimesheetPage() {
                 <div
                   key={ts.id}
                   onClick={() => {
-                    if (statusFiltro === 'pendente' && editandoId !== ts.id) {
+                    if (statusFiltro === 'pendente') {
                       handleSelectOne(ts.id, !selectedIds.has(ts.id))
                     }
                   }}
@@ -809,22 +756,19 @@ export default function TimesheetPage() {
                     statusFiltro === 'pendente'
                       ? 'grid-cols-[1.5rem_repeat(11,minmax(0,1fr))]'
                       : 'grid-cols-12',
-                    statusFiltro === 'pendente' && editandoId !== ts.id && 'cursor-pointer',
+                    statusFiltro === 'pendente' && 'cursor-pointer',
                     selectedIds.has(ts.id) ? 'bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/15' : 'hover:bg-slate-50 dark:hover:bg-surface-2',
-                    editandoId === ts.id && 'bg-amber-50 dark:bg-amber-500/10'
                   )}
                 >
                   {/* Checkbox */}
                   {statusFiltro === 'pendente' && (
                     <div className="flex items-center">
-                      {editandoId !== ts.id && (
-                        <Checkbox
-                          checked={selectedIds.has(ts.id)}
-                          onCheckedChange={(checked) => handleSelectOne(ts.id, !!checked)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="border-slate-300 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
+                      <Checkbox
+                        checked={selectedIds.has(ts.id)}
+                        onCheckedChange={(checked) => handleSelectOne(ts.id, !!checked)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="border-slate-300 data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
                         />
-                      )}
                     </div>
                   )}
 
@@ -878,98 +822,41 @@ export default function TimesheetPage() {
                   </div>
 
                   {/* Atividade */}
-                  <div className="col-span-3" onClick={editandoId === ts.id ? (e) => e.stopPropagation() : undefined}>
-                    {editandoId === ts.id ? (
-                      <Input
-                        value={editForm.atividade}
-                        onChange={(e) => setEditForm({ ...editForm, atividade: e.target.value })}
-                        className="h-7 text-xs"
-                        placeholder="Descreva a atividade..."
-                      />
-                    ) : (
-                      <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">
-                        {ts.atividade}
-                        {ts.editado && (
-                          <span className="text-[10px] text-amber-600 dark:text-amber-400 ml-1">(editado)</span>
-                        )}
-                      </p>
-                    )}
+                  <div className="col-span-3">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">
+                      {ts.atividade}
+                      {ts.editado && (
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 ml-1">(editado)</span>
+                      )}
+                    </p>
                   </div>
 
                   {/* Horas */}
-                  <div className="col-span-1 text-right" onClick={editandoId === ts.id ? (e) => e.stopPropagation() : undefined}>
-                    {editandoId === ts.id ? (
-                      <Input
-                        type="number"
-                        step="0.25"
-                        min="0.25"
-                        value={editForm.horas}
-                        onChange={(e) => setEditForm({ ...editForm, horas: parseFloat(e.target.value) || 0 })}
-                        className="h-7 text-xs w-16 ml-auto"
-                      />
-                    ) : (
-                      <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200">
-                        {formatHoras(Number(ts.horas))}
-                      </span>
-                    )}
+                  <div className="col-span-1 text-right">
+                    <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200">
+                      {formatHoras(Number(ts.horas))}
+                    </span>
                   </div>
 
                   {/* Tipo */}
-                  <div className="col-span-1 text-center" onClick={editandoId === ts.id ? (e) => e.stopPropagation() : undefined}>
-                    {editandoId === ts.id ? (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setEditForm({ ...editForm, faturavel: !editForm.faturavel }) }}
-                        className={cn(
-                          'px-2 py-0.5 rounded text-[10px] font-medium',
-                          editForm.faturavel
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
-                            : 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400'
-                        )}
-                      >
-                        {editForm.faturavel ? 'Cobrável' : 'N/Cob.'}
-                      </button>
-                    ) : (
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          'text-[10px]',
-                          ts.faturavel
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
-                            : 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400'
-                        )}
-                      >
-                        {ts.faturavel ? 'Cobrável' : 'N/Cob.'}
-                      </Badge>
-                    )}
+                  <div className="col-span-1 text-center">
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        'text-[10px]',
+                        ts.faturavel
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
+                          : 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400'
+                      )}
+                    >
+                      {ts.faturavel ? 'Cobrável' : 'N/Cob.'}
+                    </Badge>
                   </div>
 
                   {/* Ações */}
                   <div className="col-span-1 flex justify-end gap-0.5" onClick={(e) => e.stopPropagation()}>
                     {statusFiltro === 'pendente' ? (
                       <>
-                        {editandoId === ts.id ? (
-                          <>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7"
-                              onClick={salvarEdicao}
-                              disabled={salvandoEdicao}
-                            >
-                              <Save className="h-3.5 w-3.5 text-emerald-600" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7"
-                              onClick={cancelarEdicao}
-                              disabled={salvandoEdicao}
-                            >
-                              <X className="h-3.5 w-3.5 text-slate-400" />
-                            </Button>
-                          </>
-                        ) : (
-                          <>
                             {/* Botão de aprovação rápida */}
                             <Button
                               size="icon"
@@ -1028,8 +915,6 @@ export default function TimesheetPage() {
                                   : "text-red-500 hover:text-red-600"
                               )} />
                             </Button>
-                          </>
-                        )}
                       </>
                     ) : (
                       /* Aba Aprovados - botões de ação */
@@ -1177,6 +1062,33 @@ export default function TimesheetPage() {
           loadTimesheets()
         }}
       />
+
+      {/* Modal Editar Timesheet */}
+      {editTimesheetEntry && (
+        <TimesheetModal
+          open={editModalOpen}
+          onOpenChange={(open) => {
+            setEditModalOpen(open)
+            if (!open) setEditTimesheetEntry(null)
+          }}
+          editTimesheetId={editTimesheetEntry.id}
+          processoId={editTimesheetEntry.processo_id}
+          consultaId={editTimesheetEntry.consulta_id}
+          defaultModoRegistro={editTimesheetEntry.hora_inicio ? 'horario' : 'duracao'}
+          defaultDuracaoHoras={Math.floor(Number(editTimesheetEntry.horas))}
+          defaultDuracaoMinutos={Math.round((Number(editTimesheetEntry.horas) % 1) * 60)}
+          defaultAtividade={editTimesheetEntry.atividade}
+          defaultDataTrabalho={editTimesheetEntry.data_trabalho}
+          defaultHoraInicio={editTimesheetEntry.hora_inicio || undefined}
+          defaultHoraFim={editTimesheetEntry.hora_fim || undefined}
+          defaultFaturavel={editTimesheetEntry.faturavel}
+          onSuccess={() => {
+            setEditTimesheetEntry(null)
+            setEditModalOpen(false)
+            loadTimesheets()
+          }}
+        />
+      )}
     </div>
   )
 }

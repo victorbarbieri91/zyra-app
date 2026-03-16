@@ -31,6 +31,7 @@ interface ProcessoFinanceiroCardProps {
   onLancarHoras?: () => void
   onLancarDespesa?: () => void
   onLancarHonorario?: () => void
+  onEditTimesheet?: (entry: import('@/hooks/useProcessoFinanceiro').TimesheetEntry) => void
   refreshTrigger?: number // Incrementar para forçar refresh dos dados
 }
 
@@ -49,6 +50,7 @@ export default function ProcessoFinanceiroCard({
   onLancarHoras,
   onLancarDespesa,
   onLancarHonorario,
+  onEditTimesheet,
   refreshTrigger,
 }: ProcessoFinanceiroCardProps) {
   const {
@@ -276,6 +278,7 @@ export default function ProcessoFinanceiroCard({
         onLancarHonorario={onLancarHonorario}
         onLancarHoras={onLancarHoras}
         onLancarDespesa={onLancarDespesa}
+        onEditTimesheet={onEditTimesheet}
         onRefresh={loadDados}
       />
     </>

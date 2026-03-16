@@ -33,6 +33,7 @@ interface ConsultivoFinanceiroCardProps {
   onLancarHoras?: () => void
   onLancarDespesa?: () => void
   onLancarHonorario?: () => void
+  onEditTimesheet?: (entry: import('@/hooks/useConsultivoFinanceiro').TimesheetEntry) => void
   onContratoVinculado?: () => void
   refreshTrigger?: number
 }
@@ -55,6 +56,7 @@ export default function ConsultivoFinanceiroCard({
   onLancarHoras,
   onLancarDespesa,
   onLancarHonorario,
+  onEditTimesheet,
   onContratoVinculado,
   refreshTrigger,
 }: ConsultivoFinanceiroCardProps) {
@@ -294,6 +296,7 @@ export default function ConsultivoFinanceiroCard({
         onLancarHonorario={onLancarHonorario}
         onLancarHoras={onLancarHoras}
         onLancarDespesa={onLancarDespesa}
+        onEditTimesheet={onEditTimesheet}
         onRefresh={loadDados}
       />
     </>

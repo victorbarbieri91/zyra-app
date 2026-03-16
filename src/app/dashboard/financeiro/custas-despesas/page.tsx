@@ -52,6 +52,7 @@ import { formatBrazilDate } from '@/lib/timezone'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import DespesaModal from '@/components/financeiro/DespesaModal'
+import DespesaDetalhesModal from '@/components/financeiro/DespesaDetalhesModal'
 
 const CATEGORIAS_LABELS: Record<string, string> = {
   custas: 'Custas Processuais',
@@ -126,6 +127,7 @@ export default function CustasDespesasPage() {
   const [modalRejeitar, setModalRejeitar] = useState<CustaDespesa | null>(null)
   const [modalPagar, setModalPagar] = useState<CustaDespesa | null>(null)
   const [modalEditar, setModalEditar] = useState<CustaDespesa | null>(null)
+  const [modalDetalhes, setModalDetalhes] = useState<CustaDespesa | null>(null)
 
   // Forms
   const [agendarForm, setAgendarForm] = useState({ data: '', conta: '', obs: '' })
@@ -278,9 +280,16 @@ export default function CustasDespesasPage() {
   }
 
   const getCasoLabel = (item: CustaDespesa) => {
-    if (item.processo_autor && item.processo_reu) {
+    if (item.processo_id) {
       const pasta = item.processo_numero_pasta ? `${item.processo_numero_pasta} - ` : ''
-      return `${pasta}${item.processo_autor} x ${item.processo_reu}`
+      if (item.processo_autor && item.processo_reu) {
+        return `${pasta}${item.processo_autor} x ${item.processo_reu}`
+      }
+      if (item.processo_autor) return `${pasta}${item.processo_autor}`
+      if (item.processo_reu) return `${pasta}${item.processo_reu}`
+      if (item.processo_numero_cnj) return item.processo_numero_cnj
+      if (pasta) return pasta.replace(' - ', '')
+      return 'Processo vinculado'
     }
     if (item.consulta_titulo) return item.consulta_titulo
     return '—'
@@ -400,8 +409,8 @@ export default function CustasDespesasPage() {
                     const statusConf = STATUS_CONFIG[item.fluxo_status] || STATUS_CONFIG.pendente
 
                     return (
-                      <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                        <td className="p-3">
+                      <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setModalDetalhes(item)}>
+                        <td className="p-3" onClick={e => e.stopPropagation()}>
                           <Checkbox
                             checked={selecionados.has(item.id)}
                             onCheckedChange={() => toggleSelecionado(item.id)}
@@ -450,7 +459,7 @@ export default function CustasDespesasPage() {
                             {statusConf.label}
                           </Badge>
                         </td>
-                        <td className="p-3 text-center">
+                        <td className="p-3 text-center" onClick={e => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
@@ -689,6 +698,19 @@ export default function CustasDespesasPage() {
           onSuccess={recarregar}
         />
       )}
+
+      {/* Modal Detalhes da Despesa */}
+      <DespesaDetalhesModal
+        open={!!modalDetalhes}
+        onOpenChange={(open) => !open && setModalDetalhes(null)}
+        despesa={modalDetalhes}
+        onEditar={(item) => handleAbrirEditar(item)}
+        onCancelar={(item) => handleCancelar(item)}
+        onAgendar={(item) => handleAbrirAgendar(item)}
+        onLiberar={(item) => handleLiberar(item)}
+        onRejeitar={(item) => handleAbrirRejeitar(item)}
+        onPagar={(item) => handleAbrirPagar(item)}
+      />
     </div>
   )
 }

@@ -11,6 +11,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   Banknote,
   Clock,
   Receipt,
@@ -19,6 +26,9 @@ import {
   User,
   FileText,
   ChevronDown,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
 } from 'lucide-react'
 import { formatCurrency, formatHoras, cn } from '@/lib/utils'
 import { formatBrazilDate } from '@/lib/timezone'
@@ -40,6 +50,8 @@ interface ConsultivoFinanceiroDetalhesModalProps {
   onLancarHoras?: () => void
   onLancarDespesa?: () => void
   onEditTimesheet?: (entry: TimesheetEntry) => void
+  onEditDespesa?: (despesa: Despesa) => void
+  onDeleteDespesa?: (id: string) => void
   onRefresh?: () => void
 }
 
@@ -73,6 +85,8 @@ export default function ConsultivoFinanceiroDetalhesModal({
   onLancarHoras,
   onLancarDespesa,
   onEditTimesheet,
+  onEditDespesa,
+  onDeleteDespesa,
 }: ConsultivoFinanceiroDetalhesModalProps) {
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE)
 
@@ -318,21 +332,56 @@ export default function ConsultivoFinanceiroDetalhesModal({
               return (
                 <div
                   key={desp.id}
-                  className="border border-slate-200 rounded-lg p-3 hover:border-[#89bcbe]/50 transition-colors"
+                  className="border border-slate-200 rounded-lg p-3 hover:border-[#89bcbe]/50 transition-colors group"
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-[#34495e] uppercase">{desp.categoria}</p>
                       <p className="text-sm text-slate-700 mt-0.5">{desp.descricao}</p>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge variant="outline" className={`text-[10px] h-5 ${statusConfig.className}`}>
-                        {statusConfig.label}
-                      </Badge>
-                      {desp.reembolsavel && (
-                        <Badge variant="outline" className="text-[9px] h-4 bg-blue-50 text-blue-700 border-blue-200">
-                          Reembolsavel
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge variant="outline" className={`text-[10px] h-5 ${statusConfig.className}`}>
+                          {statusConfig.label}
                         </Badge>
+                        {desp.reembolsavel && (
+                          <Badge variant="outline" className="text-[9px] h-4 bg-blue-50 text-blue-700 border-blue-200">
+                            Reembolsável
+                          </Badge>
+                        )}
+                      </div>
+                      {(onEditDespesa || onDeleteDespesa) && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <MoreHorizontal className="w-3.5 h-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            {onEditDespesa && (
+                              <DropdownMenuItem onClick={() => onEditDespesa(desp)}>
+                                <Pencil className="w-3.5 h-3.5 mr-2" />
+                                Editar
+                              </DropdownMenuItem>
+                            )}
+                            {onDeleteDespesa && (
+                              <>
+                                {onEditDespesa && <DropdownMenuSeparator />}
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    if (confirm('Tem certeza que deseja excluir esta despesa?')) {
+                                      onDeleteDespesa(desp.id)
+                                    }
+                                  }}
+                                  className="text-red-600"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 mr-2" />
+                                  Excluir
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                     </div>
                   </div>

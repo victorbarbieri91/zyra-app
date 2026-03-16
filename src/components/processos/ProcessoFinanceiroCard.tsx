@@ -22,9 +22,12 @@ import {
   Receipt,
 } from 'lucide-react'
 import { formatCurrency, formatHoras } from '@/lib/utils'
-import { useProcessoFinanceiro } from '@/hooks/useProcessoFinanceiro'
+import { useProcessoFinanceiro, type Despesa } from '@/hooks/useProcessoFinanceiro'
+import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 import VincularContratoModal from './VincularContratoModal'
 import FinanceiroDetalhesModal from './FinanceiroDetalhesModal'
+import DespesaModal, { type DespesaEditData } from '@/components/financeiro/DespesaModal'
 
 interface ProcessoFinanceiroCardProps {
   processoId: string
@@ -65,10 +68,43 @@ export default function ProcessoFinanceiroCard({
     loadDados,
   } = useProcessoFinanceiro(processoId)
 
+  const supabase = createClient()
+
   // Estados para modais
   const [vincularModalOpen, setVincularModalOpen] = useState(false)
   const [detalhesModalOpen, setDetalhesModalOpen] = useState(false)
   const [detalhesModalTipo, setDetalhesModalTipo] = useState<'honorarios' | 'timesheet' | 'despesas'>('honorarios')
+  const [editDespesa, setEditDespesa] = useState<DespesaEditData | null>(null)
+
+  const handleEditDespesa = (despesa: Despesa) => {
+    setDetalhesModalOpen(false)
+    setEditDespesa({
+      id: despesa.id,
+      categoria: despesa.categoria,
+      descricao: despesa.descricao,
+      valor: despesa.valor,
+      data_vencimento: despesa.data_vencimento,
+      reembolsavel: despesa.reembolsavel,
+      processo_id: despesa.processo_id,
+      fornecedor: despesa.fornecedor,
+      status: despesa.status,
+      data_pagamento: despesa.data_pagamento,
+      forma_pagamento: despesa.forma_pagamento,
+    })
+  }
+
+  const handleDeleteDespesa = async (id: string) => {
+    const { error } = await supabase
+      .from('financeiro_despesas')
+      .delete()
+      .eq('id', id)
+    if (error) {
+      toast.error('Erro ao excluir despesa')
+    } else {
+      toast.success('Despesa excluída')
+      loadDados()
+    }
+  }
 
   useEffect(() => {
     if (processoId) {
@@ -279,8 +315,24 @@ export default function ProcessoFinanceiroCard({
         onLancarHoras={onLancarHoras}
         onLancarDespesa={onLancarDespesa}
         onEditTimesheet={onEditTimesheet}
+        onEditDespesa={handleEditDespesa}
+        onDeleteDespesa={handleDeleteDespesa}
         onRefresh={loadDados}
       />
+
+      {/* Modal Editar Despesa */}
+      {editDespesa && (
+        <DespesaModal
+          open={!!editDespesa}
+          onOpenChange={(open) => !open && setEditDespesa(null)}
+          editData={editDespesa}
+          processoId={processoId}
+          onSuccess={() => {
+            setEditDespesa(null)
+            loadDados()
+          }}
+        />
+      )}
     </>
   )
 }

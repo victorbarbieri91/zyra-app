@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from './useEscritorioAtivo'
@@ -144,6 +144,44 @@ export function useDashboardAgenda() {
     enabled: !!escritorioAtivo,
     staleTime: 2 * 60 * 1000, // 2 minutes - agenda changes more frequently
   })
+
+  // Supabase Realtime: invalidar cache quando agenda mudar no banco
+  useEffect(() => {
+    if (!escritorioAtivo) return
+
+    const supabase = supabaseRef.current
+    const queryKey = ['dashboard', 'agenda', escritorioAtivo]
+
+    const channel = supabase
+      .channel(`dashboard-agenda-${escritorioAtivo}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'agenda_tarefas',
+        filter: `escritorio_id=eq.${escritorioAtivo}`,
+      }, () => {
+        queryClient.invalidateQueries({ queryKey })
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'agenda_eventos',
+        filter: `escritorio_id=eq.${escritorioAtivo}`,
+      }, () => {
+        queryClient.invalidateQueries({ queryKey })
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'agenda_audiencias',
+        filter: `escritorio_id=eq.${escritorioAtivo}`,
+      }, () => {
+        queryClient.invalidateQueries({ queryKey })
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [escritorioAtivo, queryClient])
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'agenda', escritorioAtivo] })

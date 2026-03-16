@@ -453,6 +453,8 @@ export default function DashboardPage() {
           .from('agenda_tarefas')
           .update({ status: 'concluida', data_conclusao: new Date().toISOString() })
           .eq('id', dashTarefaParaConcluir.id)
+        setTarefaDetailOpen(false)
+        setTarefaDetailData(null)
         setAgendaPage(0)
         await refreshAgenda()
         toast.success('Tarefa concluída!')
@@ -1547,6 +1549,12 @@ export default function DashboardPage() {
           }}
           tarefa={tarefaDetailData}
           onUpdate={refreshAgenda}
+          onClose={() => {
+            setTarefaDetailOpen(false)
+            setTarefaDetailData(null)
+            setAgendaPage(0)
+            refreshAgenda()
+          }}
           onEdit={handleDashEditTarefa}
           onConcluir={() => handleDashCompleteTask(tarefaDetailData.id)}
           onReabrir={() => handleDashReopenTask(tarefaDetailData.id)}

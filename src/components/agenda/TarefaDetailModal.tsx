@@ -23,7 +23,7 @@ import {
   PauseCircle,
 } from 'lucide-react'
 import { cn, formatHoras } from '@/lib/utils'
-import { formatBrazilDate, formatDateTimeForDB, parseDBDate } from '@/lib/timezone'
+import { formatBrazilDate, formatDateTimeForDB, parseDBDate, toBrazilTime } from '@/lib/timezone'
 import { Tarefa } from '@/hooks/useTarefas'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -158,6 +158,7 @@ interface TarefaDetailModalProps {
   onProcessoClick?: (processoId: string) => void
   onConsultivoClick?: (consultivoId: string) => void
   onUpdate?: () => void | Promise<void>
+  onClose?: () => void // Chamado quando o modal deve fechar por ação (reagendamento para outro dia, etc)
 }
 
 interface ProcessoInfo {
@@ -199,6 +200,7 @@ export default function TarefaDetailModal({
   onProcessoClick,
   onConsultivoClick,
   onUpdate,
+  onClose,
 }: TarefaDetailModalProps) {
   // Timer
   const { timersAtivos, iniciarTimer, pausarTimer, retomarTimer } = useTimer()
@@ -467,6 +469,19 @@ export default function TarefaDetailModal({
         .eq('id', tarefa.id)
 
       if (error) throw error
+
+      // Verificar se a tarefa saiu do dia atual (reagendamento para outro dia)
+      if (field === 'data_inicio') {
+        const newDateBrazil = toBrazilTime(updateData[field])
+        const todayBrazil = toBrazilTime(new Date().toISOString())
+        if (newDateBrazil.toDateString() !== todayBrazil.toDateString()) {
+          // Tarefa reagendada para outro dia → fechar modal e atualizar agenda
+          toast.success('Tarefa reagendada com sucesso')
+          if (onUpdate) await onUpdate()
+          if (onClose) onClose()
+          return
+        }
+      }
 
       toast.success(field === 'prazo_data_limite' ? 'Prazo fatal atualizado' : 'Data atualizada com sucesso')
 

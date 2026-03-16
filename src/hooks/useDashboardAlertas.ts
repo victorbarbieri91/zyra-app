@@ -85,23 +85,27 @@ export function useDashboardAlertas() {
         parcelasVencidasResult,
         horasProntasResult,
       ] = await Promise.all([
-        // 1. Prazos vencendo HOJE
-        supabase
+        // 1. Prazos vencendo HOJE (filtrado por responsável)
+        userId ? supabase
           .from('agenda_tarefas')
           .select('id', { count: 'exact', head: true })
           .eq('escritorio_id', escritorioAtivo)
           .eq('tipo', 'prazo_processual')
           .eq('prazo_data_limite', hojeStr)
-          .neq('status', 'concluida'),
+          .neq('status', 'concluida')
+          .contains('responsaveis_ids', [userId])
+        : Promise.resolve({ count: 0 }),
 
-        // 2. Prazos VENCIDOS (anteriores a hoje)
-        supabase
+        // 2. Prazos VENCIDOS (anteriores a hoje, filtrado por responsável)
+        userId ? supabase
           .from('agenda_tarefas')
           .select('id', { count: 'exact', head: true })
           .eq('escritorio_id', escritorioAtivo)
           .eq('tipo', 'prazo_processual')
           .lt('prazo_data_limite', hojeStr)
-          .neq('status', 'concluida'),
+          .neq('status', 'concluida')
+          .contains('responsaveis_ids', [userId])
+        : Promise.resolve({ count: 0 }),
 
         // 3. Processos ativos SEM contrato de honorários
         supabase

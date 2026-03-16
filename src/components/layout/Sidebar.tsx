@@ -47,12 +47,13 @@ const menuItems: MenuItem[] = [
     href: '/dashboard',
     group: 'main',
   },
-  {
-    title: 'Centro de Comando',
-    icon: MessageSquareCode,
-    href: '/dashboard/centro-comando',
-    group: 'main',
-  },
+  // Centro de Comando temporariamente desativado do menu
+  // {
+  //   title: 'Centro de Comando',
+  //   icon: MessageSquareCode,
+  //   href: '/dashboard/centro-comando',
+  //   group: 'main',
+  // },
   {
     title: 'Agenda',
     icon: Calendar,

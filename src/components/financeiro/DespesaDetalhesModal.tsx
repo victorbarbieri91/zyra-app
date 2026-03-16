@@ -162,7 +162,7 @@ export default function DespesaDetalhesModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+      <DialogContent className="sm:max-w-2xl lg:max-w-3xl">
         <DialogHeader className="pb-4 border-b border-slate-100">
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2 text-[#34495e]">
@@ -176,163 +176,141 @@ export default function DespesaDetalhesModal({
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto py-4 space-y-4">
-          {/* Informações principais */}
-          <div className="space-y-1">
-            <InfoRow
-              icon={Tag}
-              label="Categoria"
-              value={CATEGORIAS_LABELS[despesa.categoria] || despesa.categoria}
-            />
-            <InfoRow
-              icon={FileText}
-              label="Descrição"
-              value={despesa.descricao}
-            />
-            <InfoRow
-              icon={Banknote}
-              label="Valor"
-              value={<span className="text-base font-bold text-[#34495e]">{formatCurrency(despesa.valor)}</span>}
-            />
-            {despesa.fornecedor && (
+        <div className="py-4">
+          {/* Layout em 2 colunas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+            {/* Coluna esquerda */}
+            <div className="space-y-1">
               <InfoRow
-                icon={User}
-                label="Fornecedor / Beneficiário"
-                value={despesa.fornecedor}
+                icon={Tag}
+                label="Categoria"
+                value={CATEGORIAS_LABELS[despesa.categoria] || despesa.categoria}
               />
-            )}
-          </div>
-
-          {/* Separador */}
-          <div className="border-t border-slate-100" />
-
-          {/* Datas */}
-          <div className="space-y-1">
-            <InfoRow
-              icon={Calendar}
-              label="Data de Criação"
-              value={formatBrazilDate(despesa.created_at)}
-            />
-            <InfoRow
-              icon={Calendar}
-              label="Data de Vencimento"
-              value={formatBrazilDate(despesa.data_vencimento)}
-            />
-            {despesa.data_pagamento_programada && (
-              <InfoRow
-                icon={Calendar}
-                label="Pagamento Programado"
-                value={formatBrazilDate(despesa.data_pagamento_programada)}
-              />
-            )}
-            {despesa.data_pagamento && (
-              <InfoRow
-                icon={CheckCircle2}
-                label="Data de Pagamento"
-                value={formatBrazilDate(despesa.data_pagamento)}
-              />
-            )}
-          </div>
-
-          {/* Vínculo */}
-          {(casoLabel || despesa.cliente_nome) && (
-            <>
-              <div className="border-t border-slate-100" />
-              <div className="space-y-1">
-                {casoLabel && (
-                  <InfoRow
-                    icon={FolderOpen}
-                    label={despesa.processo_id ? 'Processo' : 'Caso Consultivo'}
-                    value={casoLabel}
-                  />
-                )}
-                {despesa.cliente_nome && (
-                  <InfoRow
-                    icon={User}
-                    label="Cliente"
-                    value={despesa.cliente_nome}
-                  />
-                )}
-              </div>
-            </>
-          )}
-
-          {/* Reembolso */}
-          <div className="border-t border-slate-100" />
-          <div className="space-y-1">
-            <InfoRow
-              icon={CreditCard}
-              label="Reembolsável"
-              value={
-                despesa.reembolsavel ? (
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700 bg-emerald-50">
-                      Sim
-                    </Badge>
-                    {despesa.reembolso_status && (
-                      <span className="text-xs text-slate-500">
-                        ({REEMBOLSO_STATUS_LABELS[despesa.reembolso_status] || despesa.reembolso_status})
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-slate-400">Não</span>
-                )
-              }
-            />
-          </div>
-
-          {/* Comprovante */}
-          <div className="border-t border-slate-100" />
-          <div className="space-y-1">
-            {despesa.comprovante_url ? (
-              <div className="flex items-start gap-3 py-2">
-                <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <FileText className="w-3.5 h-3.5 text-slate-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] text-slate-400 uppercase tracking-wide">Comprovante</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-1.5 text-xs h-8"
-                    onClick={() => window.open(despesa.comprovante_url!, '_blank')}
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                    Ver Comprovante
-                  </Button>
-                </div>
-              </div>
-            ) : (
               <InfoRow
                 icon={FileText}
-                label="Comprovante"
-                value={<span className="text-slate-400 italic">Nenhum comprovante anexado</span>}
+                label="Descrição"
+                value={despesa.descricao}
               />
-            )}
+              <InfoRow
+                icon={Banknote}
+                label="Valor"
+                value={<span className="text-base font-bold text-[#34495e]">{formatCurrency(despesa.valor)}</span>}
+              />
+              {despesa.fornecedor && (
+                <InfoRow
+                  icon={User}
+                  label="Fornecedor / Beneficiário"
+                  value={despesa.fornecedor}
+                />
+              )}
+              <InfoRow
+                icon={CreditCard}
+                label="Reembolsável"
+                value={
+                  despesa.reembolsavel ? (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700 bg-emerald-50">
+                        Sim
+                      </Badge>
+                      {despesa.reembolso_status && (
+                        <span className="text-xs text-slate-500">
+                          ({REEMBOLSO_STATUS_LABELS[despesa.reembolso_status] || despesa.reembolso_status})
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-slate-400">Não</span>
+                  )
+                }
+              />
+            </div>
+
+            {/* Coluna direita */}
+            <div className="space-y-1">
+              <InfoRow
+                icon={Calendar}
+                label="Data de Criação"
+                value={formatBrazilDate(despesa.created_at)}
+              />
+              <InfoRow
+                icon={Calendar}
+                label="Data de Vencimento"
+                value={formatBrazilDate(despesa.data_vencimento)}
+              />
+              {despesa.data_pagamento_programada && (
+                <InfoRow
+                  icon={Calendar}
+                  label="Pagamento Programado"
+                  value={formatBrazilDate(despesa.data_pagamento_programada)}
+                />
+              )}
+              {despesa.data_pagamento && (
+                <InfoRow
+                  icon={CheckCircle2}
+                  label="Data de Pagamento"
+                  value={formatBrazilDate(despesa.data_pagamento)}
+                />
+              )}
+              {casoLabel && (
+                <InfoRow
+                  icon={FolderOpen}
+                  label={despesa.processo_id ? 'Processo' : 'Caso Consultivo'}
+                  value={casoLabel}
+                />
+              )}
+              {despesa.cliente_nome && (
+                <InfoRow
+                  icon={User}
+                  label="Cliente"
+                  value={despesa.cliente_nome}
+                />
+              )}
+              {despesa.comprovante_url ? (
+                <div className="flex items-start gap-3 py-2">
+                  <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <FileText className="w-3.5 h-3.5 text-slate-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] text-slate-400 uppercase tracking-wide">Comprovante</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-1.5 text-xs h-8"
+                      onClick={() => window.open(despesa.comprovante_url!, '_blank')}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                      Ver Comprovante
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <InfoRow
+                  icon={FileText}
+                  label="Comprovante"
+                  value={<span className="text-slate-400 italic">Nenhum anexado</span>}
+                />
+              )}
+            </div>
           </div>
 
-          {/* Observações */}
+          {/* Seções full-width (observações, rejeição) */}
           {despesa.observacoes_financeiro && (
-            <>
-              <div className="border-t border-slate-100" />
+            <div className="mt-3 pt-3 border-t border-slate-100">
               <InfoRow
                 icon={MessageSquare}
                 label="Observações do Financeiro"
                 value={despesa.observacoes_financeiro}
               />
-            </>
+            </div>
           )}
 
-          {/* Motivo da rejeição */}
           {despesa.motivo_rejeicao && (
-            <>
-              <div className="border-t border-slate-100" />
+            <div className="mt-3 pt-3 border-t border-slate-100">
               <div className="p-3 bg-red-50 rounded-lg border border-red-200">
                 <p className="text-[11px] text-red-500 uppercase tracking-wide mb-1">Motivo da Rejeição</p>
                 <p className="text-sm text-red-700">{despesa.motivo_rejeicao}</p>
               </div>
-            </>
+            </div>
           )}
         </div>
 
@@ -379,7 +357,7 @@ export default function DespesaDetalhesModal({
                 }}
               >
                 <Calendar className="w-3.5 h-3.5 mr-1.5" />
-                Agendar
+                Agendar Pagamento
               </Button>
             )}
 

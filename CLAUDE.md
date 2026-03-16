@@ -733,6 +733,16 @@ From `src/lib/design-system.ts`:
 - Card shadow: `shadow-sm` (rest) → `shadow-lg` (hover)
 - Highlight shadow: `shadow-xl`
 
+### Modais e Uso de Espaço
+
+**REGRA**: Modais devem usar o espaço da tela de forma inteligente, sempre priorizando evitar scroll vertical desnecessário. Use layouts mais largos (2 colunas, grids) para distribuir o conteúdo horizontalmente, mantendo responsividade para telas menores.
+
+- **Modais de detalhes/visualização**: usar `sm:max-w-2xl lg:max-w-3xl` e layout em 2 colunas (`grid grid-cols-1 md:grid-cols-2`) para aproveitar o espaço e evitar scroll
+- **Modais de formulário simples**: `sm:max-w-md` ou `sm:max-w-lg` é suficiente
+- **Modais de formulário complexo**: usar `sm:max-w-2xl` com seções bem organizadas
+- **Sempre responsivo**: usar `grid-cols-1` como fallback para mobile e breakpoints (`md:`, `lg:`) para telas maiores
+- **Evitar scroll vertical**: distribuir informações em colunas lado a lado sempre que possível
+
 ### Grid Layout Patterns
 
 ```tsx

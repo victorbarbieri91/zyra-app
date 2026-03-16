@@ -287,7 +287,7 @@ export default function DashboardPage() {
         setAgendaAudienciaData(data)
         setAgendaAudienciaOpen(true)
       }
-    } else if (item.tipo === 'tarefa' || item.tipo === 'prazo') {
+    } else if (item.tipo === 'tarefa') {
       const { data } = await supabase
         .from('agenda_tarefas')
         .select('*, profiles:responsavel_id(nome_completo)')
@@ -956,7 +956,7 @@ export default function DashboardPage() {
                   )}
                   {prazosHoje > 0 && (
                     <span className="px-2 py-0.5 rounded-full bg-amber-50 text-[10px] font-semibold text-amber-600">
-                      {prazosHoje} {prazosHoje === 1 ? 'prazo' : 'prazos'}
+                      {prazosHoje} {prazosHoje === 1 ? 'prazo urgente' : 'prazos urgentes'}
                     </span>
                   )}
                   <Link href="/dashboard/agenda" className="text-[11px] font-medium text-[#89bcbe] hover:text-[#6ba9ab] transition-colors">
@@ -987,13 +987,11 @@ export default function DashboardPage() {
                             .map((event, index) => {
                               const dotColor: Record<string, string> = {
                                 audiencia: 'bg-red-500',
-                                prazo: 'bg-amber-500',
                                 tarefa: 'bg-[#89bcbe]',
                                 evento: 'bg-[#1E3A8A]',
                               }
                               const badgeConfig: Record<string, { className: string; label: string }> = {
                                 audiencia: { className: 'text-red-600', label: 'Audiência' },
-                                prazo: { className: 'text-amber-600', label: 'Prazo' },
                                 tarefa: { className: 'text-[#46627f] dark:text-slate-400', label: 'Tarefa' },
                                 evento: { className: 'text-[#1E3A8A]', label: 'Evento' },
                               }
@@ -1020,8 +1018,18 @@ export default function DashboardPage() {
                                     )}
                                   </div>
 
-                                  {/* Time + Type */}
-                                  <div className="flex items-center gap-2.5 flex-shrink-0">
+                                  {/* Priority + Time + Type */}
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    {event.prioridade && (event.tipo === 'tarefa') && (
+                                      <span className={cn(
+                                        "text-[9px] font-semibold px-1.5 py-0.5 rounded",
+                                        event.prioridade === 'alta' && 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400',
+                                        event.prioridade === 'media' && 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400',
+                                        event.prioridade === 'baixa' && 'bg-slate-100 text-slate-500 dark:bg-surface-2 dark:text-slate-400',
+                                      )}>
+                                        {event.prioridade === 'alta' ? 'Alta' : event.prioridade === 'media' ? 'Média' : 'Baixa'}
+                                      </span>
+                                    )}
                                     {(event.tipo === 'audiencia' || event.tipo === 'evento') && temHorario && (
                                       <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
                                         {event.time}

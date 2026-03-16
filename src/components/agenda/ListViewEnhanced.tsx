@@ -424,7 +424,6 @@ export default function ListViewEnhanced({
                   <SelectItem value="compromisso">Compromissos</SelectItem>
                   <SelectItem value="audiencia">Audiências</SelectItem>
                   <SelectItem value="tarefa">Tarefas</SelectItem>
-                  <SelectItem value="prazo">Prazos</SelectItem>
                 </SelectContent>
               </Select>
 

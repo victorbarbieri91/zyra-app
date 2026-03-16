@@ -77,7 +77,7 @@ async function fetchDashboardAgenda(
       color = colorMap.audiencia
     } else if (item.tipo_entidade === 'tarefa') {
       if (item.subtipo?.includes('prazo')) {
-        tipo = 'prazo'
+        tipo = 'tarefa'
         color = colorMap[item.subtipo] || colorMap.prazo_processual
       } else {
         tipo = 'tarefa'
@@ -118,6 +118,16 @@ async function fetchDashboardAgenda(
       data_inicio: item.data_inicio || undefined,
       dia_inteiro: item.dia_inteiro || false,
     }
+  })
+
+  // Ordenar por prioridade: alta > media > baixa > sem prioridade, depois por horário
+  const prioridadeOrdem: Record<string, number> = { alta: 0, media: 1, baixa: 2 }
+  agendaItems.sort((a, b) => {
+    const prioA = prioridadeOrdem[a.prioridade || ''] ?? 3
+    const prioB = prioridadeOrdem[b.prioridade || ''] ?? 3
+    if (prioA !== prioB) return prioA - prioB
+    // Mesmo nível de prioridade: ordenar por horário
+    return (a.data_inicio || '').localeCompare(b.data_inicio || '')
   })
 
   return agendaItems

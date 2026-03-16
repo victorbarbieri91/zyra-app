@@ -48,7 +48,7 @@ const tipoConfig = {
     color: 'bg-[#1E3A8A]/10 text-[#1E3A8A] border-[#1E3A8A]/20',
   },
   prazo: {
-    label: 'Prazo',
+    label: 'Tarefa',
     color: 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200',
   },
   tarefa: {

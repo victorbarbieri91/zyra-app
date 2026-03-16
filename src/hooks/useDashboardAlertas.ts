@@ -90,7 +90,7 @@ export function useDashboardAlertas() {
           .from('agenda_tarefas')
           .select('id', { count: 'exact', head: true })
           .eq('escritorio_id', escritorioAtivo)
-          .eq('tipo', 'prazo')
+          .eq('tipo', 'prazo_processual')
           .eq('prazo_data_limite', hojeStr)
           .neq('status', 'concluida'),
 
@@ -99,7 +99,7 @@ export function useDashboardAlertas() {
           .from('agenda_tarefas')
           .select('id', { count: 'exact', head: true })
           .eq('escritorio_id', escritorioAtivo)
-          .eq('tipo', 'prazo')
+          .eq('tipo', 'prazo_processual')
           .lt('prazo_data_limite', hojeStr)
           .neq('status', 'concluida'),
 

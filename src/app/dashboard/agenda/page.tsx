@@ -343,7 +343,7 @@ export default function AgendaPage() {
   // Estatísticas para ResumoIA
   const eventosCriticos = useMemo(() => {
     return eventosFormatados.filter(e =>
-      e.tipo === 'prazo' && (e.prazo_criticidade === 'critico' || e.prazo_criticidade === 'urgente')
+      e.prazo_criticidade === 'critico' || e.prazo_criticidade === 'urgente'
     ).length
   }, [eventosFormatados])
 

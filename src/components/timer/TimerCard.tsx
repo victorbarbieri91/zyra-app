@@ -38,19 +38,19 @@ export function TimerCard({
 
   if (compact) {
     return (
-      <div className="px-2.5 py-2 rounded border border-slate-100 bg-white">
+      <div className="px-2.5 py-2 rounded border border-slate-100 dark:border-[#2f3f52] bg-white dark:bg-[#162030]">
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
               <span
                 className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                  timer.status === 'rodando' ? 'bg-[#89bcbe]' : 'bg-slate-300'
+                  timer.status === 'rodando' ? 'bg-[#89bcbe]' : 'bg-slate-300 dark:bg-slate-600'
                 }`}
               />
-              <span className="text-[11px] text-slate-600 truncate">{timer.titulo}</span>
+              <span className="text-[11px] text-slate-600 dark:text-slate-300 truncate">{timer.titulo}</span>
             </div>
           </div>
-          <TimerDisplay segundos={timer.tempo_atual} size="sm" className="text-[#34495e]" />
+          <TimerDisplay segundos={timer.tempo_atual} size="sm" className="text-[#34495e] dark:text-[#89bcbe]" />
           <TimerControls
             status={timer.status}
             onPlay={() => handleAction(onResume)}
@@ -68,7 +68,7 @@ export function TimerCard({
 
   return (
     <div
-      className="p-2.5 rounded border border-slate-100 bg-white"
+      className="p-2.5 rounded border border-slate-100 dark:border-[#2f3f52] bg-white dark:bg-[#162030]"
       style={timer.cor ? { borderLeftColor: timer.cor, borderLeftWidth: 2 } : undefined}
     >
       {/* Header */}
@@ -77,25 +77,25 @@ export function TimerCard({
           <div className="flex items-center gap-1.5 mb-0.5">
             <span
               className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                timer.status === 'rodando' ? 'bg-[#89bcbe]' : 'bg-slate-300'
+                timer.status === 'rodando' ? 'bg-[#89bcbe]' : 'bg-slate-300 dark:bg-slate-600'
               }`}
             />
-            <span className="text-[10px] text-slate-400">
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">
               {timer.status === 'rodando' ? 'Rodando' : 'Pausado'}
             </span>
           </div>
-          <h4 className="text-xs font-medium text-[#34495e] truncate">{timer.titulo}</h4>
+          <h4 className="text-xs font-medium text-[#34495e] dark:text-slate-100 truncate">{timer.titulo}</h4>
         </div>
         <TimerDisplay
           segundos={timer.tempo_atual}
           size="sm"
-          className={timer.status === 'rodando' ? 'text-[#34495e]' : 'text-slate-500'}
+          className={timer.status === 'rodando' ? 'text-[#34495e] dark:text-[#89bcbe]' : 'text-slate-500 dark:text-slate-400'}
         />
       </div>
 
       {/* Vínculo */}
       {(vinculoNome || timer.cliente_nome) && (
-        <div className="text-[10px] text-slate-400 truncate mb-2">
+        <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate mb-2">
           {vinculoNome && <span>{vinculoNome}</span>}
           {vinculoNome && timer.cliente_nome && <span className="mx-1">•</span>}
           {timer.cliente_nome && <span>{timer.cliente_nome}</span>}
@@ -104,7 +104,7 @@ export function TimerCard({
 
       {/* Descrição */}
       {timer.descricao && (
-        <p className="text-[10px] text-slate-400 mb-2 line-clamp-1">{timer.descricao}</p>
+        <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-2 line-clamp-1">{timer.descricao}</p>
       )}
 
       {/* Controles */}

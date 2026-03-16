@@ -43,7 +43,7 @@ export function TimerControls({
         <button
           onClick={onPlay}
           disabled={disabled}
-          className={`${buttonBase} ${sizeClasses[size]} bg-slate-100 text-[#34495e] hover:bg-slate-200`}
+          className={`${buttonBase} ${sizeClasses[size]} bg-slate-100 dark:bg-white/10 text-[#34495e] dark:text-[#89bcbe] hover:bg-slate-200 dark:hover:bg-white/20`}
           title="Retomar"
         >
           <Play className={iconSizes[size]} />
@@ -52,7 +52,7 @@ export function TimerControls({
         <button
           onClick={onPause}
           disabled={disabled}
-          className={`${buttonBase} ${sizeClasses[size]} bg-slate-100 text-[#46627f] hover:bg-slate-200`}
+          className={`${buttonBase} ${sizeClasses[size]} bg-slate-100 dark:bg-white/10 text-[#46627f] dark:text-[#89bcbe] hover:bg-slate-200 dark:hover:bg-white/20`}
           title="Pausar"
         >
           <Pause className={iconSizes[size]} />
@@ -63,7 +63,7 @@ export function TimerControls({
       <button
         onClick={onStop}
         disabled={disabled}
-        className={`${buttonBase} ${sizeClasses[size]} bg-slate-100 text-slate-500 hover:bg-slate-200`}
+        className={`${buttonBase} ${sizeClasses[size]} bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/20`}
         title="Parar e salvar"
       >
         <Save className={iconSizes[size]} />
@@ -74,7 +74,7 @@ export function TimerControls({
         <button
           onClick={onDiscard}
           disabled={disabled}
-          className={`${buttonBase} ${sizeClasses[size]} text-slate-400 hover:text-slate-500 hover:bg-slate-100`}
+          className={`${buttonBase} ${sizeClasses[size]} text-slate-400 dark:text-slate-500 hover:text-slate-500 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10`}
           title="Descartar"
         >
           <Trash2 className={iconSizes[size]} />

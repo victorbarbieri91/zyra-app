@@ -95,8 +95,8 @@ export function QuickStartPanel() {
   if (loading) {
     return (
       <div className="p-4 text-center">
-        <Loader2 className="w-5 h-5 text-slate-400 mx-auto mb-1.5 animate-spin" />
-        <p className="text-xs text-slate-500">Carregando...</p>
+        <Loader2 className="w-5 h-5 text-slate-400 dark:text-slate-500 mx-auto mb-1.5 animate-spin" />
+        <p className="text-xs text-slate-500 dark:text-slate-400">Carregando...</p>
       </div>
     );
   }
@@ -108,7 +108,7 @@ export function QuickStartPanel() {
         <p className="text-xs text-red-600">Erro ao carregar</p>
         <button
           onClick={refreshTarefas}
-          className="mt-1.5 text-[10px] text-[#34495e] hover:underline"
+          className="mt-1.5 text-[10px] text-[#34495e] dark:text-[#89bcbe] hover:underline"
         >
           Tentar novamente
         </button>
@@ -119,9 +119,9 @@ export function QuickStartPanel() {
   if (tarefas.length === 0) {
     return (
       <div className="p-4 text-center">
-        <CheckSquare className="w-6 h-6 text-slate-300 mx-auto mb-1.5" />
-        <p className="text-xs text-slate-500">Nenhum item para hoje</p>
-        <p className="text-[10px] text-slate-400 mt-0.5">
+        <CheckSquare className="w-6 h-6 text-slate-300 dark:text-slate-600 mx-auto mb-1.5" />
+        <p className="text-xs text-slate-500 dark:text-slate-400">Nenhum item para hoje</p>
+        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
           Use &quot;Novo Timer&quot; para iniciar
         </p>
       </div>
@@ -130,7 +130,7 @@ export function QuickStartPanel() {
 
   return (
     <div className="p-2.5">
-      <p className="text-[10px] text-slate-400 mb-2 px-0.5">
+      <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-2 px-0.5">
         Seus itens do dia ({tarefas.length})
       </p>
 
@@ -140,8 +140,8 @@ export function QuickStartPanel() {
             key={item.id}
             className={`group flex items-center gap-2 px-2 py-1.5 rounded transition-colors ${
               item.temTimerAtivo
-                ? 'bg-slate-50 opacity-50'
-                : 'hover:bg-slate-50'
+                ? 'bg-slate-50 dark:bg-white/5 opacity-50'
+                : 'hover:bg-slate-50 dark:hover:bg-white/5'
             }`}
           >
             {/* Indicador de tipo */}
@@ -149,10 +149,10 @@ export function QuickStartPanel() {
 
             {/* Conteúdo */}
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-[#34495e] truncate leading-tight">
+              <p className="text-xs text-[#34495e] dark:text-slate-200 truncate leading-tight">
                 {item.titulo}
               </p>
-              <p className="text-[10px] text-slate-400 truncate leading-tight">
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate leading-tight">
                 {getSubtitulo(item)}
               </p>
             </div>
@@ -171,8 +171,8 @@ export function QuickStartPanel() {
               disabled={item.temTimerAtivo || loadingItemId === item.id || (!item.processo_id && !item.consultivo_id)}
               className={`flex items-center justify-center w-6 h-6 rounded transition-all ${
                 item.temTimerAtivo || (!item.processo_id && !item.consultivo_id)
-                  ? 'text-slate-300 cursor-not-allowed'
-                  : 'text-slate-400 hover:text-[#34495e] hover:bg-slate-100'
+                  ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
+                  : 'text-slate-400 hover:text-[#34495e] dark:hover:text-[#89bcbe] hover:bg-slate-100 dark:hover:bg-white/10'
               }`}
               title={
                 item.temTimerAtivo

@@ -642,22 +642,15 @@ export default function DashboardPage() {
       {/* ═══════════════════════════════════════════════════════════════
           HERO BANNER - Light gradient with decorative elements
           ═══════════════════════════════════════════════════════════════ */}
-      <div className="bg-gradient-to-br from-[#f0f9f9] via-[#e8f5f5]/60 to-slate-50 dark:from-surface-1 dark:via-surface-1 dark:to-surface-0 px-4 md:px-6 pt-3 md:pt-4 pb-8 md:pb-10 relative overflow-hidden border-b border-[#aacfd0]/20 dark:border-slate-700">
-        {/* Decorative geometric shapes - hidden on mobile */}
+      <div className="bg-white dark:bg-surface-1 px-4 md:px-6 pt-3 md:pt-4 pb-8 md:pb-10 relative overflow-hidden border-b border-slate-100 dark:border-slate-700">
+        {/* Subtle decorative accents - thin outlines, no fills */}
         <div className="hidden md:block">
-          <div className="absolute top-6 right-[14%] w-28 h-28 rounded-2xl bg-[#34495e]/[0.08] rotate-12" />
-          <div className="absolute bottom-3 right-[32%] w-20 h-20 rounded-xl bg-[#89bcbe]/[0.12] -rotate-6" />
-          <div className="absolute bottom-6 left-[12%] w-16 h-16 rounded-2xl bg-[#89bcbe]/[0.09] rotate-[35deg]" />
-          <div className="absolute top-[35%] left-[32%] w-20 h-20 rounded-full border-2 border-[#89bcbe]/[0.14]" />
-          <div className="absolute top-[45%] left-[8%] w-2.5 h-2.5 rounded-full bg-[#89bcbe]/[0.22]" />
-          <div className="absolute top-[25%] right-[22%] w-2 h-2 rounded-full bg-[#34495e]/[0.18]" />
-          <div className="absolute bottom-8 left-[22%] w-3 h-3 rounded-full bg-[#46627f]/[0.16]" />
-          <div className="absolute top-3 left-[38%] w-1.5 h-1.5 rounded-full bg-[#89bcbe]/[0.25]" />
-          <div className="absolute top-[15%] left-[18%] w-2 h-2 rounded-full bg-[#89bcbe]/20" />
-          <div className="absolute top-[50%] left-[60%] opacity-[0.10]">
-            <div className="w-5 h-[2px] bg-[#34495e] rounded-full" />
-            <div className="w-[2px] h-5 bg-[#34495e] rounded-full -mt-3.5 ml-[9px]" />
-          </div>
+          <div className="absolute top-6 right-[10%] w-20 h-20 rounded-full border border-[#89bcbe]/15" />
+          <div className="absolute bottom-8 right-[40%] w-14 h-14 rounded-lg border border-[#46627f]/10 rotate-12" />
+          <div className="absolute top-[25%] left-[42%] w-10 h-10 rounded-full border border-[#89bcbe]/12" />
+          <div className="absolute bottom-5 right-[18%] w-16 h-16 rounded-xl border border-[#46627f]/8 -rotate-6" />
+          <div className="absolute top-[55%] left-[55%] w-2 h-2 rounded-full bg-[#89bcbe]/20" />
+          <div className="absolute top-4 left-[48%] w-1.5 h-1.5 rounded-full bg-[#46627f]/15" />
         </div>
 
         <div className="relative z-10">
@@ -669,25 +662,6 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {/* Quick Action Pills - scrollable on mobile */}
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                {[
-                  { label: 'Tarefa', icon: CheckSquare, action: () => setTarefaModalOpen(true) },
-                  { label: 'Processo', icon: Briefcase, action: () => setProcessoModalOpen(true) },
-                  { label: 'Consultivo', icon: Scale, action: () => setConsultaModalOpen(true) },
-                  { label: 'Horas', icon: Timer, action: () => setTimesheetModalOpen(true) },
-                ].map((btn) => (
-                  <button
-                    key={btn.label}
-                    onClick={btn.action}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#46627f] hover:bg-[#3d5a80] active:bg-[#2d4a60] shadow-sm hover:shadow transition-all text-xs text-white/90 hover:text-white border border-[#46627f]/80 whitespace-nowrap"
-                  >
-                    <btn.icon className="w-3.5 h-3.5" />
-                    <span className="hidden lg:inline">{btn.label}</span>
-                  </button>
-                ))}
-              </div>
-
               {/* Seletor de Escritórios */}
               {escritoriosGrupo.length > 1 && (
                 <Popover open={seletorAberto} onOpenChange={setSeletorAberto}>
@@ -819,12 +793,6 @@ export default function DashboardPage() {
                       {resumo.dados.eventos} {resumo.dados.eventos === 1 ? 'evento' : 'eventos'}
                     </span>
                   )}
-                  {resumo.dados.prazos_urgentes > 0 && (
-                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-[11px] font-semibold text-amber-600 border border-amber-100">
-                      <Zap className="w-3 h-3" />
-                      {resumo.dados.prazos_urgentes} {resumo.dados.prazos_urgentes === 1 ? 'prazo urgente' : 'prazos urgentes'}
-                    </span>
-                  )}
                 </div>
               )}
             </div>
@@ -898,17 +866,12 @@ export default function DashboardPage() {
               key={kpi.label}
               onClick={() => setKpiDetailOpen(kpi.kpiType)}
               className={cn(
-                "rounded-2xl p-3 md:p-4 bg-gradient-to-br shadow-[0_6px_28px_-4px_rgba(52,73,94,0.35)] dark:shadow-[0_6px_28px_-4px_rgba(0,0,0,0.5)] hover:shadow-[0_12px_40px_-6px_rgba(52,73,94,0.45)] dark:hover:shadow-[0_12px_40px_-6px_rgba(0,0,0,0.6)] transition-all duration-300 hover:-translate-y-1 cursor-pointer",
+                "rounded-xl p-4 md:p-5 bg-gradient-to-br shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 cursor-pointer",
                 kpi.gradient
               )}
             >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-medium text-white/80">{kpi.label}</span>
-                <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", kpi.iconBg)}>
-                  <kpi.icon className="w-4 h-4 text-white" />
-                </div>
-              </div>
-              <div className="text-lg md:text-2xl font-bold text-white tracking-tight">{kpi.value}</div>
+              <span className="text-[11px] font-medium text-white/80 mb-2 block">{kpi.label}</span>
+              <div className="text-base md:text-xl font-bold text-white tracking-tight">{kpi.value}</div>
               {(kpi.trend ?? 0) !== 0 && (
                 <div className="flex items-center gap-1 mt-1.5">
                   {(kpi.trend ?? 0) > 0 ? (
@@ -933,13 +896,13 @@ export default function DashboardPage() {
       {/* ═══════════════════════════════════════════════════════════════
           MAIN CONTENT
           ═══════════════════════════════════════════════════════════════ */}
-      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-8 space-y-4 md:space-y-5">
+      <div className="px-4 md:px-6 pt-5 md:pt-6 pb-8 space-y-6">
         {/* Main Grid: Agenda + Performance | Números + Lançamentos + Alertas + Insights */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* ── LEFT: AGENDA + PERFORMANCE ── */}
-          <div className="lg:col-span-7 space-y-5">
+          <div className="lg:col-span-7 space-y-6">
             {/* ── AGENDA DO DIA (Hero) ── */}
-            <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] dark:hover:shadow-[0_10px_35px_-6px_rgba(0,0,0,0.4)] transition-all duration-300 overflow-hidden">
+            <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
               {/* Agenda Header */}
               <div className="flex items-center justify-between px-5 pt-5 pb-3">
                 <div>
@@ -954,11 +917,6 @@ export default function DashboardPage() {
                   {audienciasHoje > 0 && (
                     <span className="px-2 py-0.5 rounded-full bg-red-50 text-[10px] font-semibold text-red-600">
                       {audienciasHoje} {audienciasHoje === 1 ? 'audiência' : 'audiências'}
-                    </span>
-                  )}
-                  {prazosHoje > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-amber-50 text-[10px] font-semibold text-amber-600">
-                      {prazosHoje} {prazosHoje === 1 ? 'prazo urgente' : 'prazos urgentes'}
                     </span>
                   )}
                   <Link href="/dashboard/agenda" className="text-[11px] font-medium text-[#89bcbe] hover:text-[#6ba9ab] transition-colors">
@@ -983,21 +941,21 @@ export default function DashboardPage() {
                     <>
                       {/* Items area */}
                       <div className="flex-1">
-                        <div className="space-y-0.5">
+                        <div className="space-y-1">
                           {agendaItems
                             .slice(agendaPage * AGENDA_PER_PAGE, (agendaPage + 1) * AGENDA_PER_PAGE)
                             .map((event, index) => {
-                              const dotColor: Record<string, string> = {
+                              const barColor: Record<string, string> = {
                                 audiencia: 'bg-red-500',
                                 tarefa: 'bg-[#89bcbe]',
                                 evento: 'bg-[#1E3A8A]',
                               }
-                              const badgeConfig: Record<string, { className: string; label: string }> = {
-                                audiencia: { className: 'text-red-600', label: 'Audiência' },
-                                tarefa: { className: 'text-[#46627f] dark:text-slate-400', label: 'Tarefa' },
-                                evento: { className: 'text-[#1E3A8A]', label: 'Evento' },
+                              const badgeConfig: Record<string, { bg: string; text: string; label: string }> = {
+                                audiencia: { bg: 'bg-red-50 dark:bg-red-500/10', text: 'text-red-600 dark:text-red-400', label: 'Audiência' },
+                                tarefa: { bg: 'bg-[#e8f5f5] dark:bg-teal-500/10', text: 'text-[#46627f] dark:text-slate-400', label: 'Tarefa' },
+                                evento: { bg: 'bg-blue-50 dark:bg-blue-500/10', text: 'text-[#1E3A8A] dark:text-blue-400', label: 'Evento' },
                               }
-                              const dot = dotColor[event.tipo] || dotColor.evento
+                              const bar = barColor[event.tipo] || barColor.evento
                               const badge = badgeConfig[event.tipo] || badgeConfig.evento
                               const temHorario = event.time && event.time !== 'Dia todo'
 
@@ -1008,7 +966,7 @@ export default function DashboardPage() {
                                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors cursor-pointer text-left group"
                                 >
                                   {/* Dot */}
-                                  <div className={cn("w-2 h-2 rounded-full flex-shrink-0", dot)} />
+                                  <div className={cn("w-2 h-2 rounded-full flex-shrink-0", bar)} />
 
                                   {/* Content */}
                                   <div className="flex-1 min-w-0">
@@ -1020,7 +978,7 @@ export default function DashboardPage() {
                                     )}
                                   </div>
 
-                                  {/* Priority + Time + Type */}
+                                  {/* Priority + Time + Type badge */}
                                   <div className="flex items-center gap-2 flex-shrink-0">
                                     {event.prioridade && (event.tipo === 'tarefa') && (
                                       <span className={cn(
@@ -1037,7 +995,7 @@ export default function DashboardPage() {
                                         {event.time}
                                       </span>
                                     )}
-                                    <span className={cn("text-[10px] font-medium", badge.className)}>
+                                    <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full", badge.bg, badge.text)}>
                                       {badge.label}
                                     </span>
                                   </div>
@@ -1078,7 +1036,7 @@ export default function DashboardPage() {
             </div>
 
             {/* ── PERFORMANCE DA EQUIPE ── */}
-            <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] dark:hover:shadow-[0_10px_35px_-6px_rgba(0,0,0,0.4)] transition-all duration-300 overflow-hidden">
+            <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
               <div className="flex items-center justify-between px-5 pt-5 pb-3">
                 <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200">Performance da Equipe</h2>
                 <div className="flex items-center gap-2">
@@ -1252,9 +1210,9 @@ export default function DashboardPage() {
           </div>
 
           {/* ── RIGHT: MEUS NÚMEROS + LANÇAMENTOS + ALERTAS + INSIGHTS ── */}
-          <div className="lg:col-span-5 space-y-5">
+          <div className="lg:col-span-5 space-y-6">
             {/* Meus Números do Mês */}
-            <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] dark:hover:shadow-[0_10px_35px_-6px_rgba(0,0,0,0.4)] transition-all duration-300 p-5">
+            <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 p-5">
               <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200 mb-4">Meus Números</h2>
 
               <div className="grid grid-cols-2 gap-4">
@@ -1344,7 +1302,7 @@ export default function DashboardPage() {
 
             {/* Insights de Gestão */}
             {hasInsightsPermission && (
-              <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] dark:hover:shadow-[0_10px_35px_-6px_rgba(0,0,0,0.4)] transition-all duration-300 overflow-hidden">
+              <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
                 <div className="flex items-center justify-between px-5 pt-5 pb-3">
                   <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200">Insights IA</h2>
                   <Button

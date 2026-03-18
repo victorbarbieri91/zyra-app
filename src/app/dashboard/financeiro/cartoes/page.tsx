@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import {
   CreditCard,
   Plus,
@@ -9,11 +8,11 @@ import {
   Upload,
   Building2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Check,
   Pencil,
   Trash2,
-  Eye,
-  FileText,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,21 +42,47 @@ import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import {
   useCartoesCredito,
   CartaoComFaturaAtual,
+  FaturaCartao,
 } from '@/hooks/useCartoesCredito'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 import { cn } from '@/lib/utils'
 import CartaoModal from '@/components/financeiro/cartoes/CartaoModal'
 import ImportarFaturaModal from '@/components/financeiro/cartoes/ImportarFaturaModal'
+import FaturaDetailSheet from '@/components/financeiro/cartoes/FaturaDetailSheet'
 import { toast } from 'sonner'
 
+const MESES_COMPLETO: Record<number, string> = {
+  0: 'Janeiro', 1: 'Fevereiro', 2: 'Março', 3: 'Abril', 4: 'Maio', 5: 'Junho',
+  6: 'Julho', 7: 'Agosto', 8: 'Setembro', 9: 'Outubro', 10: 'Novembro', 11: 'Dezembro',
+}
+
+const MESES_ABREV: Record<number, string> = {
+  0: 'Jan', 1: 'Fev', 2: 'Mar', 3: 'Abr', 4: 'Mai', 5: 'Jun',
+  6: 'Jul', 7: 'Ago', 8: 'Set', 9: 'Out', 10: 'Nov', 11: 'Dez',
+}
+
+function getCurrentMonth(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+  }).format(value)
+}
+
 export default function CartoesPage() {
-  const router = useRouter()
   const { escritorioAtivo } = useEscritorioAtivo()
 
   // States
   const [cartoes, setCartoes] = useState<CartaoComFaturaAtual[]>([])
+  const [faturasPorCartao, setFaturasPorCartao] = useState<Record<string, FaturaCartao | null>>({})
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth)
 
   // Multi-escritório states
   const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
@@ -70,15 +95,18 @@ export default function CartoesPage() {
   const [cartaoParaEditar, setCartaoParaEditar] = useState<CartaoComFaturaAtual | null>(null)
   const [cartaoParaExcluir, setCartaoParaExcluir] = useState<string | null>(null)
 
-  const { loadCartoesComFaturaAtual, deleteCartao } = useCartoesCredito(escritoriosSelecionados)
+  // Sheet
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [selectedCartao, setSelectedCartao] = useState<CartaoComFaturaAtual | null>(null)
 
-  // Carregar escritórios do grupo (com todos selecionados por padrão)
+  const { loadCartoesComFaturaAtual, loadFaturas, deleteCartao } = useCartoesCredito(escritoriosSelecionados)
+
+  // Carregar escritórios do grupo
   useEffect(() => {
     const loadEscritoriosGrupo = async () => {
       try {
         const escritorios = await getEscritoriosDoGrupo()
         setEscritoriosGrupo(escritorios)
-        // Iniciar com TODOS selecionados (visão consolidada padrão)
         if (escritorios.length > 0) {
           setEscritoriosSelecionados(escritorios.map(e => e.id))
         }
@@ -95,32 +123,23 @@ export default function CartoesPage() {
       if (prev.includes(escritorioId)) {
         if (prev.length === 1) return prev
         return prev.filter(id => id !== escritorioId)
-      } else {
-        return [...prev, escritorioId]
       }
+      return [...prev, escritorioId]
     })
   }
 
-  const selecionarTodos = () => {
-    setEscritoriosSelecionados(escritoriosGrupo.map(e => e.id))
-  }
-
-  const selecionarApenas = (escritorioId: string) => {
-    setEscritoriosSelecionados([escritorioId])
-  }
+  const selecionarTodos = () => setEscritoriosSelecionados(escritoriosGrupo.map(e => e.id))
+  const selecionarApenas = (escritorioId: string) => setEscritoriosSelecionados([escritorioId])
 
   const getSeletorLabel = () => {
-    if (escritoriosSelecionados.length === escritoriosGrupo.length) {
-      return 'Todos os escritórios'
-    } else if (escritoriosSelecionados.length === 1) {
-      const escritorio = escritoriosGrupo.find(e => e.id === escritoriosSelecionados[0])
-      return escritorio?.nome || 'Escritório'
-    } else {
-      return `${escritoriosSelecionados.length} escritórios`
+    if (escritoriosSelecionados.length === escritoriosGrupo.length) return 'Todos os escritórios'
+    if (escritoriosSelecionados.length === 1) {
+      return escritoriosGrupo.find(e => e.id === escritoriosSelecionados[0])?.nome || 'Escritório'
     }
+    return `${escritoriosSelecionados.length} escritórios`
   }
 
-  // Carregar cartões
+  // Carregar cartões e faturas do mês selecionado
   const loadData = useCallback(async () => {
     if (escritoriosSelecionados.length === 0) return
 
@@ -128,19 +147,43 @@ export default function CartoesPage() {
     try {
       const data = await loadCartoesComFaturaAtual()
       setCartoes(data)
+
+      // Carregar faturas — filtrar pelo mês de VENCIMENTO (quando impacta o caixa)
+      const todasFaturas = await loadFaturas()
+      const faturaMap: Record<string, FaturaCartao | null> = {}
+      for (const cartao of data) {
+        const faturaDoMes = todasFaturas.find(f => {
+          const vencMes = f.data_vencimento?.substring(0, 7)
+          return f.cartao_id === cartao.id && vencMes === selectedMonth
+        })
+        faturaMap[cartao.id] = faturaDoMes || null
+      }
+      setFaturasPorCartao(faturaMap)
     } catch (error) {
       console.error('Erro ao carregar cartões:', error)
       toast.error('Erro ao carregar cartões')
     } finally {
       setLoading(false)
     }
-  }, [escritoriosSelecionados, loadCartoesComFaturaAtual])
+  }, [escritoriosSelecionados, loadCartoesComFaturaAtual, loadFaturas, selectedMonth])
 
   useEffect(() => {
     if (escritoriosSelecionados.length > 0) {
       loadData()
     }
   }, [loadData, escritoriosSelecionados])
+
+  // Navegação de meses
+  const navigateMonth = (direction: -1 | 1) => {
+    const [ano, mes] = selectedMonth.split('-').map(Number)
+    const date = new Date(ano, mes - 1 + direction, 1)
+    setSelectedMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`)
+  }
+
+  const getMonthLabel = () => {
+    const [ano, mes] = selectedMonth.split('-').map(Number)
+    return `${MESES_COMPLETO[mes - 1]} de ${ano}`
+  }
 
   // Filtrar cartões
   const cartoesFiltrados = cartoes.filter((cartao) => {
@@ -153,7 +196,30 @@ export default function CartoesPage() {
     )
   })
 
+  // Calcular vencimento formatado para o mês selecionado
+  const getVencimentoFormatado = (cartao: CartaoComFaturaAtual) => {
+    const fatura = faturasPorCartao[cartao.id]
+    if (fatura?.data_vencimento) {
+      const [ano, mes, dia] = fatura.data_vencimento.split('-').map(Number)
+      return `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${ano}`
+    }
+    // Sem fatura no banco — vencimento é dia_vencimento no mês selecionado
+    const [anoSel, mesSel] = selectedMonth.split('-').map(Number)
+    return `${String(cartao.dia_vencimento).padStart(2, '0')}/${String(mesSel).padStart(2, '0')}/${anoSel}`
+  }
+
+  // Total do mês selecionado
+  const totalMesSelecionado = cartoesFiltrados.reduce((acc, c) => {
+    const fatura = faturasPorCartao[c.id]
+    return acc + (fatura?.valor_total || 0)
+  }, 0)
+
   // Handlers
+  const handleRowClick = (cartao: CartaoComFaturaAtual) => {
+    setSelectedCartao(cartao)
+    setSheetOpen(true)
+  }
+
   const handleNewCartao = () => {
     setCartaoParaEditar(null)
     setModalCartaoOpen(true)
@@ -166,7 +232,6 @@ export default function CartoesPage() {
 
   const handleDeleteCartao = async () => {
     if (!cartaoParaExcluir) return
-
     const success = await deleteCartao(cartaoParaExcluir)
     if (success) {
       toast.success('Cartão desativado com sucesso')
@@ -177,51 +242,23 @@ export default function CartoesPage() {
     setCartaoParaExcluir(null)
   }
 
-  const handleViewDetails = (cartaoId: string) => {
-    router.push(`/dashboard/financeiro/cartoes/${cartaoId}`)
-  }
-
-  // Calcular total das faturas abertas
-  const totalFaturaAtual = cartoes.reduce(
-    (acc, c) => acc + (c.fatura_atual?.valor_total || 0),
-    0
-  )
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 2,
-    }).format(value)
-  }
-
   return (
-    <div className="space-y-4 md:space-y-6 p-4 md:p-6">
+    <div className="space-y-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold text-[#34495e] dark:text-slate-200">Cartões de Crédito</h1>
-          <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 mt-1">
-            Gerencie os cartões de crédito e suas faturas
-          </p>
-        </div>
-        <div className="flex items-center gap-2.5">
-          {/* Seletor de Escritórios */}
+        <h1 className="text-xl md:text-2xl font-semibold text-[#34495e] dark:text-slate-200">Cartões de Crédito</h1>
+        <div className="flex items-center gap-2">
           {escritoriosGrupo.length > 1 && (
             <Popover open={seletorAberto} onOpenChange={setSeletorAberto}>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 hover:bg-slate-50 dark:hover:bg-surface-2"
-                >
-                  <Building2 className="h-4 w-4 mr-2 text-[#34495e] dark:text-slate-200" />
-                  <span className="text-sm">{getSeletorLabel()}</span>
-                  <ChevronDown className="h-4 w-4 ml-2 text-slate-400" />
+                <Button variant="outline" size="sm" className="h-9 text-xs border-slate-200 dark:border-slate-700">
+                  <Building2 className="h-3.5 w-3.5 mr-1.5" />
+                  {getSeletorLabel()}
+                  <ChevronDown className="h-3.5 w-3.5 ml-1.5 text-slate-400" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-72 p-2" align="end">
                 <div className="space-y-1">
-                  {/* Opção: Todos */}
                   <button
                     onClick={selecionarTodos}
                     className={cn(
@@ -232,34 +269,20 @@ export default function CartoesPage() {
                     )}
                   >
                     <span className="font-medium">Todos os escritórios</span>
-                    {escritoriosSelecionados.length === escritoriosGrupo.length && (
-                      <Check className="h-4 w-4" />
-                    )}
+                    {escritoriosSelecionados.length === escritoriosGrupo.length && <Check className="h-4 w-4" />}
                   </button>
-
                   <div className="h-px bg-slate-200 dark:bg-slate-700 my-2" />
-
-                  {/* Lista de escritórios */}
                   {escritoriosGrupo.map((escritorio) => (
-                    <div
-                      key={escritorio.id}
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2"
-                    >
+                    <div key={escritorio.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2">
                       <Checkbox
                         id={`esc-${escritorio.id}`}
                         checked={escritoriosSelecionados.includes(escritorio.id)}
                         onCheckedChange={() => toggleEscritorio(escritorio.id)}
                       />
-                      <label
-                        htmlFor={`esc-${escritorio.id}`}
-                        className="flex-1 text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
-                      >
+                      <label htmlFor={`esc-${escritorio.id}`} className="flex-1 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
                         {escritorio.nome}
                       </label>
-                      <button
-                        onClick={() => selecionarApenas(escritorio.id)}
-                        className="text-[10px] text-[#1E3A8A] hover:underline"
-                      >
+                      <button onClick={() => selecionarApenas(escritorio.id)} className="text-[10px] text-[#1E3A8A] hover:underline">
                         apenas
                       </button>
                     </div>
@@ -269,48 +292,61 @@ export default function CartoesPage() {
             </Popover>
           )}
           <Button
+            size="sm"
             onClick={() => setImportModalOpen(true)}
-            className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white hover:from-emerald-700 hover:to-emerald-800 shadow-sm"
+            className="h-9 text-xs bg-gradient-to-r from-emerald-600 to-emerald-700 text-white hover:from-emerald-700 hover:to-emerald-800 shadow-sm"
           >
-            <Upload className="h-4 w-4 md:mr-2" />
-            <span className="hidden md:inline">Importar PDF com IA</span>
+            <Upload className="h-3.5 w-3.5 md:mr-1.5" />
+            <span className="hidden md:inline">Importar PDF</span>
           </Button>
           <Button
+            size="sm"
             onClick={handleNewCartao}
-            className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white hover:from-[#2c3e50] hover:to-[#3d5469] shadow-sm"
+            className="h-9 text-xs bg-gradient-to-r from-[#34495e] to-[#46627f] text-white hover:from-[#2c3e50] hover:to-[#3d5469] shadow-sm"
           >
-            <Plus className="h-4 w-4 md:mr-2" />
+            <Plus className="h-3.5 w-3.5 md:mr-1.5" />
             <span className="hidden md:inline">Novo Cartão</span>
           </Button>
         </div>
       </div>
 
-      {/* Card de Resumo */}
-      <Card className="border-slate-200 dark:border-slate-700 bg-gradient-to-br from-[#34495e] to-[#46627f] text-white max-w-xs">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-white/90">Total Faturas Abertas</p>
-              <p className="text-2xl font-bold text-white mt-1">{formatCurrency(totalFaturaAtual)}</p>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-              <CreditCard className="w-5 h-5 text-white" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Navegador de meses — centralizado */}
+      <div className="flex flex-col items-center gap-1 py-2">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-surface-3"
+            onClick={() => navigateMonth(-1)}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-base font-semibold text-[#34495e] dark:text-slate-200 min-w-[200px] text-center">
+            {getMonthLabel()}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-surface-3"
+            onClick={() => navigateMonth(1)}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        <p className="text-sm text-slate-500 dark:text-slate-400 tabular-nums">
+          {formatCurrency(totalMesSelecionado)}
+        </p>
+      </div>
 
       {/* Busca */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="Buscar cartão..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+      <div className="relative max-w-xs">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+        <Input
+          placeholder="Buscar cartão..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-9 h-9 text-sm"
+        />
       </div>
 
       {/* Lista de Cartões */}
@@ -324,16 +360,10 @@ export default function CartoesPage() {
           <CardContent className="py-12 text-center">
             <CreditCard className="h-12 w-12 mx-auto text-slate-300" />
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-              {searchTerm
-                ? 'Nenhum cartão encontrado com esse termo'
-                : 'Nenhum cartão cadastrado ainda'}
+              {searchTerm ? 'Nenhum cartão encontrado com esse termo' : 'Nenhum cartão cadastrado ainda'}
             </p>
             {!searchTerm && (
-              <Button
-                onClick={handleNewCartao}
-                variant="outline"
-                className="mt-4"
-              >
+              <Button onClick={handleNewCartao} variant="outline" className="mt-4">
                 <Plus className="h-4 w-4 mr-2" />
                 Cadastrar Primeiro Cartão
               </Button>
@@ -341,7 +371,7 @@ export default function CartoesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-x-auto">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
@@ -351,21 +381,22 @@ export default function CartoesPage() {
                 {escritoriosSelecionados.length > 1 && (
                   <TableHead className="text-xs">Escritório</TableHead>
                 )}
-                <TableHead className="text-xs text-right">Fatura Atual</TableHead>
+                <TableHead className="text-xs text-right">Fatura</TableHead>
                 <TableHead className="text-xs">Status</TableHead>
                 <TableHead className="text-xs text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {cartoesFiltrados.map((cartao) => {
-                const faturaStatus = cartao.fatura_atual?.status
-                const faturaValor = cartao.fatura_atual?.valor_total || 0
+                const fatura = faturasPorCartao[cartao.id]
+                const faturaValor = fatura?.valor_total || 0
+                const faturaStatus = fatura?.status
 
                 return (
                   <TableRow
                     key={cartao.id}
                     className="hover:bg-slate-50 dark:hover:bg-surface-2 cursor-pointer"
-                    onClick={() => handleViewDetails(cartao.id)}
+                    onClick={() => handleRowClick(cartao)}
                   >
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -385,7 +416,7 @@ export default function CartoesPage() {
                       {cartao.banco}
                     </TableCell>
                     <TableCell className="text-sm text-slate-600 dark:text-slate-400">
-                      Dia {cartao.dia_vencimento}
+                      {getVencimentoFormatado(cartao)}
                     </TableCell>
                     {escritoriosSelecionados.length > 1 && (
                       <TableCell className="text-xs text-slate-500 dark:text-slate-400">
@@ -393,7 +424,12 @@ export default function CartoesPage() {
                       </TableCell>
                     )}
                     <TableCell className="text-right">
-                      <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
+                      <span className={cn(
+                        "text-sm font-semibold tabular-nums",
+                        faturaValor > 0
+                          ? "text-[#34495e] dark:text-slate-200"
+                          : "text-slate-400 dark:text-slate-500"
+                      )}>
                         {formatCurrency(faturaValor)}
                       </span>
                     </TableCell>
@@ -413,22 +449,11 @@ export default function CartoesPage() {
                           {faturaStatus === 'paga' && 'Paga'}
                         </Badge>
                       ) : (
-                        <span className="text-xs text-slate-400">-</span>
+                        <span className="text-xs text-slate-400">—</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div
-                        className="flex items-center justify-end gap-1.5"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 px-2.5 text-xs font-medium text-[#34495e] dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-surface-2 hover:border-slate-300 dark:hover:border-slate-600"
-                          onClick={() => handleViewDetails(cartao.id)}
-                        >
-                          Ver Fatura
-                        </Button>
+                      <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -454,8 +479,19 @@ export default function CartoesPage() {
               })}
             </TableBody>
           </Table>
-        </div>
+        </Card>
       )}
+
+      {/* Sheet de Detalhe da Fatura */}
+      <FaturaDetailSheet
+        cartao={selectedCartao}
+        mesReferencia={selectedMonth}
+        faturaExistente={selectedCartao ? faturasPorCartao[selectedCartao.id] : null}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        escritorioIds={escritoriosSelecionados}
+        onDataChange={loadData}
+      />
 
       {/* Modal de Importação de Fatura */}
       <ImportarFaturaModal
@@ -488,10 +524,7 @@ export default function CartoesPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteCartao}
-              className="bg-red-600 hover:bg-red-700"
-            >
+            <AlertDialogAction onClick={handleDeleteCartao} className="bg-red-600 hover:bg-red-700">
               Desativar
             </AlertDialogAction>
           </AlertDialogFooter>

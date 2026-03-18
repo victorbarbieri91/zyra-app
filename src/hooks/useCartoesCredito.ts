@@ -1000,6 +1000,11 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
         vencimento = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(diaVenc).padStart(2, '0')}`
       }
 
+      // Se a data de fechamento já passou, criar como fechada
+      const hoje = new Date()
+      const dataFech = new Date(fechamento + 'T12:00:00')
+      const statusInicial = hoje > dataFech ? 'fechada' : 'aberta'
+
       const { data: novaFatura, error: insertError } = await supabase
         .from('cartoes_credito_faturas')
         .insert({
@@ -1009,7 +1014,7 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
           data_fechamento: fechamento,
           data_vencimento: vencimento,
           valor_total: valorTotal || 0,
-          status: 'aberta',
+          status: statusInicial,
         })
         .select()
         .single()
@@ -1085,14 +1090,24 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
       setLoading(true)
       setError(null)
 
+      console.log('RPC importar_lancamentos_cartao_em_lote params:', {
+        p_cartao_id: cartaoId,
+        p_mes_referencia: mesReferencia,
+        transacoes_count: transacoes.length,
+        primeira_transacao: transacoes[0],
+      })
+
       const { data, error: rpcError } = await supabase
         .rpc('importar_lancamentos_cartao_em_lote', {
           p_cartao_id: cartaoId,
           p_mes_referencia: mesReferencia,
-          p_transacoes: JSON.stringify(transacoes),
+          p_transacoes: transacoes,
         })
 
-      if (rpcError) throw rpcError
+      if (rpcError) {
+        console.error('RPC error details:', JSON.stringify(rpcError, null, 2))
+        throw rpcError
+      }
 
       const result = data?.[0] || { total_importados: 0, lancamento_ids: [] }
       return {

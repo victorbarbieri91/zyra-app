@@ -392,7 +392,7 @@ export default function DashboardPage() {
           .update({ status: 'concluida', data_conclusao: new Date().toISOString() })
           .eq('id', taskId)
         setTarefaDetailOpen(false)
-        setTarefaDetailData(null)
+        setTimeout(() => setTarefaDetailData(null), 300)
         setAgendaPage(0)
         await refreshAgenda()
         toast.success('Tarefa concluída!')
@@ -412,7 +412,7 @@ export default function DashboardPage() {
         .update({ status: 'pendente', data_conclusao: null })
         .eq('id', taskId)
       setTarefaDetailOpen(false)
-      setTarefaDetailData(null)
+      setTimeout(() => setTarefaDetailData(null), 300)
       setAgendaPage(0)
       await refreshAgenda()
       toast.success('Tarefa reaberta!')
@@ -454,7 +454,7 @@ export default function DashboardPage() {
           .update({ status: 'concluida', data_conclusao: new Date().toISOString() })
           .eq('id', dashTarefaParaConcluir.id)
         setTarefaDetailOpen(false)
-        setTarefaDetailData(null)
+        setTimeout(() => setTarefaDetailData(null), 300)
         setAgendaPage(0)
         await refreshAgenda()
         toast.success('Tarefa concluída!')
@@ -523,7 +523,7 @@ export default function DashboardPage() {
         .eq('id', audienciaId)
 
       setAgendaAudienciaOpen(false)
-      setAgendaAudienciaData(null)
+      setTimeout(() => setAgendaAudienciaData(null), 300)
       setAgendaPage(0)
       await refreshAgenda()
       toast.success('Audiência marcada como realizada!')
@@ -545,7 +545,7 @@ export default function DashboardPage() {
         .eq('id', eventoId)
 
       setEventoDetailOpen(false)
-      setEventoDetailData(null)
+      setTimeout(() => setEventoDetailData(null), 300)
       setAgendaPage(0)
       await refreshAgenda()
       toast.success('Evento marcado como cumprido!')
@@ -565,7 +565,7 @@ export default function DashboardPage() {
         .eq('id', audienciaId)
 
       setAgendaAudienciaOpen(false)
-      setAgendaAudienciaData(null)
+      setTimeout(() => setAgendaAudienciaData(null), 300)
       setAgendaPage(0)
       await refreshAgenda()
       toast.success('Audiência reaberta!')
@@ -585,7 +585,7 @@ export default function DashboardPage() {
         .eq('id', eventoId)
 
       setEventoDetailOpen(false)
-      setEventoDetailData(null)
+      setTimeout(() => setEventoDetailData(null), 300)
       setAgendaPage(0)
       await refreshAgenda()
       toast.success('Evento reaberto!')
@@ -1545,15 +1545,17 @@ export default function DashboardPage() {
           onOpenChange={(open) => {
             setTarefaDetailOpen(open)
             // Só limpa se NÃO está transitando para edição
-            if (!open && !tarefaModalOpen) setTarefaDetailData(null)
+            if (!open && !tarefaModalOpen) setTimeout(() => setTarefaDetailData(null), 300)
           }}
           tarefa={tarefaDetailData}
           onUpdate={refreshAgenda}
           onClose={() => {
             setTarefaDetailOpen(false)
-            setTarefaDetailData(null)
             setAgendaPage(0)
             refreshAgenda()
+            // Delay data cleanup para permitir animação de fechar do Dialog Portal
+            // (evita overlay órfão que trava a UI)
+            setTimeout(() => setTarefaDetailData(null), 300)
           }}
           onEdit={handleDashEditTarefa}
           onConcluir={() => handleDashCompleteTask(tarefaDetailData.id)}
@@ -1572,7 +1574,7 @@ export default function DashboardPage() {
             setAgendaAudienciaOpen(open)
             // Só limpa se NÃO está transitando para edição
             if (!open && !dashAudienciaEditOpen) {
-              setAgendaAudienciaData(null)
+              setTimeout(() => setAgendaAudienciaData(null), 300)
               refreshAgenda()
             }
           }}
@@ -1610,7 +1612,7 @@ export default function DashboardPage() {
             setEventoDetailOpen(open)
             // Só limpa se NÃO está transitando para edição
             if (!open && !dashEventoEditOpen) {
-              setEventoDetailData(null)
+              setTimeout(() => setEventoDetailData(null), 300)
               refreshAgenda()
             }
           }}

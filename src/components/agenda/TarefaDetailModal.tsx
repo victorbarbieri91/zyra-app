@@ -477,7 +477,8 @@ export default function TarefaDetailModal({
         if (newDateBrazil.toDateString() !== todayBrazil.toDateString()) {
           // Tarefa reagendada para outro dia → fechar modal e atualizar agenda
           toast.success('Tarefa reagendada com sucesso')
-          if (onUpdate) await onUpdate()
+          // Apenas onClose — ele já faz refreshAgenda() no dashboard,
+          // e o Realtime subscription também dispara invalidação automática
           if (onClose) onClose()
           return
         }

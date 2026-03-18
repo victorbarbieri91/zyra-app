@@ -42,6 +42,8 @@ Sentry.init({
     // Service Worker em previews da Vercel
     "Failed to register a ServiceWorker",
     "The script resource is behind a redirect",
+    // SW rejection genérica (capturada via onunhandledrejection)
+    /^Rejected$/,
   ],
 
   beforeSend(event) {

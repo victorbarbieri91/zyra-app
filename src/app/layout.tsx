@@ -46,14 +46,7 @@ export default function RootLayout({
         <ThemeProvider>
           <RegisterSW />
           {children}
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              classNames: {
-                toast: 'bg-white dark:bg-surface-2 border-slate-200 dark:border-slate-700 text-foreground',
-              },
-            }}
-          />
+          <Toaster position="top-right" />
         </ThemeProvider>
       </body>
     </html>

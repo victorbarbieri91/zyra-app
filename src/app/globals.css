@@ -380,6 +380,51 @@
   --tw-ring-offset-color: hsl(var(--background));
 }
 
+/* --- Sonner toast overrides for dark mode --- */
+.dark [data-sonner-toast] {
+  --normal-bg: hsl(220 16% 14%) !important;
+  --normal-border: hsl(220 14% 25%) !important;
+  --normal-text: hsl(214 32% 91%) !important;
+  background-color: hsl(220 16% 14%) !important;
+  border-color: hsl(220 14% 25%) !important;
+  color: hsl(214 32% 91%) !important;
+}
+.dark [data-sonner-toast] [data-title] {
+  color: hsl(214 32% 91%) !important;
+}
+.dark [data-sonner-toast] [data-description] {
+  color: hsl(215 20% 65%) !important;
+}
+.dark [data-sonner-toast] [data-close-button] {
+  background-color: hsl(220 14% 20%) !important;
+  border-color: hsl(220 14% 25%) !important;
+  color: hsl(215 20% 65%) !important;
+}
+.dark [data-sonner-toast] [data-close-button]:hover {
+  background-color: hsl(220 14% 25%) !important;
+  color: hsl(214 32% 91%) !important;
+}
+.dark [data-sonner-toast][data-type="success"] {
+  --normal-bg: hsl(220 16% 14%) !important;
+  color: hsl(214 32% 91%) !important;
+}
+.dark [data-sonner-toast][data-type="success"] [data-icon] svg {
+  color: #34d399 !important;
+}
+.dark [data-sonner-toast][data-type="error"] {
+  --normal-bg: hsl(220 16% 14%) !important;
+  color: hsl(214 32% 91%) !important;
+}
+.dark [data-sonner-toast][data-type="error"] [data-icon] svg {
+  color: #f87171 !important;
+}
+.dark [data-sonner-toast][data-type="warning"] [data-icon] svg {
+  color: #fbbf24 !important;
+}
+.dark [data-sonner-toast][data-type="info"] [data-icon] svg {
+  color: #60a5fa !important;
+}
+
 /* Dark mode transition for smooth theme switch */
 html.transitioning,
 html.transitioning *,

@@ -41,11 +41,11 @@ serve(async (req) => {
     const textoLimitado = email_text.slice(0, 4000)
     const modoAtual = modo === 'consultivo' ? 'consultivo' : 'contencioso'
 
-    // Buscar chave OpenAI
-    const openaiKey = Deno.env.get('OPENAI_API_KEY')
-    if (!openaiKey) {
+    // Buscar chave DeepSeek
+    const deepseekKey = Deno.env.get('DEEPSEEK_API_KEY')
+    if (!deepseekKey) {
       return new Response(
-        JSON.stringify({ sucesso: false, erro: 'Chave OpenAI nao configurada' }),
+        JSON.stringify({ sucesso: false, erro: 'Chave DeepSeek nao configurada' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -103,27 +103,28 @@ ${textoLimitado}
 
 Retorne APENAS o JSON, sem explicacoes.`
 
-    console.log('[Processar Email Tarefa] Chamando GPT-5 mini...')
+    console.log('[Processar Email Tarefa] Chamando DeepSeek...')
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openaiKey}`,
+        'Authorization': `Bearer ${deepseekKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-mini',
+        model: 'deepseek-chat',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_completion_tokens: 1000,
+        max_tokens: 1000,
+        temperature: 0.1,
       }),
     })
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('[Processar Email Tarefa] Erro OpenAI:', response.status, errorText)
+      console.error('[Processar Email Tarefa] Erro DeepSeek:', response.status, errorText)
       return new Response(
         JSON.stringify({ sucesso: false, erro: `Erro na API: ${response.status}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

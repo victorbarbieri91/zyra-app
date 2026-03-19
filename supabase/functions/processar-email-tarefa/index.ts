@@ -74,12 +74,14 @@ Sua tarefa e analisar o texto de um e-mail (que pode ser uma cadeia/thread com v
 REGRAS:
 1. Extraia o assunto principal do e-mail como titulo (maximo 80 caracteres, claro e conciso)
 2. Resuma TODA a cadeia de e-mails como descricao (maximo 300 caracteres, incluindo pontos-chave e acoes necessarias)
-3. Extraia o conteudo do e-mail MAIS RECENTE (o primeiro/topo da cadeia) como conteudo_ultimo_email:
-   - Apenas o texto escrito pela pessoa (a mensagem em si)
+3. Extraia o conteudo do e-mail MAIS RECENTE que tenha texto real como conteudo_ultimo_email:
+   - Identifique o e-mail mais recente (topo da cadeia) que contenha uma mensagem escrita (nao apenas assinatura)
+   - Se o topo da cadeia tiver apenas assinatura/rodape sem mensagem real, va para o proximo e-mail da cadeia que tenha texto
+   - Extraia APENAS o texto escrito pela pessoa (a mensagem em si)
    - REMOVA completamente: assinaturas, rodapes, links, URLs, disclaimers/avisos legais, imagens, "Reserve um horario", dados de contato (telefone, email, site), blocos "AVISO/WARNING"
    - REMOVA linhas em branco excessivas
    - Mantenha a transcricao FIEL do texto original, sem alterar palavras
-   - Se o e-mail mais recente tiver apenas assinatura sem texto, retorne string vazia
+   - NUNCA retorne string vazia se houver algum e-mail com texto na cadeia
 4. Sugira o tipo de tarefa mais adequado dentre as opcoes abaixo
 5. Avalie a urgencia: se menciona prazo curto, audiencia proxima, ou linguagem urgente → alta; normal → media; sem urgencia → baixa
 
@@ -115,8 +117,7 @@ Retorne APENAS o JSON, sem explicacoes.`
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_tokens: 1000,
-        temperature: 0.1,
+        max_completion_tokens: 1000,
       }),
     })
 

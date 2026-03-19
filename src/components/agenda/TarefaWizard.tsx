@@ -256,7 +256,8 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       // Ler arquivo como ArrayBuffer
       const arrayBuffer = await file.arrayBuffer()
 
-      let emailText = ''
+      let emailSubject = ''
+      let emailBody = ''
 
       // Tentar parsear .msg com msgreader
       try {
@@ -264,14 +265,21 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
         const msgReader = new MsgReader(arrayBuffer)
         const msgData = msgReader.getFileData()
 
-        const subject = msgData.subject || ''
-        const body = msgData.body || ''
-        emailText = `Assunto: ${subject}\n\n${body}`
+        emailSubject = msgData.subject || ''
+        emailBody = msgData.body || ''
       } catch {
         // Fallback: ler como texto bruto (pode ser .eml ou texto)
         const decoder = new TextDecoder('utf-8')
-        emailText = decoder.decode(arrayBuffer)
+        const rawText = decoder.decode(arrayBuffer)
+        // Tentar extrair subject de headers
+        const subjectMatch = rawText.match(/(?:Subject|Assunto):\s*(.+)/i)
+        emailSubject = subjectMatch?.[1]?.trim() || ''
+        emailBody = rawText
       }
+
+      const emailText = emailSubject
+        ? `Assunto: ${emailSubject}\n\n${emailBody}`
+        : emailBody
 
       if (!emailText.trim()) {
         throw new Error('Não foi possível extrair texto do e-mail')
@@ -287,8 +295,18 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao processar e-mail')
 
       const resultado = data.resultado
-      if (resultado.titulo) setTitulo(resultado.titulo)
-      if (resultado.descricao) setDescricao(resultado.descricao)
+
+      // Título = assunto exato do e-mail (não reinterpretado pela IA)
+      setTitulo(emailSubject || resultado.titulo || '')
+
+      // Descrição = resumo da IA + conteúdo limpo do último e-mail
+      const resumoIA = resultado.descricao || ''
+      const conteudoLimpo = resultado.conteudo_ultimo_email || ''
+      const partes = [resumoIA, conteudoLimpo].filter(Boolean)
+      const descricaoFinal = partes.length > 1
+        ? `${resumoIA}\n\n--- E-mail original ---\n${conteudoLimpo}`
+        : partes[0] || emailBody.slice(0, 500)
+      setDescricao(descricaoFinal)
       if (resultado.tipo_sugerido) {
         const tipoSugerido = resultado.tipo_sugerido as TipoTarefa
         if (modoTipo === 'contencioso' && tipoSugerido in CONTENCIOSO_TIPOS) {

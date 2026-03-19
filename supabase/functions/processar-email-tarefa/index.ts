@@ -17,6 +17,7 @@ const corsHeaders = {
 interface EmailProcessado {
   titulo: string
   descricao: string
+  conteudo_ultimo_email: string
   tipo_sugerido: string
   prioridade_sugerida: 'alta' | 'media' | 'baixa'
 }
@@ -40,11 +41,11 @@ serve(async (req) => {
     const textoLimitado = email_text.slice(0, 4000)
     const modoAtual = modo === 'consultivo' ? 'consultivo' : 'contencioso'
 
-    // Buscar chave DeepSeek
-    const deepseekKey = Deno.env.get('DEEPSEEK_API_KEY')
-    if (!deepseekKey) {
+    // Buscar chave OpenAI
+    const openaiKey = Deno.env.get('OPENAI_API_KEY')
+    if (!openaiKey) {
       return new Response(
-        JSON.stringify({ sucesso: false, erro: 'Chave DeepSeek nao configurada' }),
+        JSON.stringify({ sucesso: false, erro: 'Chave OpenAI nao configurada' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -68,13 +69,19 @@ serve(async (req) => {
     const tiposDisponiveis = modoAtual === 'consultivo' ? tiposConsultivo : tiposContencioso
 
     const systemPrompt = `Voce e um assistente juridico de um escritorio de advocacia brasileiro.
-Sua tarefa e analisar o texto de um e-mail e extrair informacoes para criar uma tarefa juridica.
+Sua tarefa e analisar o texto de um e-mail (que pode ser uma cadeia/thread com varios e-mails) e extrair informacoes para criar uma tarefa juridica.
 
 REGRAS:
 1. Extraia o assunto principal do e-mail como titulo (maximo 80 caracteres, claro e conciso)
-2. Resuma o corpo do e-mail como descricao (maximo 300 caracteres, incluindo pontos-chave e acoes necessarias)
-3. Sugira o tipo de tarefa mais adequado dentre as opcoes abaixo
-4. Avalie a urgencia: se menciona prazo curto, audiencia proxima, ou linguagem urgente → alta; normal → media; sem urgencia → baixa
+2. Resuma TODA a cadeia de e-mails como descricao (maximo 300 caracteres, incluindo pontos-chave e acoes necessarias)
+3. Extraia o conteudo do e-mail MAIS RECENTE (o primeiro/topo da cadeia) como conteudo_ultimo_email:
+   - Apenas o texto escrito pela pessoa (a mensagem em si)
+   - REMOVA completamente: assinaturas, rodapes, links, URLs, disclaimers/avisos legais, imagens, "Reserve um horario", dados de contato (telefone, email, site), blocos "AVISO/WARNING"
+   - REMOVA linhas em branco excessivas
+   - Mantenha a transcricao FIEL do texto original, sem alterar palavras
+   - Se o e-mail mais recente tiver apenas assinatura sem texto, retorne string vazia
+4. Sugira o tipo de tarefa mais adequado dentre as opcoes abaixo
+5. Avalie a urgencia: se menciona prazo curto, audiencia proxima, ou linguagem urgente → alta; normal → media; sem urgencia → baixa
 
 TIPOS DE TAREFA DISPONIVEIS (modo ${modoAtual}):
 ${tiposDisponiveis}
@@ -82,7 +89,8 @@ ${tiposDisponiveis}
 Responda APENAS com um JSON valido:
 {
   "titulo": "Titulo limpo e conciso da tarefa",
-  "descricao": "Resumo do e-mail com pontos-chave e acoes",
+  "descricao": "Resumo da cadeia com pontos-chave e acoes",
+  "conteudo_ultimo_email": "Texto fiel do e-mail mais recente, sem assinaturas/links/disclaimers",
   "tipo_sugerido": "tipo_escolhido",
   "prioridade_sugerida": "alta|media|baixa"
 }`
@@ -93,28 +101,28 @@ ${textoLimitado}
 
 Retorne APENAS o JSON, sem explicacoes.`
 
-    console.log('[Processar Email Tarefa] Chamando DeepSeek...')
+    console.log('[Processar Email Tarefa] Chamando GPT-5 mini...')
 
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${deepseekKey}`,
+        'Authorization': `Bearer ${openaiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: 'gpt-5-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_tokens: 500,
+        max_tokens: 1000,
         temperature: 0.1,
       }),
     })
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('[Processar Email Tarefa] Erro DeepSeek:', response.status, errorText)
+      console.error('[Processar Email Tarefa] Erro OpenAI:', response.status, errorText)
       return new Response(
         JSON.stringify({ sucesso: false, erro: `Erro na API: ${response.status}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -139,6 +147,7 @@ Retorne APENAS o JSON, sem explicacoes.`
       resultado = {
         titulo: subjectMatch?.[1]?.trim().slice(0, 80) || 'Tarefa de e-mail',
         descricao: textoLimitado.slice(0, 300),
+        conteudo_ultimo_email: textoLimitado.slice(0, 500),
         tipo_sugerido: modoAtual === 'consultivo' ? 'cons_outro' : 'outro',
         prioridade_sugerida: 'media',
       }

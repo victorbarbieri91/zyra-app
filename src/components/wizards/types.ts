@@ -18,6 +18,7 @@ export interface WizardProps {
   onClose: () => void
   onComplete: () => void | Promise<void>
   isSubmitting?: boolean
+  className?: string
 }
 
 export interface StepIndicatorProps {

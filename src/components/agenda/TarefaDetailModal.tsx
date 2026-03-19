@@ -43,6 +43,7 @@ import { useTimer } from '@/contexts/TimerContext'
 import { useTimesheetPorTarefa, type TimesheetEntryRecente } from '@/hooks/useTimesheetRecentes'
 import TimesheetListModal from '@/components/agenda/TimesheetListModal'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
+import { getTipoLabel as getTipoLabelFromConfig, getTipoCategoria } from '@/lib/constants/tarefa-tipos'
 
 // Extracted outside parent to prevent re-mount on every render (causes dropdown flicker)
 function DateRescheduleButton({
@@ -374,18 +375,8 @@ export default function TarefaDetailModal({
   const isConcluido = statusOtimista ? statusOtimista === 'concluida' : tarefa.status === 'concluida'
 
   // Helper functions
-  const getTipoLabel = (tipo: string) => {
-    const labels: Record<string, string> = {
-      normal: 'Tarefa Normal',
-      prazo_processual: 'Prazo Processual',
-      recorrente: 'Tarefa Recorrente',
-      fixa: 'Tarefa Fixa',
-      acompanhamento: 'Acompanhamento',
-      follow_up: 'Follow-up',
-      administrativo: 'Administrativo',
-      outro: 'Outro',
-    }
-    return labels[tipo] || tipo
+  const getLocalTipoLabel = (tipo: string) => {
+    return getTipoLabelFromConfig(tipo)
   }
 
   const getPrioridadeLabel = (prioridade: string) => {
@@ -582,7 +573,17 @@ export default function TarefaDetailModal({
                 {tarefa.titulo}
               </h2>
               <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
-                <span>{getTipoLabel(tarefa.tipo)}</span>
+                <span>{getLocalTipoLabel(tarefa.tipo)}</span>
+                {getTipoCategoria(tarefa.tipo) && (
+                  <span className={cn(
+                    'inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium',
+                    getTipoCategoria(tarefa.tipo) === 'contencioso'
+                      ? 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                      : 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400'
+                  )}>
+                    {getTipoCategoria(tarefa.tipo) === 'contencioso' ? 'Contencioso' : 'Consultivo'}
+                  </span>
+                )}
                 {isFixa && (
                   <span className="inline-flex items-center gap-1 bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30 rounded px-1.5 py-0.5 text-[10px] font-medium">
                     Aparece todo dia

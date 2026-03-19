@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Calendar, CalendarClock, Clock, Link as LinkIcon, CheckSquare, Briefcase, UserCheck, FileText, ClipboardList, Zap, TrendingUp, ChevronRight, Repeat, ListTree, Pin } from 'lucide-react' // Pin kept for info banner
+import { useState, useEffect, useCallback } from 'react'
+import { Calendar, CalendarClock, Clock, Link as LinkIcon, CheckSquare, Briefcase, UserCheck, FileText, ClipboardList, Zap, TrendingUp, ChevronRight, Repeat, ListTree, Pin, Mail, Loader2, Scale, Gavel, CheckCircle2 } from 'lucide-react'
 import { ModalWizard, WizardStep, ReviewCard } from '@/components/wizards'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { DateInput } from '@/components/ui/date-picker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-// TagSelector removido - tabelas de tags não são mais utilizadas
+import { Switch } from '@/components/ui/switch'
+import { useDropzone } from 'react-dropzone'
 import VinculacaoSelector from '@/components/agenda/VinculacaoSelector'
 import RecorrenciaConfig, { RecorrenciaData, getRecorrenciaSummary } from '@/components/agenda/RecorrenciaConfig'
 import ResponsaveisSelector from '@/components/agenda/ResponsaveisSelector'
@@ -17,7 +18,6 @@ import type { TarefaFormData } from '@/hooks/useTarefas'
 import type { WizardStep as WizardStepType } from '@/components/wizards/types'
 import { format, parse } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-// useTags removido - tabelas de tags não são mais utilizadas
 import { useRecorrencias } from '@/hooks/useRecorrencias'
 import { useTarefas } from '@/hooks/useTarefas'
 import { useAgendaResponsaveis } from '@/hooks/useAgendaResponsaveis'
@@ -26,6 +26,15 @@ import { createClient } from '@/lib/supabase/client'
 import { parseDateInBrazil, formatBrazilDateLong } from '@/lib/timezone'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
+import {
+  CONTENCIOSO_TIPOS,
+  CONSULTIVO_TIPOS,
+  getTipoLabel,
+  getTipoSelectedClasses,
+  type TipoTarefaContencioso,
+  type TipoTarefaConsultivo,
+  type CategoriaTarefa,
+} from '@/lib/constants/tarefa-tipos'
 
 interface TarefaWizardProps {
   escritorioId: string
@@ -35,49 +44,25 @@ interface TarefaWizardProps {
   initialData?: Partial<TarefaFormData>
 }
 
-type TipoTarefa = 'prazo_processual' | 'acompanhamento' | 'follow_up' | 'administrativo' | 'outro'
+type TipoTarefa = TipoTarefaContencioso | TipoTarefaConsultivo
 type Prioridade = 'alta' | 'media' | 'baixa'
 type PrazoTipo = 'recurso' | 'manifestacao' | 'cumprimento' | 'juntada' | 'pagamento' | 'outro'
-
-const TIPO_CONFIG = {
-  prazo_processual: {
-    label: 'Prazo Processual',
-    icon: Briefcase,
-    color: 'red',
-    description: 'Prazos judiciais',
-  },
-  acompanhamento: {
-    label: 'Acompanhamento',
-    icon: UserCheck,
-    color: 'blue',
-    description: 'Acompanhamento',
-  },
-  follow_up: {
-    label: 'Follow-up',
-    icon: Clock,
-    color: 'emerald',
-    description: 'Contato com clientes',
-  },
-  administrativo: {
-    label: 'Administrativo',
-    icon: FileText,
-    color: 'purple',
-    description: 'Tarefas internas',
-  },
-  outro: {
-    label: 'Outro',
-    icon: ClipboardList,
-    color: 'slate',
-    description: 'Outras tarefas',
-  },
-}
 
 export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreated, initialData }: TarefaWizardProps) {
   const { user } = useAuth()
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Tags removidas - sistema simplificado
+  // Toggle Contencioso/Consultivo
+  const [modoTipo, setModoTipo] = useState<CategoriaTarefa>(() => {
+    if (initialData?.consultivo_id) return 'consultivo'
+    return 'contencioso'
+  })
+
+  // Email drag-and-drop
+  const [emailProcessing, setEmailProcessing] = useState(false)
+  const [emailFileName, setEmailFileName] = useState<string | null>(null)
+  const [emailProcessed, setEmailProcessed] = useState(false)
 
   // Carregar membros do escritório para exibição na revisão
   const { membros } = useEscritorioMembros(escritorioId)
@@ -89,9 +74,14 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   const { getResponsaveis } = useAgendaResponsaveis()
 
   // Form State — se editando tarefa fixa, exibir como 'administrativo' (tipo original perdido)
-  const [tipo, setTipo] = useState<TipoTarefa>(
-    initialData?.tipo === 'fixa' ? 'administrativo' : (initialData?.tipo as TipoTarefa || 'outro')
-  )
+  const [tipo, setTipo] = useState<TipoTarefa>(() => {
+    if (initialData?.tipo === 'fixa') return 'administrativo'
+    const t = initialData?.tipo as TipoTarefa | undefined
+    if (t && (t in CONTENCIOSO_TIPOS || t in CONSULTIVO_TIPOS)) return t
+    // Default conforme modo
+    if (initialData?.consultivo_id) return 'cons_parecer'
+    return 'outro'
+  })
   const [titulo, setTitulo] = useState(initialData?.titulo || '')
   const [descricao, setDescricao] = useState(initialData?.descricao || '')
 
@@ -227,21 +217,118 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
     loadMetadados()
   }, [initialData?.processo_id, initialData?.consultivo_id])
 
-  // Sincronizar vinculacao com processoId/consultivoId
+  // Sincronizar vinculacao com processoId/consultivoId + auto-switch modo
   useEffect(() => {
     if (vinculacao) {
       if (vinculacao.modulo === 'processo') {
         setProcessoId(vinculacao.modulo_registro_id)
         setConsultivoId(null)
+        // Auto-switch para contencioso se estava em consultivo
+        if (modoTipo === 'consultivo') {
+          setModoTipo('contencioso')
+          setTipo('outro')
+        }
       } else if (vinculacao.modulo === 'consultivo') {
         setConsultivoId(vinculacao.modulo_registro_id)
         setProcessoId(null)
+        // Auto-switch para consultivo se estava em contencioso
+        if (modoTipo === 'contencioso') {
+          setModoTipo('consultivo')
+          setTipo('cons_parecer')
+        }
       }
     } else {
       setProcessoId(null)
       setConsultivoId(null)
     }
   }, [vinculacao])
+
+  // Drag-and-drop de e-mail (.msg do Outlook)
+  const onDropEmail = useCallback(async (acceptedFiles: File[]) => {
+    const file = acceptedFiles[0]
+    if (!file) return
+
+    setEmailFileName(file.name)
+    setEmailProcessing(true)
+    setEmailProcessed(false)
+
+    try {
+      // Ler arquivo como ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer()
+
+      let emailText = ''
+
+      // Tentar parsear .msg com msgreader
+      try {
+        const MsgReader = (await import('@kenjiuno/msgreader')).default
+        const msgReader = new MsgReader(arrayBuffer)
+        const msgData = msgReader.getFileData()
+
+        const subject = msgData.subject || ''
+        const body = msgData.body || ''
+        emailText = `Assunto: ${subject}\n\n${body}`
+      } catch {
+        // Fallback: ler como texto bruto (pode ser .eml ou texto)
+        const decoder = new TextDecoder('utf-8')
+        emailText = decoder.decode(arrayBuffer)
+      }
+
+      if (!emailText.trim()) {
+        throw new Error('Não foi possível extrair texto do e-mail')
+      }
+
+      // Enviar à edge function para processamento com IA
+      const supabase = createClient()
+      const { data, error } = await supabase.functions.invoke('processar-email-tarefa', {
+        body: { email_text: emailText, modo: modoTipo },
+      })
+
+      if (error) throw error
+      if (!data?.sucesso) throw new Error(data?.erro || 'Erro ao processar e-mail')
+
+      const resultado = data.resultado
+      if (resultado.titulo) setTitulo(resultado.titulo)
+      if (resultado.descricao) setDescricao(resultado.descricao)
+      if (resultado.tipo_sugerido) {
+        const tipoSugerido = resultado.tipo_sugerido as TipoTarefa
+        if (modoTipo === 'contencioso' && tipoSugerido in CONTENCIOSO_TIPOS) {
+          setTipo(tipoSugerido)
+        } else if (modoTipo === 'consultivo' && tipoSugerido in CONSULTIVO_TIPOS) {
+          setTipo(tipoSugerido)
+        }
+      }
+      if (resultado.prioridade_sugerida) {
+        const prio = resultado.prioridade_sugerida as Prioridade
+        if (['alta', 'media', 'baixa'].includes(prio)) setPrioridade(prio)
+      }
+
+      setEmailProcessed(true)
+      toast.success('E-mail processado! Campos preenchidos automaticamente.')
+
+      // Reset do estado visual após 3s
+      setTimeout(() => {
+        setEmailProcessed(false)
+        setEmailFileName(null)
+      }, 3000)
+    } catch (err: any) {
+      console.error('Erro ao processar e-mail:', err)
+      toast.error(err?.message || 'Erro ao processar e-mail')
+      setEmailFileName(null)
+    } finally {
+      setEmailProcessing(false)
+    }
+  }, [modoTipo])
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: onDropEmail,
+    accept: {
+      'application/vnd.ms-outlook': ['.msg'],
+      'message/rfc822': ['.eml'],
+    },
+    maxFiles: 1,
+    noClick: false,
+    noKeyboard: true,
+  })
 
   // Carregar responsáveis existentes quando estamos editando (initialData tem id)
   // Pular para instâncias virtuais (não existem no banco)
@@ -399,16 +486,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
     }
   }
 
-  const getTipoLabel = (t: TipoTarefa) => {
-    const labels: Record<TipoTarefa, string> = {
-      prazo_processual: 'Prazo Processual',
-      acompanhamento: 'Acompanhamento',
-      follow_up: 'Follow-up',
-      administrativo: 'Administrativo',
-      outro: 'Outro',
-    }
-    return labels[t]
-  }
+  const getLocalTipoLabel = (t: string) => getTipoLabel(t)
 
   const getPrioridadeLabel = (p: Prioridade) => {
     const labels = { alta: 'Alta', media: 'Média', baixa: 'Baixa' }
@@ -424,16 +502,44 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       onClose={onClose}
       onComplete={handleComplete}
       isSubmitting={isSubmitting}
+      className="max-w-3xl"
     >
       {/* ETAPA 1: Tipo e Identificação */}
       {steps[currentStep]?.id === 'tipo-identificacao' && (
         <WizardStep title={steps[currentStep].title} subtitle={steps[currentStep].subtitle}>
-          <div className="space-y-4">
-            {/* Tipo de Tarefa */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#34495e] dark:text-slate-200">Tipo de Tarefa *</Label>
+          <div className="space-y-5">
+            {/* Label + Switch inline */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Label className="text-sm font-medium text-[#34495e] dark:text-slate-200">Tipo de Tarefa *</Label>
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    'text-[11px] font-medium transition-colors',
+                    modoTipo === 'contencioso' ? 'text-[#34495e] dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'
+                  )}>
+                    Contencioso
+                  </span>
+                  <Switch
+                    checked={modoTipo === 'consultivo'}
+                    onCheckedChange={(checked) => {
+                      const novoModo = checked ? 'consultivo' : 'contencioso'
+                      setModoTipo(novoModo)
+                      if (checked && tipo in CONTENCIOSO_TIPOS) setTipo('cons_parecer')
+                      if (!checked && tipo in CONSULTIVO_TIPOS) setTipo('outro')
+                    }}
+                  />
+                  <span className={cn(
+                    'text-[11px] font-medium transition-colors',
+                    modoTipo === 'consultivo' ? 'text-[#34495e] dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'
+                  )}>
+                    Consultivo
+                  </span>
+                </div>
+              </div>
+
+              {/* Grid de tipos conforme modo */}
               <div className="grid grid-cols-5 gap-2">
-                {(Object.entries(TIPO_CONFIG) as [TipoTarefa, typeof TIPO_CONFIG[keyof typeof TIPO_CONFIG]][]).map(
+                {Object.entries(modoTipo === 'contencioso' ? CONTENCIOSO_TIPOS : CONSULTIVO_TIPOS).map(
                   ([key, config]) => {
                     const Icon = config.icon
                     const selected = tipo === key
@@ -442,18 +548,11 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
                       <button
                         key={key}
                         type="button"
-                        onClick={() => setTipo(key)}
+                        onClick={() => setTipo(key as TipoTarefa)}
                         className={cn(
                           'flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all',
                           selected
-                            ? cn(
-                                'border-current shadow-sm',
-                                config.color === 'red' && 'bg-red-50 text-red-600 border-red-300 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/50',
-                                config.color === 'blue' && 'bg-blue-50 text-blue-600 border-blue-300 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/50',
-                                config.color === 'emerald' && 'bg-emerald-50 text-emerald-600 border-emerald-300 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/50',
-                                config.color === 'purple' && 'bg-purple-50 text-purple-600 border-purple-300 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/50',
-                                config.color === 'slate' && 'bg-slate-50 text-slate-600 border-slate-300 dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/50'
-                              )
+                            ? cn('border-current shadow-sm', getTipoSelectedClasses(config.color))
                             : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600 dark:border-slate-700 dark:bg-surface-1 dark:text-slate-500 dark:hover:border-slate-600 dark:hover:text-slate-300'
                         )}
                       >
@@ -466,6 +565,42 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
                   }
                 )}
               </div>
+            </div>
+
+            {/* Dropzone de e-mail — faixa discreta */}
+            <div
+              {...getRootProps()}
+              className={cn(
+                'flex items-center gap-2 py-2 px-3 rounded-md border border-dashed cursor-pointer transition-all',
+                isDragActive
+                  ? 'border-[#89bcbe] bg-[#f0f9f9] dark:bg-teal-500/5 dark:border-teal-500/40'
+                  : 'border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600',
+                emailProcessing && 'pointer-events-none opacity-70'
+              )}
+            >
+              <input {...getInputProps()} />
+              {emailProcessing ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 text-[#89bcbe] animate-spin flex-shrink-0" />
+                  <span className="text-[11px] text-[#34495e] dark:text-slate-300 truncate">
+                    Processando {emailFileName}...
+                  </span>
+                </>
+              ) : emailProcessed ? (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                    E-mail processado
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Mail className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
+                  <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                    {isDragActive ? 'Solte o e-mail aqui' : 'Arraste um e-mail do Outlook aqui ou clique para selecionar'}
+                  </span>
+                </>
+              )}
             </div>
 
             {/* Título */}
@@ -648,7 +783,12 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
               {/* Tipo e Título */}
               <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
                 <span className="text-slate-500 dark:text-slate-400">Tipo</span>
-                <span className="text-[#34495e] dark:text-slate-200 font-medium">{getTipoLabel(tipo)}</span>
+                <span className="text-[#34495e] dark:text-slate-200 font-medium">
+                  {getLocalTipoLabel(tipo)}
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal ml-1.5">
+                    ({modoTipo === 'contencioso' ? 'Contencioso' : 'Consultivo'})
+                  </span>
+                </span>
 
                 {isFixa && (
                   <>

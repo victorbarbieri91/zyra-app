@@ -9,20 +9,12 @@ import { parseDBDate } from '@/lib/timezone'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import Link from 'next/link'
+import { getTipoChipStyle } from '@/lib/constants/tarefa-tipos'
 
 interface KanbanTaskCardProps {
   tarefa: Tarefa
   onClick: () => void
   onComplete?: () => void
-}
-
-const tipoChipConfig: Record<string, { label: string; bg: string; text: string }> = {
-  prazo_processual: { label: 'Prazo', bg: 'bg-red-50 dark:bg-red-500/10', text: 'text-red-600 dark:text-red-400' },
-  acompanhamento: { label: 'Acomp.', bg: 'bg-blue-50 dark:bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400' },
-  follow_up: { label: 'Follow-up', bg: 'bg-purple-50 dark:bg-purple-500/10', text: 'text-purple-600 dark:text-purple-400' },
-  administrativo: { label: 'Admin', bg: 'bg-slate-100 dark:bg-surface-2', text: 'text-slate-600 dark:text-slate-400' },
-  fixa: { label: 'Fixa', bg: 'bg-teal-50 dark:bg-teal-500/10', text: 'text-teal-600 dark:text-teal-400' },
-  outro: { label: 'Outro', bg: 'bg-slate-100 dark:bg-surface-2', text: 'text-slate-500 dark:text-slate-400' },
 }
 
 export const statusConfig: Record<string, { bg: string; text: string; border: string; label: string }> = {
@@ -46,7 +38,7 @@ export default function KanbanTaskCard({ tarefa, onClick }: KanbanTaskCardProps)
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : undefined
 
-  const tipoInfo = tipoChipConfig[tarefa.tipo] || tipoChipConfig.outro
+  const tipoInfo = getTipoChipStyle(tarefa.tipo)
   const dataFormatada = format(parseDBDate(tarefa.data_inicio), "d MMM", { locale: ptBR }).replace('.', '')
   // Link para o caso vinculado
   const casoHref = tarefa.processo_id

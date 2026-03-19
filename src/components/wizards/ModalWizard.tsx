@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import StepIndicator from './StepIndicator'
 import WizardNavigation from './WizardNavigation'
+import { cn } from '@/lib/utils'
 import type { WizardProps } from './types'
 
 export default function ModalWizard({
@@ -16,6 +17,7 @@ export default function ModalWizard({
   onClose,
   onComplete,
   isSubmitting = false,
+  className,
 }: WizardProps) {
   const [canProceed, setCanProceed] = useState(false)
 
@@ -52,7 +54,7 @@ export default function ModalWizard({
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+      <DialogContent className={cn("max-w-2xl max-h-[90vh] flex flex-col p-0", className)}>
         {/* Hidden DialogTitle for accessibility */}
         <VisuallyHidden>
           <DialogTitle>{title}</DialogTitle>

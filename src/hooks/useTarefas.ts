@@ -3,13 +3,14 @@ import { createClient } from '@/lib/supabase/client'
 import { formatDateForDB, formatDateTimeForDB, getNowInBrazil } from '@/lib/timezone'
 import { format } from 'date-fns'
 import { expandirRecorrencias, type RecorrenciaRegra } from '@/lib/recorrencia-utils'
+import type { TipoTarefa } from '@/lib/constants/tarefa-tipos'
 
 export interface Tarefa {
   id: string
   escritorio_id: string
   titulo: string
   descricao?: string
-  tipo: 'prazo_processual' | 'acompanhamento' | 'follow_up' | 'administrativo' | 'outro' | 'fixa'
+  tipo: TipoTarefa
   prioridade: 'alta' | 'media' | 'baixa'
   status: 'pendente' | 'em_andamento' | 'em_pausa' | 'concluida' | 'cancelada'
   data_inicio: string

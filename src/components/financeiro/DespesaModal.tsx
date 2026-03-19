@@ -325,6 +325,9 @@ export default function DespesaModal({
           conta_bancaria_id: editData.conta_bancaria_id || '',
           forma_pagamento: editData.forma_pagamento || '',
           fornecedor: editData.fornecedor || '',
+          modalidade: 'unica',
+          numero_parcelas: 2,
+          config_recorrencia: { ...DEFAULT_CONFIG_RECORRENCIA },
         })
         setSearchTerm('')
         setProcessoSelecionado(null)

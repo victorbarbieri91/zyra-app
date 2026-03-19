@@ -134,6 +134,7 @@ export default function ImportarFaturaModal({
                   handleEditTransacao={hook.handleEditTransacao}
                   handleSaveEdit={hook.handleSaveEdit}
                   handleRemoveTransacao={hook.handleRemoveTransacao}
+                  toggleRecorrente={hook.toggleRecorrente}
                   formatCurrency={hook.formatCurrency}
                   formatDate={hook.formatDate}
                 />

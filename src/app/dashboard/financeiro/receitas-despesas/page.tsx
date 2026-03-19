@@ -133,8 +133,8 @@ const getCategoriaConfig = (categoria: string) => {
   return CATEGORIA_CONFIG[categoria] || { label: categoria, color: 'bg-slate-50 text-slate-600 border-slate-200' }
 }
 
-const PAGE_SIZE_OPTIONS = [20, 50, 100]
-const DEFAULT_PAGE_SIZE = 20
+const PAGE_SIZE_OPTIONS = [50, 100, 150]
+const DEFAULT_PAGE_SIZE = 50
 
 // Helpers para período
 const getInicioMes = (date: Date = new Date()) => {

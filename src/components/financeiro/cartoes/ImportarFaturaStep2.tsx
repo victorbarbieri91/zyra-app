@@ -83,6 +83,7 @@ interface ImportarFaturaStep2Props {
   handleEditTransacao: (t: TransacaoExtraida) => void
   handleSaveEdit: () => void
   handleRemoveTransacao: (id: string) => void
+  toggleRecorrente: (id: string) => void
 
   // Helpers
   formatCurrency: (value: number) => string
@@ -123,6 +124,7 @@ export default function ImportarFaturaStep2({
   handleEditTransacao,
   handleSaveEdit,
   handleRemoveTransacao,
+  toggleRecorrente,
   formatCurrency,
   formatDate,
 }: ImportarFaturaStep2Props) {
@@ -323,9 +325,27 @@ export default function ImportarFaturaStep2({
                           title="Clique para editar"
                         >
                           <p className="text-[11px] text-slate-700 dark:text-slate-300 truncate">{t.descricao}</p>
-                          {t.parcela && (
-                            <span className="text-[9px] text-slate-400">Parcela {t.parcela}</span>
-                          )}
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {t.parcela && (
+                              <span className="text-[9px] text-blue-600 dark:text-blue-400">Parcela {t.parcela}</span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                toggleRecorrente(t.id)
+                              }}
+                              className={cn(
+                                'text-[9px] px-1.5 py-0.5 rounded-full border transition-colors',
+                                t.tipo === 'recorrente'
+                                  ? 'bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800'
+                                  : 'bg-transparent text-slate-400 border-slate-200 dark:border-slate-700 hover:text-purple-600 hover:border-purple-300'
+                              )}
+                              title={t.tipo === 'recorrente' ? 'Remover recorrência' : 'Marcar como recorrente'}
+                            >
+                              ↻ {t.tipo === 'recorrente' ? 'Recorrente' : 'Recorrente?'}
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>

@@ -11,6 +11,10 @@ import {
   Pencil,
   Calendar,
   CheckCircle2,
+  Repeat,
+  XCircle,
+  RotateCcw,
+  Eraser,
 } from 'lucide-react'
 import {
   Sheet,
@@ -127,15 +131,20 @@ export default function FaturaDetailSheet({
   const [fecharFaturaConfirm, setFecharFaturaConfirm] = useState(false)
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
   const [bulkCategoriaOpen, setBulkCategoriaOpen] = useState(false)
+  const [limparFaturaConfirm, setLimparFaturaConfirm] = useState(false)
 
   const {
     loadLancamentosMes,
     loadFaturas,
+    updateLancamento,
     deleteLancamento,
+    cancelarRecorrente,
+    reativarRecorrente,
     fecharFatura,
     pagarFatura,
     deleteLancamentosEmMassa,
     atualizarCategoriaEmMassa,
+    limparFatura,
   } = useCartoesCredito(escritorioIds)
 
   // Carregar dados quando abrir
@@ -378,6 +387,17 @@ export default function FaturaDetailSheet({
                   Pagar
                 </Button>
               )}
+              {(fatura || lancamentos.length > 0) && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs h-8 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-500/10"
+                  onClick={() => setLimparFaturaConfirm(true)}
+                >
+                  <Eraser className="w-3.5 h-3.5 mr-1" />
+                  Limpar
+                </Button>
+              )}
             </div>
           </div>
 
@@ -518,6 +538,44 @@ export default function FaturaDetailSheet({
                           <Pencil className="h-3.5 w-3.5 mr-2" />
                           Editar
                         </DropdownMenuItem>
+                        {lanc.tipo === 'unica' && (
+                          <DropdownMenuItem onClick={async () => {
+                            const success = await updateLancamento(lanc.id, {
+                              tipo: 'recorrente',
+                              recorrente_ativo: true,
+                            })
+                            if (success) {
+                              toast.success('Marcado como recorrente')
+                              loadData()
+                              onDataChange?.()
+                            }
+                          }}>
+                            <Repeat className="h-3.5 w-3.5 mr-2 text-purple-600" />
+                            Marcar como Recorrente
+                          </DropdownMenuItem>
+                        )}
+                        {lanc.tipo === 'recorrente' && lanc.recorrente_ativo && (
+                          <DropdownMenuItem onClick={async () => {
+                            await cancelarRecorrente(lanc.compra_id)
+                            toast.success('Recorrência cancelada')
+                            loadData()
+                            onDataChange?.()
+                          }}>
+                            <XCircle className="h-3.5 w-3.5 mr-2 text-amber-600" />
+                            Cancelar Recorrência
+                          </DropdownMenuItem>
+                        )}
+                        {lanc.tipo === 'recorrente' && !lanc.recorrente_ativo && (
+                          <DropdownMenuItem onClick={async () => {
+                            await reativarRecorrente(lanc.compra_id)
+                            toast.success('Recorrência reativada')
+                            loadData()
+                            onDataChange?.()
+                          }}>
+                            <RotateCcw className="h-3.5 w-3.5 mr-2 text-emerald-600" />
+                            Reativar Recorrência
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           className="text-red-600"
                           onClick={() => setDeleteConfirmId(lanc.id)}
@@ -620,6 +678,48 @@ export default function FaturaDetailSheet({
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleBulkDelete} className="bg-red-600 hover:bg-red-700">
               Excluir Todos
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmação limpar fatura */}
+      <AlertDialog open={limparFaturaConfirm} onOpenChange={setLimparFaturaConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600">Limpar Fatura</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso vai excluir <strong>todos os lançamentos</strong>, a fatura e a despesa vinculada
+              de {formatMesAno(mesReferencia)} do cartão {cartao?.nome}. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!cartao) return
+                // Buscar mes_referencia da fatura (competência) para limpar corretamente
+                const mesRef = fatura?.mes_referencia
+                  ? fatura.mes_referencia.substring(0, 10)
+                  : (() => {
+                      const [ano, mes] = mesReferencia.split('-').map(Number)
+                      const d = new Date(ano, mes - 2, 1)
+                      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+                    })()
+
+                const success = await limparFatura(cartao.id, mesRef)
+                if (success) {
+                  toast.success('Fatura limpa com sucesso')
+                  setLimparFaturaConfirm(false)
+                  onOpenChange(false)
+                  onDataChange?.()
+                } else {
+                  toast.error('Erro ao limpar fatura')
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Limpar Tudo
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

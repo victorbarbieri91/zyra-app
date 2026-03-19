@@ -43,6 +43,8 @@ import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { formatDateForDB, formatBrazilDate } from '@/lib/timezone'
+import LancamentoModalidadeSelector, { DEFAULT_CONFIG_RECORRENCIA, type LancamentoModalidade } from './LancamentoModalidadeSelector'
+import type { ConfigRecorrencia } from '@/hooks/useReceitas'
 
 export interface DespesaEditData {
   id: string
@@ -108,6 +110,9 @@ interface FormData {
   conta_bancaria_id: string
   forma_pagamento: string
   fornecedor: string
+  modalidade: LancamentoModalidade
+  numero_parcelas: number
+  config_recorrencia: ConfigRecorrencia
 }
 
 const CATEGORIAS_PROCESSUAIS = [
@@ -172,6 +177,9 @@ const makeInitialFormData = (hasVinculo: boolean): FormData => ({
   conta_bancaria_id: '',
   forma_pagamento: '',
   fornecedor: '',
+  modalidade: 'unica',
+  numero_parcelas: 2,
+  config_recorrencia: { ...DEFAULT_CONFIG_RECORRENCIA },
 })
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -596,6 +604,20 @@ export default function DespesaModal({
       toast.error('Escritório não identificado')
       return
     }
+    if (formData.modalidade === 'parcelada' && (formData.numero_parcelas < 2 || formData.numero_parcelas > 60)) {
+      toast.error('O número de parcelas deve ser entre 2 e 60')
+      return
+    }
+    if (formData.modalidade === 'recorrente') {
+      if (!formData.config_recorrencia.frequencia) {
+        toast.error('Selecione a frequência da recorrência')
+        return
+      }
+      if (formData.config_recorrencia.dia_vencimento < 1 || formData.config_recorrencia.dia_vencimento > 31) {
+        toast.error('O dia do vencimento deve ser entre 1 e 31')
+        return
+      }
+    }
     if (formData.ja_pago) {
       if (!formData.data_pagamento) {
         toast.error('Informe a data do pagamento')
@@ -664,6 +686,16 @@ export default function DespesaModal({
           reembolso_status: formData.reembolsavel ? 'pendente' : null,
           advogado_id: currentUser?.id || null,
           fornecedor: formData.fornecedor.trim() || null,
+          parcelado: formData.modalidade === 'parcelada',
+          numero_parcelas: formData.modalidade === 'parcelada' ? formData.numero_parcelas : 1,
+          recorrente: formData.modalidade === 'recorrente',
+          config_recorrencia: formData.modalidade === 'recorrente'
+            ? {
+                ...formData.config_recorrencia,
+                data_inicio: formatDateForDB(formData.data_vencimento),
+                gerar_automatico: true,
+              }
+            : null,
         }
 
         if (formData.ja_pago) {
@@ -683,7 +715,13 @@ export default function DespesaModal({
 
         if (error) throw error
 
-        toast.success('Despesa lançada com sucesso!')
+        toast.success(
+          formData.modalidade === 'parcelada'
+            ? `Despesa parcelada em ${formData.numero_parcelas}x lançada com sucesso!`
+            : formData.modalidade === 'recorrente'
+            ? 'Despesa recorrente criada com sucesso!'
+            : 'Despesa lançada com sucesso!'
+        )
       }
 
       onOpenChange(false)
@@ -698,7 +736,7 @@ export default function DespesaModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl lg:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
             <Receipt className="w-5 h-5 text-[#89bcbe]" />
@@ -886,7 +924,9 @@ export default function DespesaModal({
             )}
           </div>
 
-          {/* === SEÇÃO 2: CAMPOS PRINCIPAIS === */}
+          {/* === SEÇÃO 2: INFORMAÇÕES === */}
+          <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4 space-y-3">
+            <p className="text-xs font-medium text-[#46627f] dark:text-slate-400 uppercase tracking-wide">Informações</p>
           {/* Categoria */}
           <div>
             <Label htmlFor="categoria">Categoria *</Label>
@@ -946,6 +986,11 @@ export default function DespesaModal({
             />
           </div>
 
+          </div>
+
+          {/* === SEÇÃO 3: VALORES E DATAS === */}
+          <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4 space-y-3">
+            <p className="text-xs font-medium text-[#46627f] dark:text-slate-400 uppercase tracking-wide">Valores e Datas</p>
           {/* Valor e Data de Vencimento */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -966,8 +1011,28 @@ export default function DespesaModal({
               />
             </div>
           </div>
+          </div>
 
-          {/* === SEÇÃO 3: UPLOAD DE COMPROVANTE === */}
+          {/* === SEÇÃO 4: MODALIDADE === */}
+          <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4 space-y-3">
+            <p className="text-xs font-medium text-[#46627f] dark:text-slate-400 uppercase tracking-wide">Modalidade</p>
+          <LancamentoModalidadeSelector
+            modalidade={formData.modalidade}
+            onModalidadeChange={(m) => updateField('modalidade', m)}
+            numeroParcelas={formData.numero_parcelas}
+            onNumeroParcelasChange={(n) => updateField('numero_parcelas', n)}
+            supportsParcelamento={true}
+            valor={formData.valor}
+            configRecorrencia={formData.config_recorrencia}
+            onConfigRecorrenciaChange={(c) => updateField('config_recorrencia', c)}
+            dataVencimento={formData.data_vencimento}
+            disabled={!!editData}
+          />
+          </div>
+
+          {/* === SEÇÃO 5: COMPROVANTE + REEMBOLSO === */}
+          <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4 space-y-3">
+            <p className="text-xs font-medium text-[#46627f] dark:text-slate-400 uppercase tracking-wide">Documentação e Reembolso</p>
           <div>
             <Label className="text-xs text-slate-600 dark:text-slate-400">Comprovante / Guia</Label>
             <input
@@ -1074,8 +1139,9 @@ export default function DespesaModal({
               </Badge>
             )}
           </div>
+          </div>
 
-          {/* === SEÇÃO 5: JÁ FOI PAGO === */}
+          {/* === SEÇÃO 6: JÁ FOI PAGO === */}
           <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4 space-y-3">
             <div className="flex items-center gap-3">
               <Switch

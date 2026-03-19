@@ -435,6 +435,16 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
     setTransacoes(prev => prev.filter(t => t.id !== id))
   }
 
+  const toggleRecorrente = (id: string) => {
+    setTransacoes(prev => prev.map(t => {
+      if (t.id !== id) return t
+      return {
+        ...t,
+        tipo: t.tipo === 'recorrente' ? 'unica' : 'recorrente',
+      }
+    }))
+  }
+
   // Etapa 2 -> 3: Importar
   const handleImportar = async () => {
     const selecionadas = transacoes.filter(t => t.selecionada)
@@ -452,12 +462,38 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
     try {
       const mesRef = mesReferenciaFatura ? `${mesReferenciaFatura}-01` : new Date().toISOString().split('T')[0].substring(0, 8) + '01'
 
-      const transacoesParaImportar = selecionadas.map(t => ({
-        descricao: t.descricao,
-        categoria: t.categoria_sugerida,
-        valor: t.valor,
-        data_compra: t.data,
-      }))
+      const transacoesParaImportar = selecionadas.map(t => {
+        // Parsear parcela "2/12" para parcela_numero e parcela_total
+        let parcela_numero = 1
+        let parcela_total = 1
+        let tipo = t.tipo || 'unica'
+
+        if (t.parcela && t.parcela.includes('/')) {
+          const [num, total] = t.parcela.split('/').map(Number)
+          if (num > 0 && total > 0) {
+            parcela_numero = num
+            parcela_total = total
+            tipo = 'parcelada'
+          }
+        }
+
+        // Se marcado como recorrente pelo usuário
+        if (t.tipo === 'recorrente') {
+          tipo = 'recorrente'
+          parcela_numero = 1
+          parcela_total = 1
+        }
+
+        return {
+          descricao: t.descricao,
+          categoria: t.categoria_sugerida,
+          valor: t.valor,
+          data_compra: t.data,
+          tipo,
+          parcela_numero,
+          parcela_total,
+        }
+      })
 
       const { total_importados, lancamento_ids } = await importarLancamentosEmLote(
         cartao.id,
@@ -627,6 +663,7 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
     handleEditTransacao,
     handleSaveEdit,
     handleRemoveTransacao,
+    toggleRecorrente,
 
     // Helpers
     formatCurrency,

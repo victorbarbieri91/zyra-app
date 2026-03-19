@@ -776,6 +776,32 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
     }
   }, [supabase])
 
+  // Limpar fatura (deletar lançamentos, fatura e despesa vinculada)
+  const limparFatura = useCallback(async (
+    cartaoId: string,
+    mesReferencia: string
+  ): Promise<boolean> => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const { data, error: rpcError } = await supabase
+        .rpc('limpar_fatura_cartao', {
+          p_cartao_id: cartaoId,
+          p_mes_referencia: mesReferencia,
+        })
+
+      if (rpcError) throw rpcError
+      return data || false
+    } catch (err: any) {
+      console.error('Erro ao limpar fatura:', err)
+      setError(err.message)
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase])
+
   // ============================================
   // IMPORTAÇÃO
   // ============================================
@@ -1020,6 +1046,32 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
         .single()
 
       if (insertError) throw insertError
+
+      // Se criou como fechada, gerar despesa vinculada em financeiro_despesas
+      if (statusInicial === 'fechada' && novaFatura && (valorTotal || 0) > 0) {
+        const descricaoFatura = `Fatura ${cartao.nome} - ${mesReferencia.substring(5, 7)}/${mesReferencia.substring(0, 4)}`
+        const { data: despesa } = await supabase
+          .from('financeiro_despesas')
+          .insert({
+            escritorio_id: cartao.escritorio_id,
+            categoria: 'cartao_credito',
+            fornecedor: `${cartao.banco} - ${cartao.nome}`,
+            descricao: descricaoFatura,
+            valor: valorTotal,
+            data_vencimento: vencimento,
+            status: 'pendente',
+          })
+          .select('id')
+          .single()
+
+        if (despesa) {
+          await supabase
+            .from('cartoes_credito_faturas')
+            .update({ despesa_id: despesa.id })
+            .eq('id', novaFatura.id)
+        }
+      }
+
       return novaFatura
     } catch (err) {
       console.error('Erro ao criar fatura do cartão:', err)
@@ -1312,6 +1364,7 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
     getFatura,
     fecharFatura,
     pagarFatura,
+    limparFatura,
     // Importação
     loadImportacoes,
     createImportacao,

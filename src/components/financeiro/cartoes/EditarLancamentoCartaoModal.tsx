@@ -65,7 +65,7 @@ export default function EditarLancamentoCartaoModal({
   const [processos, setProcessos] = useState<ProcessoOption[]>([])
 
   const supabase = createClient()
-  const { updateLancamento } = useCartoesCredito(escritorioId)
+  const { updateLancamento, cancelarRecorrente } = useCartoesCredito(escritorioId)
 
   // Carregar processos
   useEffect(() => {
@@ -214,17 +214,57 @@ export default function EditarLancamentoCartaoModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Info do tipo de lancamento (nao editavel) */}
+          {/* Tipo de lançamento */}
           <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-600 dark:text-slate-400">Tipo:</span>
               {getTipoBadge()}
             </div>
-            {lancamento.tipo === 'parcelada' && (
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                Valor total: {formatCurrency(lancamento.valor * lancamento.parcela_total)}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {lancamento.tipo === 'parcelada' && (
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  Valor total: {formatCurrency(lancamento.valor * lancamento.parcela_total)}
+                </span>
+              )}
+              {lancamento.tipo === 'unica' && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-500/10"
+                  onClick={async () => {
+                    const success = await updateLancamento(lancamento.id, {
+                      tipo: 'recorrente',
+                      recorrente_ativo: true,
+                    })
+                    if (success) {
+                      toast.success('Marcado como recorrente')
+                      onOpenChange(false)
+                      onSuccess?.()
+                    }
+                  }}
+                >
+                  <Repeat className="w-3 h-3 mr-1" />
+                  Tornar Recorrente
+                </Button>
+              )}
+              {lancamento.tipo === 'recorrente' && lancamento.recorrente_ativo && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+                  onClick={async () => {
+                    await cancelarRecorrente(lancamento.compra_id)
+                    toast.success('Recorrência cancelada')
+                    onOpenChange(false)
+                    onSuccess?.()
+                  }}
+                >
+                  Cancelar Recorrência
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Descricao */}

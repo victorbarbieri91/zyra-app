@@ -51,7 +51,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 // Custom components
-import InsightCard from '@/components/dashboard/InsightCard'
 import EmptyState from '@/components/dashboard/EmptyState'
 import AlertasCard from '@/components/dashboard/AlertasCard'
 import MeusLancamentos from '@/components/dashboard/MeusLancamentos'
@@ -79,7 +78,6 @@ import { useDashboardAgenda, AgendaItemDashboard } from '@/hooks/useDashboardAge
 import { useDashboardPerformance } from '@/hooks/useDashboardPerformance'
 // useDashboardPublicacoes removido - card de publicações removido do dashboard
 import { useDashboardResumoIA } from '@/hooks/useDashboardResumoIA'
-import { useDashboardInsightsIA } from '@/hooks/useDashboardInsightsIA'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 import { cn } from '@/lib/utils'
@@ -271,7 +269,6 @@ export default function DashboardPage() {
   const { equipe, totalHorasEquipe, currentUserId, loading: loadingPerformance, refresh: refreshPerformance } = useDashboardPerformance()
   // publicações removido do dashboard
   const { resumo, loading: loadingResumo, refresh: refreshResumo, tempoDesdeAtualizacao } = useDashboardResumoIA()
-  const { insights, loading: loadingInsights, hasPermission: hasInsightsPermission, refresh: refreshInsights } = useDashboardInsightsIA()
 
   // Handler para clique nos itens da agenda do dashboard
   const handleAgendaItemClick = async (item: AgendaItemDashboard) => {
@@ -1300,46 +1297,6 @@ export default function DashboardPage() {
             {/* Atenção Imediata */}
             <AlertasCard onAudienciasClick={handleAudienciasClick} />
 
-            {/* Insights de Gestão */}
-            {hasInsightsPermission && (
-              <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
-                <div className="flex items-center justify-between px-5 pt-5 pb-3">
-                  <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200">Insights IA</h2>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 hover:bg-slate-100 dark:hover:bg-surface-3 rounded-lg"
-                    onClick={() => refreshInsights()}
-                    disabled={loadingInsights}
-                  >
-                    {loadingInsights ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#89bcbe]" />
-                    ) : (
-                      <RefreshCw className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-                    )}
-                  </Button>
-                </div>
-                <div className="px-5 pb-5 space-y-2">
-                  {loadingInsights ? (
-                    <div className="flex items-center justify-center py-3">
-                      <Loader2 className="w-4 h-4 text-[#89bcbe] animate-spin" />
-                    </div>
-                  ) : insights.length === 0 ? (
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center py-3">Nenhum insight disponível</p>
-                  ) : (
-                    insights.map((insight, index) => (
-                      <InsightCard
-                        key={index}
-                        type={insight.tipo}
-                        title={insight.titulo}
-                        description={insight.descricao}
-                        action={insight.acao ? { label: insight.acao.label, onClick: () => window.location.href = insight.acao!.href } : undefined}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>

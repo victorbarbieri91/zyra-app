@@ -106,7 +106,7 @@ const TIPOS_RECEITA = [
 const CATEGORIAS_RECEITA = [
   { value: 'honorarios', label: 'Honorários' },
   { value: 'consultoria', label: 'Consultoria' },
-  { value: 'custas_reembolsadas', label: 'Custas Reembolsadas' },
+  { value: 'custas', label: 'Custas' },
   { value: 'exito', label: 'Êxito' },
   { value: 'outros', label: 'Outros' },
 ]

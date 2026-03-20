@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Building2, Landmark, Pencil, Trash2, MoreVertical, ChevronDown, Check, BarChart3 } from 'lucide-react'
+import { Building2, Landmark, Pencil, Trash2, MoreVertical, ChevronDown, Check, BarChart3, FileText } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,6 +38,7 @@ import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
+import ExtratoContaSheet from '@/components/financeiro/ExtratoContaSheet'
 
 interface ContaBancaria {
   id: string
@@ -108,6 +109,7 @@ export default function ContasBancariasPage() {
   const [showContaDialog, setShowContaDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [contaParaExcluir, setContaParaExcluir] = useState<ContaBancaria | null>(null)
+  const [contaExtrato, setContaExtrato] = useState<ContaBancaria | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const [contaForm, setContaForm] = useState<ContaForm>({
@@ -537,7 +539,7 @@ export default function ContasBancariasPage() {
               </TableHeader>
               <TableBody>
                 {contas.map((conta) => (
-                  <TableRow key={conta.id} className="hover:bg-slate-50 dark:hover:bg-surface-2">
+                  <TableRow key={conta.id} className="hover:bg-slate-50 dark:hover:bg-surface-2 cursor-pointer" onClick={() => setContaExtrato(conta)}>
                     <TableCell className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                       {conta.banco}
                     </TableCell>
@@ -583,7 +585,7 @@ export default function ContasBancariasPage() {
                           variant="ghost"
                           size="sm"
                           className="h-7 w-7 p-0"
-                          onClick={() => handleOpenEdit(conta)}
+                          onClick={(e) => { e.stopPropagation(); handleOpenEdit(conta) }}
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -591,7 +593,7 @@ export default function ContasBancariasPage() {
                           variant="ghost"
                           size="sm"
                           className="h-7 w-7 p-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10"
-                          onClick={() => handleOpenDelete(conta)}
+                          onClick={(e) => { e.stopPropagation(); handleOpenDelete(conta) }}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -606,7 +608,7 @@ export default function ContasBancariasPage() {
           /* Cards View */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {contas.map((conta) => (
-              <Card key={conta.id} className="border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow">
+              <Card key={conta.id} className="border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setContaExtrato(conta)}>
                 <CardContent className="pt-4 pb-4">
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
@@ -633,11 +635,15 @@ export default function ContasBancariasPage() {
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 -mr-2">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 -mr-2" onClick={(e) => e.stopPropagation()}>
                           <MoreVertical className="h-4 w-4 text-slate-400" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setContaExtrato(conta)}>
+                          <FileText className="h-4 w-4 mr-2" />
+                          Ver Extrato
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleOpenEdit(conta)}>
                           <Pencil className="h-4 w-4 mr-2" />
                           Editar
@@ -848,6 +854,13 @@ export default function ContasBancariasPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Sidebar Extrato da Conta */}
+      <ExtratoContaSheet
+        conta={contaExtrato}
+        open={!!contaExtrato}
+        onOpenChange={(open) => !open && setContaExtrato(null)}
+      />
     </div>
   )
 }

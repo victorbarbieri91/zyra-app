@@ -7,6 +7,7 @@ import { createClient } from './client';
 export interface Escritorio {
   id: string;
   nome: string;
+  apelido?: string;
   cnpj?: string;
   logo_url?: string;
   plano: 'free' | 'basic' | 'professional' | 'enterprise';
@@ -65,6 +66,7 @@ export async function getEscritoriosDoUsuario(): Promise<EscritorioComRole[]> {
       escritorios:escritorio_id (
         id,
         nome,
+        apelido,
         cnpj,
         logo_url,
         plano,
@@ -256,6 +258,7 @@ export async function getEscritoriosDoGrupo(): Promise<EscritorioComRole[]> {
     .select(`
       id,
       nome,
+      apelido,
       cnpj,
       logo_url,
       plano,

@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -98,43 +97,66 @@ interface ExtratoItem {
 const CATEGORIA_CONFIG: Record<string, { label: string; color: string }> = {
   // Receitas
   honorario: { label: 'Honorário', color: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30' },
+  honorarios: { label: 'Honorários', color: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30' },
   honorario_contrato: { label: 'Honorário', color: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30' },
   honorario_avulso: { label: 'Avulso', color: 'bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-500/30' },
+  consultoria: { label: 'Consultoria', color: 'bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-500/30' },
   exito: { label: 'Êxito', color: 'bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/30' },
   fatura: { label: 'Fatura', color: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30' },
   parcela: { label: 'Parcela', color: 'bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-200 dark:border-cyan-500/30' },
   saldo: { label: 'Saldo', color: 'bg-slate-50 dark:bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-500/30' },
   avulso: { label: 'Avulso', color: 'bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-500/30' },
-  // Despesas
+  // Despesas — Processuais
   custas: { label: 'Custas', color: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30' },
+  custas_reembolsadas: { label: 'Custas', color: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30' },
+  honorarios_perito: { label: 'Perito', color: 'bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-500/30' },
+  oficial_justica: { label: 'Oficial Justiça', color: 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/30' },
+  cartorio: { label: 'Cartório', color: 'bg-yellow-50 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-500/30' },
+  deslocamento: { label: 'Deslocamento', color: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30' },
+  estacionamento: { label: 'Estacionamento', color: 'bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-500/30' },
+  alimentacao: { label: 'Alimentação', color: 'bg-lime-50 dark:bg-lime-500/10 text-lime-700 dark:text-lime-400 border-lime-200 dark:border-lime-500/30' },
+  combustivel: { label: 'Combustível', color: 'bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-500/30' },
+  // Despesas — Operacionais
   fornecedor: { label: 'Fornecedor', color: 'bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-500/30' },
   folha: { label: 'Folha', color: 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/30' },
+  prolabore: { label: 'Pró-Labore', color: 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-500/30' },
+  retirada_socios: { label: 'Retirada Sócios', color: 'bg-fuchsia-50 dark:bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-400 border-fuchsia-200 dark:border-fuchsia-500/30' },
+  beneficios: { label: 'Benefícios', color: 'bg-lime-50 dark:bg-lime-500/10 text-lime-700 dark:text-lime-400 border-lime-200 dark:border-lime-500/30' },
   impostos: { label: 'Impostos', color: 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/30' },
+  taxas_bancarias: { label: 'Taxas Bancárias', color: 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/30' },
+  juros: { label: 'Juros', color: 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/30' },
+  emprestimos: { label: 'Empréstimos', color: 'bg-yellow-50 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-500/30' },
   aluguel: { label: 'Aluguel', color: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30' },
-  marketing: { label: 'Marketing', color: 'bg-pink-50 dark:bg-pink-500/10 text-pink-700 dark:text-pink-400 border-pink-200 dark:border-pink-500/30' },
   tecnologia: { label: 'Tecnologia', color: 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-500/30' },
   assinatura: { label: 'Assinatura', color: 'bg-fuchsia-50 dark:bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-400 border-fuchsia-200 dark:border-fuchsia-500/30' },
+  telefonia: { label: 'Telefonia', color: 'bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-200 dark:border-cyan-500/30' },
+  material: { label: 'Material', color: 'bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-500/30' },
+  marketing: { label: 'Marketing', color: 'bg-pink-50 dark:bg-pink-500/10 text-pink-700 dark:text-pink-400 border-pink-200 dark:border-pink-500/30' },
+  capacitacao: { label: 'Capacitação', color: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30' },
+  comissao: { label: 'Comissão', color: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30' },
+  associacoes: { label: 'Associações', color: 'bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-500/30' },
   cartao_credito: { label: 'Cartão', color: 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/30' },
   infraestrutura: { label: 'Infraestrutura', color: 'bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-500/30' },
   pessoal: { label: 'Pessoal', color: 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/30' },
-  despesa: { label: 'Despesa', color: 'bg-slate-50 dark:bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-500/30' },
-  outras: { label: 'Outras', color: 'bg-gray-50 dark:bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-500/30' },
+  // Genéricas
+  outra: { label: 'Outra', color: 'bg-stone-50 dark:bg-stone-500/10 text-stone-700 dark:text-stone-400 border-stone-200 dark:border-stone-500/30' },
+  outras: { label: 'Outras', color: 'bg-stone-50 dark:bg-stone-500/10 text-stone-700 dark:text-stone-400 border-stone-200 dark:border-stone-500/30' },
+  outros: { label: 'Outros', color: 'bg-stone-50 dark:bg-stone-500/10 text-stone-700 dark:text-stone-400 border-stone-200 dark:border-stone-500/30' },
+  despesa: { label: 'Despesa', color: 'bg-stone-50 dark:bg-stone-500/10 text-stone-700 dark:text-stone-400 border-stone-200 dark:border-stone-500/30' },
   transferencia: { label: 'Transferência', color: 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/30' },
-  // Extras que podem aparecer
-  retirada_socios: { label: 'Retirada Sócios', color: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30' },
-  beneficios: { label: 'Benefícios', color: 'bg-lime-50 dark:bg-lime-500/10 text-lime-700 dark:text-lime-400 border-lime-200 dark:border-lime-500/30' },
-  telefonia: { label: 'Telefonia', color: 'bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-200 dark:border-cyan-500/30' },
-  emprestimos: { label: 'Empréstimos', color: 'bg-yellow-50 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-500/30' },
-  taxas_bancarias: { label: 'Taxas Bancárias', color: 'bg-stone-50 dark:bg-stone-500/10 text-stone-700 dark:text-stone-400 border-stone-200 dark:border-stone-500/30' },
-  associacoes: { label: 'Associações', color: 'bg-neutral-50 dark:bg-neutral-500/10 text-neutral-700 dark:text-neutral-400 border-neutral-200 dark:border-neutral-500/30' },
 }
 
 const getCategoriaConfig = (categoria: string) => {
-  return CATEGORIA_CONFIG[categoria] || { label: categoria, color: 'bg-slate-50 text-slate-600 border-slate-200' }
+  if (CATEGORIA_CONFIG[categoria]) return CATEGORIA_CONFIG[categoria]
+  // Fallback: capitalizar e formatar o nome da categoria
+  const label = categoria
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+  return { label, color: 'bg-stone-50 dark:bg-stone-500/10 text-stone-700 dark:text-stone-400 border-stone-200 dark:border-stone-500/30' }
 }
 
-const PAGE_SIZE_OPTIONS = [50, 100, 150]
-const DEFAULT_PAGE_SIZE = 50
+const PAGE_SIZE_OPTIONS = [150, 200, 250]
+const DEFAULT_PAGE_SIZE = 150
 
 // Helpers para período
 const getInicioMes = (date: Date = new Date()) => {
@@ -177,18 +199,23 @@ export default function ExtratoFinanceiroPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
-  // Filtros - ler status da URL se disponível (ex: ?status=vencido vindo do card Atenção Imediata)
+  // Filtros - ler status, conta e mês da URL se disponíveis
   const statusUrl = searchParams.get('status')
+  const contaUrl = searchParams.get('conta')
+  const mesUrl = searchParams.get('mes') // formato YYYY-MM
   const statusInicial = (statusUrl === 'vencido' || statusUrl === 'pendente' || statusUrl === 'efetivado') ? statusUrl : 'todos'
+
+  // Se veio mês da URL (ex: ?mes=2026-03), usar como período inicial
+  const mesUrlDate = mesUrl ? new Date(Number(mesUrl.split('-')[0]), Number(mesUrl.split('-')[1]) - 1, 1) : null
 
   const [tipoFiltro, setTipoFiltro] = useState<'todos' | 'receita' | 'despesa' | 'transferencia'>(statusUrl ? 'receita' : 'todos')
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pendente' | 'vencido' | 'efetivado' | 'previsto'>(statusInicial)
-  const [contaFiltro, setContaFiltro] = useState<string>('todas')  // 'todas' ou ID da conta
+  const [contaFiltro, setContaFiltro] = useState<string>(contaUrl || 'todas')  // 'todas' ou ID da conta
 
-  // Filtro de período - padrão: mês atual
-  const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>('mes_atual')
-  const [dataInicio, setDataInicio] = useState<string>(getInicioMes())
-  const [dataFim, setDataFim] = useState<string>(getFimMes())
+  // Filtro de período - padrão: mês atual, ou mês da URL se disponível
+  const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>(mesUrl ? 'personalizado' : 'mes_atual')
+  const [dataInicio, setDataInicio] = useState<string>(mesUrlDate ? getInicioMes(mesUrlDate) : getInicioMes())
+  const [dataFim, setDataFim] = useState<string>(mesUrlDate ? getFimMes(mesUrlDate) : getFimMes())
   const [periodoAberto, setPeriodoAberto] = useState(false)
 
   // Estados para multi-escritório
@@ -2375,6 +2402,23 @@ export default function ExtratoFinanceiroPage() {
     if (page >= 1 && page <= totalPages) setCurrentPage(page)
   }
 
+  // Mapa de escritório para exibição compacta (apelido || nome) e cores
+  const showMultiEscritorio = escritoriosSelecionados.length > 1
+  const escritorioNomeMap: Record<string, string> = {}
+  const ESCRITORIO_COLORS = [
+    'bg-indigo-100 dark:bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-500/40',
+    'bg-amber-100 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-500/40',
+    'bg-rose-100 dark:bg-rose-500/15 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-500/40',
+    'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/40',
+    'bg-purple-100 dark:bg-purple-500/15 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-500/40',
+    'bg-orange-100 dark:bg-orange-500/15 text-orange-800 dark:text-orange-300 border-orange-300 dark:border-orange-500/40',
+  ]
+  const escritorioColorMap: Record<string, string> = {}
+  escritoriosGrupo.forEach((e, i) => {
+    escritorioNomeMap[e.id] = e.apelido || e.nome
+    escritorioColorMap[e.id] = ESCRITORIO_COLORS[i % ESCRITORIO_COLORS.length]
+  })
+
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Header */}
@@ -2500,8 +2544,8 @@ export default function ExtratoFinanceiroPage() {
 
           <Button
             size="sm"
-            variant="outline"
             onClick={() => setModalDespesa(true)}
+            className="bg-red-600 hover:bg-red-700 text-white"
           >
             <Plus className="w-4 h-4 md:mr-1" />
             <span className="hidden md:inline">Despesa</span>
@@ -2509,14 +2553,13 @@ export default function ExtratoFinanceiroPage() {
           <Button
             size="sm"
             onClick={() => setModalReceita(true)}
-            className="bg-[#34495e] hover:bg-[#46627f] text-white"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
           >
             <Plus className="w-4 h-4 md:mr-1" />
             <span className="hidden md:inline">Receita</span>
           </Button>
           <Button
             size="sm"
-            variant="outline"
             onClick={() => {
               setTransferenciaForm({
                 conta_origem_id: contasBancarias[0]?.id || '',
@@ -2526,6 +2569,7 @@ export default function ExtratoFinanceiroPage() {
               })
               setModalTransferencia(true)
             }}
+            className="bg-[#1E3A8A] hover:bg-[#1a3278] text-white"
           >
             <ArrowLeftRight className="w-4 h-4 md:mr-1" />
             <span className="hidden md:inline">Transferir</span>
@@ -2684,68 +2728,151 @@ export default function ExtratoFinanceiroPage() {
             </div>
 
             {/* Filtro por Tipo */}
-            <Tabs value={tipoFiltro} onValueChange={(v) => setTipoFiltro(v as typeof tipoFiltro)}>
-              <TabsList className="bg-slate-100 dark:bg-surface-2 h-9">
-                <TabsTrigger value="todos" className="text-xs h-7 px-3">
-                  <FileText className="w-3 h-3 mr-1.5" />
-                  Todos
-                </TabsTrigger>
-                <TabsTrigger value="despesa" className="text-xs h-7 px-3">
-                  <TrendingDown className="w-3 h-3 mr-1.5 text-red-600" />
-                  Despesas
-                </TabsTrigger>
-                <TabsTrigger value="receita" className="text-xs h-7 px-3">
-                  <TrendingUp className="w-3 h-3 mr-1.5 text-emerald-600" />
-                  Receitas
-                </TabsTrigger>
-                <TabsTrigger value="transferencia" className="text-xs h-7 px-3">
-                  <ArrowLeftRight className="w-3 h-3 mr-1.5 text-blue-600" />
-                  Transf.
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <Select value={tipoFiltro} onValueChange={(v) => setTipoFiltro(v as typeof tipoFiltro)}>
+              <SelectTrigger className="h-9 w-[150px] text-sm border-slate-200 dark:border-slate-700">
+                <div className="flex items-center gap-1.5">
+                  {tipoFiltro === 'despesa' ? (
+                    <TrendingDown className="w-3.5 h-3.5 text-red-600" />
+                  ) : tipoFiltro === 'receita' ? (
+                    <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                  ) : tipoFiltro === 'transferencia' ? (
+                    <ArrowLeftRight className="w-3.5 h-3.5 text-blue-600" />
+                  ) : (
+                    <FileText className="w-3.5 h-3.5 text-slate-400" />
+                  )}
+                  <SelectValue placeholder="Tipo" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os tipos</SelectItem>
+                <SelectItem value="despesa">
+                  <span className="flex items-center gap-2">
+                    <TrendingDown className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                    Despesas
+                  </span>
+                </SelectItem>
+                <SelectItem value="receita">
+                  <span className="flex items-center gap-2">
+                    <TrendingUp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    Receitas
+                  </span>
+                </SelectItem>
+                <SelectItem value="transferencia">
+                  <span className="flex items-center gap-2">
+                    <ArrowLeftRight className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    Transferências
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
 
             {/* Filtro por Status */}
-            <Tabs value={statusFiltro} onValueChange={(v) => setStatusFiltro(v as typeof statusFiltro)}>
-              <TabsList className="bg-slate-100 dark:bg-surface-2 h-9">
-                <TabsTrigger value="todos" className="text-xs h-7 px-3">
-                  Todos
-                </TabsTrigger>
-                <TabsTrigger value="pendente" className="text-xs h-7 px-3">
-                  <Clock className="w-3 h-3 mr-1.5 text-amber-600" />
-                  Pendentes
-                </TabsTrigger>
-                <TabsTrigger value="vencido" className="text-xs h-7 px-3">
-                  <XCircle className="w-3 h-3 mr-1.5 text-red-600" />
-                  Vencidos
-                </TabsTrigger>
-                <TabsTrigger value="efetivado" className="text-xs h-7 px-3">
-                  <CheckCircle className="w-3 h-3 mr-1.5 text-emerald-600" />
-                  Efetivados
-                </TabsTrigger>
-                <TabsTrigger value="previsto" className="text-xs h-7 px-3">
-                  <CalendarDays className="w-3 h-3 mr-1.5 text-slate-400" />
-                  Previstos
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <Select value={statusFiltro} onValueChange={(v) => setStatusFiltro(v as typeof statusFiltro)}>
+              <SelectTrigger className="h-9 w-[170px] text-sm border-slate-200 dark:border-slate-700">
+                <div className="flex items-center gap-1.5">
+                  <span className={cn(
+                    "w-2 h-2 rounded-full shrink-0",
+                    statusFiltro === 'vencido' ? 'bg-red-500' :
+                    statusFiltro === 'pendente' ? 'bg-amber-500' :
+                    statusFiltro === 'efetivado' ? 'bg-emerald-500' :
+                    statusFiltro === 'previsto' ? 'bg-slate-400' :
+                    'bg-slate-300'
+                  )} />
+                  <SelectValue placeholder="Status" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os status</SelectItem>
+                <SelectItem value="pendente">
+                  <span className="flex items-center gap-2">
+                    <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    Pendentes
+                  </span>
+                </SelectItem>
+                <SelectItem value="vencido">
+                  <span className="flex items-center gap-2">
+                    <XCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                    Vencidos
+                  </span>
+                </SelectItem>
+                <SelectItem value="efetivado">
+                  <span className="flex items-center gap-2">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    Efetivados
+                  </span>
+                </SelectItem>
+                <SelectItem value="previsto">
+                  <span className="flex items-center gap-2">
+                    <CalendarDays className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    Previstos
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
 
-            {/* Filtro por Conta (mantém como select por ter opções dinâmicas) */}
-            <select
-              value={contaFiltro}
-              onChange={(e) => setContaFiltro(e.target.value)}
-              className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-surface-3 focus:outline-none focus:ring-2 focus:ring-[#89bcbe] h-9 dark:bg-surface-1"
-            >
-              <option value="todas">Todas as contas</option>
-              {contasBancarias.map((cb) => (
-                <option key={cb.id} value={cb.id}>
-                  {cb.banco} - {cb.numero_conta}
-                </option>
-              ))}
-            </select>
+            {/* Filtro por Conta */}
+            <Select value={contaFiltro} onValueChange={setContaFiltro}>
+              <SelectTrigger className="h-9 w-[180px] text-sm border-slate-200 dark:border-slate-700">
+                <div className="flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                  <SelectValue placeholder="Conta" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas as contas</SelectItem>
+                {contasBancarias.map((cb) => (
+                  <SelectItem key={cb.id} value={cb.id}>
+                    {cb.banco} - {cb.numero_conta}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
+
+      {/* Pills de Filtros Ativos */}
+      {(tipoFiltro !== 'todos' || statusFiltro !== 'todos' || contaFiltro !== 'todas') && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-xs text-slate-400 dark:text-slate-500">Filtros:</span>
+          {tipoFiltro !== 'todos' && (
+            <Badge
+              variant="secondary"
+              className="text-xs h-6 gap-1 cursor-pointer hover:bg-slate-200 dark:hover:bg-surface-3"
+              onClick={() => setTipoFiltro('todos')}
+            >
+              {tipoFiltro === 'receita' ? 'Receitas' : tipoFiltro === 'despesa' ? 'Despesas' : 'Transferências'}
+              <XCircle className="w-3 h-3" />
+            </Badge>
+          )}
+          {statusFiltro !== 'todos' && (
+            <Badge
+              variant="secondary"
+              className="text-xs h-6 gap-1 cursor-pointer hover:bg-slate-200 dark:hover:bg-surface-3"
+              onClick={() => setStatusFiltro('todos')}
+            >
+              {statusFiltro === 'pendente' ? 'Pendentes' : statusFiltro === 'vencido' ? 'Vencidos' : statusFiltro === 'efetivado' ? 'Efetivados' : 'Previstos'}
+              <XCircle className="w-3 h-3" />
+            </Badge>
+          )}
+          {contaFiltro !== 'todas' && (
+            <Badge
+              variant="secondary"
+              className="text-xs h-6 gap-1 cursor-pointer hover:bg-slate-200 dark:hover:bg-surface-3"
+              onClick={() => setContaFiltro('todas')}
+            >
+              {contasBancarias.find(c => c.id === contaFiltro)?.banco || 'Conta'}
+              <XCircle className="w-3 h-3" />
+            </Badge>
+          )}
+          <button
+            className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline ml-1"
+            onClick={() => { setTipoFiltro('todos'); setStatusFiltro('todos'); setContaFiltro('todas') }}
+          >
+            Limpar tudo
+          </button>
+        </div>
+      )}
 
       {/* Barra de Ações em Massa */}
       {itensSelecionados.length > 0 && (
@@ -2883,7 +3010,7 @@ export default function ExtratoFinanceiroPage() {
                         ) : item.status === 'efetivado' ? (
                           <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30">
                             <CheckCircle className="w-2.5 h-2.5" />
-                            Pago
+                            Efetivado
                           </span>
                         ) : item.status === 'parcial' ? (
                           <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30">
@@ -3140,12 +3267,15 @@ export default function ExtratoFinanceiroPage() {
                     )}
                   </button>
                 </th>
-                <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Pago</th>
+                <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Efetivado</th>
                 <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Tipo</th>
                 <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-[30%]">Descrição</th>
                 <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Benf./Cliente</th>
                 <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Categoria</th>
                 <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Conta</th>
+                {showMultiEscritorio && (
+                  <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Escritório</th>
+                )}
                 <th className="text-center py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Status</th>
                 <th className="text-right py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Valor</th>
                 <th className="text-center py-2.5 px-2 w-20"></th>
@@ -3154,7 +3284,7 @@ export default function ExtratoFinanceiroPage() {
             <tbody className={loading ? 'opacity-50' : ''}>
               {loading && extrato.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="p-8 text-center">
+                  <td colSpan={showMultiEscritorio ? 12 : 11} className="p-8 text-center">
                     <div className="flex items-center justify-center gap-3">
                       <Loader2 className="w-5 h-5 text-[#34495e] dark:text-slate-300 animate-spin" />
                       <span className="text-sm text-slate-600 dark:text-slate-400">Carregando...</span>
@@ -3165,7 +3295,7 @@ export default function ExtratoFinanceiroPage() {
 
               {!loading && extrato.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="p-8 text-center">
+                  <td colSpan={showMultiEscritorio ? 12 : 11} className="p-8 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <FileText className="w-10 h-10 text-slate-300 dark:text-slate-600" />
                       <p className="text-sm text-slate-600 dark:text-slate-400">Nenhum lançamento encontrado</p>
@@ -3292,6 +3422,15 @@ export default function ExtratoFinanceiroPage() {
                       )}
                     </td>
 
+                    {/* Escritório (só quando multi-escritório) */}
+                    {showMultiEscritorio && (
+                      <td className="py-2.5 px-3">
+                        <span className={cn("inline-block px-1.5 py-0.5 rounded text-[10px] font-medium border whitespace-nowrap truncate max-w-[80px]", escritorioColorMap[item.escritorio_id] || 'bg-slate-100 text-slate-600 border-slate-200')} title={escritorioNomeMap[item.escritorio_id] || ''}>
+                          {escritorioNomeMap[item.escritorio_id] || '-'}
+                        </span>
+                      </td>
+                    )}
+
                     {/* Status */}
                     <td className="py-2.5 px-3 text-center">
                       {isPrevisto ? (
@@ -3302,7 +3441,7 @@ export default function ExtratoFinanceiroPage() {
                       ) : item.status === 'efetivado' ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 whitespace-nowrap">
                           <CheckCircle className="w-3 h-3" />
-                          Pago
+                          Efetivado
                         </span>
                       ) : item.status === 'parcial' ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30 whitespace-nowrap">
@@ -3866,7 +4005,7 @@ export default function ExtratoFinanceiroPage() {
                 <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
                   <span>Status atual:</span>
                   <Badge variant="outline" className="text-[10px]">
-                    {modalAlterarStatus.status === 'efetivado' ? 'Pago' : modalAlterarStatus.status === 'vencido' ? 'Vencido' : 'Pendente'}
+                    {modalAlterarStatus.status === 'efetivado' ? 'Efetivado' : modalAlterarStatus.status === 'vencido' ? 'Vencido' : 'Pendente'}
                   </Badge>
                 </div>
               </div>
@@ -3893,7 +4032,7 @@ export default function ExtratoFinanceiroPage() {
                     <SelectItem value="pago">
                       <div className="flex items-center gap-2">
                         <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
-                        Pago
+                        Efetivado
                       </div>
                     </SelectItem>
                   </SelectContent>

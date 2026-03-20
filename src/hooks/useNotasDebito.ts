@@ -299,7 +299,7 @@ export function useNotasDebito() {
       .insert({
         escritorio_id: escritorioAtivo,
         tipo: 'reembolso',
-        categoria: 'custas_reembolsadas',
+        categoria: 'custas',
         cliente_id: clienteId,
         descricao: `Nota de Débito ${numero}`,
         valor: valorTotal,

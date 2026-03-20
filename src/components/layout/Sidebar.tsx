@@ -84,12 +84,13 @@ const menuItems: MenuItem[] = [
     href: '/dashboard/crm/pessoas',
     group: 'management',
   },
-  {
-    title: 'Portfólio',
-    icon: Briefcase,
-    href: '/dashboard/portfolio',
-    group: 'management',
-  },
+  // Portfólio removido temporariamente - módulo ainda não finalizado
+  // {
+  //   title: 'Portfólio',
+  //   icon: Briefcase,
+  //   href: '/dashboard/portfolio',
+  //   group: 'management',
+  // },
   {
     title: 'Financeiro',
     icon: DollarSign,

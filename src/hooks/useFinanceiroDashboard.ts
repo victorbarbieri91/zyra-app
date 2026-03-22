@@ -108,6 +108,7 @@ export function useFinanceiroDashboard({ escritorioIds, mes }: UseFinanceiroDash
   }, [])
 
   // ── KPIs: Receita, Despesa, Lucro, Variação, Horas ──
+  // Usa RPC get_extrato_com_recorrentes para incluir projeções de recorrentes/cartões
   const loadKpis = useCallback(async (ids: string[], mesSel: Date) => {
     updateData({ loadingKpis: true })
     try {
@@ -118,40 +119,22 @@ export function useFinanceiroDashboard({ escritorioIds, mes }: UseFinanceiroDash
       const fimMesAnt = fmtMonthEnd(mesAnterior)
 
       const [
-        { data: receitasMes },
-        { data: receitasMesAnt },
-        { data: despesasMes },
-        { data: despesasMesAnt },
+        { data: extratoMes },
+        { data: extratoMesAnt },
         { data: timesheet },
       ] = await Promise.all([
-        supabase
-          .from('financeiro_receitas')
-          .select('valor, valor_pago')
-          .in('escritorio_id', ids)
-          .eq('status', 'pago')
-          .gte('data_pagamento', inicioMes)
-          .lte('data_pagamento', fimMes),
-        supabase
-          .from('financeiro_receitas')
-          .select('valor, valor_pago')
-          .in('escritorio_id', ids)
-          .eq('status', 'pago')
-          .gte('data_pagamento', inicioMesAnt)
-          .lte('data_pagamento', fimMesAnt),
-        supabase
-          .from('financeiro_despesas')
-          .select('valor')
-          .in('escritorio_id', ids)
-          .eq('status', 'pago')
-          .gte('data_pagamento', inicioMes)
-          .lte('data_pagamento', fimMes),
-        supabase
-          .from('financeiro_despesas')
-          .select('valor')
-          .in('escritorio_id', ids)
-          .eq('status', 'pago')
-          .gte('data_pagamento', inicioMesAnt)
-          .lte('data_pagamento', fimMesAnt),
+        // Mês selecionado: reais + virtuais (inclui projeções de recorrentes e cartões)
+        supabase.rpc('get_extrato_com_recorrentes', {
+          p_escritorio_ids: ids,
+          p_data_inicio: inicioMes,
+          p_data_fim: fimMes,
+        }),
+        // Mês anterior: reais + virtuais
+        supabase.rpc('get_extrato_com_recorrentes', {
+          p_escritorio_ids: ids,
+          p_data_inicio: inicioMesAnt,
+          p_data_fim: fimMesAnt,
+        }),
         supabase
           .from('financeiro_timesheet')
           .select('horas, faturavel')
@@ -160,16 +143,52 @@ export function useFinanceiroDashboard({ escritorioIds, mes }: UseFinanceiroDash
           .lte('data_trabalho', fimMes),
       ])
 
-      const recMesArr = Array.isArray(receitasMes) ? receitasMes : []
-      const recMesAntArr = Array.isArray(receitasMesAnt) ? receitasMesAnt : []
-      const despMesArr = Array.isArray(despesasMes) ? despesasMes : []
-      const despMesAntArr = Array.isArray(despesasMesAnt) ? despesasMesAnt : []
+      const mesArr = Array.isArray(extratoMes) ? extratoMes : []
+      const mesAntArr = Array.isArray(extratoMesAnt) ? extratoMesAnt : []
       const tsArr = Array.isArray(timesheet) ? timesheet : []
 
-      const totalReceita = recMesArr.reduce((s, r) => s + getValorReceita(r), 0)
-      const totalReceitaAnt = recMesAntArr.reduce((s, r) => s + getValorReceita(r), 0)
-      const totalDespesa = despMesArr.reduce((s, d) => s + (Number(d.valor) || 0), 0)
-      const totalDespesaAnt = despMesAntArr.reduce((s, d) => s + (Number(d.valor) || 0), 0)
+      // Para KPIs, somar tudo: efetivado (pago) + previsto (recorrentes virtuais) + pendente
+      // Excluir transferências internas (tipo_movimento = 'transferencia_*')
+      const totalReceita = mesArr
+        .filter((r: Record<string, unknown>) =>
+          r.tipo_movimento === 'receita' &&
+          r.status !== 'cancelado'
+        )
+        .reduce((s: number, r: Record<string, unknown>) => {
+          // Para efetivados, usar valor_pago se disponível
+          if (r.status === 'efetivado') {
+            const vp = Number(r.valor_pago) || 0
+            return s + (vp > 0 ? vp : Number(r.valor) || 0)
+          }
+          return s + (Number(r.valor) || 0)
+        }, 0)
+
+      const totalReceitaAnt = mesAntArr
+        .filter((r: Record<string, unknown>) =>
+          r.tipo_movimento === 'receita' &&
+          r.status !== 'cancelado'
+        )
+        .reduce((s: number, r: Record<string, unknown>) => {
+          if (r.status === 'efetivado') {
+            const vp = Number(r.valor_pago) || 0
+            return s + (vp > 0 ? vp : Number(r.valor) || 0)
+          }
+          return s + (Number(r.valor) || 0)
+        }, 0)
+
+      const totalDespesa = mesArr
+        .filter((r: Record<string, unknown>) =>
+          r.tipo_movimento === 'despesa' &&
+          r.status !== 'cancelado'
+        )
+        .reduce((s: number, r: Record<string, unknown>) => s + (Number(r.valor) || 0), 0)
+
+      const totalDespesaAnt = mesAntArr
+        .filter((r: Record<string, unknown>) =>
+          r.tipo_movimento === 'despesa' &&
+          r.status !== 'cancelado'
+        )
+        .reduce((s: number, r: Record<string, unknown>) => s + (Number(r.valor) || 0), 0)
 
       const lucro = totalReceita - totalDespesa
       const lucroAnt = totalReceitaAnt - totalDespesaAnt
@@ -226,32 +245,38 @@ export function useFinanceiroDashboard({ escritorioIds, mes }: UseFinanceiroDash
     }
   }, [supabase, updateData])
 
-  // ── Resumo do mês ──
+  // ── Resumo do mês (usando RPC com recorrentes para incluir cartões e projeções) ──
   const loadResumoMes = useCallback(async (ids: string[], mesSel: Date) => {
     updateData({ loadingResumo: true })
     try {
       const inicioMes = fmtMonth(mesSel)
       const fimMes = fmtMonthEnd(mesSel)
 
-      const [{ data: receber }, { data: pagar }] = await Promise.all([
-        supabase
-          .from('v_contas_receber_pagar')
-          .select('valor')
-          .in('escritorio_id', ids)
-          .eq('tipo_conta', 'receber')
-          .gte('data_vencimento', inicioMes)
-          .lte('data_vencimento', fimMes),
-        supabase
-          .from('v_contas_receber_pagar')
-          .select('valor')
-          .in('escritorio_id', ids)
-          .eq('tipo_conta', 'pagar')
-          .gte('data_vencimento', inicioMes)
-          .lte('data_vencimento', fimMes),
-      ])
+      const { data: extrato, error } = await supabase.rpc('get_extrato_com_recorrentes', {
+        p_escritorio_ids: ids,
+        p_data_inicio: inicioMes,
+        p_data_fim: fimMes,
+      })
 
-      const totalReceber = (Array.isArray(receber) ? receber : []).reduce((s, r) => s + (Number(r.valor) || 0), 0)
-      const totalPagar = (Array.isArray(pagar) ? pagar : []).reduce((s, r) => s + (Number(r.valor) || 0), 0)
+      if (error) throw error
+
+      const arr = Array.isArray(extrato) ? extrato : []
+
+      // A receber: receitas pendentes/previstas (não efetivadas)
+      const totalReceber = arr
+        .filter((r: Record<string, unknown>) =>
+          r.tipo_movimento === 'receita' &&
+          r.status !== 'efetivado' && r.status !== 'cancelado'
+        )
+        .reduce((s: number, r: Record<string, unknown>) => s + (Number(r.valor) || 0), 0)
+
+      // A pagar: despesas pendentes/previstas (não efetivadas)
+      const totalPagar = arr
+        .filter((r: Record<string, unknown>) =>
+          r.tipo_movimento === 'despesa' &&
+          r.status !== 'efetivado' && r.status !== 'cancelado'
+        )
+        .reduce((s: number, r: Record<string, unknown>) => s + (Number(r.valor) || 0), 0)
 
       updateData({ totalAReceber: totalReceber, totalAPagar: totalPagar, saldoMes: totalReceber - totalPagar, loadingResumo: false })
     } catch (error) {

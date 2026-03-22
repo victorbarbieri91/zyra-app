@@ -211,6 +211,22 @@ export default function FaturaDetailSheet({
     ? formatDiaMes(fatura.data_fechamento)
     : null
 
+  // Calcular se o fechamento é antecipado (para aviso no dialog)
+  const calcularDataFechamentoReal = (): { date: Date; formatted: string } | null => {
+    const [ano, mes] = mesReferencia.split('-').map(Number)
+    const ultimoDiaMes = new Date(ano, mes, 0).getDate()
+    const diaVcto = Math.min(cartao.dia_vencimento, ultimoDiaMes)
+    const dataVcto = new Date(ano, mes - 1, diaVcto)
+    const diasAntes = (cartao as any).dias_antes_fechamento || 7
+    const dataFech = new Date(dataVcto.getTime() - diasAntes * 86400000)
+    return {
+      date: dataFech,
+      formatted: `${String(dataFech.getDate()).padStart(2, '0')}/${MESES_ABREV[dataFech.getMonth()]}`
+    }
+  }
+  const dataFechamentoReal = calcularDataFechamentoReal()
+  const isFechamentoAntecipado = dataFechamentoReal ? new Date() < dataFechamentoReal.date : false
+
   // Handlers
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -652,14 +668,24 @@ export default function FaturaDetailSheet({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Fechar Fatura</AlertDialogTitle>
-            <AlertDialogDescription>
-              Deseja fechar a fatura de {formatMesAno(mesReferencia)}? Novos lançamentos não poderão ser adicionados.
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>Deseja fechar a fatura de {formatMesAno(mesReferencia)}? Novos lançamentos não poderão ser adicionados.</p>
+                {isFechamentoAntecipado && dataFechamentoReal && (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
+                    <Calendar className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                      A data de fechamento desta fatura é <strong>{dataFechamentoReal.formatted}</strong>. Fechar antes pode excluir lançamentos que ainda seriam incluídos neste período.
+                    </p>
+                  </div>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleFecharFatura} className="bg-amber-600 hover:bg-amber-700">
-              Fechar Fatura
+              {isFechamentoAntecipado ? 'Fechar Mesmo Assim' : 'Fechar Fatura'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

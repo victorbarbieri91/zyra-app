@@ -12,6 +12,17 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useDropzone } from 'react-dropzone'
 
+// Interface para regra de recorrência do cartão
+export interface RegraRecorrenteCartao {
+  id: string
+  descricao: string
+  categoria: string
+  valor_atual: number
+  cartao_id: string
+  frequencia: string
+  ativo: boolean
+}
+
 // Interface para transação extraída
 export interface TransacaoExtraida {
   id: string
@@ -25,6 +36,10 @@ export interface TransacaoExtraida {
   tipo: 'unica' | 'parcelada' | 'recorrente'
   tipo_transacao: 'debito' | 'credito'
   possivelDuplicata?: boolean
+  // Matching com regra de recorrência existente
+  regraRecorrenteId?: string
+  regraValorAnterior?: number
+  regraDescricao?: string
 }
 
 export type Etapa = 1 | 2 | 3
@@ -91,6 +106,9 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
   const [faturaExistente, setFaturaExistente] = useState<FaturaCartao | null>(null)
   const [verificandoDuplicatas, setVerificandoDuplicatas] = useState(false)
 
+  // Estado para regras de recorrência do cartão
+  const [regrasRecorrentes, setRegrasRecorrentes] = useState<RegraRecorrenteCartao[]>([])
+
   // Reset state when modal closes
   useEffect(() => {
     if (!open) {
@@ -112,6 +130,7 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
       setEditingTransacao(null)
       setEditModalOpen(false)
       setFaturaExistente(null)
+      setRegrasRecorrentes([])
     }
   }, [open])
 
@@ -207,6 +226,90 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
     maxFiles: 1,
     maxSize: 20 * 1024 * 1024,
   })
+
+  // Normalizar descrição para matching
+  const normalizarDescricao = (desc: string): string => {
+    return desc
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ')
+      .replace(/[*#\-_]/g, '')
+      .trim()
+  }
+
+  // Buscar regras de recorrência ativas para o cartão selecionado
+  const buscarRegrasRecorrentes = async (cartaoId: string): Promise<RegraRecorrenteCartao[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('financeiro_regras_recorrencia')
+        .select('id, descricao, categoria, valor_atual, cartao_id, frequencia, ativo')
+        .eq('cartao_id', cartaoId)
+        .eq('tipo_entidade', 'cartao')
+        .eq('ativo', true)
+
+      if (error) {
+        console.error('Erro ao buscar regras recorrentes:', error)
+        return []
+      }
+      return (data || []) as RegraRecorrenteCartao[]
+    } catch (err) {
+      console.error('Erro ao buscar regras recorrentes:', err)
+      return []
+    }
+  }
+
+  // Matching de transações com regras de recorrência existentes
+  const matchTransacoesComRegras = (
+    transacoesRaw: TransacaoExtraida[],
+    regras: RegraRecorrenteCartao[]
+  ): TransacaoExtraida[] => {
+    if (regras.length === 0) return transacoesRaw
+
+    // Criar mapa de regras por descrição normalizada
+    // Se houver duplicatas (mesmo cartão + mesma descrição), usar a com maior valor_atual (mais recente)
+    const regrasMap = new Map<string, RegraRecorrenteCartao>()
+    for (const regra of regras) {
+      const key = normalizarDescricao(regra.descricao)
+      const existing = regrasMap.get(key)
+      if (!existing || regra.valor_atual > existing.valor_atual) {
+        regrasMap.set(key, regra)
+      }
+    }
+
+    return transacoesRaw.map(t => {
+      // Pular parceladas — não são recorrentes
+      if (t.parcela) return t
+
+      const descNorm = normalizarDescricao(t.descricao)
+
+      // Matching exato
+      let regraMatch = regrasMap.get(descNorm)
+
+      // Matching parcial: descrição da transação contém a da regra ou vice-versa
+      if (!regraMatch) {
+        for (const [regraKey, regra] of regrasMap) {
+          if (descNorm.includes(regraKey) || regraKey.includes(descNorm)) {
+            regraMatch = regra
+            break
+          }
+        }
+      }
+
+      if (regraMatch) {
+        const valorMudou = Math.abs(t.valor - Number(regraMatch.valor_atual)) > 0.01
+        return {
+          ...t,
+          tipo: 'recorrente' as const,
+          categoria_sugerida: regraMatch.categoria || t.categoria_sugerida,
+          regraRecorrenteId: regraMatch.id,
+          regraValorAnterior: valorMudou ? Number(regraMatch.valor_atual) : undefined,
+          regraDescricao: regraMatch.descricao,
+        }
+      }
+
+      return t
+    })
+  }
 
   // Etapa 1 -> 2: Upload e processar
   const handleProcessar = async () => {
@@ -329,7 +432,12 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
           }
         })
 
-        setTransacoes(transacoesProcessadas)
+        // Buscar regras de recorrência e fazer matching
+        const regras = await buscarRegrasRecorrentes(selectedCartao)
+        setRegrasRecorrentes(regras)
+        const transacoesComMatch = matchTransacoesComRegras(transacoesProcessadas, regras)
+
+        setTransacoes(transacoesComMatch)
         setDadosFatura({
           valor_total: dados.valor_total,
           data_vencimento: dados.data_vencimento,
@@ -445,6 +553,71 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
     }))
   }
 
+  // Atualizar valor de uma regra de recorrência e registrar no histórico
+  const atualizarValorRegra = async (regraId: string, valorAnterior: number, valorNovo: number) => {
+    try {
+      // Atualizar valor_atual
+      await supabase
+        .from('financeiro_regras_recorrencia')
+        .update({ valor_atual: valorNovo, updated_at: new Date().toISOString() })
+        .eq('id', regraId)
+
+      // Registrar no histórico
+      const { data: { user } } = await supabase.auth.getUser()
+      await supabase
+        .from('financeiro_regras_recorrencia_historico')
+        .insert({
+          regra_id: regraId,
+          campo_alterado: 'valor_atual',
+          valor_anterior: valorAnterior,
+          valor_novo: valorNovo,
+          vigencia_a_partir_de: new Date().toISOString().split('T')[0],
+          motivo: 'Atualizado via importação de fatura de cartão',
+          created_by: user?.id || null,
+        })
+    } catch (err) {
+      console.error('Erro ao atualizar regra recorrente:', err)
+    }
+  }
+
+  // Criar nova regra de recorrência para item marcado como recorrente na importação
+  const criarRegraRecorrente = async (
+    t: TransacaoExtraida,
+    cartaoId: string,
+    escritorioId: string
+  ): Promise<string | null> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data, error } = await supabase
+        .from('financeiro_regras_recorrencia')
+        .insert({
+          escritorio_id: escritorioId,
+          tipo_entidade: 'cartao',
+          descricao: t.descricao,
+          categoria: t.categoria_sugerida,
+          valor_atual: t.valor,
+          cartao_id: cartaoId,
+          frequencia: 'mensal',
+          dia_vencimento: t.data ? new Date(t.data + 'T12:00:00').getDate() : 1,
+          vigencia_inicio: t.data || new Date().toISOString().split('T')[0],
+          ativo: true,
+          is_parcelamento: false,
+          created_by: user?.id || null,
+        })
+        .select('id')
+        .single()
+
+      if (error) {
+        console.error('Erro ao criar regra recorrente:', error)
+        return null
+      }
+      return data?.id || null
+    } catch (err) {
+      console.error('Erro ao criar regra recorrente:', err)
+      return null
+    }
+  }
+
   // Etapa 2 -> 3: Importar
   const handleImportar = async () => {
     const selecionadas = transacoes.filter(t => t.selecionada)
@@ -462,6 +635,28 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
     try {
       const mesRef = mesReferenciaFatura ? `${mesReferenciaFatura}-01` : new Date().toISOString().split('T')[0].substring(0, 8) + '01'
 
+      // Processar regras de recorrência antes de importar
+      const regrasAtualizadas = new Set<string>()
+      const novasRegrasMap = new Map<string, string>() // transacao.id -> nova regra id
+
+      for (const t of selecionadas) {
+        if (t.tipo === 'recorrente') {
+          if (t.regraRecorrenteId) {
+            // Regra existente — atualizar valor se mudou
+            if (t.regraValorAnterior !== undefined && !regrasAtualizadas.has(t.regraRecorrenteId)) {
+              await atualizarValorRegra(t.regraRecorrenteId, t.regraValorAnterior, t.valor)
+              regrasAtualizadas.add(t.regraRecorrenteId)
+            }
+          } else {
+            // Novo recorrente sem regra — criar regra
+            const novaRegraId = await criarRegraRecorrente(t, cartao.id, cartao.escritorio_id)
+            if (novaRegraId) {
+              novasRegrasMap.set(t.id, novaRegraId)
+            }
+          }
+        }
+      }
+
       const transacoesParaImportar = selecionadas.map(t => {
         // Parsear parcela "2/12" para parcela_numero e parcela_total
         let parcela_numero = 1
@@ -477,7 +672,7 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
           }
         }
 
-        // Se marcado como recorrente pelo usuário
+        // Se marcado como recorrente
         if (t.tipo === 'recorrente') {
           tipo = 'recorrente'
           parcela_numero = 1
@@ -492,6 +687,7 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
           tipo,
           parcela_numero,
           parcela_total,
+          regra_recorrencia_id: t.regraRecorrenteId || novasRegrasMap.get(t.id) || undefined,
         }
       })
 
@@ -536,7 +732,12 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
       setValorTotalImportado(selecionadas.reduce((acc, t) => acc + t.valor, 0))
       setEtapa(3)
 
-      toast.success(`${total_importados} lançamentos importados e vinculados à fatura de ${mesReferenciaFatura}!`)
+      const recorrentesAtualizados = regrasAtualizadas.size
+      const novasRegras = novasRegrasMap.size
+      let msg = `${total_importados} lançamentos importados`
+      if (recorrentesAtualizados > 0) msg += `, ${recorrentesAtualizados} recorrentes atualizados`
+      if (novasRegras > 0) msg += `, ${novasRegras} novas regras criadas`
+      toast.success(msg)
       onSuccess?.()
     } catch (error: any) {
       console.error('Erro:', error)
@@ -565,6 +766,7 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
     setTotalImportado(0)
     setValorTotalImportado(0)
     setFaturaExistente(null)
+    setRegrasRecorrentes([])
   }
 
   // Helpers

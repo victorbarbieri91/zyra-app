@@ -1209,58 +1209,58 @@ export default function DashboardPage() {
           {/* ── RIGHT: MEUS NÚMEROS + LANÇAMENTOS + ALERTAS + INSIGHTS ── */}
           <div className="lg:col-span-5 space-y-6">
             {/* Meus Números do Mês */}
-            <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 p-5">
-              <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200 mb-4">Meus Números</h2>
+            <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 p-6">
+              <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200 mb-5">Meus Números</h2>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-5">
                 {/* Horas Cobráveis */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3.5">
                   <div className="relative flex-shrink-0">
                     <CircularProgress
                       value={metrics?.horas_cobraveis_usuario || 0}
                       max={metrics?.horas_meta || 160}
-                      size={56}
+                      size={64}
                       strokeWidth={5}
                       color="#89bcbe"
                     />
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-[10px] font-bold text-[#34495e] dark:text-slate-200">{Math.round(progressoHoras)}%</span>
+                      <span className="text-[11px] font-bold text-[#34495e] dark:text-slate-200">{Math.round(progressoHoras)}%</span>
                     </div>
                   </div>
                   <div>
-                    <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Horas Cobráveis</p>
-                    <p className="text-sm font-bold text-[#34495e] dark:text-slate-200">{formatHoras(metrics?.horas_cobraveis_usuario || 0, 'curto')}</p>
-                    <p className="text-[9px] text-slate-400 dark:text-slate-500">de {formatHoras(metrics?.horas_meta || 160, 'curto')}</p>
+                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Horas Cobráveis</p>
+                    <p className="text-base font-bold text-[#34495e] dark:text-slate-200">{formatHoras(metrics?.horas_cobraveis_usuario || 0, 'curto')}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500">de {formatHoras(metrics?.horas_meta || 160, 'curto')}</p>
                     {(metrics?.horas_ja_faturadas_usuario ?? 0) > 0 && (
-                      <p className="text-[9px] text-emerald-500">{formatHoras(metrics?.horas_ja_faturadas_usuario || 0, 'curto')} já faturadas</p>
+                      <p className="text-[10px] text-emerald-500">{formatHoras(metrics?.horas_ja_faturadas_usuario || 0, 'curto')} já faturadas</p>
                     )}
                   </div>
                 </div>
 
                 {/* Honorários */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3.5">
                   <div className="relative flex-shrink-0">
                     <CircularProgress
                       value={metrics?.honorarios_mes || 0}
                       max={metrics?.receita_meta || 40000}
-                      size={56}
+                      size={64}
                       strokeWidth={5}
                       color="#10b981"
                     />
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-[10px] font-bold text-[#34495e] dark:text-slate-200">{Math.round(progressoReceita)}%</span>
+                      <span className="text-[11px] font-bold text-[#34495e] dark:text-slate-200">{Math.round(progressoReceita)}%</span>
                     </div>
                   </div>
                   <div>
-                    <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Honorários</p>
-                    <p className="text-sm font-bold text-[#34495e] dark:text-slate-200">{formatCurrency(metrics?.honorarios_mes || 0)}</p>
-                    <p className="text-[9px] text-slate-400 dark:text-slate-500">Meta: {formatCurrency(metrics?.receita_meta || 40000)}</p>
+                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Honorários</p>
+                    <p className="text-base font-bold text-[#34495e] dark:text-slate-200">{formatCurrency(metrics?.honorarios_mes || 0)}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500">Meta: {formatCurrency(metrics?.receita_meta || 40000)}</p>
                   </div>
                 </div>
               </div>
 
               {/* Horas não cobráveis - compact */}
-              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600" />

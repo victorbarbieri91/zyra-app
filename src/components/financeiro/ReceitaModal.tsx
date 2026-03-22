@@ -495,88 +495,111 @@ export default function ReceitaModal({
       const isParcelada = formData.modalidade === 'parcelada'
       const isRecorrente = formData.modalidade === 'recorrente'
       const valorTotal = parseFloat(formData.valor)
+      const clienteIdFinal = derivedClienteId || clienteId || null
+      const processoIdFinal = processoSelecionado?.id || null
+      const consultaIdFinal = consultaSelecionada?.id || consultaId || null
+      const contratoIdFinal = contratoId || null
+      const vencimentoDay = new Date(formData.data_vencimento + 'T12:00:00').getDate()
 
-      // Dados base da receita
-      const receitaBase: Record<string, unknown> = {
-        escritorio_id: escritorioAtivo,
-        tipo: formData.tipo,
-        categoria: formData.categoria,
-        descricao: formData.descricao,
-        valor: valorTotal,
-        data_competencia: formData.data_competencia,
-        data_vencimento: formData.data_vencimento,
-        cliente_id: derivedClienteId || clienteId || null,
-        processo_id: processoSelecionado?.id || null,
-        consulta_id: consultaSelecionada?.id || consultaId || null,
-        contrato_id: contratoId || null,
-        observacoes: formData.observacoes || null,
-        status: formData.ja_recebido ? 'pago' : 'pendente',
-        data_pagamento: formData.ja_recebido ? formData.data_pagamento : null,
-        valor_pago: formData.ja_recebido ? valorTotal : null,
-        conta_bancaria_id: formData.ja_recebido ? formData.conta_bancaria_id : null,
-        forma_pagamento: formData.ja_recebido ? formData.forma_pagamento : null,
-        responsavel_id: user.id,
-        created_by: user.id,
-        parcelado: isParcelada,
-        numero_parcelas: isParcelada ? formData.numero_parcelas : 1,
-        recorrente: isRecorrente,
-        config_recorrencia: isRecorrente
-          ? {
-              ...formData.config_recorrencia,
-              data_inicio: formData.data_vencimento,
-              gerar_automatico: true,
-            }
-          : null,
-      }
+      if (isRecorrente || isParcelada) {
+        // ──────────────────────────────────────────────────
+        // RECORRENTE ou PARCELADA: criar regra + 1ª instância
+        // ──────────────────────────────────────────────────
+        const valorParcela = isParcelada
+          ? Math.floor((valorTotal / formData.numero_parcelas) * 100) / 100
+          : valorTotal
 
-      if (isParcelada && formData.tipo !== 'honorario') {
-        // Para tipos não-honorario, o trigger não gera parcelas automaticamente
-        // Inserir a receita pai primeiro, depois criar parcelas manualmente
-        const { data: receitaPai, error: errPai } = await supabase
-          .from('financeiro_receitas')
-          .insert(receitaBase)
+        // 1. Criar regra de recorrência
+        const { data: regra, error: errRegra } = await supabase
+          .from('financeiro_regras_recorrencia')
+          .insert({
+            escritorio_id: escritorioAtivo,
+            tipo_entidade: 'receita',
+            descricao: formData.descricao,
+            categoria: formData.categoria,
+            valor_atual: valorParcela,
+            valor_total_original: isParcelada ? valorTotal : null,
+            cliente_id: clienteIdFinal,
+            processo_id: processoIdFinal,
+            consulta_id: consultaIdFinal,
+            contrato_id: contratoIdFinal,
+            conta_bancaria_id: formData.ja_recebido ? formData.conta_bancaria_id : null,
+            frequencia: isRecorrente ? formData.config_recorrencia.frequencia : 'mensal',
+            dia_vencimento: vencimentoDay,
+            vigencia_inicio: formData.data_vencimento,
+            vigencia_fim: isParcelada
+              ? (() => {
+                  const d = new Date(formData.data_vencimento)
+                  d.setMonth(d.getMonth() + formData.numero_parcelas - 1)
+                  return d.toISOString().split('T')[0]
+                })()
+              : formData.config_recorrencia.data_fim || null,
+            ativo: true,
+            is_parcelamento: isParcelada,
+            parcela_total: isParcelada ? formData.numero_parcelas : null,
+            created_by: user.id,
+          })
           .select('id')
           .single()
 
-        if (errPai) throw errPai
+        if (errRegra) throw errRegra
 
-        // Gerar parcelas manualmente
-        const valorParcela = Math.floor((valorTotal / formData.numero_parcelas) * 100) / 100
-        const valorUltima = Math.round((valorTotal - valorParcela * (formData.numero_parcelas - 1)) * 100) / 100
-        const parcelas = []
-
-        for (let i = 1; i <= formData.numero_parcelas; i++) {
-          const vencimentoDate = new Date(formData.data_vencimento)
-          vencimentoDate.setMonth(vencimentoDate.getMonth() + (i - 1))
-
-          parcelas.push({
-            escritorio_id: escritorioAtivo,
-            tipo: 'parcela',
-            cliente_id: derivedClienteId || clienteId || null,
-            processo_id: processoSelecionado?.id || null,
-            consulta_id: consultaSelecionada?.id || consultaId || null,
-            contrato_id: contratoId || null,
-            receita_pai_id: receitaPai.id,
-            numero_parcela: i,
-            descricao: `Parcela ${i}/${formData.numero_parcelas} - ${formData.descricao}`,
-            categoria: formData.categoria,
-            valor: i === formData.numero_parcelas ? valorUltima : valorParcela,
-            data_competencia: vencimentoDate.toISOString().split('T')[0].substring(0, 7) + '-01',
-            data_vencimento: vencimentoDate.toISOString().split('T')[0],
-            status: 'pendente',
-            created_by: user.id,
-          })
-        }
-
-        const { error: errParcelas } = await supabase
+        // 2. Criar primeira instância real (mês atual)
+        const { error: errInst } = await supabase
           .from('financeiro_receitas')
-          .insert(parcelas)
+          .insert({
+            escritorio_id: escritorioAtivo,
+            tipo: formData.tipo,
+            categoria: formData.categoria,
+            descricao: isParcelada
+              ? `Parcela 1/${formData.numero_parcelas} - ${formData.descricao}`
+              : formData.descricao,
+            valor: valorParcela,
+            data_competencia: formData.data_competencia,
+            data_vencimento: formData.data_vencimento,
+            cliente_id: clienteIdFinal,
+            processo_id: processoIdFinal,
+            consulta_id: consultaIdFinal,
+            contrato_id: contratoIdFinal,
+            observacoes: formData.observacoes || null,
+            status: formData.ja_recebido ? 'pago' : 'pendente',
+            data_pagamento: formData.ja_recebido ? formData.data_pagamento : null,
+            valor_pago: formData.ja_recebido ? valorParcela : null,
+            conta_bancaria_id: formData.ja_recebido ? formData.conta_bancaria_id : null,
+            forma_pagamento: formData.ja_recebido ? formData.forma_pagamento : null,
+            responsavel_id: user.id,
+            created_by: user.id,
+            regra_recorrencia_id: regra.id,
+            periodo_referencia: formData.data_vencimento.substring(0, 7),
+            numero_parcela: isParcelada ? 1 : null,
+          })
 
-        if (errParcelas) throw errParcelas
+        if (errInst) throw errInst
       } else {
-        // Para honorario parcelado, o trigger DB gera parcelas automaticamente
-        // Para única ou recorrente, insert normal
-        const { error } = await supabase.from('financeiro_receitas').insert(receitaBase)
+        // ──────────────────────────────────────────────────
+        // ÚNICA: insert direto sem regra
+        // ──────────────────────────────────────────────────
+        const { error } = await supabase.from('financeiro_receitas').insert({
+          escritorio_id: escritorioAtivo,
+          tipo: formData.tipo,
+          categoria: formData.categoria,
+          descricao: formData.descricao,
+          valor: valorTotal,
+          data_competencia: formData.data_competencia,
+          data_vencimento: formData.data_vencimento,
+          cliente_id: clienteIdFinal,
+          processo_id: processoIdFinal,
+          consulta_id: consultaIdFinal,
+          contrato_id: contratoIdFinal,
+          observacoes: formData.observacoes || null,
+          status: formData.ja_recebido ? 'pago' : 'pendente',
+          data_pagamento: formData.ja_recebido ? formData.data_pagamento : null,
+          valor_pago: formData.ja_recebido ? valorTotal : null,
+          conta_bancaria_id: formData.ja_recebido ? formData.conta_bancaria_id : null,
+          forma_pagamento: formData.ja_recebido ? formData.forma_pagamento : null,
+          responsavel_id: user.id,
+          created_by: user.id,
+        })
         if (error) throw error
       }
 

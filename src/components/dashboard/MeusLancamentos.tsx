@@ -14,15 +14,15 @@ interface MeusLancamentosProps {
 }
 
 export default function MeusLancamentos({ className, onEditEntry }: MeusLancamentosProps) {
-  const { data: entries, loading } = useTimesheetRecentes(5)
+  const { data: entries, loading } = useTimesheetRecentes(7)
 
   return (
     <div className={cn(
-      "bg-white dark:bg-surface-1 rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] dark:hover:shadow-[0_10px_35px_-6px_rgba(0,0,0,0.4)] transition-all duration-300 p-5",
+      "bg-white dark:bg-surface-1 rounded-2xl shadow-[0_4px_20px_-4px_rgba(52,73,94,0.18)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.3)] hover:shadow-[0_10px_35px_-6px_rgba(52,73,94,0.25)] dark:hover:shadow-[0_10px_35px_-6px_rgba(0,0,0,0.4)] transition-all duration-300 p-6",
       className
     )}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200">Meus Timesheets</h2>
         <Link
           href="/dashboard/financeiro/timesheet?usuario=meu"

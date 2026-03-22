@@ -648,44 +648,45 @@ export default function ExtratoFinanceiroPage() {
   }, [escritoriosSelecionados, loadExtrato, loadContasBancarias, loadAdvogadosEscritorio])
 
   // Materializar item previsto (virtual) → cria registro real no banco
+  // O origem_pai_id agora aponta para financeiro_regras_recorrencia.id
   const materializarPrevisto = async (item: ExtratoItem): Promise<ExtratoItem | null> => {
     if (!item.virtual || !item.origem_pai_id || !escritorioAtivo) return null
 
     try {
-      if (item.tipo_movimento === 'receita') {
-        // Buscar dados do pai (receita recorrente)
-        const { data: pai, error: errPai } = await supabase
-          .from('financeiro_receitas')
-          .select('*')
-          .eq('id', item.origem_pai_id)
-          .single()
+      // Buscar regra de recorrência
+      const { data: regra, error: errRegra } = await supabase
+        .from('financeiro_regras_recorrencia')
+        .select('*')
+        .eq('id', item.origem_pai_id)
+        .single()
 
-        if (errPai || !pai) {
-          toast.error('Receita recorrente não encontrada')
-          return null
-        }
+      if (errRegra || !regra) {
+        toast.error('Regra de recorrência não encontrada')
+        return null
+      }
 
-        // Criar a receita filha
+      const dataVenc = item.data_vencimento || item.data_referencia
+      const periodoRef = dataVenc ? dataVenc.substring(0, 7) : null
+
+      if (regra.tipo_entidade === 'receita') {
         const { data: novaReceita, error: errInsert } = await supabase
           .from('financeiro_receitas')
           .insert({
-            escritorio_id: pai.escritorio_id,
-            tipo: pai.tipo,
-            categoria: pai.categoria,
-            descricao: pai.descricao,
-            valor: pai.valor,
-            data_competencia: item.data_vencimento || item.data_referencia,
-            data_vencimento: item.data_vencimento || item.data_referencia,
+            escritorio_id: regra.escritorio_id,
+            tipo: 'avulso',
+            categoria: regra.categoria,
+            descricao: item.descricao || regra.descricao,
+            valor: item.valor || regra.valor_atual,
+            data_competencia: dataVenc,
+            data_vencimento: dataVenc,
             status: 'pendente',
-            receita_pai_id: pai.id,
-            cliente_id: pai.cliente_id,
-            processo_id: pai.processo_id,
-            consulta_id: pai.consulta_id,
-            contrato_id: pai.contrato_id,
-            conta_bancaria_id: pai.conta_bancaria_id,
-            responsavel_id: pai.responsavel_id,
-            consultivo_id: pai.consultivo_id,
-            recorrente: false,
+            cliente_id: regra.cliente_id,
+            processo_id: regra.processo_id,
+            consulta_id: regra.consulta_id,
+            contrato_id: regra.contrato_id,
+            conta_bancaria_id: regra.conta_bancaria_id,
+            regra_recorrencia_id: regra.id,
+            periodo_referencia: periodoRef,
           })
           .select('id')
           .single()
@@ -696,19 +697,6 @@ export default function ExtratoFinanceiroPage() {
           return null
         }
 
-        // Atualizar ultima_geracao na config_recorrencia do pai
-        const configRec = pai.config_recorrencia || {}
-        const dataVenc = item.data_vencimento || item.data_referencia
-        if (!configRec.ultima_geracao || dataVenc > configRec.ultima_geracao) {
-          await supabase
-            .from('financeiro_receitas')
-            .update({
-              config_recorrencia: { ...configRec, ultima_geracao: dataVenc }
-            })
-            .eq('id', pai.id)
-        }
-
-        // Retornar item atualizado com dados reais
         return {
           ...item,
           id: novaReceita.id,
@@ -717,37 +705,23 @@ export default function ExtratoFinanceiroPage() {
           status: 'pendente',
           origem_id: novaReceita.id,
         }
-      } else if (item.tipo_movimento === 'despesa') {
-        // Buscar dados do pai (despesa recorrente)
-        const { data: pai, error: errPai } = await supabase
-          .from('financeiro_despesas')
-          .select('*')
-          .eq('id', item.origem_pai_id)
-          .single()
-
-        if (errPai || !pai) {
-          toast.error('Despesa recorrente não encontrada')
-          return null
-        }
-
-        // Criar a despesa filha
+      } else if (regra.tipo_entidade === 'despesa') {
         const { data: novaDespesa, error: errInsert } = await supabase
           .from('financeiro_despesas')
           .insert({
-            escritorio_id: pai.escritorio_id,
-            categoria: pai.categoria,
-            descricao: pai.descricao,
-            valor: pai.valor,
-            data_vencimento: item.data_vencimento || item.data_referencia,
+            escritorio_id: regra.escritorio_id,
+            categoria: regra.categoria,
+            descricao: item.descricao || regra.descricao,
+            valor: item.valor || regra.valor_atual,
+            data_vencimento: dataVenc,
             status: 'pendente',
-            despesa_pai_id: pai.id,
-            fornecedor: pai.fornecedor,
-            conta_bancaria_id: pai.conta_bancaria_id,
-            processo_id: pai.processo_id,
-            cliente_id: pai.cliente_id,
-            consulta_id: pai.consulta_id,
-            consultivo_id: pai.consultivo_id,
-            recorrente: false,
+            fornecedor: regra.fornecedor,
+            conta_bancaria_id: regra.conta_bancaria_id,
+            processo_id: regra.processo_id,
+            cliente_id: regra.cliente_id,
+            consulta_id: regra.consulta_id,
+            regra_recorrencia_id: regra.id,
+            periodo_referencia: periodoRef,
           })
           .select('id')
           .single()
@@ -758,19 +732,6 @@ export default function ExtratoFinanceiroPage() {
           return null
         }
 
-        // Atualizar ultima_geracao na config_recorrencia do pai
-        const configRec = pai.config_recorrencia || {}
-        const dataVenc = item.data_vencimento || item.data_referencia
-        if (!configRec.ultima_geracao || dataVenc > configRec.ultima_geracao) {
-          await supabase
-            .from('financeiro_despesas')
-            .update({
-              config_recorrencia: { ...configRec, ultima_geracao: dataVenc }
-            })
-            .eq('id', pai.id)
-        }
-
-        // Retornar item atualizado com dados reais
         return {
           ...item,
           id: novaDespesa.id,
@@ -869,20 +830,19 @@ export default function ExtratoFinanceiroPage() {
     try {
       setSubmitting(true)
 
-      // Verificar se o item tem pai (foi gerado por recorrência)
+      // Verificar se o item foi gerado por regra de recorrência
       if (item.tipo_movimento === 'receita') {
         const { data } = await supabase
           .from('financeiro_receitas')
-          .select('receita_pai_id')
+          .select('regra_recorrencia_id, receita_pai_id')
           .eq('id', item.origem_id)
           .single()
 
-        if (!data?.receita_pai_id) {
+        if (!data?.regra_recorrencia_id && !data?.receita_pai_id) {
           toast.error('Este lançamento não foi gerado por recorrência')
           return
         }
 
-        // Deletar o registro filho
         const { error } = await supabase
           .from('financeiro_receitas')
           .delete()
@@ -892,11 +852,11 @@ export default function ExtratoFinanceiroPage() {
       } else if (item.tipo_movimento === 'despesa') {
         const { data } = await supabase
           .from('financeiro_despesas')
-          .select('despesa_pai_id')
+          .select('regra_recorrencia_id, despesa_pai_id')
           .eq('id', item.origem_id)
           .single()
 
-        if (!data?.despesa_pai_id) {
+        if (!data?.regra_recorrencia_id && !data?.despesa_pai_id) {
           toast.error('Este lançamento não foi gerado por recorrência')
           return
         }
@@ -1674,34 +1634,35 @@ export default function ExtratoFinanceiroPage() {
   }
 
   // Preparar edição de previsto (item virtual recorrente)
+  // O origem_pai_id agora aponta para financeiro_regras_recorrencia.id
   const handlePrepararEdicaoPrevisto = async (item: ExtratoItem) => {
     if (!escritorioAtivo || !item.virtual || !item.origem_pai_id) return
 
     try {
       setSubmitting(true)
-      const tabela = item.tipo_movimento === 'receita' ? 'financeiro_receitas' : 'financeiro_despesas'
 
-      const { data: pai } = await supabase
-        .from(tabela)
+      // Buscar regra de recorrência
+      const { data: regra } = await supabase
+        .from('financeiro_regras_recorrencia')
         .select('*')
         .eq('id', item.origem_pai_id)
         .single()
 
-      if (pai) {
+      if (regra) {
         setEditForm({
-          descricao: pai.descricao || '',
-          valor: Number(pai.valor) || 0,
-          data_vencimento: item.data_vencimento || '', // Usa data do virtual, não do pai
-          categoria: pai.categoria || '',
-          fornecedor: pai.fornecedor || '',
-          observacoes: pai.observacoes || '',
-          conta_bancaria_id: pai.conta_bancaria_id || '',
+          descricao: regra.descricao || '',
+          valor: Number(regra.valor_atual) || 0,
+          data_vencimento: item.data_vencimento || '',
+          categoria: regra.categoria || '',
+          fornecedor: regra.fornecedor || '',
+          observacoes: '',
+          conta_bancaria_id: regra.conta_bancaria_id || '',
         })
       }
 
       setPrevistoParaEditar(item)
-      setModalEscopoEdicao(null) // Usuário ainda não escolheu escopo
-      setModalEditar(item) // Reutiliza o dialog de edição existente
+      setModalEscopoEdicao(null)
+      setModalEditar(item)
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
       toast.error('Erro ao carregar dados para edição')
@@ -1772,44 +1733,75 @@ export default function ExtratoFinanceiroPage() {
           toast.success('Lançamento deste mês atualizado!')
 
         } else if (modalEscopoEdicao === 'deste_em_diante') {
-          // Atualizar o PAI diretamente
-          const paiId = previstoParaEditar.origem_pai_id!
+          // Atualizar a REGRA DE RECORRÊNCIA
+          const regraId = previstoParaEditar.origem_pai_id!
 
-          const updateData: Record<string, unknown> = {
-            descricao: editForm.descricao,
-            valor: valor,
-            categoria: editForm.categoria,
-            conta_bancaria_id: editForm.conta_bancaria_id || null,
-            updated_at: new Date().toISOString(),
-          }
-          if (item.tipo_movimento === 'despesa') {
-            updateData.fornecedor = editForm.fornecedor
-          } else {
-            updateData.observacoes = editForm.observacoes
-          }
-
-          // Se dia_vencimento mudou, atualizar config_recorrencia
-          const newDay = new Date(editForm.data_vencimento + 'T12:00:00').getDate()
-          const { data: paiData } = await supabase
-            .from(tabela)
-            .select('config_recorrencia')
-            .eq('id', paiId)
+          // Buscar valor anterior para histórico
+          const { data: regraData } = await supabase
+            .from('financeiro_regras_recorrencia')
+            .select('valor_atual, dia_vencimento')
+            .eq('id', regraId)
             .single()
 
-          if (paiData) {
-            const config = paiData.config_recorrencia || {}
-            if (config.dia_vencimento !== newDay) {
-              updateData.config_recorrencia = { ...config, dia_vencimento: newDay }
-              updateData.data_vencimento = editForm.data_vencimento
-            }
+          const valorAnterior = regraData?.valor_atual || 0
+          const newDay = new Date(editForm.data_vencimento + 'T12:00:00').getDate()
+
+          const updateRegra: Record<string, unknown> = {
+            descricao: editForm.descricao,
+            valor_atual: valor,
+            categoria: editForm.categoria,
+            conta_bancaria_id: editForm.conta_bancaria_id || null,
+          }
+          if (item.tipo_movimento === 'despesa') {
+            updateRegra.fornecedor = editForm.fornecedor
+          }
+          if (regraData && regraData.dia_vencimento !== newDay) {
+            updateRegra.dia_vencimento = newDay
           }
 
           const { error } = await supabase
-            .from(tabela)
-            .update(updateData)
-            .eq('id', paiId)
+            .from('financeiro_regras_recorrencia')
+            .update(updateRegra)
+            .eq('id', regraId)
 
           if (error) throw error
+
+          // Registrar no histórico se valor mudou
+          if (valorAnterior !== valor) {
+            await supabase
+              .from('financeiro_regras_recorrencia_historico')
+              .insert({
+                regra_id: regraId,
+                campo_alterado: 'valor',
+                valor_anterior: valorAnterior,
+                valor_novo: valor,
+                vigencia_a_partir_de: editForm.data_vencimento,
+                motivo: 'Alteração pelo usuário',
+              })
+          }
+
+          // Materializar este mês também com o novo valor
+          const materializado = await materializarPrevisto({
+            ...previstoParaEditar,
+            valor: valor,
+            descricao: editForm.descricao,
+          })
+          if (materializado) {
+            const updateInst: Record<string, unknown> = {
+              valor: valor,
+              descricao: editForm.descricao,
+              categoria: editForm.categoria,
+              conta_bancaria_id: editForm.conta_bancaria_id || null,
+            }
+            if (item.tipo_movimento === 'despesa') {
+              updateInst.fornecedor = editForm.fornecedor
+            }
+            await supabase
+              .from(tabela)
+              .update(updateInst)
+              .eq('id', materializado.id)
+          }
+
           toast.success('Recorrência atualizada para todos os meses futuros!')
         }
 
@@ -3060,8 +3052,8 @@ export default function ExtratoFinanceiroPage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-0.5 flex-shrink-0">
-                      {/* Botão icon primário */}
-                      {isPrevisto && (
+                      {/* Botão icon primário — não mostrar para faturas projetadas de cartão */}
+                      {isPrevisto && item.origem !== 'cartao_credito' && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -3103,8 +3095,8 @@ export default function ExtratoFinanceiroPage() {
                         </Button>
                       )}
 
-                      {/* Dropdown */}
-                      {isPrevisto && (
+                      {/* Dropdown — não mostrar para faturas projetadas de cartão */}
+                      {isPrevisto && item.origem !== 'cartao_credito' && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
@@ -3481,8 +3473,8 @@ export default function ExtratoFinanceiroPage() {
                     {/* Ações */}
                     <td className="py-2.5 px-2 text-center">
                       <div className="flex items-center justify-center gap-0.5">
-                        {/* Botão icon primário */}
-                        {isPrevisto && (
+                        {/* Botão icon primário — não mostrar para faturas projetadas de cartão */}
+                        {isPrevisto && item.origem !== 'cartao_credito' && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -3524,8 +3516,8 @@ export default function ExtratoFinanceiroPage() {
                           </Button>
                         )}
 
-                        {/* Dropdown — condicional por estado */}
-                        {isPrevisto && (
+                        {/* Dropdown — não mostrar para faturas projetadas de cartão */}
+                        {isPrevisto && item.origem !== 'cartao_credito' && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-6 w-6 p-0">

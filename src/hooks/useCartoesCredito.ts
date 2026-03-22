@@ -1136,7 +1136,16 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
   const importarLancamentosEmLote = useCallback(async (
     cartaoId: string,
     mesReferencia: string, // formato: YYYY-MM-01
-    transacoes: Array<{ descricao: string; categoria: string; valor: number; data_compra: string }>
+    transacoes: Array<{
+      descricao: string
+      categoria: string
+      valor: number
+      data_compra: string
+      tipo?: string
+      parcela_numero?: number
+      parcela_total?: number
+      regra_recorrencia_id?: string
+    }>
   ): Promise<{ total_importados: number; lancamento_ids: string[] }> => {
     try {
       setLoading(true)

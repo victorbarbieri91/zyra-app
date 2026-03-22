@@ -11,6 +11,8 @@ import {
   Tag,
   AlertTriangle,
   Info,
+  RefreshCw,
+  ArrowRight,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -183,8 +185,24 @@ export default function ImportarFaturaStep2({
       </div>
 
       {/* Alertas */}
-      {(faturaExistente || transacoes.some(t => t.possivelDuplicata)) && (
+      {(faturaExistente || transacoes.some(t => t.possivelDuplicata) || transacoes.some(t => t.regraRecorrenteId)) && (
         <div className="flex-shrink-0 px-6 py-2 space-y-1.5">
+          {/* Recorrentes identificados */}
+          {transacoes.some(t => t.regraRecorrenteId) && (
+            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-800">
+              <RefreshCw className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-[11px] font-medium text-purple-800 dark:text-purple-300">
+                  {transacoes.filter(t => t.regraRecorrenteId).length} recorrentes identificados automaticamente
+                </p>
+                {transacoes.some(t => t.regraValorAnterior !== undefined) && (
+                  <p className="text-[10px] text-purple-600 dark:text-purple-400">
+                    {transacoes.filter(t => t.regraValorAnterior !== undefined).length} com valor diferente — serão atualizados ao importar
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
           {faturaExistente && (
             <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200">
               <Info className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
@@ -325,26 +343,48 @@ export default function ImportarFaturaStep2({
                           title="Clique para editar"
                         >
                           <p className="text-[11px] text-slate-700 dark:text-slate-300 truncate">{t.descricao}</p>
-                          <div className="flex items-center gap-1.5 mt-0.5">
+                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                             {t.parcela && (
                               <span className="text-[9px] text-blue-600 dark:text-blue-400">Parcela {t.parcela}</span>
                             )}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                toggleRecorrente(t.id)
-                              }}
-                              className={cn(
-                                'text-[9px] px-1.5 py-0.5 rounded-full border transition-colors',
-                                t.tipo === 'recorrente'
-                                  ? 'bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800'
-                                  : 'bg-transparent text-slate-400 border-slate-200 dark:border-slate-700 hover:text-purple-600 hover:border-purple-300'
-                              )}
-                              title={t.tipo === 'recorrente' ? 'Remover recorrência' : 'Marcar como recorrente'}
-                            >
-                              ↻ {t.tipo === 'recorrente' ? 'Recorrente' : 'Recorrente?'}
-                            </button>
+                            {/* Recorrente identificado automaticamente */}
+                            {t.regraRecorrenteId ? (
+                              <span
+                                className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-800"
+                                title={`Identificado como recorrente: ${t.regraDescricao || t.descricao}`}
+                              >
+                                <RefreshCw className="w-2 h-2" />
+                                Recorrente ✓
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  toggleRecorrente(t.id)
+                                }}
+                                className={cn(
+                                  'text-[9px] px-1.5 py-0.5 rounded-full border transition-colors',
+                                  t.tipo === 'recorrente'
+                                    ? 'bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800'
+                                    : 'bg-transparent text-slate-400 border-slate-200 dark:border-slate-700 hover:text-purple-600 hover:border-purple-300'
+                                )}
+                                title={t.tipo === 'recorrente' ? 'Remover recorrência' : 'Marcar como recorrente'}
+                              >
+                                ↻ {t.tipo === 'recorrente' ? 'Recorrente' : 'Recorrente?'}
+                              </button>
+                            )}
+                            {/* Indicação de mudança de valor */}
+                            {t.regraValorAnterior !== undefined && (
+                              <span
+                                className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
+                                title={`Valor anterior: ${formatCurrency(t.regraValorAnterior)} → Novo: ${formatCurrency(t.valor)}`}
+                              >
+                                {formatCurrency(t.regraValorAnterior)}
+                                <ArrowRight className="w-2 h-2" />
+                                {formatCurrency(t.valor)}
+                              </span>
+                            )}
                           </div>
                         </div>
                       )}

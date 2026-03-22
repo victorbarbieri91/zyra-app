@@ -675,48 +675,123 @@ export default function DespesaModal({
         // Modo criação: INSERT
         const { data: { user: currentUser } } = await supabase.auth.getUser()
 
-        const despesaData: Record<string, unknown> = {
-          escritorio_id: escritorioAtivo,
-          processo_id: processoSelecionado?.id || null,
-          consultivo_id: consultaSelecionada?.id || null,
-          cliente_id: derivedClienteId || clienteId || null,
-          categoria: formData.categoria,
-          descricao: formData.descricao.trim(),
-          valor: formData.valor,
-          data_vencimento: formatDateForDB(formData.data_vencimento),
-          comprovante_url: comprovanteUrl,
-          reembolsavel: formData.reembolsavel,
-          reembolso_status: formData.reembolsavel ? 'pendente' : null,
-          advogado_id: currentUser?.id || null,
-          fornecedor: formData.fornecedor.trim() || null,
-          parcelado: formData.modalidade === 'parcelada',
-          numero_parcelas: formData.modalidade === 'parcelada' ? formData.numero_parcelas : 1,
-          recorrente: formData.modalidade === 'recorrente',
-          config_recorrencia: formData.modalidade === 'recorrente'
-            ? {
-                ...formData.config_recorrencia,
-                data_inicio: formatDateForDB(formData.data_vencimento),
-                gerar_automatico: true,
-              }
-            : null,
-        }
+        const isParcelada = formData.modalidade === 'parcelada'
+        const isRecorrente = formData.modalidade === 'recorrente'
+        const vencimentoFormatado = formatDateForDB(formData.data_vencimento)
+        const vencimentoDay = new Date(formData.data_vencimento + 'T12:00:00').getDate()
 
-        if (formData.ja_pago) {
-          // Já pago: pula o fluxo de aprovação, vai direto como pago
-          despesaData.status = 'pago'
-          despesaData.fluxo_status = 'pago'
-          despesaData.data_pagamento = formatDateForDB(formData.data_pagamento)
-          despesaData.conta_bancaria_id = formData.conta_bancaria_id || null
-          despesaData.forma_pagamento = formData.forma_pagamento || null
+        if (isRecorrente || isParcelada) {
+          // ──────────────────────────────────────────────────
+          // RECORRENTE ou PARCELADA: criar regra + 1ª instância
+          // ──────────────────────────────────────────────────
+          const valorParcela = isParcelada
+            ? Math.floor((formData.valor / formData.numero_parcelas) * 100) / 100
+            : formData.valor
+
+          // 1. Criar regra de recorrência
+          const { data: regra, error: errRegra } = await supabase
+            .from('financeiro_regras_recorrencia')
+            .insert({
+              escritorio_id: escritorioAtivo,
+              tipo_entidade: 'despesa',
+              descricao: formData.descricao.trim(),
+              categoria: formData.categoria,
+              valor_atual: valorParcela,
+              valor_total_original: isParcelada ? formData.valor : null,
+              fornecedor: formData.fornecedor.trim() || null,
+              cliente_id: derivedClienteId || clienteId || null,
+              processo_id: processoSelecionado?.id || null,
+              consulta_id: consultaSelecionada?.id || null,
+              conta_bancaria_id: formData.ja_pago ? formData.conta_bancaria_id : null,
+              frequencia: isRecorrente ? formData.config_recorrencia.frequencia : 'mensal',
+              dia_vencimento: vencimentoDay,
+              vigencia_inicio: vencimentoFormatado,
+              vigencia_fim: isParcelada
+                ? (() => {
+                    const d = new Date(formData.data_vencimento)
+                    d.setMonth(d.getMonth() + formData.numero_parcelas - 1)
+                    return d.toISOString().split('T')[0]
+                  })()
+                : formData.config_recorrencia.data_fim || null,
+              ativo: true,
+              is_parcelamento: isParcelada,
+              parcela_total: isParcelada ? formData.numero_parcelas : null,
+              created_by: currentUser?.id || null,
+            })
+            .select('id')
+            .single()
+
+          if (errRegra) throw errRegra
+
+          // 2. Criar primeira instância real
+          const despesaInst: Record<string, unknown> = {
+            escritorio_id: escritorioAtivo,
+            processo_id: processoSelecionado?.id || null,
+            consultivo_id: consultaSelecionada?.id || null,
+            cliente_id: derivedClienteId || clienteId || null,
+            categoria: formData.categoria,
+            descricao: isParcelada
+              ? `Parcela 1/${formData.numero_parcelas} - ${formData.descricao.trim()}`
+              : formData.descricao.trim(),
+            valor: valorParcela,
+            data_vencimento: vencimentoFormatado,
+            comprovante_url: comprovanteUrl,
+            reembolsavel: formData.reembolsavel,
+            reembolso_status: formData.reembolsavel ? 'pendente' : null,
+            advogado_id: currentUser?.id || null,
+            fornecedor: formData.fornecedor.trim() || null,
+            regra_recorrencia_id: regra.id,
+            periodo_referencia: formData.data_vencimento.substring(0, 7),
+            numero_parcela: isParcelada ? 1 : null,
+          }
+
+          if (formData.ja_pago) {
+            despesaInst.status = 'pago'
+            despesaInst.fluxo_status = 'pago'
+            despesaInst.data_pagamento = formatDateForDB(formData.data_pagamento)
+            despesaInst.conta_bancaria_id = formData.conta_bancaria_id || null
+            despesaInst.forma_pagamento = formData.forma_pagamento || null
+          } else {
+            despesaInst.status = 'pendente'
+            despesaInst.fluxo_status = 'pendente'
+          }
+
+          const { error: errInst } = await supabase.from('financeiro_despesas').insert(despesaInst)
+          if (errInst) throw errInst
         } else {
-          // Toda despesa entra no fluxo: pendente → agendado → liberado → pago
-          despesaData.status = 'pendente'
-          despesaData.fluxo_status = 'pendente'
+          // ──────────────────────────────────────────────────
+          // ÚNICA: insert direto sem regra
+          // ──────────────────────────────────────────────────
+          const despesaData: Record<string, unknown> = {
+            escritorio_id: escritorioAtivo,
+            processo_id: processoSelecionado?.id || null,
+            consultivo_id: consultaSelecionada?.id || null,
+            cliente_id: derivedClienteId || clienteId || null,
+            categoria: formData.categoria,
+            descricao: formData.descricao.trim(),
+            valor: formData.valor,
+            data_vencimento: vencimentoFormatado,
+            comprovante_url: comprovanteUrl,
+            reembolsavel: formData.reembolsavel,
+            reembolso_status: formData.reembolsavel ? 'pendente' : null,
+            advogado_id: currentUser?.id || null,
+            fornecedor: formData.fornecedor.trim() || null,
+          }
+
+          if (formData.ja_pago) {
+            despesaData.status = 'pago'
+            despesaData.fluxo_status = 'pago'
+            despesaData.data_pagamento = formatDateForDB(formData.data_pagamento)
+            despesaData.conta_bancaria_id = formData.conta_bancaria_id || null
+            despesaData.forma_pagamento = formData.forma_pagamento || null
+          } else {
+            despesaData.status = 'pendente'
+            despesaData.fluxo_status = 'pendente'
+          }
+
+          const { error } = await supabase.from('financeiro_despesas').insert(despesaData)
+          if (error) throw error
         }
-
-        const { error } = await supabase.from('financeiro_despesas').insert(despesaData)
-
-        if (error) throw error
 
         toast.success(
           formData.modalidade === 'parcelada'

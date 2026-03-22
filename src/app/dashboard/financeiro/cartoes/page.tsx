@@ -44,7 +44,17 @@ import {
   CartaoComFaturaAtual,
   FaturaCartao,
 } from '@/hooks/useCartoesCredito'
+import { createClient } from '@/lib/supabase/client'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
+
+interface ResumoFaturaMes {
+  fatura_id: string | null
+  valor_total: number
+  status: string // 'aberta' | 'fechada' | 'paga' | 'projetada' | 'vazia'
+  total_lancamentos: number
+  data_vencimento: string
+  data_fechamento: string
+}
 import { cn } from '@/lib/utils'
 import CartaoModal from '@/components/financeiro/cartoes/CartaoModal'
 import ImportarFaturaModal from '@/components/financeiro/cartoes/ImportarFaturaModal'
@@ -80,6 +90,7 @@ export default function CartoesPage() {
   // States
   const [cartoes, setCartoes] = useState<CartaoComFaturaAtual[]>([])
   const [faturasPorCartao, setFaturasPorCartao] = useState<Record<string, FaturaCartao | null>>({})
+  const [resumosPorCartao, setResumosPorCartao] = useState<Record<string, ResumoFaturaMes | null>>({})
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth)
@@ -100,6 +111,7 @@ export default function CartoesPage() {
   const [selectedCartao, setSelectedCartao] = useState<CartaoComFaturaAtual | null>(null)
 
   const { loadCartoesComFaturaAtual, loadFaturas, deleteCartao } = useCartoesCredito(escritoriosSelecionados)
+  const supabase = createClient()
 
   // Carregar escritórios do grupo
   useEffect(() => {
@@ -139,7 +151,7 @@ export default function CartoesPage() {
     return `${escritoriosSelecionados.length} escritórios`
   }
 
-  // Carregar cartões e faturas do mês selecionado
+  // Carregar cartões e resumo da fatura do mês selecionado
   const loadData = useCallback(async () => {
     if (escritoriosSelecionados.length === 0) return
 
@@ -148,7 +160,7 @@ export default function CartoesPage() {
       const data = await loadCartoesComFaturaAtual()
       setCartoes(data)
 
-      // Carregar faturas — filtrar pelo mês de VENCIMENTO (quando impacta o caixa)
+      // Carregar faturas (para o sheet de detalhe que ainda usa faturaExistente)
       const todasFaturas = await loadFaturas()
       const faturaMap: Record<string, FaturaCartao | null> = {}
       for (const cartao of data) {
@@ -159,13 +171,35 @@ export default function CartoesPage() {
         faturaMap[cartao.id] = faturaDoMes || null
       }
       setFaturasPorCartao(faturaMap)
+
+      // Buscar resumo via RPC para cada cartão (inclui projeções para meses futuros)
+      const resumoMap: Record<string, ResumoFaturaMes | null> = {}
+      await Promise.all(
+        data.map(async (cartao) => {
+          const { data: resumo } = await supabase
+            .rpc('obter_resumo_fatura_cartao_mes', {
+              p_cartao_id: cartao.id,
+              p_mes_vencimento: selectedMonth,
+            })
+          const r = resumo?.[0]
+          resumoMap[cartao.id] = r ? {
+            fatura_id: r.fatura_id,
+            valor_total: Number(r.valor_total) || 0,
+            status: r.status,
+            total_lancamentos: Number(r.total_lancamentos) || 0,
+            data_vencimento: r.data_vencimento,
+            data_fechamento: r.data_fechamento,
+          } : null
+        })
+      )
+      setResumosPorCartao(resumoMap)
     } catch (error) {
       console.error('Erro ao carregar cartões:', error)
       toast.error('Erro ao carregar cartões')
     } finally {
       setLoading(false)
     }
-  }, [escritoriosSelecionados, loadCartoesComFaturaAtual, loadFaturas, selectedMonth])
+  }, [escritoriosSelecionados, loadCartoesComFaturaAtual, loadFaturas, selectedMonth, supabase])
 
   useEffect(() => {
     if (escritoriosSelecionados.length > 0) {
@@ -208,10 +242,10 @@ export default function CartoesPage() {
     return `${String(cartao.dia_vencimento).padStart(2, '0')}/${String(mesSel).padStart(2, '0')}/${anoSel}`
   }
 
-  // Total do mês selecionado
+  // Total do mês selecionado (usa resumo que inclui projeções)
   const totalMesSelecionado = cartoesFiltrados.reduce((acc, c) => {
-    const fatura = faturasPorCartao[c.id]
-    return acc + (fatura?.valor_total || 0)
+    const resumo = resumosPorCartao[c.id]
+    return acc + (resumo?.valor_total || 0)
   }, 0)
 
   // Handlers
@@ -389,8 +423,9 @@ export default function CartoesPage() {
             <TableBody>
               {cartoesFiltrados.map((cartao) => {
                 const fatura = faturasPorCartao[cartao.id]
-                const faturaValor = fatura?.valor_total || 0
-                const faturaStatus = fatura?.status
+                const resumo = resumosPorCartao[cartao.id]
+                const faturaValor = resumo?.valor_total || 0
+                const faturaStatus = resumo?.status
 
                 return (
                   <TableRow
@@ -434,19 +469,21 @@ export default function CartoesPage() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      {faturaStatus ? (
+                      {faturaStatus && faturaStatus !== 'vazia' ? (
                         <Badge
                           variant="secondary"
                           className={cn(
                             "text-[10px]",
                             faturaStatus === 'aberta' && "bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400",
                             faturaStatus === 'fechada' && "bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400",
-                            faturaStatus === 'paga' && "bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                            faturaStatus === 'paga' && "bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+                            faturaStatus === 'projetada' && "bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400"
                           )}
                         >
                           {faturaStatus === 'aberta' && 'Aberta'}
                           {faturaStatus === 'fechada' && 'Fechada'}
                           {faturaStatus === 'paga' && 'Paga'}
+                          {faturaStatus === 'projetada' && 'Prevista'}
                         </Badge>
                       ) : (
                         <span className="text-xs text-slate-400">—</span>

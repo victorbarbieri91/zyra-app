@@ -94,7 +94,7 @@ export default function FinanceiroLayout({
       .eq('escritorio_id', escritorioAtivo)
       .eq('fluxo_status', fluxoFiltro)
       .neq('status', 'cancelado')
-      .then(({ count }) => setCustasBadge(count || 0))
+      .then(({ count }: { count: number | null }) => setCustasBadge(count || 0))
   }, [escritorioAtivo, roleAtual])
 
   const checkScroll = useCallback(() => {

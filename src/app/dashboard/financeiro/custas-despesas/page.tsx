@@ -104,7 +104,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
 
 export default function CustasDespesasPage() {
   const supabase = createClient()
-  const { escritorioAtivo } = useEscritorioAtivo()
+  const { escritorioAtivo, roleAtual } = useEscritorioAtivo()
   const {
     custas,
     loading,
@@ -301,6 +301,83 @@ export default function CustasDespesasPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      {/* KPI Cards por cargo */}
+      {!loading && (
+        <div className="grid grid-cols-3 gap-4">
+          <Card className={cn(
+            "border transition-all",
+            roleAtual === 'admin' && custas.filter(c => c.fluxo_status === 'pendente').length > 0
+              ? "border-amber-300 shadow-md"
+              : "border-slate-200"
+          )}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500">Pendentes</p>
+                  <p className="text-2xl font-semibold text-amber-600">{custas.filter(c => c.fluxo_status === 'pendente').length}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{formatCurrency(totais.pendente)}</p>
+                </div>
+                <div className={cn(
+                  "w-10 h-10 rounded-lg flex items-center justify-center",
+                  roleAtual === 'admin' && custas.filter(c => c.fluxo_status === 'pendente').length > 0
+                    ? "bg-amber-100"
+                    : "bg-slate-100"
+                )}>
+                  <Clock className="w-5 h-5 text-amber-600" />
+                </div>
+              </div>
+              {roleAtual === 'admin' && custas.filter(c => c.fluxo_status === 'pendente').length > 0 && (
+                <p className="text-[10px] text-amber-600 font-medium mt-2">Aguardando seu agendamento</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className={cn(
+            "border transition-all",
+            roleAtual === 'owner' && custas.filter(c => c.fluxo_status === 'agendado').length > 0
+              ? "border-blue-300 shadow-md"
+              : "border-slate-200"
+          )}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500">Agendadas</p>
+                  <p className="text-2xl font-semibold text-blue-600">{custas.filter(c => c.fluxo_status === 'agendado').length}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{formatCurrency(totais.agendado)}</p>
+                </div>
+                <div className={cn(
+                  "w-10 h-10 rounded-lg flex items-center justify-center",
+                  roleAtual === 'owner' && custas.filter(c => c.fluxo_status === 'agendado').length > 0
+                    ? "bg-blue-100"
+                    : "bg-slate-100"
+                )}>
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                </div>
+              </div>
+              {roleAtual === 'owner' && custas.filter(c => c.fluxo_status === 'agendado').length > 0 && (
+                <p className="text-[10px] text-blue-600 font-medium mt-2">Aguardando sua liberação</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border border-slate-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500">Liberadas</p>
+                  <p className="text-2xl font-semibold text-emerald-600">{custas.filter(c => c.fluxo_status === 'liberado').length}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{formatCurrency(totais.liberado)}</p>
+                </div>
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-slate-100">
+                  <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-2">Serão efetivadas automaticamente</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

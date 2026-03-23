@@ -60,6 +60,7 @@ import {
   ArrowUp,
   ArrowDown,
   Undo2,
+  ShieldCheck,
 } from 'lucide-react'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
@@ -74,7 +75,7 @@ interface ExtratoItem {
   id: string
   escritorio_id: string
   tipo_movimento: 'receita' | 'despesa' | 'transferencia_saida' | 'transferencia_entrada'
-  status: 'pendente' | 'efetivado' | 'vencido' | 'cancelado' | 'parcial'
+  status: 'pendente' | 'efetivado' | 'vencido' | 'cancelado' | 'parcial' | 'liberado'
   origem: string
   categoria: string
   descricao: string
@@ -2671,6 +2672,11 @@ export default function ExtratoFinanceiroPage() {
                             <Clock className="w-2.5 h-2.5" />
                             Parcial
                           </span>
+                        ) : item.status === 'liberado' ? (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30">
+                            <ShieldCheck className="w-2.5 h-2.5" />
+                            Liberado
+                          </span>
                         ) : item.status === 'vencido' ? (
                           <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30">
                             <AlertTriangle className="w-2.5 h-2.5" />
@@ -3101,6 +3107,11 @@ export default function ExtratoFinanceiroPage() {
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30 whitespace-nowrap">
                           <Clock className="w-3 h-3" />
                           Parcial
+                        </span>
+                      ) : item.status === 'liberado' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 whitespace-nowrap">
+                          <ShieldCheck className="w-3 h-3" />
+                          Liberado
                         </span>
                       ) : item.status === 'vencido' ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30 whitespace-nowrap">

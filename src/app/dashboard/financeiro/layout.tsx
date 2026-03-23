@@ -4,6 +4,8 @@ import { usePathname } from 'next/navigation'
 import { useRef, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import {
   LayoutDashboard,
   Clock,
@@ -77,6 +79,23 @@ export default function FinanceiroLayout({
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
+  const { escritorioAtivo, roleAtual } = useEscritorioAtivo()
+  const [custasBadge, setCustasBadge] = useState(0)
+
+  // Badge de custas pendentes (admin/Gerente) ou agendadas (owner/Sócio)
+  useEffect(() => {
+    if (!escritorioAtivo || !roleAtual) return
+    const supabase = createClient()
+    const fluxoFiltro = roleAtual === 'owner' ? 'agendado' : 'pendente'
+
+    supabase
+      .from('financeiro_despesas')
+      .select('id', { count: 'exact', head: true })
+      .eq('escritorio_id', escritorioAtivo)
+      .eq('fluxo_status', fluxoFiltro)
+      .neq('status', 'cancelado')
+      .then(({ count }) => setCustasBadge(count || 0))
+  }, [escritorioAtivo, roleAtual])
 
   const checkScroll = useCallback(() => {
     const el = scrollRef.current
@@ -163,6 +182,18 @@ export default function FinanceiroLayout({
                   <Icon className="h-4 w-4 flex-shrink-0" />
                   <span className="hidden sm:inline lg:hidden">{item.shortTitle}</span>
                   <span className="hidden lg:inline">{item.title}</span>
+                  {item.href === '/dashboard/financeiro/custas-despesas' && custasBadge > 0 && (
+                    <span className={cn(
+                      "inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold",
+                      isActive
+                        ? "bg-white/20 text-white"
+                        : roleAtual === 'owner'
+                          ? "bg-blue-500 text-white"
+                          : "bg-amber-500 text-white"
+                    )}>
+                      {custasBadge}
+                    </span>
+                  )}
                 </Link>
               )
             })}

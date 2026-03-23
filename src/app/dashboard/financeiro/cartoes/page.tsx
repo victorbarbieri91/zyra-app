@@ -13,6 +13,7 @@ import {
   Check,
   Pencil,
   Trash2,
+  Receipt,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -59,6 +60,7 @@ import { cn } from '@/lib/utils'
 import CartaoModal from '@/components/financeiro/cartoes/CartaoModal'
 import ImportarFaturaModal from '@/components/financeiro/cartoes/ImportarFaturaModal'
 import FaturaDetailSheet from '@/components/financeiro/cartoes/FaturaDetailSheet'
+import DespesaCartaoModal from '@/components/financeiro/cartoes/DespesaCartaoModal'
 import { toast } from 'sonner'
 
 const MESES_COMPLETO: Record<number, string> = {
@@ -102,6 +104,7 @@ export default function CartoesPage() {
 
   // Modais
   const [importModalOpen, setImportModalOpen] = useState(false)
+  const [despesaModalOpen, setDespesaModalOpen] = useState(false)
   const [modalCartaoOpen, setModalCartaoOpen] = useState(false)
   const [cartaoParaEditar, setCartaoParaEditar] = useState<CartaoComFaturaAtual | null>(null)
   const [cartaoParaExcluir, setCartaoParaExcluir] = useState<string | null>(null)
@@ -327,6 +330,15 @@ export default function CartoesPage() {
           )}
           <Button
             size="sm"
+            variant="outline"
+            onClick={() => setDespesaModalOpen(true)}
+            className="h-9 text-xs border-slate-200 dark:border-slate-700"
+          >
+            <Receipt className="h-3.5 w-3.5 md:mr-1.5" />
+            <span className="hidden md:inline">Novo Lançamento</span>
+          </Button>
+          <Button
+            size="sm"
             onClick={() => setImportModalOpen(true)}
             className="h-9 text-xs bg-gradient-to-r from-emerald-600 to-emerald-700 text-white hover:from-emerald-700 hover:to-emerald-800 shadow-sm"
           >
@@ -529,6 +541,16 @@ export default function CartoesPage() {
         escritorioIds={escritoriosSelecionados}
         onDataChange={loadData}
       />
+
+      {/* Modal de Novo Lançamento */}
+      {escritorioAtivo && (
+        <DespesaCartaoModal
+          open={despesaModalOpen}
+          onOpenChange={setDespesaModalOpen}
+          escritorioId={escritorioAtivo}
+          onSuccess={loadData}
+        />
+      )}
 
       {/* Modal de Importação de Fatura */}
       <ImportarFaturaModal

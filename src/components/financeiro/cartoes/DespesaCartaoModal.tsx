@@ -18,9 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Receipt, Loader2, CreditCard, Info, Repeat, Calendar } from 'lucide-react'
+import { Receipt, Loader2, Repeat, Calendar, Link2, ChevronRight } from 'lucide-react'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { toast } from 'sonner'
-import { createClient } from '@/lib/supabase/client'
 import {
   useCartoesCredito,
   LancamentoFormData,
@@ -40,8 +40,8 @@ interface DespesaCartaoModalProps {
 }
 
 interface FaturaInfo {
-  mes_referencia: string // YYYY-MM-01
-  label: string // "Março/2026"
+  mes_referencia: string
+  label: string
   status: 'aberta' | 'fechada'
 }
 
@@ -61,18 +61,12 @@ function gerarMesesDisponiveis(cartao: CartaoCredito | undefined): FaturaInfo[] 
     const mesRef = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
     const label = `${MESES_PT[d.getMonth()]}/${d.getFullYear()}`
 
-    // Calcular data de fechamento real deste mês
     const dataFechamento = diaFechamento > 0
       ? new Date(d.getFullYear(), d.getMonth(), diaFechamento)
-      : new Date(d.getFullYear(), d.getMonth(), 0 + diaFechamento) // mês anterior se dia negativo
+      : new Date(d.getFullYear(), d.getMonth(), 0 + diaFechamento)
 
-    // Fatura está fechada se a data de fechamento já passou
     const isFechada = hoje > dataFechamento
-    meses.push({
-      mes_referencia: mesRef,
-      label,
-      status: isFechada ? 'fechada' : 'aberta',
-    })
+    meses.push({ mes_referencia: mesRef, label, status: isFechada ? 'fechada' : 'aberta' })
   }
   return meses
 }
@@ -81,17 +75,16 @@ function calcularMesReferenciaLocal(cartao: CartaoCredito | undefined, dataCompr
   if (!cartao || !dataCompra) return null
   const compra = new Date(dataCompra + 'T12:00:00')
   const diaFechamento = cartao.dia_vencimento - (cartao.dias_antes_fechamento || 7)
+  const diaCompra = compra.getDate()
 
-  const mesCompra = new Date(compra.getFullYear(), compra.getMonth(), 1)
-  const fechamento = diaFechamento > 0
-    ? new Date(compra.getFullYear(), compra.getMonth(), diaFechamento)
-    : new Date(compra.getFullYear(), compra.getMonth() - 1, 28 + diaFechamento) // ajusta mês anterior
-
-  if (compra <= fechamento) {
-    return `${mesCompra.getFullYear()}-${String(mesCompra.getMonth() + 1).padStart(2, '0')}-01`
+  // mes_referencia = mês de VENCIMENTO da fatura
+  if (diaCompra > diaFechamento) {
+    // Compra após fechamento → fatura do MÊS SEGUINTE (vencimento)
+    const mesVenc = new Date(compra.getFullYear(), compra.getMonth() + 1, 1)
+    return `${mesVenc.getFullYear()}-${String(mesVenc.getMonth() + 1).padStart(2, '0')}-01`
   } else {
-    const proximo = new Date(mesCompra.getFullYear(), mesCompra.getMonth() + 1, 1)
-    return `${proximo.getFullYear()}-${String(proximo.getMonth() + 1).padStart(2, '0')}-01`
+    // Compra antes/no fechamento → fatura do MÊS CORRENTE (vencimento)
+    return `${compra.getFullYear()}-${String(compra.getMonth() + 1).padStart(2, '0')}-01`
   }
 }
 
@@ -123,14 +116,13 @@ export default function DespesaCartaoModal({
   const [cartoes, setCartoes] = useState<CartaoCredito[]>([])
   const [loadingCartoes, setLoadingCartoes] = useState(false)
   const [vinculacao, setVinculacao] = useState<Vinculacao | null>(null)
+  const [showVinculacao, setShowVinculacao] = useState(false)
 
-  const supabase = createClient()
   const { loadCartoes, createLancamento } = useCartoesCredito(escritorioId)
 
   const cartaoSelecionado = cartoes.find((c) => c.id === formData.cartao_id)
   const mesesDisponiveis = useMemo(() => gerarMesesDisponiveis(cartaoSelecionado), [cartaoSelecionado])
 
-  // Carregar cartões
   useEffect(() => {
     const fetchCartoes = async () => {
       if (!escritorioId || !open) return
@@ -142,18 +134,14 @@ export default function DespesaCartaoModal({
     fetchCartoes()
   }, [escritorioId, open, loadCartoes])
 
-  // Reset form ao abrir
   useEffect(() => {
     if (open) {
-      setFormData({
-        ...initialFormData,
-        cartao_id: cartaoId || '',
-      })
+      setFormData({ ...initialFormData, cartao_id: cartaoId || '' })
       setVinculacao(null)
+      setShowVinculacao(false)
     }
   }, [open, cartaoId])
 
-  // Auto-calcular mês de referência quando data de compra ou cartão mudam
   useEffect(() => {
     if (!formData.cartao_id || !formData.data_compra) return
     const mesCalculado = calcularMesReferenciaLocal(cartaoSelecionado, formData.data_compra)
@@ -162,7 +150,7 @@ export default function DespesaCartaoModal({
     }
   }, [formData.cartao_id, formData.data_compra, cartaoSelecionado])
 
-  const updateField = (field: keyof LancamentoFormData, value: any) => {
+  const updateField = (field: keyof LancamentoFormData, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -224,57 +212,51 @@ export default function DespesaCartaoModal({
     }
   }
 
-  // Calcula valor da parcela
   const valorParcela = formData.tipo === 'parcelada' && formData.parcelas
     ? formData.valor / formData.parcelas
     : formData.valor
 
-  // Texto informativo do parcelamento
   const parcelamentoInfo = useMemo(() => {
     if (formData.tipo !== 'parcelada' || !formData.parcelas) return null
     const inicio = formData.parcela_inicial || 1
     const total = formData.parcelas
     const qtd = total - inicio + 1
-    return `Serão criadas ${qtd} parcela${qtd > 1 ? 's' : ''} (${inicio}/${total} a ${total}/${total}) nos próximos ${qtd} mês${qtd > 1 ? 'es' : ''}`
+    return `${qtd} parcela${qtd > 1 ? 's' : ''} (${inicio}/${total} a ${total}/${total})`
   }, [formData.tipo, formData.parcelas, formData.parcela_inicial])
 
-  // Mês selecionado label
   const mesSelecionado = mesesDisponiveis.find((m) => m.mes_referencia === formData.mes_referencia)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl w-[95vw]">
-        <DialogHeader className="pb-2">
+      <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col">
+        <DialogHeader className="pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
             <Receipt className="w-5 h-5" />
             Novo Lançamento no Cartão
           </DialogTitle>
           <DialogDescription>
-            Registre uma compra, parcela ou assinatura no cartão de crédito.
+            Registre uma compra, parcela ou assinatura.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Cartão + Fatura (mês) */}
-          <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-3.5 overflow-y-auto flex-1 px-0.5 -mx-0.5">
+          {/* Cartão + Fatura */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="cartao">Cartão *</Label>
+              <Label htmlFor="cartao" className="text-xs">Cartão *</Label>
               <Select
                 value={formData.cartao_id}
                 onValueChange={(v) => updateField('cartao_id', v)}
                 disabled={loadingCartoes || !!cartaoId}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder="Selecione o cartão..." />
                 </SelectTrigger>
                 <SelectContent>
                   {cartoes.map((cartao) => (
                     <SelectItem key={cartao.id} value={cartao.id}>
                       <div className="flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: cartao.cor }}
-                        />
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cartao.cor }} />
                         {cartao.nome} - •••• {cartao.ultimos_digitos}
                       </div>
                     </SelectItem>
@@ -282,19 +264,19 @@ export default function DespesaCartaoModal({
                 </SelectContent>
               </Select>
               {cartaoSelecionado && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                <p className="text-[10px] text-slate-400 mt-0.5">
                   {cartaoSelecionado.banco} — vence dia {cartaoSelecionado.dia_vencimento}, fecha {cartaoSelecionado.dias_antes_fechamento || 7} dias antes
                 </p>
               )}
             </div>
             <div>
-              <Label>Fatura (mês de referência)</Label>
+              <Label className="text-xs">Fatura (mês de referência)</Label>
               <Select
                 value={formData.mes_referencia || ''}
                 onValueChange={(v) => updateField('mes_referencia', v)}
                 disabled={!cartaoSelecionado}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder={cartaoSelecionado ? 'Selecione...' : 'Selecione um cartão primeiro'} />
                 </SelectTrigger>
                 <SelectContent>
@@ -311,118 +293,90 @@ export default function DespesaCartaoModal({
                 </SelectContent>
               </Select>
               {mesSelecionado && mesSelecionado.status === 'fechada' && (
-                <p className="text-xs text-amber-600 mt-1">
-                  Fatura já fechada — lançamento retroativo
-                </p>
+                <p className="text-[10px] text-amber-600 mt-0.5">Fatura já fechada — lançamento retroativo</p>
               )}
             </div>
           </div>
 
           {/* Tipo de Lançamento */}
           <div>
-            <Label>Tipo de Lançamento *</Label>
-            <div className="grid grid-cols-3 gap-2 mt-1.5">
+            <Label className="text-xs">Tipo de Lançamento *</Label>
+            <div className="grid grid-cols-3 gap-2 mt-1">
               {TIPOS_LANCAMENTO.map((tipo) => (
                 <button
                   key={tipo.value}
                   type="button"
                   onClick={() => updateField('tipo', tipo.value)}
                   className={cn(
-                    'p-2.5 rounded-lg border text-left transition-all',
+                    'p-2 rounded-lg border text-left transition-all',
                     formData.tipo === tipo.value
                       ? 'border-[#1E3A8A] bg-blue-50 dark:bg-blue-500/10 ring-1 ring-[#1E3A8A]'
                       : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white dark:bg-surface-1'
                   )}
                 >
-                  <div className="flex items-center gap-2">
-                    {tipo.value === 'recorrente' && (
-                      <Repeat className="w-4 h-4 text-purple-600" />
-                    )}
-                    {tipo.value === 'parcelada' && (
-                      <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    )}
-                    {tipo.value === 'unica' && (
-                      <Receipt className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                    )}
+                  <div className="flex items-center gap-1.5">
+                    {tipo.value === 'recorrente' && <Repeat className="w-3.5 h-3.5 text-purple-600" />}
+                    {tipo.value === 'parcelada' && <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />}
+                    {tipo.value === 'unica' && <Receipt className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />}
                     <span className={cn(
-                      'font-medium text-sm',
+                      'font-medium text-xs',
                       formData.tipo === tipo.value ? 'text-[#1E3A8A]' : 'text-slate-700 dark:text-slate-300'
                     )}>
                       {tipo.label}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{tipo.description}</p>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Descrição + Categoria + Fornecedor em 3 colunas */}
-          <div className="grid grid-cols-3 gap-4">
+          {/* Descrição + Categoria */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="descricao">Descrição *</Label>
+              <Label htmlFor="descricao" className="text-xs">Descrição *</Label>
               <Input
                 id="descricao"
-                placeholder={
-                  formData.tipo === 'recorrente'
-                    ? 'Ex: Netflix, Spotify, AWS'
-                    : 'Ex: Material de escritório'
-                }
+                className="h-9"
+                placeholder={formData.tipo === 'recorrente' ? 'Ex: Netflix, Spotify, AWS' : 'Ex: Material de escritório'}
                 value={formData.descricao}
                 onChange={(e) => updateField('descricao', e.target.value)}
               />
             </div>
             <div>
-              <Label htmlFor="categoria">Categoria *</Label>
-              <Select
-                value={formData.categoria}
-                onValueChange={(v) => updateField('categoria', v)}
-              >
-                <SelectTrigger>
+              <Label htmlFor="categoria" className="text-xs">Categoria *</Label>
+              <Select value={formData.categoria} onValueChange={(v) => updateField('categoria', v)}>
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
                   {CATEGORIAS_DESPESA_CARTAO.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </SelectItem>
+                    <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label htmlFor="fornecedor">Fornecedor/Loja</Label>
-              <Input
-                id="fornecedor"
-                placeholder="Ex: Amazon"
-                value={formData.fornecedor || ''}
-                onChange={(e) => updateField('fornecedor', e.target.value)}
-              />
-            </div>
           </div>
 
-          {/* Valor + Data em 2 colunas */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Valor + Data */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="valor">
-                {formData.tipo === 'parcelada' ? 'Valor Total (R$) *' : 'Valor (R$) *'}
+              <Label htmlFor="valor" className="text-xs">
+                {formData.tipo === 'parcelada' ? 'Valor Total *' : 'Valor *'}
               </Label>
-              <Input
+              <CurrencyInput
                 id="valor"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0,00"
-                value={formData.valor || ''}
-                onChange={(e) => updateField('valor', parseFloat(e.target.value) || 0)}
+                className="h-9"
+                value={formData.valor}
+                onChange={(v) => updateField('valor', v)}
               />
             </div>
             <div>
-              <Label htmlFor="data_compra">
+              <Label htmlFor="data_compra" className="text-xs">
                 {formData.tipo === 'recorrente' ? 'Data de Início *' : 'Data da Compra *'}
               </Label>
               <Input
                 id="data_compra"
+                className="h-9"
                 type="date"
                 value={formData.data_compra}
                 onChange={(e) => updateField('data_compra', e.target.value)}
@@ -430,108 +384,86 @@ export default function DespesaCartaoModal({
             </div>
           </div>
 
-          {/* Vincular a Pasta (busca unificada processo/consultivo) */}
+          {/* Vincular a Pasta — colapsável */}
           <div>
-            <Label>Vincular a Pasta</Label>
-            <VinculacaoSelector
-              vinculacao={vinculacao}
-              onChange={handleVinculacaoChange}
-            />
+            <button
+              type="button"
+              onClick={() => setShowVinculacao(!showVinculacao)}
+              className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 transition-colors"
+            >
+              <ChevronRight className={cn("w-3.5 h-3.5 transition-transform", showVinculacao && "rotate-90")} />
+              <Link2 className="w-3.5 h-3.5" />
+              {vinculacao ? `Vinculado: ${vinculacao.metadados?.titulo || vinculacao.metadados?.numero_pasta || 'Pasta'}` : 'Vincular a Pasta'}
+            </button>
+            {showVinculacao && (
+              <div className="mt-2">
+                <VinculacaoSelector vinculacao={vinculacao} onChange={handleVinculacaoChange} />
+              </div>
+            )}
           </div>
 
-          {/* Opções para Parcelado */}
+          {/* Parcelamento — compacto */}
           {formData.tipo === 'parcelada' && (
-            <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#34495e]/5 to-[#46627f]/5 border-b border-slate-200 dark:border-slate-700">
-                <Calendar className="w-4 h-4 text-[#46627f]" />
-                <span className="font-medium text-[#34495e] dark:text-slate-200 text-sm">Parcelamento</span>
-              </div>
-              <div className="p-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="parcela_inicial" className="text-xs">Parcela Atual</Label>
-                    <Input
-                      id="parcela_inicial"
-                      type="number"
-                      min={1}
-                      max={formData.parcelas || 48}
-                      value={formData.parcela_inicial || 1}
-                      onChange={(e) => updateField('parcela_inicial', parseInt(e.target.value) || 1)}
-                      className="h-9"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="numero_parcelas" className="text-xs">Total de Parcelas</Label>
-                    <Input
-                      id="numero_parcelas"
-                      type="number"
-                      min={2}
-                      max={48}
-                      value={formData.parcelas || 2}
-                      onChange={(e) => updateField('parcelas', parseInt(e.target.value) || 2)}
-                      className="h-9"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Valor da Parcela</Label>
-                    <div className="h-9 flex items-center px-3 rounded-md bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-[#34495e] dark:text-slate-200">
-                      {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      }).format(valorParcela)}
-                    </div>
+            <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label htmlFor="parcela_inicial" className="text-xs">Parcela Atual</Label>
+                  <Input
+                    id="parcela_inicial"
+                    type="number"
+                    min={1}
+                    max={formData.parcelas || 48}
+                    value={formData.parcela_inicial || 1}
+                    onChange={(e) => updateField('parcela_inicial', parseInt(e.target.value) || 1)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="numero_parcelas" className="text-xs">Total de Parcelas</Label>
+                  <Input
+                    id="numero_parcelas"
+                    type="number"
+                    min={2}
+                    max={48}
+                    value={formData.parcelas || 2}
+                    onChange={(e) => updateField('parcelas', parseInt(e.target.value) || 2)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Valor da Parcela</Label>
+                  <div className="h-8 flex items-center px-3 rounded-md bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-[#34495e] dark:text-slate-200">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorParcela)}
                   </div>
                 </div>
-                {parcelamentoInfo && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2.5">
-                    {parcelamentoInfo}
-                  </p>
-                )}
               </div>
+              {parcelamentoInfo && (
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-2">{parcelamentoInfo}</p>
+              )}
             </div>
           )}
-
-          {/* Info para Recorrente */}
-          {formData.tipo === 'recorrente' && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-purple-50 border border-purple-200">
-              <Repeat className="w-4 h-4 text-purple-600 shrink-0" />
-              <p className="text-xs text-purple-700">
-                <span className="font-medium">Assinatura Recorrente</span> — aparecerá automaticamente em todas as faturas futuras até ser cancelada.
-              </p>
-            </div>
-          )}
-
-          {/* Observações (largura total) */}
-          <div>
-            <Label htmlFor="observacoes">Observações</Label>
-            <Input
-              id="observacoes"
-              placeholder="Opcional"
-              value={formData.observacoes || ''}
-              onChange={(e) => updateField('observacoes', e.target.value || null)}
-            />
-          </div>
         </div>
 
-        {/* Botões */}
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-700">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+        {/* Botões — fixos */}
+        <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-700 flex-shrink-0">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancelar
           </Button>
           <Button
+            size="sm"
             onClick={handleSubmit}
             disabled={submitting}
             className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e] text-white"
           >
             {submitting ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
                 Salvando...
               </>
             ) : (
               <>
-                <Receipt className="w-4 h-4 mr-2" />
-                {formData.tipo === 'recorrente' ? 'Criar Assinatura' : 'Registrar Lançamento'}
+                <Receipt className="w-4 h-4 mr-1.5" />
+                {formData.tipo === 'recorrente' ? 'Criar Assinatura' : 'Registrar'}
               </>
             )}
           </Button>

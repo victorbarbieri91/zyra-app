@@ -15,6 +15,8 @@ import {
   XCircle,
   RotateCcw,
   Eraser,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import {
   Sheet,
@@ -123,6 +125,17 @@ export default function FaturaDetailSheet({
   const [loadingData, setLoadingData] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
+  // Navegação interna de meses (inicializa com prop)
+  const [mesAtual, setMesAtual] = useState(mesReferencia)
+  useEffect(() => { setMesAtual(mesReferencia) }, [mesReferencia])
+
+  const navegarMes = (direcao: -1 | 1) => {
+    const [ano, mes] = mesAtual.split('-').map(Number)
+    const d = new Date(ano, mes - 1 + direcao, 1)
+    setMesAtual(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+    setSelectedIds(new Set())
+  }
+
   // Modais
   const [despesaModalOpen, setDespesaModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
@@ -153,28 +166,26 @@ export default function FaturaDetailSheet({
 
     setLoadingData(true)
     try {
-      // Se temos a fatura da página principal, usar o mes_referencia dela (competência)
-      // Senão, buscar a fatura pelo mês de vencimento
-      let faturaAtual = faturaExistente || null
+      // Se navegamos para outro mês internamente, ignorar faturaExistente (é do mês original)
+      let faturaAtual: FaturaCartao | null = null
 
-      if (!faturaAtual) {
+      if (mesAtual === mesReferencia && faturaExistente) {
+        faturaAtual = faturaExistente
+      } else {
         const faturas = await loadFaturas(cartao.id)
         faturaAtual = faturas.find(f => {
           const vencMes = f.data_vencimento?.substring(0, 7)
-          return vencMes === mesReferencia
+          return vencMes === mesAtual
         }) || null
       }
       setFatura(faturaAtual)
 
-      // Buscar lançamentos pelo mes_referencia da fatura (competência)
-      // Se não tem fatura, usar mês anterior ao selecionado como referência padrão
+      // Buscar lançamentos pelo mes_referencia (agora = mês de vencimento, direto)
       let mesRefLancamentos: string
       if (faturaAtual) {
         mesRefLancamentos = faturaAtual.mes_referencia.substring(0, 7) + '-01'
       } else {
-        const [ano, mes] = mesReferencia.split('-').map(Number)
-        const d = new Date(ano, mes - 2, 1) // mês anterior
-        mesRefLancamentos = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+        mesRefLancamentos = mesAtual + '-01'
       }
 
       const lancs = await loadLancamentosMes(cartao.id, mesRefLancamentos)
@@ -184,7 +195,7 @@ export default function FaturaDetailSheet({
     } finally {
       setLoadingData(false)
     }
-  }, [cartao, mesReferencia, faturaExistente, open, loadLancamentosMes, loadFaturas])
+  }, [cartao, mesAtual, faturaExistente, open, loadLancamentosMes, loadFaturas])
 
   useEffect(() => {
     if (open) {
@@ -200,7 +211,7 @@ export default function FaturaDetailSheet({
   const allSelected = lancamentos.length > 0 && selectedIds.size === lancamentos.length
 
   // Calcular vencimento do mês
-  const [anoRef, mesRef] = mesReferencia.split('-').map(Number)
+  const [anoRef, mesRef] = mesAtual.split('-').map(Number)
   const mesVencimento = mesRef // mês seguinte ao de referência
   const anoVencimento = mesVencimento > 12 ? anoRef + 1 : anoRef
   const mesVencReal = mesVencimento > 12 ? 1 : mesVencimento
@@ -213,7 +224,7 @@ export default function FaturaDetailSheet({
 
   // Calcular se o fechamento é antecipado (para aviso no dialog)
   const calcularDataFechamentoReal = (): { date: Date; formatted: string } | null => {
-    const [ano, mes] = mesReferencia.split('-').map(Number)
+    const [ano, mes] = mesAtual.split('-').map(Number)
     const ultimoDiaMes = new Date(ano, mes, 0).getDate()
     const diaVcto = Math.min(cartao.dia_vencimento, ultimoDiaMes)
     const dataVcto = new Date(ano, mes - 1, diaVcto)
@@ -260,7 +271,7 @@ export default function FaturaDetailSheet({
 
   const handleFecharFatura = async () => {
     if (!cartao) return
-    const faturaId = await fecharFatura(cartao.id, `${mesReferencia}-01`)
+    const faturaId = await fecharFatura(cartao.id, `${mesAtual}-01`)
     if (faturaId) {
       toast.success('Fatura fechada com sucesso')
       loadData()
@@ -340,9 +351,28 @@ export default function FaturaDetailSheet({
                   <CreditCard className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1">
-                  <SheetTitle className="text-base text-[#34495e] dark:text-slate-200">
-                    Fatura {cartao.nome} • {formatMesAbrev(mesReferencia)}
-                  </SheetTitle>
+                  <div className="flex items-center gap-2">
+                    <SheetTitle className="text-base text-[#34495e] dark:text-slate-200">
+                      Fatura {cartao.nome}
+                    </SheetTitle>
+                    <div className="flex items-center gap-1 ml-auto">
+                      <button
+                        onClick={() => navegarMes(-1)}
+                        className="p-1 rounded hover:bg-slate-100 dark:hover:bg-surface-2 transition-colors"
+                      >
+                        <ChevronLeft className="w-4 h-4 text-slate-500" />
+                      </button>
+                      <span className="text-sm font-medium text-[#34495e] dark:text-slate-200 min-w-[90px] text-center">
+                        {formatMesAbrev(mesAtual)}
+                      </span>
+                      <button
+                        onClick={() => navegarMes(1)}
+                        className="p-1 rounded hover:bg-slate-100 dark:hover:bg-surface-2 transition-colors"
+                      >
+                        <ChevronRight className="w-4 h-4 text-slate-500" />
+                      </button>
+                    </div>
+                  </div>
                   <SheetDescription className="text-xs mt-0.5">
                     vence {dataVencimento}
                     {dataFechamento && ` • fecha ${dataFechamento}`}
@@ -465,7 +495,7 @@ export default function FaturaDetailSheet({
               <div className="py-8 text-center">
                 <DollarSign className="h-10 w-10 mx-auto text-slate-300 dark:text-slate-600" />
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                  Nenhum lançamento em {formatMesAno(mesReferencia)}
+                  Nenhum lançamento em {formatMesAno(mesAtual)}
                 </p>
                 <Button
                   size="sm"
@@ -670,7 +700,7 @@ export default function FaturaDetailSheet({
             <AlertDialogTitle>Fechar Fatura</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2">
-                <p>Deseja fechar a fatura de {formatMesAno(mesReferencia)}? Novos lançamentos não poderão ser adicionados.</p>
+                <p>Deseja fechar a fatura de {formatMesAno(mesAtual)}? Novos lançamentos não poderão ser adicionados.</p>
                 {isFechamentoAntecipado && dataFechamentoReal && (
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
                     <Calendar className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
@@ -716,7 +746,7 @@ export default function FaturaDetailSheet({
             <AlertDialogTitle className="text-red-600">Limpar Fatura</AlertDialogTitle>
             <AlertDialogDescription>
               Isso vai excluir <strong>todos os lançamentos</strong>, a fatura e a despesa vinculada
-              de {formatMesAno(mesReferencia)} do cartão {cartao?.nome}. Esta ação não pode ser desfeita.
+              de {formatMesAno(mesAtual)} do cartão {cartao?.nome}. Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -727,11 +757,7 @@ export default function FaturaDetailSheet({
                 // Buscar mes_referencia da fatura (competência) para limpar corretamente
                 const mesRef = fatura?.mes_referencia
                   ? fatura.mes_referencia.substring(0, 10)
-                  : (() => {
-                      const [ano, mes] = mesReferencia.split('-').map(Number)
-                      const d = new Date(ano, mes - 2, 1)
-                      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
-                    })()
+                  : mesAtual + '-01'
 
                 const success = await limparFatura(cartao.id, mesRef)
                 if (success) {

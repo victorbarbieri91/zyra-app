@@ -74,7 +74,7 @@ interface ExtratoItem {
   id: string
   escritorio_id: string
   tipo_movimento: 'receita' | 'despesa' | 'transferencia_saida' | 'transferencia_entrada'
-  status: 'pendente' | 'efetivado' | 'vencido' | 'cancelado' | 'previsto' | 'parcial'
+  status: 'pendente' | 'efetivado' | 'vencido' | 'cancelado' | 'parcial'
   origem: string
   categoria: string
   descricao: string
@@ -89,8 +89,6 @@ interface ExtratoItem {
   origem_id: string | null
   processo_id: string | null
   cliente_id: string | null
-  virtual?: boolean
-  origem_pai_id?: string | null
 }
 
 // Categorias com labels bonitos e cores
@@ -209,7 +207,7 @@ export default function ExtratoFinanceiroPage() {
   const mesUrlDate = mesUrl ? new Date(Number(mesUrl.split('-')[0]), Number(mesUrl.split('-')[1]) - 1, 1) : null
 
   const [tipoFiltro, setTipoFiltro] = useState<'todos' | 'receita' | 'despesa' | 'transferencia'>(statusUrl ? 'receita' : 'todos')
-  const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pendente' | 'vencido' | 'efetivado' | 'previsto'>(statusInicial)
+  const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pendente' | 'vencido' | 'efetivado'>(statusInicial as any)
   const [contaFiltro, setContaFiltro] = useState<string>(contaUrl || 'todas')  // 'todas' ou ID da conta
 
   // Filtro de período - padrão: mês atual, ou mês da URL se disponível
@@ -279,13 +277,7 @@ export default function ExtratoFinanceiroPage() {
   }>>([])
   const [modalEfetivarItem, setModalEfetivarItem] = useState<ExtratoItem | null>(null)
 
-  // Modal para efetivar previsto (antes de materializar)
-  const [modalEfetivarPrevisto, setModalEfetivarPrevisto] = useState<ExtratoItem | null>(null)
-  const [contaEfetivarPrevisto, setContaEfetivarPrevisto] = useState('')
-
-  // Edição de previstos (escopo)
-  const [modalEscopoEdicao, setModalEscopoEdicao] = useState<'somente_este' | 'deste_em_diante' | null>(null)
-  const [previstoParaEditar, setPrevistoParaEditar] = useState<ExtratoItem | null>(null)
+  // (Previsto/virtual removido — agora tudo é materializado como pendente)
 
   // Alterar status
   const [modalAlterarStatus, setModalAlterarStatus] = useState<ExtratoItem | null>(null)
@@ -504,7 +496,7 @@ export default function ExtratoFinanceiroPage() {
         id: item.id,
         escritorio_id: item.escritorio_id,
         tipo_movimento: item.tipo_movimento as 'receita' | 'despesa',
-        status: item.virtual ? 'previsto' : item.status,
+        status: item.status,
         origem: item.origem,
         categoria: item.categoria,
         descricao: item.descricao,
@@ -519,8 +511,6 @@ export default function ExtratoFinanceiroPage() {
         origem_id: item.origem_id,
         processo_id: item.processo_id,
         cliente_id: item.cliente_id,
-        virtual: item.virtual || false,
-        origem_pai_id: item.origem_pai_id || null,
       }))
 
       // Filtro por conta bancária
@@ -647,198 +637,26 @@ export default function ExtratoFinanceiroPage() {
     }
   }, [escritoriosSelecionados, loadExtrato, loadContasBancarias, loadAdvogadosEscritorio])
 
-  // Materializar item previsto (virtual) → cria registro real no banco
-  // O origem_pai_id agora aponta para financeiro_regras_recorrencia.id
-  const materializarPrevisto = async (item: ExtratoItem): Promise<ExtratoItem | null> => {
-    if (!item.virtual || !item.origem_pai_id || !escritorioAtivo) return null
+  // (Funções de materializar/efetivar previsto removidas — materialização eager)
 
-    try {
-      // Buscar regra de recorrência
-      const { data: regra, error: errRegra } = await supabase
-        .from('financeiro_regras_recorrencia')
-        .select('*')
-        .eq('id', item.origem_pai_id)
-        .single()
+  // Placeholder para manter referências no JSX que ainda usam handleAbrirModalPrevisto
+  const handleAbrirModalPrevisto = (_item: ExtratoItem) => {}
 
-      if (errRegra || !regra) {
-        toast.error('Regra de recorrência não encontrada')
-        return null
-      }
-
-      const dataVenc = item.data_vencimento || item.data_referencia
-      const periodoRef = dataVenc ? dataVenc.substring(0, 7) : null
-
-      if (regra.tipo_entidade === 'receita') {
-        const { data: novaReceita, error: errInsert } = await supabase
-          .from('financeiro_receitas')
-          .insert({
-            escritorio_id: regra.escritorio_id,
-            tipo: 'avulso',
-            categoria: regra.categoria,
-            descricao: item.descricao || regra.descricao,
-            valor: item.valor || regra.valor_atual,
-            data_competencia: dataVenc,
-            data_vencimento: dataVenc,
-            status: 'pendente',
-            cliente_id: regra.cliente_id,
-            processo_id: regra.processo_id,
-            consulta_id: regra.consulta_id,
-            contrato_id: regra.contrato_id,
-            conta_bancaria_id: regra.conta_bancaria_id,
-            regra_recorrencia_id: regra.id,
-            periodo_referencia: periodoRef,
-          })
-          .select('id')
-          .single()
-
-        if (errInsert || !novaReceita) {
-          toast.error('Erro ao materializar receita')
-          console.error('Erro ao materializar receita:', errInsert)
-          return null
-        }
-
-        return {
-          ...item,
-          id: novaReceita.id,
-          virtual: false,
-          origem_pai_id: null,
-          status: 'pendente',
-          origem_id: novaReceita.id,
-        }
-      } else if (regra.tipo_entidade === 'despesa') {
-        const { data: novaDespesa, error: errInsert } = await supabase
-          .from('financeiro_despesas')
-          .insert({
-            escritorio_id: regra.escritorio_id,
-            categoria: regra.categoria,
-            descricao: item.descricao || regra.descricao,
-            valor: item.valor || regra.valor_atual,
-            data_vencimento: dataVenc,
-            status: 'pendente',
-            fornecedor: regra.fornecedor,
-            conta_bancaria_id: regra.conta_bancaria_id,
-            processo_id: regra.processo_id,
-            cliente_id: regra.cliente_id,
-            consulta_id: regra.consulta_id,
-            regra_recorrencia_id: regra.id,
-            periodo_referencia: periodoRef,
-          })
-          .select('id')
-          .single()
-
-        if (errInsert || !novaDespesa) {
-          toast.error('Erro ao materializar despesa')
-          console.error('Erro ao materializar despesa:', errInsert)
-          return null
-        }
-
-        return {
-          ...item,
-          id: novaDespesa.id,
-          virtual: false,
-          origem_pai_id: null,
-          status: 'pendente',
-          origem_id: novaDespesa.id,
-        }
-      }
-
-      return null
-    } catch (error) {
-      console.error('Erro ao materializar previsto:', error)
-      toast.error('Erro ao criar lançamento')
-      return null
-    }
-  }
-
-  // Abrir modal de efetivação para previsto (sem materializar ainda)
-  const handleAbrirModalPrevisto = (item: ExtratoItem) => {
-    // Pre-selecionar conta do pai se disponível
-    const contaPai = item.conta_bancaria_id || ''
-    setModalEfetivarPrevisto(item)
-    setContaEfetivarPrevisto(contaPai || contasBancarias[0]?.id || '')
-  }
-
-  // Materializar previsto e efetivar imediatamente
-  const handleEfetivarPrevisto = async () => {
-    if (!modalEfetivarPrevisto) return
-    if (!contaEfetivarPrevisto) {
-      toast.error('Selecione uma conta bancária')
-      return
-    }
-
-    try {
-      setSubmitting(true)
-      const materializado = await materializarPrevisto(modalEfetivarPrevisto)
-      if (!materializado) return
-
-      // Vincular conta e efetivar
-      if (materializado.tipo_movimento === 'receita') {
-        await handleReceberTotal(materializado, contaEfetivarPrevisto)
-      } else {
-        await handlePagarDespesa(materializado, contaEfetivarPrevisto)
-      }
-
-      setModalEfetivarPrevisto(null)
-      setContaEfetivarPrevisto('')
-    } catch (error) {
-      console.error('Erro ao efetivar previsto:', error)
-      toast.error('Erro ao efetivar')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  // Materializar previsto e abrir modal de efetivação com participação
-  const handleEfetivarPrevistoComModal = async () => {
-    if (!modalEfetivarPrevisto) return
-    if (!contaEfetivarPrevisto) {
-      toast.error('Selecione uma conta bancária')
-      return
-    }
-
-    try {
-      setSubmitting(true)
-      const materializado = await materializarPrevisto(modalEfetivarPrevisto)
-      if (!materializado) return
-
-      // Vincular conta
-      await supabase
-        .from('financeiro_receitas')
-        .update({ conta_bancaria_id: contaEfetivarPrevisto })
-        .eq('id', materializado.id)
-
-      setModalEfetivarPrevisto(null)
-      setContaEfetivarPrevisto('')
-      setModalEfetivarItem(materializado)
-      setContaSelecionada(contaEfetivarPrevisto)
-      setTemParticipacao(false)
-      setAdvogadoSelecionado('')
-      setPercentualParticipacao(0)
-      setDataVencimentoParticipacao('')
-    } catch (error) {
-      console.error('Erro:', error)
-      toast.error('Erro ao processar')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  // Voltar item materializado para previsto (deletar registro filho)
+  // Voltar item materializado (deletar registro pendente recorrente)
   const handleVoltarParaPrevisto = async (item: ExtratoItem) => {
     if (!item.origem_id) return
 
     try {
       setSubmitting(true)
 
-      // Verificar se o item foi gerado por regra de recorrência
       if (item.tipo_movimento === 'receita') {
         const { data } = await supabase
           .from('financeiro_receitas')
-          .select('regra_recorrencia_id, receita_pai_id')
+          .select('regra_recorrencia_id')
           .eq('id', item.origem_id)
           .single()
 
-        if (!data?.regra_recorrencia_id && !data?.receita_pai_id) {
+        if (!data?.regra_recorrencia_id) {
           toast.error('Este lançamento não foi gerado por recorrência')
           return
         }
@@ -852,11 +670,11 @@ export default function ExtratoFinanceiroPage() {
       } else if (item.tipo_movimento === 'despesa') {
         const { data } = await supabase
           .from('financeiro_despesas')
-          .select('regra_recorrencia_id, despesa_pai_id')
+          .select('regra_recorrencia_id')
           .eq('id', item.origem_id)
           .single()
 
-        if (!data?.regra_recorrencia_id && !data?.despesa_pai_id) {
+        if (!data?.regra_recorrencia_id) {
           toast.error('Este lançamento não foi gerado por recorrência')
           return
         }
@@ -872,7 +690,7 @@ export default function ExtratoFinanceiroPage() {
         return
       }
 
-      toast.success('Lançamento revertido para previsto!')
+      toast.success('Lançamento excluído!')
       loadExtrato()
     } catch (error) {
       console.error('Erro ao reverter para previsto:', error)
@@ -1633,43 +1451,7 @@ export default function ExtratoFinanceiroPage() {
     }
   }
 
-  // Preparar edição de previsto (item virtual recorrente)
-  // O origem_pai_id agora aponta para financeiro_regras_recorrencia.id
-  const handlePrepararEdicaoPrevisto = async (item: ExtratoItem) => {
-    if (!escritorioAtivo || !item.virtual || !item.origem_pai_id) return
-
-    try {
-      setSubmitting(true)
-
-      // Buscar regra de recorrência
-      const { data: regra } = await supabase
-        .from('financeiro_regras_recorrencia')
-        .select('*')
-        .eq('id', item.origem_pai_id)
-        .single()
-
-      if (regra) {
-        setEditForm({
-          descricao: regra.descricao || '',
-          valor: Number(regra.valor_atual) || 0,
-          data_vencimento: item.data_vencimento || '',
-          categoria: regra.categoria || '',
-          fornecedor: regra.fornecedor || '',
-          observacoes: '',
-          conta_bancaria_id: regra.conta_bancaria_id || '',
-        })
-      }
-
-      setPrevistoParaEditar(item)
-      setModalEscopoEdicao(null)
-      setModalEditar(item)
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error)
-      toast.error('Erro ao carregar dados para edição')
-    } finally {
-      setSubmitting(false)
-    }
-  }
+  // (handlePrepararEdicao removido — itens agora são registros reais editáveis diretamente)
 
   // Salvar edição
   const handleSalvarEdicao = async () => {
@@ -1692,127 +1474,7 @@ export default function ExtratoFinanceiroPage() {
         return
       }
 
-      // === PREVISTO: Edição com escopo ===
-      if (previstoParaEditar && previstoParaEditar.virtual) {
-        if (!modalEscopoEdicao) {
-          toast.error('Selecione o escopo da alteração')
-          return
-        }
-
-        const tabela = item.tipo_movimento === 'receita' ? 'financeiro_receitas' : 'financeiro_despesas'
-
-        if (modalEscopoEdicao === 'somente_este') {
-          // Materializar o virtual como filho e aplicar valores editados
-          const materializado = await materializarPrevisto(previstoParaEditar)
-          if (!materializado) {
-            toast.error('Erro ao materializar lançamento')
-            return
-          }
-
-          // Atualizar o filho com valores editados
-          const updateData: Record<string, unknown> = {
-            descricao: editForm.descricao,
-            valor: valor,
-            data_vencimento: editForm.data_vencimento,
-            categoria: editForm.categoria,
-            conta_bancaria_id: editForm.conta_bancaria_id || null,
-            updated_at: new Date().toISOString(),
-          }
-          if (item.tipo_movimento === 'despesa') {
-            updateData.fornecedor = editForm.fornecedor
-          } else {
-            updateData.observacoes = editForm.observacoes
-          }
-
-          const { error } = await supabase
-            .from(tabela)
-            .update(updateData)
-            .eq('id', materializado.id)
-
-          if (error) throw error
-          toast.success('Lançamento deste mês atualizado!')
-
-        } else if (modalEscopoEdicao === 'deste_em_diante') {
-          // Atualizar a REGRA DE RECORRÊNCIA
-          const regraId = previstoParaEditar.origem_pai_id!
-
-          // Buscar valor anterior para histórico
-          const { data: regraData } = await supabase
-            .from('financeiro_regras_recorrencia')
-            .select('valor_atual, dia_vencimento')
-            .eq('id', regraId)
-            .single()
-
-          const valorAnterior = regraData?.valor_atual || 0
-          const newDay = new Date(editForm.data_vencimento + 'T12:00:00').getDate()
-
-          const updateRegra: Record<string, unknown> = {
-            descricao: editForm.descricao,
-            valor_atual: valor,
-            categoria: editForm.categoria,
-            conta_bancaria_id: editForm.conta_bancaria_id || null,
-          }
-          if (item.tipo_movimento === 'despesa') {
-            updateRegra.fornecedor = editForm.fornecedor
-          }
-          if (regraData && regraData.dia_vencimento !== newDay) {
-            updateRegra.dia_vencimento = newDay
-          }
-
-          const { error } = await supabase
-            .from('financeiro_regras_recorrencia')
-            .update(updateRegra)
-            .eq('id', regraId)
-
-          if (error) throw error
-
-          // Registrar no histórico se valor mudou
-          if (valorAnterior !== valor) {
-            await supabase
-              .from('financeiro_regras_recorrencia_historico')
-              .insert({
-                regra_id: regraId,
-                campo_alterado: 'valor',
-                valor_anterior: valorAnterior,
-                valor_novo: valor,
-                vigencia_a_partir_de: editForm.data_vencimento,
-                motivo: 'Alteração pelo usuário',
-              })
-          }
-
-          // Materializar este mês também com o novo valor
-          const materializado = await materializarPrevisto({
-            ...previstoParaEditar,
-            valor: valor,
-            descricao: editForm.descricao,
-          })
-          if (materializado) {
-            const updateInst: Record<string, unknown> = {
-              valor: valor,
-              descricao: editForm.descricao,
-              categoria: editForm.categoria,
-              conta_bancaria_id: editForm.conta_bancaria_id || null,
-            }
-            if (item.tipo_movimento === 'despesa') {
-              updateInst.fornecedor = editForm.fornecedor
-            }
-            await supabase
-              .from(tabela)
-              .update(updateInst)
-              .eq('id', materializado.id)
-          }
-
-          toast.success('Recorrência atualizada para todos os meses futuros!')
-        }
-
-        setPrevistoParaEditar(null)
-        setModalEscopoEdicao(null)
-        setModalEditar(null)
-        loadExtrato()
-        return
-      }
-
-      // === ITEM NORMAL: Edição padrão ===
+      // === Edição padrão (tudo é registro real agora) ===
 
       // Verificar se já foi pago - não permitir alterar valor
       if (item.status === 'efetivado' && valor !== item.valor) {
@@ -2767,7 +2429,6 @@ export default function ExtratoFinanceiroPage() {
                     statusFiltro === 'vencido' ? 'bg-red-500' :
                     statusFiltro === 'pendente' ? 'bg-amber-500' :
                     statusFiltro === 'efetivado' ? 'bg-emerald-500' :
-                    statusFiltro === 'previsto' ? 'bg-slate-400' :
                     'bg-slate-300'
                   )} />
                   <SelectValue placeholder="Status" />
@@ -2793,12 +2454,13 @@ export default function ExtratoFinanceiroPage() {
                     Efetivados
                   </span>
                 </SelectItem>
-                <SelectItem value="previsto">
+                {/* Previsto removido — tudo é materializado como pendente */
+                false && <SelectItem value="previsto">
                   <span className="flex items-center gap-2">
                     <CalendarDays className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     Previstos
                   </span>
-                </SelectItem>
+                </SelectItem>}
               </SelectContent>
             </Select>
 
@@ -2949,7 +2611,7 @@ export default function ExtratoFinanceiroPage() {
               const diasVenc = getDiasVencimento(item.data_vencimento)
               const isVencido = item.status === 'vencido' || (diasVenc !== null && diasVenc < 0)
               const isPendente = item.status === 'pendente' || item.status === 'vencido'
-              const isPrevisto = item.virtual === true
+              const isPrevisto = false // Materialização eager: tudo é pendente, sem previstos
               const categoriaConfig = getCategoriaConfig(item.categoria)
               const isSelected = itensSelecionados.includes(item.id)
 
@@ -3104,7 +2766,7 @@ export default function ExtratoFinanceiroPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-44">
-                            <DropdownMenuItem onClick={() => handlePrepararEdicaoPrevisto(item)}>
+                            <DropdownMenuItem onClick={() => handlePrepararEdicao(item)}>
                               <Pencil className="w-4 h-4 mr-2" />
                               Editar
                             </DropdownMenuItem>
@@ -3300,7 +2962,7 @@ export default function ExtratoFinanceiroPage() {
                 const diasVenc = getDiasVencimento(item.data_vencimento)
                 const isVencido = item.status === 'vencido' || (diasVenc !== null && diasVenc < 0)
                 const isPendente = item.status === 'pendente' || item.status === 'vencido' || item.status === 'parcial'
-                const isPrevisto = item.virtual === true
+                const isPrevisto = false // Materialização eager: tudo é pendente, sem previstos
                 const categoriaConfig = getCategoriaConfig(item.categoria)
                 const isSelected = itensSelecionados.includes(item.id)
 
@@ -3525,7 +3187,7 @@ export default function ExtratoFinanceiroPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
-                              <DropdownMenuItem onClick={() => handlePrepararEdicaoPrevisto(item)}>
+                              <DropdownMenuItem onClick={() => handlePrepararEdicao(item)}>
                                 <Pencil className="w-4 h-4 mr-2" />
                                 Editar
                               </DropdownMenuItem>
@@ -4328,56 +3990,18 @@ export default function ExtratoFinanceiroPage() {
       {/* Modal Edição */}
       <Dialog open={!!modalEditar} onOpenChange={() => {
         setModalEditar(null)
-        setPrevistoParaEditar(null)
-        setModalEscopoEdicao(null)
       }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-[#34495e] dark:text-slate-200">
-              {previstoParaEditar
-                ? `Editar ${modalEditar?.tipo_movimento === 'receita' ? 'Receita' : 'Despesa'} Recorrente`
-                : `Editar ${modalEditar?.tipo_movimento === 'receita' ? 'Receita' : 'Despesa'}`}
+              Editar {modalEditar?.tipo_movimento === 'receita' ? 'Receita' : 'Despesa'}
             </DialogTitle>
           </DialogHeader>
           {modalEditar && (
             <div className="space-y-4">
-              {/* Escopo da edição - apenas para previstos */}
-              {previstoParaEditar && (
-                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 space-y-2.5">
-                  <p className="text-xs font-medium text-amber-800">Escopo da alteração:</p>
-                  <div className="flex flex-col gap-2">
-                    <label className="flex items-start gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="escopo-edicao"
-                        checked={modalEscopoEdicao === 'somente_este'}
-                        onChange={() => setModalEscopoEdicao('somente_este')}
-                        className="mt-0.5 accent-[#34495e]"
-                      />
-                      <div>
-                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Somente este mês</span>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400">Altera apenas o lançamento deste mês. Meses futuros continuam com valores originais.</p>
-                      </div>
-                    </label>
-                    <label className="flex items-start gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="escopo-edicao"
-                        checked={modalEscopoEdicao === 'deste_em_diante'}
-                        onChange={() => setModalEscopoEdicao('deste_em_diante')}
-                        className="mt-0.5 accent-[#34495e]"
-                      />
-                      <div>
-                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Deste mês em diante</span>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400">Altera a recorrência. Todos os meses futuros refletirão os novos valores.</p>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-              )}
 
               {/* Aviso se já foi pago */}
-              {!previstoParaEditar && modalEditar.status === 'efetivado' && (
+              {modalEditar.status === 'efetivado' && (
                 <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
                   <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-amber-700">
@@ -4401,8 +4025,8 @@ export default function ExtratoFinanceiroPage() {
                   <CurrencyInput
                     value={editForm.valor}
                     onChange={(val) => setEditForm({ ...editForm, valor: val })}
-                    disabled={!previstoParaEditar && modalEditar.status === 'efetivado'}
-                    className={!previstoParaEditar && modalEditar.status === 'efetivado' ? 'bg-slate-100 dark:bg-surface-2' : ''}
+                    disabled={modalEditar.status === 'efetivado'}
+                    className={modalEditar.status === 'efetivado' ? 'bg-slate-100 dark:bg-surface-2' : ''}
                   />
                 </div>
                 <div>
@@ -4488,15 +4112,13 @@ export default function ExtratoFinanceiroPage() {
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" size="sm" onClick={() => {
                   setModalEditar(null)
-                  setPrevistoParaEditar(null)
-                  setModalEscopoEdicao(null)
                 }} disabled={submitting}>
                   Cancelar
                 </Button>
                 <Button
                   size="sm"
                   onClick={handleSalvarEdicao}
-                  disabled={submitting || (!!previstoParaEditar && !modalEscopoEdicao)}
+                  disabled={submitting}
                 >
                   {submitting ? (
                     <>
@@ -4853,129 +4475,6 @@ export default function ExtratoFinanceiroPage() {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal Efetivar Previsto */}
-      <Dialog open={!!modalEfetivarPrevisto} onOpenChange={(open) => {
-        if (!open) {
-          setModalEfetivarPrevisto(null)
-          setContaEfetivarPrevisto('')
-        }
-      }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
-              <PlayCircle className="w-5 h-5" />
-              Efetivar Lançamento Previsto
-            </DialogTitle>
-          </DialogHeader>
-          {modalEfetivarPrevisto && (
-            <div className="space-y-4">
-              {/* Info do lançamento */}
-              <div className="p-3 bg-slate-50 dark:bg-surface-2 rounded-lg space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className={cn(
-                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border",
-                    modalEfetivarPrevisto.tipo_movimento === 'receita'
-                      ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30'
-                      : 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/30'
-                  )}>
-                    {modalEfetivarPrevisto.tipo_movimento === 'receita' ? (
-                      <><TrendingUp className="w-2.5 h-2.5" /> Receita</>
-                    ) : (
-                      <><TrendingDown className="w-2.5 h-2.5" /> Despesa</>
-                    )}
-                  </span>
-                  <span className={cn(
-                    "inline-block px-2 py-0.5 rounded text-[10px] font-medium border",
-                    getCategoriaConfig(modalEfetivarPrevisto.categoria).color
-                  )}>
-                    {getCategoriaConfig(modalEfetivarPrevisto.categoria).label}
-                  </span>
-                </div>
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{modalEfetivarPrevisto.descricao}</p>
-                {modalEfetivarPrevisto.entidade && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{modalEfetivarPrevisto.entidade}</p>
-                )}
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                    Vencimento: {modalEfetivarPrevisto.data_vencimento
-                      ? new Date(modalEfetivarPrevisto.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')
-                      : '-'}
-                  </span>
-                  <span className={cn(
-                    "text-lg font-semibold",
-                    modalEfetivarPrevisto.tipo_movimento === 'receita' ? 'text-emerald-600' : 'text-red-600'
-                  )}>
-                    {modalEfetivarPrevisto.tipo_movimento === 'receita' ? '+ ' : '- '}
-                    R$ {modalEfetivarPrevisto.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </div>
-
-              {/* Conta Bancária */}
-              <div>
-                <Label className="text-xs font-medium">Conta Bancária *</Label>
-                <select
-                  value={contaEfetivarPrevisto}
-                  onChange={(e) => setContaEfetivarPrevisto(e.target.value)}
-                  className="w-full h-9 rounded-md border border-slate-200 dark:border-slate-700 px-3 text-sm mt-1 dark:bg-surface-1 dark:text-slate-300"
-                >
-                  <option value="">Selecione a conta...</option>
-                  {contasBancarias.map((conta) => (
-                    <option key={conta.id} value={conta.id}>
-                      {conta.banco} - {conta.numero_conta}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Ações */}
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setModalEfetivarPrevisto(null)
-                    setContaEfetivarPrevisto('')
-                  }}
-                  disabled={submitting}
-                >
-                  Cancelar
-                </Button>
-                {modalEfetivarPrevisto.tipo_movimento === 'receita' ? (
-                  <Button
-                    size="sm"
-                    onClick={advogadosEscritorio.length > 0 ? handleEfetivarPrevistoComModal : handleEfetivarPrevisto}
-                    disabled={submitting || !contaEfetivarPrevisto}
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    {submitting ? (
-                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                    ) : (
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                    )}
-                    Receber Agora
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={handleEfetivarPrevisto}
-                    disabled={submitting || !contaEfetivarPrevisto}
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    {submitting ? (
-                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                    ) : (
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                    )}
-                    Pagar Agora
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
         </DialogContent>
       </Dialog>
 

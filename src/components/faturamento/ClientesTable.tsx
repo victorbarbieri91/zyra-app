@@ -25,6 +25,7 @@ interface ClientesTableProps {
   onSelectCliente: (cliente: ClienteParaFaturar) => void
   loading: boolean
   showEscritorio?: boolean
+  escritorioColorMap?: Map<string, string>
 }
 
 export function ClientesTable({
@@ -33,6 +34,7 @@ export function ClientesTable({
   onSelectCliente,
   loading,
   showEscritorio = false,
+  escritorioColorMap,
 }: ClientesTableProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortField, setSortField] = useState<SortField>('total')
@@ -257,9 +259,12 @@ export function ClientesTable({
                 {/* Escritório */}
                 {showEscritorio && (
                   <div className="col-span-1 flex items-center">
-                    <Badge variant="outline" className="text-[10px] font-normal text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 truncate max-w-full">
+                    <span
+                      className={cn("inline-block px-1.5 py-0.5 rounded text-[10px] font-medium border whitespace-nowrap truncate max-w-[80px]", escritorioColorMap?.get(cliente.escritorio_id) || 'bg-slate-100 text-slate-600 border-slate-200')}
+                      title={cliente.escritorio_nome || ''}
+                    >
                       {cliente.escritorio_nome || '-'}
-                    </Badge>
+                    </span>
                   </div>
                 )}
 

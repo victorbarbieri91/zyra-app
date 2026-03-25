@@ -38,6 +38,7 @@ export interface NotaDebitoItem {
 export interface ClienteComDespesasReembolsaveis {
   cliente_id: string
   cliente_nome: string
+  escritorio_id: string
   total_valor: number
   qtd_despesas: number
 }
@@ -128,31 +129,31 @@ export function useNotasDebito() {
       const { data, error } = await supabase
         .from('financeiro_despesas')
         .select(`
-          cliente_id, valor,
+          cliente_id, escritorio_id, valor,
           cliente:crm_pessoas!cliente_id(nome_completo)
         `)
         .eq('escritorio_id', escritorioAtivo)
         .eq('reembolsavel', true)
-        .eq('fluxo_status', 'pago')
         .eq('reembolsado', false)
         .not('cliente_id', 'is', null)
 
       if (error) throw error
 
-      // Agrupar por cliente_id
+      // Agrupar por cliente_id + escritorio_id
       const clientesMap = new Map<string, ClienteComDespesasReembolsaveis>()
 
       ;(data || []).forEach((d: any) => {
-        const cid = d.cliente_id
-        if (!clientesMap.has(cid)) {
-          clientesMap.set(cid, {
-            cliente_id: cid,
+        const key = `${d.cliente_id}::${d.escritorio_id}`
+        if (!clientesMap.has(key)) {
+          clientesMap.set(key, {
+            cliente_id: d.cliente_id,
             cliente_nome: d.cliente?.nome_completo || 'Cliente não identificado',
+            escritorio_id: d.escritorio_id,
             total_valor: 0,
             qtd_despesas: 0,
           })
         }
-        const cliente = clientesMap.get(cid)!
+        const cliente = clientesMap.get(key)!
         cliente.total_valor += Number(d.valor)
         cliente.qtd_despesas += 1
       })
@@ -189,7 +190,6 @@ export function useNotasDebito() {
       .eq('escritorio_id', escritorioAtivo)
       .eq('cliente_id', clienteId)
       .eq('reembolsavel', true)
-      .eq('fluxo_status', 'pago')
       .eq('reembolsado', false)
       .order('data_vencimento', { ascending: true })
 

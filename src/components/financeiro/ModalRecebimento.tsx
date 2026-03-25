@@ -5,12 +5,13 @@ import { createClient } from '@/lib/supabase/client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
-import { Banknote, AlertCircle, Info, Users } from 'lucide-react'
+import { AlertCircle, Info, Users } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -264,130 +265,127 @@ export function ModalRecebimento({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Banknote className="h-5 w-5 text-emerald-600" />
+          <DialogTitle className="text-base text-[#34495e] dark:text-slate-200">
             Registrar Recebimento
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm text-[#46627f]">
             {item.descricao}
             {item.entidade && ` — ${item.entidade}`}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 py-4">
+        <div className="flex-1 overflow-y-auto space-y-4 pr-1">
           {/* Info box */}
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs space-y-1.5">
-            {item.entidade && (
-              <div className="flex justify-between">
-                <span className="text-slate-500">Cliente</span>
-                <span className="font-medium text-slate-700 truncate max-w-[200px]">{item.entidade}</span>
+          <div className="bg-[#f0f9f9] border border-[#aacfd0]/40 rounded-lg px-4 py-3">
+            <div className="flex items-center justify-between text-xs">
+              {item.entidade && (
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[#46627f]/70 text-[10px] uppercase tracking-wide">Cliente</span>
+                  <span className="font-semibold text-[#34495e]">{item.entidade}</span>
+                </div>
+              )}
+              {item.data_vencimento && (
+                <div className="flex flex-col gap-0.5 text-center">
+                  <span className="text-[#46627f]/70 text-[10px] uppercase tracking-wide">Vencimento</span>
+                  <span className="font-medium text-[#34495e]">
+                    {new Date(item.data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR')}
+                  </span>
+                </div>
+              )}
+              <div className="flex flex-col gap-0.5 text-right">
+                <span className="text-[#46627f]/70 text-[10px] uppercase tracking-wide">Valor total</span>
+                <span className="font-bold text-[#34495e] text-sm">{formatCurrency(item.valor)}</span>
               </div>
-            )}
-            {item.data_vencimento && (
-              <div className="flex justify-between">
-                <span className="text-slate-500">Vencimento</span>
-                <span className="font-medium text-slate-700">
-                  {new Date(item.data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR')}
-                </span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span className="text-slate-500">Valor total</span>
-              <span className="font-semibold text-slate-700">{formatCurrency(item.valor)}</span>
+              {item.valor_pago > 0 && (
+                <>
+                  <div className="flex flex-col gap-0.5 text-right">
+                    <span className="text-[#46627f]/70 text-[10px] uppercase tracking-wide">Já pago</span>
+                    <span className="font-semibold text-emerald-600 text-sm">{formatCurrency(item.valor_pago)}</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5 text-right pl-3 border-l border-[#89bcbe]/30">
+                    <span className="text-[#46627f]/70 text-[10px] uppercase tracking-wide">Saldo aberto</span>
+                    <span className="font-bold text-[#34495e] text-sm">{formatCurrency(saldoAberto)}</span>
+                  </div>
+                </>
+              )}
             </div>
-            {item.valor_pago > 0 && (
-              <>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Já pago</span>
-                  <span className="font-semibold text-emerald-600">{formatCurrency(item.valor_pago)}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between">
-                  <span className="text-slate-600 font-medium">Saldo em aberto</span>
-                  <span className="font-bold text-amber-700">{formatCurrency(saldoAberto)}</span>
-                </div>
-              </>
-            )}
           </div>
 
-          {/* Valor a receber */}
-          <div className="grid gap-2">
-            <Label htmlFor="valor-receber">Valor a receber *</Label>
-            <CurrencyInput
-              id="valor-receber"
-              value={valor}
-              onChange={setValor}
-            />
-            {isParcial && (
-              <p className="text-[11px] text-amber-600 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" />
-                Pagamento parcial — saldo de {formatCurrency(saldoRestante)} restante
-              </p>
-            )}
-            {isExcedente && (
-              <p className="text-[11px] text-blue-600 flex items-center gap-1">
-                <Info className="w-3 h-3" />
-                Pagamento excedente — crédito de {formatCurrency(valorCredito)} será registrado
-              </p>
-            )}
+          {/* Valor + Data (2 colunas) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="valor-receber">Valor a receber *</Label>
+              <CurrencyInput
+                id="valor-receber"
+                value={valor}
+                onChange={setValor}
+              />
+              {isParcial && (
+                <p className="text-[11px] text-[#46627f] flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3 shrink-0 text-[#89bcbe]" />
+                  Parcial — saldo de {formatCurrency(saldoRestante)}
+                </p>
+              )}
+              {isExcedente && (
+                <p className="text-[11px] text-[#46627f] flex items-center gap-1">
+                  <Info className="w-3 h-3 shrink-0 text-[#89bcbe]" />
+                  Excedente — crédito de {formatCurrency(valorCredito)}
+                </p>
+              )}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="data-efetivacao">Data de efetivação *</Label>
+              <Input
+                id="data-efetivacao"
+                type="date"
+                value={dataEfetivacao}
+                onChange={(e) => setDataEfetivacao(e.target.value)}
+              />
+            </div>
           </div>
 
-          {/* Data de efetivação */}
-          <div className="grid gap-2">
-            <Label htmlFor="data-efetivacao">Data de efetivação *</Label>
-            <Input
-              id="data-efetivacao"
-              type="date"
-              value={dataEfetivacao}
-              onChange={(e) => setDataEfetivacao(e.target.value)}
-            />
-          </div>
-
-          {/* Forma de pagamento */}
-          <div className="grid gap-2">
-            <Label>Forma de pagamento</Label>
-            <Select value={formaPagamento} onValueChange={setFormaPagamento}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pix">PIX</SelectItem>
-                <SelectItem value="transferencia">Transferência Bancária</SelectItem>
-                <SelectItem value="boleto">Boleto</SelectItem>
-                <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
-                <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
-                <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                <SelectItem value="cheque">Cheque</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Conta bancária */}
-          <div className="grid gap-2">
-            <Label>Conta bancária *</Label>
-            <Select value={contaBancariaId} onValueChange={setContaBancariaId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a conta..." />
-              </SelectTrigger>
-              <SelectContent>
-                {contasBancarias.map((conta) => (
-                  <SelectItem key={conta.id} value={conta.id}>
-                    {conta.banco} {conta.agencia ? `- Ag: ${conta.agencia} / ` : '- '}CC: {conta.numero_conta}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-[10px] text-slate-400">
-              O valor será lançado como entrada nesta conta.
-            </p>
+          {/* Forma de pagamento + Conta bancária (2 colunas) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label>Forma de pagamento</Label>
+              <Select value={formaPagamento} onValueChange={setFormaPagamento}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pix">PIX</SelectItem>
+                  <SelectItem value="transferencia">Transferência Bancária</SelectItem>
+                  <SelectItem value="boleto">Boleto</SelectItem>
+                  <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
+                  <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
+                  <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Conta bancária *</Label>
+              <Select value={contaBancariaId} onValueChange={setContaBancariaId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a conta..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {contasBancarias.map((conta) => (
+                    <SelectItem key={conta.id} value={conta.id}>
+                      {conta.banco} {conta.agencia ? `- Ag: ${conta.agencia} / ` : '- '}CC: {conta.numero_conta}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Vencimento do saldo (apenas quando parcial) */}
           {isParcial && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
-              <Label htmlFor="data-vencimento-saldo" className="text-xs text-amber-800">
+            <div className="bg-[#f0f9f9] border border-[#aacfd0]/40 rounded-lg p-3 space-y-2">
+              <Label htmlFor="data-vencimento-saldo" className="text-xs text-[#34495e]">
                 Vencimento do saldo restante *
               </Label>
               <Input
@@ -396,7 +394,7 @@ export function ModalRecebimento({
                 value={dataVencimentoSaldo}
                 onChange={(e) => setDataVencimentoSaldo(e.target.value)}
               />
-              <p className="text-[10px] text-amber-600">
+              <p className="text-[10px] text-[#46627f]">
                 Saldo de {formatCurrency(saldoRestante)} com novo vencimento
               </p>
             </div>
@@ -404,9 +402,9 @@ export function ModalRecebimento({
 
           {/* Aviso de excedente */}
           {isExcedente && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-xs text-blue-700 flex items-center gap-1.5">
-                <Info className="w-3.5 h-3.5" />
+            <div className="bg-[#f0f9f9] border border-[#aacfd0]/40 rounded-lg p-3">
+              <p className="text-xs text-[#46627f] flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5 text-[#89bcbe]" />
                 Crédito complementar de {formatCurrency(valorCredito)} será registrado automaticamente.
               </p>
             </div>
@@ -440,32 +438,32 @@ export function ModalRecebimento({
 
               {temParticipacao && (
                 <div className="px-3 pb-3 space-y-3 border-t border-[#89bcbe]/30 pt-3">
-                  <div className="grid gap-2">
-                    <Label className="text-xs">Advogado</Label>
-                    <Select
-                      value={advogadoSelecionado}
-                      onValueChange={(id) => {
-                        setAdvogadoSelecionado(id)
-                        const adv = advogados.find(a => a.id === id)
-                        if (adv?.percentual_comissao && percentualParticipacao === 0) {
-                          setPercentualParticipacao(adv.percentual_comissao)
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Selecione o advogado..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {advogados.map((adv) => (
-                          <SelectItem key={adv.id} value={adv.id}>
-                            {adv.nome}
-                            {adv.percentual_comissao ? ` (${adv.percentual_comissao}%)` : ''}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="grid gap-2">
+                      <Label className="text-xs">Advogado</Label>
+                      <Select
+                        value={advogadoSelecionado}
+                        onValueChange={(id) => {
+                          setAdvogadoSelecionado(id)
+                          const adv = advogados.find(a => a.id === id)
+                          if (adv?.percentual_comissao && percentualParticipacao === 0) {
+                            setPercentualParticipacao(adv.percentual_comissao)
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Selecione o advogado..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {advogados.map((adv) => (
+                            <SelectItem key={adv.id} value={adv.id}>
+                              {adv.nome}
+                              {adv.percentual_comissao ? ` (${adv.percentual_comissao}%)` : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="grid gap-1.5">
                       <Label className="text-xs">Percentual (%)</Label>
                       <Input
@@ -506,10 +504,12 @@ export function ModalRecebimento({
 
           {/* Observacoes */}
           <div className="grid gap-2">
-            <Label htmlFor="observacoes-recebimento">Observações (opcional)</Label>
-            <Input
+            <Label htmlFor="observacoes-recebimento" className="text-xs text-[#46627f]">Observações</Label>
+            <Textarea
               id="observacoes-recebimento"
-              placeholder="Ex: Comprovante recebido por email"
+              rows={2}
+              placeholder="Ex: Comprovante recebido por email, número do comprovante..."
+              className="resize-none text-sm"
               value={observacoes}
               onChange={(e) => setObservacoes(e.target.value)}
             />

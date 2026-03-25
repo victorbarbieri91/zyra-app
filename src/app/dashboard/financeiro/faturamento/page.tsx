@@ -56,6 +56,7 @@ import { FaturasTable } from '@/components/faturamento/FaturasTable'
 import { ClientesTable } from '@/components/faturamento/ClientesTable'
 import { ModalRecebimento, type ModalRecebimentoItem } from '@/components/financeiro/ModalRecebimento'
 import NotasDebitoContent from '@/components/financeiro/NotasDebitoContent'
+import { useNotasDebito } from '@/hooks/useNotasDebito'
 import { createClient } from '@/lib/supabase/client'
 import { cn, formatHoras } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -106,6 +107,8 @@ export default function FaturamentoPage() {
     executarFechamentoManual,
   } = useFechamentosPasta(escritoriosSelecionados)
 
+  const { notas: notasDebito, clientesComDespesas } = useNotasDebito()
+
   const [activeTab, setActiveTab] = useState<'prontos' | 'faturados' | 'notas_debito'>('prontos')
 
   const [clientes, setClientes] = useState<ClienteParaFaturar[]>([])
@@ -117,6 +120,17 @@ export default function FaturamentoPage() {
 
   // Estado para modal de recebimento
   const [faturaParaReceber, setFaturaParaReceber] = useState<FaturaGerada | null>(null)
+
+  // Contadores para badges das abas
+  const faturasEmAberto = useMemo(() =>
+    faturas.filter(f => f.status !== 'paga' && f.status !== 'cancelada').length,
+    [faturas]
+  )
+  const notasEmAberto = useMemo(() =>
+    notasDebito.filter(n => n.status !== 'paga' && n.status !== 'cancelada').length,
+    [notasDebito]
+  )
+  const notasDisponivelGerar = clientesComDespesas.length
 
   // Pesquisa e filtros de faturas
   const [searchFaturas, setSearchFaturas] = useState('')
@@ -236,6 +250,20 @@ export default function FaturamentoPage() {
     })
   }
 
+  // Mapa de cores por escritório (mesmo padrão de receitas-despesas)
+  const ESCRITORIO_COLORS = [
+    'bg-indigo-100 dark:bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-500/40',
+    'bg-amber-100 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-500/40',
+    'bg-rose-100 dark:bg-rose-500/15 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-500/40',
+    'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/40',
+    'bg-purple-100 dark:bg-purple-500/15 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-500/40',
+    'bg-orange-100 dark:bg-orange-500/15 text-orange-800 dark:text-orange-300 border-orange-300 dark:border-orange-500/40',
+  ]
+  const escritorioColorMap = new Map<string, string>()
+  escritoriosGrupo.forEach((e, i) => {
+    escritorioColorMap.set(e.id, ESCRITORIO_COLORS[i % ESCRITORIO_COLORS.length])
+  })
+
   const selecionarTodos = () => {
     setEscritoriosSelecionados(escritoriosGrupo.map(e => e.id))
   }
@@ -267,11 +295,11 @@ export default function FaturamentoPage() {
       loadClientesParaFaturar(),
       loadFaturasGeradas(),
     ])
-    // Enriquecer cada cliente com o nome do escritório
-    const enriched = clientesData.map(c => ({
-      ...c,
-      escritorio_nome: escritoriosGrupo.find(e => e.id === c.escritorio_id)?.nome || '',
-    }))
+    // Enriquecer cada cliente com o nome do escritório (apelido quando disponível)
+    const enriched = clientesData.map(c => {
+      const esc = escritoriosGrupo.find(e => e.id === c.escritorio_id)
+      return { ...c, escritorio_nome: esc?.apelido || esc?.nome || '' }
+    })
     setClientes(enriched)
     setFaturas(faturasData)
 
@@ -563,15 +591,20 @@ export default function FaturamentoPage() {
           </TabsTrigger>
           <TabsTrigger value="faturados">
             Faturados
-            {faturas.length > 0 && (
-              <Badge variant="secondary" className="ml-2 bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400">
-                {faturas.length}
+            {faturasEmAberto > 0 && (
+              <Badge variant="secondary" className="ml-2 bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                {faturasEmAberto}
               </Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="notas_debito">
             <FileOutput className="h-4 w-4 mr-1.5" />
             Notas de Débito
+            {(notasEmAberto > 0 || notasDisponivelGerar > 0) && (
+              <Badge variant="secondary" className="ml-2 bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                {notasEmAberto + notasDisponivelGerar}
+              </Badge>
+            )}
           </TabsTrigger>
         </TabsList>
 
@@ -586,6 +619,7 @@ export default function FaturamentoPage() {
                 onSelectCliente={handlePreview}
                 loading={loading}
                 showEscritorio={escritoriosGrupo.length > 1}
+                escritorioColorMap={escritorioColorMap}
               />
             </div>
           </div>
@@ -732,7 +766,8 @@ export default function FaturamentoPage() {
                 }}
                 loading={loading}
                 showEscritorio={escritoriosGrupo.length > 1}
-                escritoriosMap={new Map(escritoriosGrupo.map(e => [e.id, e.nome]))}
+                escritoriosMap={new Map(escritoriosGrupo.map(e => [e.id, e.apelido || e.nome]))}
+                escritorioColorMap={escritorioColorMap}
               />
             </CardContent>
           </Card>
@@ -740,7 +775,12 @@ export default function FaturamentoPage() {
 
         {/* Tab: Notas de Débito */}
         <TabsContent value="notas_debito" className="mt-6">
-          <NotasDebitoContent embedded />
+          <NotasDebitoContent
+            embedded
+            showEscritorio={escritoriosGrupo.length > 1}
+            escritoriosMap={new Map(escritoriosGrupo.map(e => [e.id, e.apelido || e.nome]))}
+            escritorioColorMap={escritorioColorMap}
+          />
         </TabsContent>
 
       </Tabs>

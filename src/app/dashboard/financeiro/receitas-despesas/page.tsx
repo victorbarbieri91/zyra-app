@@ -61,6 +61,7 @@ import {
   ArrowDown,
   Undo2,
   ShieldCheck,
+  Scale,
 } from 'lucide-react'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
@@ -69,12 +70,13 @@ import { cn } from '@/lib/utils'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 import ReceitaModal from '@/components/financeiro/ReceitaModal'
 import DespesaModal from '@/components/financeiro/DespesaModal'
+import LevantamentoModal from '@/components/financeiro/LevantamentoModal'
 import { ModalRecebimento, type ModalRecebimentoItem } from '@/components/financeiro/ModalRecebimento'
 
 interface ExtratoItem {
   id: string
   escritorio_id: string
-  tipo_movimento: 'receita' | 'despesa' | 'transferencia_saida' | 'transferencia_entrada'
+  tipo_movimento: 'receita' | 'despesa' | 'transferencia_saida' | 'transferencia_entrada' | 'levantamento'
   status: 'pendente' | 'efetivado' | 'vencido' | 'cancelado' | 'parcial' | 'liberado'
   origem: string
   categoria: string
@@ -143,6 +145,11 @@ const CATEGORIA_CONFIG: Record<string, { label: string; color: string }> = {
   outros: { label: 'Outros', color: 'bg-stone-50 dark:bg-stone-500/10 text-stone-700 dark:text-stone-400 border-stone-200 dark:border-stone-500/30' },
   despesa: { label: 'Despesa', color: 'bg-stone-50 dark:bg-stone-500/10 text-stone-700 dark:text-stone-400 border-stone-200 dark:border-stone-500/30' },
   transferencia: { label: 'Transferência', color: 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/30' },
+  // Levantamentos
+  alvara: { label: 'Alvará', color: 'bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-500/30' },
+  rpv: { label: 'RPV', color: 'bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-500/30' },
+  precatorio: { label: 'Precatório', color: 'bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-500/30' },
+  deposito_judicial: { label: 'Dep. Judicial', color: 'bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-500/30' },
 }
 
 const getCategoriaConfig = (categoria: string) => {
@@ -253,6 +260,7 @@ export default function ExtratoFinanceiroPage() {
   const [modalEditar, setModalEditar] = useState<ExtratoItem | null>(null)
   const [modalReceita, setModalReceita] = useState(false)
   const [modalDespesa, setModalDespesa] = useState(false)
+  const [modalLevantamento, setModalLevantamento] = useState(false)
 
   // Modais para alterar categoria/tipo individual
   const [modalAlterarCategoriaItem, setModalAlterarCategoriaItem] = useState<ExtratoItem | null>(null)
@@ -567,6 +575,8 @@ export default function ExtratoFinanceiroPage() {
       let somaReceitas = 0
       let somaDespesas = 0
       for (const item of combinedData) {
+        // Levantamentos são neutros — não somam em receitas nem despesas
+        if (item.tipo_movimento === 'levantamento') continue
         if (item.tipo_movimento === 'receita' || item.tipo_movimento === 'transferencia_entrada') {
           somaReceitas += item.valor
         } else {
@@ -2229,6 +2239,14 @@ export default function ExtratoFinanceiroPage() {
             <ArrowLeftRight className="w-4 h-4 md:mr-1" />
             <span className="hidden md:inline">Transferir</span>
           </Button>
+          <Button
+            size="sm"
+            onClick={() => setModalLevantamento(true)}
+            className="bg-[#34495e] hover:bg-[#46627f] text-white"
+          >
+            <Scale className="w-4 h-4 md:mr-1" />
+            <span className="hidden md:inline">Levantamento</span>
+          </Button>
         </div>
       </div>
 
@@ -2651,6 +2669,11 @@ export default function ExtratoFinanceiroPage() {
                             <TrendingDown className="w-2.5 h-2.5" />
                             Despesa
                           </span>
+                        ) : item.tipo_movimento === 'levantamento' ? (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30">
+                            <Scale className="w-2.5 h-2.5" />
+                            Levantamento
+                          </span>
                         ) : (
                           <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30">
                             <ArrowLeftRight className="w-2.5 h-2.5" />
@@ -2696,6 +2719,7 @@ export default function ExtratoFinanceiroPage() {
                         "text-sm font-semibold",
                         item.tipo_movimento === 'receita' ? 'text-emerald-600' :
                         item.tipo_movimento === 'despesa' ? 'text-red-600' :
+                        item.tipo_movimento === 'levantamento' ? 'text-[#34495e] dark:text-teal-400' :
                         'text-blue-600'
                       )}>
                         {item.tipo_movimento === 'receita' ? '+ ' :
@@ -3036,6 +3060,11 @@ export default function ExtratoFinanceiroPage() {
                           <TrendingDown className="w-2.5 h-2.5" />
                           Despesa
                         </span>
+                      ) : item.tipo_movimento === 'levantamento' ? (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30 whitespace-nowrap">
+                          <Scale className="w-2.5 h-2.5" />
+                          Levantamento
+                        </span>
                       ) : (
                         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 whitespace-nowrap">
                           <ArrowLeftRight className="w-2.5 h-2.5" />
@@ -3131,6 +3160,7 @@ export default function ExtratoFinanceiroPage() {
                       <span className={`text-xs font-semibold whitespace-nowrap ${
                         item.tipo_movimento === 'receita' ? 'text-emerald-600' :
                         item.tipo_movimento === 'despesa' ? 'text-red-600' :
+                        item.tipo_movimento === 'levantamento' ? 'text-[#34495e] dark:text-teal-400' :
                         item.tipo_movimento === 'transferencia_saida' ? (contaFiltro === 'todas' ? 'text-blue-600' : 'text-red-600') :
                         item.tipo_movimento === 'transferencia_entrada' ? 'text-emerald-600' :
                         'text-slate-600 dark:text-slate-400'
@@ -4753,6 +4783,13 @@ export default function ExtratoFinanceiroPage() {
       <DespesaModal
         open={modalDespesa}
         onOpenChange={setModalDespesa}
+        onSuccess={() => loadExtrato()}
+      />
+
+      {/* Modal Novo Levantamento */}
+      <LevantamentoModal
+        open={modalLevantamento}
+        onOpenChange={setModalLevantamento}
         onSuccess={() => loadExtrato()}
       />
 

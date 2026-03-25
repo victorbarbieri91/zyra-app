@@ -93,9 +93,12 @@ const getDefaultVencimento = (): string => {
 
 interface NotasDebitoContentProps {
   embedded?: boolean
+  showEscritorio?: boolean
+  escritoriosMap?: Map<string, string>
+  escritorioColorMap?: Map<string, string>
 }
 
-export default function NotasDebitoContent({ embedded = false }: NotasDebitoContentProps) {
+export default function NotasDebitoContent({ embedded = false, showEscritorio = false, escritoriosMap, escritorioColorMap }: NotasDebitoContentProps) {
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
   const {
@@ -338,6 +341,9 @@ export default function NotasDebitoContent({ embedded = false }: NotasDebitoCont
                     <thead>
                       <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-surface-1">
                         <th className="p-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Cliente</th>
+                        {showEscritorio && (
+                          <th className="p-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Escritório</th>
+                        )}
                         <th className="p-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Despesas</th>
                         <th className="p-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total a Cobrar</th>
                         <th className="p-3 w-10"></th>
@@ -346,13 +352,23 @@ export default function NotasDebitoContent({ embedded = false }: NotasDebitoCont
                     <tbody>
                       {clientesComDespesas.map(cliente => (
                         <tr
-                          key={cliente.cliente_id}
+                          key={`${cliente.cliente_id}::${cliente.escritorio_id}`}
                           onClick={() => handleSelecionarCliente(cliente)}
                           className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-surface-1 transition-colors cursor-pointer group"
                         >
                           <td className="p-3">
                             <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">{cliente.cliente_nome}</p>
                           </td>
+                          {showEscritorio && (
+                            <td className="p-3">
+                              <span
+                                className={cn("inline-block px-1.5 py-0.5 rounded text-[10px] font-medium border whitespace-nowrap truncate max-w-[80px]", escritorioColorMap?.get(cliente.escritorio_id) || 'bg-slate-100 text-slate-600 border-slate-200')}
+                                title={escritoriosMap?.get(cliente.escritorio_id) || ''}
+                              >
+                                {escritoriosMap?.get(cliente.escritorio_id) || '-'}
+                              </span>
+                            </td>
+                          )}
                           <td className="p-3 text-center">
                             <Badge variant="secondary" className="bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400 text-xs">
                               {cliente.qtd_despesas} {cliente.qtd_despesas === 1 ? 'despesa' : 'despesas'}
@@ -442,6 +458,9 @@ export default function NotasDebitoContent({ embedded = false }: NotasDebitoCont
                       <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-surface-1">
                         <th className="p-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400">Número</th>
                         <th className="p-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400">Cliente</th>
+                        {showEscritorio && (
+                          <th className="p-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400">Escritório</th>
+                        )}
                         <th className="p-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400">Itens</th>
                         <th className="p-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400">Valor Total</th>
                         <th className="p-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400">Emissão</th>
@@ -458,6 +477,16 @@ export default function NotasDebitoContent({ embedded = false }: NotasDebitoCont
                           <tr key={nota.id} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-surface-1 transition-colors">
                             <td className="p-3 text-xs font-mono font-semibold text-[#34495e] dark:text-slate-200">{nota.numero}</td>
                             <td className="p-3 text-xs text-slate-700 dark:text-slate-300">{nota.cliente_nome || '—'}</td>
+                            {showEscritorio && (
+                              <td className="p-3">
+                                <span
+                                  className={cn("inline-block px-1.5 py-0.5 rounded text-[10px] font-medium border whitespace-nowrap truncate max-w-[80px]", escritorioColorMap?.get(nota.escritorio_id) || 'bg-slate-100 text-slate-600 border-slate-200')}
+                                  title={escritoriosMap?.get(nota.escritorio_id) || ''}
+                                >
+                                  {escritoriosMap?.get(nota.escritorio_id) || '-'}
+                                </span>
+                              </td>
+                            )}
                             <td className="p-3 text-center text-xs text-slate-500 dark:text-slate-400">{nota.qtd_itens}</td>
                             <td className="p-3 text-right text-xs font-semibold text-[#34495e] dark:text-slate-200">{formatCurrency(nota.valor_total)}</td>
                             <td className="p-3 text-xs text-slate-500 dark:text-slate-400">{nota.data_emissao ? formatBrazilDate(nota.data_emissao) : '—'}</td>
@@ -539,14 +568,14 @@ export default function NotasDebitoContent({ embedded = false }: NotasDebitoCont
 
       {/* === Modal Criar Nota (simplificado — sem busca de cliente) === */}
       <Dialog open={modalCriar} onOpenChange={setModalCriar}>
-        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-xl max-h-[85vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base text-[#34495e] dark:text-slate-200">
               <FileOutput className="w-4 h-4 text-[#89bcbe]" />
               Nova Nota de Débito
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1">
             {/* Cliente (read-only) */}
             {clienteParaNota && (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700">
@@ -598,11 +627,11 @@ export default function NotasDebitoContent({ embedded = false }: NotasDebitoCont
                         checked={despesasSelecionadas.has(d.id)}
                         onCheckedChange={() => toggleDespesa(d.id)}
                       />
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 overflow-hidden">
                         <p className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{d.descricao}</p>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500">{getCasoLabel(d)}</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{getCasoLabel(d)}</p>
                       </div>
-                      <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200 whitespace-nowrap">
+                      <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200 whitespace-nowrap shrink-0">
                         {formatCurrency(d.valor)}
                       </span>
                     </div>

@@ -19,6 +19,7 @@ interface FaturasTableProps {
   loading?: boolean
   showEscritorio?: boolean
   escritoriosMap?: Map<string, string>
+  escritorioColorMap?: Map<string, string>
 }
 
 const formatCurrency = (value: number) =>
@@ -121,6 +122,7 @@ export function FaturasTable({
   loading = false,
   showEscritorio = false,
   escritoriosMap,
+  escritorioColorMap,
 }: FaturasTableProps) {
   if (loading) {
     return (
@@ -205,9 +207,12 @@ export function FaturasTable({
                   {/* Escritorio */}
                   {showEscritorio && (
                     <td className="py-2 px-2 w-[10%]">
-                      <Badge variant="outline" className="text-[10px] font-normal text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 truncate max-w-full">
+                      <span
+                        className={cn("inline-block px-1.5 py-0.5 rounded text-[10px] font-medium border whitespace-nowrap truncate max-w-[80px]", escritorioColorMap?.get(fatura.escritorio_id) || 'bg-slate-100 text-slate-600 border-slate-200')}
+                        title={escritoriosMap?.get(fatura.escritorio_id) || ''}
+                      >
                         {escritoriosMap?.get(fatura.escritorio_id) || '-'}
-                      </Badge>
+                      </span>
                     </td>
                   )}
 

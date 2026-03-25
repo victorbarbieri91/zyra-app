@@ -222,104 +222,8 @@ export function useNotasDebito() {
   ) => {
     if (!escritorioAtivo) throw new Error('Escritório não identificado')
 
-    // Gerar número
-    const { data: numeroData, error: numError } = await supabase
-      .rpc('gerar_numero_nota_debito', { p_escritorio_id: escritorioAtivo })
-
-    if (numError) throw numError
-    const numero = numeroData
-
-    // Buscar despesas para calcular total e montar itens
-    const { data: despesas, error: despError } = await supabase
-      .from('financeiro_despesas')
-      .select(`
-        id, descricao, valor, categoria,
-        processo:processos_processos!processo_id(autor, reu, numero_pasta),
-        consulta:consultivo_consultas!consultivo_id(titulo)
-      `)
-      .in('id', despesaIds)
-
-    if (despError) throw despError
-
-    const valorTotal = (despesas || []).reduce((s: number, d: any) => s + Number(d.valor), 0)
-
-    // Obter user atual
-    const { data: { user } } = await supabase.auth.getUser()
-
-    const dataEmissao = new Date().toISOString().split('T')[0]
-
-    // Inserir nota já como emitida
-    const { data: nota, error: notaError } = await supabase
-      .from('financeiro_notas_debito')
-      .insert({
-        escritorio_id: escritorioAtivo,
-        numero,
-        cliente_id: clienteId,
-        status: 'emitida',
-        valor_total: valorTotal,
-        data_emissao: dataEmissao,
-        data_vencimento: dataVencimento,
-        observacoes: observacoes || null,
-        created_by: user?.id || null,
-      })
-      .select('id')
-      .single()
-
-    if (notaError) throw notaError
-
-    // Inserir itens
-    const itens = (despesas || []).map((d: any) => {
-      let processoTitulo = null
-      if (d.processo) {
-        const pasta = d.processo.numero_pasta ? `${d.processo.numero_pasta} - ` : ''
-        processoTitulo = `${pasta}${d.processo.autor} x ${d.processo.reu}`
-      } else if (d.consulta) {
-        processoTitulo = d.consulta.titulo
-      }
-
-      return {
-        nota_debito_id: nota.id,
-        despesa_id: d.id,
-        descricao: d.descricao,
-        valor: Number(d.valor),
-        categoria: d.categoria,
-        processo_titulo: processoTitulo,
-      }
-    })
-
-    const { error: itensError } = await supabase
-      .from('financeiro_notas_debito_itens')
-      .insert(itens)
-
-    if (itensError) throw itensError
-
-    // Criar receita vinculada
-    const { data: receita, error: recError } = await supabase
-      .from('financeiro_receitas')
-      .insert({
-        escritorio_id: escritorioAtivo,
-        tipo: 'reembolso',
-        categoria: 'custas',
-        cliente_id: clienteId,
-        descricao: `Nota de Débito ${numero}`,
-        valor: valorTotal,
-        data_competencia: dataVencimento,
-        data_vencimento: dataVencimento,
-        status: 'pendente',
-      })
-      .select('id')
-      .single()
-
-    if (recError) throw recError
-
-    // Vincular receita à nota
-    await supabase
-      .from('financeiro_notas_debito')
-      .update({ receita_id: receita.id })
-      .eq('id', nota.id)
-
-    // Marcar despesas como reembolsadas
-    const { error: updError } = await supabase
+    // 1. Marcar despesas como reembolsadas PRIMEIRO (evita duplicatas se o usuário clicar de novo)
+    const { error: lockError } = await supabase
       .from('financeiro_despesas')
       .update({
         reembolsado: true,
@@ -328,11 +232,116 @@ export function useNotasDebito() {
       })
       .in('id', despesaIds)
 
-    if (updError) throw updError
+    if (lockError) throw lockError
 
-    toast.success(`Nota de Débito ${numero} emitida com sucesso!`)
-    await Promise.all([carregarNotas(), carregarClientesComDespesas()])
-    return nota.id
+    try {
+      // 2. Gerar número
+      const { data: numeroData, error: numError } = await supabase
+        .rpc('gerar_numero_nota_debito', { p_escritorio_id: escritorioAtivo })
+
+      if (numError) throw numError
+      const numero = numeroData
+
+      // 3. Buscar despesas para calcular total e montar itens
+      const { data: despesas, error: despError } = await supabase
+        .from('financeiro_despesas')
+        .select(`
+          id, descricao, valor, categoria,
+          processo:processos_processos!processo_id(autor, reu, numero_pasta),
+          consulta:consultivo_consultas!consultivo_id(titulo)
+        `)
+        .in('id', despesaIds)
+
+      if (despError) throw despError
+
+      const valorTotal = (despesas || []).reduce((s: number, d: any) => s + Number(d.valor), 0)
+
+      // 4. Obter user atual
+      const { data: { user } } = await supabase.auth.getUser()
+
+      const dataEmissao = new Date().toISOString().split('T')[0]
+
+      // 5. Criar receita vinculada ANTES da nota (era aqui que falhava)
+      const { data: receita, error: recError } = await supabase
+        .from('financeiro_receitas')
+        .insert({
+          escritorio_id: escritorioAtivo,
+          tipo: 'reembolso',
+          categoria: 'custas_reembolsadas',
+          cliente_id: clienteId,
+          descricao: `Nota de Débito ${numero}`,
+          valor: valorTotal,
+          data_competencia: dataVencimento,
+          data_vencimento: dataVencimento,
+          status: 'pendente',
+        })
+        .select('id')
+        .single()
+
+      if (recError) throw recError
+
+      // 6. Inserir nota já com receita_id vinculada
+      const { data: nota, error: notaError } = await supabase
+        .from('financeiro_notas_debito')
+        .insert({
+          escritorio_id: escritorioAtivo,
+          numero,
+          cliente_id: clienteId,
+          status: 'emitida',
+          valor_total: valorTotal,
+          data_emissao: dataEmissao,
+          data_vencimento: dataVencimento,
+          observacoes: observacoes || null,
+          created_by: user?.id || null,
+          receita_id: receita.id,
+        })
+        .select('id')
+        .single()
+
+      if (notaError) throw notaError
+
+      // 7. Inserir itens
+      const itens = (despesas || []).map((d: any) => {
+        let processoTitulo = null
+        if (d.processo) {
+          const pasta = d.processo.numero_pasta ? `${d.processo.numero_pasta} - ` : ''
+          processoTitulo = `${pasta}${d.processo.autor} x ${d.processo.reu}`
+        } else if (d.consulta) {
+          processoTitulo = d.consulta.titulo
+        }
+
+        return {
+          nota_debito_id: nota.id,
+          despesa_id: d.id,
+          descricao: d.descricao,
+          valor: Number(d.valor),
+          categoria: d.categoria,
+          processo_titulo: processoTitulo,
+        }
+      })
+
+      const { error: itensError } = await supabase
+        .from('financeiro_notas_debito_itens')
+        .insert(itens)
+
+      if (itensError) throw itensError
+
+      toast.success(`Nota de Débito ${numero} emitida com sucesso!`)
+      await Promise.all([carregarNotas(), carregarClientesComDespesas()])
+      return nota.id
+    } catch (error) {
+      // Rollback: reverter despesas para disponível se qualquer etapa falhar
+      await supabase
+        .from('financeiro_despesas')
+        .update({
+          reembolsado: false,
+          reembolso_status: 'pendente',
+          updated_at: new Date().toISOString(),
+        })
+        .in('id', despesaIds)
+
+      throw error
+    }
   }
 
   // Desmontar nota — reverte despesas e cancela receita

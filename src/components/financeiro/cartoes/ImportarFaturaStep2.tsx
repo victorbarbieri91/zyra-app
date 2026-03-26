@@ -46,7 +46,6 @@ interface ImportarFaturaStep2Props {
   dadosFatura: {
     valor_total: number
     data_vencimento: string | null
-    data_fechamento: string | null
   } | null
   mesReferenciaFatura: string
   setMesReferenciaFatura: (mes: string) => void
@@ -208,7 +207,7 @@ export default function ImportarFaturaStep2({
               <Info className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
               <div>
                 <p className="text-[11px] font-medium text-amber-800">
-                  Fatura {faturaExistente.status === 'fechada' ? 'fechada' : faturaExistente.status === 'paga' ? 'paga' : 'aberta'} existente
+                  Fatura {faturaExistente.status === 'paga' ? 'paga' : 'pendente'} existente
                 </p>
                 <p className="text-[10px] text-amber-600">
                   Lançamentos serão adicionados à fatura ({formatCurrency(faturaExistente.valor_total || 0)})

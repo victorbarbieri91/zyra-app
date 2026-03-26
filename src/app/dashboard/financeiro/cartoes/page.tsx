@@ -51,10 +51,10 @@ import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escrito
 interface ResumoFaturaMes {
   fatura_id: string | null
   valor_total: number
-  status: string // 'aberta' | 'fechada' | 'paga' | 'projetada' | 'vazia'
+  status: string // 'pendente' | 'paga' | 'vazia'
   total_lancamentos: number
   data_vencimento: string
-  data_fechamento: string
+  despesa_id: string | null
 }
 import { cn } from '@/lib/utils'
 import CartaoModal from '@/components/financeiro/cartoes/CartaoModal'
@@ -191,7 +191,7 @@ export default function CartoesPage() {
             status: r.status,
             total_lancamentos: Number(r.total_lancamentos) || 0,
             data_vencimento: r.data_vencimento,
-            data_fechamento: r.data_fechamento,
+            despesa_id: r.despesa_id,
           } : null
         })
       )
@@ -437,7 +437,18 @@ export default function CartoesPage() {
                 const fatura = faturasPorCartao[cartao.id]
                 const resumo = resumosPorCartao[cartao.id]
                 const faturaValor = resumo?.valor_total || 0
-                const faturaStatus = resumo?.status
+                // Status visual: derivado da data de fechamento do cartão
+                const statusDoBanco = resumo?.status
+                let faturaStatus = statusDoBanco
+                if (statusDoBanco === 'pendente') {
+                  const [anoSel, mesSel] = selectedMonth.split('-').map(Number)
+                  const ultimoDia = new Date(anoSel, mesSel, 0).getDate()
+                  const diaVenc = Math.min(cartao.dia_vencimento, ultimoDia)
+                  const diasAntes = (cartao as any).dias_antes_fechamento || 7
+                  const diaFech = diaVenc - diasAntes
+                  const dataFech = new Date(anoSel, mesSel - 1, diaFech > 0 ? diaFech : 1)
+                  faturaStatus = new Date() >= dataFech ? 'fechada' : 'aberta'
+                }
 
                 return (
                   <TableRow
@@ -481,24 +492,20 @@ export default function CartoesPage() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      {faturaStatus && faturaStatus !== 'vazia' ? (
-                        <Badge
-                          variant="secondary"
-                          className={cn(
-                            "text-[10px]",
-                            faturaStatus === 'aberta' && "bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400",
-                            faturaStatus === 'fechada' && "bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400",
-                            faturaStatus === 'paga' && "bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-                            faturaStatus === 'projetada' && "bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400"
-                          )}
-                        >
-                          {faturaStatus === 'aberta' && 'Aberta'}
-                          {faturaStatus === 'fechada' && 'Fechada'}
-                          {faturaStatus === 'paga' && 'Paga'}
-                          {faturaStatus === 'projetada' && 'Prevista'}
+                      {faturaStatus === 'aberta' && (
+                        <Badge variant="secondary" className="text-[10px] bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400">
+                          Aberta
                         </Badge>
-                      ) : (
-                        <span className="text-xs text-slate-400">—</span>
+                      )}
+                      {faturaStatus === 'fechada' && (
+                        <Badge variant="secondary" className="text-[10px] bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                          Fechada
+                        </Badge>
+                      )}
+                      {faturaStatus === 'paga' && (
+                        <Badge variant="secondary" className="text-[10px] bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                          Paga
+                        </Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right">

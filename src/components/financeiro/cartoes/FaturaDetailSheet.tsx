@@ -141,7 +141,7 @@ export default function FaturaDetailSheet({
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [lancamentoParaEditar, setLancamentoParaEditar] = useState<LancamentoCartao | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
-  const [fecharFaturaConfirm, setFecharFaturaConfirm] = useState(false)
+  const [pagarFaturaConfirm, setPagarFaturaConfirm] = useState(false)
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
   const [bulkCategoriaOpen, setBulkCategoriaOpen] = useState(false)
   const [limparFaturaConfirm, setLimparFaturaConfirm] = useState(false)
@@ -153,7 +153,6 @@ export default function FaturaDetailSheet({
     deleteLancamento,
     cancelarRecorrente,
     reativarRecorrente,
-    fecharFatura,
     pagarFatura,
     deleteLancamentosEmMassa,
     atualizarCategoriaEmMassa,
@@ -218,12 +217,8 @@ export default function FaturaDetailSheet({
   const dataVencimento = fatura?.data_vencimento
     ? formatDiaMes(fatura.data_vencimento)
     : `${cartao.dia_vencimento}/${MESES_ABREV[mesVencReal - 1]}`
-  const dataFechamento = fatura?.data_fechamento
-    ? formatDiaMes(fatura.data_fechamento)
-    : null
-
-  // Calcular se o fechamento é antecipado (para aviso no dialog)
-  const calcularDataFechamentoReal = (): { date: Date; formatted: string } | null => {
+  // Calcular data de fechamento (informativo, derivado do cartão)
+  const calcularDataFechamento = (): { date: Date; formatted: string } | null => {
     const [ano, mes] = mesAtual.split('-').map(Number)
     const ultimoDiaMes = new Date(ano, mes, 0).getDate()
     const diaVcto = Math.min(cartao.dia_vencimento, ultimoDiaMes)
@@ -235,8 +230,8 @@ export default function FaturaDetailSheet({
       formatted: `${String(dataFech.getDate()).padStart(2, '0')}/${MESES_ABREV[dataFech.getMonth()]}`
     }
   }
-  const dataFechamentoReal = calcularDataFechamentoReal()
-  const isFechamentoAntecipado = dataFechamentoReal ? new Date() < dataFechamentoReal.date : false
+  const dataFechamentoCalc = calcularDataFechamento()
+  const jaFechou = dataFechamentoCalc ? new Date() >= dataFechamentoCalc.date : false
 
   // Handlers
   const toggleSelect = (id: string) => {
@@ -269,22 +264,9 @@ export default function FaturaDetailSheet({
     setDeleteConfirmId(null)
   }
 
-  const handleFecharFatura = async () => {
-    if (!cartao) return
-    const faturaId = await fecharFatura(cartao.id, `${mesAtual}-01`)
-    if (faturaId) {
-      toast.success('Fatura fechada com sucesso')
-      loadData()
-      onDataChange?.()
-    } else {
-      toast.error('Erro ao fechar fatura')
-    }
-    setFecharFaturaConfirm(false)
-  }
-
   const handlePagarFatura = async () => {
-    if (!fatura) return
-    const success = await pagarFatura(fatura.id, 'debito_automatico')
+    if (!cartao) return
+    const success = await pagarFatura(cartao.id, 'debito_automatico', `${mesAtual}-01`)
     if (success) {
       toast.success('Fatura marcada como paga')
       loadData()
@@ -319,6 +301,11 @@ export default function FaturaDetailSheet({
 
   const statusBadge = (status: string | undefined) => {
     if (!status) return null
+    // Status visual: aberta/fechada calculado pela data, paga do banco
+    let statusVisual = status
+    if (status === 'pendente') {
+      statusVisual = jaFechou ? 'fechada' : 'aberta'
+    }
     const styles: Record<string, string> = {
       aberta: 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400',
       fechada: 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400',
@@ -329,6 +316,7 @@ export default function FaturaDetailSheet({
       fechada: 'Fechada',
       paga: 'Paga',
     }
+    status = statusVisual
     return (
       <Badge variant="secondary" className={cn('text-[10px]', styles[status])}>
         {labels[status] || status}
@@ -375,7 +363,7 @@ export default function FaturaDetailSheet({
                   </div>
                   <SheetDescription className="text-xs mt-0.5">
                     vence {dataVencimento}
-                    {dataFechamento && ` • fecha ${dataFechamento}`}
+                    {dataFechamentoCalc && ` • fecha ${dataFechamentoCalc.formatted}`}{jaFechou && ' (fechada)'}
                   </SheetDescription>
                 </div>
               </div>
@@ -411,23 +399,12 @@ export default function FaturaDetailSheet({
                 <Plus className="w-3.5 h-3.5 mr-1" />
                 Novo Lançamento
               </Button>
-              {(!fatura || fatura.status === 'aberta') && lancamentos.length > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs h-8 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-500/10"
-                  onClick={() => setFecharFaturaConfirm(true)}
-                >
-                  <Lock className="w-3.5 h-3.5 mr-1" />
-                  Fechar Fatura
-                </Button>
-              )}
-              {fatura?.status === 'fechada' && (
+              {(!fatura || fatura.status === 'pendente') && lancamentos.length > 0 && (
                 <Button
                   size="sm"
                   variant="outline"
                   className="text-xs h-8 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
-                  onClick={handlePagarFatura}
+                  onClick={() => setPagarFaturaConfirm(true)}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
                   Pagar
@@ -693,29 +670,19 @@ export default function FaturaDetailSheet({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Confirmação fechar fatura */}
-      <AlertDialog open={fecharFaturaConfirm} onOpenChange={setFecharFaturaConfirm}>
+      {/* Confirmação pagar fatura */}
+      <AlertDialog open={pagarFaturaConfirm} onOpenChange={setPagarFaturaConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Fechar Fatura</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-2">
-                <p>Deseja fechar a fatura de {formatMesAno(mesAtual)}? Novos lançamentos não poderão ser adicionados.</p>
-                {isFechamentoAntecipado && dataFechamentoReal && (
-                  <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
-                    <Calendar className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-amber-700 dark:text-amber-400">
-                      A data de fechamento desta fatura é <strong>{dataFechamentoReal.formatted}</strong>. Fechar antes pode excluir lançamentos que ainda seriam incluídos neste período.
-                    </p>
-                  </div>
-                )}
-              </div>
+            <AlertDialogTitle>Pagar Fatura</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja marcar a fatura de {formatMesAno(mesAtual)} como paga? O valor de {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalValor)} será registrado como despesa paga.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleFecharFatura} className="bg-amber-600 hover:bg-amber-700">
-              {isFechamentoAntecipado ? 'Fechar Mesmo Assim' : 'Fechar Fatura'}
+            <AlertDialogAction onClick={async () => { await handlePagarFatura(); setPagarFaturaConfirm(false) }} className="bg-emerald-600 hover:bg-emerald-700">
+              Confirmar Pagamento
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

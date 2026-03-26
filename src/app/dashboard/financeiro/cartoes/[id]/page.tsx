@@ -113,7 +113,6 @@ export default function CartaoDetalhePage() {
   const [lancamentoParaExcluir, setLancamentoParaExcluir] = useState<string | null>(null)
   const [recorrenteParaCancelar, setRecorrenteParaCancelar] = useState<string | null>(null)
   const [recorrenteParaReativar, setRecorrenteParaReativar] = useState<string | null>(null)
-  const [faturaParaFechar, setFaturaParaFechar] = useState<string | null>(null)
 
   // Seleção múltipla / Ações em massa
   const [lancamentosSelecionados, setLancamentosSelecionados] = useState<Set<string>>(new Set())
@@ -134,7 +133,6 @@ export default function CartaoDetalhePage() {
     deleteLancamento,
     cancelarRecorrente,
     reativarRecorrente,
-    fecharFatura,
     pagarFatura,
     deleteLancamentosEmMassa,
     atualizarCategoriaEmMassa,
@@ -289,20 +287,6 @@ export default function CartaoDetalhePage() {
     setRecorrenteParaReativar(null)
   }
 
-  const handleFecharFatura = async () => {
-    if (!faturaParaFechar || !cartao) return
-
-    const faturaId = await fecharFatura(cartao.id, mesReferenciaStr)
-
-    if (faturaId) {
-      toast.success('Fatura fechada com sucesso! Um lançamento foi criado em Despesas.')
-      loadData()
-    } else {
-      toast.error('Erro ao fechar fatura')
-    }
-    setFaturaParaFechar(null)
-  }
-
   const handlePagarFatura = async (faturaId: string) => {
     const success = await pagarFatura(faturaId, 'pix')
     if (success) {
@@ -412,14 +396,10 @@ export default function CartaoDetalhePage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'aberta':
-        return <Badge className="bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200">Aberta</Badge>
-      case 'fechada':
-        return <Badge className="bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200">Fechada</Badge>
+      case 'pendente':
+        return <Badge className="bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200">Pendente</Badge>
       case 'paga':
         return <Badge className="bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200">Paga</Badge>
-      case 'cancelada':
-        return <Badge className="bg-slate-100 dark:bg-surface-2 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700">Cancelada</Badge>
       default:
         return null
     }
@@ -760,16 +740,6 @@ export default function CartaoDetalhePage() {
               <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Histórico de Faturas
               </CardTitle>
-              {!faturaAtual && valorFaturaAtual > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setFaturaParaFechar(cartao.id)}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Fechar Fatura Atual
-                </Button>
-              )}
             </CardHeader>
             <CardContent className="pt-2 pb-3">
               {faturas.length === 0 ? (
@@ -782,7 +752,6 @@ export default function CartaoDetalhePage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Referência</TableHead>
-                      <TableHead>Fechamento</TableHead>
                       <TableHead>Vencimento</TableHead>
                       <TableHead className="text-center">Status</TableHead>
                       <TableHead className="text-center">Lançamentos</TableHead>
@@ -799,7 +768,6 @@ export default function CartaoDetalhePage() {
                             year: 'numeric',
                           })}
                         </TableCell>
-                        <TableCell>{formatBrazilDate(fatura.data_fechamento)}</TableCell>
                         <TableCell>{formatBrazilDate(fatura.data_vencimento)}</TableCell>
                         <TableCell className="text-center">
                           {getStatusBadge(fatura.status)}
@@ -811,7 +779,7 @@ export default function CartaoDetalhePage() {
                           {formatCurrency(fatura.valor_total)}
                         </TableCell>
                         <TableCell>
-                          {fatura.status === 'fechada' && (
+                          {fatura.status === 'pendente' && (
                             <Button
                               size="sm"
                               className="h-8 bg-emerald-600 hover:bg-emerald-700"
@@ -931,23 +899,6 @@ export default function CartaoDetalhePage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog Fechar Fatura */}
-      <AlertDialog open={!!faturaParaFechar} onOpenChange={() => setFaturaParaFechar(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Fechar Fatura</AlertDialogTitle>
-            <AlertDialogDescription>
-              Ao fechar a fatura, um lançamento único será criado em Despesas com o valor
-              total de {formatCurrency(valorFaturaAtual)}. Os novos lançamentos irão para a
-              próxima fatura.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleFecharFatura}>Fechar Fatura</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Dialog Excluir em Massa */}
       <AlertDialog open={mostrarDialogExcluirEmMassa} onOpenChange={setMostrarDialogExcluirEmMassa}>

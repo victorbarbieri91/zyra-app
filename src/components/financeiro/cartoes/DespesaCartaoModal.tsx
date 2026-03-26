@@ -42,7 +42,7 @@ interface DespesaCartaoModalProps {
 interface FaturaInfo {
   mes_referencia: string
   label: string
-  status: 'aberta' | 'fechada'
+  status: 'pendente' | 'fechada_ciclo'
 }
 
 const MESES_PT = [
@@ -66,7 +66,7 @@ function gerarMesesDisponiveis(cartao: CartaoCredito | undefined): FaturaInfo[] 
       : new Date(d.getFullYear(), d.getMonth(), 0 + diaFechamento)
 
     const isFechada = hoje > dataFechamento
-    meses.push({ mes_referencia: mesRef, label, status: isFechada ? 'fechada' : 'aberta' })
+    meses.push({ mes_referencia: mesRef, label, status: isFechada ? 'fechada_ciclo' : 'pendente' })
   }
   return meses
 }
@@ -284,16 +284,16 @@ export default function DespesaCartaoModal({
                     <SelectItem key={mes.mes_referencia} value={mes.mes_referencia}>
                       <div className="flex items-center gap-2">
                         {mes.label}
-                        {mes.status === 'fechada' && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Fechada</span>
+                        {mes.status === 'fechada_ciclo' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Ciclo fechado</span>
                         )}
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {mesSelecionado && mesSelecionado.status === 'fechada' && (
-                <p className="text-[10px] text-amber-600 mt-0.5">Fatura já fechada — lançamento retroativo</p>
+              {mesSelecionado && mesSelecionado.status === 'fechada_ciclo' && (
+                <p className="text-[10px] text-amber-600 mt-0.5">Ciclo já fechou — lançamento retroativo</p>
               )}
             </div>
           </div>

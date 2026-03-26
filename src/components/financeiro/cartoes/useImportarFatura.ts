@@ -69,7 +69,6 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
   const [dadosFatura, setDadosFatura] = useState<{
     valor_total: number
     data_vencimento: string | null
-    data_fechamento: string | null
   } | null>(null)
   const [importacaoId, setImportacaoId] = useState<string | null>(null)
   const [mesReferenciaFatura, setMesReferenciaFatura] = useState<string>('')
@@ -441,7 +440,6 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
         setDadosFatura({
           valor_total: dados.valor_total,
           data_vencimento: dados.data_vencimento,
-          data_fechamento: dados.data_fechamento,
         })
       }
 
@@ -703,7 +701,7 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
           const novaFatura = await criarFaturaCartao(
             selectedCartao,
             mesRef,
-            dadosFatura?.data_fechamento || null,
+            null,
             dadosFatura?.data_vencimento || null,
             dadosFatura?.valor_total || null
           )

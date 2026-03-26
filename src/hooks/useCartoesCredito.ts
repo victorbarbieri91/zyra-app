@@ -27,13 +27,10 @@ export interface CartaoComFaturaAtual extends CartaoCredito {
   fatura_atual: {
     fatura_id: string | null
     mes_referencia: string
-    data_fechamento: string
     data_vencimento: string
     valor_total: number
-    status: 'aberta' | 'fechada' | 'paga' | 'cancelada'
+    status: 'pendente' | 'paga'
     total_lancamentos: number
-    total_despesas: number
-    dias_para_fechamento: number
     dias_para_vencimento: number
   } | null
 }
@@ -56,7 +53,6 @@ export interface LancamentoCartao {
   mes_referencia: string
   recorrente_ativo: boolean
   recorrente_data_fim: string | null
-  faturado: boolean
   importado_de_fatura: boolean
   hash_transacao: string | null
   processo_id: string | null
@@ -76,11 +72,10 @@ export interface FaturaCartao {
   escritorio_id: string
   cartao_id: string
   mes_referencia: string
-  data_fechamento: string
   data_vencimento: string
   valor_total: number
   despesa_id: string | null
-  status: 'aberta' | 'fechada' | 'paga' | 'cancelada'
+  status: 'pendente' | 'paga'
   pdf_url: string | null
   data_pagamento: string | null
   forma_pagamento: string | null
@@ -308,12 +303,10 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
           const faturaFormatada = faturaData ? {
             fatura_id: faturaData.fatura_id,
             mes_referencia: faturaData.mes_referencia,
-            data_fechamento: faturaData.data_fechamento,
             data_vencimento: faturaData.data_vencimento,
             valor_total: Number(faturaData.valor_total) || 0,
             status: faturaData.status,
             total_lancamentos: Number(faturaData.total_lancamentos) || 0,
-            dias_para_fechamento: faturaData.dias_para_fechamento,
             dias_para_vencimento: faturaData.dias_para_vencimento,
           } : null
 
@@ -713,37 +706,28 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
     }
   }, [supabase])
 
-  const fecharFatura = useCallback(async (cartaoId: string, mesReferencia: string): Promise<string | null> => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      const { data: faturaId, error: rpcError } = await supabase
-        .rpc('fechar_fatura_cartao', {
-          p_cartao_id: cartaoId,
-          p_mes_referencia: mesReferencia,
-        })
-
-      if (rpcError) throw rpcError
-
-      return faturaId
-    } catch (err: any) {
-      console.error('Erro ao fechar fatura:', err)
-      setError(err.message)
-      return null
-    } finally {
-      setLoading(false)
-    }
-  }, [supabase])
-
   const pagarFatura = useCallback(async (
-    faturaId: string,
+    cartaoIdOuFaturaId: string,
     formaPagamento: string,
+    mesReferencia?: string,
     dataPagamento?: string
   ): Promise<boolean> => {
     try {
       setLoading(true)
       setError(null)
+
+      let faturaId = cartaoIdOuFaturaId
+
+      // Se mesReferencia fornecido, garantir que fatura+despesa existem
+      if (mesReferencia) {
+        const { data: newFaturaId, error: rpcError } = await supabase
+          .rpc('criar_ou_atualizar_fatura_cartao', {
+            p_cartao_id: cartaoIdOuFaturaId,
+            p_mes_referencia: mesReferencia,
+          })
+        if (rpcError) throw rpcError
+        faturaId = newFaturaId
+      }
 
       const { data: fatura } = await supabase
         .from('cartoes_credito_faturas')
@@ -955,7 +939,6 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
         .from('cartoes_credito_lancamentos')
         .update({
           fatura_id: faturaId,
-          faturado: true,
           updated_at: new Date().toISOString(),
         })
         .in('id', lancamentoIds)
@@ -992,12 +975,11 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
   const criarFaturaCartao = useCallback(async (
     cartaoId: string,
     mesReferencia: string, // formato: YYYY-MM-01
-    dataFechamento?: string | null,
+    _dataFechamento?: string | null,
     dataVencimento?: string | null,
     valorTotal?: number | null
   ): Promise<FaturaCartao | null> => {
     try {
-      // Buscar dados do cartão para calcular datas se não fornecidas
       const { data: cartao } = await supabase
         .from('cartoes_credito')
         .select('*')
@@ -1010,15 +992,6 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
       const ano = mesDate.getFullYear()
       const mes = mesDate.getMonth()
 
-      // Calcular data de fechamento se não fornecida
-      let fechamento = dataFechamento
-      if (!fechamento) {
-        const diaFechamento = cartao.dia_vencimento - (cartao.dias_antes_fechamento || 7)
-        const diaFechAjustado = diaFechamento > 0 ? diaFechamento : 1
-        fechamento = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(diaFechAjustado).padStart(2, '0')}`
-      }
-
-      // Calcular data de vencimento se não fornecida
       let vencimento = dataVencimento
       if (!vencimento) {
         const ultimoDia = new Date(ano, mes + 1, 0).getDate()
@@ -1026,51 +999,20 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
         vencimento = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(diaVenc).padStart(2, '0')}`
       }
 
-      // Se a data de fechamento já passou, criar como fechada
-      const hoje = new Date()
-      const dataFech = new Date(fechamento + 'T12:00:00')
-      const statusInicial = hoje > dataFech ? 'fechada' : 'aberta'
-
       const { data: novaFatura, error: insertError } = await supabase
         .from('cartoes_credito_faturas')
         .insert({
           escritorio_id: cartao.escritorio_id,
           cartao_id: cartaoId,
           mes_referencia: mesReferencia,
-          data_fechamento: fechamento,
           data_vencimento: vencimento,
           valor_total: valorTotal || 0,
-          status: statusInicial,
+          status: 'pendente',
         })
         .select()
         .single()
 
       if (insertError) throw insertError
-
-      // Se criou como fechada, gerar despesa vinculada em financeiro_despesas
-      if (statusInicial === 'fechada' && novaFatura && (valorTotal || 0) > 0) {
-        const descricaoFatura = `Fatura ${cartao.nome} - ${mesReferencia.substring(5, 7)}/${mesReferencia.substring(0, 4)}`
-        const { data: despesa } = await supabase
-          .from('financeiro_despesas')
-          .insert({
-            escritorio_id: cartao.escritorio_id,
-            categoria: 'cartao_credito',
-            fornecedor: `${cartao.banco} - ${cartao.nome}`,
-            descricao: descricaoFatura,
-            valor: valorTotal,
-            data_vencimento: vencimento,
-            status: 'pendente',
-          })
-          .select('id')
-          .single()
-
-        if (despesa) {
-          await supabase
-            .from('cartoes_credito_faturas')
-            .update({ despesa_id: despesa.id })
-            .eq('id', novaFatura.id)
-        }
-      }
 
       return novaFatura
     } catch (err) {
@@ -1371,7 +1313,7 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
     // Faturas
     loadFaturas,
     getFatura,
-    fecharFatura,
+
     pagarFatura,
     limparFatura,
     // Importação

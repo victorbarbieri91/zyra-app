@@ -78,18 +78,11 @@ export default function CartaoCard({
             Paga
           </Badge>
         )
-      case 'fechada':
+      case 'pendente':
         return (
-          <Badge className="bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 font-medium">
-            <AlertCircle className="w-3 h-3 mr-1" />
-            Aguardando
-          </Badge>
-        )
-      case 'aberta':
-        return (
-          <Badge className="bg-slate-50 dark:bg-surface-0 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 font-medium">
+          <Badge className="bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 font-medium">
             <Calendar className="w-3 h-3 mr-1" />
-            Aberta
+            Pendente
           </Badge>
         )
       default:
@@ -204,13 +197,7 @@ export default function CartaoCard({
         {/* Info de fechamento/vencimento */}
         {fatura && (
           <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-4">
-            {fatura.status === 'aberta' && fatura.dias_para_fechamento > 0 && (
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                Fecha em {fatura.dias_para_fechamento} dias
-              </span>
-            )}
-            {fatura.status === 'fechada' && (
+            {fatura.status === 'pendente' && (
               <span
                 className={cn(
                   'flex items-center gap-1',
@@ -227,7 +214,7 @@ export default function CartaoCard({
               </span>
             )}
             <span className="text-slate-400">
-              {fatura.total_despesas} {fatura.total_despesas === 1 ? 'lançamento' : 'lançamentos'}
+              {fatura.total_lancamentos} {fatura.total_lancamentos === 1 ? 'lançamento' : 'lançamentos'}
             </span>
           </div>
         )}

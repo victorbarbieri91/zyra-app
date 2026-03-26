@@ -460,7 +460,7 @@ export default function CustasDespesasPage() {
                           />
                         </td>
                         <td className="p-3 text-xs text-slate-600 whitespace-nowrap">
-                          {formatBrazilDate(item.created_at)}
+                          {formatBrazilDate(item.data_vencimento)}
                         </td>
                         <td className="p-3">
                           <p className="text-xs font-medium text-[#34495e] max-w-[200px] truncate" title={getCasoLabel(item)}>

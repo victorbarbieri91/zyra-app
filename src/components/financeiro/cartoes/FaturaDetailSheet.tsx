@@ -374,7 +374,7 @@ export default function FaturaDetailSheet({
               <div className="flex-1 bg-slate-50 dark:bg-surface-1 rounded-lg p-3">
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wide">Total</p>
                 <p className="text-lg font-bold text-[#34495e] dark:text-slate-200">
-                  {formatCurrency(fatura?.valor_total ?? totalValor)}
+                  {formatCurrency(totalValor)}
                 </p>
               </div>
               <div className="bg-slate-50 dark:bg-surface-1 rounded-lg p-3 text-center min-w-[80px]">

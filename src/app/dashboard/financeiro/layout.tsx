@@ -83,10 +83,12 @@ export default function FinanceiroLayout({
   const [custasBadge, setCustasBadge] = useState(0)
 
   // Badge de custas pendentes (admin/Gerente) ou agendadas (owner/Sócio)
+  // Filtra: mês atual + atrasados (vencimento até fim do mês atual)
   useEffect(() => {
     if (!escritorioAtivo || !roleAtual) return
     const supabase = createClient()
     const fluxoFiltro = roleAtual === 'owner' ? 'agendado' : 'pendente'
+    const fimMes = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
 
     supabase
       .from('financeiro_despesas')
@@ -94,6 +96,7 @@ export default function FinanceiroLayout({
       .eq('escritorio_id', escritorioAtivo)
       .eq('fluxo_status', fluxoFiltro)
       .neq('status', 'cancelado')
+      .lte('data_vencimento', fimMes)
       .then(({ count }: { count: number | null }) => setCustasBadge(count || 0))
   }, [escritorioAtivo, roleAtual])
 

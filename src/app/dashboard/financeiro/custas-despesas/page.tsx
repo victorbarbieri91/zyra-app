@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,6 +43,8 @@ import {
   Clock,
   Banknote,
   ShieldCheck,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { useCustasDespesas, type CustaDespesa } from '@/hooks/useCustasDespesas'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
@@ -102,6 +104,13 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
   },
 }
 
+// Helpers de período
+const getInicioMes = (date: Date = new Date()) =>
+  new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0]
+
+const getFimMes = (date: Date = new Date()) =>
+  new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().split('T')[0]
+
 export default function CustasDespesasPage() {
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
@@ -120,6 +129,28 @@ export default function CustasDespesasPage() {
     agendarLote,
     liberarLote,
   } = useCustasDespesas()
+
+  // Navegação de mês — default = mês atual
+  const [mesRef, setMesRef] = useState(() => new Date())
+
+  // Setar período no filtro ao montar e ao navegar
+  useEffect(() => {
+    setFiltros(prev => ({
+      ...prev,
+      periodo: { inicio: getInicioMes(mesRef), fim: getFimMes(mesRef) },
+    }))
+  }, [mesRef]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const navegarMes = (direcao: -1 | 1) => {
+    setMesRef(prev => {
+      const novo = new Date(prev)
+      novo.setMonth(novo.getMonth() + direcao)
+      return novo
+    })
+  }
+
+  const getMesLabel = () =>
+    mesRef.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 
   // Modais
   const [modalDespesa, setModalDespesa] = useState(false)
@@ -325,6 +356,18 @@ export default function CustasDespesasPage() {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-3">
+            {/* Navegador de mês */}
+            <div className="flex items-center border border-slate-200 rounded-md h-9">
+              <Button variant="ghost" size="icon" className="h-9 w-8 rounded-r-none" onClick={() => navegarMes(-1)}>
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="text-sm font-medium px-3 min-w-[140px] text-center capitalize">
+                {getMesLabel()}
+              </span>
+              <Button variant="ghost" size="icon" className="h-9 w-8 rounded-l-none" onClick={() => navegarMes(1)}>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input

@@ -52,6 +52,14 @@ export interface FiltrosCustas {
   busca: string
 }
 
+// Helper: mês atual como período default
+const getMesAtual = (): { inicio: string; fim: string } => {
+  const now = new Date()
+  const inicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+  const fim = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+  return { inicio, fim }
+}
+
 export function useCustasDespesas() {
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
@@ -60,7 +68,7 @@ export function useCustasDespesas() {
   const [loading, setLoading] = useState(true)
   const [filtros, setFiltros] = useState<FiltrosCustas>({
     fluxo_status: 'todos',
-    periodo: null,
+    periodo: getMesAtual(),
     processo_id: null,
     cliente_id: null,
     categoria: null,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -67,6 +67,8 @@ import { formatCurrency } from '@/lib/utils'
 import { formatBrazilDate } from '@/lib/timezone'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { getEscritoriosDoGrupo } from '@/lib/supabase/escritorio-helpers'
+import ContaBancariaSelect from '@/components/financeiro/ContaBancariaSelect'
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   rascunho: { label: 'Rascunho', color: 'bg-slate-100 text-slate-700 border-slate-200' },
@@ -101,6 +103,20 @@ interface NotasDebitoContentProps {
 export default function NotasDebitoContent({ embedded = false, showEscritorio = false, escritoriosMap, escritorioColorMap }: NotasDebitoContentProps) {
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
+  const [grupoIds, setGrupoIds] = useState<string[]>([])
+
+  useEffect(() => {
+    const loadGrupo = async () => {
+      try {
+        const escritorios = await getEscritoriosDoGrupo()
+        setGrupoIds(escritorios.map(e => e.id))
+      } catch {
+        if (escritorioAtivo) setGrupoIds([escritorioAtivo])
+      }
+    }
+    loadGrupo()
+  }, [escritorioAtivo])
+
   const {
     notas,
     loading,
@@ -135,7 +151,6 @@ export default function NotasDebitoContent({ embedded = false, showEscritorio = 
   // Modal pagar
   const [modalPagar, setModalPagar] = useState<NotaDebito | null>(null)
   const [contaPagar, setContaPagar] = useState('')
-  const [contasBancarias, setContasBancarias] = useState<Array<{ id: string; banco: string; numero_conta: string }>>([])
 
   const [submitting, setSubmitting] = useState(false)
 
@@ -229,14 +244,7 @@ export default function NotasDebitoContent({ embedded = false, showEscritorio = 
 
   const handleAbrirPagar = async (nota: NotaDebito) => {
     setContaPagar(nota.conta_bancaria_id || '')
-    if (!escritorioAtivo) return
-    const { data } = await supabase
-      .from('financeiro_contas_bancarias')
-      .select('id, banco, numero_conta')
-      .eq('escritorio_id', escritorioAtivo)
-      .eq('ativa', true)
-      .order('banco')
-    setContasBancarias(data || [])
+    if (!grupoIds.length) return
     setModalPagar(nota)
   }
 
@@ -773,14 +781,12 @@ export default function NotasDebitoContent({ embedded = false, showEscritorio = 
             </div>
             <div>
               <Label className="text-xs">Conta Bancária *</Label>
-              <Select value={contaPagar} onValueChange={setContaPagar}>
-                <SelectTrigger><SelectValue placeholder="Selecione a conta" /></SelectTrigger>
-                <SelectContent>
-                  {contasBancarias.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.banco} - {c.numero_conta}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ContaBancariaSelect
+                value={contaPagar}
+                onValueChange={setContaPagar}
+                escritorioIds={grupoIds}
+                placeholder="Selecione a conta"
+              />
             </div>
           </div>
           <DialogFooter>

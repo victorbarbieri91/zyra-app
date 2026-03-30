@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
+import { getEscritoriosDoGrupo } from '@/lib/supabase/escritorio-helpers'
 import {
   LayoutDashboard,
   Clock,
@@ -84,20 +85,30 @@ export default function FinanceiroLayout({
 
   // Badge de custas pendentes (admin/Gerente) ou agendadas (owner/Sócio)
   // Filtra: mês atual + atrasados (vencimento até fim do mês atual)
+  // Consolida todos os escritórios do grupo (matriz/filial)
   useEffect(() => {
     if (!escritorioAtivo || !roleAtual) return
-    const supabase = createClient()
-    const fluxoFiltro = roleAtual === 'owner' ? 'agendado' : 'pendente'
-    const fimMes = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
-
-    supabase
-      .from('financeiro_despesas')
-      .select('id', { count: 'exact', head: true })
-      .eq('escritorio_id', escritorioAtivo)
-      .eq('fluxo_status', fluxoFiltro)
-      .neq('status', 'cancelado')
-      .lte('data_vencimento', fimMes)
-      .then(({ count }: { count: number | null }) => setCustasBadge(count || 0))
+    const loadBadge = async () => {
+      try {
+        const supabase = createClient()
+        const escritorios = await getEscritoriosDoGrupo()
+        const ids = escritorios.map(e => e.id)
+        if (!ids.length) return
+        const fluxoFiltro = roleAtual === 'owner' ? 'agendado' : 'pendente'
+        const fimMes = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
+        const { count } = await supabase
+          .from('financeiro_despesas')
+          .select('id', { count: 'exact', head: true })
+          .in('escritorio_id', ids)
+          .eq('fluxo_status', fluxoFiltro)
+          .neq('status', 'cancelado')
+          .lte('data_vencimento', fimMes)
+        setCustasBadge(count || 0)
+      } catch (error) {
+        console.error('Erro badge:', error)
+      }
+    }
+    loadBadge()
   }, [escritorioAtivo, roleAtual])
 
   const checkScroll = useCallback(() => {

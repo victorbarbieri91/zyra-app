@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -55,6 +55,9 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import DespesaModal from '@/components/financeiro/DespesaModal'
 import DespesaDetalhesModal from '@/components/financeiro/DespesaDetalhesModal'
+import ContaBancariaSelect from '@/components/financeiro/ContaBancariaSelect'
+import EscritorioGrupoSelector from '@/components/financeiro/EscritorioGrupoSelector'
+import { getEscritoriosDoGrupo, type EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 
 const CATEGORIAS_LABELS: Record<string, string> = {
   custas: 'Custas Processuais',
@@ -114,6 +117,26 @@ const getFimMes = (date: Date = new Date()) =>
 export default function CustasDespesasPage() {
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
+
+  // Visão consolidada do grupo
+  const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
+  const [escritoriosSelecionados, setEscritoriosSelecionados] = useState<string[]>([])
+
+  useEffect(() => {
+    const loadGrupo = async () => {
+      try {
+        const escritorios = await getEscritoriosDoGrupo()
+        setEscritoriosGrupo(escritorios)
+        if (escritorios.length > 0) {
+          setEscritoriosSelecionados(escritorios.map(e => e.id))
+        }
+      } catch (error) {
+        console.error('Erro ao carregar escritórios do grupo:', error)
+      }
+    }
+    loadGrupo()
+  }, [])
+
   const {
     custas,
     loading,
@@ -128,7 +151,7 @@ export default function CustasDespesasPage() {
     cancelar,
     agendarLote,
     liberarLote,
-  } = useCustasDespesas()
+  } = useCustasDespesas(escritoriosSelecionados)
 
   // Navegação de mês — default = mês atual
   const [mesRef, setMesRef] = useState(() => new Date())
@@ -165,31 +188,15 @@ export default function CustasDespesasPage() {
   const [rejeitarMotivo, setRejeitarMotivo] = useState('')
   const [pagarForm, setPagarForm] = useState({ conta: '', forma: '' })
 
-  // Contas bancárias
-  const [contasBancarias, setContasBancarias] = useState<Array<{ id: string; banco: string; numero_conta: string }>>([])
-
   // Seleção em lote
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
 
   const [submitting, setSubmitting] = useState(false)
 
-  // Carregar contas bancárias
-  const carregarContas = async () => {
-    if (!escritorioAtivo) return
-    const { data } = await supabase
-      .from('financeiro_contas_bancarias')
-      .select('id, banco, numero_conta')
-      .eq('escritorio_id', escritorioAtivo)
-      .eq('ativa', true)
-      .order('banco')
-    setContasBancarias(data || [])
-  }
-
   // === Handlers ===
 
   const handleAbrirAgendar = (item: CustaDespesa) => {
     setAgendarForm({ data: item.data_vencimento || '', conta: '', obs: '' })
-    carregarContas()
     setModalAgendar(item)
   }
 
@@ -239,7 +246,6 @@ export default function CustasDespesasPage() {
 
   const handleAbrirPagar = (item: CustaDespesa) => {
     setPagarForm({ conta: item.conta_bancaria_id || '', forma: '' })
-    carregarContas()
     setModalPagar(item)
   }
 
@@ -330,6 +336,13 @@ export default function CustasDespesasPage() {
     return true
   }
 
+  const showMultiEscritorio = escritoriosSelecionados.length > 1
+
+  const getEscritorioNome = (escritorioId: string) => {
+    const esc = escritoriosGrupo.find(e => e.id === escritorioId)
+    return esc?.apelido || esc?.nome || ''
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
@@ -341,6 +354,14 @@ export default function CustasDespesasPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <EscritorioGrupoSelector
+            escritoriosGrupo={escritoriosGrupo}
+            selecionados={escritoriosSelecionados}
+            onChange={setEscritoriosSelecionados}
+            escritorioAtivoId={escritorioAtivo}
+            label="Visualizar custas de:"
+            footerLabel="custas"
+          />
           <Button variant="outline" size="sm" onClick={recarregar} disabled={loading}>
             <RefreshCw className={cn('w-4 h-4 mr-1', loading && 'animate-spin')} />
             Atualizar
@@ -438,6 +459,9 @@ export default function CustasDespesasPage() {
                       />
                     </th>
                     <th className="p-3 text-left text-xs font-medium text-slate-500">Data</th>
+                    {showMultiEscritorio && (
+                      <th className="p-3 text-left text-xs font-medium text-slate-500">Escritório</th>
+                    )}
                     <th className="p-3 text-left text-xs font-medium text-slate-500">Processo / Caso</th>
                     <th className="p-3 text-left text-xs font-medium text-slate-500">Descrição</th>
                     <th className="p-3 text-left text-xs font-medium text-slate-500">Categoria</th>
@@ -462,6 +486,13 @@ export default function CustasDespesasPage() {
                         <td className="p-3 text-xs text-slate-600 whitespace-nowrap">
                           {formatBrazilDate(item.data_vencimento)}
                         </td>
+                        {showMultiEscritorio && (
+                          <td className="p-3">
+                            <span className="text-[10px] font-medium text-[#46627f] bg-slate-100 px-1.5 py-0.5 rounded truncate max-w-[120px] inline-block">
+                              {getEscritorioNome(item.escritorio_id)}
+                            </span>
+                          </td>
+                        )}
                         <td className="p-3">
                           <p className="text-xs font-medium text-[#34495e] max-w-[200px] truncate" title={getCasoLabel(item)}>
                             {getCasoLabel(item)}
@@ -603,14 +634,11 @@ export default function CustasDespesasPage() {
             </div>
             <div>
               <Label className="text-xs">Conta Bancária</Label>
-              <Select value={agendarForm.conta} onValueChange={v => setAgendarForm({ ...agendarForm, conta: v })}>
-                <SelectTrigger><SelectValue placeholder="Selecione a conta" /></SelectTrigger>
-                <SelectContent>
-                  {contasBancarias.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.banco} - {c.numero_conta}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ContaBancariaSelect
+                value={agendarForm.conta}
+                onValueChange={v => setAgendarForm({ ...agendarForm, conta: v })}
+                escritorioIds={escritoriosSelecionados}
+              />
             </div>
             <div>
               <Label className="text-xs">Observações</Label>
@@ -681,14 +709,11 @@ export default function CustasDespesasPage() {
             </div>
             <div>
               <Label className="text-xs">Conta Bancária *</Label>
-              <Select value={pagarForm.conta} onValueChange={v => setPagarForm({ ...pagarForm, conta: v })}>
-                <SelectTrigger><SelectValue placeholder="Selecione a conta" /></SelectTrigger>
-                <SelectContent>
-                  {contasBancarias.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.banco} - {c.numero_conta}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ContaBancariaSelect
+                value={pagarForm.conta}
+                onValueChange={v => setPagarForm({ ...pagarForm, conta: v })}
+                escritorioIds={escritoriosSelecionados}
+              />
             </div>
             <div>
               <Label className="text-xs">Forma de Pagamento</Label>

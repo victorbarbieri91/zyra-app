@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { toast } from 'sonner'
@@ -60,9 +60,15 @@ const getMesAtual = (): { inicio: string; fim: string } => {
   return { inicio, fim }
 }
 
-export function useCustasDespesas() {
+export function useCustasDespesas(escritorioIds?: string[]) {
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
+
+  // Se receber array de IDs (visão consolidada), usa eles. Senão, usa o ativo.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const idsParaFiltrar = useMemo(() => {
+    return escritorioIds && escritorioIds.length > 0 ? escritorioIds : escritorioAtivo ? [escritorioAtivo] : []
+  }, [JSON.stringify(escritorioIds), escritorioAtivo])
 
   const [custas, setCustas] = useState<CustaDespesa[]>([])
   const [loading, setLoading] = useState(true)
@@ -76,7 +82,7 @@ export function useCustasDespesas() {
   })
 
   const carregarCustas = useCallback(async () => {
-    if (!escritorioAtivo) return
+    if (!idsParaFiltrar.length) return
 
     try {
       setLoading(true)
@@ -90,7 +96,7 @@ export function useCustasDespesas() {
           cliente:crm_pessoas!cliente_id(nome_completo),
           advogado:profiles!advogado_id(nome_completo)
         `)
-        .eq('escritorio_id', escritorioAtivo)
+        .in('escritorio_id', idsParaFiltrar)
         .not('fluxo_status', 'is', null)
         .neq('fluxo_status', 'cancelado')
         .neq('fluxo_status', 'pago')
@@ -170,7 +176,7 @@ export function useCustasDespesas() {
     } finally {
       setLoading(false)
     }
-  }, [escritorioAtivo, filtros, supabase])
+  }, [idsParaFiltrar, filtros, supabase])
 
   useEffect(() => {
     carregarCustas()

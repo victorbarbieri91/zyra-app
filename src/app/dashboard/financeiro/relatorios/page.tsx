@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
+import { getEscritoriosDoGrupo, type EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
+import EscritorioGrupoSelector from '@/components/financeiro/EscritorioGrupoSelector'
 import { cn } from '@/lib/utils'
 import { format, parseISO, subMonths, startOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -64,6 +66,8 @@ export default function RelatoriosFinanceirosPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [inadimplencia, setInadimplencia] = useState<{ taxa: number; valor: number }>({ taxa: 0, valor: 0 })
+  const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
+  const [escritoriosSelecionados, setEscritoriosSelecionados] = useState<string[]>([])
 
   // Calcula quantos meses carregar baseado no período selecionado
   const getMesesPeriodo = useCallback(() => {
@@ -81,9 +85,26 @@ export default function RelatoriosFinanceirosPage() {
     }
   }, [periodo])
 
+  // Carregar escritórios do grupo e inicializar seleção
+  useEffect(() => {
+    if (!escritorioAtivo) return
+    const loadGrupo = async () => {
+      try {
+        const escritorios = await getEscritoriosDoGrupo()
+        setEscritoriosGrupo(escritorios)
+        setEscritoriosSelecionados(escritorios.map(e => e.id))
+      } catch (err) {
+        console.error('Erro ao carregar grupo:', err)
+        // Fallback: usar apenas o escritório ativo
+        setEscritoriosSelecionados([escritorioAtivo])
+      }
+    }
+    loadGrupo()
+  }, [escritorioAtivo])
+
   // Carregar dados do DRE
   const loadDRE = useCallback(async () => {
-    if (!escritorioAtivo) return
+    if (!escritoriosSelecionados.length) return
 
     try {
       const meses = getMesesPeriodo()
@@ -91,7 +112,7 @@ export default function RelatoriosFinanceirosPage() {
       const { data, error: dreError } = await supabase
         .from('v_dre')
         .select('mes_referencia, receita_bruta, despesas_totais, resultado_liquido, margem_liquida')
-        .eq('escritorio_id', escritorioAtivo)
+        .in('escritorio_id', escritoriosSelecionados)
         .order('mes_referencia', { ascending: false })
         .limit(meses)
 
@@ -113,11 +134,11 @@ export default function RelatoriosFinanceirosPage() {
       console.error('Erro ao carregar DRE:', err)
       setError('Erro ao carregar dados do DRE')
     }
-  }, [escritorioAtivo, supabase, getMesesPeriodo])
+  }, [escritoriosSelecionados, supabase, getMesesPeriodo])
 
   // Carregar categorias de despesas
   const loadCategoriasDespesas = useCallback(async () => {
-    if (!escritorioAtivo) return
+    if (!escritoriosSelecionados.length) return
 
     try {
       const meses = getMesesPeriodo()
@@ -126,7 +147,7 @@ export default function RelatoriosFinanceirosPage() {
       const { data, error: despesasError } = await supabase
         .from('despesas')
         .select('categoria, valor')
-        .eq('escritorio_id', escritorioAtivo)
+        .in('escritorio_id', escritoriosSelecionados)
         .eq('status', 'pago')
         .gte('data_pagamento', dataInicio)
 
@@ -158,11 +179,11 @@ export default function RelatoriosFinanceirosPage() {
     } catch (err) {
       console.error('Erro ao carregar categorias de despesas:', err)
     }
-  }, [escritorioAtivo, supabase, getMesesPeriodo])
+  }, [escritoriosSelecionados, supabase, getMesesPeriodo])
 
   // Carregar fontes de receita
   const loadFontesReceita = useCallback(async () => {
-    if (!escritorioAtivo) return
+    if (!escritoriosSelecionados.length) return
 
     try {
       const meses = getMesesPeriodo()
@@ -181,7 +202,7 @@ export default function RelatoriosFinanceirosPage() {
           )
         `
         )
-        .eq('escritorio_id', escritorioAtivo)
+        .in('escritorio_id', escritoriosSelecionados)
 
       if (honorariosError) throw honorariosError
 
@@ -222,11 +243,11 @@ export default function RelatoriosFinanceirosPage() {
     } catch (err) {
       console.error('Erro ao carregar fontes de receita:', err)
     }
-  }, [escritorioAtivo, supabase, getMesesPeriodo])
+  }, [escritoriosSelecionados, supabase, getMesesPeriodo])
 
   // Carregar taxa de inadimplência
   const loadInadimplencia = useCallback(async () => {
-    if (!escritorioAtivo) return
+    if (!escritoriosSelecionados.length) return
 
     try {
       // Buscar parcelas em aberto e atrasadas
@@ -241,7 +262,7 @@ export default function RelatoriosFinanceirosPage() {
           )
         `
         )
-        .eq('honorarios.escritorio_id', escritorioAtivo)
+        .in('honorarios.escritorio_id', escritoriosSelecionados)
         .in('status', ['pendente', 'atrasado'])
 
       if (parcelasError) throw parcelasError
@@ -257,11 +278,11 @@ export default function RelatoriosFinanceirosPage() {
     } catch (err) {
       console.error('Erro ao carregar inadimplência:', err)
     }
-  }, [escritorioAtivo, supabase])
+  }, [escritoriosSelecionados, supabase])
 
   // Carregar todos os dados
   useEffect(() => {
-    if (escritorioAtivo) {
+    if (escritoriosSelecionados.length) {
       setLoading(true)
       setError(null)
 
@@ -269,7 +290,7 @@ export default function RelatoriosFinanceirosPage() {
         .catch(() => setError('Erro ao carregar dados'))
         .finally(() => setLoading(false))
     }
-  }, [escritorioAtivo, periodo, loadDRE, loadCategoriasDespesas, loadFontesReceita, loadInadimplencia])
+  }, [escritoriosSelecionados, periodo, loadDRE, loadCategoriasDespesas, loadFontesReceita, loadInadimplencia])
 
   const getTotais = () => {
     const receitas = relatorioData.reduce((sum, r) => sum + r.receitas, 0)
@@ -311,7 +332,14 @@ export default function RelatoriosFinanceirosPage() {
             Análise consolidada de receitas, despesas e performance
           </p>
         </div>
-        <div className="flex gap-2.5">
+        <div className="flex gap-2.5 items-center">
+          {escritoriosGrupo.length > 1 && (
+            <EscritorioGrupoSelector
+              escritoriosGrupo={escritoriosGrupo}
+              selecionados={escritoriosSelecionados}
+              onChange={setEscritoriosSelecionados}
+            />
+          )}
           <select
             value={periodo}
             onChange={(e) => setPeriodo(e.target.value as typeof periodo)}

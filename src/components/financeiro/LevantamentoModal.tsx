@@ -36,6 +36,8 @@ import { useLevantamentos } from '@/hooks/useLevantamentos'
 import { formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { getEscritoriosDoGrupo } from '@/lib/supabase/escritorio-helpers'
+import ContaBancariaSelect from '@/components/financeiro/ContaBancariaSelect'
 
 // =====================================================
 // INTERFACES
@@ -116,6 +118,19 @@ export default function LevantamentoModal({
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
   const { criarLevantamento } = useLevantamentos()
+  const [grupoIds, setGrupoIds] = useState<string[]>([])
+
+  useEffect(() => {
+    const loadGrupo = async () => {
+      try {
+        const escritorios = await getEscritoriosDoGrupo()
+        setGrupoIds(escritorios.map(e => e.id))
+      } catch {
+        if (escritorioAtivo) setGrupoIds([escritorioAtivo])
+      }
+    }
+    loadGrupo()
+  }, [escritorioAtivo])
 
   // Form state
   const [descricao, setDescricao] = useState('')
@@ -163,11 +178,11 @@ export default function LevantamentoModal({
   // =====================================================
 
   const carregarContas = async () => {
-    if (!escritorioAtivo) return
+    if (!grupoIds.length) return
     const { data } = await supabase
       .from('financeiro_contas_bancarias')
       .select('id, banco, numero_conta')
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', grupoIds)
       .eq('ativa', true)
       .order('banco')
     setContasBancarias(data || [])
@@ -272,7 +287,7 @@ export default function LevantamentoModal({
   // Buscar processos/consultas (debounce 300ms)
   useEffect(() => {
     const buscar = async () => {
-      if (!escritorioAtivo || searchTerm.length < 2) {
+      if (!grupoIds.length || searchTerm.length < 2) {
         setProcessos([])
         setConsultas([])
         return
@@ -284,7 +299,7 @@ export default function LevantamentoModal({
           const { data: processosData } = await supabase
             .from('processos_processos')
             .select('id, numero_cnj, numero_pasta, parte_contraria, cliente_id')
-            .eq('escritorio_id', escritorioAtivo)
+            .in('escritorio_id', grupoIds)
             .or(`numero_cnj.ilike.%${searchTerm}%,numero_pasta.ilike.%${searchTerm}%,parte_contraria.ilike.%${searchTerm}%`)
             .limit(10)
 
@@ -312,7 +327,7 @@ export default function LevantamentoModal({
           const { data: consultasData } = await supabase
             .from('consultivo_consultas')
             .select('id, numero, titulo, cliente_id')
-            .eq('escritorio_id', escritorioAtivo)
+            .in('escritorio_id', grupoIds)
             .or(`titulo.ilike.%${searchTerm}%,numero.ilike.%${searchTerm}%`)
             .limit(10)
 
@@ -346,7 +361,7 @@ export default function LevantamentoModal({
 
     const debounce = setTimeout(buscar, 300)
     return () => clearTimeout(debounce)
-  }, [searchTerm, vinculoTipo, escritorioAtivo, supabase])
+  }, [searchTerm, vinculoTipo, grupoIds, supabase])
 
   // =====================================================
   // SUBMIT
@@ -669,18 +684,12 @@ export default function LevantamentoModal({
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-xs">Conta bancária *</Label>
-                    <Select value={contaBancariaId} onValueChange={setContaBancariaId}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {contasBancarias.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.banco} - CC: {c.numero_conta}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ContaBancariaSelect
+                      value={contaBancariaId}
+                      onValueChange={setContaBancariaId}
+                      escritorioIds={grupoIds}
+                      placeholder="Selecione..."
+                    />
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-xs">Forma de pagamento</Label>
@@ -739,18 +748,12 @@ export default function LevantamentoModal({
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-xs">Conta de saída *</Label>
-                    <Select value={contaRepasseId} onValueChange={setContaRepasseId}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {contasBancarias.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.banco} - CC: {c.numero_conta}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ContaBancariaSelect
+                      value={contaRepasseId}
+                      onValueChange={setContaRepasseId}
+                      escritorioIds={grupoIds}
+                      placeholder="Selecione..."
+                    />
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-xs">Forma de pagamento</Label>

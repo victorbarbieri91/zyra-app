@@ -40,7 +40,9 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
+import { getEscritoriosDoGrupo } from '@/lib/supabase/escritorio-helpers'
 import { toast } from 'sonner'
+import ContaBancariaSelect from '@/components/financeiro/ContaBancariaSelect'
 import { cn } from '@/lib/utils'
 import { formatDateForDB, formatBrazilDate } from '@/lib/timezone'
 import LancamentoModalidadeSelector, { DEFAULT_CONFIG_RECORRENCIA, type LancamentoModalidade } from './LancamentoModalidadeSelector'
@@ -204,6 +206,21 @@ export default function DespesaModal({
   const { escritorioAtivo } = useEscritorioAtivo()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // IDs do grupo para visão consolidada
+  const [grupoIds, setGrupoIds] = useState<string[]>([])
+
+  useEffect(() => {
+    const loadGrupo = async () => {
+      try {
+        const escritorios = await getEscritoriosDoGrupo()
+        setGrupoIds(escritorios.map(e => e.id))
+      } catch {
+        if (escritorioAtivo) setGrupoIds([escritorioAtivo])
+      }
+    }
+    loadGrupo()
+  }, [escritorioAtivo])
+
   // Form state
   const [formData, setFormData] = useState<FormData>(makeInitialFormData(false))
   const [loading, setLoading] = useState(false)
@@ -225,25 +242,10 @@ export default function DespesaModal({
   // Loading state para vinculo pre-carregado
   const [loadingVinculo, setLoadingVinculo] = useState(false)
 
-  // Contas bancárias
-  const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([])
-
   const isEditing = !!editData
 
   const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
-  }
-
-  // Carregar contas bancárias
-  const carregarContas = async () => {
-    if (!escritorioAtivo) return
-    const { data } = await supabase
-      .from('financeiro_contas_bancarias')
-      .select('id, banco, numero_conta')
-      .eq('escritorio_id', escritorioAtivo)
-      .eq('ativa', true)
-      .order('banco')
-    setContasBancarias(data || [])
   }
 
   // Carregar processo por ID
@@ -307,8 +309,6 @@ export default function DespesaModal({
   // Reset form quando abrir
   useEffect(() => {
     if (open) {
-      carregarContas()
-
       if (editData) {
         // Modo edição: preencher form com dados existentes
         const isPago = editData.status === 'pago' || editData.fluxo_status === 'pago'
@@ -370,7 +370,7 @@ export default function DespesaModal({
   // Buscar processos/consultas
   useEffect(() => {
     const buscar = async () => {
-      if (!escritorioAtivo || searchTerm.length < 2) {
+      if (!grupoIds.length || searchTerm.length < 2) {
         setProcessos([])
         setConsultas([])
         return
@@ -382,14 +382,14 @@ export default function DespesaModal({
           const { data: processosData } = await supabase
             .from('processos_processos')
             .select('id, numero_cnj, numero_pasta, parte_contraria, cliente_id')
-            .eq('escritorio_id', escritorioAtivo)
+            .in('escritorio_id', grupoIds)
             .or(`numero_cnj.ilike.%${searchTerm}%,numero_pasta.ilike.%${searchTerm}%,parte_contraria.ilike.%${searchTerm}%`)
             .limit(15)
 
           const { data: clientesData } = await supabase
             .from('crm_pessoas')
             .select('id, nome_completo')
-            .eq('escritorio_id', escritorioAtivo)
+            .in('escritorio_id', grupoIds)
             .ilike('nome_completo', `%${searchTerm}%`)
             .limit(10)
 
@@ -400,7 +400,7 @@ export default function DespesaModal({
             const { data: pcData } = await supabase
               .from('processos_processos')
               .select('id, numero_cnj, numero_pasta, parte_contraria, cliente_id')
-              .eq('escritorio_id', escritorioAtivo)
+              .in('escritorio_id', grupoIds)
               .in('cliente_id', Array.from(clienteMap.keys()))
               .limit(10)
             processosCliente = pcData || []
@@ -437,14 +437,14 @@ export default function DespesaModal({
           const { data: consultasResultado } = await supabase
             .from('consultivo_consultas')
             .select('id, numero, titulo, cliente_id')
-            .eq('escritorio_id', escritorioAtivo)
+            .in('escritorio_id', grupoIds)
             .or(`titulo.ilike.%${searchTerm}%,numero.ilike.%${searchTerm}%`)
             .limit(15)
 
           const { data: clientesConsultas } = await supabase
             .from('crm_pessoas')
             .select('id, nome_completo')
-            .eq('escritorio_id', escritorioAtivo)
+            .in('escritorio_id', grupoIds)
             .ilike('nome_completo', `%${searchTerm}%`)
             .limit(10)
 
@@ -455,7 +455,7 @@ export default function DespesaModal({
             const { data: ccData } = await supabase
               .from('consultivo_consultas')
               .select('id, numero, titulo, cliente_id')
-              .eq('escritorio_id', escritorioAtivo)
+              .in('escritorio_id', grupoIds)
               .in('cliente_id', Array.from(clienteMapConsultas.keys()))
               .limit(10)
             consultasDoCliente = ccData || []
@@ -1255,18 +1255,11 @@ export default function DespesaModal({
                   </div>
                   <div>
                     <Label className="text-xs">Conta Bancária *</Label>
-                    <Select value={formData.conta_bancaria_id} onValueChange={(v) => updateField('conta_bancaria_id', v)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a conta" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {contasBancarias.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.banco} - {c.numero_conta}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ContaBancariaSelect
+                      value={formData.conta_bancaria_id}
+                      onValueChange={(v) => updateField('conta_bancaria_id', v)}
+                      escritorioIds={grupoIds}
+                    />
                   </div>
                 </div>
                 <div className="w-1/2">

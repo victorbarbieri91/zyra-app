@@ -39,6 +39,8 @@ import LancamentoModalidadeSelector, {
   type LancamentoModalidade,
 } from './LancamentoModalidadeSelector'
 import type { ConfigRecorrencia } from '@/hooks/useReceitas'
+import { getEscritoriosDoGrupo } from '@/lib/supabase/escritorio-helpers'
+import ContaBancariaSelect from '@/components/financeiro/ContaBancariaSelect'
 
 // =====================================================
 // INTERFACES
@@ -144,6 +146,21 @@ export default function ReceitaModal({
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
 
+  // IDs do grupo para visão consolidada
+  const [grupoIds, setGrupoIds] = useState<string[]>([])
+
+  useEffect(() => {
+    const loadGrupo = async () => {
+      try {
+        const escritorios = await getEscritoriosDoGrupo()
+        setGrupoIds(escritorios.map(e => e.id))
+      } catch {
+        if (escritorioAtivo) setGrupoIds([escritorioAtivo])
+      }
+    }
+    loadGrupo()
+  }, [escritorioAtivo])
+
   // Form state
   const [formData, setFormData] = useState<FormData>(makeInitialFormData())
   const [loading, setLoading] = useState(false)
@@ -165,11 +182,11 @@ export default function ReceitaModal({
   // =====================================================
 
   const carregarContas = async () => {
-    if (!escritorioAtivo) return
+    if (!grupoIds.length) return
     const { data } = await supabase
       .from('financeiro_contas_bancarias')
       .select('id, banco, numero_conta')
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', grupoIds)
       .eq('ativa', true)
       .order('banco')
     setContasBancarias(data || [])
@@ -294,7 +311,7 @@ export default function ReceitaModal({
   // Buscar processos/consultas (debounce 300ms)
   useEffect(() => {
     const buscar = async () => {
-      if (!escritorioAtivo || searchTerm.length < 2) {
+      if (!grupoIds.length || searchTerm.length < 2) {
         setProcessos([])
         setConsultas([])
         return
@@ -306,14 +323,14 @@ export default function ReceitaModal({
           const { data: processosData } = await supabase
             .from('processos_processos')
             .select('id, numero_cnj, numero_pasta, parte_contraria, cliente_id')
-            .eq('escritorio_id', escritorioAtivo)
+            .in('escritorio_id', grupoIds)
             .or(`numero_cnj.ilike.%${searchTerm}%,numero_pasta.ilike.%${searchTerm}%,parte_contraria.ilike.%${searchTerm}%`)
             .limit(15)
 
           const { data: clientesData } = await supabase
             .from('crm_pessoas')
             .select('id, nome_completo')
-            .eq('escritorio_id', escritorioAtivo)
+            .in('escritorio_id', grupoIds)
             .ilike('nome_completo', `%${searchTerm}%`)
             .limit(10)
 
@@ -324,7 +341,7 @@ export default function ReceitaModal({
             const { data: pcData } = await supabase
               .from('processos_processos')
               .select('id, numero_cnj, numero_pasta, parte_contraria, cliente_id')
-              .eq('escritorio_id', escritorioAtivo)
+              .in('escritorio_id', grupoIds)
               .in('cliente_id', Array.from(clienteMap.keys()))
               .limit(10)
             processosCliente = pcData || []
@@ -360,14 +377,14 @@ export default function ReceitaModal({
           const { data: consultasResultado } = await supabase
             .from('consultivo_consultas')
             .select('id, numero, titulo, cliente_id')
-            .eq('escritorio_id', escritorioAtivo)
+            .in('escritorio_id', grupoIds)
             .or(`titulo.ilike.%${searchTerm}%,numero.ilike.%${searchTerm}%`)
             .limit(15)
 
           const { data: clientesConsultas } = await supabase
             .from('crm_pessoas')
             .select('id, nome_completo')
-            .eq('escritorio_id', escritorioAtivo)
+            .in('escritorio_id', grupoIds)
             .ilike('nome_completo', `%${searchTerm}%`)
             .limit(10)
 
@@ -378,7 +395,7 @@ export default function ReceitaModal({
             const { data: ccData } = await supabase
               .from('consultivo_consultas')
               .select('id, numero, titulo, cliente_id')
-              .eq('escritorio_id', escritorioAtivo)
+              .in('escritorio_id', grupoIds)
               .in('cliente_id', Array.from(clienteMapConsultas.keys()))
               .limit(10)
             consultasDoCliente = ccData || []
@@ -420,7 +437,7 @@ export default function ReceitaModal({
 
     const debounce = setTimeout(buscar, 300)
     return () => clearTimeout(debounce)
-  }, [searchTerm, vinculoTipo, escritorioAtivo, supabase])
+  }, [searchTerm, vinculoTipo, grupoIds, supabase])
 
   // =====================================================
   // HELPERS
@@ -936,18 +953,11 @@ export default function ReceitaModal({
                   </div>
                   <div>
                     <Label className="text-xs">Conta Bancária *</Label>
-                    <Select value={formData.conta_bancaria_id} onValueChange={(v) => updateField('conta_bancaria_id', v)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a conta" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {contasBancarias.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.banco} - {c.numero_conta}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ContaBancariaSelect
+                      value={formData.conta_bancaria_id}
+                      onValueChange={(v) => updateField('conta_bancaria_id', v)}
+                      escritorioIds={grupoIds}
+                    />
                   </div>
                 </div>
                 <div className="w-1/2">

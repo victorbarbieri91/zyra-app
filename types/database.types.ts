@@ -3532,7 +3532,6 @@ export type Database = {
           data_inicio: string
           data_ultimo_reajuste: string | null
           descricao: string | null
-          escritorio_cobranca_id: string | null
           escritorio_id: string
           forma_cobranca: string | null
           formas_pagamento: Json | null
@@ -3560,7 +3559,6 @@ export type Database = {
           data_inicio: string
           data_ultimo_reajuste?: string | null
           descricao?: string | null
-          escritorio_cobranca_id?: string | null
           escritorio_id: string
           forma_cobranca?: string | null
           formas_pagamento?: Json | null
@@ -3588,7 +3586,6 @@ export type Database = {
           data_inicio?: string
           data_ultimo_reajuste?: string | null
           descricao?: string | null
-          escritorio_cobranca_id?: string | null
           escritorio_id?: string
           forma_cobranca?: string | null
           formas_pagamento?: Json | null
@@ -3623,13 +3620,6 @@ export type Database = {
           {
             foreignKeyName: "contratos_honorarios_escritorio_id_fkey"
             columns: ["escritorio_id"]
-            isOneToOne: false
-            referencedRelation: "escritorios"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "financeiro_contratos_honorarios_escritorio_cobranca_id_fkey"
-            columns: ["escritorio_cobranca_id"]
             isOneToOne: false
             referencedRelation: "escritorios"
             referencedColumns: ["id"]
@@ -4044,7 +4034,6 @@ export type Database = {
           data_vencimento: string
           descricao: string | null
           enviada_em: string | null
-          escritorio_cobranca_id: string | null
           escritorio_id: string
           forma_pagamento_preferencial: string | null
           gerada_automaticamente: boolean | null
@@ -4072,7 +4061,6 @@ export type Database = {
           data_vencimento: string
           descricao?: string | null
           enviada_em?: string | null
-          escritorio_cobranca_id?: string | null
           escritorio_id: string
           forma_pagamento_preferencial?: string | null
           gerada_automaticamente?: boolean | null
@@ -4100,7 +4088,6 @@ export type Database = {
           data_vencimento?: string
           descricao?: string | null
           enviada_em?: string | null
-          escritorio_cobranca_id?: string | null
           escritorio_id?: string
           forma_pagamento_preferencial?: string | null
           gerada_automaticamente?: boolean | null
@@ -4149,13 +4136,6 @@ export type Database = {
           {
             foreignKeyName: "faturas_escritorio_id_fkey"
             columns: ["escritorio_id"]
-            isOneToOne: false
-            referencedRelation: "escritorios"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "financeiro_faturamento_faturas_escritorio_cobranca_id_fkey"
-            columns: ["escritorio_cobranca_id"]
             isOneToOne: false
             referencedRelation: "escritorios"
             referencedColumns: ["id"]

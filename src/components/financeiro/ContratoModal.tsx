@@ -187,7 +187,6 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
     area_juridica: 'civel',
     atos_configurados: [],
     escritorio_contrato_id: undefined, // Escritório dono do contrato
-    escritorio_id: undefined, // Escritório faturador (CNPJ na nota)
     // Grupo de clientes (grupo econômico)
     grupo_habilitado: false,
     grupo_clientes: [],
@@ -328,7 +327,6 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
           atualizacao_data_base: (configJsonb.atualizacao_monetaria as { data_base?: string })?.data_base || undefined,
           // Multi-escritório
           escritorio_contrato_id: contrato.escritorio_id,
-          escritorio_id: contrato.escritorio_cobranca_id || contrato.escritorio_id,
           // Grupo de clientes (grupo econômico)
           grupo_habilitado: grupoClientes?.habilitado || false,
           grupo_clientes: grupoClientes?.clientes || [],
@@ -367,7 +365,6 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
           valor_maximo_mensal: undefined,
           // Multi-escritório
           escritorio_contrato_id: undefined,
-          escritorio_id: undefined,
           // Grupo de clientes
           grupo_habilitado: false,
           grupo_clientes: [],
@@ -420,12 +417,11 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
         const escritorios = await getEscritoriosDoGrupo()
         setEscritoriosGrupo(escritorios)
 
-        // Se não tem escritórios definidos e tem escritório ativo, usar o ativo como padrão
+        // Se não tem escritório definido e tem escritório ativo, usar o ativo como padrão
         if (escritorioAtivo) {
           setFormData(prev => ({
             ...prev,
             escritorio_contrato_id: prev.escritorio_contrato_id || escritorioAtivo,
-            escritorio_id: prev.escritorio_id || escritorioAtivo,
           }))
         }
       } catch (error) {
@@ -1071,10 +1067,6 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                     setFormData((prev) => ({
                       ...prev,
                       escritorio_contrato_id: value,
-                      // Atualizar faturador para o mesmo escritório por padrão
-                      escritorio_id: prev.escritorio_id === prev.escritorio_contrato_id || !prev.escritorio_id
-                        ? value
-                        : prev.escritorio_id,
                     }))
                     // Limpar cliente selecionado ao trocar escritório (pode não existir no novo)
                     setSelectedCliente(null)
@@ -1106,42 +1098,6 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
               </div>
             )}
 
-            {/* Seleção de Escritório Faturador (só aparece se tem mais de 1 no grupo) */}
-            {escritoriosGrupo.length > 1 && (
-              <div className="space-y-2">
-                <Label htmlFor="escritorio_faturador" className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-[#89bcbe]" />
-                  Escritório Faturador
-                </Label>
-                <Select
-                  value={formData.escritorio_id || formData.escritorio_contrato_id || escritorioAtivo || ''}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, escritorio_id: value }))
-                  }
-                >
-                  <SelectTrigger id="escritorio_faturador">
-                    <SelectValue placeholder="Selecione o escritório" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {escritoriosGrupo.map((esc) => (
-                      <SelectItem key={esc.id} value={esc.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{esc.nome}</span>
-                          {esc.cnpj && (
-                            <span className="text-xs text-slate-400">
-                              ({esc.cnpj})
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Selecione qual CNPJ será usado para faturar este contrato
-                </p>
-              </div>
-            )}
           </div>
         )}
 
@@ -1997,26 +1953,15 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                   </div>
                   {/* Mostrar escritórios se tem múltiplos no grupo */}
                   {escritoriosGrupo.length > 1 && (
-                    <>
-                      <div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Escritório do Contrato</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Building2 className="h-3.5 w-3.5 text-[#89bcbe]" />
-                          <p className="font-medium text-[#34495e] dark:text-slate-200">
-                            {escritoriosGrupo.find((e) => e.id === (formData.escritorio_contrato_id || escritorioAtivo))?.nome || '-'}
-                          </p>
-                        </div>
+                    <div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Escritório do Contrato</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Building2 className="h-3.5 w-3.5 text-[#89bcbe]" />
+                        <p className="font-medium text-[#34495e] dark:text-slate-200">
+                          {escritoriosGrupo.find((e) => e.id === (formData.escritorio_contrato_id || escritorioAtivo))?.nome || '-'}
+                        </p>
                       </div>
-                      <div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Escritório Faturador</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Building2 className="h-3.5 w-3.5 text-[#89bcbe]" />
-                          <p className="font-medium text-[#34495e] dark:text-slate-200">
-                            {escritoriosGrupo.find((e) => e.id === (formData.escritorio_id || formData.escritorio_contrato_id || escritorioAtivo))?.nome || '-'}
-                          </p>
-                        </div>
-                      </div>
-                    </>
+                    </div>
                   )}
                 </div>
 

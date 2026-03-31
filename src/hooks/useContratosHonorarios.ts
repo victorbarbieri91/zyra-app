@@ -12,9 +12,6 @@ export interface ContratoHonorario {
   id: string
   escritorio_id: string
   escritorio_nome?: string // Nome do escritório (para visualização multi-escritório)
-  escritorio_cobranca_id?: string | null // Escritório que fatura (CNPJ na nota)
-  escritorio_cobranca_nome?: string // Nome do escritório de cobrança
-  escritorio_cobranca_cnpj?: string // CNPJ do escritório de cobrança
   numero_contrato: string
   titulo?: string | null // Título/referência do contrato
   cliente_id: string
@@ -159,8 +156,6 @@ export interface ContratoFormData {
   horas_faturaveis?: boolean
   // Multi-escritório: escritório dono do contrato (se diferente do ativo)
   escritorio_contrato_id?: string
-  // Multi-escritório: escritório que vai faturar (CNPJ na nota)
-  escritorio_id?: string
   // Limites mensais para contratos por_hora e por_cargo
   valor_minimo_mensal?: number | null
   valor_maximo_mensal?: number | null
@@ -248,11 +243,6 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           ),
           escritorios:escritorio_id (
             nome
-          ),
-          escritorio_cobranca:escritorios!financeiro_contratos_honorarios_escritorio_cobranca_id_fkey (
-            id,
-            nome,
-            cnpj
           ),
           financeiro_receitas (
             id,
@@ -392,9 +382,6 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           id: contrato.id,
           escritorio_id: contrato.escritorio_id,
           escritorio_nome: contrato.escritorios?.nome,
-          escritorio_cobranca_id: contrato.escritorio_cobranca_id,
-          escritorio_cobranca_nome: contrato.escritorio_cobranca?.nome,
-          escritorio_cobranca_cnpj: contrato.escritorio_cobranca?.cnpj,
           numero_contrato: contrato.numero_contrato,
           titulo: contrato.titulo,
           cliente_id: contrato.cliente_id,
@@ -476,17 +463,11 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
         // Determinar escritório dono do contrato (pode ser filial mesmo com ativo na matriz)
         const ownerEscritorioId = data.escritorio_contrato_id || escritorioAtivo
 
-        // Determinar escritório de cobrança (se diferente do dono)
-        const escritorioCobranca = data.escritorio_id && data.escritorio_id !== ownerEscritorioId
-          ? data.escritorio_id
-          : null
-
         // Criar contrato
         const { data: novoContrato, error: contratoError } = await supabase
           .from('financeiro_contratos_honorarios')
           .insert({
             escritorio_id: ownerEscritorioId,
-            escritorio_cobranca_id: escritorioCobranca, // Escritório que fatura (CNPJ)
             numero_contrato: numeroContrato,
             titulo: data.titulo || null,
             cliente_id: data.cliente_id,
@@ -723,13 +704,6 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
         // Atualizar escritório dono do contrato se informado
         if (data.escritorio_contrato_id !== undefined) {
           updateData.escritorio_id = data.escritorio_contrato_id
-        }
-        // Atualizar escritório de cobrança se informado
-        const ownerRef = data.escritorio_contrato_id || escritorioAtivo
-        if (data.escritorio_id !== undefined) {
-          updateData.escritorio_cobranca_id = data.escritorio_id !== ownerRef
-            ? data.escritorio_id
-            : null
         }
         // Para contratos misto: atualizar se horas são cobráveis
         if (data.horas_faturaveis !== undefined) {

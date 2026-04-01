@@ -142,18 +142,23 @@ export function PreviewCollapsible({
   }
 
   // Calcular ajuste contratual para um grupo (min/max mensal)
-  const getGroupAdjustment = (group: ContratoGroup): { ajuste: number; subtotal: number; limite: number; tipo: 'min' | 'max' } | null => {
+  // Considera timesheet + pasta do mesmo contrato para o cálculo
+  const getGroupAdjustment = (group: ContratoGroup): { ajuste: number; subtotal: number; subtotalHoras: number; subtotalPastas: number; limite: number; tipo: 'min' | 'max' } | null => {
     if (!group.contrato_id || !contractLimits[group.contrato_id]) return null
     const { min, max } = contractLimits[group.contrato_id]
     const subtotalHoras = group.timesheet
       .filter(l => selectedIds.includes(l.lancamento_id))
       .reduce((sum, l) => sum + (l.valor || 0), 0)
-    if (subtotalHoras === 0) return null
-    if (min !== null && subtotalHoras < min) {
-      return { ajuste: min - subtotalHoras, subtotal: subtotalHoras, limite: min, tipo: 'min' }
+    const subtotalPastas = group.pastas
+      .filter(l => selectedIds.includes(l.lancamento_id))
+      .reduce((sum, l) => sum + (l.valor || 0), 0)
+    const subtotalCombinado = subtotalHoras + subtotalPastas
+    if (subtotalHoras === 0 && subtotalPastas === 0) return null
+    if (min !== null && subtotalCombinado < min) {
+      return { ajuste: min - subtotalCombinado, subtotal: subtotalCombinado, subtotalHoras, subtotalPastas, limite: min, tipo: 'min' }
     }
-    if (max !== null && subtotalHoras > max) {
-      return { ajuste: max - subtotalHoras, subtotal: subtotalHoras, limite: max, tipo: 'max' }
+    if (max !== null && subtotalCombinado > max) {
+      return { ajuste: max - subtotalCombinado, subtotal: subtotalCombinado, subtotalHoras, subtotalPastas, limite: max, tipo: 'max' }
     }
     return null
   }
@@ -311,8 +316,8 @@ export function PreviewCollapsible({
                             <Scale className="h-3.5 w-3.5 shrink-0" />
                             <span>
                               {isMin
-                                ? `Valor/hora será ajustado proporcionalmente para atingir mínimo de ${formatCurrency(adj.limite)}`
-                                : `Subtotal horas ${formatCurrency(adj.subtotal)} — Máximo contratual ${formatCurrency(adj.limite)}`
+                                ? `Subtotal ${formatCurrency(adj.subtotal)}${adj.subtotalPastas > 0 ? ` (horas ${formatCurrency(adj.subtotalHoras)} + pastas ${formatCurrency(adj.subtotalPastas)})` : ''} — Mínimo ${formatCurrency(adj.limite)}`
+                                : `Subtotal ${formatCurrency(adj.subtotal)}${adj.subtotalPastas > 0 ? ` (horas ${formatCurrency(adj.subtotalHoras)} + pastas ${formatCurrency(adj.subtotalPastas)})` : ''} — Máximo ${formatCurrency(adj.limite)}`
                               }
                             </span>
                           </div>

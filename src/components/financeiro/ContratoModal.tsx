@@ -535,9 +535,16 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
     return () => clearTimeout(timer)
   }, [searchClienteGrupo])
 
-  // Carregar cargos do escritório (usa escritório do contrato se selecionado)
+  // Carregar cargos da matriz do grupo (cargos são compartilhados entre escritórios do grupo)
   const loadCargos = async () => {
-    const targetEscritorio = formData.escritorio_contrato_id || escritorioAtivo
+    let targetEscritorio = formData.escritorio_contrato_id || escritorioAtivo
+
+    // Se o escritório tem grupo, usar cargos da matriz para garantir IDs consistentes
+    if (escritoriosGrupo && escritoriosGrupo.length > 1) {
+      const matriz = escritoriosGrupo.find(e => e.grupo_id === e.id)
+      if (matriz) targetEscritorio = matriz.id
+    }
+
     if (!targetEscritorio) return
 
     setLoadingCargos(true)
@@ -1460,13 +1467,17 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
               </Card>
             )}
 
-            {/* Por Pasta Mensal */}
-            {(formData.formas_selecionadas || []).includes('por_pasta') && (
+            {/* Por Pasta Mensal (disponível como adicional em contratos por_ato) */}
+            {((formData.formas_selecionadas || []).includes('por_pasta') ||
+              (formData.formas_selecionadas || []).includes('por_ato')) && (
               <Card>
                     <CardHeader className="pb-2 pt-3">
                       <CardTitle className="text-sm flex items-center gap-2">
                         <Folders className="h-4 w-4 text-[#89bcbe]" />
-                        Por Pasta
+                        Cobrança Mensal por Pasta
+                        {!(formData.formas_selecionadas || []).includes('por_pasta') && (
+                          <Badge variant="outline" className="text-[10px] h-5">Opcional</Badge>
+                        )}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pb-3 space-y-3">

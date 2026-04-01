@@ -518,8 +518,8 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           if (data.valor_minimo_exito) configJsonb.valor_minimo_exito = data.valor_minimo_exito
         }
 
-        // Por Pasta
-        if (formas.includes('por_pasta') && data.valor_por_processo) {
+        // Por Pasta (disponível como adicional em contratos por_ato)
+        if ((formas.includes('por_pasta') || formas.includes('por_ato')) && data.valor_por_processo) {
           configJsonb.valor_por_processo = data.valor_por_processo
           configJsonb.dia_cobranca = data.dia_cobranca || 1
           configJsonb.limite_meses = data.limite_meses || 24
@@ -756,8 +756,8 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           if (data.valor_minimo_exito) configJsonb.valor_minimo_exito = data.valor_minimo_exito
         }
 
-        // Por Pasta
-        if (formas.includes('por_pasta') && data.valor_por_processo) {
+        // Por Pasta (disponível como adicional em contratos por_ato)
+        if ((formas.includes('por_pasta') || formas.includes('por_ato')) && data.valor_por_processo) {
           configJsonb.valor_por_processo = data.valor_por_processo
           configJsonb.dia_cobranca = data.dia_cobranca || 1
           configJsonb.limite_meses = data.limite_meses || 24

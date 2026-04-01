@@ -12,7 +12,7 @@ export interface ProcessoFechamento {
 
 export interface LancamentoProntoFaturar {
   lancamento_id: string
-  tipo_lancamento: 'honorario' | 'timesheet' | 'despesa' | 'pasta'
+  tipo_lancamento: 'honorario' | 'timesheet' | 'pasta'
   escritorio_id: string
   cliente_id: string
   cliente_nome: string
@@ -110,7 +110,7 @@ export interface ContractLimits {
 export interface ItemFatura {
   id: string
   fatura_id: string
-  tipo_item: 'honorario' | 'timesheet' | 'despesa' | 'pasta' | 'ajuste_contratual'
+  tipo_item: 'honorario' | 'timesheet' | 'pasta' | 'ajuste_contratual'
   descricao: string
   processo_id: string | null
   consulta_id: string | null
@@ -229,7 +229,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
 
         const cliente = clientesMap.get(groupKey)!
 
-        if (lanc.tipo_lancamento === 'honorario' || lanc.tipo_lancamento === 'despesa') {
+        if (lanc.tipo_lancamento === 'honorario') {
           cliente.qtd_honorarios += 1
           cliente.total_honorarios += lanc.valor || 0
         } else if (lanc.tipo_lancamento === 'timesheet') {
@@ -386,7 +386,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
           const processo = item.processo_id ? processosMap[item.processo_id] : null
 
           // Determinar tipo do item
-          let tipoItem: ItemFatura['tipo_item'] = 'despesa'
+          let tipoItem: ItemFatura['tipo_item'] = 'honorario'
           if (item.tipo === 'timesheet') tipoItem = 'timesheet'
           else if (item.tipo === 'honorario') tipoItem = 'honorario'
           else if (item.tipo === 'pasta') tipoItem = 'pasta'
@@ -456,7 +456,6 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
       dataVencimento?: string,
       escritorioIdOverride?: string,
       fechamentosIds?: string[],
-      despesasIds?: string[],
       dataEmissao?: string,
       contaBancariaId?: string
     ): Promise<string | null> => {
@@ -475,14 +474,13 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
           data: { user },
         } = await supabase.auth.getUser()
 
-        // Usar Edge Function para gerar fatura (suporta honorários, timesheet, despesas e fechamentos)
+        // Usar Edge Function para gerar fatura (suporta honorários, timesheet e fechamentos)
         const { data: response, error: fnError } = await supabase.functions.invoke('gerar-fatura', {
           body: {
             p_escritorio_id: targetEscritorioId,
             p_cliente_id: clienteId,
             p_honorarios_ids: honorariosIds.length > 0 ? honorariosIds : null,
             p_timesheet_ids: timesheetIds.length > 0 ? timesheetIds : null,
-            p_despesas_ids: despesasIds && despesasIds.length > 0 ? despesasIds : null,
             p_fechamentos_ids: fechamentosIds && fechamentosIds.length > 0 ? fechamentosIds : null,
             p_data_emissao: dataEmissao || new Date().toISOString().split('T')[0],
             p_data_vencimento: dataVencimento || null,
@@ -627,7 +625,6 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
         .from('financeiro_contratos_honorarios')
         .select('id, forma_cobranca, config')
         .in('id', contratoIds)
-        .in('forma_cobranca', ['por_hora', 'por_cargo'])
 
       if (queryError) throw queryError
 

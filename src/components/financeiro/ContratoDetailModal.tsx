@@ -654,6 +654,21 @@ export default function ContratoDetailModal({
                       </div>
                     )
                   })}
+                  {/* Cobrança por pasta adicional (em contratos que não são por_pasta mas têm valor_por_processo) */}
+                  {configPasta?.valor_por_processo && !formas.some(f => f.forma_cobranca === 'por_pasta') && (
+                    <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-md bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                          <Folder className="w-3.5 h-3.5 text-[#89bcbe]" />
+                        </div>
+                        <span className="text-sm font-medium text-[#34495e] dark:text-slate-200">
+                          Por Pasta
+                        </span>
+                        <Badge variant="outline" className="text-[10px] h-5">Adicional</Badge>
+                      </div>
+                      {renderFormaValores('por_pasta')}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

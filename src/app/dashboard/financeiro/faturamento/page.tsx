@@ -393,7 +393,6 @@ export default function FaturamentoPage() {
       dataVencimento || undefined,
       selectedCliente.escritorio_id, // escritorioIdOverride — gerar no escritório correto
       fechamentosIds,
-      undefined, // despesasIds
       dataEmissao || undefined,
       contaBancariaSelecionada || undefined
     )

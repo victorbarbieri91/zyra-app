@@ -11,7 +11,6 @@ interface GerarFaturaParams {
   p_cliente_id: string;
   p_honorarios_ids?: string[] | null;
   p_timesheet_ids?: string[] | null;
-  p_despesas_ids?: string[] | null;
   p_fechamentos_ids?: string[] | null;
   p_data_emissao?: string;
   p_data_vencimento?: string | null;
@@ -36,7 +35,6 @@ Deno.serve(async (req: Request) => {
       p_cliente_id,
       p_honorarios_ids,
       p_timesheet_ids,
-      p_despesas_ids,
       p_fechamentos_ids,
       p_data_emissao,
       p_data_vencimento,
@@ -54,10 +52,9 @@ Deno.serve(async (req: Request) => {
 
     const hasHonorarios = p_honorarios_ids && p_honorarios_ids.length > 0;
     const hasTimesheet = p_timesheet_ids && p_timesheet_ids.length > 0;
-    const hasDespesas = p_despesas_ids && p_despesas_ids.length > 0;
     const hasFechamentos = p_fechamentos_ids && p_fechamentos_ids.length > 0;
 
-    if (!hasHonorarios && !hasTimesheet && !hasDespesas && !hasFechamentos) {
+    if (!hasHonorarios && !hasTimesheet && !hasFechamentos) {
       return new Response(JSON.stringify({ error: 'Fatura deve conter pelo menos um item' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -226,119 +223,15 @@ Deno.serve(async (req: Request) => {
         valorTotal += valorItem;
       }
 
-      // =========================================================================
-      // POS-PROCESSAMENTO: Aplicar limites contratuais (min/max mensal)
-      // MINIMO: inflar valor_hora proporcionalmente (fatura limpa, sem linha extra)
-      // MAXIMO: manter ajuste_contratual negativo (desconto visivel ao cliente)
-      // =========================================================================
-      const timesheetItens = itens.filter(i => i.tipo === 'timesheet' && i.contrato_id);
-      const contratoIds = [...new Set(timesheetItens.map(i => i.contrato_id))];
-
-      for (const cid of contratoIds) {
-        const contratoItens = timesheetItens.filter(i => i.contrato_id === cid);
-        const subtotal = contratoItens.reduce((sum, i) => sum + i.valor, 0);
-
-        if (subtotal === 0) continue;
-
-        const { data: ajustado } = await supabase.rpc('aplicar_limites_mensais', {
-          p_valor_calculado: subtotal,
-          p_contrato_id: cid
-        });
-
-        const valorAjustado = typeof ajustado === 'number' ? ajustado : parseFloat(ajustado);
-        if (valorAjustado === subtotal) continue;
-
-        if (valorAjustado > subtotal) {
-          // MINIMO: Inflar valor_hora proporcionalmente para atingir o minimo
-          const fator = valorAjustado / subtotal;
-          let acumulado = 0;
-
-          for (let i = 0; i < contratoItens.length; i++) {
-            const item = contratoItens[i];
-            item.valor_hora_original = item.valor_hora;
-
-            if (i < contratoItens.length - 1) {
-              item.valor_hora = Math.round(item.valor_hora * fator * 100) / 100;
-              item.valor = Math.round(item.horas * item.valor_hora * 100) / 100;
-              acumulado += item.valor;
-            } else {
-              // Ultimo item: ajuste fino para soma exata do minimo
-              item.valor = Math.round((valorAjustado - acumulado) * 100) / 100;
-              item.valor_hora = Math.round((item.valor / item.horas) * 100) / 100;
-            }
-          }
-          valorTotal = valorTotal - subtotal + valorAjustado;
-
-        } else {
-          // MAXIMO: Manter ajuste_contratual negativo (cliente ve desconto)
-          const ajuste = valorAjustado - subtotal;
-          itens.push({
-            tipo: 'ajuste_contratual',
-            descricao: 'Ajuste maximo contratual',
-            valor: ajuste,
-            contrato_id: cid,
-            subtotal_original: subtotal,
-            valor_limite: valorAjustado
-          });
-          valorTotal += ajuste;
-        }
-      }
     }
 
     // ============================================
-    // 3. Processar despesas reembolsaveis
-    // ============================================
-    if (hasDespesas) {
-      const { data: despesas, error: despError } = await supabase
-        .from('financeiro_despesas')
-        .select(`
-          id, descricao, valor, categoria, processo_id, consultivo_id
-        `)
-        .in('id', p_despesas_ids!)
-        .eq('reembolsavel', true)
-        .eq('reembolsado', false)
-        .eq('status', 'pago');
-
-      if (despError) throw despError;
-
-      // Buscar processos para despesas
-      const despProcessosIds = (despesas || []).filter(d => d.processo_id).map(d => d.processo_id);
-      let despProcessosMap: Record<string, any> = {};
-
-      if (despProcessosIds.length > 0) {
-        const { data: processos } = await supabase
-          .from('processos_processos')
-          .select('id, numero_cnj, numero_pasta, autor, reu')
-          .in('id', despProcessosIds);
-
-        (processos || []).forEach(p => { despProcessosMap[p.id] = p; });
-      }
-
-      for (const d of despesas || []) {
-        const processo = d.processo_id ? despProcessosMap[d.processo_id] : null;
-        itens.push({
-          tipo: 'despesa',
-          despesa_id: d.id,
-          descricao: `[Reembolso] ${d.descricao}`,
-          valor: parseFloat(d.valor),
-          categoria: d.categoria,
-          processo_id: d.processo_id,
-          consulta_id: d.consultivo_id,
-          processo_numero: processo?.numero_cnj,
-          processo_pasta: processo?.numero_pasta,
-          partes_resumo: processo ? `${processo.autor} x ${processo.reu}` : null
-        });
-        valorTotal += parseFloat(d.valor);
-      }
-    }
-
-    // ============================================
-    // 4. Processar fechamentos de pasta
+    // 3. Processar fechamentos de pasta (ANTES dos limites contratuais)
     // ============================================
     if (hasFechamentos) {
       const { data: fechamentos, error: fechError } = await supabase
         .from('financeiro_fechamentos_pasta')
-        .select('id, competencia, qtd_processos, valor_unitario, valor_total, processos')
+        .select('id, competencia, qtd_processos, valor_unitario, valor_total, processos, contrato_id')
         .in('id', p_fechamentos_ids!)
         .eq('cliente_id', p_cliente_id)
         .eq('status', 'aprovado')
@@ -356,14 +249,85 @@ Deno.serve(async (req: Request) => {
           competencia: f.competencia,
           qtd_processos: f.qtd_processos,
           valor_unitario: parseFloat(f.valor_unitario),
-          processos: f.processos
+          processos: f.processos,
+          contrato_id: f.contrato_id
         });
         valorTotal += parseFloat(f.valor_total);
       }
     }
 
+    // =========================================================================
+    // 4. POS-PROCESSAMENTO: Aplicar limites contratuais (min/max mensal)
+    // Considera timesheet + pasta do mesmo contrato para o cálculo do mínimo.
+    // MINIMO: inflar valor_hora proporcionalmente (fatura limpa, sem linha extra)
+    // MAXIMO: manter ajuste_contratual negativo (desconto visivel ao cliente)
+    // =========================================================================
+    {
+      const timesheetItens = itens.filter(i => i.tipo === 'timesheet' && i.contrato_id);
+      const contratoIds = [...new Set(timesheetItens.map(i => i.contrato_id))];
+
+      for (const cid of contratoIds) {
+        const contratoItens = timesheetItens.filter(i => i.contrato_id === cid);
+        const subtotalTimesheet = contratoItens.reduce((sum, i) => sum + i.valor, 0);
+
+        if (subtotalTimesheet === 0) continue;
+
+        // Somar pasta do mesmo contrato para considerar no mínimo
+        const subtotalPasta = itens
+          .filter(i => i.tipo === 'pasta' && i.contrato_id === cid)
+          .reduce((sum, i) => sum + i.valor, 0);
+
+        // Aplicar limites sobre o total combinado (timesheet + pasta)
+        const subtotalCombinado = subtotalTimesheet + subtotalPasta;
+
+        const { data: ajustado } = await supabase.rpc('aplicar_limites_mensais', {
+          p_valor_calculado: subtotalCombinado,
+          p_contrato_id: cid
+        });
+
+        const valorAjustado = typeof ajustado === 'number' ? ajustado : parseFloat(ajustado);
+        if (valorAjustado === subtotalCombinado) continue;
+
+        if (valorAjustado > subtotalCombinado) {
+          // MINIMO: Inflar valor_hora do timesheet para cobrir a diferença (mínimo - pasta)
+          const targetTimesheet = valorAjustado - subtotalPasta;
+          const fator = targetTimesheet / subtotalTimesheet;
+          let acumulado = 0;
+
+          for (let i = 0; i < contratoItens.length; i++) {
+            const item = contratoItens[i];
+            item.valor_hora_original = item.valor_hora;
+
+            if (i < contratoItens.length - 1) {
+              item.valor_hora = Math.round(item.valor_hora * fator * 100) / 100;
+              item.valor = Math.round(item.horas * item.valor_hora * 100) / 100;
+              acumulado += item.valor;
+            } else {
+              // Ultimo item: ajuste fino para soma exata
+              item.valor = Math.round((targetTimesheet - acumulado) * 100) / 100;
+              item.valor_hora = Math.round((item.valor / item.horas) * 100) / 100;
+            }
+          }
+          valorTotal = valorTotal - subtotalTimesheet + targetTimesheet;
+
+        } else {
+          // MAXIMO: Manter ajuste_contratual negativo (cliente ve desconto)
+          const ajuste = valorAjustado - subtotalCombinado;
+          itens.push({
+            tipo: 'ajuste_contratual',
+            descricao: 'Ajuste maximo contratual',
+            valor: ajuste,
+            contrato_id: cid,
+            subtotal_original: subtotalCombinado,
+            valor_limite: valorAjustado
+          });
+          valorTotal += ajuste;
+        }
+      }
+    }
+
     // ============================================
-    // 5. Criar a fatura
+    // 4. Criar a fatura
     // ============================================
     const { data: fatura, error: faturaError } = await supabase
       .from('financeiro_faturamento_faturas')
@@ -387,7 +351,7 @@ Deno.serve(async (req: Request) => {
     const faturaId = fatura.id;
 
     // ============================================
-    // 6. Atualizar honorarios
+    // 5. Atualizar honorarios
     // ============================================
     if (hasHonorarios) {
       await supabase
@@ -399,7 +363,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // ============================================
-    // 7. Atualizar timesheet
+    // 6. Atualizar timesheet
     // ============================================
     if (hasTimesheet) {
       await supabase
@@ -411,19 +375,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // ============================================
-    // 8. Atualizar despesas
-    // ============================================
-    if (hasDespesas) {
-      await supabase
-        .from('financeiro_despesas')
-        .update({ reembolsado: true, reembolso_fatura_id: faturaId, reembolso_status: 'faturado' })
-        .in('id', p_despesas_ids!)
-        .eq('reembolsavel', true)
-        .eq('reembolsado', false);
-    }
-
-    // ============================================
-    // 9. Atualizar fechamentos
+    // 7. Atualizar fechamentos
     // ============================================
     if (hasFechamentos) {
       await supabase
@@ -435,7 +387,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // ============================================
-    // 10. Notificacao
+    // 8. Notificacao
     // ============================================
     if (p_user_id) {
       await supabase

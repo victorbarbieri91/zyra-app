@@ -160,9 +160,9 @@ async function fetchDashboardPerformance(
       return {
         id: odUserId,
         nome: profilesMap[odUserId] || 'Membro',
-        horas: Math.round(userHoras.total * 10) / 10,
-        horasCobraveis: Math.round(userHoras.cobraveis * 10) / 10,
-        horasNaoCobraveis: Math.round(userHoras.naoCobraveis * 10) / 10,
+        horas: userHoras.total,
+        horasCobraveis: userHoras.cobraveis,
+        horasNaoCobraveis: userHoras.naoCobraveis,
         cor: cores[index % cores.length],
       }
     })

@@ -258,7 +258,7 @@ Deno.serve(async (req: Request) => {
 
     // =========================================================================
     // 4. POS-PROCESSAMENTO: Aplicar limites contratuais (min/max mensal)
-    // Considera timesheet + pasta do mesmo contrato para o cálculo do mínimo.
+    // Limites aplicados somente sobre timesheet. Pasta é cobrada separadamente.
     // MINIMO: inflar valor_hora proporcionalmente (fatura limpa, sem linha extra)
     // MAXIMO: manter ajuste_contratual negativo (desconto visivel ao cliente)
     // =========================================================================
@@ -268,30 +268,21 @@ Deno.serve(async (req: Request) => {
 
       for (const cid of contratoIds) {
         const contratoItens = timesheetItens.filter(i => i.contrato_id === cid);
-        const subtotalTimesheet = contratoItens.reduce((sum, i) => sum + i.valor, 0);
+        const subtotal = contratoItens.reduce((sum, i) => sum + i.valor, 0);
 
-        if (subtotalTimesheet === 0) continue;
-
-        // Somar pasta do mesmo contrato para considerar no mínimo
-        const subtotalPasta = itens
-          .filter(i => i.tipo === 'pasta' && i.contrato_id === cid)
-          .reduce((sum, i) => sum + i.valor, 0);
-
-        // Aplicar limites sobre o total combinado (timesheet + pasta)
-        const subtotalCombinado = subtotalTimesheet + subtotalPasta;
+        if (subtotal === 0) continue;
 
         const { data: ajustado } = await supabase.rpc('aplicar_limites_mensais', {
-          p_valor_calculado: subtotalCombinado,
+          p_valor_calculado: subtotal,
           p_contrato_id: cid
         });
 
         const valorAjustado = typeof ajustado === 'number' ? ajustado : parseFloat(ajustado);
-        if (valorAjustado === subtotalCombinado) continue;
+        if (valorAjustado === subtotal) continue;
 
-        if (valorAjustado > subtotalCombinado) {
-          // MINIMO: Inflar valor_hora do timesheet para cobrir a diferença (mínimo - pasta)
-          const targetTimesheet = valorAjustado - subtotalPasta;
-          const fator = targetTimesheet / subtotalTimesheet;
+        if (valorAjustado > subtotal) {
+          // MINIMO: Inflar valor_hora proporcionalmente para atingir o minimo
+          const fator = valorAjustado / subtotal;
           let acumulado = 0;
 
           for (let i = 0; i < contratoItens.length; i++) {
@@ -303,22 +294,22 @@ Deno.serve(async (req: Request) => {
               item.valor = Math.round(item.horas * item.valor_hora * 100) / 100;
               acumulado += item.valor;
             } else {
-              // Ultimo item: ajuste fino para soma exata
-              item.valor = Math.round((targetTimesheet - acumulado) * 100) / 100;
+              // Ultimo item: ajuste fino para soma exata do minimo
+              item.valor = Math.round((valorAjustado - acumulado) * 100) / 100;
               item.valor_hora = Math.round((item.valor / item.horas) * 100) / 100;
             }
           }
-          valorTotal = valorTotal - subtotalTimesheet + targetTimesheet;
+          valorTotal = valorTotal - subtotal + valorAjustado;
 
         } else {
           // MAXIMO: Manter ajuste_contratual negativo (cliente ve desconto)
-          const ajuste = valorAjustado - subtotalCombinado;
+          const ajuste = valorAjustado - subtotal;
           itens.push({
             tipo: 'ajuste_contratual',
             descricao: 'Ajuste maximo contratual',
             valor: ajuste,
             contrato_id: cid,
-            subtotal_original: subtotalCombinado,
+            subtotal_original: subtotal,
             valor_limite: valorAjustado
           });
           valorTotal += ajuste;

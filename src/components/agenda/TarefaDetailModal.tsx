@@ -224,7 +224,7 @@ export default function TarefaDetailModal({
       } else {
         await iniciarTimer({
           titulo: tarefa.titulo,
-          tarefa_id: tarefa.id,
+          tarefa_id: isVirtual ? undefined : tarefa.id,
           processo_id: tarefa.processo_id || undefined,
           consulta_id: tarefa.consultivo_id || undefined,
           faturavel: true,

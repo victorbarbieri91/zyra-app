@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/client'
 import {
   ConfiguracaoFiscal,
   ImpostosCalculados,
+  ClienteRetencaoContext,
   calcularImpostosLucroPresumido,
   ALIQUOTAS_LUCRO_PRESUMIDO,
   REGIME_TRIBUTARIO_LABELS,
@@ -139,7 +140,7 @@ export function useFaturaImpressao() {
           .select(`
             id, nome_completo, nome_fantasia, tipo_pessoa, cpf_cnpj,
             logradouro, numero, complemento, bairro, cidade, uf, cep,
-            email, telefone
+            email, telefone, optante_simples
           `)
           .eq('id', faturaData.cliente_id)
           .single()
@@ -317,17 +318,53 @@ export function useFaturaImpressao() {
         const config = escritorioData.config || {}
         const configFiscal: ConfiguracaoFiscal | null = config.fiscal || null
 
+        // Buscar contratos de exportação para os itens da fatura
+        const contratosIds = [...new Set(itensJsonb
+          .filter((item: any) => item.contrato_id)
+          .map((item: any) => item.contrato_id))]
+
+        let contratosExportacaoSet = new Set<string>()
+
+        if (contratosIds.length > 0) {
+          const { data: contratos } = await supabase
+            .from('financeiro_contratos_honorarios')
+            .select('id, exportacao')
+            .in('id', contratosIds)
+            .eq('exportacao', true)
+
+          if (contratos) {
+            contratos.forEach((c: any) => contratosExportacaoSet.add(c.id))
+          }
+        }
+
+        // Calcular valor de itens de exportação (isentos de retenção)
+        const valorExportacao = itensJsonb
+          .filter((item: any) => item.contrato_id && contratosExportacaoSet.has(item.contrato_id))
+          .reduce((sum: number, item: any) => sum + Number(item.valor || 0), 0)
+
         // Calcular impostos baseado na configuração fiscal
         let impostosCalculados: ImpostosCalculados | null = null
         let regimeTributarioLabel: string | null = null
 
         if (configFiscal && configFiscal.exibir_impostos_fatura) {
           const valorTotal = Number(faturaData.valor_total)
+          const valorBaseRetencao = valorTotal - valorExportacao
           regimeTributarioLabel = REGIME_TRIBUTARIO_LABELS[configFiscal.regime_tributario]
+
+          const clienteContext: ClienteRetencaoContext = {
+            tipo_pessoa: clienteData.tipo_pessoa || 'pj',
+            optante_simples: clienteData.optante_simples || false,
+          }
 
           if (configFiscal.regime_tributario === 'lucro_presumido') {
             const impostos = configFiscal.lucro_presumido?.impostos || ALIQUOTAS_LUCRO_PRESUMIDO
-            impostosCalculados = calcularImpostosLucroPresumido(valorTotal, impostos)
+            const calculado = calcularImpostosLucroPresumido(valorBaseRetencao, impostos, clienteContext)
+            // valor_liquido deve ser sobre o total da fatura, não só a base de retenção
+            impostosCalculados = {
+              ...calculado,
+              base_calculo: valorBaseRetencao,
+              valor_liquido: valorTotal - calculado.total_retencoes,
+            }
           } else if (configFiscal.regime_tributario === 'simples_nacional') {
             // No Simples Nacional, geralmente não há retenções na fatura
             // A tributação é paga pelo prestador via DAS

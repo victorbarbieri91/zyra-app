@@ -231,11 +231,41 @@ export function calcularAliquotaEfetivaSimplesNacional(rbt12: number): {
   };
 }
 
+// Contexto do cliente para regras de retenção
+export interface ClienteRetencaoContext {
+  tipo_pessoa: 'pf' | 'pj';
+  optante_simples: boolean;
+}
+
+// Limite mínimo de R$ 10,00 por tipo de retenção (legislação federal)
+const VALOR_MINIMO_RETENCAO = 10;
+
 // Helper para calcular impostos de uma fatura no Lucro Presumido
+// Regras de retenção:
+// - PF: nenhuma retenção
+// - Optante Simples Nacional: apenas IRRF (se >= R$10)
+// - PJ normal: IRRF se >= R$10, PIS+COFINS+CSLL se cada grupo >= R$10
 export function calcularImpostosLucroPresumido(
   valorBruto: number,
-  config: ImpostosLucroPresumido
+  config: ImpostosLucroPresumido,
+  cliente?: ClienteRetencaoContext
 ): ImpostosCalculados {
+  // PF: nenhuma retenção
+  if (cliente?.tipo_pessoa === 'pf') {
+    return {
+      base_calculo: valorBruto,
+      irrf: { aliquota: config.irrf.aliquota, valor: 0, retido: false },
+      pis: { aliquota: config.pis.aliquota, valor: 0, retido: false },
+      cofins: { aliquota: config.cofins.aliquota, valor: 0, retido: false },
+      csll: { aliquota: config.csll.aliquota, valor: 0, retido: false },
+      iss: { aliquota: config.iss.aliquota, valor: 0, retido: false },
+      inss: { aliquota: config.inss.aliquota, valor: 0, retido: false },
+      total_retencoes: 0,
+      valor_liquido: valorBruto,
+    };
+  }
+
+  // Calcular valores brutos
   const irrf = config.irrf.ativo ? valorBruto * (config.irrf.aliquota / 100) : 0;
   const pis = config.pis.ativo ? valorBruto * (config.pis.aliquota / 100) : 0;
   const cofins = config.cofins.ativo ? valorBruto * (config.cofins.aliquota / 100) : 0;
@@ -243,20 +273,30 @@ export function calcularImpostosLucroPresumido(
   const iss = config.iss.ativo ? valorBruto * (config.iss.aliquota / 100) : 0;
   const inss = config.inss.ativo ? valorBruto * (config.inss.aliquota / 100) : 0;
 
+  // Aplicar regra de valor mínimo de R$ 10,00
+  const irrfRetido = config.irrf.retido_na_fonte && irrf >= VALOR_MINIMO_RETENCAO;
+  const pcsRetido = pis + cofins + csll >= VALOR_MINIMO_RETENCAO;
+  const pisRetido = config.pis.retido_na_fonte && pcsRetido;
+  const cofinsRetido = config.cofins.retido_na_fonte && pcsRetido;
+  const csllRetido = config.csll.retido_na_fonte && pcsRetido;
+
+  // Optante Simples Nacional: apenas IRRF
+  const isSimples = cliente?.optante_simples === true;
+
   const total_retencoes =
-    (config.irrf.retido_na_fonte ? irrf : 0) +
-    (config.pis.retido_na_fonte ? pis : 0) +
-    (config.cofins.retido_na_fonte ? cofins : 0) +
-    (config.csll.retido_na_fonte ? csll : 0) +
+    (irrfRetido ? irrf : 0) +
+    (!isSimples && pisRetido ? pis : 0) +
+    (!isSimples && cofinsRetido ? cofins : 0) +
+    (!isSimples && csllRetido ? csll : 0) +
     (config.iss.retido_na_fonte ? iss : 0) +
     (config.inss.retido_na_fonte ? inss : 0);
 
   return {
     base_calculo: valorBruto,
-    irrf: { aliquota: config.irrf.aliquota, valor: irrf, retido: config.irrf.retido_na_fonte },
-    pis: { aliquota: config.pis.aliquota, valor: pis, retido: config.pis.retido_na_fonte },
-    cofins: { aliquota: config.cofins.aliquota, valor: cofins, retido: config.cofins.retido_na_fonte },
-    csll: { aliquota: config.csll.aliquota, valor: csll, retido: config.csll.retido_na_fonte },
+    irrf: { aliquota: config.irrf.aliquota, valor: irrfRetido ? irrf : 0, retido: irrfRetido },
+    pis: { aliquota: config.pis.aliquota, valor: !isSimples && pisRetido ? pis : 0, retido: !isSimples && pisRetido },
+    cofins: { aliquota: config.cofins.aliquota, valor: !isSimples && cofinsRetido ? cofins : 0, retido: !isSimples && cofinsRetido },
+    csll: { aliquota: config.csll.aliquota, valor: !isSimples && csllRetido ? csll : 0, retido: !isSimples && csllRetido },
     iss: { aliquota: config.iss.aliquota, valor: iss, retido: config.iss.retido_na_fonte },
     inss: { aliquota: config.inss.aliquota, valor: inss, retido: config.inss.retido_na_fonte },
     total_retencoes,

@@ -1033,7 +1033,7 @@ export default function PublicacoesPage() {
                         pub.processo_id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400'
                       )}>
                         {pub.processo_id && (pub.processo_autor || pub.processo_reu)
-                          ? `${pub.processo_autor} x ${pub.processo_reu}`
+                          ? [pub.processo_autor, pub.processo_reu].filter(Boolean).join(' x ')
                           : pub.numero_processo
                         }
                       </span>
@@ -1231,8 +1231,8 @@ export default function PublicacoesPage() {
                             >
                               {(pub.processo_autor || pub.processo_reu) ? (
                                 <>
-                                  <span className="text-sm font-medium text-[#3B82F6] hover:text-[#2563EB] group-hover/proc:underline underline-offset-2 truncate" title={`${pub.processo_autor} x ${pub.processo_reu}`}>
-                                    {pub.processo_autor} x {pub.processo_reu}
+                                  <span className="text-sm font-medium text-[#3B82F6] hover:text-[#2563EB] group-hover/proc:underline underline-offset-2 truncate" title={[pub.processo_autor, pub.processo_reu].filter(Boolean).join(' x ')}>
+                                    {[pub.processo_autor, pub.processo_reu].filter(Boolean).join(' x ')}
                                   </span>
                                   <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 flex items-center gap-1">
                                     {pub.numero_processo}

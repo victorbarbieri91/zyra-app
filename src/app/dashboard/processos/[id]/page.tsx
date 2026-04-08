@@ -40,6 +40,7 @@ import {
 
 // Abas
 import ProcessoResumo from '@/components/processos/ProcessoResumo'
+import ProcessoPartes from '@/components/processos/ProcessoPartes'
 import ProcessoDocumentos from '@/components/processos/ProcessoDocumentos'
 import ProcessoEstrategia from '@/components/processos/ProcessoEstrategia'
 import ProcessoJurisprudencias from '@/components/processos/ProcessoJurisprudencias'
@@ -675,6 +676,7 @@ export default function ProcessoDetalhe() {
                 )
               })() : undefined}
             />
+            <ProcessoPartes processoId={processo.id} />
           </TabsContent>
 
           <TabsContent value="documentos" className="space-y-6">

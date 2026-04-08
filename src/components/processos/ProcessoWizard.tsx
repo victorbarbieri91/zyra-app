@@ -723,6 +723,34 @@ export default function ProcessoWizard({
           return
         }
 
+        // Inserir partes iniciais na tabela processos_partes
+        if (processo?.id) {
+          const partesIniciais = []
+          if (autor) {
+            partesIniciais.push({
+              processo_id: processo.id,
+              tipo: 'autor',
+              nome: autor,
+              cliente_id: formData.polo_cliente === 'ativo' ? formData.cliente_id : null,
+              escritorio_id: profile.escritorio_id,
+              ordem: 1,
+            })
+          }
+          if (reu) {
+            partesIniciais.push({
+              processo_id: processo.id,
+              tipo: 'reu',
+              nome: reu,
+              cliente_id: formData.polo_cliente === 'passivo' ? formData.cliente_id : null,
+              escritorio_id: profile.escritorio_id,
+              ordem: 1,
+            })
+          }
+          if (partesIniciais.length > 0) {
+            await supabase.from('processos_partes').insert(partesIniciais)
+          }
+        }
+
         toast.success('Processo criado com sucesso!')
         setFormData(initialFormData)
         setValorCausaFormatado('')

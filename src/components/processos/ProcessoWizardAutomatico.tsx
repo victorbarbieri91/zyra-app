@@ -273,6 +273,19 @@ export default function ProcessoWizardAutomatico({
                              partesAtivas[0]?.nome ||
                              dadosEscavador.titulo_polo_ativo || ''
 
+      // Derivar autor e réu a partir do polo do cliente e parte contrária
+      const nomeCliente = clientes.find(c => c.id === clienteId)?.nome_completo || null
+      const poloCliente = partesAtivas.length > 0 ? 'ativo' : 'passivo'
+      let autor: string | null = null
+      let reu: string | null = null
+      if (poloCliente === 'ativo') {
+        autor = nomeCliente
+        reu = parteContraria || null
+      } else if (poloCliente === 'passivo') {
+        autor = parteContraria || null
+        reu = nomeCliente
+      }
+
       // Determinar área jurídica (mapear se necessário)
       const areaJuridica = mapearArea(dadosEscavador.area || dadosEscavador.classe || 'Cível')
 
@@ -296,7 +309,9 @@ export default function ProcessoWizardAutomatico({
         fase: 'conhecimento',
         status: 'ativo',
         parte_contraria: parteContraria,
-        polo_cliente: partesAtivas.length > 0 ? 'ativo' : 'passivo',
+        polo_cliente: poloCliente,
+        autor,
+        reu,
         created_by: user.user.id,
       }
 
@@ -315,6 +330,47 @@ export default function ProcessoWizardAutomatico({
           toast.error(`Erro ao criar processo: ${error.message}`)
         }
         return
+      }
+
+      // Inserir partes na tabela processos_partes
+      if (novoProcesso?.id) {
+        const partesParaInserir = [
+          ...partesAtivas.map((p, i) => ({
+            processo_id: novoProcesso.id,
+            tipo: 'autor' as const,
+            nome: p.nome,
+            cpf_cnpj: p.documento || null,
+            qualificacao: p.tipo_participacao || null,
+            advogados: p.advogados?.length > 0 ? p.advogados.map(a => a.nome) : null,
+            oab_advogados: p.advogados?.length > 0 ? p.advogados.map(a => a.oab).filter(Boolean) : null,
+            escritorio_id: profile.escritorio_id,
+            ordem: i + 1,
+          })),
+          ...partesPassivas.map((p, i) => ({
+            processo_id: novoProcesso.id,
+            tipo: 'reu' as const,
+            nome: p.nome,
+            cpf_cnpj: p.documento || null,
+            qualificacao: p.tipo_participacao || null,
+            advogados: p.advogados?.length > 0 ? p.advogados.map(a => a.nome) : null,
+            oab_advogados: p.advogados?.length > 0 ? p.advogados.map(a => a.oab).filter(Boolean) : null,
+            escritorio_id: profile.escritorio_id,
+            ordem: i + 1,
+          })),
+        ]
+        // Vincular o cliente à parte correspondente
+        if (clienteId && partesParaInserir.length > 0) {
+          const nomeClienteMatch = clientes.find(c => c.id === clienteId)?.nome_completo?.toLowerCase()
+          if (nomeClienteMatch) {
+            const idx = partesParaInserir.findIndex(p => p.nome.toLowerCase().includes(nomeClienteMatch) || nomeClienteMatch.includes(p.nome.toLowerCase()))
+            if (idx >= 0) {
+              (partesParaInserir[idx] as Record<string, unknown>).cliente_id = clienteId
+            }
+          }
+        }
+        if (partesParaInserir.length > 0) {
+          await supabase.from('processos_partes').insert(partesParaInserir)
+        }
       }
 
       // Se ativar monitoramento, chamar API

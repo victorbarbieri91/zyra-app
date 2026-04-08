@@ -150,7 +150,7 @@ export default function PublicacaoExpandedRow({
                     <p className="text-[10px] text-slate-400 leading-none mb-0.5">Processo</p>
                     {temPartes && (
                       <p className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate max-w-[280px]">
-                        {publicacao.processo_autor} x {publicacao.processo_reu}
+                        {[publicacao.processo_autor, publicacao.processo_reu].filter(Boolean).join(' x ')}
                       </p>
                     )}
                     <p className={cn(

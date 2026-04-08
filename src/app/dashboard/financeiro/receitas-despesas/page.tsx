@@ -3005,15 +3005,13 @@ export default function ExtratoFinanceiroPage() {
                                     Liberar Pagamento
                                   </DropdownMenuItem>
                                 )}
-                                {item.status !== 'efetivado' && (
-                                  <DropdownMenuItem
-                                    onClick={() => setModalPagarDespesa(item)}
-                                    className="text-emerald-700 focus:text-emerald-800 focus:bg-emerald-50 font-medium"
-                                  >
-                                    <Banknote className="w-4 h-4 mr-2" />
-                                    Registrar Pagamento
-                                  </DropdownMenuItem>
-                                )}
+                                <DropdownMenuItem
+                                  onClick={() => setModalPagarDespesa(item)}
+                                  className="text-emerald-700 focus:text-emerald-800 focus:bg-emerald-50 font-medium"
+                                >
+                                  <Banknote className="w-4 h-4 mr-2" />
+                                  Registrar Pagamento
+                                </DropdownMenuItem>
                               </>
                             )}
                             {(item.status === 'pendente' || item.status === 'vencido' || item.status === 'agendado') && (
@@ -3563,15 +3561,13 @@ export default function ExtratoFinanceiroPage() {
                                       Liberar Pagamento
                                     </DropdownMenuItem>
                                   )}
-                                  {item.status !== 'efetivado' && (
-                                    <DropdownMenuItem
-                                      onClick={() => setModalPagarDespesa(item)}
-                                      className="text-emerald-700 focus:text-emerald-800 focus:bg-emerald-50 font-medium"
-                                    >
-                                      <Banknote className="w-4 h-4 mr-2" />
-                                      Registrar Pagamento
-                                    </DropdownMenuItem>
-                                  )}
+                                  <DropdownMenuItem
+                                    onClick={() => setModalPagarDespesa(item)}
+                                    className="text-emerald-700 focus:text-emerald-800 focus:bg-emerald-50 font-medium"
+                                  >
+                                    <Banknote className="w-4 h-4 mr-2" />
+                                    Registrar Pagamento
+                                  </DropdownMenuItem>
                                 </>
                               )}
                               {(item.status === 'pendente' || item.status === 'vencido' || item.status === 'agendado') && (

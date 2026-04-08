@@ -495,27 +495,66 @@ export function useProcessoFinanceiro(processoId: string | null) {
         const dataVencimentoStr = dataVencimento.toISOString().split('T')[0]
         const dataCompetencia = dataVencimentoStr.substring(0, 7) + '-01'
 
-        const { error: insertError } = await supabase
-          .from('financeiro_receitas')
-          .insert({
-            escritorio_id: escritorioAtivo,
-            tipo: 'honorario',
-            cliente_id: processoData.cliente_id,
-            processo_id: processoId,
-            contrato_id: processoData.contrato_id,
-            categoria: data.tipo_honorario,
-            valor: data.valor_total,
-            descricao: data.descricao,
-            data_competencia: dataCompetencia,
-            data_vencimento: dataVencimentoStr,
-            parcelado: data.parcelado ?? false,
-            numero_parcelas: data.numero_parcelas || 1,
-            status: 'pendente',
-            created_by: user.id,
-            responsavel_id: user.id,
-          })
+        if (data.parcelado && data.numero_parcelas && data.numero_parcelas > 1) {
+          // Criar todas as parcelas diretamente (sem registro pai)
+          const numParcelas = data.numero_parcelas
+          const valorParcela = Math.round((data.valor_total / numParcelas) * 100) / 100
+          const valorUltima = Math.round((data.valor_total - valorParcela * (numParcelas - 1)) * 100) / 100
+          const [ano, mes] = dataVencimentoStr.split('-').map(Number)
+          const dia = parseInt(dataVencimentoStr.split('-')[2])
 
-        if (insertError) throw insertError
+          const parcelas = []
+          for (let i = 0; i < numParcelas; i++) {
+            const date = new Date(ano, mes - 1 + i, 1)
+            const anoP = date.getFullYear()
+            const mesP = date.getMonth() + 1
+            const ultimoDia = new Date(anoP, mesP, 0).getDate()
+            const diaReal = Math.min(dia, ultimoDia)
+            const dataVenc = `${anoP}-${String(mesP).padStart(2, '0')}-${String(diaReal).padStart(2, '0')}`
+            const dataComp = `${anoP}-${String(mesP).padStart(2, '0')}-01`
+
+            parcelas.push({
+              escritorio_id: escritorioAtivo,
+              tipo: 'honorario',
+              cliente_id: processoData.cliente_id,
+              processo_id: processoId,
+              contrato_id: processoData.contrato_id,
+              categoria: data.tipo_honorario,
+              valor: i === numParcelas - 1 ? valorUltima : valorParcela,
+              descricao: `Parcela ${i + 1}/${numParcelas} - ${data.descricao}`,
+              data_competencia: dataComp,
+              data_vencimento: dataVenc,
+              parcelado: false,
+              numero_parcelas: 1,
+              status: 'pendente',
+              created_by: user.id,
+              responsavel_id: user.id,
+            })
+          }
+          const { error: insertError } = await supabase.from('financeiro_receitas').insert(parcelas)
+          if (insertError) throw insertError
+        } else {
+          const { error: insertError } = await supabase
+            .from('financeiro_receitas')
+            .insert({
+              escritorio_id: escritorioAtivo,
+              tipo: 'honorario',
+              cliente_id: processoData.cliente_id,
+              processo_id: processoId,
+              contrato_id: processoData.contrato_id,
+              categoria: data.tipo_honorario,
+              valor: data.valor_total,
+              descricao: data.descricao,
+              data_competencia: dataCompetencia,
+              data_vencimento: dataVencimentoStr,
+              parcelado: false,
+              numero_parcelas: 1,
+              status: 'pendente',
+              created_by: user.id,
+              responsavel_id: user.id,
+            })
+          if (insertError) throw insertError
+        }
 
         await loadDados()
         return true

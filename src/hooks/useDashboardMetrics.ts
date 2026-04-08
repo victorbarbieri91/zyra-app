@@ -331,11 +331,9 @@ async function fetchDashboardMetrics(
     if (metaReceita) receitaMeta = Number(metaReceita.valor_meta)
   }
 
-  // Calcular honorários do mês (anti-duplicação: excluir pais parcelados e saldos)
+  // Calcular honorários do mês (excluir saldos já contabilizados)
   const honorariosMes = receitasGeradasResult.data?.reduce(
     (acc: number, item: { valor: number | null; tipo: string | null; parcelado: boolean | null }) => {
-      // Pular pais parcelados (filhos parcelas já representam o valor)
-      if (item.tipo === 'honorario' && item.parcelado) return acc
       // Pular saldo (já contabilizado na receita original)
       if (item.tipo === 'saldo') return acc
       return acc + (Number(item.valor) || 0)

@@ -1407,6 +1407,9 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                                       periodicidade: opt.value,
                                       dia_vencimento: opt.value ? (novosValores[index].dia_vencimento || 10) : undefined,
                                       numero_parcelas: opt.value === 'parcelado' ? (novosValores[index].numero_parcelas || 6) : undefined,
+                                      data_inicio_cobranca: opt.value
+                                        ? (novosValores[index].data_inicio_cobranca || formData.data_inicio?.substring(0, 7))
+                                        : undefined,
                                     }
                                     setFormData((prev) => ({ ...prev, valores_fixos: novosValores }))
                                   }}
@@ -1418,6 +1421,23 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
 
                             {valorFixo.periodicidade && (
                               <div className="flex items-center gap-3 mt-2">
+                                <div>
+                                  <Label className="text-[10px] text-slate-500 dark:text-slate-400">Início cobrança</Label>
+                                  <Input
+                                    type="month"
+                                    value={valorFixo.data_inicio_cobranca || formData.data_inicio?.substring(0, 7) || ''}
+                                    onChange={(e) => {
+                                      const novosValores = [...(formData.valores_fixos || [])]
+                                      novosValores[index] = {
+                                        ...novosValores[index],
+                                        data_inicio_cobranca: e.target.value,
+                                      }
+                                      setFormData((prev) => ({ ...prev, valores_fixos: novosValores }))
+                                    }}
+                                    min={formData.data_inicio?.substring(0, 7)}
+                                    className="h-7 w-36 text-xs mt-0.5"
+                                  />
+                                </div>
                                 <div>
                                   <Label className="text-[10px] text-slate-500 dark:text-slate-400">Dia vencimento</Label>
                                   <Input

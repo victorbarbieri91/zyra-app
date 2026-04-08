@@ -160,9 +160,6 @@ export function useReceitas(escritorioId: string | null) {
 
       if (filtros?.tipo && filtros.tipo !== 'todos') {
         query = query.eq('tipo', filtros.tipo)
-      } else {
-        // Por padrão, não mostrar honorários parcelados (só as parcelas)
-        query = query.or('parcelado.eq.false,tipo.neq.honorario')
       }
 
       if (filtros?.cliente_id) {
@@ -246,37 +243,83 @@ export function useReceitas(escritorioId: string | null) {
     try {
       const { data: { user } } = await supabase.auth.getUser()
 
-      const { data, error: insertError } = await supabase
-        .from('financeiro_receitas')
-        .insert({
-          escritorio_id: escritorioId,
-          tipo: 'honorario',
-          cliente_id: formData.cliente_id,
-          processo_id: formData.processo_id,
-          consulta_id: formData.consulta_id,
-          contrato_id: formData.contrato_id,
-          descricao: formData.descricao,
-          categoria: formData.categoria,
-          valor: formData.valor,
-          data_competencia: formData.data_vencimento.substring(0, 7) + '-01', // Primeiro dia do mês
-          data_vencimento: formData.data_vencimento,
-          parcelado: formData.parcelado,
-          numero_parcelas: formData.parcelado ? formData.numero_parcelas : 1,
-          recorrente: formData.recorrente,
-          config_recorrencia: formData.recorrente ? formData.config_recorrencia : null,
-          observacoes: formData.observacoes,
-          status: 'pendente',
-          responsavel_id: user?.id,
-          created_by: user?.id,
-        })
-        .select('id')
-        .single()
+      if (formData.parcelado && formData.numero_parcelas && formData.numero_parcelas > 1) {
+        // Criar todas as parcelas diretamente (sem registro pai)
+        const numParcelas = formData.numero_parcelas
+        const valorParcela = Math.round((formData.valor / numParcelas) * 100) / 100
+        const valorUltima = Math.round((formData.valor - valorParcela * (numParcelas - 1)) * 100) / 100
+        const [ano, mes] = formData.data_vencimento.split('-').map(Number)
+        const dia = parseInt(formData.data_vencimento.split('-')[2])
 
-      if (insertError) throw insertError
+        const parcelas = []
+        for (let i = 0; i < numParcelas; i++) {
+          const date = new Date(ano, mes - 1 + i, 1)
+          const anoP = date.getFullYear()
+          const mesP = date.getMonth() + 1
+          const ultimoDia = new Date(anoP, mesP, 0).getDate()
+          const diaReal = Math.min(dia, ultimoDia)
+          const dataVenc = `${anoP}-${String(mesP).padStart(2, '0')}-${String(diaReal).padStart(2, '0')}`
+          const dataComp = `${anoP}-${String(mesP).padStart(2, '0')}-01`
 
-      // Se parcelado, o trigger gerar_parcelas_receita cria as parcelas automaticamente
+          parcelas.push({
+            escritorio_id: escritorioId,
+            tipo: 'honorario',
+            cliente_id: formData.cliente_id,
+            processo_id: formData.processo_id,
+            consulta_id: formData.consulta_id,
+            contrato_id: formData.contrato_id,
+            descricao: `Parcela ${i + 1}/${numParcelas} - ${formData.descricao}`,
+            categoria: formData.categoria,
+            valor: i === numParcelas - 1 ? valorUltima : valorParcela,
+            data_competencia: dataComp,
+            data_vencimento: dataVenc,
+            parcelado: false,
+            numero_parcelas: 1,
+            recorrente: false,
+            observacoes: formData.observacoes,
+            status: 'pendente',
+            responsavel_id: user?.id,
+            created_by: user?.id,
+          })
+        }
+        const { data, error: insertError } = await supabase
+          .from('financeiro_receitas')
+          .insert(parcelas)
+          .select('id')
 
-      return data?.id || null
+        if (insertError) throw insertError
+        return data?.[0]?.id || null
+      } else {
+        // Receita simples (não parcelada)
+        const { data, error: insertError } = await supabase
+          .from('financeiro_receitas')
+          .insert({
+            escritorio_id: escritorioId,
+            tipo: 'honorario',
+            cliente_id: formData.cliente_id,
+            processo_id: formData.processo_id,
+            consulta_id: formData.consulta_id,
+            contrato_id: formData.contrato_id,
+            descricao: formData.descricao,
+            categoria: formData.categoria,
+            valor: formData.valor,
+            data_competencia: formData.data_vencimento.substring(0, 7) + '-01',
+            data_vencimento: formData.data_vencimento,
+            parcelado: false,
+            numero_parcelas: 1,
+            recorrente: formData.recorrente,
+            config_recorrencia: formData.recorrente ? formData.config_recorrencia : null,
+            observacoes: formData.observacoes,
+            status: 'pendente',
+            responsavel_id: user?.id,
+            created_by: user?.id,
+          })
+          .select('id')
+          .single()
+
+        if (insertError) throw insertError
+        return data?.id || null
+      }
     } catch (err) {
       console.error('Erro ao criar receita:', err)
       setError('Erro ao criar receita')

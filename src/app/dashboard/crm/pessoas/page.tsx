@@ -16,6 +16,8 @@ import {
   FileText,
   FileSignature,
   ChevronRight,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,12 +41,16 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PessoaWizardModal } from '@/components/crm/PessoaWizardModal';
+import { PessoaEditarModal } from '@/components/crm/PessoaEditarModal';
+import { PessoaDeleteConfirmDialog } from '@/components/crm/PessoaDeleteConfirmDialog';
+import { BulkDeleteConfirmDialog } from '@/components/crm/BulkDeleteConfirmDialog';
 import { BulkActionsToolbarCRM, BulkActionCRM } from '@/components/crm/BulkActionsToolbarCRM';
 import { BulkEditModalCRM } from '@/components/crm/BulkEditModalCRM';
 import { ProcessosPessoaModal } from '@/components/crm/ProcessosPessoaModal';
 import { ConsultivosPessoaModal } from '@/components/crm/ConsultivosPessoaModal';
 import { ContratosPessoaModal } from '@/components/crm/ContratosPessoaModal';
 import { createClient } from '@/lib/supabase/client';
+import { toast } from 'sonner';
 import type { PessoaResumo } from '@/types/crm';
 
 type EditFieldCRM = 'status' | 'categoria';
@@ -76,6 +82,12 @@ export default function PessoasPage() {
   const [processosModalOpen, setProcessosModalOpen] = useState(false);
   const [consultivosModalOpen, setConsultivosModalOpen] = useState(false);
   const [contratosModalOpen, setContratosModalOpen] = useState(false);
+
+  // Estados para editar/excluir
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [escritorioId, setEscritorioId] = useState<string | null>(null);
 
   // Buscar pessoas do banco de dados
   const fetchPessoas = useCallback(async () => {
@@ -144,6 +156,34 @@ export default function PessoasPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [busca, tipoCadastro, status]);
+
+  // Carregar escritorioId uma unica vez
+  useEffect(() => {
+    const loadEscritorio = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('escritorio_id')
+        .eq('id', user.id)
+        .single();
+      if (profile) setEscritorioId(profile.escritorio_id);
+    };
+    loadEscritorio();
+  }, []);
+
+  // Sync sidebar quando lista atualizar
+  useEffect(() => {
+    if (pessoaSelecionada) {
+      const updated = pessoas.find(p => p.id === pessoaSelecionada.id);
+      if (updated) {
+        setPessoaSelecionada(updated);
+      } else {
+        setPessoaSelecionada(null);
+      }
+    }
+  }, [pessoas]);
 
   // Limpar selecao quando mudar de pagina ou filtros
   useEffect(() => {
@@ -268,6 +308,8 @@ export default function PessoasPage() {
     } else if (action === 'alterar_categoria') {
       setBulkEditField('categoria');
       setShowBulkEditModal(true);
+    } else if (action === 'excluir') {
+      setBulkDeleteDialogOpen(true);
     }
   };
 
@@ -512,9 +554,17 @@ export default function PessoasPage() {
           {/* Header */}
           <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
             <h2 className="text-base font-semibold text-[#34495e] dark:text-slate-200">Detalhes da Pessoa</h2>
-            <Button variant="ghost" size="sm" onClick={() => setPessoaSelecionada(null)}>
-              <X className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditModalOpen(true)} title="Editar">
+                <Pencil className="w-4 h-4 text-slate-500" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-500/10" onClick={() => setDeleteDialogOpen(true)} title="Excluir">
+                <Trash2 className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPessoaSelecionada(null)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
 
           <ScrollArea className="flex-1">
@@ -803,10 +853,11 @@ export default function PessoasPage() {
 
             if (error) throw error;
 
+            toast.success('Pessoa cadastrada com sucesso!');
             fetchPessoas();
           } catch (error: any) {
             console.error('Erro ao salvar pessoa:', error);
-            alert(error.message || 'Erro ao salvar pessoa. Tente novamente.');
+            toast.error(error.message || 'Erro ao salvar pessoa. Tente novamente.');
           }
         }}
       />
@@ -858,6 +909,37 @@ export default function PessoasPage() {
           />
         </>
       )}
+
+      {/* Modal Editar Pessoa */}
+      <PessoaEditarModal
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        pessoaId={pessoaSelecionada?.id ?? null}
+        escritorioId={escritorioId}
+        onSaved={fetchPessoas}
+      />
+
+      {/* Dialog Excluir Pessoa */}
+      <PessoaDeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        pessoa={pessoaSelecionada}
+        onDeleted={() => {
+          setPessoaSelecionada(null);
+          fetchPessoas();
+        }}
+      />
+
+      {/* Dialog Excluir em Massa */}
+      <BulkDeleteConfirmDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+        selectedIds={Array.from(selectedIds)}
+        onDeleted={() => {
+          clearSelection();
+          fetchPessoas();
+        }}
+      />
     </div>
   );
 }

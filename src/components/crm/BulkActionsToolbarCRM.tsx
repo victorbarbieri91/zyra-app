@@ -1,9 +1,9 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { Users, Activity, X, Loader2, FileText } from 'lucide-react'
+import { Users, Activity, X, Loader2, FileText, Trash2 } from 'lucide-react'
 
-export type BulkActionCRM = 'alterar_status' | 'alterar_categoria' | 'vincular_contrato'
+export type BulkActionCRM = 'alterar_status' | 'alterar_categoria' | 'vincular_contrato' | 'excluir'
 
 interface BulkActionsToolbarCRMProps {
   selectedCount: number
@@ -76,6 +76,19 @@ export function BulkActionsToolbarCRM({
         >
           <FileText className="w-3.5 h-3.5 mr-1.5" />
           Vincular Contrato
+        </Button>
+
+        {/* Separador + Botao Excluir */}
+        <div className="border-l border-white/20 h-6 mx-1" />
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 text-xs text-red-300 hover:text-red-100 hover:bg-red-500/20"
+          disabled={loading}
+          onClick={() => onAction('excluir')}
+        >
+          <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+          Excluir
         </Button>
       </div>
     </div>

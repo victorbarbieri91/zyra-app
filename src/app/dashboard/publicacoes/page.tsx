@@ -139,7 +139,7 @@ export default function PublicacoesPage() {
   // Estado para criação de processo (fluxo com busca automática)
   const [buscaCNJModal, setBuscaCNJModal] = useState<{ open: boolean; cnj: string }>({ open: false, cnj: '' })
   const [wizardProcessoAuto, setWizardProcessoAuto] = useState<{ open: boolean; dados: ProcessoEscavadorNormalizado | null }>({ open: false, dados: null })
-  const [wizardProcessoManual, setWizardProcessoManual] = useState(false)
+  const [wizardProcessoManual, setWizardProcessoManual] = useState<{ open: boolean; cnj: string }>({ open: false, cnj: '' })
 
   const router = useRouter()
   const supabase = createClient()
@@ -547,8 +547,9 @@ export default function PublicacoesPage() {
   }
 
   const handleCadastroManual = () => {
+    const cnj = buscaCNJModal.cnj
     setBuscaCNJModal({ open: false, cnj: '' })
-    setWizardProcessoManual(true)
+    setWizardProcessoManual({ open: true, cnj })
   }
 
   // Gerar dados iniciais para os wizards baseado na publicação
@@ -1517,13 +1518,38 @@ export default function PublicacoesPage() {
       )}
 
       {/* Wizard Manual (fallback) */}
-      {wizardProcessoManual && (
+      {wizardProcessoManual.open && (
         <ProcessoWizard
-          open={wizardProcessoManual}
-          onClose={() => setWizardProcessoManual(false)}
+          open={wizardProcessoManual.open}
+          onClose={() => setWizardProcessoManual({ open: false, cnj: '' })}
           onSuccess={async (processoId) => {
-            toast.success('Pasta criada com sucesso!')
-            setWizardProcessoManual(false)
+            // Vincular publicações ao processo criado (pelo número CNJ)
+            const cnj = wizardProcessoManual.cnj
+            if (cnj && processoId && escritorioAtivo) {
+              try {
+                const cnjSomenteDigitos = cnj.replace(/\D/g, '')
+
+                const { data: updated, error } = await supabase
+                  .from('publicacoes_publicacoes')
+                  .update({ processo_id: processoId })
+                  .eq('escritorio_id', escritorioAtivo)
+                  .or(`numero_processo.eq.${cnj},numero_processo.eq.${cnjSomenteDigitos}`)
+                  .select('id')
+
+                if (error) {
+                  console.error('Erro ao vincular publicações:', error.message, error.details, error.hint)
+                } else if (updated && updated.length > 0) {
+                  toast.success(`Pasta criada e ${updated.length} publicação(ões) vinculada(s)!`)
+                } else {
+                  toast.success('Pasta criada com sucesso!')
+                }
+              } catch (err) {
+                console.error('Erro ao vincular publicações:', err)
+              }
+            } else {
+              toast.success('Pasta criada com sucesso!')
+            }
+            setWizardProcessoManual({ open: false, cnj: '' })
             carregarPublicacoes()
           }}
         />

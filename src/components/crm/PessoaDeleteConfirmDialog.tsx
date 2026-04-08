@@ -89,7 +89,7 @@ export function PessoaDeleteConfirmDialog({ open, onOpenChange, pessoa, onDelete
 
       if (error) throw error
 
-      toast.success('Pessoa excluida com sucesso')
+      toast.success('Pessoa excluída com sucesso')
       onOpenChange(false)
       onDeleted()
     } catch (error: any) {
@@ -130,7 +130,7 @@ export function PessoaDeleteConfirmDialog({ open, onOpenChange, pessoa, onDelete
         <AlertDialogHeader>
           {loadingCounts ? (
             <>
-              <AlertDialogTitle>Verificando vinculos...</AlertDialogTitle>
+              <AlertDialogTitle>Verificando vínculos...</AlertDialogTitle>
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
               </div>
@@ -139,12 +139,12 @@ export function PessoaDeleteConfirmDialog({ open, onOpenChange, pessoa, onDelete
             <>
               <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
                 <AlertTriangle className="w-5 h-5" />
-                Nao e possivel excluir
+                Não é possível excluir
               </AlertDialogTitle>
               <AlertDialogDescription asChild>
                 <div className="space-y-3">
                   <p className="text-sm text-slate-600 dark:text-slate-400">
-                    <strong>{pessoa?.nome_completo}</strong> possui vinculos que impedem a exclusao:
+                    <strong>{pessoa?.nome_completo}</strong> possui vínculos que impedem a exclusão:
                   </p>
                   <div className="space-y-1.5">
                     {counts.processos > 0 && (
@@ -173,7 +173,7 @@ export function PessoaDeleteConfirmDialog({ open, onOpenChange, pessoa, onDelete
                     )}
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Voce pode arquivar a pessoa como alternativa. Ela ficara oculta mas os vinculos serao preservados.
+                    Você pode arquivar a pessoa como alternativa. Ela ficará oculta, mas os vínculos serão preservados.
                   </p>
                 </div>
               </AlertDialogDescription>
@@ -182,7 +182,7 @@ export function PessoaDeleteConfirmDialog({ open, onOpenChange, pessoa, onDelete
             <>
               <AlertDialogTitle>Excluir Pessoa</AlertDialogTitle>
               <AlertDialogDescription>
-                Tem certeza que deseja excluir <strong>{pessoa?.nome_completo}</strong>? Esta acao nao pode ser desfeita.
+                Tem certeza que deseja excluir <strong>{pessoa?.nome_completo}</strong>? Esta ação não pode ser desfeita.
               </AlertDialogDescription>
             </>
           )}

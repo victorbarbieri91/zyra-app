@@ -29,6 +29,15 @@ This is a comprehensive legal system integrated with AI, designed for law firms.
 
 ## ⚠️ REGRAS CRÍTICAS DE DESENVOLVIMENTO
 
+### Português Brasileiro Obrigatório
+
+**TODA string voltada ao usuário DEVE estar em português brasileiro correto**, com acentuação, cedilha e pontuação adequadas. Exemplos:
+- ✅ `"Não é possível excluir"` — ❌ `"Nao e possivel excluir"`
+- ✅ `"Esta ação não pode ser desfeita"` — ❌ `"Esta acao nao pode ser desfeita"`
+- ✅ `"Vínculos serão preservados"` — ❌ `"Vinculos serao preservados"`
+
+Isso inclui: títulos, descrições, mensagens de toast, labels, placeholders, tooltips, comentários visíveis ao usuário e textos de confirmação.
+
 ### MCP Supabase é OBRIGATÓRIO
 
 **SEMPRE usar MCP Supabase para TODAS operações de banco de dados:**

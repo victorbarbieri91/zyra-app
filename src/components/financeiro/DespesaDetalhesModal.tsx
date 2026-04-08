@@ -29,6 +29,7 @@ import {
 import { formatCurrency } from '@/lib/utils'
 import { formatBrazilDate } from '@/lib/timezone'
 import type { CustaDespesa } from '@/hooks/useCustasDespesas'
+export type { CustaDespesa }
 
 const CATEGORIAS_LABELS: Record<string, string> = {
   custas: 'Custas Processuais',
@@ -157,7 +158,7 @@ export default function DespesaDetalhesModal({
 }: DespesaDetalhesModalProps) {
   if (!despesa) return null
 
-  const statusConf = STATUS_CONFIG[despesa.fluxo_status] || STATUS_CONFIG.pendente
+  const statusConf = STATUS_CONFIG[despesa.status] || STATUS_CONFIG.pendente
   const casoLabel = getCasoLabel(despesa)
 
   return (
@@ -330,7 +331,7 @@ export default function DespesaDetalhesModal({
               Editar
             </Button>
 
-            {['pendente', 'agendado'].includes(despesa.fluxo_status) && (
+            {['pendente', 'agendado'].includes(despesa.status) && (
               <Button
                 size="sm"
                 variant="outline"
@@ -347,7 +348,7 @@ export default function DespesaDetalhesModal({
           </div>
 
           <div className="flex items-center gap-2">
-            {despesa.fluxo_status === 'pendente' && (
+            {despesa.status === 'pendente' && (
               <Button
                 size="sm"
                 className="text-xs bg-blue-600 hover:bg-blue-700"
@@ -361,7 +362,7 @@ export default function DespesaDetalhesModal({
               </Button>
             )}
 
-            {despesa.fluxo_status === 'agendado' && (
+            {despesa.status === 'agendado' && (
               <>
                 <Button
                   size="sm"
@@ -389,7 +390,7 @@ export default function DespesaDetalhesModal({
               </>
             )}
 
-            {despesa.fluxo_status === 'liberado' && (
+            {despesa.status === 'liberado' && (
               <Button
                 size="sm"
                 className="text-xs bg-emerald-600 hover:bg-emerald-700"

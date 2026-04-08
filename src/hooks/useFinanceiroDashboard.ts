@@ -108,7 +108,6 @@ export function useFinanceiroDashboard({ escritorioIds, mes }: UseFinanceiroDash
   }, [])
 
   // ── KPIs: Receita, Despesa, Lucro, Variação, Horas ──
-  // Usa RPC get_extrato_com_recorrentes para incluir projeções de recorrentes/cartões
   const loadKpis = useCallback(async (ids: string[], mesSel: Date) => {
     updateData({ loadingKpis: true })
     try {
@@ -123,18 +122,18 @@ export function useFinanceiroDashboard({ escritorioIds, mes }: UseFinanceiroDash
         { data: extratoMesAnt },
         { data: timesheet },
       ] = await Promise.all([
-        // Mês selecionado: reais + virtuais (inclui projeções de recorrentes e cartões)
-        supabase.rpc('get_extrato_com_recorrentes', {
-          p_escritorio_ids: ids,
-          p_data_inicio: inicioMes,
-          p_data_fim: fimMes,
-        }),
-        // Mês anterior: reais + virtuais
-        supabase.rpc('get_extrato_com_recorrentes', {
-          p_escritorio_ids: ids,
-          p_data_inicio: inicioMesAnt,
-          p_data_fim: fimMesAnt,
-        }),
+        supabase
+          .from('v_extrato_financeiro')
+          .select('*')
+          .in('escritorio_id', ids)
+          .gte('data_referencia', inicioMes)
+          .lte('data_referencia', fimMes),
+        supabase
+          .from('v_extrato_financeiro')
+          .select('*')
+          .in('escritorio_id', ids)
+          .gte('data_referencia', inicioMesAnt)
+          .lte('data_referencia', fimMesAnt),
         supabase
           .from('financeiro_timesheet')
           .select('horas, faturavel')
@@ -245,18 +244,19 @@ export function useFinanceiroDashboard({ escritorioIds, mes }: UseFinanceiroDash
     }
   }, [supabase, updateData])
 
-  // ── Resumo do mês (usando RPC com recorrentes para incluir cartões e projeções) ──
+  // ── Resumo do mês ──
   const loadResumoMes = useCallback(async (ids: string[], mesSel: Date) => {
     updateData({ loadingResumo: true })
     try {
       const inicioMes = fmtMonth(mesSel)
       const fimMes = fmtMonthEnd(mesSel)
 
-      const { data: extrato, error } = await supabase.rpc('get_extrato_com_recorrentes', {
-        p_escritorio_ids: ids,
-        p_data_inicio: inicioMes,
-        p_data_fim: fimMes,
-      })
+      const { data: extrato, error } = await supabase
+        .from('v_extrato_financeiro')
+        .select('*')
+        .in('escritorio_id', ids)
+        .gte('data_referencia', inicioMes)
+        .lte('data_referencia', fimMes)
 
       if (error) throw error
 
@@ -374,11 +374,12 @@ export function useFinanceiroDashboard({ escritorioIds, mes }: UseFinanceiroDash
       const dataInicio = format(startOfMonth(new Date()), 'yyyy-MM-dd')
       const dataFim = format(endOfMonth(addMonths(new Date(), 5)), 'yyyy-MM-dd')
 
-      const { data: extrato, error } = await supabase.rpc('get_extrato_com_recorrentes', {
-        p_escritorio_ids: ids,
-        p_data_inicio: dataInicio,
-        p_data_fim: dataFim,
-      })
+      const { data: extrato, error } = await supabase
+        .from('v_extrato_financeiro')
+        .select('*')
+        .in('escritorio_id', ids)
+        .gte('data_referencia', dataInicio)
+        .lte('data_referencia', dataFim)
 
       if (error) throw error
 

@@ -186,11 +186,12 @@ export default function ExtratoContaSheet({ conta, open, onOpenChange }: Extrato
       const dataInicio = getInicioMes(selectedMonth)
       const dataFim = getFimMes(selectedMonth)
 
-      const { data, error } = await supabase.rpc('get_extrato_com_recorrentes', {
-        p_escritorio_ids: [conta.escritorio_id],
-        p_data_inicio: dataInicio,
-        p_data_fim: dataFim,
-      })
+      const { data, error } = await supabase
+        .from('v_extrato_financeiro')
+        .select('*')
+        .eq('escritorio_id', conta.escritorio_id)
+        .gte('data_referencia', dataInicio)
+        .lte('data_referencia', dataFim)
 
       if (error) {
         console.error('Erro ao carregar extrato da conta:', error)

@@ -15,7 +15,6 @@ import {
   DollarSign,
   TrendingUpDown,
   CreditCard,
-  Receipt,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
@@ -32,12 +31,6 @@ const financeiroMenuItems = [
     shortTitle: 'Rec/Desp',
     icon: TrendingUpDown,
     href: '/dashboard/financeiro/receitas-despesas',
-  },
-  {
-    title: 'Custas e Despesas',
-    shortTitle: 'Custas',
-    icon: Receipt,
-    href: '/dashboard/financeiro/custas-despesas',
   },
   {
     title: 'Timesheet',
@@ -94,14 +87,13 @@ export default function FinanceiroLayout({
         const escritorios = await getEscritoriosDoGrupo()
         const ids = escritorios.map(e => e.id)
         if (!ids.length) return
-        const fluxoFiltro = roleAtual === 'owner' ? 'agendado' : 'pendente'
+        const statusFiltro = roleAtual === 'owner' ? 'agendado' : 'pendente'
         const fimMes = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
         const { count } = await supabase
           .from('financeiro_despesas')
           .select('id', { count: 'exact', head: true })
           .in('escritorio_id', ids)
-          .eq('fluxo_status', fluxoFiltro)
-          .neq('status', 'cancelado')
+          .eq('status', statusFiltro)
           .lte('data_vencimento', fimMes)
         setCustasBadge(count || 0)
       } catch (error) {
@@ -196,7 +188,7 @@ export default function FinanceiroLayout({
                   <Icon className="h-4 w-4 flex-shrink-0" />
                   <span className="hidden sm:inline lg:hidden">{item.shortTitle}</span>
                   <span className="hidden lg:inline">{item.title}</span>
-                  {item.href === '/dashboard/financeiro/custas-despesas' && custasBadge > 0 && (
+                  {item.href === '/dashboard/financeiro/receitas-despesas' && custasBadge > 0 && (
                     <span className={cn(
                       "inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold",
                       isActive

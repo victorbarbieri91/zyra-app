@@ -36,7 +36,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  MoreVertical,
+  MoreHorizontal,
   Loader2,
   Plus,
   FileText,
@@ -62,6 +62,8 @@ import {
   Undo2,
   ShieldCheck,
   Scale,
+  CalendarClock,
+  Ban,
 } from 'lucide-react'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
@@ -72,12 +74,15 @@ import ReceitaModal from '@/components/financeiro/ReceitaModal'
 import DespesaModal from '@/components/financeiro/DespesaModal'
 import LevantamentoModal from '@/components/financeiro/LevantamentoModal'
 import { ModalRecebimento, type ModalRecebimentoItem } from '@/components/financeiro/ModalRecebimento'
+import { AgendarPagamentoModal } from '@/components/financeiro/AgendarPagamentoModal'
+import { RegistrarPagamentoModal } from '@/components/financeiro/RegistrarPagamentoModal'
+import DespesaDetalhesModal, { type CustaDespesa } from '@/components/financeiro/DespesaDetalhesModal'
 
 interface ExtratoItem {
   id: string
   escritorio_id: string
   tipo_movimento: 'receita' | 'despesa' | 'transferencia_saida' | 'transferencia_entrada' | 'levantamento'
-  status: 'pendente' | 'efetivado' | 'vencido' | 'cancelado' | 'parcial' | 'liberado'
+  status: 'pendente' | 'efetivado' | 'vencido' | 'cancelado' | 'parcial' | 'liberado' | 'agendado'
   origem: string
   categoria: string
   descricao: string
@@ -92,6 +97,13 @@ interface ExtratoItem {
   origem_id: string | null
   processo_id: string | null
   cliente_id: string | null
+  // Campos de workflow (apenas despesas, null para outros tipos)
+  aprovado_por: string | null
+  data_aprovacao: string | null
+  motivo_rejeicao: string | null
+  data_pagamento_programada: string | null
+  observacoes_financeiro: string | null
+  auto_pagamento: boolean | null
 }
 
 // Categorias com labels bonitos e cores
@@ -272,6 +284,13 @@ export default function ExtratoFinanceiroPage() {
   const [contaDestinoTransf, setContaDestinoTransf] = useState('')
   const [modalEfetivarMassa, setModalEfetivarMassa] = useState(false)
   const [contaEfetivarMassa, setContaEfetivarMassa] = useState('')
+
+  // Modais de workflow de despesa
+  const [modalAgendarDespesa, setModalAgendarDespesa] = useState<ExtratoItem | null>(null)
+  const [modalPagarDespesa, setModalPagarDespesa] = useState<ExtratoItem | null>(null)
+  const [modalDetalhesDespesa, setModalDetalhesDespesa] = useState<CustaDespesa | null>(null)
+  const [loadingDetalhesDespesa, setLoadingDetalhesDespesa] = useState(false)
+  const [workflowSubmitting, setWorkflowSubmitting] = useState(false)
 
   // Participação de advogados ao efetivar
   const [temParticipacao, setTemParticipacao] = useState(false)
@@ -485,15 +504,12 @@ export default function ExtratoFinanceiroPage() {
 
     setLoading(true)
     try {
-      const hoje = new Date().toISOString().split('T')[0]
-
-      // Usa RPC que retorna entradas reais + virtuais (recorrentes futuros sem lançamento)
       const { data: viewData, error: viewError } = await supabase
-        .rpc('get_extrato_com_recorrentes', {
-          p_escritorio_ids: escritoriosSelecionados,
-          p_data_inicio: dataInicio,
-          p_data_fim: dataFim,
-        })
+        .from('v_extrato_financeiro')
+        .select('*')
+        .in('escritorio_id', escritoriosSelecionados)
+        .gte('data_referencia', dataInicio)
+        .lte('data_referencia', dataFim)
 
       if (viewError) {
         console.error('Erro ao carregar extrato:', viewError)
@@ -504,7 +520,7 @@ export default function ExtratoFinanceiroPage() {
       let combinedData: ExtratoItem[] = (viewData || []).map((item: any) => ({
         id: item.id,
         escritorio_id: item.escritorio_id,
-        tipo_movimento: item.tipo_movimento as 'receita' | 'despesa',
+        tipo_movimento: item.tipo_movimento as ExtratoItem['tipo_movimento'],
         status: item.status,
         origem: item.origem,
         categoria: item.categoria,
@@ -520,6 +536,12 @@ export default function ExtratoFinanceiroPage() {
         origem_id: item.origem_id,
         processo_id: item.processo_id,
         cliente_id: item.cliente_id,
+        aprovado_por: item.aprovado_por,
+        data_aprovacao: item.data_aprovacao,
+        motivo_rejeicao: item.motivo_rejeicao,
+        data_pagamento_programada: item.data_pagamento_programada,
+        observacoes_financeiro: item.observacoes_financeiro,
+        auto_pagamento: item.auto_pagamento,
       }))
 
       // Filtro por conta bancária
@@ -653,6 +675,129 @@ export default function ExtratoFinanceiroPage() {
   // Placeholder para manter referências no JSX que ainda usam handleAbrirModalPrevisto
   const handleAbrirModalPrevisto = (_item: ExtratoItem) => {}
 
+  // ── Handlers de workflow de despesa ──
+
+  const handleAgendarDespesa = async (id: string, opts: { dataProgramada: string; contaBancariaId: string | null; observacoes?: string }) => {
+    try {
+      const updateData: Record<string, unknown> = {
+        status: 'agendado',
+        data_pagamento_programada: opts.dataProgramada,
+      }
+      if (opts.contaBancariaId) updateData.conta_bancaria_id = opts.contaBancariaId
+      if (opts.observacoes) updateData.observacoes_financeiro = opts.observacoes
+
+      const { error } = await supabase.from('financeiro_despesas').update(updateData).eq('id', id)
+      if (error) throw error
+      toast.success('Pagamento agendado')
+      loadExtrato()
+    } catch (err) {
+      console.error('Erro ao agendar:', err)
+      toast.error('Erro ao agendar pagamento')
+      throw err
+    }
+  }
+
+  const handleLiberarDespesa = async (item: ExtratoItem) => {
+    if (!item.origem_id) return
+    setWorkflowSubmitting(true)
+    try {
+      const { data: userData } = await supabase.auth.getUser()
+      const { error } = await supabase.from('financeiro_despesas').update({
+        status: 'liberado',
+        aprovado_por: userData?.user?.id || null,
+        data_aprovacao: new Date().toISOString(),
+      }).eq('id', item.origem_id)
+      if (error) throw error
+      toast.success('Despesa liberada para pagamento')
+      loadExtrato()
+    } catch (err) {
+      console.error('Erro ao liberar:', err)
+      toast.error('Erro ao liberar despesa')
+    } finally {
+      setWorkflowSubmitting(false)
+    }
+  }
+
+  const handlePagarDespesa = async (id: string, opts: { contaBancariaId: string; formaPagamento?: string }) => {
+    try {
+      const hoje = new Date().toISOString().split('T')[0]
+      const { error } = await supabase.from('financeiro_despesas').update({
+        status: 'pago',
+        data_pagamento: hoje,
+        conta_bancaria_id: opts.contaBancariaId,
+        forma_pagamento: opts.formaPagamento || null,
+      }).eq('id', id)
+      if (error) throw error
+
+      // Recalcular saldo da conta
+      if (opts.contaBancariaId) {
+        await supabase.rpc('recalcular_saldo_conta', { p_conta_id: opts.contaBancariaId })
+      }
+
+      toast.success('Pagamento registrado')
+      loadExtrato()
+    } catch (err) {
+      console.error('Erro ao registrar pagamento:', err)
+      toast.error('Erro ao registrar pagamento')
+      throw err
+    }
+  }
+
+  const handleCancelarDespesa = async (item: ExtratoItem) => {
+    if (!item.origem_id) return
+    if (!confirm('Tem certeza que deseja cancelar esta despesa?')) return
+    setWorkflowSubmitting(true)
+    try {
+      const { error } = await supabase.from('financeiro_despesas').update({
+        status: 'cancelado',
+      }).eq('id', item.origem_id)
+      if (error) throw error
+      toast.success('Despesa cancelada')
+      loadExtrato()
+    } catch (err) {
+      console.error('Erro ao cancelar:', err)
+      toast.error('Erro ao cancelar despesa')
+    } finally {
+      setWorkflowSubmitting(false)
+    }
+  }
+
+  const handleAbrirDetalhesDespesa = async (item: ExtratoItem) => {
+    if (!item.origem_id) return
+    setLoadingDetalhesDespesa(true)
+    try {
+      const { data, error } = await supabase
+        .from('financeiro_despesas')
+        .select(`
+          *,
+          processo:processo_id(id, autor, reu, numero_pasta, numero_cnj),
+          cliente:cliente_id(nome_completo),
+          advogado:advogado_id(nome_completo)
+        `)
+        .eq('id', item.origem_id)
+        .single()
+      if (error) throw error
+
+      const despesa: CustaDespesa = {
+        ...data,
+        fluxo_status: data.status,
+        processo_autor: data.processo?.autor || null,
+        processo_reu: data.processo?.reu || null,
+        processo_numero_pasta: data.processo?.numero_pasta || null,
+        processo_numero_cnj: data.processo?.numero_cnj || null,
+        consulta_titulo: null,
+        cliente_nome: data.cliente?.nome_completo || null,
+        advogado_nome: data.advogado?.nome_completo || null,
+      }
+      setModalDetalhesDespesa(despesa)
+    } catch (err) {
+      console.error('Erro ao carregar detalhes:', err)
+      toast.error('Erro ao carregar detalhes da despesa')
+    } finally {
+      setLoadingDetalhesDespesa(false)
+    }
+  }
+
   // Voltar item materializado (deletar registro pendente recorrente)
   const handleVoltarParaPrevisto = async (item: ExtratoItem) => {
     if (!item.origem_id) return
@@ -780,33 +925,6 @@ export default function ExtratoFinanceiroPage() {
     } catch (error) {
       console.error('Erro:', error)
       toast.error('Erro ao receber')
-    }
-  }
-
-  const handlePagarDespesa = async (item: ExtratoItem, contaId: string) => {
-    if (!contaId || !escritorioAtivo) {
-      toast.error('Selecione uma conta bancária')
-      return
-    }
-
-    try {
-      await supabase
-        .from('financeiro_despesas')
-        .update({
-          status: 'pago',
-          data_pagamento: new Date().toISOString().split('T')[0],
-          conta_bancaria_id: contaId,
-        })
-        .eq('id', item.origem_id)
-
-      // Recalcular saldo da conta bancária
-      await supabase.rpc('recalcular_saldo_conta', { p_conta_id: contaId })
-
-      toast.success('Despesa paga!')
-      loadExtrato()
-    } catch (error) {
-      console.error('Erro:', error)
-      toast.error('Erro ao pagar')
     }
   }
 
@@ -2695,6 +2813,11 @@ export default function ExtratoFinanceiroPage() {
                             <Clock className="w-2.5 h-2.5" />
                             Parcial
                           </span>
+                        ) : item.status === 'agendado' ? (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-500/30">
+                            <CalendarClock className="w-2.5 h-2.5" />
+                            Agendado
+                          </span>
                         ) : item.status === 'liberado' ? (
                           <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30">
                             <ShieldCheck className="w-2.5 h-2.5" />
@@ -2768,12 +2891,48 @@ export default function ExtratoFinanceiroPage() {
                           <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                         </Button>
                       )}
-                      {isPendente && contasBancarias.length > 0 && item.tipo_movimento === 'despesa' && (
+                      {/* Botão workflow de despesa */}
+                      {item.tipo_movimento === 'despesa' && (item.status === 'pendente' || item.status === 'vencido') && (
+                        <Button
+                          size="sm"
+                          className="h-6 px-2 text-[10px] font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-full"
+                          disabled={workflowSubmitting}
+                          onClick={(e) => { e.stopPropagation(); setModalAgendarDespesa(item) }}
+                        >
+                          <CalendarClock className="w-3 h-3 mr-0.5" />
+                          Agendar
+                        </Button>
+                      )}
+                      {item.tipo_movimento === 'despesa' && item.status === 'agendado' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 px-2 text-[10px] font-medium border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-full"
+                          disabled={workflowSubmitting}
+                          onClick={(e) => { e.stopPropagation(); handleLiberarDespesa(item) }}
+                        >
+                          <ShieldCheck className="w-3 h-3 mr-0.5" />
+                          Liberar
+                        </Button>
+                      )}
+                      {item.tipo_movimento === 'despesa' && item.status === 'liberado' && (
+                        <Button
+                          size="sm"
+                          className="h-6 px-2 text-[10px] font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-full"
+                          disabled={workflowSubmitting}
+                          onClick={(e) => { e.stopPropagation(); setModalPagarDespesa(item) }}
+                        >
+                          <Banknote className="w-3 h-3 mr-0.5" />
+                          Pagar
+                        </Button>
+                      )}
+                      {/* Botão genérico para despesas sem workflow (efetivado/pago) — não mostrar */}
+                      {isPendente && contasBancarias.length > 0 && item.tipo_movimento !== 'despesa' && item.tipo_movimento !== 'receita' && (
                         <Button
                           variant="ghost"
                           size="sm"
                           className="h-6 w-6 p-0 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-                          title="Pagar"
+                          title="Efetivar"
                           onClick={() => {
                             setModalEfetivarItem(item)
                             setContaSelecionada(item.conta_bancaria_id || contasBancarias[0]?.id || '')
@@ -2792,7 +2951,7 @@ export default function ExtratoFinanceiroPage() {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                              <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                              <MoreHorizontal className="w-4 h-4 text-slate-400" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-44">
@@ -2808,11 +2967,84 @@ export default function ExtratoFinanceiroPage() {
                         </DropdownMenu>
                       )}
 
-                      {isPendente && item.tipo_movimento !== 'transferencia_saida' && item.tipo_movimento !== 'transferencia_entrada' && (
+                      {/* Menu de ações para despesas (mobile) */}
+                      {item.tipo_movimento === 'despesa' && !isPrevisto && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                              <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                              <MoreHorizontal className="w-4 h-4 text-slate-400" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-52">
+                            <DropdownMenuItem onClick={() => handleAbrirDetalhesDespesa(item)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Ver Detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handlePrepararEdicao(item)}>
+                              <Pencil className="w-4 h-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            {item.status !== 'efetivado' && (
+                              <>
+                                <DropdownMenuSeparator />
+                                {(item.status === 'pendente' || item.status === 'vencido') && (
+                                  <DropdownMenuItem
+                                    onClick={() => setModalAgendarDespesa(item)}
+                                    className="text-blue-600 focus:text-blue-700 focus:bg-blue-50"
+                                  >
+                                    <CalendarClock className="w-4 h-4 mr-2" />
+                                    Agendar Pagamento
+                                  </DropdownMenuItem>
+                                )}
+                                {(item.status === 'pendente' || item.status === 'vencido' || item.status === 'agendado') && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleLiberarDespesa(item)}
+                                    className="text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50"
+                                  >
+                                    <ShieldCheck className="w-4 h-4 mr-2" />
+                                    Liberar Pagamento
+                                  </DropdownMenuItem>
+                                )}
+                                {item.status !== 'efetivado' && (
+                                  <DropdownMenuItem
+                                    onClick={() => setModalPagarDespesa(item)}
+                                    className="text-emerald-700 focus:text-emerald-800 focus:bg-emerald-50 font-medium"
+                                  >
+                                    <Banknote className="w-4 h-4 mr-2" />
+                                    Registrar Pagamento
+                                  </DropdownMenuItem>
+                                )}
+                              </>
+                            )}
+                            {(item.status === 'pendente' || item.status === 'vencido' || item.status === 'agendado') && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => handleCancelarDespesa(item)}
+                                  className="text-amber-600 focus:text-amber-600 focus:bg-amber-50"
+                                >
+                                  <Ban className="w-4 h-4 mr-2" />
+                                  Cancelar
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handlePrepararExclusao(item)}
+                              className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+
+                      {isPendente && item.tipo_movimento !== 'despesa' && item.tipo_movimento !== 'transferencia_saida' && item.tipo_movimento !== 'transferencia_entrada' && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                              <MoreHorizontal className="w-4 h-4 text-slate-400" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
@@ -2826,7 +3058,7 @@ export default function ExtratoFinanceiroPage() {
                                 Editar
                               </DropdownMenuItem>
                             )}
-                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa') && (
+                            {item.origem !== 'fatura' && item.origem !== 'nota_debito' && item.tipo_movimento === 'receita' && (
                               <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
@@ -2851,11 +3083,11 @@ export default function ExtratoFinanceiroPage() {
                         </DropdownMenu>
                       )}
 
-                      {!isPrevisto && !isPendente && item.tipo_movimento !== 'transferencia_saida' && item.tipo_movimento !== 'transferencia_entrada' && (
+                      {!isPrevisto && !isPendente && item.tipo_movimento !== 'despesa' && item.tipo_movimento !== 'transferencia_saida' && item.tipo_movimento !== 'transferencia_entrada' && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                              <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                              <MoreHorizontal className="w-4 h-4 text-slate-400" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
@@ -2879,7 +3111,7 @@ export default function ExtratoFinanceiroPage() {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                              <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                              <MoreHorizontal className="w-4 h-4 text-slate-400" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-44">
@@ -2937,7 +3169,7 @@ export default function ExtratoFinanceiroPage() {
                     className="data-[state=checked]:bg-[#34495e] data-[state=checked]:border-[#34495e]"
                   />
                 </th>
-                <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">
+                <th className="text-left py-2.5 px-2 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">
                   <button
                     onClick={() => setSortDirection(prev => prev === 'desc' ? 'asc' : 'desc')}
                     className="flex items-center gap-1 hover:text-[#34495e] dark:hover:text-slate-200 transition-colors"
@@ -2951,18 +3183,18 @@ export default function ExtratoFinanceiroPage() {
                     )}
                   </button>
                 </th>
-                <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Efetivado</th>
-                <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Tipo</th>
-                <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide w-[30%]">Descrição</th>
-                <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Benf./Cliente</th>
-                <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Categoria</th>
-                <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Conta</th>
+                <th className="text-left py-2.5 px-2 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Pgto</th>
+                <th className="text-left py-2.5 px-2 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Tipo</th>
+                <th className="text-left py-2.5 px-2 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide">Descrição</th>
+                <th className="text-left py-2.5 px-2 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Benf./Cliente</th>
+                <th className="text-left py-2.5 px-2 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Categoria</th>
+                <th className="text-left py-2.5 px-2 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Conta</th>
                 {showMultiEscritorio && (
-                  <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Escritório</th>
+                  <th className="text-left py-2.5 px-2 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Escritório</th>
                 )}
-                <th className="text-center py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Status</th>
-                <th className="text-right py-2.5 px-3 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Valor</th>
-                <th className="text-center py-2.5 px-2 w-20"></th>
+                <th className="text-center py-2.5 px-2 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Status</th>
+                <th className="text-right py-2.5 px-2 text-[10px] font-semibold text-[#46627f] dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Valor</th>
+                <th className="text-center py-2.5 px-1 w-24"></th>
               </tr>
             </thead>
             <tbody className={loading ? 'opacity-50' : ''}>
@@ -3024,9 +3256,9 @@ export default function ExtratoFinanceiroPage() {
                     </td>
 
                     {/* Vencimento */}
-                    <td className="py-2.5 px-3">
+                    <td className="py-2.5 px-2">
                       <div className="flex flex-col">
-                        <span className={`text-xs font-medium whitespace-nowrap ${isVencido ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                        <span className={`text-[11px] font-medium whitespace-nowrap ${isVencido ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-300'}`}>
                           {item.data_vencimento ? formatDate(item.data_vencimento) : '-'}
                         </span>
                         {isPendente && diasVenc !== null && (
@@ -3037,19 +3269,25 @@ export default function ExtratoFinanceiroPage() {
                       </div>
                     </td>
 
-                    {/* Data Pagamento */}
-                    <td className="py-2.5 px-3">
+                    {/* Data Pagamento / Agendamento */}
+                    <td className="py-2.5 px-2">
                       {item.status === 'efetivado' && item.data_efetivacao ? (
-                        <span className="text-xs text-emerald-600 font-medium whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 font-medium whitespace-nowrap">
+                          <CheckCircle className="w-3 h-3" />
                           {formatDate(item.data_efetivacao)}
                         </span>
+                      ) : (item.status === 'agendado' || item.status === 'liberado') && item.data_pagamento_programada ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-purple-600 font-medium whitespace-nowrap" title="Data agendada para pagamento">
+                          <Clock className="w-3 h-3" />
+                          {formatDate(item.data_pagamento_programada)}
+                        </span>
                       ) : (
-                        <span className="text-xs text-slate-300 dark:text-slate-600">-</span>
+                        <span className="text-[11px] text-slate-300 dark:text-slate-600">-</span>
                       )}
                     </td>
 
                     {/* Tipo */}
-                    <td className="py-2.5 px-3">
+                    <td className="py-2.5 px-2">
                       {item.tipo_movimento === 'receita' ? (
                         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 whitespace-nowrap">
                           <TrendingUp className="w-2.5 h-2.5" />
@@ -3074,9 +3312,9 @@ export default function ExtratoFinanceiroPage() {
                     </td>
 
                     {/* Descrição */}
-                    <td className="py-2.5 px-3">
+                    <td className="py-2.5 px-2">
                       <p
-                        className="text-xs text-slate-700 dark:text-slate-300 truncate max-w-[300px]"
+                        className="text-xs text-slate-700 dark:text-slate-300 truncate max-w-[220px]"
                         title={item.descricao}
                       >
                         {item.descricao}
@@ -3084,9 +3322,9 @@ export default function ExtratoFinanceiroPage() {
                     </td>
 
                     {/* Beneficiário */}
-                    <td className="py-2.5 px-3">
+                    <td className="py-2.5 px-2">
                       <span
-                        className="text-xs text-slate-600 dark:text-slate-400 truncate block max-w-[120px]"
+                        className="text-xs text-slate-600 dark:text-slate-400 truncate block max-w-[110px]"
                         title={item.entidade || ''}
                       >
                         {item.entidade || '-'}
@@ -3094,16 +3332,16 @@ export default function ExtratoFinanceiroPage() {
                     </td>
 
                     {/* Categoria */}
-                    <td className="py-2.5 px-3">
-                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium border whitespace-nowrap ${categoriaConfig.color}`}>
+                    <td className="py-2.5 px-2">
+                      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium border whitespace-nowrap ${categoriaConfig.color}`}>
                         {categoriaConfig.label}
                       </span>
                     </td>
 
                     {/* Conta */}
-                    <td className="py-2.5 px-3">
+                    <td className="py-2.5 px-2">
                       {item.conta_bancaria_nome ? (
-                        <span className="text-xs text-slate-600 dark:text-slate-400 truncate block max-w-[90px]" title={item.conta_bancaria_nome}>
+                        <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate block max-w-[80px]" title={item.conta_bancaria_nome}>
                           {item.conta_bancaria_nome}
                         </span>
                       ) : (
@@ -3113,15 +3351,15 @@ export default function ExtratoFinanceiroPage() {
 
                     {/* Escritório (só quando multi-escritório) */}
                     {showMultiEscritorio && (
-                      <td className="py-2.5 px-3">
-                        <span className={cn("inline-block px-1.5 py-0.5 rounded text-[10px] font-medium border whitespace-nowrap truncate max-w-[80px]", escritorioColorMap[item.escritorio_id] || 'bg-slate-100 text-slate-600 border-slate-200')} title={escritorioNomeMap[item.escritorio_id] || ''}>
+                      <td className="py-2.5 px-2">
+                        <span className={cn("inline-block px-1.5 py-0.5 rounded text-[10px] font-medium border whitespace-nowrap truncate max-w-[70px]", escritorioColorMap[item.escritorio_id] || 'bg-slate-100 text-slate-600 border-slate-200')} title={escritorioNomeMap[item.escritorio_id] || ''}>
                           {escritorioNomeMap[item.escritorio_id] || '-'}
                         </span>
                       </td>
                     )}
 
                     {/* Status */}
-                    <td className="py-2.5 px-3 text-center">
+                    <td className="py-2.5 px-2 text-center">
                       {isPrevisto ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 dark:bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-dashed border-slate-300 dark:border-slate-500/30 whitespace-nowrap">
                           <CalendarDays className="w-3 h-3" />
@@ -3136,6 +3374,11 @@ export default function ExtratoFinanceiroPage() {
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30 whitespace-nowrap">
                           <Clock className="w-3 h-3" />
                           Parcial
+                        </span>
+                      ) : item.status === 'agendado' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-500/30 whitespace-nowrap">
+                          <CalendarClock className="w-3 h-3" />
+                          Agendado
                         </span>
                       ) : item.status === 'liberado' ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 whitespace-nowrap">
@@ -3156,7 +3399,7 @@ export default function ExtratoFinanceiroPage() {
                     </td>
 
                     {/* Valor */}
-                    <td className="py-2.5 px-3 text-right">
+                    <td className="py-2.5 px-2 text-right">
                       <span className={`text-xs font-semibold whitespace-nowrap ${
                         item.tipo_movimento === 'receita' ? 'text-emerald-600' :
                         item.tipo_movimento === 'despesa' ? 'text-red-600' :
@@ -3174,8 +3417,8 @@ export default function ExtratoFinanceiroPage() {
                     </td>
 
                     {/* Ações */}
-                    <td className="py-2.5 px-2 text-center">
-                      <div className="flex items-center justify-center gap-0.5">
+                    <td className="py-2.5 px-1 text-center">
+                      <div className="flex items-center justify-end gap-0.5">
                         {/* Botão icon primário — não mostrar para faturas projetadas de cartão */}
                         {isPrevisto && item.origem !== 'cartao_credito' && (
                           <Button
@@ -3200,22 +3443,39 @@ export default function ExtratoFinanceiroPage() {
                             <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                           </Button>
                         )}
-                        {isPendente && contasBancarias.length > 0 && item.tipo_movimento === 'despesa' && (
+                        {/* Botão workflow de despesa — desktop */}
+                        {item.tipo_movimento === 'despesa' && (item.status === 'pendente' || item.status === 'vencido') && (
                           <Button
-                            variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-                            title="Pagar"
-                            onClick={() => {
-                              setModalEfetivarItem(item)
-                              setContaSelecionada(item.conta_bancaria_id || contasBancarias[0]?.id || '')
-                              setTemParticipacao(false)
-                              setAdvogadoSelecionado('')
-                              setPercentualParticipacao(0)
-                              setDataVencimentoParticipacao('')
-                            }}
+                            className="h-[26px] px-2 text-[10px] font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-full gap-0.5"
+                            disabled={workflowSubmitting}
+                            onClick={(e) => { e.stopPropagation(); setModalAgendarDespesa(item) }}
                           >
-                            <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            <CalendarClock className="w-3 h-3" />
+                            Agendar
+                          </Button>
+                        )}
+                        {item.tipo_movimento === 'despesa' && item.status === 'agendado' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-[26px] px-2 text-[10px] font-medium border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-full gap-0.5"
+                            disabled={workflowSubmitting}
+                            onClick={(e) => { e.stopPropagation(); handleLiberarDespesa(item) }}
+                          >
+                            <ShieldCheck className="w-3 h-3" />
+                            Liberar
+                          </Button>
+                        )}
+                        {item.tipo_movimento === 'despesa' && item.status === 'liberado' && (
+                          <Button
+                            size="sm"
+                            className="h-[26px] px-2 text-[10px] font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-full gap-0.5"
+                            disabled={workflowSubmitting}
+                            onClick={(e) => { e.stopPropagation(); setModalPagarDespesa(item) }}
+                          >
+                            <Banknote className="w-3 h-3" />
+                            Pagar
                           </Button>
                         )}
 
@@ -3224,7 +3484,7 @@ export default function ExtratoFinanceiroPage() {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                                <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                                <MoreHorizontal className="w-4 h-4 text-slate-400" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
@@ -3244,7 +3504,7 @@ export default function ExtratoFinanceiroPage() {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                                <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                                <MoreHorizontal className="w-4 h-4 text-slate-400" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
@@ -3264,11 +3524,86 @@ export default function ExtratoFinanceiroPage() {
                           </DropdownMenu>
                         )}
 
-                        {isPendente && item.tipo_movimento !== 'transferencia_saida' && item.tipo_movimento !== 'transferencia_entrada' && (
+                        {/* Menu de ações para despesas */}
+                        {item.tipo_movimento === 'despesa' && !isPrevisto && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                                <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                                <MoreHorizontal className="w-4 h-4 text-slate-400" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-52">
+                              <DropdownMenuItem onClick={() => handleAbrirDetalhesDespesa(item)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Ver Detalhes
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handlePrepararEdicao(item)}>
+                                <Pencil className="w-4 h-4 mr-2" />
+                                Editar
+                              </DropdownMenuItem>
+                              {/* Ações de workflow — permite pular etapas */}
+                              {item.status !== 'efetivado' && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  {(item.status === 'pendente' || item.status === 'vencido') && (
+                                    <DropdownMenuItem
+                                      onClick={() => setModalAgendarDespesa(item)}
+                                      className="text-blue-600 focus:text-blue-700 focus:bg-blue-50"
+                                    >
+                                      <CalendarClock className="w-4 h-4 mr-2" />
+                                      Agendar Pagamento
+                                    </DropdownMenuItem>
+                                  )}
+                                  {(item.status === 'pendente' || item.status === 'vencido' || item.status === 'agendado') && (
+                                    <DropdownMenuItem
+                                      onClick={() => handleLiberarDespesa(item)}
+                                      className="text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50"
+                                    >
+                                      <ShieldCheck className="w-4 h-4 mr-2" />
+                                      Liberar Pagamento
+                                    </DropdownMenuItem>
+                                  )}
+                                  {item.status !== 'efetivado' && (
+                                    <DropdownMenuItem
+                                      onClick={() => setModalPagarDespesa(item)}
+                                      className="text-emerald-700 focus:text-emerald-800 focus:bg-emerald-50 font-medium"
+                                    >
+                                      <Banknote className="w-4 h-4 mr-2" />
+                                      Registrar Pagamento
+                                    </DropdownMenuItem>
+                                  )}
+                                </>
+                              )}
+                              {(item.status === 'pendente' || item.status === 'vencido' || item.status === 'agendado') && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleCancelarDespesa(item)}
+                                    className="text-amber-600 focus:text-amber-600 focus:bg-amber-50"
+                                  >
+                                    <Ban className="w-4 h-4 mr-2" />
+                                    Cancelar
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handlePrepararExclusao(item)}
+                                className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+
+                        {/* Menu completo para receitas e outros tipos (pendentes) */}
+                        {isPendente && item.tipo_movimento !== 'despesa' && item.tipo_movimento !== 'transferencia_saida' && item.tipo_movimento !== 'transferencia_entrada' && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                <MoreHorizontal className="w-4 h-4 text-slate-400" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
@@ -3305,18 +3640,6 @@ export default function ExtratoFinanceiroPage() {
                                   Alterar Categoria
                                 </DropdownMenuItem>
                               )}
-                              {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setItemParaAlterarTipo(item)
-                                    setNovoTipo(item.tipo_movimento === 'receita' ? 'despesa' : 'receita')
-                                    setModalAlterarTipo(true)
-                                  }}
-                                >
-                                  <ArrowLeftRight className="w-4 h-4 mr-2" />
-                                  Alterar Tipo
-                                </DropdownMenuItem>
-                              )}
 
                               <DropdownMenuSeparator />
 
@@ -3329,16 +3652,6 @@ export default function ExtratoFinanceiroPage() {
                                 <RefreshCw className="w-4 h-4 mr-2" />
                                 Alterar Status
                               </DropdownMenuItem>
-                              {item.origem !== 'fatura' && item.origem !== 'nota_debito' && (item.tipo_movimento === 'receita' || item.tipo_movimento === 'despesa') && (
-                                <DropdownMenuItem
-                                  disabled={submitting}
-                                  onClick={() => handleVoltarParaPrevisto(item)}
-                                  className="text-slate-500 focus:text-slate-600"
-                                >
-                                  <Undo2 className="w-4 h-4 mr-2" />
-                                  Voltar para Previsto
-                                </DropdownMenuItem>
-                              )}
 
                               <DropdownMenuSeparator />
 
@@ -3353,11 +3666,11 @@ export default function ExtratoFinanceiroPage() {
                           </DropdownMenu>
                         )}
 
-                        {!isPrevisto && !isPendente && item.tipo_movimento !== 'transferencia_saida' && item.tipo_movimento !== 'transferencia_entrada' && (
+                        {!isPrevisto && !isPendente && item.tipo_movimento !== 'despesa' && item.tipo_movimento !== 'transferencia_saida' && item.tipo_movimento !== 'transferencia_entrada' && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                                <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+                                <MoreHorizontal className="w-4 h-4 text-slate-400" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
@@ -4814,6 +5127,68 @@ export default function ExtratoFinanceiroPage() {
         contasBancarias={contasBancarias}
         advogados={advogadosEscritorio.map(a => ({ id: a.id, user_id: a.user_id, nome: a.nome, percentual_comissao: a.percentual_comissao }))}
         onPagamentoRealizado={loadExtrato}
+      />
+
+      {/* Modais de workflow de despesa */}
+      <AgendarPagamentoModal
+        open={!!modalAgendarDespesa}
+        onOpenChange={(v: boolean) => { if (!v) setModalAgendarDespesa(null) }}
+        despesa={modalAgendarDespesa ? {
+          id: modalAgendarDespesa.origem_id!,
+          descricao: modalAgendarDespesa.descricao,
+          valor: modalAgendarDespesa.valor,
+          data_vencimento: modalAgendarDespesa.data_vencimento,
+        } : null}
+        escritorioIds={escritoriosSelecionados}
+        onConfirm={handleAgendarDespesa}
+      />
+
+      <RegistrarPagamentoModal
+        open={!!modalPagarDespesa}
+        onOpenChange={(v: boolean) => { if (!v) setModalPagarDespesa(null) }}
+        despesa={modalPagarDespesa ? {
+          id: modalPagarDespesa.origem_id!,
+          descricao: modalPagarDespesa.descricao,
+          valor: modalPagarDespesa.valor,
+        } : null}
+        escritorioIds={escritoriosSelecionados}
+        onConfirm={handlePagarDespesa}
+      />
+
+      <DespesaDetalhesModal
+        open={!!modalDetalhesDespesa}
+        onOpenChange={(v) => { if (!v) setModalDetalhesDespesa(null) }}
+        despesa={modalDetalhesDespesa}
+        onEditar={(item) => {
+          setModalDetalhesDespesa(null)
+          // Buscar ExtratoItem correspondente para handlePrepararEdicao
+          const extratoItem = extrato.find(d => d.origem_id === item.id)
+          if (extratoItem) handlePrepararEdicao(extratoItem)
+        }}
+        onCancelar={(item) => {
+          setModalDetalhesDespesa(null)
+          const extratoItem = extrato.find(d => d.origem_id === item.id)
+          if (extratoItem) handleCancelarDespesa(extratoItem)
+        }}
+        onAgendar={(item) => {
+          setModalDetalhesDespesa(null)
+          const extratoItem = extrato.find(d => d.origem_id === item.id)
+          if (extratoItem) setModalAgendarDespesa(extratoItem)
+        }}
+        onLiberar={(item) => {
+          setModalDetalhesDespesa(null)
+          const extratoItem = extrato.find(d => d.origem_id === item.id)
+          if (extratoItem) handleLiberarDespesa(extratoItem)
+        }}
+        onRejeitar={() => {
+          // TODO: modal de rejeição se necessário
+          setModalDetalhesDespesa(null)
+        }}
+        onPagar={(item) => {
+          setModalDetalhesDespesa(null)
+          const extratoItem = extrato.find(d => d.origem_id === item.id)
+          if (extratoItem) setModalPagarDespesa(extratoItem)
+        }}
       />
     </div>
   )

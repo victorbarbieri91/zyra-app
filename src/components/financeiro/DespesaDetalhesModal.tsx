@@ -25,6 +25,7 @@ import {
   Tag,
   CreditCard,
   MessageSquare,
+  Undo2,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { formatBrazilDate } from '@/lib/timezone'
@@ -113,6 +114,7 @@ interface DespesaDetalhesModalProps {
   onLiberar: (item: CustaDespesa) => void
   onRejeitar: (item: CustaDespesa) => void
   onPagar: (item: CustaDespesa) => void
+  onReverter?: (item: CustaDespesa) => void
 }
 
 function getCasoLabel(item: CustaDespesa) {
@@ -155,6 +157,7 @@ export default function DespesaDetalhesModal({
   onLiberar,
   onRejeitar,
   onPagar,
+  onReverter,
 }: DespesaDetalhesModalProps) {
   if (!despesa) return null
 
@@ -343,6 +346,21 @@ export default function DespesaDetalhesModal({
               >
                 <Ban className="w-3.5 h-3.5 mr-1.5" />
                 Cancelar
+              </Button>
+            )}
+
+            {onReverter && ['agendado', 'liberado', 'pago'].includes(despesa.status) && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs text-slate-500 hover:text-slate-600 hover:bg-slate-50 border-slate-300"
+                onClick={() => {
+                  onOpenChange(false)
+                  onReverter(despesa)
+                }}
+              >
+                <Undo2 className="w-3.5 h-3.5 mr-1.5" />
+                Voltar Etapa
               </Button>
             )}
           </div>

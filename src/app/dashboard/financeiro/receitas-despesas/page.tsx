@@ -77,6 +77,8 @@ import { ModalRecebimento, type ModalRecebimentoItem } from '@/components/financ
 import { AgendarPagamentoModal } from '@/components/financeiro/AgendarPagamentoModal'
 import { RegistrarPagamentoModal } from '@/components/financeiro/RegistrarPagamentoModal'
 import DespesaDetalhesModal, { type CustaDespesa } from '@/components/financeiro/DespesaDetalhesModal'
+import TransferenciaDetalhesModal from '@/components/financeiro/TransferenciaDetalhesModal'
+import TransferenciaEditarModal from '@/components/financeiro/TransferenciaEditarModal'
 
 interface ExtratoItem {
   id: string
@@ -292,6 +294,16 @@ export default function ExtratoFinanceiroPage() {
   const [loadingDetalhesDespesa, setLoadingDetalhesDespesa] = useState(false)
   const [workflowSubmitting, setWorkflowSubmitting] = useState(false)
 
+  // Modais de transferência
+  const [modalDetalhesTransferencia, setModalDetalhesTransferencia] = useState<ExtratoItem | null>(null)
+  const [transferenciaDetalhes, setTransferenciaDetalhes] = useState<{
+    conta_origem_nome: string
+    conta_destino_nome: string
+    data_transferencia: string
+    criado_por_nome: string | null
+  } | null>(null)
+  const [modalEditarTransferencia, setModalEditarTransferencia] = useState<string | null>(null)
+
   // Participação de advogados ao efetivar
   const [temParticipacao, setTemParticipacao] = useState(false)
   const [advogadoSelecionado, setAdvogadoSelecionado] = useState('')
@@ -324,6 +336,7 @@ export default function ExtratoFinanceiroPage() {
   const [novaDataVencimento, setNovaDataVencimento] = useState('')
   const [contaSelecionada, setContaSelecionada] = useState('')
   const [dataEfetivacaoParcial, setDataEfetivacaoParcial] = useState('')
+  const [dataEfetivacao, setDataEfetivacao] = useState('')
   const [dataVencimentoSaldo, setDataVencimentoSaldo] = useState('')
   const [contasBancarias, setContasBancarias] = useState<any[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -762,6 +775,63 @@ export default function ExtratoFinanceiroPage() {
     }
   }
 
+  const handleReverterDespesa = async (item: ExtratoItem) => {
+    if (!item.origem_id) return
+
+    const transicoes: Record<string, { statusAnterior: string; label: string; campos: Record<string, unknown> }> = {
+      agendado: {
+        statusAnterior: 'pendente',
+        label: 'Pendente',
+        campos: { data_pagamento_programada: null },
+      },
+      liberado: {
+        statusAnterior: 'agendado',
+        label: 'Agendado',
+        campos: { aprovado_por: null, data_aprovacao: null },
+      },
+      efetivado: {
+        statusAnterior: 'liberado',
+        label: 'Liberado',
+        campos: { data_pagamento: null, forma_pagamento: null },
+      },
+    }
+
+    const transicao = transicoes[item.status]
+    if (!transicao) return
+
+    const msg = item.status === 'efetivado'
+      ? `Tem certeza? O pagamento será desfeito e o saldo da conta bancária será recalculado. A despesa voltará para "${transicao.label}".`
+      : `Tem certeza que deseja voltar esta despesa para "${transicao.label}"?`
+
+    if (!confirm(msg)) return
+
+    setWorkflowSubmitting(true)
+    try {
+      const { error } = await supabase
+        .from('financeiro_despesas')
+        .update({
+          status: transicao.statusAnterior,
+          ...transicao.campos,
+        })
+        .eq('id', item.origem_id)
+
+      if (error) throw error
+
+      // Recalcular saldo se reverter de efetivado (pago)
+      if (item.status === 'efetivado' && item.conta_bancaria_id) {
+        await supabase.rpc('recalcular_saldo_conta', { p_conta_id: item.conta_bancaria_id })
+      }
+
+      toast.success(`Despesa revertida para ${transicao.label}`)
+      loadExtrato()
+    } catch (err) {
+      console.error('Erro ao reverter despesa:', err)
+      toast.error('Erro ao reverter despesa')
+    } finally {
+      setWorkflowSubmitting(false)
+    }
+  }
+
   const handleAbrirDetalhesDespesa = async (item: ExtratoItem) => {
     if (!item.origem_id) return
     setLoadingDetalhesDespesa(true)
@@ -943,7 +1013,7 @@ export default function ExtratoFinanceiroPage() {
     try {
       setSubmitting(true)
       const item = modalEfetivarItem
-      const hoje = new Date().toISOString().split('T')[0]
+      const dataEfetiva = dataEfetivacao || new Date().toISOString().split('T')[0]
 
       // 1. Efetivar a receita
       if (item.tipo_movimento === 'receita') {
@@ -954,7 +1024,7 @@ export default function ExtratoFinanceiroPage() {
           const { error: rpcError } = await supabase.rpc('pagar_fatura', {
             p_fatura_id: item.origem_id,
             p_valor_pago: valorAberto,
-            p_data_pagamento: hoje,
+            p_data_pagamento: dataEfetiva,
             p_forma_pagamento: 'pix',
             p_conta_bancaria_id: contaSelecionada,
             p_user_id: user?.id || null,
@@ -971,13 +1041,13 @@ export default function ExtratoFinanceiroPage() {
 
           await supabase
             .from('financeiro_notas_debito')
-            .update({ status: 'paga', data_pagamento: hoje, conta_bancaria_id: contaSelecionada })
+            .update({ status: 'paga', data_pagamento: dataEfetiva, conta_bancaria_id: contaSelecionada })
             .eq('id', item.origem_id)
 
           if (nota?.receita_id) {
             await supabase
               .from('financeiro_receitas')
-              .update({ status: 'pago', valor_pago: item.valor, data_pagamento: hoje, conta_bancaria_id: contaSelecionada })
+              .update({ status: 'pago', valor_pago: item.valor, data_pagamento: dataEfetiva, conta_bancaria_id: contaSelecionada })
               .eq('id', nota.receita_id)
           }
 
@@ -998,7 +1068,7 @@ export default function ExtratoFinanceiroPage() {
             .update({
               status: 'pago',
               valor_pago: item.valor,
-              data_pagamento: hoje,
+              data_pagamento: dataEfetiva,
               conta_bancaria_id: contaSelecionada,
             })
             .eq('id', item.origem_id)
@@ -1009,7 +1079,7 @@ export default function ExtratoFinanceiroPage() {
           .from('financeiro_despesas')
           .update({
             status: 'pago',
-            data_pagamento: hoje,
+            data_pagamento: dataEfetiva,
             conta_bancaria_id: contaSelecionada,
           })
           .eq('id', item.origem_id)
@@ -1052,6 +1122,7 @@ export default function ExtratoFinanceiroPage() {
       setPercentualParticipacao(0)
       setDataVencimentoParticipacao('')
       setContaSelecionada('')
+      setDataEfetivacao('')
       loadExtrato()
     } catch (error) {
       console.error('Erro ao efetivar:', error)
@@ -1327,6 +1398,44 @@ export default function ExtratoFinanceiroPage() {
       toast.error('Erro ao transferir')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleVerDetalhesTransferencia = async (item: ExtratoItem) => {
+    if (!item.origem_id) return
+
+    try {
+      const { data, error } = await supabase
+        .from('financeiro_transferencias')
+        .select('conta_origem_id, conta_destino_id, data_transferencia, created_by')
+        .eq('id', item.origem_id)
+        .single()
+
+      if (error) throw error
+
+      const contaOrigem = contasBancarias.find((c: any) => c.id === data.conta_origem_id)
+      const contaDestino = contasBancarias.find((c: any) => c.id === data.conta_destino_id)
+
+      let criadoPorNome: string | null = null
+      if (data.created_by) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('nome')
+          .eq('id', data.created_by)
+          .single()
+        criadoPorNome = profile?.nome || null
+      }
+
+      setTransferenciaDetalhes({
+        conta_origem_nome: contaOrigem ? `${contaOrigem.banco} - ${contaOrigem.numero_conta}` : 'Conta não encontrada',
+        conta_destino_nome: contaDestino ? `${contaDestino.banco} - ${contaDestino.numero_conta}` : 'Conta não encontrada',
+        data_transferencia: data.data_transferencia,
+        criado_por_nome: criadoPorNome,
+      })
+      setModalDetalhesTransferencia(item)
+    } catch (error) {
+      console.error('Erro ao carregar detalhes:', error)
+      toast.error('Erro ao carregar detalhes da transferência')
     }
   }
 
@@ -2936,6 +3045,7 @@ export default function ExtratoFinanceiroPage() {
                           onClick={() => {
                             setModalEfetivarItem(item)
                             setContaSelecionada(item.conta_bancaria_id || contasBancarias[0]?.id || '')
+                            setDataEfetivacao(new Date().toISOString().split('T')[0])
                             setTemParticipacao(false)
                             setAdvogadoSelecionado('')
                             setPercentualParticipacao(0)
@@ -3026,6 +3136,24 @@ export default function ExtratoFinanceiroPage() {
                                 </DropdownMenuItem>
                               </>
                             )}
+                            {/* Voltar Etapa — desfazer transição acidental */}
+                            {['agendado', 'liberado', 'efetivado'].includes(item.status) && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  disabled={workflowSubmitting}
+                                  onClick={() => handleReverterDespesa(item)}
+                                  className="text-slate-500 focus:text-slate-600 focus:bg-slate-50"
+                                >
+                                  <Undo2 className="w-4 h-4 mr-2" />
+                                  Voltar para {
+                                    item.status === 'agendado' ? 'Pendente' :
+                                    item.status === 'liberado' ? 'Agendado' :
+                                    'Liberado'
+                                  }
+                                </DropdownMenuItem>
+                              </>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => handlePrepararExclusao(item)}
@@ -3112,10 +3240,14 @@ export default function ExtratoFinanceiroPage() {
                               <MoreHorizontal className="w-4 h-4 text-slate-400" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-44">
-                            <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => handleVerDetalhesTransferencia(item)}>
                               <Eye className="w-4 h-4 mr-2" />
                               Ver Detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setModalEditarTransferencia(item.origem_id)}>
+                              <Pencil className="w-4 h-4 mr-2" />
+                              Editar
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -3505,10 +3637,14 @@ export default function ExtratoFinanceiroPage() {
                                 <MoreHorizontal className="w-4 h-4 text-slate-400" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-44">
-                              <DropdownMenuItem onClick={() => setModalDetalhes(item)}>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem onClick={() => handleVerDetalhesTransferencia(item)}>
                                 <Eye className="w-4 h-4 mr-2" />
                                 Ver Detalhes
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setModalEditarTransferencia(item.origem_id)}>
+                                <Pencil className="w-4 h-4 mr-2" />
+                                Editar
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -3579,6 +3715,24 @@ export default function ExtratoFinanceiroPage() {
                                   >
                                     <Ban className="w-4 h-4 mr-2" />
                                     Cancelar
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {/* Voltar Etapa — desfazer transição acidental */}
+                              {['agendado', 'liberado', 'efetivado'].includes(item.status) && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    disabled={workflowSubmitting}
+                                    onClick={() => handleReverterDespesa(item)}
+                                    className="text-slate-500 focus:text-slate-600 focus:bg-slate-50"
+                                  >
+                                    <Undo2 className="w-4 h-4 mr-2" />
+                                    Voltar para {
+                                      item.status === 'agendado' ? 'Pendente' :
+                                      item.status === 'liberado' ? 'Agendado' :
+                                      'Liberado'
+                                    }
                                   </DropdownMenuItem>
                                 </>
                               )}
@@ -4885,6 +5039,19 @@ export default function ExtratoFinanceiroPage() {
                 </select>
               </div>
 
+              {/* Data de Recebimento/Pagamento */}
+              <div>
+                <Label className="text-xs">
+                  {modalEfetivarItem.tipo_movimento === 'receita' ? 'Data do Recebimento' : 'Data do Pagamento'}
+                </Label>
+                <Input
+                  type="date"
+                  value={dataEfetivacao}
+                  onChange={(e) => setDataEfetivacao(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+
               {/* Participação de Advogado (apenas para receitas) */}
               {modalEfetivarItem.tipo_movimento === 'receita' && (
                 <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
@@ -4982,6 +5149,7 @@ export default function ExtratoFinanceiroPage() {
                     setPercentualParticipacao(0)
                     setDataVencimentoParticipacao('')
                     setContaSelecionada('')
+                    setDataEfetivacao('')
                   }}
                   disabled={submitting}
                 >
@@ -5184,6 +5352,47 @@ export default function ExtratoFinanceiroPage() {
           setModalDetalhesDespesa(null)
           const extratoItem = extrato.find(d => d.origem_id === item.id)
           if (extratoItem) setModalPagarDespesa(extratoItem)
+        }}
+        onReverter={(item) => {
+          setModalDetalhesDespesa(null)
+          const extratoItem = extrato.find(d => d.origem_id === item.id)
+          if (extratoItem) handleReverterDespesa(extratoItem)
+        }}
+      />
+
+      {/* Modal Detalhes Transferência */}
+      <TransferenciaDetalhesModal
+        open={!!modalDetalhesTransferencia}
+        onOpenChange={(v) => { if (!v) { setModalDetalhesTransferencia(null); setTransferenciaDetalhes(null) } }}
+        item={modalDetalhesTransferencia}
+        contaOrigemNome={transferenciaDetalhes?.conta_origem_nome || null}
+        contaDestinoNome={transferenciaDetalhes?.conta_destino_nome || null}
+        dataTransferencia={transferenciaDetalhes?.data_transferencia || null}
+        criadoPorNome={transferenciaDetalhes?.criado_por_nome || null}
+        onEditar={() => {
+          const origemId = modalDetalhesTransferencia?.origem_id
+          setModalDetalhesTransferencia(null)
+          setTransferenciaDetalhes(null)
+          if (origemId) setModalEditarTransferencia(origemId)
+        }}
+        onExcluir={() => {
+          const item = modalDetalhesTransferencia
+          setModalDetalhesTransferencia(null)
+          setTransferenciaDetalhes(null)
+          if (item) handlePrepararExclusao(item)
+        }}
+      />
+
+      {/* Modal Editar Transferência */}
+      <TransferenciaEditarModal
+        open={!!modalEditarTransferencia}
+        onOpenChange={(v) => { if (!v) setModalEditarTransferencia(null) }}
+        transferenciaId={modalEditarTransferencia}
+        contasBancarias={contasBancarias}
+        escritorioId={escritorioAtivo || ''}
+        onSaved={() => {
+          setModalEditarTransferencia(null)
+          loadExtrato()
         }}
       />
     </div>

@@ -52,6 +52,7 @@ import { useFaturamento } from '@/hooks/useFaturamento'
 import { useFechamentosPasta } from '@/hooks/useFechamentosPasta'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 import { PreviewCollapsible } from '@/components/faturamento/PreviewCollapsible'
+import { EditarLancamentoModal } from '@/components/faturamento/EditarLancamentoModal'
 import { FaturasTable } from '@/components/faturamento/FaturasTable'
 import { ClientesTable } from '@/components/faturamento/ClientesTable'
 import { ModalRecebimento, type ModalRecebimentoItem } from '@/components/financeiro/ModalRecebimento'
@@ -98,6 +99,8 @@ export default function FaturamentoPage() {
     desmontarFatura,
     loadContractLimits,
     loadContasBancarias,
+    editarLancamentoHonorario,
+    excluirLancamentoHonorario,
   } = useFaturamento(escritoriosSelecionados)
 
   const {
@@ -120,6 +123,10 @@ export default function FaturamentoPage() {
 
   // Estado para modal de recebimento
   const [faturaParaReceber, setFaturaParaReceber] = useState<FaturaGerada | null>(null)
+
+  // Estado para editar/excluir lançamentos
+  const [editLancamento, setEditLancamento] = useState<LancamentoProntoFaturar | null>(null)
+  const [deleteLancamento, setDeleteLancamento] = useState<LancamentoProntoFaturar | null>(null)
 
   // Contadores para badges das abas
   const faturasEmAberto = useMemo(() =>
@@ -644,9 +651,101 @@ export default function FaturamentoPage() {
               pastas={selectedCliente.pastas}
               onRemoverProcessoPasta={handleRemoverProcessoPasta}
               onExcluirPasta={handleExcluirPasta}
+              onEditLancamento={(l) => setEditLancamento(l)}
+              onDeleteLancamento={(l) => setDeleteLancamento(l)}
               contractLimits={contractLimits}
             />
           )}
+
+          {/* Modal de Edição de Lançamento */}
+          <EditarLancamentoModal
+            open={!!editLancamento}
+            onOpenChange={(open) => { if (!open) setEditLancamento(null) }}
+            lancamento={editLancamento}
+            onSalvar={async (lancamentoId, dados, escopo, regraId) => {
+              const success = await editarLancamentoHonorario(lancamentoId, dados, escopo, regraId)
+              if (success) {
+                toast.success(escopo === 'este_e_proximos' ? 'Lançamento e próximos meses atualizados' : 'Lançamento atualizado')
+                if (selectedCliente) {
+                  const lancamentosData = await loadLancamentosPorCliente(selectedCliente.cliente_id, selectedCliente.escritorio_id)
+                  setLancamentos(lancamentosData)
+                }
+                loadData()
+              } else {
+                toast.error('Erro ao editar lançamento')
+              }
+              return success
+            }}
+          />
+
+          {/* Dialog de Exclusão de Lançamento */}
+          <AlertDialog open={!!deleteLancamento} onOpenChange={(open) => { if (!open) setDeleteLancamento(null) }}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir lançamento</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {deleteLancamento && (
+                    <>
+                      Deseja excluir o lançamento <strong>{deleteLancamento.descricao}</strong> de{' '}
+                      <strong>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deleteLancamento.valor || 0)}</strong>?
+                      {deleteLancamento.regra_recorrencia_id && (
+                        <span className="block mt-2 text-amber-600">
+                          Este lançamento faz parte de uma recorrência. A exclusão cancelará apenas este mês.
+                        </span>
+                      )}
+                    </>
+                  )}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                {deleteLancamento?.regra_recorrencia_id && (
+                  <AlertDialogAction
+                    className="bg-amber-600 hover:bg-amber-700"
+                    onClick={async () => {
+                      if (!deleteLancamento) return
+                      const success = await excluirLancamentoHonorario(deleteLancamento.lancamento_id, 'este_e_cancelar', deleteLancamento.regra_recorrencia_id)
+                      if (success) {
+                        toast.success('Lançamento excluído e recorrência cancelada')
+                        if (selectedCliente) {
+                          const lancamentosData = await loadLancamentosPorCliente(selectedCliente.cliente_id, selectedCliente.escritorio_id)
+                          setLancamentos(lancamentosData)
+                          setSelectedLancamentosIds(prev => prev.filter(id => lancamentosData.some(l => l.lancamento_id === id)))
+                        }
+                        loadData()
+                      } else {
+                        toast.error('Erro ao excluir lançamento')
+                      }
+                      setDeleteLancamento(null)
+                    }}
+                  >
+                    Excluir e cancelar recorrência
+                  </AlertDialogAction>
+                )}
+                <AlertDialogAction
+                  className="bg-red-600 hover:bg-red-700"
+                  onClick={async () => {
+                    if (!deleteLancamento) return
+                    const success = await excluirLancamentoHonorario(deleteLancamento.lancamento_id, 'este', deleteLancamento.regra_recorrencia_id)
+                    if (success) {
+                      toast.success('Lançamento excluído')
+                      if (selectedCliente) {
+                        const lancamentosData = await loadLancamentosPorCliente(selectedCliente.cliente_id, selectedCliente.escritorio_id)
+                        setLancamentos(lancamentosData)
+                        setSelectedLancamentosIds(prev => prev.filter(id => lancamentosData.some(l => l.lancamento_id === id)))
+                      }
+                      loadData()
+                    } else {
+                      toast.error('Erro ao excluir lançamento')
+                    }
+                    setDeleteLancamento(null)
+                  }}
+                >
+                  Excluir somente este
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </TabsContent>
 
         {/* Tab: Faturados */}

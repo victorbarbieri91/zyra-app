@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { ExternalLink, FolderOpen, CalendarDays, User } from 'lucide-react'
+import { ExternalLink, FolderOpen, CalendarDays, User, Pencil, Trash2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { cn, formatHoras, formatDescricaoFatura } from '@/lib/utils'
 import { formatBrazilDate } from '@/lib/timezone'
 import type { LancamentoProntoFaturar } from '@/hooks/useFaturamento'
@@ -10,14 +11,19 @@ interface LancamentoSelectableItemProps {
   lancamento: LancamentoProntoFaturar
   selected: boolean
   onToggle: (id: string) => void
+  onEdit?: (lancamento: LancamentoProntoFaturar) => void
+  onDelete?: (lancamento: LancamentoProntoFaturar) => void
 }
 
 export function LancamentoSelectableItem({
   lancamento,
   selected,
   onToggle,
+  onEdit,
+  onDelete,
 }: LancamentoSelectableItemProps) {
   const isTimesheet = lancamento.tipo_lancamento === 'timesheet'
+  const isHonorario = lancamento.tipo_lancamento === 'honorario'
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }).format(value)
@@ -25,7 +31,7 @@ export function LancamentoSelectableItem({
   return (
     <div
       className={cn(
-        'flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors',
+        'group flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors',
         selected ? 'bg-[#1E3A8A]/5 dark:bg-blue-500/10' : 'hover:bg-slate-50 dark:hover:bg-[hsl(var(--surface-3))]'
       )}
       onClick={() => onToggle(lancamento.lancamento_id)}
@@ -85,16 +91,45 @@ export function LancamentoSelectableItem({
         )}
       </div>
 
-      {/* Valor + Horas (direita) */}
-      <div className="text-right shrink-0 mt-0.5">
-        {isTimesheet && lancamento.horas != null && (
-          <p className="text-[11px] text-slate-400 tabular-nums">
-            {formatHoras(lancamento.horas, 'curto')}
-          </p>
+      {/* Valor + Ações (direita) */}
+      <div className="flex items-start gap-2 shrink-0 mt-0.5">
+        {/* Botões editar/excluir — apenas honorários, visíveis no hover */}
+        {isHonorario && (onEdit || onDelete) && (
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
+            {onEdit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 text-slate-400 hover:text-[#1E3A8A] hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                onClick={(e) => { e.stopPropagation(); onEdit(lancamento) }}
+              >
+                <Pencil className="h-3 w-3" />
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+                onClick={(e) => { e.stopPropagation(); onDelete(lancamento) }}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
         )}
-        <p className="text-xs font-semibold text-emerald-600 tabular-nums">
-          {formatCurrency(lancamento.valor || 0)}
-        </p>
+
+        {/* Valor */}
+        <div className="text-right">
+          {isTimesheet && lancamento.horas != null && (
+            <p className="text-[11px] text-slate-400 tabular-nums">
+              {formatHoras(lancamento.horas, 'curto')}
+            </p>
+          )}
+          <p className="text-xs font-semibold text-emerald-600 tabular-nums">
+            {formatCurrency(lancamento.valor || 0)}
+          </p>
+        </div>
       </div>
     </div>
   )

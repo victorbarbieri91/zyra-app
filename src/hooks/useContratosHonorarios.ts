@@ -593,7 +593,7 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           if (updateError) throw updateError
         }
 
-        // Gerar receitas automaticamente para valores fixos com periodicidade
+        // Criar regras de recorrência e gerar receitas vinculadas
         const valoresComPeriodicidade = (data.valores_fixos || []).filter(
           v => v.valor > 0 && v.periodicidade
         )
@@ -603,83 +603,109 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           const userId = userData?.user?.id
 
           for (const valorFixo of valoresComPeriodicidade) {
-            // Usar data_inicio_cobranca do valor fixo ou fallback para data_inicio do contrato
             const mesInicio = valorFixo.data_inicio_cobranca || data.data_inicio.substring(0, 7)
             const [anoInicio, mesInicioNum] = mesInicio.split('-').map(Number)
             const dia = valorFixo.dia_vencimento || 10
+            const isParcelado = valorFixo.periodicidade === 'parcelado'
+            const numParcelas = isParcelado ? (valorFixo.numero_parcelas || 6) : null
+            const valorParcela = isParcelado
+              ? Math.round((valorFixo.valor / (numParcelas || 6)) * 100) / 100
+              : valorFixo.valor
+            const descricao = valorFixo.descricao || (isParcelado ? 'Honorário' : 'Mensalidade')
 
-            if (valorFixo.periodicidade === 'mensal_fixo') {
-              // Criar 12 receitas reais individuais (janela de 12 meses)
-              const receitas = []
-              for (let i = 0; i < 12; i++) {
-                const date = new Date(anoInicio, mesInicioNum - 1 + i, 1)
-                const ano = date.getFullYear()
-                const mes = date.getMonth() + 1
-                const ultimoDia = new Date(ano, mes, 0).getDate()
-                const diaReal = Math.min(dia, ultimoDia)
-                const dataVenc = `${ano}-${String(mes).padStart(2, '0')}-${String(diaReal).padStart(2, '0')}`
-                const dataComp = `${ano}-${String(mes).padStart(2, '0')}-01`
+            // Calcular vigencia_inicio (YYYY-MM-DD)
+            const ultimoDiaInicio = new Date(anoInicio, mesInicioNum, 0).getDate()
+            const diaInicio = Math.min(dia, ultimoDiaInicio)
+            const vigenciaInicio = `${anoInicio}-${String(mesInicioNum).padStart(2, '0')}-${String(diaInicio).padStart(2, '0')}`
 
-                receitas.push({
-                  escritorio_id: ownerEscritorioId,
-                  tipo: 'honorario',
-                  cliente_id: data.cliente_id,
-                  contrato_id: novoContrato.id,
-                  descricao: valorFixo.descricao || 'Mensalidade',
-                  categoria: 'honorarios',
-                  valor: valorFixo.valor,
-                  data_competencia: dataComp,
-                  data_vencimento: dataVenc,
-                  status: 'pendente',
-                  recorrente: false,
-                  parcelado: false,
-                  numero_parcelas: 1,
-                  responsavel_id: userId,
-                  created_by: userId,
-                })
-              }
-              const { error: receitaError } = await supabase.from('financeiro_receitas').insert(receitas)
-              if (receitaError) {
-                console.error('[criarContrato] Erro ao criar receitas mensais:', receitaError)
-              }
-            } else if (valorFixo.periodicidade === 'parcelado') {
-              // Criar todas as parcelas diretamente (sem registro pai)
-              const numParcelas = valorFixo.numero_parcelas || 6
-              const valorParcela = Math.round((valorFixo.valor / numParcelas) * 100) / 100
-              const valorUltima = Math.round((valorFixo.valor - valorParcela * (numParcelas - 1)) * 100) / 100
+            // Calcular vigencia_fim para parcelado
+            let vigenciaFim: string | null = data.data_fim || null
+            if (isParcelado && numParcelas) {
+              const fimDate = new Date(anoInicio, mesInicioNum - 1 + numParcelas - 1, 1)
+              const anoFim = fimDate.getFullYear()
+              const mesFim = fimDate.getMonth() + 1
+              const ultimoDiaFim = new Date(anoFim, mesFim, 0).getDate()
+              const diaFim = Math.min(dia, ultimoDiaFim)
+              vigenciaFim = `${anoFim}-${String(mesFim).padStart(2, '0')}-${String(diaFim).padStart(2, '0')}`
+            }
 
-              const parcelas = []
-              for (let i = 0; i < numParcelas; i++) {
-                const date = new Date(anoInicio, mesInicioNum - 1 + i, 1)
-                const ano = date.getFullYear()
-                const mes = date.getMonth() + 1
-                const ultimoDia = new Date(ano, mes, 0).getDate()
-                const diaReal = Math.min(dia, ultimoDia)
-                const dataVenc = `${ano}-${String(mes).padStart(2, '0')}-${String(diaReal).padStart(2, '0')}`
-                const dataComp = `${ano}-${String(mes).padStart(2, '0')}-01`
+            // 1. Criar regra de recorrência
+            const { data: regra, error: regraError } = await supabase
+              .from('financeiro_regras_recorrencia')
+              .insert({
+                escritorio_id: ownerEscritorioId,
+                tipo_entidade: 'receita',
+                descricao,
+                categoria: 'honorarios',
+                valor_atual: valorParcela,
+                valor_total_original: isParcelado ? valorFixo.valor : null,
+                cliente_id: data.cliente_id,
+                contrato_id: novoContrato.id,
+                frequencia: 'mensal',
+                dia_vencimento: dia,
+                vigencia_inicio: vigenciaInicio,
+                vigencia_fim: vigenciaFim,
+                ativo: true,
+                is_parcelamento: isParcelado,
+                parcela_total: numParcelas,
+                parcela_inicio: 1,
+                created_by: userId,
+              })
+              .select('id')
+              .single()
 
-                parcelas.push({
-                  escritorio_id: ownerEscritorioId,
-                  tipo: 'honorario',
-                  cliente_id: data.cliente_id,
-                  contrato_id: novoContrato.id,
-                  descricao: `Parcela ${i + 1}/${numParcelas} - ${valorFixo.descricao || 'Honorário'}`,
-                  categoria: 'honorarios',
-                  valor: i === numParcelas - 1 ? valorUltima : valorParcela,
-                  data_competencia: dataComp,
-                  data_vencimento: dataVenc,
-                  status: 'pendente',
-                  recorrente: false,
-                  parcelado: false,
-                  numero_parcelas: 1,
-                  responsavel_id: userId,
-                  created_by: userId,
-                })
+            if (regraError) {
+              console.error('[criarContrato] Erro ao criar regra de recorrência:', regraError)
+              continue
+            }
+
+            // 2. Gerar batch inicial de receitas vinculadas à regra
+            const totalMeses = isParcelado ? (numParcelas || 6) : 12
+            const receitas = []
+
+            for (let i = 0; i < totalMeses; i++) {
+              const date = new Date(anoInicio, mesInicioNum - 1 + i, 1)
+              const ano = date.getFullYear()
+              const mes = date.getMonth() + 1
+              const ultimoDia = new Date(ano, mes, 0).getDate()
+              const diaReal = Math.min(dia, ultimoDia)
+              const dataVenc = `${ano}-${String(mes).padStart(2, '0')}-${String(diaReal).padStart(2, '0')}`
+              const dataComp = `${ano}-${String(mes).padStart(2, '0')}-01`
+              const periodoRef = `${ano}-${String(mes).padStart(2, '0')}`
+
+              // Calcular valor da parcela (última ajustada para arredondamento)
+              let valor = valorParcela
+              if (isParcelado && numParcelas) {
+                valor = i === numParcelas - 1
+                  ? Math.round((valorFixo.valor - valorParcela * (numParcelas - 1)) * 100) / 100
+                  : valorParcela
               }
-              const { error: parcelaError } = await supabase.from('financeiro_receitas').insert(parcelas)
-              if (parcelaError) {
-                console.error('[criarContrato] Erro ao criar parcelas:', parcelaError)
-              }
+
+              const descricaoReceita = isParcelado
+                ? `Parcela ${i + 1}/${numParcelas} - ${descricao}`
+                : descricao
+
+              receitas.push({
+                escritorio_id: ownerEscritorioId,
+                tipo: 'honorario',
+                cliente_id: data.cliente_id,
+                contrato_id: novoContrato.id,
+                descricao: descricaoReceita,
+                categoria: 'honorarios',
+                valor,
+                data_competencia: dataComp,
+                data_vencimento: dataVenc,
+                status: 'pendente',
+                regra_recorrencia_id: regra.id,
+                periodo_referencia: periodoRef,
+                responsavel_id: userId,
+                created_by: userId,
+              })
+            }
+
+            const { error: receitaError } = await supabase.from('financeiro_receitas').insert(receitas)
+            if (receitaError) {
+              console.error('[criarContrato] Erro ao criar receitas:', receitaError)
             }
           }
         }
@@ -874,111 +900,156 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
         // Nota: Tabelas auxiliares de cargo e atos foram removidas
         // Agora todos os dados ficam no JSONB config (já atualizado acima)
 
-        // Gerar receitas para novos itens com periodicidade
-        // Buscar receitas existentes deste contrato para evitar duplicatas
+        // Sincronizar regras de recorrência com valores fixos do contrato
         const valoresComPeriodicidade = (data.valores_fixos || []).filter(
           v => v.valor > 0 && v.periodicidade
         )
 
-        if (valoresComPeriodicidade.length > 0) {
-          const { data: receitasExistentes } = await supabase
-            .from('financeiro_receitas')
-            .select('descricao')
-            .eq('contrato_id', id)
+        const { data: userData } = await supabase.auth.getUser()
+        const userId = userData?.user?.id
+        const ownerEscritorioId = data.escritorio_contrato_id || escritorioAtivo
 
-          const descricaoExistentes = new Set(
-            (receitasExistentes || []).map((r: { descricao: string }) => r.descricao)
-          )
+        // Buscar regras ativas existentes para este contrato
+        const { data: regrasExistentes } = await supabase
+          .from('financeiro_regras_recorrencia')
+          .select('id, descricao, valor_atual, dia_vencimento, ativo')
+          .eq('contrato_id', id)
+          .eq('ativo', true)
 
-          const { data: userData } = await supabase.auth.getUser()
-          const userId = userData?.user?.id
-          const ownerEscritorioId = data.escritorio_contrato_id || escritorioAtivo
+        const regrasMap = new Map(
+          (regrasExistentes || []).map((r: { id: string; descricao: string; valor_atual: number; dia_vencimento: number }) => [r.descricao, r])
+        )
+        const descricoesMantidas = new Set<string>()
 
-          for (const valorFixo of valoresComPeriodicidade) {
-            const descricao = valorFixo.descricao || (valorFixo.periodicidade === 'mensal_fixo' ? 'Mensalidade' : 'Honorário')
+        for (const valorFixo of valoresComPeriodicidade) {
+          const isParcelado = valorFixo.periodicidade === 'parcelado'
+          const descricao = valorFixo.descricao || (isParcelado ? 'Honorário' : 'Mensalidade')
+          const numParcelas = isParcelado ? (valorFixo.numero_parcelas || 6) : null
+          const valorParcela = isParcelado
+            ? Math.round((valorFixo.valor / (numParcelas || 6)) * 100) / 100
+            : valorFixo.valor
+          const dia = valorFixo.dia_vencimento || 10
+          descricoesMantidas.add(descricao)
 
-            // Não criar se já existe receita com mesma descrição para este contrato
-            if (descricaoExistentes.has(descricao)) continue
+          const regraExistente = regrasMap.get(descricao) as { id: string; valor_atual: number; dia_vencimento: number } | undefined
 
-            // Usar data_inicio_cobranca do valor fixo ou fallback para data_inicio do contrato
-            const dataInicio = data.data_inicio || new Date().toISOString().split('T')[0]
-            const mesInicio = valorFixo.data_inicio_cobranca || dataInicio.substring(0, 7)
-            const [anoInicio, mesInicioNum] = mesInicio.split('-').map(Number)
-            const dia = valorFixo.dia_vencimento || 10
+          if (regraExistente) {
+            // Regra já existe — atualizar valor e dia se mudaram
+            const updates: Record<string, unknown> = {}
+            if (Number(regraExistente.valor_atual) !== valorParcela) updates.valor_atual = valorParcela
+            if (regraExistente.dia_vencimento !== dia) updates.dia_vencimento = dia
 
-            if (valorFixo.periodicidade === 'mensal_fixo') {
-              // Criar 12 receitas reais individuais (janela de 12 meses)
-              const receitas = []
-              for (let i = 0; i < 12; i++) {
-                const date = new Date(anoInicio, mesInicioNum - 1 + i, 1)
-                const ano = date.getFullYear()
-                const mes = date.getMonth() + 1
-                const ultimoDia = new Date(ano, mes, 0).getDate()
-                const diaReal = Math.min(dia, ultimoDia)
-                const dataVenc = `${ano}-${String(mes).padStart(2, '0')}-${String(diaReal).padStart(2, '0')}`
-                const dataComp = `${ano}-${String(mes).padStart(2, '0')}-01`
-
-                receitas.push({
-                  escritorio_id: ownerEscritorioId,
-                  tipo: 'honorario',
-                  cliente_id: data.cliente_id,
-                  contrato_id: id,
-                  descricao,
-                  categoria: 'honorarios',
-                  valor: valorFixo.valor,
-                  data_competencia: dataComp,
-                  data_vencimento: dataVenc,
-                  status: 'pendente',
-                  recorrente: false,
-                  parcelado: false,
-                  numero_parcelas: 1,
-                  responsavel_id: userId,
-                  created_by: userId,
-                })
-              }
-              const { error: receitaError } = await supabase.from('financeiro_receitas').insert(receitas)
-              if (receitaError) {
-                console.error('[editarContrato] Erro ao criar receitas mensais:', receitaError)
-              }
-            } else if (valorFixo.periodicidade === 'parcelado') {
-              // Criar todas as parcelas diretamente (sem registro pai)
-              const numParcelas = valorFixo.numero_parcelas || 6
-              const valorParcela = Math.round((valorFixo.valor / numParcelas) * 100) / 100
-              const valorUltima = Math.round((valorFixo.valor - valorParcela * (numParcelas - 1)) * 100) / 100
-
-              const parcelas = []
-              for (let i = 0; i < numParcelas; i++) {
-                const date = new Date(anoInicio, mesInicioNum - 1 + i, 1)
-                const ano = date.getFullYear()
-                const mes = date.getMonth() + 1
-                const ultimoDia = new Date(ano, mes, 0).getDate()
-                const diaReal = Math.min(dia, ultimoDia)
-                const dataVenc = `${ano}-${String(mes).padStart(2, '0')}-${String(diaReal).padStart(2, '0')}`
-                const dataComp = `${ano}-${String(mes).padStart(2, '0')}-01`
-
-                parcelas.push({
-                  escritorio_id: ownerEscritorioId,
-                  tipo: 'honorario',
-                  cliente_id: data.cliente_id,
-                  contrato_id: id,
-                  descricao: `Parcela ${i + 1}/${numParcelas} - ${descricao}`,
-                  categoria: 'honorarios',
-                  valor: i === numParcelas - 1 ? valorUltima : valorParcela,
-                  data_competencia: dataComp,
-                  data_vencimento: dataVenc,
-                  status: 'pendente',
-                  recorrente: false,
-                  parcelado: false,
-                  numero_parcelas: 1,
-                  responsavel_id: userId,
-                  created_by: userId,
-                })
-              }
-              const { error: parcelaError } = await supabase.from('financeiro_receitas').insert(parcelas)
-              if (parcelaError) {
-                console.error('[editarContrato] Erro ao criar parcelas:', parcelaError)
-              }
+            if (Object.keys(updates).length > 0) {
+              await supabase
+                .from('financeiro_regras_recorrencia')
+                .update(updates)
+                .eq('id', regraExistente.id)
             }
+          } else {
+            // Regra nova — criar regra + batch inicial de receitas
+            const mesInicio = valorFixo.data_inicio_cobranca || (data.data_inicio || new Date().toISOString().split('T')[0]).substring(0, 7)
+            const [anoInicio, mesInicioNum] = mesInicio.split('-').map(Number)
+
+            const ultimoDiaInicio = new Date(anoInicio, mesInicioNum, 0).getDate()
+            const diaInicio = Math.min(dia, ultimoDiaInicio)
+            const vigenciaInicio = `${anoInicio}-${String(mesInicioNum).padStart(2, '0')}-${String(diaInicio).padStart(2, '0')}`
+
+            let vigenciaFim: string | null = data.data_fim || null
+            if (isParcelado && numParcelas) {
+              const fimDate = new Date(anoInicio, mesInicioNum - 1 + numParcelas - 1, 1)
+              const anoFim = fimDate.getFullYear()
+              const mesFim = fimDate.getMonth() + 1
+              const ultimoDiaFim = new Date(anoFim, mesFim, 0).getDate()
+              const diaFim = Math.min(dia, ultimoDiaFim)
+              vigenciaFim = `${anoFim}-${String(mesFim).padStart(2, '0')}-${String(diaFim).padStart(2, '0')}`
+            }
+
+            const { data: regra, error: regraError } = await supabase
+              .from('financeiro_regras_recorrencia')
+              .insert({
+                escritorio_id: ownerEscritorioId,
+                tipo_entidade: 'receita',
+                descricao,
+                categoria: 'honorarios',
+                valor_atual: valorParcela,
+                valor_total_original: isParcelado ? valorFixo.valor : null,
+                cliente_id: data.cliente_id,
+                contrato_id: id,
+                frequencia: 'mensal',
+                dia_vencimento: dia,
+                vigencia_inicio: vigenciaInicio,
+                vigencia_fim: vigenciaFim,
+                ativo: true,
+                is_parcelamento: isParcelado,
+                parcela_total: numParcelas,
+                parcela_inicio: 1,
+                created_by: userId,
+              })
+              .select('id')
+              .single()
+
+            if (regraError) {
+              console.error('[editarContrato] Erro ao criar regra de recorrência:', regraError)
+              continue
+            }
+
+            // Gerar batch inicial de receitas
+            const totalMeses = isParcelado ? (numParcelas || 6) : 12
+            const receitas = []
+
+            for (let i = 0; i < totalMeses; i++) {
+              const date = new Date(anoInicio, mesInicioNum - 1 + i, 1)
+              const ano = date.getFullYear()
+              const mes = date.getMonth() + 1
+              const ultimoDia = new Date(ano, mes, 0).getDate()
+              const diaReal = Math.min(dia, ultimoDia)
+              const dataVenc = `${ano}-${String(mes).padStart(2, '0')}-${String(diaReal).padStart(2, '0')}`
+              const dataComp = `${ano}-${String(mes).padStart(2, '0')}-01`
+              const periodoRef = `${ano}-${String(mes).padStart(2, '0')}`
+
+              let valor = valorParcela
+              if (isParcelado && numParcelas) {
+                valor = i === numParcelas - 1
+                  ? Math.round((valorFixo.valor - valorParcela * (numParcelas - 1)) * 100) / 100
+                  : valorParcela
+              }
+
+              const descricaoReceita = isParcelado
+                ? `Parcela ${i + 1}/${numParcelas} - ${descricao}`
+                : descricao
+
+              receitas.push({
+                escritorio_id: ownerEscritorioId,
+                tipo: 'honorario',
+                cliente_id: data.cliente_id,
+                contrato_id: id,
+                descricao: descricaoReceita,
+                categoria: 'honorarios',
+                valor,
+                data_competencia: dataComp,
+                data_vencimento: dataVenc,
+                status: 'pendente',
+                regra_recorrencia_id: regra.id,
+                periodo_referencia: periodoRef,
+                responsavel_id: userId,
+                created_by: userId,
+              })
+            }
+
+            const { error: receitaError } = await supabase.from('financeiro_receitas').insert(receitas)
+            if (receitaError) {
+              console.error('[editarContrato] Erro ao criar receitas:', receitaError)
+            }
+          }
+        }
+
+        // Desativar regras que não têm mais valor fixo correspondente
+        for (const [desc, regra] of regrasMap) {
+          if (!descricoesMantidas.has(desc as string)) {
+            await supabase
+              .from('financeiro_regras_recorrencia')
+              .update({ ativo: false })
+              .eq('id', (regra as { id: string }).id)
           }
         }
 

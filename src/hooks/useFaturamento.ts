@@ -22,6 +22,8 @@ export interface LancamentoProntoFaturar {
   processo_id: string | null
   consulta_id: string | null
   categoria: string
+  subtipo: string | null
+  data_vencimento: string
   created_at: string
   // Campos de detalhes do processo
   processo_numero: string | null // numero_cnj
@@ -41,6 +43,7 @@ export interface LancamentoProntoFaturar {
   contrato_id?: string | null
   numero_contrato?: string | null
   contrato_titulo?: string | null
+  regra_recorrencia_id?: string | null
 }
 
 export interface ClienteParaFaturar {
@@ -643,6 +646,134 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
     }
   }, [supabase])
 
+  // ============================================
+  // EDITAR LANÇAMENTO DE HONORÁRIO
+  // ============================================
+
+  const editarLancamentoHonorario = useCallback(async (
+    lancamentoId: string,
+    dados: { descricao?: string; valor?: number; data_vencimento?: string; categoria?: string },
+    escopo: 'este' | 'este_e_proximos',
+    regraRecorrenciaId?: string | null
+  ): Promise<boolean> => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Atualizar esta receita
+      const updateData: Record<string, unknown> = {}
+      if (dados.descricao !== undefined) updateData.descricao = dados.descricao
+      if (dados.valor !== undefined) updateData.valor = dados.valor
+      if (dados.data_vencimento !== undefined) updateData.data_vencimento = dados.data_vencimento
+      if (dados.categoria !== undefined) updateData.categoria = dados.categoria
+
+      const { error: updateError } = await supabase
+        .from('financeiro_receitas')
+        .update(updateData)
+        .eq('id', lancamentoId)
+
+      if (updateError) throw updateError
+
+      // Se escopo "este e próximos" e tem regra de recorrência
+      if (escopo === 'este_e_proximos' && regraRecorrenciaId) {
+        // Atualizar regra com novo valor
+        if (dados.valor !== undefined) {
+          await supabase
+            .from('financeiro_regras_recorrencia')
+            .update({ valor_atual: dados.valor })
+            .eq('id', regraRecorrenciaId)
+        }
+
+        // Buscar data_vencimento da receita editada para atualizar futuras
+        const { data: receitaEditada } = await supabase
+          .from('financeiro_receitas')
+          .select('data_vencimento')
+          .eq('id', lancamentoId)
+          .single()
+
+        if (receitaEditada) {
+          // Atualizar receitas futuras pendentes da mesma regra
+          const futureUpdate: Record<string, unknown> = {}
+          if (dados.valor !== undefined) futureUpdate.valor = dados.valor
+          if (dados.descricao !== undefined) futureUpdate.descricao = dados.descricao
+
+          if (Object.keys(futureUpdate).length > 0) {
+            await supabase
+              .from('financeiro_receitas')
+              .update(futureUpdate)
+              .eq('regra_recorrencia_id', regraRecorrenciaId)
+              .in('status', ['pendente'])
+              .gt('data_vencimento', receitaEditada.data_vencimento)
+          }
+        }
+      }
+
+      return true
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao editar lançamento'
+      setError(message)
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase])
+
+  // ============================================
+  // EXCLUIR LANÇAMENTO DE HONORÁRIO
+  // ============================================
+
+  const excluirLancamentoHonorario = useCallback(async (
+    lancamentoId: string,
+    escopo: 'este' | 'este_e_cancelar',
+    regraRecorrenciaId?: string | null
+  ): Promise<boolean> => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Cancelar a receita (manter periodo_referencia para cron não regenerar)
+      const { error: cancelError } = await supabase
+        .from('financeiro_receitas')
+        .update({ status: 'cancelado' })
+        .eq('id', lancamentoId)
+
+      if (cancelError) throw cancelError
+
+      // Se "cancelar recorrência" e tem regra
+      if (escopo === 'este_e_cancelar' && regraRecorrenciaId) {
+        // Desativar regra
+        await supabase
+          .from('financeiro_regras_recorrencia')
+          .update({ ativo: false })
+          .eq('id', regraRecorrenciaId)
+
+        // Cancelar receitas futuras pendentes da mesma regra
+        const { data: receitaCancelada } = await supabase
+          .from('financeiro_receitas')
+          .select('data_vencimento')
+          .eq('id', lancamentoId)
+          .single()
+
+        if (receitaCancelada) {
+          await supabase
+            .from('financeiro_receitas')
+            .update({ status: 'cancelado' })
+            .eq('regra_recorrencia_id', regraRecorrenciaId)
+            .in('status', ['pendente'])
+            .gt('data_vencimento', receitaCancelada.data_vencimento)
+        }
+      }
+
+      return true
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao excluir lançamento'
+      setError(message)
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase])
+
   return {
     loading,
     error,
@@ -656,5 +787,7 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
     pagarFatura,
     loadContasBancarias,
     loadContractLimits,
+    editarLancamentoHonorario,
+    excluirLancamentoHonorario,
   }
 }

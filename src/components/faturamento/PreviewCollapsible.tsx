@@ -49,6 +49,8 @@ interface PreviewCollapsibleProps {
   pastas?: PastaData[]
   onRemoverProcessoPasta?: (fechamentoId: string, processoId: string) => void
   onExcluirPasta?: (fechamentoId: string) => void
+  onEditLancamento?: (lancamento: LancamentoProntoFaturar) => void
+  onDeleteLancamento?: (lancamento: LancamentoProntoFaturar) => void
   contractLimits?: Record<string, ContractLimits>
 }
 
@@ -75,6 +77,8 @@ export function PreviewCollapsible({
   onGerarFatura,
   onRemoverProcessoPasta,
   onExcluirPasta,
+  onEditLancamento,
+  onDeleteLancamento,
   contractLimits = {},
 }: PreviewCollapsibleProps) {
   const [activeContratoKey, setActiveContratoKey] = useState<string>('__all__')
@@ -344,6 +348,8 @@ export function PreviewCollapsible({
                             lancamento={h}
                             selected={selectedIds.includes(h.lancamento_id)}
                             onToggle={onToggleLancamento}
+                            onEdit={onEditLancamento}
+                            onDelete={onDeleteLancamento}
                           />
                         )}
                       />

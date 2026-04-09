@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { WizardWrapper, WizardStep } from '@/components/wizards/WizardWrapper'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -38,31 +38,67 @@ interface PessoaWizardModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSave?: (data: any) => Promise<void>
+  initialData?: any | null
   className?: string
 }
 
-export function PessoaWizardModal({ open, onOpenChange, onSave, className }: PessoaWizardModalProps) {
+const emptyFormData = {
+  tipo_pessoa: 'pf' as TipoPessoa,
+  tipo_cadastro: 'cliente' as TipoCadastro,
+  status: 'ativo' as StatusPessoa,
+  nome_completo: '',
+  nome_fantasia: '',
+  cpf_cnpj: '',
+  telefone: '',
+  email: '',
+  cep: '',
+  logradouro: '',
+  numero: '',
+  complemento: '',
+  bairro: '',
+  cidade: '',
+  uf: '',
+  origem: '' as OrigemCRM,
+  observacoes: '',
+}
+
+export function PessoaWizardModal({ open, onOpenChange, onSave, initialData, className }: PessoaWizardModalProps) {
   const [currentStep, setCurrentStep] = useState(0)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [formData, setFormData] = useState({
-    tipo_pessoa: 'pf' as TipoPessoa,
-    tipo_cadastro: 'cliente' as TipoCadastro,
-    status: 'ativo' as StatusPessoa,
-    nome_completo: '',
-    nome_fantasia: '',
-    cpf_cnpj: '',
-    telefone: '',
-    email: '',
-    cep: '',
-    logradouro: '',
-    numero: '',
-    complemento: '',
-    bairro: '',
-    cidade: '',
-    uf: '',
-    origem: '' as OrigemCRM,
-    observacoes: '',
-  })
+  const [formData, setFormData] = useState({ ...emptyFormData })
+
+  const isEditMode = !!initialData
+
+  // Preencher formulário com dados existentes ao abrir em modo edição
+  useEffect(() => {
+    if (open && initialData) {
+      setFormData({
+        tipo_pessoa: initialData.tipo_pessoa || 'pf',
+        tipo_cadastro: initialData.tipo_cadastro || 'cliente',
+        status: initialData.status || 'ativo',
+        nome_completo: initialData.nome_completo || '',
+        nome_fantasia: initialData.nome_fantasia || '',
+        cpf_cnpj: initialData.cpf_cnpj || '',
+        telefone: initialData.telefone || '',
+        email: initialData.email || '',
+        cep: initialData.cep || '',
+        logradouro: initialData.logradouro || '',
+        numero: initialData.numero || '',
+        complemento: initialData.complemento || '',
+        bairro: initialData.bairro || '',
+        cidade: initialData.cidade || '',
+        uf: initialData.uf || '',
+        origem: initialData.origem || '',
+        observacoes: initialData.observacoes || '',
+      })
+      setCurrentStep(0)
+      setErrors({})
+    } else if (open && !initialData) {
+      setFormData({ ...emptyFormData })
+      setCurrentStep(0)
+      setErrors({})
+    }
+  }, [open, initialData])
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -520,25 +556,7 @@ export function PessoaWizardModal({ open, onOpenChange, onSave, className }: Pes
 
   const handleCancel = () => {
     setCurrentStep(0)
-    setFormData({
-      tipo_pessoa: 'pf',
-      tipo_cadastro: 'cliente',
-      status: 'ativo',
-      nome_completo: '',
-      nome_fantasia: '',
-      cpf_cnpj: '',
-      telefone: '',
-      email: '',
-      cep: '',
-      logradouro: '',
-      numero: '',
-      complemento: '',
-      bairro: '',
-      cidade: '',
-      uf: '',
-      origem: '',
-      observacoes: '',
-    })
+    setFormData({ ...emptyFormData })
     onOpenChange(false)
   }
 
@@ -551,8 +569,8 @@ export function PessoaWizardModal({ open, onOpenChange, onSave, className }: Pes
       onStepChange={setCurrentStep}
       onComplete={handleComplete}
       onCancel={handleCancel}
-      title="Nova Pessoa"
-      description="Preencha as informacoes"
+      title={isEditMode ? 'Editar Pessoa' : 'Nova Pessoa'}
+      description={isEditMode ? 'Altere as informações necessárias' : 'Preencha as informações'}
       className={className}
     />
   )

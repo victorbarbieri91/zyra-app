@@ -41,7 +41,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PessoaWizardModal } from '@/components/crm/PessoaWizardModal';
-import { PessoaEditarModal } from '@/components/crm/PessoaEditarModal';
 import { PessoaDeleteConfirmDialog } from '@/components/crm/PessoaDeleteConfirmDialog';
 import { BulkDeleteConfirmDialog } from '@/components/crm/BulkDeleteConfirmDialog';
 import { BulkActionsToolbarCRM, BulkActionCRM } from '@/components/crm/BulkActionsToolbarCRM';
@@ -910,13 +909,72 @@ export default function PessoasPage() {
         </>
       )}
 
-      {/* Modal Editar Pessoa */}
-      <PessoaEditarModal
+      {/* Modal Editar Pessoa (reutiliza o wizard com dados pré-preenchidos) */}
+      <PessoaWizardModal
         open={editModalOpen}
         onOpenChange={setEditModalOpen}
-        pessoaId={pessoaSelecionada?.id ?? null}
-        escritorioId={escritorioId}
-        onSaved={fetchPessoas}
+        initialData={pessoaSelecionada}
+        onSave={async (data) => {
+          try {
+            const supabase = createClient();
+
+            if (!escritorioId) {
+              throw new Error('Escritório não encontrado.');
+            }
+
+            // Verificar CPF/CNPJ duplicado (excluindo o próprio registro)
+            if (data.cpf_cnpj && pessoaSelecionada) {
+              const cpfCnpjLimpo = data.cpf_cnpj.replace(/\D/g, '');
+              if (cpfCnpjLimpo.length >= 11) {
+                const { data: existente } = await supabase
+                  .from('crm_pessoas')
+                  .select('id, nome_completo')
+                  .eq('escritorio_id', escritorioId)
+                  .eq('cpf_cnpj', data.cpf_cnpj)
+                  .neq('id', pessoaSelecionada.id)
+                  .maybeSingle();
+
+                if (existente) {
+                  throw new Error(`Já existe uma pessoa com este CPF/CNPJ: ${existente.nome_completo}`);
+                }
+              }
+            }
+
+            const updateData = {
+              tipo_pessoa: data.tipo_pessoa,
+              tipo_cadastro: data.tipo_cadastro,
+              status: data.status || 'ativo',
+              nome_completo: data.nome_completo,
+              nome_fantasia: data.nome_fantasia || null,
+              cpf_cnpj: data.cpf_cnpj || null,
+              telefone: data.telefone || null,
+              email: data.email || null,
+              cep: data.cep || null,
+              logradouro: data.logradouro || null,
+              numero: data.numero || null,
+              complemento: data.complemento || null,
+              bairro: data.bairro || null,
+              cidade: data.cidade || null,
+              uf: data.uf || null,
+              origem: data.origem || null,
+              observacoes: data.observacoes || null,
+            };
+
+            const { error } = await supabase
+              .from('crm_pessoas')
+              .update(updateData)
+              .eq('id', pessoaSelecionada!.id)
+              .eq('escritorio_id', escritorioId);
+
+            if (error) throw error;
+
+            toast.success('Pessoa atualizada com sucesso!');
+            fetchPessoas();
+          } catch (error: any) {
+            console.error('Erro ao atualizar pessoa:', error);
+            toast.error(error.message || 'Erro ao atualizar pessoa.');
+          }
+        }}
       />
 
       {/* Dialog Excluir Pessoa */}

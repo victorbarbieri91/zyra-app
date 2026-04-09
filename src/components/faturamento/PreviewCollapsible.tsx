@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { FileText, Plus, FolderOpen, Trash2, DollarSign, Clock, ChevronDown, Building2, AlertTriangle, Scale } from 'lucide-react'
+import { FileText, Plus, FolderOpen, Trash2, DollarSign, Clock, ChevronDown, Building2, AlertTriangle, Scale, CalendarClock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -331,29 +331,87 @@ export function PreviewCollapsible({
                       )
                     })()}
 
-                    {/* Seção: Honorários */}
-                    {activeGroup.honorarios.length > 0 && (
-                      <CollapsibleSection
-                        sectionKey={`${activeGroup.key}-honorarios`}
-                        icon={<DollarSign className="h-4 w-4 text-[#1E3A8A]" />}
-                        label="Honorários"
-                        items={activeGroup.honorarios}
-                        selectedIds={selectedIds}
-                        collapsed={collapsed[`${activeGroup.key}-honorarios`] ?? false}
-                        onToggleCollapse={() => toggleSection(`${activeGroup.key}-honorarios`)}
-                        onToggleAll={() => toggleAllInSection(activeGroup.honorarios)}
-                        renderItem={(h) => (
-                          <LancamentoSelectableItem
-                            key={h.lancamento_id}
-                            lancamento={h}
-                            selected={selectedIds.includes(h.lancamento_id)}
-                            onToggle={onToggleLancamento}
-                            onEdit={onEditLancamento}
-                            onDelete={onDeleteLancamento}
-                          />
-                        )}
-                      />
-                    )}
+                    {/* Separar honorários do período vs futuros */}
+                    {(() => {
+                      const fimMes = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
+                      const fimMesStr = fimMes.toISOString().split('T')[0]
+
+                      const honorariosDoPeriodo = activeGroup.honorarios.filter(
+                        h => (h.data_vencimento || '') <= fimMesStr
+                      )
+                      const honorariosFuturos = activeGroup.honorarios.filter(
+                        h => (h.data_vencimento || '') > fimMesStr
+                      )
+
+                      // Período formatado dos futuros
+                      const formatMesAno = (ym: string) => {
+                        const [y, m] = ym.split('-')
+                        const nomes = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
+                        return `${nomes[parseInt(m) - 1]}/${y}`
+                      }
+                      const mesesFuturos = [...new Set(honorariosFuturos.map(h => (h.data_vencimento || '').substring(0, 7)))].sort()
+                      const periodoLabel = mesesFuturos.length === 1
+                        ? formatMesAno(mesesFuturos[0])
+                        : mesesFuturos.length > 1
+                          ? `${formatMesAno(mesesFuturos[0])} a ${formatMesAno(mesesFuturos[mesesFuturos.length - 1])}`
+                          : ''
+
+                      return (
+                        <>
+                          {/* Seção: Honorários do período */}
+                          {honorariosDoPeriodo.length > 0 && (
+                            <CollapsibleSection
+                              sectionKey={`${activeGroup.key}-honorarios`}
+                              icon={<DollarSign className="h-4 w-4 text-[#1E3A8A]" />}
+                              label="Honorários"
+                              items={honorariosDoPeriodo}
+                              selectedIds={selectedIds}
+                              collapsed={collapsed[`${activeGroup.key}-honorarios`] ?? false}
+                              onToggleCollapse={() => toggleSection(`${activeGroup.key}-honorarios`)}
+                              onToggleAll={() => toggleAllInSection(honorariosDoPeriodo)}
+                              renderItem={(h) => (
+                                <LancamentoSelectableItem
+                                  key={h.lancamento_id}
+                                  lancamento={h}
+                                  selected={selectedIds.includes(h.lancamento_id)}
+                                  onToggle={onToggleLancamento}
+                                  onEdit={onEditLancamento}
+                                  onDelete={onDeleteLancamento}
+                                />
+                              )}
+                            />
+                          )}
+
+                          {/* Seção: Parcelas futuras (colapsada por padrão) */}
+                          {honorariosFuturos.length > 0 && (
+                            <div className="opacity-80">
+                              <CollapsibleSection
+                                sectionKey={`${activeGroup.key}-futuros`}
+                                icon={<CalendarClock className="h-4 w-4 text-slate-400" />}
+                                label={`Parcelas futuras`}
+                                subtitle={periodoLabel}
+                                items={honorariosFuturos}
+                                selectedIds={selectedIds}
+                                collapsed={collapsed[`${activeGroup.key}-futuros`] ?? true}
+                                onToggleCollapse={() => toggleSection(`${activeGroup.key}-futuros`)}
+                                onToggleAll={() => toggleAllInSection(honorariosFuturos)}
+                                muted
+                                renderItem={(h) => (
+                                  <LancamentoSelectableItem
+                                    key={h.lancamento_id}
+                                    lancamento={h}
+                                    selected={selectedIds.includes(h.lancamento_id)}
+                                    onToggle={onToggleLancamento}
+                                    onEdit={onEditLancamento}
+                                    onDelete={onDeleteLancamento}
+                                  />
+                                )}
+                              />
+                            </div>
+                          )}
+                        </>
+                      )
+                    })()}
 
                     {/* Seção: Horas */}
                     {activeGroup.timesheet.length > 0 && (
@@ -546,47 +604,86 @@ interface CollapsibleSectionProps {
   sectionKey: string
   icon: React.ReactNode
   label: string
+  subtitle?: string
   items: LancamentoProntoFaturar[]
   selectedIds: string[]
   collapsed: boolean
   onToggleCollapse: () => void
   onToggleAll: () => void
   renderItem: (item: LancamentoProntoFaturar) => React.ReactNode
+  muted?: boolean
 }
 
 function CollapsibleSection({
   icon,
   label,
+  subtitle,
   items,
   selectedIds,
   collapsed,
   onToggleCollapse,
   onToggleAll,
   renderItem,
+  muted = false,
 }: CollapsibleSectionProps) {
   const selectedCount = items.filter(l => selectedIds.includes(l.lancamento_id)).length
   const totalValue = items
     .filter(l => selectedIds.includes(l.lancamento_id))
     .reduce((sum, l) => sum + (l.valor || 0), 0)
+  const totalGeral = items.reduce((sum, l) => sum + (l.valor || 0), 0)
   const allSelected = items.length > 0 && items.every(l => selectedIds.includes(l.lancamento_id))
 
   return (
-    <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+    <div className={cn(
+      'border rounded-lg overflow-hidden',
+      muted
+        ? 'border-slate-100 dark:border-slate-700/50'
+        : 'border-slate-200 dark:border-slate-700'
+    )}>
       {/* Header colapsável */}
       <button
         onClick={onToggleCollapse}
-        className="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-[hsl(var(--surface-2))] hover:bg-slate-50 dark:hover:bg-[hsl(var(--surface-3))] transition-colors text-left"
+        className={cn(
+          'w-full flex items-center justify-between px-4 py-3 transition-colors text-left',
+          muted
+            ? 'bg-slate-50/50 dark:bg-[hsl(var(--surface-1))] hover:bg-slate-50 dark:hover:bg-[hsl(var(--surface-2))]'
+            : 'bg-white dark:bg-[hsl(var(--surface-2))] hover:bg-slate-50 dark:hover:bg-[hsl(var(--surface-3))]'
+        )}
       >
         <div className="flex items-center gap-2">
           {icon}
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</span>
-          <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-[10px] font-medium h-5 px-1.5">
-            {selectedCount}/{items.length}
-          </Badge>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className={cn(
+                'text-sm',
+                muted
+                  ? 'font-medium text-slate-500 dark:text-slate-400'
+                  : 'font-semibold text-slate-700 dark:text-slate-200'
+              )}>{label}</span>
+              <Badge variant="secondary" className={cn(
+                'text-[10px] font-medium h-5 px-1.5',
+                muted
+                  ? 'bg-slate-100/80 dark:bg-slate-700/30 text-slate-400 dark:text-slate-500'
+                  : 'bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300'
+              )}>
+                {selectedCount > 0 ? `${selectedCount}/` : ''}{items.length}
+              </Badge>
+            </div>
+            {subtitle && (
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{subtitle}</span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-3">
-          {totalValue > 0 && (
-            <span className="text-sm font-semibold text-emerald-600">{formatCurrency(totalValue)}</span>
+          {(muted ? totalGeral > 0 : totalValue > 0) && (
+            <span className={cn(
+              'text-sm font-semibold',
+              muted && selectedCount === 0
+                ? 'text-slate-400 dark:text-slate-500'
+                : 'text-emerald-600'
+            )}>
+              {formatCurrency(muted && selectedCount === 0 ? totalGeral : totalValue)}
+            </span>
           )}
           <Button
             variant="ghost"
@@ -594,7 +691,7 @@ function CollapsibleSection({
             className="text-[11px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 h-6 px-2"
             onClick={(e) => { e.stopPropagation(); onToggleAll() }}
           >
-            {allSelected ? 'Desmarcar' : 'Selecionar todos'}
+            {allSelected ? 'Desmarcar' : (muted ? 'Incluir todos' : 'Selecionar todos')}
           </Button>
           <ChevronDown
             className={cn('h-4 w-4 text-slate-400 transition-transform duration-150', !collapsed && 'rotate-180')}

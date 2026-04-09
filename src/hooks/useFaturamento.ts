@@ -57,6 +57,9 @@ export interface ClienteParaFaturar {
   qtd_horas: number
   soma_horas: number
   total_faturar: number
+  // Honorários futuros (não contam no total, mas informam o usuário)
+  qtd_honorarios_futuros: number
+  total_honorarios_futuros: number
   // Campos para pasta
   total_pastas: number
   qtd_pastas: number
@@ -207,6 +210,10 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
 
       const lancamentos = await loadLancamentosProntos()
 
+      // Calcular fim do mês atual para separar período vs futuro
+      const fimMes = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
+      const fimMesStr = fimMes.toISOString().split('T')[0]
+
       // Agrupar por cliente + escritório (mesmo cliente em escritórios diferentes = linhas separadas)
       const clientesMap = new Map<string, ClienteParaFaturar>()
 
@@ -223,6 +230,8 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
             qtd_horas: 0,
             soma_horas: 0,
             total_faturar: 0,
+            qtd_honorarios_futuros: 0,
+            total_honorarios_futuros: 0,
             total_pastas: 0,
             qtd_pastas: 0,
             qtd_processos_pasta: 0,
@@ -233,8 +242,14 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
         const cliente = clientesMap.get(groupKey)!
 
         if (lanc.tipo_lancamento === 'honorario') {
-          cliente.qtd_honorarios += 1
-          cliente.total_honorarios += lanc.valor || 0
+          const isFuturo = (lanc.data_vencimento || '') > fimMesStr
+          if (isFuturo) {
+            cliente.qtd_honorarios_futuros += 1
+            cliente.total_honorarios_futuros += lanc.valor || 0
+          } else {
+            cliente.qtd_honorarios += 1
+            cliente.total_honorarios += lanc.valor || 0
+          }
         } else if (lanc.tipo_lancamento === 'timesheet') {
           cliente.qtd_horas += 1
           cliente.soma_horas += lanc.horas || 0

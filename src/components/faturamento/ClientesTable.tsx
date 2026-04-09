@@ -286,10 +286,13 @@ export function ClientesTable({
 
                 {/* Honorários */}
                 <div className="col-span-2 flex items-center justify-center">
-                  {cliente.qtd_honorarios > 0 ? (
+                  {(cliente.qtd_honorarios > 0 || (cliente.qtd_honorarios_futuros || 0) > 0) ? (
                     <div className="text-center">
                       <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                         {cliente.qtd_honorarios} item{cliente.qtd_honorarios !== 1 ? 's' : ''}
+                        {(cliente.qtd_honorarios_futuros || 0) > 0 && (
+                          <span className="font-normal text-slate-400"> (+{cliente.qtd_honorarios_futuros})</span>
+                        )}
                       </p>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400">
                         {formatCurrency(cliente.total_honorarios)}

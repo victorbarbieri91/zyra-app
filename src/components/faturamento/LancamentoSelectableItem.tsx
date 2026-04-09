@@ -28,6 +28,19 @@ export function LancamentoSelectableItem({
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }).format(value)
 
+  const categoriaLabel: Record<string, string> = {
+    honorarios: 'Honorários',
+    consultoria: 'Consultoria',
+    exito: 'Êxito',
+    custas_reembolsadas: 'Custas reembolsadas',
+    outros: 'Outros',
+    acordo: 'Acordo',
+    parecer: 'Parecer',
+    avulso: 'Avulso',
+    timesheet: 'Timesheet',
+    pasta: 'Pasta',
+  }
+
   return (
     <div
       className={cn(
@@ -50,7 +63,14 @@ export function LancamentoSelectableItem({
         <p className="text-xs font-medium text-slate-800 dark:text-slate-200 leading-snug">
           {formatDescricaoFatura(lancamento.descricao)}
         </p>
-        <p className="text-[11px] text-slate-400 mt-0.5">{lancamento.categoria}</p>
+        <p className="text-[11px] text-slate-400 mt-0.5">
+          {categoriaLabel[lancamento.categoria] || lancamento.categoria}
+          {lancamento.data_vencimento && isHonorario && (() => {
+            const [y, m] = lancamento.data_vencimento.split('-')
+            const nomes = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
+            return <span className="text-slate-300 dark:text-slate-500"> · {nomes[parseInt(m) - 1]}/{y}</span>
+          })()}
+        </p>
 
         {/* Caso vinculado (Processo ou Consultivo) */}
         {(lancamento.processo_id || lancamento.consulta_id) && (

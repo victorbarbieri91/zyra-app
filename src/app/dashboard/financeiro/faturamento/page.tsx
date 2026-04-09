@@ -339,7 +339,15 @@ export default function FaturamentoPage() {
     setSelectedCliente(cliente)
     const lancamentosData = await loadLancamentosPorCliente(cliente.cliente_id, cliente.escritorio_id)
     setLancamentos(lancamentosData)
-    setSelectedLancamentosIds(lancamentosData.map((l) => l.lancamento_id))
+    // Pré-selecionar apenas lançamentos do período (vencimento até fim do mês atual)
+    // Honorários futuros ficam desmarcados — usuário inclui manualmente se quiser antecipar
+    const fimMes = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
+    const fimMesStr = fimMes.toISOString().split('T')[0]
+    setSelectedLancamentosIds(
+      lancamentosData
+        .filter((l) => l.tipo_lancamento !== 'honorario' || (l.data_vencimento || '') <= fimMesStr)
+        .map((l) => l.lancamento_id)
+    )
 
     // Carregar limites contratuais (min/max mensal) dos contratos envolvidos
     const contratoIds = [...new Set(lancamentosData.map(l => l.contrato_id).filter(Boolean))] as string[]

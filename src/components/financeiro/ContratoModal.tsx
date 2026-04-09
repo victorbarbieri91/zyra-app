@@ -732,7 +732,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] !flex !flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
             <FileText className="h-5 w-5 text-[#89bcbe]" />
@@ -745,6 +745,7 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
           </DialogDescription>
         </DialogHeader>
 
+        <div className="flex-1 min-h-0 overflow-y-auto">
         {/* Indicador de Steps */}
         <div className="flex items-center justify-center gap-2 py-4">
           {[1, 2, 3, 4].map((s) => (
@@ -2174,7 +2175,9 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
           </div>
         )}
 
-        <DialogFooter className="gap-2">
+        </div>
+
+        <DialogFooter className="gap-2 flex-shrink-0">
           {step > 1 && (
             <Button variant="outline" onClick={() => setStep((s) => s - 1)} disabled={saving}>
               Voltar

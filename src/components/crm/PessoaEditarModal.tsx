@@ -286,8 +286,8 @@ export function PessoaEditarModal({ open, onOpenChange, pessoaId, escritorioId, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-700">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] !flex !flex-col overflow-hidden">
+        <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-700 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Pencil className="w-4 h-4 text-[#34495e] dark:text-slate-300" />
             Editar Pessoa
@@ -299,7 +299,7 @@ export function PessoaEditarModal({ open, onOpenChange, pessoaId, escritorioId, 
             <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
           </div>
         ) : (
-          <ScrollArea className="flex-1 max-h-[60vh]">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="space-y-5 p-1 pr-4">
               {/* Secao: Dados Basicos */}
               <div>
@@ -629,7 +629,7 @@ export function PessoaEditarModal({ open, onOpenChange, pessoaId, escritorioId, 
           </ScrollArea>
         )}
 
-        <DialogFooter className="pt-3 border-t border-slate-100 dark:border-slate-700">
+        <DialogFooter className="pt-3 border-t border-slate-100 dark:border-slate-700 flex-shrink-0">
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancelar
           </Button>

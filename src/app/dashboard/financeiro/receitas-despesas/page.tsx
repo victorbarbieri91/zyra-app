@@ -1459,18 +1459,8 @@ export default function ExtratoFinanceiroPage() {
         return
       }
 
-      let temParcelas = 0
+      const temParcelas = 0
       const jaPago = item.status === 'efetivado'
-
-      if (item.tipo_movimento === 'receita' && item.origem !== 'fatura' && item.origem !== 'nota_debito') {
-        // Verificar parcelas filhas
-        const { count } = await supabase
-          .from('financeiro_receitas')
-          .select('*', { count: 'exact', head: true })
-          .eq('receita_pai_id', item.origem_id)
-
-        temParcelas = count || 0
-      }
 
       setExclusaoInfo({
         temParcelas,
@@ -1575,7 +1565,7 @@ export default function ExtratoFinanceiroPage() {
           loadExtrato()
           return
         } else {
-          // Deletar receita (CASCADE vai deletar parcelas)
+          // Deletar receita
           const { error } = await supabase
             .from('financeiro_receitas')
             .delete()

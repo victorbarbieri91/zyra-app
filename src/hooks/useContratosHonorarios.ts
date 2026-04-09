@@ -252,7 +252,6 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
             valor_pago,
             status,
             data_vencimento,
-            numero_parcela,
             dias_atraso
           )
         `)
@@ -281,7 +280,6 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           valor_pago: number | null
           status: string
           data_vencimento: string
-          numero_parcela: number | null
           dias_atraso: number | null
         }) => {
           // Somar valor total (apenas honorários e parcelas, não saldos)
@@ -302,9 +300,9 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
                 diasAtraso = Math.max(diasAtraso, Number(receita.dias_atraso) || 0)
               }
               // Próxima parcela pendente
-              if (!proximaParcela && receita.tipo === 'parcela') {
+              if (!proximaParcela && (receita.tipo === 'parcela' || receita.tipo === 'honorario')) {
                 proximaParcela = {
-                  numero: receita.numero_parcela || 1,
+                  numero: totalParcelas,
                   valor: Number(receita.valor),
                   vencimento: receita.data_vencimento,
                 }

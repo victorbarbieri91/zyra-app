@@ -12,6 +12,7 @@ export type StatusReceita = 'pendente' | 'pago' | 'parcial' | 'atrasado' | 'canc
 export type FormaPagamento = 'dinheiro' | 'pix' | 'ted' | 'boleto' | 'cartao_credito' | 'cartao_debito'
 export type FrequenciaRecorrencia = 'mensal' | 'trimestral' | 'semestral' | 'anual'
 
+// Interface de configuração de recorrência (usado nos formulários, não na tabela receitas)
 export interface ConfigRecorrencia {
   frequencia: FrequenciaRecorrencia
   dia_vencimento: number
@@ -30,9 +31,7 @@ export interface Receita {
   consulta_id: string | null
   contrato_id: string | null
   fatura_id: string | null
-  receita_pai_id: string | null
   receita_origem_id: string | null
-  numero_parcela: number | null
   descricao: string
   categoria: string
   valor: number
@@ -43,13 +42,13 @@ export interface Receita {
   valor_pago: number | null
   forma_pagamento: FormaPagamento | null
   conta_bancaria_id: string | null
-  recorrente: boolean
-  config_recorrencia: ConfigRecorrencia | null
   parcelado: boolean
   numero_parcelas: number
   dias_atraso: number
   juros_aplicados: number
   observacoes: string | null
+  regra_recorrencia_id: string | null
+  periodo_referencia: string | null
   created_at: string
   updated_at: string
 }
@@ -83,8 +82,6 @@ export interface ReceitaFormData {
   data_vencimento: string
   parcelado: boolean
   numero_parcelas: number
-  recorrente: boolean
-  config_recorrencia: ConfigRecorrencia | null
   observacoes: string | null
 }
 
@@ -104,7 +101,6 @@ export interface FiltrosReceitas {
   contrato_id?: string
   data_inicio?: string
   data_fim?: string
-  recorrente?: boolean
 }
 
 // =====================================================
@@ -182,9 +178,6 @@ export function useReceitas(escritorioId: string | null) {
         query = query.lte('data_vencimento', filtros.data_fim)
       }
 
-      if (filtros?.recorrente !== undefined) {
-        query = query.eq('recorrente', filtros.recorrente)
-      }
 
       const { data, error: queryError } = await query
 
@@ -216,7 +209,7 @@ export function useReceitas(escritorioId: string | null) {
           cliente:crm_pessoas(id, nome_completo, email),
           processo:processos_processos(id, numero_cnj, numero_pasta),
           contrato:financeiro_contratos_honorarios(id, numero_contrato),
-          parcelas:financeiro_receitas!receita_pai_id(*)
+          regra:financeiro_regras_recorrencia(id, descricao, valor_atual)
         `)
         .eq('id', receitaId)
         .single()
@@ -307,8 +300,6 @@ export function useReceitas(escritorioId: string | null) {
             data_vencimento: formData.data_vencimento,
             parcelado: false,
             numero_parcelas: 1,
-            recorrente: formData.recorrente,
-            config_recorrencia: formData.recorrente ? formData.config_recorrencia : null,
             observacoes: formData.observacoes,
             status: 'pendente',
             responsavel_id: user?.id,
@@ -462,30 +453,7 @@ export function useReceitas(escritorioId: string | null) {
   }, [escritorioId, supabase])
 
   // =====================================================
-  // CARREGAR PARCELAS DE UM HONORÁRIO
-  // =====================================================
-
-  const loadParcelas = useCallback(async (receitaPaiId: string): Promise<Receita[]> => {
-    if (!escritorioId) return []
-
-    try {
-      const { data, error: queryError } = await supabase
-        .from('financeiro_receitas')
-        .select('*')
-        .eq('receita_pai_id', receitaPaiId)
-        .order('numero_parcela', { ascending: true })
-
-      if (queryError) throw queryError
-
-      return data || []
-    } catch (err) {
-      console.error('Erro ao carregar parcelas:', err)
-      return []
-    }
-  }, [escritorioId, supabase])
-
-  // =====================================================
-  // CARREGAR RECEITAS RECORRENTES
+  // CARREGAR RECEITAS RECORRENTES (vinculadas a regras)
   // =====================================================
 
   const loadReceitasRecorrentes = useCallback(async (): Promise<ReceitaComRelacoes[]> => {
@@ -499,8 +467,7 @@ export function useReceitas(escritorioId: string | null) {
           cliente:crm_pessoas(id, nome_completo)
         `)
         .eq('escritorio_id', escritorioId)
-        .eq('recorrente', true)
-        .is('receita_pai_id', null) // Só templates, não filhos
+        .not('regra_recorrencia_id', 'is', null)
         .order('descricao')
 
       if (queryError) throw queryError
@@ -557,7 +524,6 @@ export function useReceitas(escritorioId: string | null) {
     receberReceitaParcial,
 
     // Parcelas e recorrência
-    loadParcelas,
     loadReceitasRecorrentes,
 
     // Estatísticas

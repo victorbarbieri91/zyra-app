@@ -251,7 +251,7 @@ async function fetchDashboardMetrics(
     // Honorários do mês DO USUÁRIO LOGADO (por data_competencia, anti-duplicação no processamento)
     userId ? supabase
       .from('financeiro_receitas')
-      .select('valor, tipo, parcelado')
+      .select('valor, tipo')
       .eq('escritorio_id', escritorioAtivo)
       .eq('responsavel_id', userId)
       .neq('status', 'cancelado')
@@ -333,7 +333,7 @@ async function fetchDashboardMetrics(
 
   // Calcular honorários do mês (excluir saldos já contabilizados)
   const honorariosMes = receitasGeradasResult.data?.reduce(
-    (acc: number, item: { valor: number | null; tipo: string | null; parcelado: boolean | null }) => {
+    (acc: number, item: { valor: number | null; tipo: string | null }) => {
       // Pular saldo (já contabilizado na receita original)
       if (item.tipo === 'saldo') return acc
       return acc + (Number(item.valor) || 0)

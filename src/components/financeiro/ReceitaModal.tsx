@@ -588,7 +588,6 @@ export default function ReceitaModal({
             created_by: user.id,
             regra_recorrencia_id: regra.id,
             periodo_referencia: formData.data_vencimento.substring(0, 7),
-            numero_parcela: isParcelada ? 1 : null,
           })
 
         if (errInst) throw errInst

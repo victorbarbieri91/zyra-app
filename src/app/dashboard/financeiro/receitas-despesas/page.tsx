@@ -66,6 +66,7 @@ import {
   Ban,
 } from 'lucide-react'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
+import { cancelarNotaDebito } from '@/hooks/useNotasDebito'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -1533,39 +1534,8 @@ export default function ExtratoFinanceiroPage() {
 
           if (error) throw error
         } else if (item.origem === 'nota_debito') {
-          // Cancelar nota de débito + reverter despesas + cancelar receita vinculada
-          const { data: nota } = await supabase
-            .from('financeiro_notas_debito')
-            .select('receita_id')
-            .eq('id', item.origem_id)
-            .single()
-
-          await supabase
-            .from('financeiro_notas_debito')
-            .update({ status: 'cancelada' })
-            .eq('id', item.origem_id)
-
-          // Reverter despesas vinculadas
-          const { data: itensNota } = await supabase
-            .from('financeiro_notas_debito_itens')
-            .select('despesa_id')
-            .eq('nota_debito_id', item.origem_id)
-
-          if (itensNota && itensNota.length > 0) {
-            await supabase
-              .from('financeiro_despesas')
-              .update({ reembolsado: false, reembolso_status: 'pendente' })
-              .in('id', itensNota.map((i: any) => i.despesa_id))
-          }
-
-          // Cancelar receita vinculada
-          if (nota?.receita_id) {
-            await supabase
-              .from('financeiro_receitas')
-              .update({ status: 'cancelado' })
-              .eq('id', nota.receita_id)
-          }
-
+          if (!item.origem_id) throw new Error('Nota de débito sem identificador')
+          await cancelarNotaDebito(supabase, item.origem_id)
           toast.success('Nota de débito cancelada!')
           setModalExcluir(null)
           setExclusaoInfo(null)

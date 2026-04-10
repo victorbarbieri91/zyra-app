@@ -2,8 +2,57 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { toast } from 'sonner'
+
+// Cancelamento de uma nota de débito: reverte despesas vinculadas, cancela a
+// receita-sombra e marca a própria nota como cancelada. Exportado fora do hook
+// para que outras telas (ex: receitas-despesas) possam reaproveitar sem
+// disparar os useEffects do hook.
+export async function cancelarNotaDebito(supabase: SupabaseClient, id: string) {
+  const { data: itens } = await supabase
+    .from('financeiro_notas_debito_itens')
+    .select('despesa_id')
+    .eq('nota_debito_id', id)
+
+  const { data: nota } = await supabase
+    .from('financeiro_notas_debito')
+    .select('receita_id')
+    .eq('id', id)
+    .single()
+
+  const { error } = await supabase
+    .from('financeiro_notas_debito')
+    .update({
+      status: 'cancelada',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+
+  if (error) throw error
+
+  if (itens && itens.length > 0) {
+    await supabase
+      .from('financeiro_despesas')
+      .update({
+        reembolsado: false,
+        reembolso_status: 'pendente',
+        updated_at: new Date().toISOString(),
+      })
+      .in('id', itens.map((i: any) => i.despesa_id))
+  }
+
+  if (nota?.receita_id) {
+    await supabase
+      .from('financeiro_receitas')
+      .update({
+        status: 'cancelado',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', nota.receita_id)
+  }
+}
 
 export interface NotaDebito {
   id: string
@@ -477,53 +526,7 @@ export function useNotasDebito() {
   }
 
   const cancelarNota = async (id: string) => {
-    // Buscar itens para reverter despesas
-    const { data: itens } = await supabase
-      .from('financeiro_notas_debito_itens')
-      .select('despesa_id')
-      .eq('nota_debito_id', id)
-
-    // Buscar nota para cancelar receita
-    const { data: nota } = await supabase
-      .from('financeiro_notas_debito')
-      .select('receita_id')
-      .eq('id', id)
-      .single()
-
-    // Cancelar nota
-    const { error } = await supabase
-      .from('financeiro_notas_debito')
-      .update({
-        status: 'cancelada',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-
-    if (error) throw error
-
-    // Reverter despesas
-    if (itens && itens.length > 0) {
-      await supabase
-        .from('financeiro_despesas')
-        .update({
-          reembolsado: false,
-          reembolso_status: 'pendente',
-          updated_at: new Date().toISOString(),
-        })
-        .in('id', itens.map((i: any) => i.despesa_id))
-    }
-
-    // Cancelar receita vinculada
-    if (nota?.receita_id) {
-      await supabase
-        .from('financeiro_receitas')
-        .update({
-          status: 'cancelado',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', nota.receita_id)
-    }
-
+    await cancelarNotaDebito(supabase, id)
     toast.success('Nota de Débito cancelada')
     await Promise.all([carregarNotas(), carregarClientesComDespesas()])
   }

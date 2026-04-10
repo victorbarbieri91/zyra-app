@@ -2,10 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import {
   ArrowLeft,
   Edit,
@@ -15,6 +20,7 @@ import {
   RotateCcw,
   Info,
   GitBranch,
+  History,
 } from 'lucide-react'
 import {
   AlertDialog,
@@ -38,13 +44,9 @@ import {
   PROCESSO_RESULTADO_LABELS,
 } from '@/lib/constants/processo-enums'
 
-// Abas
+// Componentes do processo
 import ProcessoResumo from '@/components/processos/ProcessoResumo'
 import ProcessoPartes from '@/components/processos/ProcessoPartes'
-import ProcessoDocumentos from '@/components/processos/ProcessoDocumentos'
-import ProcessoEstrategia from '@/components/processos/ProcessoEstrategia'
-import ProcessoJurisprudencias from '@/components/processos/ProcessoJurisprudencias'
-import ProcessoDepositos from '@/components/processos/ProcessoDepositos'
 import ProcessoHistorico from '@/components/processos/ProcessoHistorico'
 import ProcessoWizard from '@/components/processos/ProcessoWizard'
 import EncerrarProcessoModal from '@/components/processos/EncerrarProcessoModal'
@@ -139,17 +141,13 @@ export default function ProcessoDetalhe() {
   const [processo, setProcesso] = useState<Processo | null>(null)
   const [processoRaw, setProcessoRaw] = useState<ProcessoRaw | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('ficha')
+  const [showHistorico, setShowHistorico] = useState(false)
   const [copiedCNJ, setCopiedCNJ] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showEncerrarModal, setShowEncerrarModal] = useState(false)
   const [reabrindo, setReabrindo] = useState(false)
   const supabase = createClient()
 
-  // Contadores para badges das abas
-  const [totalDocumentos, setTotalDocumentos] = useState(0)
-  const [versõesEstrategia, setVersoesEstrategia] = useState(0)
-  const [totalJurisprudencias, setTotalJurisprudencias] = useState(0)
 
   // Relacionamentos (recursos e incidentes)
   const [processoDerived, setProcessoDerived] = useState<{
@@ -274,9 +272,6 @@ export default function ProcessoDetalhe() {
         provisao_sugerida: data.provisao_sugerida || undefined,
       })
 
-      setTotalDocumentos(0) // TODO: buscar da tabela de documentos
-      setVersoesEstrategia(0) // TODO: buscar da tabela de estratégias
-      setTotalJurisprudencias(0) // TODO: buscar da tabela de jurisprudências
 
       // Verificar se este processo é derivado de outro (recurso/incidente)
       if (data.processo_principal_id) {
@@ -414,7 +409,7 @@ export default function ProcessoDetalhe() {
       <div className="max-w-[1800px] mx-auto space-y-6">
 
         {/* Header da Ficha */}
-        <div className="bg-gradient-to-r from-[#34495e] to-[#46627f] border border-slate-300 dark:border-slate-600 rounded-lg p-5 shadow-sm">
+        <div className="bg-gradient-to-r from-[#34495e] to-[#46627f] border border-slate-300 dark:border-slate-600 rounded-lg p-5 pb-7 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <Button
               variant="ghost"
@@ -465,6 +460,15 @@ export default function ProcessoDetalhe() {
                   </AlertDialogContent>
                 </AlertDialog>
               )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white/80 hover:text-white hover:bg-white/10 h-8"
+                onClick={() => setShowHistorico(true)}
+              >
+                <History className="w-4 h-4 mr-2" />
+                Histórico
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -594,113 +598,69 @@ export default function ProcessoDetalhe() {
           </div>
         )}
 
-        {/* Sistema de Abas */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-            <CardHeader className="pb-2">
-              <TabsList className="grid w-full grid-cols-6 bg-slate-100 dark:bg-surface-2">
-                <TabsTrigger value="ficha" className="text-xs">
-                  Ficha Processual
-                </TabsTrigger>
-                <TabsTrigger value="documentos" className="text-xs">
-                  Documentos
-                  {totalDocumentos > 0 && (
-                    <Badge className="ml-2 text-[10px] h-4" variant="secondary">
-                      {totalDocumentos}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="estrategia" className="text-xs">
-                  Estratégia
-                  {versõesEstrategia > 0 && (
-                    <Badge className="ml-2 text-[10px] h-4" variant="secondary">
-                      {versõesEstrategia}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="jurisprudencias" className="text-xs">
-                  Jurisprudências
-                  {totalJurisprudencias > 0 && (
-                    <Badge className="ml-2 text-[10px] h-4" variant="secondary">
-                      {totalJurisprudencias}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="depositos" className="text-xs">
-                  Depósitos
-                </TabsTrigger>
-                <TabsTrigger value="historico" className="text-xs">
-                  Histórico
-                </TabsTrigger>
-              </TabsList>
-            </CardHeader>
-          </Card>
-
-          {/* Conteúdo das Abas */}
-          <TabsContent value="ficha" className="space-y-6">
-            <ProcessoResumo
-              processo={processo}
-              leftColumnFooter={processoRaw ? (() => {
-                const polo = processoRaw.polo_cliente
-                const clienteNome = processo.cliente_nome
-                const parteContraria = processoRaw.parte_contraria ?? ''
-                const autor = polo === 'ativo' ? clienteNome : polo === 'passivo' ? parteContraria : ''
-                const reu = polo === 'ativo' ? parteContraria : polo === 'passivo' ? clienteNome : ''
-                const ppData: ProcessoPrincipalData = {
-                  id: processo.id,
-                  numero_cnj: processoRaw.numero_cnj,
-                  numero_pasta: processo.numero_pasta,
-                  cliente_id: processoRaw.cliente_id,
-                  cliente_nome: clienteNome,
-                  autor,
-                  reu,
-                  polo_cliente: polo,
-                  parte_contraria: parteContraria,
-                  area: processoRaw.area,
-                  instancia: processoRaw.instancia,
-                  comarca: processoRaw.comarca,
-                  responsavel_id: processoRaw.responsavel_id,
-                  responsavel_nome: processo.responsavel_nome,
-                  colaboradores_ids: processoRaw.colaboradores_ids,
-                  tags: processoRaw.tags,
-                  contrato_id: processoRaw.contrato_id,
-                  modalidade_cobranca: processoRaw.modalidade_cobranca,
-                  valor_causa: processoRaw.valor_causa,
-                  objeto_acao: processoRaw.objeto_acao,
-                }
-                return (
-                  <ProcessoRelacionados
-                    processoId={processo.id}
-                    processoPrincipalData={ppData}
-                  />
-                )
-              })() : undefined}
-            />
-            <ProcessoPartes processoId={processo.id} />
-          </TabsContent>
-
-          <TabsContent value="documentos" className="space-y-6">
-            <ProcessoDocumentos processoId={processo.id} />
-          </TabsContent>
-
-          <TabsContent value="estrategia" className="space-y-6">
-            <ProcessoEstrategia processoId={processo.id} />
-          </TabsContent>
-
-          <TabsContent value="jurisprudencias" className="space-y-6">
-            <ProcessoJurisprudencias processoId={processo.id} />
-          </TabsContent>
-
-          <TabsContent value="depositos" className="space-y-6">
-            <ProcessoDepositos processoId={processo.id} />
-          </TabsContent>
-
-          <TabsContent value="historico" className="space-y-6">
-            <ProcessoHistorico processoId={processo.id} />
-          </TabsContent>
-        </Tabs>
+        {/* Conteúdo Principal - Ficha Processual */}
+        <ProcessoResumo
+          processo={processo}
+          topSectionsSlot={processoRaw ? (() => {
+            const polo = processoRaw.polo_cliente
+            const clienteNome = processo.cliente_nome
+            const parteContraria = processoRaw.parte_contraria ?? ''
+            const autor = polo === 'ativo' ? clienteNome : polo === 'passivo' ? parteContraria : ''
+            const reu = polo === 'ativo' ? parteContraria : polo === 'passivo' ? clienteNome : ''
+            const ppData: ProcessoPrincipalData = {
+              id: processo.id,
+              numero_cnj: processoRaw.numero_cnj,
+              numero_pasta: processo.numero_pasta,
+              cliente_id: processoRaw.cliente_id,
+              cliente_nome: clienteNome,
+              autor,
+              reu,
+              polo_cliente: polo,
+              parte_contraria: parteContraria,
+              area: processoRaw.area,
+              instancia: processoRaw.instancia,
+              comarca: processoRaw.comarca,
+              responsavel_id: processoRaw.responsavel_id,
+              responsavel_nome: processo.responsavel_nome,
+              colaboradores_ids: processoRaw.colaboradores_ids,
+              tags: processoRaw.tags,
+              contrato_id: processoRaw.contrato_id,
+              modalidade_cobranca: processoRaw.modalidade_cobranca,
+              valor_causa: processoRaw.valor_causa,
+              objeto_acao: processoRaw.objeto_acao,
+            }
+            return (
+              <>
+                <ProcessoPartes processoId={processo.id} autoHide collapsible />
+                <ProcessoRelacionados
+                  processoId={processo.id}
+                  processoPrincipalData={ppData}
+                  autoHide
+                />
+              </>
+            )
+          })() : undefined}
+        />
 
       </div>
+
+      {/* Sheet: Histórico de Alterações */}
+      <Sheet open={showHistorico} onOpenChange={setShowHistorico}>
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
+              <History className="w-4 h-4 text-[#89bcbe]" />
+              Histórico de Alterações
+            </SheetTitle>
+            <SheetDescription className="text-xs text-slate-500 dark:text-slate-400">
+              Auditoria completa de alterações neste processo
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-6">
+            <ProcessoHistorico processoId={processo.id} />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Modal de Edição de Processo */}
       {showEditModal && processoRaw && (

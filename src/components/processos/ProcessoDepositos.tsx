@@ -31,7 +31,6 @@ import {
   Pencil,
   Trash2,
   AlertCircle,
-  Wallet,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { formatBrazilDate, formatDateForDB, parseDateInBrazil } from '@/lib/timezone'
@@ -58,6 +57,11 @@ interface Deposito {
 
 interface ProcessoDepositosProps {
   processoId: string
+  /**
+   * Quando true, o card não renderiza quando não há nenhum depósito cadastrado.
+   * Útil para usar inline no resumo e só aparecer quando o processo tem depósitos.
+   */
+  autoHide?: boolean
 }
 
 const TIPO_LABELS: Record<string, string> = {
@@ -96,7 +100,7 @@ const initialFormState = {
   observacoes: '',
 }
 
-export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps) {
+export default function ProcessoDepositos({ processoId, autoHide = false }: ProcessoDepositosProps) {
   const supabase = createClient()
 
   const [depositos, setDepositos] = useState<Deposito[]>([])
@@ -287,6 +291,12 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
     }
   }
 
+  // AutoHide: suprime totalmente o componente durante o loading inicial
+  // para evitar flash de skeleton em processos sem depósitos
+  if (autoHide && loading) {
+    return null
+  }
+
   if (loading) {
     return (
       <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
@@ -299,19 +309,52 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
     )
   }
 
+  const isEmpty = depositos.length === 0
+
   return (
     <>
-      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-        <CardHeader className="pb-3">
+      {isEmpty ? (
+        // Empty state: card com header gradient + linha slim de empty state
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+          <CardHeader className="pb-3 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
+                  <Landmark className="w-3.5 h-3.5 text-[#89bcbe]" />
+                </div>
+                Depósitos Judiciais
+              </CardTitle>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleNovoDeposito}
+                className="h-8 text-xs bg-white/60 dark:bg-surface-0/60 border-[#89bcbe] text-[#34495e] dark:text-slate-200 hover:bg-white dark:hover:bg-surface-0 flex-shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                Registrar depósito
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="py-4">
+            <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+              Nenhum depósito registrado neste processo
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <CardHeader className="pb-3 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200 flex items-center gap-2">
-              <Landmark className="w-5 h-5 text-[#89bcbe]" />
+            <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
+                <Landmark className="w-3.5 h-3.5 text-[#89bcbe]" />
+              </div>
               Depósitos Judiciais
             </CardTitle>
             <Button
               size="sm"
               onClick={handleNovoDeposito}
-              className="h-8 px-3 text-xs bg-[#34495e] hover:bg-[#46627f]"
+              className="h-8 px-3 text-xs bg-[#34495e] hover:bg-[#46627f] text-white"
             >
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               Novo Depósito
@@ -319,7 +362,7 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-5">
           {/* Totais */}
           {depositos.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-slate-50 dark:bg-surface-0 rounded-lg">
@@ -346,27 +389,8 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
             </div>
           )}
 
-          {/* Lista de Depósitos */}
-          {depositos.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-surface-2 flex items-center justify-center mx-auto mb-4">
-                <Wallet className="w-8 h-8 text-slate-400" />
-              </div>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Nenhum depósito cadastrado</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-                Cadastre depósitos recursais, de embargo, caução ou outros
-              </p>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleNovoDeposito}
-                className="text-xs h-8 border-[#89bcbe] text-[#34495e] dark:text-slate-200 hover:bg-[#89bcbe]/10"
-              >
-                <Plus className="w-3.5 h-3.5 mr-1.5" />
-                Cadastrar Depósito
-              </Button>
-            </div>
-          ) : (
+          {/* Lista de Depósitos (isEmpty já tratado no fork acima) */}
+          {depositos.length > 0 && (
             <div className="space-y-3">
               {depositos.map((deposito) => (
                 <div
@@ -458,8 +482,9 @@ export default function ProcessoDepositos({ processoId }: ProcessoDepositosProps
           )}
         </CardContent>
       </Card>
+      )}
 
-      {/* Modal de Cadastro/Edição */}
+      {/* Modal de Cadastro/Edição — compartilhado entre empty state e view completa */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>

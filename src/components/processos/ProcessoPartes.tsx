@@ -10,12 +10,18 @@ import {
   X,
   UserCircle,
   Loader2,
+  ChevronDown,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import {
   Select,
   SelectContent,
@@ -34,6 +40,17 @@ import {
 interface ProcessoPartesProps {
   processoId: string
   className?: string
+  /**
+   * Quando true, o card não renderiza nada (retorna null) se não houver
+   * nenhuma parte cadastrada além dos polos primários da ficha. Útil para
+   * usar inline no resumo e só aparecer quando há múltiplas partes.
+   */
+  autoHide?: boolean
+  /**
+   * Quando true, envolve o conteúdo em um Collapsible colapsado por padrão.
+   * O usuário clica no header para expandir/recolher.
+   */
+  collapsible?: boolean
 }
 
 type PoloColuna = 'autor' | 'reu' | 'terceiro'
@@ -82,7 +99,14 @@ const TIPOS_TERCEIRO = [
   { value: 'chamado', label: 'Chamado' },
 ]
 
-export default function ProcessoPartes({ processoId, className }: ProcessoPartesProps) {
+export default function ProcessoPartes({
+  processoId,
+  className,
+  autoHide = false,
+  collapsible = false,
+}: ProcessoPartesProps) {
+  const [expanded, setExpanded] = useState(false)
+
   const {
     autores,
     reus,
@@ -296,7 +320,7 @@ export default function ProcessoPartes({ processoId, className }: ProcessoPartes
   const renderColuna = (polo: PoloColuna, partesList: ProcessoParte[]) => {
     const config = POLO_CONFIG[polo]
     return (
-      <div className="space-y-1">
+      <div className="flex flex-col h-full">
         <div className="flex items-center justify-between mb-2">
           <h4 className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
             {config.label}
@@ -306,21 +330,24 @@ export default function ProcessoPartes({ processoId, className }: ProcessoPartes
           </Badge>
         </div>
 
-        {partesList.length === 0 && form.polo !== polo && (
-          <p className="text-xs text-slate-400 italic py-2">{config.emptyText}</p>
-        )}
+        {/* Área de conteúdo — cresce para empurrar o botão para o fim */}
+        <div className="flex-1 space-y-1">
+          {partesList.length === 0 && form.polo !== polo && (
+            <p className="text-xs text-slate-400 italic py-2">{config.emptyText}</p>
+          )}
 
-        {partesList.map(renderParte)}
+          {partesList.map(renderParte)}
 
-        {/* Form inline aparece no polo correto */}
-        {renderFormInline(polo)}
+          {/* Form inline aparece no polo correto */}
+          {renderFormInline(polo)}
+        </div>
 
-        {/* Botão adicionar — só aparece se não tem form aberto nesse polo */}
+        {/* Botão adicionar — sempre fica alinhado no fim da coluna */}
         {form.polo !== polo && (
           <Button
             variant="ghost"
             size="sm"
-            className="w-full h-7 text-xs text-slate-400 hover:text-slate-600 mt-1 border border-dashed border-slate-200 dark:border-slate-700"
+            className="w-full h-7 text-xs text-slate-400 hover:text-slate-600 mt-3 border border-dashed border-slate-200 dark:border-slate-700"
             onClick={() => abrirFormNovo(polo)}
             disabled={saving}
           >
@@ -332,7 +359,15 @@ export default function ProcessoPartes({ processoId, className }: ProcessoPartes
     )
   }
 
+  // Se autoHide ligado, só renderiza quando há alguma parte cadastrada
+  // (além dos polos primários já mostrados na ficha)
+  if (autoHide && !loading && autores.length === 0 && reus.length === 0 && terceiros.length === 0) {
+    return null
+  }
+
   if (loading) {
+    // Em modo autoHide, não mostra skeleton (evita flash de loading para processos sem partes)
+    if (autoHide) return null
     return (
       <Card className={className}>
         <CardContent className="py-8 flex items-center justify-center">
@@ -342,21 +377,66 @@ export default function ProcessoPartes({ processoId, className }: ProcessoPartes
     )
   }
 
+  const totalPartes = autores.length + reus.length + terceiros.length
+
+  const gridContent = (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {renderColuna('autor', autores)}
+      {renderColuna('reu', reus)}
+      {renderColuna('terceiro', terceiros)}
+    </div>
+  )
+
+  if (collapsible) {
+    return (
+      <Card className={`${className ?? ''} overflow-hidden`}>
+        <Collapsible open={expanded} onOpenChange={setExpanded}>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="w-full flex items-center justify-between px-6 py-4 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 hover:from-[#e8f5f5] hover:to-[#dcefef] dark:hover:from-teal-500/10 dark:hover:to-teal-500/15 transition-colors group border-b border-slate-100 dark:border-slate-800"
+            >
+              <div className="flex items-center gap-2 text-sm font-medium text-[#34495e] dark:text-slate-200">
+                <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
+                  <Users className="w-3.5 h-3.5 text-[#89bcbe]" />
+                </div>
+                Partes Adicionais
+                <Badge
+                  variant="secondary"
+                  className="text-[10px] h-4 px-1.5 font-medium ml-1"
+                >
+                  {totalPartes}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <span className="hidden sm:inline">
+                  {expanded ? 'Recolher' : 'Expandir'}
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 text-slate-400 transition-transform ${
+                    expanded ? 'rotate-180' : ''
+                  }`}
+                />
+              </div>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-6 pb-7">{gridContent}</CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+    )
+  }
+
   return (
     <Card className={className}>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+        <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
           <Users className="w-4 h-4 text-[#89bcbe]" />
-          Partes do Processo
+          Partes Adicionais
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {renderColuna('autor', autores)}
-          {renderColuna('reu', reus)}
-          {renderColuna('terceiro', terceiros)}
-        </div>
-      </CardContent>
+      <CardContent>{gridContent}</CardContent>
     </Card>
   )
 }

@@ -65,6 +65,11 @@ import ProcessoDerivadoWizard, { type ProcessoPrincipalData } from './ProcessoDe
 interface Props {
   processoId: string
   processoPrincipalData: ProcessoPrincipalData
+  /**
+   * Quando true, o card não renderiza quando não há nenhum vínculo
+   * (principal, recursos ou incidentes). Útil para usar inline no resumo.
+   */
+  autoHide?: boolean
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -366,7 +371,7 @@ function VincularExistenteModal({
 
 // ─── Componente principal ───────────────────────────────────────────────────
 
-export default function ProcessoRelacionados({ processoId, processoPrincipalData }: Props) {
+export default function ProcessoRelacionados({ processoId, processoPrincipalData, autoHide = false }: Props) {
   const router = useRouter()
   const {
     principal,
@@ -406,12 +411,24 @@ export default function ProcessoRelacionados({ processoId, processoPrincipalData
   const todosFilhos = [...recursos, ...incidentes]
   const temRelacionados = !!principal || todosFilhos.length > 0
 
+  // AutoHide: não renderiza quando não há vínculos (útil no resumo inline)
+  if (autoHide && !loading && !temRelacionados) {
+    return null
+  }
+
+  if (autoHide && loading) {
+    // Evita flash de skeleton para processos sem vínculos
+    return null
+  }
+
   return (
-    <Card className="border-slate-200 dark:border-slate-700">
-      <CardHeader className="pb-2 pt-3 px-4">
+    <Card className="border-slate-200 dark:border-slate-700 overflow-hidden">
+      <CardHeader className="pb-3 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm text-[#34495e] dark:text-slate-200 flex items-center gap-2">
-            <GitBranch className="w-4 h-4 text-[#89bcbe]" />
+          <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
+              <GitBranch className="w-3.5 h-3.5 text-[#89bcbe]" />
+            </div>
             Processos Vinculados
             {todosFilhos.length > 0 && (
               <Badge className="bg-[#89bcbe] text-white text-[10px] px-1.5 py-0">
@@ -451,7 +468,7 @@ export default function ProcessoRelacionados({ processoId, processoPrincipalData
         </div>
       </CardHeader>
 
-      <CardContent className="px-4 pb-3">
+      <CardContent className="px-4 pt-5 pb-4">
         {loading ? (
           <div className="flex items-center justify-center py-6">
             <Loader2 className="w-5 h-5 animate-spin text-slate-300" />

@@ -1,12 +1,12 @@
 # Módulo: Processos
 
 **Status**: ✅ Completo
-**Última atualização**: 2025-01-21
-**Tabelas**: 6 tabelas
+**Última atualização**: 2026-04-10
+**Tabelas**: 5 tabelas
 
 ## Visão Geral
 
-O módulo de Processos é o núcleo do sistema jurídico, responsável por gerenciar todos os processos judiciais e administrativos do escritório. Inclui gestão de movimentações, histórico de alterações, depósitos judiciais, estratégias processuais e jurisprudências relacionadas.
+O módulo de Processos é o núcleo do sistema jurídico, responsável por gerenciar todos os processos judiciais e administrativos do escritório. Inclui gestão de movimentações, histórico de alterações, depósitos judiciais e partes envolvidas.
 
 ## Diagrama de Relacionamentos
 
@@ -22,11 +22,8 @@ processos_processos (principal)
     ├──► processos_depositos (1:N)
     │        └── Depósitos judiciais
     │
-    ├──► processos_estrategia (1:N, versionado)
-    │        └── Estratégias processuais
-    │
-    └──► processos_jurisprudencias (1:N)
-             └── Jurisprudências relacionadas
+    └──► processos_partes (1:N)
+             └── Partes adicionais (além dos polos principais)
 
 Relacionamentos externos:
     ├── FK escritorios.id (multitenancy)
@@ -52,8 +49,7 @@ Relacionamentos externos:
 - `→ processos_movimentacoes` via `processo_id`
 - `→ processos_historico` via `processo_id`
 - `→ processos_depositos` via `processo_id`
-- `→ processos_estrategia` via `processo_id`
-- `→ processos_jurisprudencias` via `processo_id`
+- `→ processos_partes` via `processo_id`
 
 **Colunas**:
 
@@ -319,136 +315,6 @@ Relacionamentos externos:
 
 ---
 
-### processos_estrategia
-
-**Descrição**: Armazena a estratégia processual detalhada, incluindo análise SWOT, teses jurídicas, próximos passos e parâmetros de acordo. Suporta versionamento para manter histórico de estratégias.
-
-**Relacionamentos**:
-- `FK processo_id` → `processos_processos.id`
-- `FK escritorio_id` → `escritorios.id` (multitenancy)
-- `FK elaborado_por` → `profiles.id`
-- `FK revisado_por` → `profiles.id`
-- `FK versao_anterior_id` → `processos_estrategia.id` (auto-referência para versionamento)
-
-**Colunas**:
-
-| Coluna | Tipo | Nullable | Default | Descrição |
-|--------|------|----------|---------|-----------|
-| `id` | uuid | NO | uuid_generate_v4() | Identificador único |
-| `processo_id` | uuid | NO | - | FK para processos_processos |
-| `escritorio_id` | uuid | NO | - | FK para escritorios (multitenancy) |
-| `resumo_caso` | text | YES | - | Resumo executivo do caso |
-| `objetivo_principal` | text | YES | - | Objetivo principal da estratégia |
-| `pontos_fortes` | jsonb | YES | - | Análise SWOT - pontos fortes |
-| `pontos_fracos` | jsonb | YES | - | Análise SWOT - pontos fracos |
-| `oportunidades` | jsonb | YES | - | Análise SWOT - oportunidades |
-| `ameacas` | jsonb | YES | - | Análise SWOT - ameaças |
-| `teses_principais` | text[] | YES | - | Teses jurídicas principais |
-| `teses_subsidiarias` | text[] | YES | - | Teses jurídicas subsidiárias |
-| `fundamentos_legais` | text[] | YES | - | Fundamentos legais aplicáveis |
-| `estrategia_texto` | text | YES | - | Descrição detalhada da estratégia |
-| `proximos_passos` | jsonb | YES | - | Lista de próximos passos a executar |
-| `documentos_necessarios` | jsonb | YES | - | Documentos necessários para a estratégia |
-| `provas_a_produzir` | jsonb | YES | - | Provas a serem produzidas |
-| `riscos_identificados` | jsonb | YES | - | Riscos identificados |
-| `plano_contingencia` | text | YES | - | Plano B caso estratégia principal falhe |
-| `possibilidade_acordo` | boolean | YES | - | Há possibilidade de acordo? |
-| `parametros_acordo` | jsonb | YES | - | Parâmetros aceitáveis para acordo |
-| `versao` | integer | YES | 1 | Número da versão |
-| `versao_anterior_id` | uuid | YES | - | FK para versão anterior |
-| `is_versao_atual` | boolean | YES | true | É a versão vigente? |
-| `elaborado_por` | uuid | YES | - | FK para profiles.id - autor |
-| `revisado_por` | uuid | YES | - | FK para profiles.id - revisor |
-| `data_revisao` | timestamptz | YES | - | Data da revisão |
-| `aprovado` | boolean | YES | false | Estratégia foi aprovada? |
-| `data_aprovacao` | timestamptz | YES | - | Data da aprovação |
-| `created_at` | timestamptz | YES | now() | Data de criação |
-| `updated_at` | timestamptz | YES | now() | Data de atualização |
-
-**RLS Policies**:
-
-| Policy | Operação | Descrição |
-|--------|----------|-----------|
-| `Ver estratégia` | SELECT | user_tem_acesso_processo() |
-| `Ver estratégias` | SELECT | user_tem_acesso_processo() |
-| `Gerenciar estratégias` | ALL | user_pode_editar_processo() |
-
-**Índices**:
-
-| Nome | Colunas | Descrição |
-|------|---------|-----------|
-| `processos_estrategia_pkey` | id | Chave primária |
-| `idx_processos_estrategia_processo` | processo_id | Filtro por processo |
-
-**Triggers**:
-
-| Nome | Evento | Função | Descrição |
-|------|--------|--------|-----------|
-| `processos_estrategia_updated_at` | BEFORE UPDATE | update_processos_updated_at() | Atualiza updated_at |
-
----
-
-### processos_jurisprudencias
-
-**Descrição**: Armazena jurisprudências relacionadas aos processos, seja para fundamentação de peças ou análise estratégica. Suporta busca manual e importação automática.
-
-**Relacionamentos**:
-- `FK processo_id` → `processos_processos.id`
-- `FK escritorio_id` → `escritorios.id` (multitenancy)
-- `FK adicionado_por` → `profiles.id`
-- `FK peca_id` → (peças onde foi citada)
-
-**Colunas**:
-
-| Coluna | Tipo | Nullable | Default | Descrição |
-|--------|------|----------|---------|-----------|
-| `id` | uuid | NO | uuid_generate_v4() | Identificador único |
-| `processo_id` | uuid | NO | - | FK para processos_processos |
-| `escritorio_id` | uuid | NO | - | FK para escritorios (multitenancy) |
-| `tribunal` | text | NO | - | Tribunal de origem (STF, STJ, TRT, etc.) |
-| `tipo` | text | YES | - | Tipo: acordao, sumula, decisao_monocratica |
-| `numero_acordao` | text | YES | - | Número do acórdão |
-| `numero_processo` | text | YES | - | Número do processo de origem |
-| `data_julgamento` | date | YES | - | Data do julgamento |
-| `data_publicacao` | date | YES | - | Data de publicação |
-| `orgao_julgador` | text | YES | - | Órgão julgador (Turma, Seção, etc.) |
-| `relator` | text | YES | - | Nome do relator |
-| `ementa` | text | NO | - | Ementa da decisão |
-| `decisao` | text | YES | - | Dispositivo da decisão |
-| `texto_completo` | text | YES | - | Inteiro teor do acórdão |
-| `resultado` | text | YES | - | Resultado: provido, desprovido, parcial |
-| `relevancia` | text | YES | 'media' | Relevância: alta, media, baixa |
-| `similaridade_score` | numeric | YES | - | Score de similaridade com o caso (0-100) |
-| `teses_aplicadas` | text[] | YES | - | Teses jurídicas aplicadas |
-| `temas_relacionados` | text[] | YES | - | Temas relacionados |
-| `aplicada_em_peca` | boolean | YES | false | Foi aplicada em alguma peça? |
-| `peca_id` | uuid | YES | - | FK para peça onde foi citada |
-| `citada_em_analise` | boolean | YES | false | Foi citada em análise? |
-| `link_inteiro_teor` | text | YES | - | URL para inteiro teor |
-| `link_consulta` | text | YES | - | URL para consulta no tribunal |
-| `tags` | text[] | YES | - | Tags para categorização |
-| `observacoes` | text | YES | - | Observações internas |
-| `metadata` | jsonb | YES | - | Metadados adicionais |
-| `fonte` | text | YES | 'manual' | Fonte: manual, ia_sugestao, importacao |
-| `adicionado_por` | uuid | YES | - | FK para profiles.id |
-| `created_at` | timestamptz | YES | now() | Data de criação |
-
-**RLS Policies**:
-
-| Policy | Operação | Descrição |
-|--------|----------|-----------|
-| `Ver jurisprudências` | SELECT | user_tem_acesso_processo() |
-| `Gerenciar jurisprudências` | ALL | user_pode_editar_processo() |
-
-**Índices**:
-
-| Nome | Colunas | Descrição |
-|------|---------|-----------|
-| `processos_jurisprudencias_pkey` | id | Chave primária |
-| `idx_processos_juris_processo` | processo_id | Filtro por processo |
-
----
-
 ## Funções Auxiliares
 
 ### user_tem_acesso_processo(processo_id uuid)
@@ -530,11 +396,6 @@ A gestão de partes foi simplificada na tabela principal:
 - Movimentações com `origem = 'escavador'` são importadas automaticamente
 - Índice parcial otimiza busca por processos monitorados
 
-### Versionamento de Estratégias
-- `processos_estrategia` suporta múltiplas versões por processo
-- `is_versao_atual = true` indica a versão vigente
-- `versao_anterior_id` cria cadeia de histórico
-
 ### Pontos de Atenção
 - `numero_cnj` é único por escritório (pode haver mesmo CNJ em escritórios diferentes)
 - `numero_pasta` é gerado automaticamente, não deve ser editado manualmente
@@ -544,7 +405,6 @@ A gestão de partes foi simplificada na tabela principal:
 ### Melhorias Futuras
 - [ ] Integração direta com DataJud para movimentações
 - [ ] OCR de petições para extração automática de dados
-- [ ] Sugestão automática de jurisprudências por IA
 - [ ] Timeline unificada com agenda e financeiro
 
 ---
@@ -554,4 +414,5 @@ A gestão de partes foi simplificada na tabela principal:
 | Data | Descrição | Migration |
 |------|-----------|-----------|
 | 2025-01-21 | Documentação inicial | - |
-| 2025-01-21 | Remoção de processos_partes | remover_processos_partes |
+| 2025-01-21 | Remoção de processos_partes (posteriormente restaurada) | remover_processos_partes |
+| 2026-04-10 | Drop de processos_estrategia, processos_jurisprudencias e processos_equipe (limpeza de tabelas legadas vazias) | drop_processos_legacy_tables |

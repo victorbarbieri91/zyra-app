@@ -33,7 +33,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Save,
-  Loader2
+  Loader2,
+  Info,
+  Activity,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -51,6 +53,8 @@ import ProcessoTimelineHorizontal from '@/components/processos/ProcessoTimelineH
 import ProcessoFinanceiroCard from '@/components/processos/ProcessoFinanceiroCard'
 import ProcessoCobrancasCard from '@/components/processos/ProcessoCobrancasCard'
 import ProcessoCobrancaFixaCard from '@/components/processos/ProcessoCobrancaFixaCard'
+import ProcessoDocumentos from '@/components/processos/ProcessoDocumentos'
+import ProcessoDepositos from '@/components/processos/ProcessoDepositos'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import DespesaModal from '@/components/financeiro/DespesaModal'
 import { useRouter } from 'next/navigation'
@@ -97,7 +101,12 @@ interface Processo {
 
 interface ProcessoResumoProps {
   processo: Processo
-  leftColumnFooter?: React.ReactNode
+  /**
+   * Conteúdo renderizado na coluna esquerda entre "Informações Gerais"
+   * e "Últimos Andamentos" — usado para Partes adicionais e Vínculos
+   * (passado pelo parent porque precisa de dados brutos do processo).
+   */
+  topSectionsSlot?: React.ReactNode
 }
 
 interface Movimentacao {
@@ -109,7 +118,7 @@ interface Movimentacao {
   origem?: string
 }
 
-export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoResumoProps) {
+export default function ProcessoResumo({ processo, topSectionsSlot }: ProcessoResumoProps) {
   const [copiedCNJ, setCopiedCNJ] = useState(false)
   const [openNovoAndamento, setOpenNovoAndamento] = useState(false)
   const [novoAndamento, setNovoAndamento] = useState({
@@ -563,195 +572,227 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
 
       {/* Coluna Principal - Ficha (8/12) */}
-      <div className="xl:col-span-8 space-y-6">
+      <div className="xl:col-span-8 space-y-6 min-w-0">
 
         {/* Card Principal - Informações Gerais */}
-        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 mb-1">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+          <CardHeader className="pb-3 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 border-b border-slate-100 dark:border-slate-800">
+            <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
+                <Info className="w-3.5 h-3.5 text-[#89bcbe]" />
+              </div>
               Informações Gerais
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-12 gap-6">
+          <CardContent className="px-7 py-7">
+            {(() => {
+              // Compõe o label de Fase/Instância só com valores preenchidos
+              const faseInstanciaParts = [processo.fase, processo.instancia]
+                .filter((v): v is string => !!v && v.trim() !== '')
+              const faseInstancia = faseInstanciaParts.join(' / ')
 
-              {/* Coluna Esquerda - Informações Principais */}
-              <div className="col-span-7 space-y-3.5">
+              return (
+                <div className="grid grid-cols-12 gap-8">
 
-                {/* Partes */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Cliente</p>
-                    <Button variant="link" className="text-sm font-semibold text-[#34495e] dark:text-slate-200 hover:text-[#89bcbe] p-0 h-auto max-w-full truncate block" title={processo.cliente_nome}>
-                      {processo.cliente_nome}
-                    </Button>
-                  </div>
+                  {/* Coluna Esquerda - Informações Principais */}
+                  <div className="col-span-7 space-y-5">
 
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Parte Contrária</p>
-                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 truncate" title={processo.parte_contraria || 'Não informado'}>{processo.parte_contraria || 'Não informado'}</p>
-                  </div>
-                </div>
+                    {/* Partes */}
+                    <div className="grid grid-cols-2 gap-5">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Cliente</p>
+                        <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200 truncate" title={processo.cliente_nome}>
+                          {processo.cliente_nome}
+                        </p>
+                      </div>
 
-                {/* CNJ */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Número CNJ</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-slate-700 dark:text-slate-300">{processo.numero_cnj}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={copyCNJ}
-                        className="h-6 w-6 p-0 hover:bg-slate-100 dark:hover:bg-surface-2"
-                        title="Copiar CNJ"
-                      >
-                        {copiedCNJ ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        ) : (
-                          <Copy className="w-3.5 h-3.5 text-slate-400" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Data de Distribuição</p>
-                    <p className="text-sm text-slate-700 dark:text-slate-300">
-                      {format(new Date(processo.data_distribuicao), "dd/MM/yyyy", { locale: ptBR })}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Informações Processuais */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Fase / Instância</p>
-                    <p className="text-sm text-slate-700 dark:text-slate-300">
-                      {processo.fase} / {processo.instancia}
-                    </p>
-                  </div>
-
-                  {processo.rito && (
-                    <div>
-                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Rito</p>
-                      <p className="text-sm text-slate-700 dark:text-slate-300 capitalize">{processo.rito}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Objeto da Ação */}
-                {processo.objeto_acao && (
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Objeto da Ação</p>
-                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{processo.objeto_acao}</p>
-                  </div>
-                )}
-
-                {/* Valores */}
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2.5">Valores</p>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-baseline">
-                      <span className="text-xs text-slate-600 dark:text-slate-400">Valor da Causa:</span>
-                      <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
-                        {processo.valor_causa ? formatCurrency(processo.valor_causa) : 'Não definido'}
-                      </span>
+                      {processo.parte_contraria && (
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Parte Contrária</p>
+                          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 truncate" title={processo.parte_contraria}>
+                            {processo.parte_contraria}
+                          </p>
+                        </div>
+                      )}
                     </div>
 
-                    {processo.valor_atualizado && processo.valor_atualizado !== processo.valor_causa && (
-                      <div className="flex justify-between items-baseline">
-                        <span className="text-xs text-slate-600 dark:text-slate-400">Valor Atualizado:</span>
-                        <div className="text-right">
-                          <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-                            {formatCurrency(processo.valor_atualizado)}
-                          </span>
-                          {processo.data_ultima_atualizacao_monetaria && (
-                            <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                              Atualizado em {format(new Date(processo.data_ultima_atualizacao_monetaria), "dd/MM/yyyy", { locale: ptBR })}
-                            </p>
-                          )}
+                    {/* CNJ — linha própria em largura cheia para não quebrar */}
+                    {processo.numero_cnj && (
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Número CNJ</p>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm font-mono text-slate-700 dark:text-slate-300 whitespace-nowrap">{processo.numero_cnj}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={copyCNJ}
+                            className="h-6 w-6 p-0 hover:bg-slate-100 dark:hover:bg-surface-2 flex-shrink-0"
+                            title="Copiar CNJ"
+                          >
+                            {copiedCNJ ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5 text-slate-400" />
+                            )}
+                          </Button>
                         </div>
                       </div>
                     )}
-                  </div>
-                </div>
 
-              </div>
-
-              {/* Coluna Direita - Localização e Responsável */}
-              <div className="col-span-5 pl-6 border-l border-slate-100 dark:border-slate-800 space-y-4">
-                {/* Localização */}
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-[#89bcbe] mt-0.5 flex-shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2.5">Localização</p>
-                    <div className="space-y-2.5">
+                    {/* Data de Distribuição + Fase/Instância (ou Rito) */}
+                    <div className="grid grid-cols-2 gap-5">
                       <div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Tribunal</p>
-                        {processo.link_tribunal ? (
-                          <Button
-                            variant="link"
-                            className="text-sm text-[#34495e] dark:text-slate-200 hover:text-[#89bcbe] font-medium p-0 h-auto"
-                            onClick={() => window.open(processo.link_tribunal, '_blank')}
-                          >
-                            {processo.tribunal} →
-                          </Button>
-                        ) : (
-                          <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">{processo.tribunal}</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Data de Distribuição</p>
+                        <p className="text-sm text-slate-700 dark:text-slate-300">
+                          {format(new Date(processo.data_distribuicao), "dd/MM/yyyy", { locale: ptBR })}
+                        </p>
+                      </div>
+
+                      {faseInstancia && (
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Fase / Instância</p>
+                          <p className="text-sm text-slate-700 dark:text-slate-300 capitalize">
+                            {faseInstancia}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Rito — linha própria se preenchido */}
+                    {processo.rito && (
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Rito</p>
+                        <p className="text-sm text-slate-700 dark:text-slate-300 capitalize">{processo.rito}</p>
+                      </div>
+                    )}
+
+                    {/* Objeto da Ação */}
+                    {processo.objeto_acao && (
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Objeto da Ação</p>
+                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{processo.objeto_acao}</p>
+                      </div>
+                    )}
+
+                    {/* Valores */}
+                    <div className="pt-5 border-t border-slate-100 dark:border-slate-800">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Valores</p>
+                      <div className="space-y-2.5">
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-xs text-slate-600 dark:text-slate-400">Valor da Causa</span>
+                          <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
+                            {processo.valor_causa ? formatCurrency(processo.valor_causa) : '—'}
+                          </span>
+                        </div>
+
+                        {processo.valor_atualizado && processo.valor_atualizado !== processo.valor_causa && (
+                          <div className="flex justify-between items-baseline">
+                            <span className="text-xs text-slate-600 dark:text-slate-400">Valor Atualizado</span>
+                            <div className="text-right">
+                              <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                                {formatCurrency(processo.valor_atualizado)}
+                              </span>
+                              {processo.data_ultima_atualizacao_monetaria && (
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                                  Atualizado em {format(new Date(processo.data_ultima_atualizacao_monetaria), "dd/MM/yyyy", { locale: ptBR })}
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         )}
                       </div>
-                      {processo.comarca && (
-                        <div>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Comarca</p>
-                          <p className="text-sm text-slate-700 dark:text-slate-300">{processo.comarca}</p>
+                    </div>
+
+                  </div>
+
+                  {/* Coluna Direita - Localização (topo) + Responsável (centralizado no espaço restante) */}
+                  <div className="col-span-5 pl-7 border-l border-slate-100 dark:border-slate-800 flex flex-col">
+                    {/* Localização (no topo) */}
+                    <div className="flex items-start gap-3">
+                      <MapPin className="w-4 h-4 text-[#89bcbe] mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Localização</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                          {processo.tribunal && (
+                            <div>
+                              <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-0.5">Tribunal</p>
+                              {processo.link_tribunal ? (
+                                <Button
+                                  variant="link"
+                                  className="text-sm text-[#34495e] dark:text-slate-200 hover:text-[#89bcbe] font-medium p-0 h-auto"
+                                  onClick={() => window.open(processo.link_tribunal, '_blank')}
+                                >
+                                  {processo.tribunal} →
+                                </Button>
+                              ) : (
+                                <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">{processo.tribunal}</p>
+                              )}
+                            </div>
+                          )}
+                          {processo.comarca && (
+                            <div>
+                              <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-0.5">Comarca</p>
+                              <p className="text-sm text-slate-700 dark:text-slate-300">{processo.comarca}</p>
+                            </div>
+                          )}
+                          {processo.vara && (
+                            <div className="col-span-2">
+                              <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-0.5">Vara</p>
+                              <p className="text-sm text-slate-700 dark:text-slate-300">{processo.vara}</p>
+                            </div>
+                          )}
+                          {processo.juiz && (
+                            <div className="col-span-2">
+                              <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-0.5">Juiz</p>
+                              <p className="text-sm text-slate-700 dark:text-slate-300">{processo.juiz}</p>
+                            </div>
+                          )}
+                          {!processo.tribunal && !processo.comarca && !processo.vara && !processo.juiz && (
+                            <p className="text-xs text-slate-400 italic col-span-2">Localização não informada</p>
+                          )}
                         </div>
-                      )}
-                      {processo.vara && (
-                        <div>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Vara</p>
-                          <p className="text-sm text-slate-700 dark:text-slate-300">{processo.vara}</p>
+                      </div>
+                    </div>
+
+                    {/* Responsável (cresce e centraliza verticalmente no espaço restante) */}
+                    <div className="flex-1 flex flex-col justify-center mt-5 pt-5 border-t border-slate-100 dark:border-slate-800">
+                      <div className="flex items-start gap-3">
+                        <Users className="w-4 h-4 text-[#89bcbe] mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Responsável</p>
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center flex-shrink-0 shadow-sm">
+                              <span className="text-xs font-semibold text-white">
+                                {processo.responsavel_nome.split(' ')[1]?.charAt(0) || processo.responsavel_nome.charAt(0)}
+                              </span>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">{processo.responsavel_nome}</p>
+                              <p className="text-[10px] text-slate-500 dark:text-slate-400">Advogado responsável</p>
+                            </div>
+                          </div>
                         </div>
-                      )}
-                      {processo.juiz && (
-                        <div>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Juiz</p>
-                          <p className="text-sm text-slate-700 dark:text-slate-300">{processo.juiz}</p>
-                        </div>
-                      )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Responsável */}
-                <div className="flex items-start gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                  <Users className="w-4 h-4 text-[#89bcbe] mt-0.5 flex-shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2.5">Responsável</p>
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center flex-shrink-0">
-                        <span className="text-[10px] font-semibold text-white">
-                          {processo.responsavel_nome.split(' ')[1]?.charAt(0) || processo.responsavel_nome.charAt(0)}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">{processo.responsavel_nome}</p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400">Advogado responsável</p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
-              </div>
-
-            </div>
+              )
+            })()}
           </CardContent>
         </Card>
 
+        {/* Slot para seções condicionais no topo (Partes adicionais + Vínculos) */}
+        {topSectionsSlot}
+
         {/* Andamentos Processuais */}
-        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between mb-1">
-              <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+          <CardHeader className="pb-3 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
+                  <Activity className="w-3.5 h-3.5 text-[#89bcbe]" />
+                </div>
                 Últimos Andamentos
               </CardTitle>
 
@@ -836,7 +877,7 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 pt-5">
             {paginatedMovimentacoes.map((mov, index) => (
               <div
                 key={mov.id}
@@ -952,20 +993,25 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
           </Card>
         )}
 
-        {/* Slot para conteúdo extra na coluna esquerda (ex: Processos Vinculados) */}
-        {leftColumnFooter}
+        {/* Documentos — card inline com drag-drop (sempre visível) */}
+        <ProcessoDocumentos processoId={processo.id} variant="inline" inlineLimit={5} />
+
+        {/* Depósitos — empty state compacto quando vazio, com botão para cadastrar */}
+        <ProcessoDepositos processoId={processo.id} />
 
       </div>
 
-      {/* Coluna Lateral (4/12) */}
-      <div className="xl:col-span-4 space-y-6">
+      {/* Coluna Lateral (4/12) - Sticky */}
+      <div className="xl:col-span-4 space-y-6 xl:sticky xl:top-6 xl:self-start min-w-0">
 
         {/* Agenda */}
-        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-          <CardHeader className="pb-4">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+          <CardHeader className="pb-3 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2 mb-1">
-                <Calendar className="w-4 h-4 text-[#89bcbe]" />
+              <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
+                  <Calendar className="w-3.5 h-3.5 text-[#89bcbe]" />
+                </div>
                 Agenda
               </CardTitle>
               <DropdownMenu>
@@ -995,7 +1041,7 @@ export default function ProcessoResumo({ processo, leftColumnFooter }: ProcessoR
               </DropdownMenu>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-5">
             {loadingAgenda ? (
               <div className="text-center py-3">
                 <div className="w-5 h-5 mx-auto border-2 border-teal-200 border-t-teal-500 rounded-full animate-spin"></div>

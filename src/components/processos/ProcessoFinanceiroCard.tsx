@@ -5,23 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
   DollarSign,
   FileText,
   Loader2,
   Link as LinkIcon,
-  Plus,
-  ChevronRight,
-  Banknote,
   Clock,
   Receipt,
+  Banknote,
+  ChevronRight,
 } from 'lucide-react'
-import { formatCurrency, formatHoras } from '@/lib/utils'
+import { cn, formatCurrency, formatHoras } from '@/lib/utils'
 import { useProcessoFinanceiro, type Despesa } from '@/hooks/useProcessoFinanceiro'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -35,7 +28,7 @@ interface ProcessoFinanceiroCardProps {
   onLancarDespesa?: () => void
   onLancarHonorario?: () => void
   onEditTimesheet?: (entry: import('@/hooks/useProcessoFinanceiro').TimesheetEntry) => void
-  refreshTrigger?: number // Incrementar para forçar refresh dos dados
+  refreshTrigger?: number
 }
 
 const MODALIDADE_LABELS: Record<string, string> = {
@@ -70,10 +63,11 @@ export default function ProcessoFinanceiroCard({
 
   const supabase = createClient()
 
-  // Estados para modais
   const [vincularModalOpen, setVincularModalOpen] = useState(false)
   const [detalhesModalOpen, setDetalhesModalOpen] = useState(false)
-  const [detalhesModalTipo, setDetalhesModalTipo] = useState<'honorarios' | 'timesheet' | 'despesas'>('honorarios')
+  const [detalhesModalTipo, setDetalhesModalTipo] = useState<
+    'honorarios' | 'timesheet' | 'despesas'
+  >('honorarios')
   const [editDespesa, setEditDespesa] = useState<DespesaEditData | null>(null)
 
   const handleEditDespesa = (despesa: Despesa) => {
@@ -117,6 +111,9 @@ export default function ProcessoFinanceiroCard({
     setDetalhesModalOpen(true)
   }
 
+  // ========================================
+  // LOADING STATE
+  // ========================================
   if (loading) {
     return (
       <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
@@ -129,26 +126,29 @@ export default function ProcessoFinanceiroCard({
     )
   }
 
-  // Se não tem contrato vinculado
+  // ========================================
+  // SEM CONTRATO VINCULADO
+  // ========================================
   if (!contratoInfo) {
     return (
       <>
-        <Card className="border-slate-200 shadow-sm">
-          <CardContent className="py-6">
-            <div className="text-center">
-              <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-surface-2 flex items-center justify-center mx-auto mb-3">
-                <FileText className="w-5 h-5 text-slate-400" />
-              </div>
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Nenhum contrato vinculado
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-[#89bcbe]" />
+              Financeiro
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="rounded-lg bg-slate-50 dark:bg-surface-2 border border-dashed border-slate-200 dark:border-slate-700 px-4 py-5 text-center">
+              <FileText className="w-5 h-5 text-slate-400 mx-auto mb-2" />
+              <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
                 Vincule um contrato para gerenciar o financeiro deste processo
               </p>
               <Button
                 size="sm"
                 variant="outline"
-                className="text-xs h-8 border-[#89bcbe] text-[#34495e] dark:text-slate-200 hover:bg-[#89bcbe]/10"
+                className="h-8 text-xs border-[#89bcbe] text-[#34495e] dark:text-slate-200 hover:bg-[#89bcbe]/10"
                 onClick={() => setVincularModalOpen(true)}
               >
                 <LinkIcon className="w-3.5 h-3.5 mr-1.5" />
@@ -170,132 +170,197 @@ export default function ProcessoFinanceiroCard({
     )
   }
 
+  // ========================================
+  // CARD PRINCIPAL — HERO DINÂMICO
+  // ========================================
+  const totalHonorarios = resumo.totalHonorarios || 0
+  const totalDespesas = resumo.totalDespesas || 0
+  const horasTrab = resumo.horasTrabalhadas || 0
+
+  // Define qual métrica é o "hero" (maior destaque).
+  // Critério: métrica com maior valor absoluto/entradas
+  //   - Honorários: total em R$
+  //   - Despesas: total em R$
+  //   - Timesheet: aproxima por horas (hora × 100 apenas para ranking relativo)
+  type MetricKey = 'honorarios' | 'timesheet' | 'despesas'
+
+  const metricas: Record<MetricKey, {
+    label: string
+    displayValue: string
+    count: number
+    rank: number
+  }> = {
+    honorarios: {
+      label: 'Honorários',
+      displayValue: formatCurrency(totalHonorarios),
+      count: honorarios.length,
+      rank: totalHonorarios,
+    },
+    timesheet: {
+      label: 'Timesheet',
+      displayValue: formatHoras(horasTrab, 'curto'),
+      count: timesheet.length,
+      // horas ranqueiam junto com valores em R$ — fator aproximado R$100/h
+      rank: horasTrab * 100,
+    },
+    despesas: {
+      label: 'Despesas',
+      displayValue: formatCurrency(totalDespesas),
+      count: despesas.length,
+      rank: totalDespesas,
+    },
+  }
+
+  // Ordem dinâmica: maior rank primeiro. Empate em zero → ordem padrão honorários > timesheet > despesas
+  const defaultOrder: MetricKey[] = ['honorarios', 'timesheet', 'despesas']
+  const allZero =
+    metricas.honorarios.rank === 0 &&
+    metricas.timesheet.rank === 0 &&
+    metricas.despesas.rank === 0
+  const ordered: MetricKey[] = allZero
+    ? defaultOrder
+    : ([...defaultOrder].sort(
+        (a, b) => metricas[b].rank - metricas[a].rank
+      ) as MetricKey[])
+
+  const heroKey = ordered[0]
+  const hero = metricas[heroKey]
+  const secondaries = ordered.slice(1)
+
+  const formatCountLabel = (count: number, key: MetricKey) => {
+    if (count === 0) {
+      if (key === 'timesheet') return 'Nenhuma entrada'
+      if (key === 'despesas') return 'Nenhum item'
+      return 'Nenhum lançamento'
+    }
+    if (key === 'timesheet') return count === 1 ? '1 entrada' : `${count} entradas`
+    if (key === 'despesas') return count === 1 ? '1 item' : `${count} itens`
+    return count === 1 ? '1 lançamento' : `${count} lançamentos`
+  }
+
   return (
     <>
-      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-        {/* Header - igual às demais seções */}
-        <CardHeader className="pb-3 pt-4">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        {/* Header */}
+        <CardHeader className="pb-3 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-[#89bcbe]" />
+              <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
+                <DollarSign className="w-3.5 h-3.5 text-[#89bcbe]" />
+              </div>
               Financeiro
             </CardTitle>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2.5 text-xs text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-surface-2"
-                >
-                  <Plus className="w-3.5 h-3.5 mr-1.5" />
-                  Novo
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem
-                  onClick={() => onLancarHonorario?.()}
-                  className="text-xs cursor-pointer py-2.5"
-                >
-                  <Banknote className="w-4 h-4 mr-2.5 text-slate-500 dark:text-slate-400" />
-                  Honorário
-                </DropdownMenuItem>
-                {podelancarHoras && (
-                  <DropdownMenuItem
-                    onClick={() => onLancarHoras?.()}
-                    className="text-xs cursor-pointer py-2.5"
-                  >
-                    <Clock className="w-4 h-4 mr-2.5 text-slate-500 dark:text-slate-400" />
-                    Timesheet
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem
-                  onClick={() => onLancarDespesa?.()}
-                  className="text-xs cursor-pointer py-2.5"
-                >
-                  <Receipt className="w-4 h-4 mr-2.5 text-slate-500 dark:text-slate-400" />
-                  Despesa
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
-        </CardHeader>
 
-        {/* Info do Contrato - Seção separada */}
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2.5">
-            <FileText className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-xs text-slate-600 dark:text-slate-400">
+          {/* Info do Contrato */}
+          <div className="flex items-center gap-2 mt-2">
+            <FileText className="w-3 h-3 text-slate-400" />
+            <span className="text-[11px] font-mono font-medium text-slate-600 dark:text-slate-400">
               {contratoInfo.numero_contrato}
             </span>
-            <Badge variant="outline" className="text-[10px] font-medium h-5 bg-slate-50 dark:bg-surface-0 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700">
+            <span className="text-[11px] text-slate-400">•</span>
+            <Badge
+              variant="outline"
+              className="text-[10px] h-4 px-1.5 font-medium bg-white dark:bg-surface-0 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"
+            >
               {MODALIDADE_LABELS[contratoInfo.forma_cobranca || ''] || 'Padrão'}
             </Badge>
           </div>
-        </div>
+        </CardHeader>
 
-        {/* Categorias Financeiras */}
-        <CardContent className="p-5 space-y-4">
-          {/* Honorários */}
-          <div
-            className="group flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 -mx-3 px-3 py-3 rounded-lg transition-colors"
-            onClick={() => openDetalhesModal('honorarios')}
+        <CardContent className="p-0">
+          {/* Hero: Métrica com maior destaque (dinâmica) */}
+          <button
+            type="button"
+            onClick={() => openDetalhesModal(heroKey)}
+            className="w-full text-left group px-5 pt-5 pb-4 hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors"
           >
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Honorários</p>
-                {honorarios.length > 0 && (
-                  <span className="text-[10px] text-slate-400">
-                    ({honorarios.length})
-                  </span>
-                )}
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                  {hero.label}
+                </p>
+                <p className="text-2xl font-bold text-[#34495e] dark:text-slate-100 leading-tight">
+                  {hero.displayValue}
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  {formatCountLabel(hero.count, heroKey)}
+                </p>
               </div>
-              <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200 mt-1">
-                {formatCurrency(resumo.totalHonorarios)}
-              </p>
+              <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-[#89bcbe] transition-colors mt-1 flex-shrink-0" />
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#89bcbe] transition-colors" />
-          </div>
+          </button>
 
-          {/* Timesheet */}
-          <div
-            className="group flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 -mx-3 px-3 py-3 rounded-lg transition-colors"
-            onClick={() => openDetalhesModal('timesheet')}
-          >
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Timesheet</p>
-                {timesheet.length > 0 && (
-                  <span className="text-[10px] text-slate-400">
-                    ({timesheet.length})
-                  </span>
-                )}
+          {/* Métricas secundárias (compactas, ordenadas pelo rank) */}
+          {secondaries.map((key) => {
+            const m = metricas[key]
+            return (
+              <div key={key}>
+                <div className="border-t border-slate-100 dark:border-slate-800" />
+                <button
+                  type="button"
+                  onClick={() => openDetalhesModal(key)}
+                  className="w-full text-left group px-5 py-3 hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        {m.label}
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        {formatCountLabel(m.count, key)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
+                        {m.displayValue}
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 group-hover:text-[#89bcbe] transition-colors" />
+                    </div>
+                  </div>
+                </button>
               </div>
-              <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200 mt-1">
-                {formatHoras(resumo.horasTrabalhadas)}
-              </p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#89bcbe] transition-colors" />
-          </div>
+            )
+          })}
 
-          {/* Despesas */}
-          <div
-            className="group flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 -mx-3 px-3 py-3 rounded-lg transition-colors"
-            onClick={() => openDetalhesModal('despesas')}
-          >
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Despesas</p>
-                {despesas.length > 0 && (
-                  <span className="text-[10px] text-slate-400">
-                    ({despesas.length})
-                  </span>
-                )}
-              </div>
-              <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200 mt-1">
-                {formatCurrency(resumo.totalDespesas)}
-              </p>
+          {/* Rodapé: Ações rápidas com gradientes coloridos */}
+          <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-surface-2/50 px-3 py-3">
+            <div
+              className={cn(
+                'grid gap-2',
+                podelancarHoras ? 'grid-cols-3' : 'grid-cols-2'
+              )}
+            >
+              {podelancarHoras && (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => onLancarHoras?.()}
+                  className="h-9 text-[11px] font-semibold text-white border-0 shadow-sm bg-gradient-to-br from-[#5a898c] to-[#73a3a5] hover:from-[#4e7b7e] hover:to-[#659697] hover:shadow-md transition-all"
+                >
+                  <Clock className="w-3.5 h-3.5 mr-1" />
+                  Horas
+                </Button>
+              )}
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => onLancarDespesa?.()}
+                className="h-9 text-[11px] font-semibold text-white border-0 shadow-sm bg-gradient-to-br from-[#7c5c46] to-[#9d7558] hover:from-[#6e5140] hover:to-[#8c6a4f] hover:shadow-md transition-all"
+              >
+                <Receipt className="w-3.5 h-3.5 mr-1" />
+                Despesa
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => onLancarHonorario?.()}
+                className="h-9 text-[11px] font-semibold text-white border-0 shadow-sm bg-gradient-to-br from-[#34654e] to-[#458768] hover:from-[#2c5a44] hover:to-[#3a785b] hover:shadow-md transition-all"
+              >
+                <Banknote className="w-3.5 h-3.5 mr-1" />
+                Honorário
+              </Button>
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#89bcbe] transition-colors" />
           </div>
         </CardContent>
       </Card>

@@ -236,14 +236,16 @@ export default function ProcessoCobrancasCard({
 
   return (
     <>
-      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-        <CardHeader className="pb-3 pt-4">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <CardHeader className="pb-3 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 border-b border-slate-100 dark:border-slate-800">
           <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
-            <Receipt className="w-4 h-4 text-[#89bcbe]" />
+            <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
+              <Receipt className="w-3.5 h-3.5 text-[#89bcbe]" />
+            </div>
             Cobrança de Atos
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-5 pt-0">
+        <CardContent className="p-5">
           <div className="space-y-3">
             {atosComEstado.map(ato => (
               <div

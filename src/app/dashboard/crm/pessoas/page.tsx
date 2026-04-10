@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Pencil,
   Trash2,
+  RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -103,10 +104,19 @@ export default function PessoasPage() {
       if (tipoCadastro !== 'todos') {
         query = query.eq('tipo_cadastro', tipoCadastro);
       }
+
+      const temBusca = busca.trim().length > 0;
+
       if (status !== 'todos') {
+        // Filtro manual de status sempre tem prioridade
         query = query.eq('status', status);
+      } else if (!temBusca) {
+        // Sem busca e sem filtro: esconder arquivadas por padrão
+        query = query.neq('status', 'arquivado');
       }
-      if (busca.trim()) {
+      // Se há busca sem filtro de status, mostrar TODAS (incluindo arquivadas)
+
+      if (temBusca) {
         const searchTerm = busca.trim();
         query = query.or(`nome_completo.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,cpf_cnpj.ilike.%${searchTerm}%`);
       }
@@ -298,6 +308,29 @@ export default function PessoasPage() {
 
   const clearSelection = () => {
     setSelectedIds(new Set());
+  };
+
+  const handleReativarPessoa = async () => {
+    if (!pessoaSelecionada) return;
+    try {
+      const supabase = createClient();
+      const { error, count } = await supabase
+        .from('crm_pessoas')
+        .update({ status: 'ativo' }, { count: 'exact' })
+        .eq('id', pessoaSelecionada.id);
+
+      if (error) throw error;
+      if ((count ?? 0) === 0) {
+        toast.error('Não foi possível reativar. Verifique as permissões.');
+        return;
+      }
+
+      toast.success('Pessoa reativada com sucesso');
+      fetchPessoas();
+    } catch (error: any) {
+      console.error('Erro ao reativar pessoa:', error);
+      toast.error(error.message || 'Erro ao reativar pessoa');
+    }
   };
 
   const handleBulkAction = (action: BulkActionCRM) => {
@@ -554,6 +587,11 @@ export default function PessoasPage() {
           <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
             <h2 className="text-base font-semibold text-[#34495e] dark:text-slate-200">Detalhes da Pessoa</h2>
             <div className="flex items-center gap-1">
+              {pessoaSelecionada.status === 'arquivado' && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-500/10" onClick={handleReativarPessoa} title="Reativar">
+                  <RotateCcw className="w-4 h-4" />
+                </Button>
+              )}
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditModalOpen(true)} title="Editar">
                 <Pencil className="w-4 h-4 text-slate-500" />
               </Button>

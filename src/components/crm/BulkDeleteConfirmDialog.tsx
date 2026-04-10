@@ -32,39 +32,88 @@ export function BulkDeleteConfirmDialog({ open, onOpenChange, selectedIds, onDel
     try {
       const supabase = createClient()
 
-      // Tentar excluir todas de uma vez
-      const { error } = await supabase
+      // Buscar status atual de todas as pessoas selecionadas para detectar
+      // as que já estão arquivadas
+      const { data: pessoasAtuais, error: fetchError } = await supabase
         .from('crm_pessoas')
-        .delete()
+        .select('id, status')
         .in('id', selectedIds)
 
-      if (error) {
-        // FK violation — pelo menos uma pessoa tem vínculos
-        // Como Supabase faz transação em batch, se 1 falha, todas falham
-        // Fallback: arquivar todas que não estejam já arquivadas
-        if (error.code === '23503') {
-          const { error: archiveError } = await supabase
-            .from('crm_pessoas')
-            .update({ status: 'arquivado' })
-            .in('id', selectedIds)
-            .neq('status', 'arquivado')
+      if (fetchError) throw fetchError
 
-          if (archiveError) throw archiveError
+      const statusMap = new Map<string, string>()
+      pessoasAtuais?.forEach((p: { id: string; status: string }) => statusMap.set(p.id, p.status))
 
-          toast.success('Pessoas possuem vínculos e foram arquivadas para preservar os dados')
-        } else {
-          throw error
+      let excluidas = 0
+      let arquivadas = 0
+      let bloqueadas = 0
+      let erros = 0
+
+      // Processar individualmente para tratar cada caso
+      for (const id of selectedIds) {
+        const statusAtual = statusMap.get(id)
+
+        // Tentar excluir
+        const { error: deleteError, count } = await supabase
+          .from('crm_pessoas')
+          .delete({ count: 'exact' })
+          .eq('id', id)
+
+        if (!deleteError && (count ?? 0) > 0) {
+          excluidas++
+          continue
         }
+
+        // Erro de FK violation — pessoa tem vínculos
+        if (deleteError && deleteError.code === '23503') {
+          if (statusAtual === 'arquivado') {
+            // Já arquivada e não pode excluir — bloqueada
+            bloqueadas++
+          } else {
+            // Arquivar como fallback
+            const { error: updateError, count: updateCount } = await supabase
+              .from('crm_pessoas')
+              .update({ status: 'arquivado' }, { count: 'exact' })
+              .eq('id', id)
+
+            if (!updateError && (updateCount ?? 0) > 0) {
+              arquivadas++
+            } else {
+              console.error('Erro ao arquivar pessoa', id, updateError)
+              erros++
+            }
+          }
+        } else if (deleteError) {
+          console.error('Erro ao excluir pessoa', id, deleteError)
+          erros++
+        } else {
+          // count === 0: linha não foi afetada (RLS ou já não existe)
+          erros++
+        }
+      }
+
+      // Montar mensagem de feedback detalhada
+      const partes: string[] = []
+      if (excluidas > 0) partes.push(`${excluidas} ${excluidas === 1 ? 'excluída' : 'excluídas'}`)
+      if (arquivadas > 0) partes.push(`${arquivadas} ${arquivadas === 1 ? 'arquivada' : 'arquivadas'}`)
+      if (bloqueadas > 0) partes.push(`${bloqueadas} ${bloqueadas === 1 ? 'bloqueada' : 'bloqueadas'}`)
+      if (erros > 0) partes.push(`${erros} com erro`)
+
+      const resumo = partes.join(', ')
+
+      if (erros === selectedIds.length) {
+        toast.error('Não foi possível processar nenhuma pessoa. Verifique as permissões.')
+      } else if (bloqueadas > 0 && excluidas === 0 && arquivadas === 0) {
+        toast.error(`${bloqueadas} ${bloqueadas === 1 ? 'pessoa já está arquivada e possui vínculos' : 'pessoas já estão arquivadas e possuem vínculos'} — não é possível excluir.`)
       } else {
-        const n = selectedIds.length
-        toast.success(`${n} ${n === 1 ? 'pessoa excluída' : 'pessoas excluídas'} com sucesso`)
+        toast.success(resumo)
       }
 
       onOpenChange(false)
       onDeleted()
     } catch (error: any) {
-      console.error('Erro ao excluir pessoas:', error)
-      toast.error(error.message || 'Erro ao excluir pessoas')
+      console.error('Erro ao processar exclusão em massa:', error)
+      toast.error(error.message || 'Erro ao processar exclusão')
     } finally {
       setDeleting(false)
     }
@@ -80,7 +129,7 @@ export function BulkDeleteConfirmDialog({ open, onOpenChange, selectedIds, onDel
             Excluir {n} {n === 1 ? 'pessoa' : 'pessoas'}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Pessoas com vínculos no sistema serão arquivadas automaticamente para preservar os dados.
+            Pessoas sem vínculos serão excluídas permanentemente. Pessoas com vínculos no sistema serão arquivadas automaticamente para preservar os dados.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -94,10 +143,10 @@ export function BulkDeleteConfirmDialog({ open, onOpenChange, selectedIds, onDel
             {deleting ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                Excluindo...
+                Processando...
               </>
             ) : (
-              'Excluir'
+              'Confirmar'
             )}
           </AlertDialogAction>
         </AlertDialogFooter>

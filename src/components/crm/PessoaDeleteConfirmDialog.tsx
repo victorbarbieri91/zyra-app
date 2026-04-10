@@ -36,9 +36,9 @@ export function PessoaDeleteConfirmDialog({ open, onOpenChange, pessoa, onDelete
       const supabase = createClient()
 
       // Tentar excluir diretamente
-      const { error } = await supabase
+      const { error, count } = await supabase
         .from('crm_pessoas')
-        .delete()
+        .delete({ count: 'exact' })
         .eq('id', pessoa.id)
 
       if (error) {
@@ -46,21 +46,27 @@ export function PessoaDeleteConfirmDialog({ open, onOpenChange, pessoa, onDelete
         if (error.code === '23503') {
           if (isAlreadyArchived) {
             // Já está arquivada e não pode excluir — avisar
-            toast.error('Não é possível excluir. A pessoa possui vínculos no sistema.')
+            toast.error('Não é possível excluir. A pessoa já está arquivada e possui vínculos no sistema.')
           } else {
             // Arquivar automaticamente como fallback
-            const { error: archiveError } = await supabase
+            const { error: archiveError, count: archiveCount } = await supabase
               .from('crm_pessoas')
-              .update({ status: 'arquivado' })
+              .update({ status: 'arquivado' }, { count: 'exact' })
               .eq('id', pessoa.id)
 
             if (archiveError) throw archiveError
+            if ((archiveCount ?? 0) === 0) {
+              throw new Error('Não foi possível arquivar a pessoa. Verifique as permissões.')
+            }
 
             toast.success('Pessoa possui vínculos e foi arquivada para preservar os dados')
           }
         } else {
           throw error
         }
+      } else if ((count ?? 0) === 0) {
+        toast.error('Não foi possível excluir. Verifique as permissões.')
+        return
       } else {
         toast.success('Pessoa excluída com sucesso')
       }

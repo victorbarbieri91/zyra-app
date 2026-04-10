@@ -589,12 +589,19 @@ export default function ExtratoFinanceiroPage() {
       }
 
       if (debouncedSearch) {
-        const termo = debouncedSearch.toLowerCase()
-        combinedData = combinedData.filter(
-          (item) =>
-            item.descricao?.toLowerCase().includes(termo) ||
-            item.entidade?.toLowerCase().includes(termo)
-        )
+        const termo = debouncedSearch.toLowerCase().trim()
+        // Normaliza termo numérico: remove separadores de milhar (.) e troca vírgula decimal por ponto
+        const termoNumerico = termo.replace(/\./g, '').replace(',', '.')
+        const ehBuscaNumerica = /^[\d.,]+$/.test(termo) && !isNaN(parseFloat(termoNumerico))
+        combinedData = combinedData.filter((item) => {
+          if (item.descricao?.toLowerCase().includes(termo)) return true
+          if (item.entidade?.toLowerCase().includes(termo)) return true
+          if (ehBuscaNumerica && item.valor != null) {
+            // Casa tanto valor exato quanto prefixo (ex: "150" casa com 150,00 e 1.500,00)
+            if (item.valor.toFixed(2).includes(termoNumerico)) return true
+          }
+          return false
+        })
       }
 
       // Ordenação cronológica por data de vencimento
@@ -2610,7 +2617,7 @@ export default function ExtratoFinanceiroPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               )}
               <Input
-                placeholder="Buscar por descrição ou entidade..."
+                placeholder="Buscar por descrição, entidade ou valor..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"

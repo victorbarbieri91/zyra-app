@@ -111,10 +111,10 @@ export default function PessoasPage() {
         // Filtro manual de status sempre tem prioridade
         query = query.eq('status', status);
       } else if (!temBusca) {
-        // Sem busca e sem filtro: esconder arquivadas por padrão
-        query = query.neq('status', 'arquivado');
+        // Sem busca e sem filtro: mostrar apenas ativas (esconder inativas e arquivadas)
+        query = query.eq('status', 'ativo');
       }
-      // Se há busca sem filtro de status, mostrar TODAS (incluindo arquivadas)
+      // Se há busca sem filtro de status, mostrar TODAS (incluindo inativas e arquivadas)
 
       if (temBusca) {
         const searchTerm = busca.trim();

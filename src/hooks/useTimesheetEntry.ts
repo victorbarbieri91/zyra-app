@@ -13,6 +13,9 @@ export interface EditarTimesheetData {
   horas: number;
   atividade: string;
   faturavel: boolean;
+  // Quando true, indica que o usuário sobrescreveu a escolha automática.
+  // O backend marcará faturavel_auto=false para que a trigger não recalcule.
+  faturavel_manual?: boolean;
   // Campos extras (quando presente, atualiza todos)
   data_trabalho?: string;
   hora_inicio?: string | null;
@@ -66,8 +69,7 @@ export function useTimesheetEntry(escritorioId: string | null): UseTimesheetEntr
     }
 
     // faturavel é calculado automaticamente pelo trigger trg_timesheet_set_faturavel
-    // baseado no contrato vinculado ao processo/consulta
-    // Para contratos por_ato com modo hora, o trigger também considera o ato_tipo_id
+    // baseado nas formas configuradas em formas_pagamento do contrato
     const { data, error } = await supabase
       .from('financeiro_timesheet')
       .insert({
@@ -78,13 +80,10 @@ export function useTimesheetEntry(escritorioId: string | null): UseTimesheetEntr
         tarefa_id: dados.tarefa_id || null,
         audiencia_id: dados.audiencia_id || null,
         evento_id: dados.evento_id || null,
-        ato_tipo_id: dados.ato_tipo_id || null, // Para contratos por_ato com modo hora
+        ato_tipo_id: dados.ato_tipo_id || null,
         data_trabalho: dados.data_trabalho,
         horas: dados.horas,
         atividade: dados.atividade,
-        // faturavel é setado automaticamente pelo trigger baseado no tipo de contrato:
-        // por_hora/por_cargo = true, fixo/por_pasta/por_ato = false, misto = configurável
-        // Para por_ato com modo hora: calcula se ainda tem espaço até o máximo
         hora_inicio: dados.hora_inicio || null,
         hora_fim: dados.hora_fim || null,
         origem: dados.origem,
@@ -220,6 +219,7 @@ export function useTimesheetEntry(escritorioId: string | null): UseTimesheetEntr
       p_consulta_id: hasExtras ? dados.consulta_id ?? null : null,
       p_ato_tipo_id: hasExtras ? dados.ato_tipo_id ?? null : null,
       p_atualizar_campos_extras: hasExtras,
+      p_faturavel_manual: dados.faturavel_manual ?? null,
     });
 
     if (error) throw error;

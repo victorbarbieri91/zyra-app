@@ -3,6 +3,7 @@
 import { useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { AtoContrato } from './useContratosHonorarios'
+import { parseFormasPagamento, contratoTemForma } from '@/lib/contratos/formas'
 
 // Configuração de um ato para modo hora
 export interface AtoHoraConfig {
@@ -73,7 +74,7 @@ export function useAtosHora(): UseAtosHoraReturn {
   const getAtosConfiguradosHora = useCallback(async (contratoId: string): Promise<AtoHoraConfig[]> => {
     const { data: contrato, error } = await supabase
       .from('financeiro_contratos_honorarios')
-      .select('config, forma_cobranca')
+      .select('config, formas_pagamento')
       .eq('id', contratoId)
       .eq('ativo', true)
       .single()
@@ -83,8 +84,10 @@ export function useAtosHora(): UseAtosHoraReturn {
       return []
     }
 
-    // Verificar se é contrato por_ato
-    if (contrato.forma_cobranca !== 'por_ato') {
+    // Reconhece contratos híbridos: aceita se 'por_ato' está em qualquer
+    // posição do array formas_pagamento (não só como forma principal).
+    const formas = parseFormasPagamento(contrato.formas_pagamento)
+    if (!contratoTemForma(formas, 'por_ato')) {
       return []
     }
 

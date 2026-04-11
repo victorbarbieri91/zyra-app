@@ -153,8 +153,14 @@ export default function ProcessoCobrancaFixaCard({
     return null
   }
 
-  // Exibir se: fixo está nas formasDisponiveis (prop ou carregado do contrato)
-  const deveExibir = formasDisponiveis?.includes('fixo') || formasDoContrato.includes('fixo') || formaCobranca === 'fixo'
+  // Exibir se 'fixo' está em qualquer fonte de formas configuradas do contrato.
+  // Como formas_pagamento é canônico (sincronizado com forma_cobranca via trigger),
+  // basta verificar o array. Mantemos os 3 fallbacks por defesa em caso de race
+  // entre props e fetch do hook.
+  const deveExibir =
+    formasDisponiveis?.includes('fixo') ||
+    formasDoContrato.includes('fixo') ||
+    formaCobranca === 'fixo'
   if (!deveExibir || valoresComEstado.length === 0) {
     return null
   }

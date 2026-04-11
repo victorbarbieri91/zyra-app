@@ -35,6 +35,14 @@ import { useTimesheetEntry } from '@/hooks/useTimesheetEntry'
 import { useQueryClient } from '@tanstack/react-query'
 import { AtoHoraProgress } from './AtoHoraProgress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  type FormaCobranca,
+  parseFormasPagamento,
+  contratoCobraHoras,
+  contratoTemForma,
+  formaPrincipal,
+  FORMA_COBRANCA_LABELS,
+} from '@/lib/contratos/formas'
 
 interface TimesheetModalProps {
   open: boolean
@@ -82,27 +90,17 @@ interface ConsultaOption {
 
 interface ContratoInfo {
   id: string
-  forma_cobranca: string
+  /** Array canônico de formas configuradas no contrato */
+  formas_cobranca: FormaCobranca[]
+  /** Primeira forma do array — atalho para badges resumidas */
+  forma_cobranca: FormaCobranca
   horas_faturaveis: boolean
   titulo?: string
 }
 
-// Formas de cobrança que tornam horas faturáveis por padrão
-const FORMAS_FATURAVEIS = ['por_hora', 'por_cargo']
-
 // Formata data para input HTML type="date" (YYYY-MM-DD)
 const formatDateForInput = (date: Date = new Date()): string => {
   return formatBrazilDate(date, 'yyyy-MM-dd')
-}
-
-const FORMA_COBRANCA_LABELS: Record<string, string> = {
-  por_hora: 'Por Hora',
-  por_cargo: 'Por Cargo',
-  fixo: 'Valor Fixo',
-  por_pasta: 'Por Pasta',
-  por_ato: 'Por Ato',
-  por_etapa: 'Por Etapa',
-  misto: 'Misto',
 }
 
 export default function TimesheetModal({
@@ -216,15 +214,12 @@ export default function TimesheetModal({
     return calcularHorasDisplay()
   }, [modoRegistro, duracaoHoras, duracaoMinutos, calcularHorasDisplay])
 
-  // Calcular faturável padrão baseado no contrato
+  // Calcular faturável padrão baseado no array canônico de formas do contrato.
+  // Espelha a lógica de calcular_faturavel_timesheet no banco — usa o helper
+  // contratoCobraHoras para reconhecer contratos híbridos (ex: por_pasta + por_cargo).
   const faturavelPadrao = useCallback((): boolean => {
-    if (!contratoInfo) return true // Sem contrato, assume faturável
-
-    if (contratoInfo.forma_cobranca === 'misto') {
-      return contratoInfo.horas_faturaveis
-    }
-
-    return FORMAS_FATURAVEIS.includes(contratoInfo.forma_cobranca)
+    if (!contratoInfo) return true
+    return contratoCobraHoras(contratoInfo.formas_cobranca, contratoInfo.horas_faturaveis)
   }, [contratoInfo])
 
   // Valor efetivo de faturável (manual ou padrão)
@@ -337,7 +332,7 @@ export default function TimesheetModal({
   const loadContratoById = async (contratoId: string): Promise<ContratoInfo | null> => {
     const { data, error } = await supabase
       .from('financeiro_contratos_honorarios')
-      .select('id, forma_cobranca, horas_faturaveis, titulo')
+      .select('id, forma_cobranca, formas_pagamento, horas_faturaveis, titulo')
       .eq('id', contratoId)
       .single()
 
@@ -346,9 +341,20 @@ export default function TimesheetModal({
       return null
     }
 
+    // Canônico: array de formas parseado do jsonb formas_pagamento.
+    // Fallback para forma_cobranca legada se o array vier vazio.
+    const formas = parseFormasPagamento(data.formas_pagamento)
+    const formasEfetivas: FormaCobranca[] =
+      formas.length > 0
+        ? formas
+        : data.forma_cobranca
+          ? [data.forma_cobranca as FormaCobranca]
+          : []
+
     return {
       id: data.id,
-      forma_cobranca: data.forma_cobranca,
+      formas_cobranca: formasEfetivas,
+      forma_cobranca: (formaPrincipal(formasEfetivas) ?? data.forma_cobranca) as FormaCobranca,
       horas_faturaveis: data.horas_faturaveis ?? true,
       titulo: data.titulo,
     }
@@ -738,6 +744,7 @@ export default function TimesheetModal({
           horas: horasDecimal,
           atividade: atividade.trim(),
           faturavel: faturavelEfetivo,
+          faturavel_manual: faturavelManual,
           data_trabalho: dataTrabalho,
           hora_inicio: modoRegistro === 'horario' ? horaInicio : null,
           hora_fim: modoRegistro === 'horario' ? horaFim : null,
@@ -842,20 +849,26 @@ export default function TimesheetModal({
                     </>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  {contratoInfo && (
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "text-[9px] px-1.5 py-0 h-4 border",
-                        FORMAS_FATURAVEIS.includes(contratoInfo.forma_cobranca)
-                          ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200"
-                          : "bg-slate-50 dark:bg-surface-0 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
-                      )}
-                    >
-                      {FORMA_COBRANCA_LABELS[contratoInfo.forma_cobranca] || contratoInfo.forma_cobranca}
-                    </Badge>
-                  )}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Renderiza um badge por forma configurada — contratos híbridos
+                      mostram todas as formas em vez de apenas a principal. */}
+                  {contratoInfo?.formas_cobranca.map((forma) => {
+                    const cobraHoras = contratoCobraHoras([forma], contratoInfo.horas_faturaveis)
+                    return (
+                      <Badge
+                        key={forma}
+                        variant="outline"
+                        className={cn(
+                          "text-[9px] px-1.5 py-0 h-4 border",
+                          cobraHoras
+                            ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200"
+                            : "bg-slate-50 dark:bg-surface-0 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+                        )}
+                      >
+                        {FORMA_COBRANCA_LABELS[forma]}
+                      </Badge>
+                    )
+                  })}
                   {!processoId && !consultaId && (
                     <button
                       type="button"
@@ -1006,7 +1019,7 @@ export default function TimesheetModal({
                                   )}
                                   {processo.forma_cobranca && (
                                     <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5">
-                                      {FORMA_COBRANCA_LABELS[processo.forma_cobranca] || processo.forma_cobranca}
+                                      {FORMA_COBRANCA_LABELS[processo.forma_cobranca as FormaCobranca] || processo.forma_cobranca}
                                     </Badge>
                                   )}
                                   {!processo.contrato_id && (
@@ -1037,7 +1050,7 @@ export default function TimesheetModal({
                                   )}
                                   {consulta.forma_cobranca && (
                                     <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5">
-                                      {FORMA_COBRANCA_LABELS[consulta.forma_cobranca] || consulta.forma_cobranca}
+                                      {FORMA_COBRANCA_LABELS[consulta.forma_cobranca as FormaCobranca] || consulta.forma_cobranca}
                                     </Badge>
                                   )}
                                   {!consulta.contrato_id && (

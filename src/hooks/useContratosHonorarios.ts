@@ -4,9 +4,14 @@ import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { captureOperationError } from '@/lib/logger'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
+import {
+  type FormaCobranca,
+  parseFormasPagamento,
+  formaPrincipal,
+} from '@/lib/contratos/formas'
 
-// Tipos baseados nas tabelas do banco
-export type FormaCobranca = 'fixo' | 'por_hora' | 'misto' | 'por_pasta' | 'por_ato' | 'por_cargo' | 'por_etapa' | 'pro_bono'
+// Re-exportar para retrocompatibilidade com hooks/componentes que importam daqui
+export type { FormaCobranca }
 
 export interface ContratoHonorario {
   id: string
@@ -17,8 +22,21 @@ export interface ContratoHonorario {
   cliente_id: string
   cliente_nome?: string
   tipo_servico: 'processo' | 'consultoria' | 'avulso' | 'misto'
+  /**
+   * Array canônico de formas de cobrança configuradas no contrato.
+   * Sempre populado a partir de formas_pagamento (jsonb) no banco.
+   * Use os helpers de @/lib/contratos/formas para verificar presença.
+   */
+  formas_cobranca: FormaCobranca[]
+  /**
+   * @deprecated Use `formas_cobranca` (array). Mantido apenas durante a janela
+   * de coexistência da Fase 5. Equivale à primeira forma do array.
+   */
   forma_cobranca: FormaCobranca
-  formas_disponiveis?: FormaCobranca[] // TODAS as formas configuradas
+  /**
+   * @deprecated Alias antigo de `formas_cobranca`. Será removido na Fase 5.
+   */
+  formas_disponiveis?: FormaCobranca[]
   ativo: boolean
   data_inicio: string
   data_fim?: string | null
@@ -46,7 +64,9 @@ export interface ContratoHonorario {
   }
   // Indica se o contrato tem configuração de valores preenchida
   configurado?: boolean
-  // Formas de cobrança que realmente têm configuração válida
+  /**
+   * @deprecated Alias antigo de `formas_cobranca`. Será removido na Fase 5.
+   */
   formas_configuradas?: FormaCobranca[]
   // Grupo de clientes (grupo econômico)
   grupo_clientes?: GrupoClientes | null
@@ -323,10 +343,15 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           valorPendente = valorTotal
         }
 
-        // Extrair formas de cobrança do JSONB ou usar forma_cobranca principal
-        const formasDisponiveis: FormaCobranca[] = contrato.formas_pagamento
-          ? (contrato.formas_pagamento as Array<{ forma: FormaCobranca }>).map(f => f.forma)
-          : [contrato.forma_cobranca]
+        // Extrair formas de cobrança do JSONB canônico (formas_pagamento)
+        // com fallback para forma_cobranca legada caso o array esteja vazio.
+        const formasParsed = parseFormasPagamento(contrato.formas_pagamento)
+        const formasDisponiveis: FormaCobranca[] =
+          formasParsed.length > 0
+            ? formasParsed
+            : contrato.forma_cobranca
+              ? [contrato.forma_cobranca as FormaCobranca]
+              : []
 
         // Verificar se o contrato está configurado baseado nas formas de cobrança
         const configData = contrato.config as Record<string, unknown> | null
@@ -386,7 +411,11 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           cliente_id: contrato.cliente_id,
           cliente_nome: contrato.crm_pessoas?.nome_completo || 'Cliente não encontrado',
           tipo_servico: contrato.tipo_contrato,
-          forma_cobranca: contrato.forma_cobranca,
+          // Canônico: array de formas configuradas (sempre populado, ordenado)
+          formas_cobranca: formasDisponiveis,
+          // Legado (deprecated): primeira forma do array, mantido para compatibilidade
+          forma_cobranca: (formaPrincipal(formasDisponiveis) ?? contrato.forma_cobranca) as FormaCobranca,
+          // Legado (deprecated): alias antigo de formas_cobranca
           formas_disponiveis: formasDisponiveis.length > 0 ? formasDisponiveis : [contrato.forma_cobranca],
           ativo: contrato.ativo,
           data_inicio: contrato.data_inicio,
@@ -462,6 +491,15 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
         // Determinar escritório dono do contrato (pode ser filial mesmo com ativo na matriz)
         const ownerEscritorioId = data.escritorio_contrato_id || escritorioAtivo
 
+        // Resolver formas selecionadas (multi-seleção do wizard) com fallback para a forma única
+        const formasIniciais = (data.formas_selecionadas?.length ?? 0) > 0
+          ? data.formas_selecionadas!
+          : [data.forma_cobranca]
+
+        // Construir array canônico formas_pagamento já no INSERT, para o trigger
+        // de validação ter o array correto desde o início (evita depender do backfill defensivo).
+        const formasPagamentoIniciais = formasIniciais.map((forma, ordem) => ({ forma, ordem }))
+
         // Criar contrato
         const { data: novoContrato, error: contratoError } = await supabase
           .from('financeiro_contratos_honorarios')
@@ -471,13 +509,16 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
             titulo: data.titulo || null,
             cliente_id: data.cliente_id,
             tipo_contrato: data.tipo_servico,
-            forma_cobranca: data.forma_cobranca,
+            // Legado: primeira forma do array (mantido em sincronia pelo trigger trg_validar_formas_pagamento)
+            forma_cobranca: formasIniciais[0],
+            // Canônico: array completo de formas configuradas
+            formas_pagamento: formasPagamentoIniciais,
             data_inicio: data.data_inicio,
             data_fim: data.data_fim || null,
             descricao: data.observacoes || null,
             ativo: true,
             // Para contratos misto: define se horas são cobráveis (usado pelo trigger de timesheet)
-            horas_faturaveis: data.forma_cobranca === 'misto' ? (data.horas_faturaveis ?? true) : null,
+            horas_faturaveis: formasIniciais.includes('misto') ? (data.horas_faturaveis ?? true) : null,
           })
           .select('id')
           .single()

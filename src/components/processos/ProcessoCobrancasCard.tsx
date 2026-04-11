@@ -37,6 +37,7 @@ import { useCobrancaAtos, AtoDisponivel, calcularValorAto } from '@/hooks/useCob
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { type FormaCobranca, parseFormasPagamento, contratoTemForma } from '@/lib/contratos/formas'
 
 interface ProcessoCobrancasCardProps {
   processoId: string
@@ -102,19 +103,19 @@ export default function ProcessoCobrancasCard({
         return
       }
 
-      setContratoForma(contrato.forma_cobranca)
+      // Canônico: parse do array formas_pagamento (com fallback para forma_cobranca legada).
+      const formasContrato: FormaCobranca[] =
+        parseFormasPagamento(contrato.formas_pagamento).length > 0
+          ? parseFormasPagamento(contrato.formas_pagamento)
+          : contrato.forma_cobranca
+            ? [contrato.forma_cobranca as FormaCobranca]
+            : []
 
-      // Extrair formas disponíveis do contrato
-      const formasDoContrato = contrato.formas_pagamento
-        ? (contrato.formas_pagamento as Array<{ forma?: string; forma_cobranca?: string }>)
-            .map(f => f.forma || f.forma_cobranca)
-            .filter(Boolean)
-        : [contrato.forma_cobranca]
+      setContratoForma(formasContrato[0] ?? null)
+      setFormasDisponiveis(formasContrato as string[])
 
-      setFormasDisponiveis(formasDoContrato as string[])
-
-      // Carregar atos se por_ato está nas formas disponíveis
-      const temPorAto = formasDoContrato.includes('por_ato') || contrato.forma_cobranca === 'por_ato'
+      // Reconhece contratos híbridos: aceita 'por_ato' em qualquer posição do array.
+      const temPorAto = contratoTemForma(formasContrato, 'por_ato')
       if (temPorAto) {
         const atos = await loadAtosDisponiveis(processoId)
 

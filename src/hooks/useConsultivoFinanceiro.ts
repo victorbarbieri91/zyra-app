@@ -3,6 +3,10 @@
 import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
+import {
+  type FormaCobranca,
+  parseFormasPagamento,
+} from '@/lib/contratos/formas'
 
 // Tipos
 export interface Honorario {
@@ -85,8 +89,18 @@ export interface ResumoFinanceiro {
 export interface ContratoInfo {
   id: string
   numero_contrato: string
+  /**
+   * Array canônico de formas configuradas (parseado de formas_pagamento jsonb).
+   */
+  formas_cobranca: FormaCobranca[]
+  /**
+   * @deprecated Use `formas_cobranca`. Mantido para compatibilidade.
+   */
   forma_cobranca: string
   modalidade_cobranca: string | null
+  /**
+   * @deprecated Alias antigo de `formas_cobranca`.
+   */
   formas_disponiveis: string[]
   config: {
     valor_hora?: number
@@ -217,17 +231,22 @@ export function useConsultivoFinanceiro(consultivoId: string | null) {
             percentual_exito?: number
           }
 
-          const formasPagamento = (contrato.formas_pagamento || []) as Array<{ forma_cobranca: string; ativo?: boolean }>
-          const formasDisponiveis = formasPagamento
-            .filter((f: any) => f.ativo !== false)
-            .map((f: any) => f.forma_cobranca)
+          // Canônico: array tipado de formas, parseado do jsonb formas_pagamento
+          const formasCobranca = parseFormasPagamento(contrato.formas_pagamento)
+          const formasEfetivas: FormaCobranca[] =
+            formasCobranca.length > 0
+              ? formasCobranca
+              : contrato.forma_cobranca
+                ? [contrato.forma_cobranca as FormaCobranca]
+                : []
 
           setContratoInfo({
             id: contrato.id,
             numero_contrato: contrato.numero_contrato,
-            forma_cobranca: contrato.forma_cobranca,
+            formas_cobranca: formasEfetivas,
+            forma_cobranca: formasEfetivas[0] ?? contrato.forma_cobranca,
             modalidade_cobranca: null,
-            formas_disponiveis: formasDisponiveis,
+            formas_disponiveis: formasEfetivas as string[],
             config: {
               valor_hora: config.valor_hora,
               valor_fixo: config.valor_fixo,

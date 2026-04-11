@@ -3,6 +3,12 @@
 import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
+import {
+  type FormaCobranca,
+  parseFormasPagamento,
+  contratoTemForma,
+  contratoTemAlgumaForma,
+} from '@/lib/contratos/formas'
 
 // Tipos
 export interface Honorario {
@@ -84,8 +90,20 @@ export interface ResumoFinanceiro {
 export interface ContratoInfo {
   id: string
   numero_contrato: string
+  /**
+   * Array canônico de formas configuradas (parseado de formas_pagamento jsonb).
+   * Use os helpers de @/lib/contratos/formas para verificar presença.
+   */
+  formas_cobranca: FormaCobranca[]
+  /**
+   * @deprecated Use `formas_cobranca`. Mantido para retrocompatibilidade da UI.
+   * Equivale à primeira forma do array.
+   */
   forma_cobranca: string
   modalidade_cobranca: string | null
+  /**
+   * @deprecated Alias antigo de `formas_cobranca`. Será removido na Fase 5.
+   */
   formas_disponiveis: string[]
   config: {
     valor_hora?: number
@@ -220,18 +238,23 @@ export function useProcessoFinanceiro(processoId: string | null) {
             valor_por_processo?: number
           }
 
-          // Formas disponíveis vem do campo JSONB formas_pagamento
-          const formasPagamento = (contrato.formas_pagamento || []) as Array<{ forma_cobranca: string; ativo?: boolean }>
-          const formasDisponiveis = formasPagamento
-            .filter((f: any) => f.ativo !== false)
-            .map((f: any) => f.forma_cobranca)
+          // Canônico: array tipado de formas, parseado do jsonb formas_pagamento
+          const formasCobranca = parseFormasPagamento(contrato.formas_pagamento)
+          // Fallback defensivo: se o array estiver vazio, usar a forma_cobranca legada
+          const formasEfetivas: FormaCobranca[] =
+            formasCobranca.length > 0
+              ? formasCobranca
+              : contrato.forma_cobranca
+                ? [contrato.forma_cobranca as FormaCobranca]
+                : []
 
           setContratoInfo({
             id: contrato.id,
             numero_contrato: contrato.numero_contrato,
-            forma_cobranca: contrato.forma_cobranca,
+            formas_cobranca: formasEfetivas,
+            forma_cobranca: formasEfetivas[0] ?? contrato.forma_cobranca,
             modalidade_cobranca: processoData.modalidade_cobranca,
-            formas_disponiveis: formasDisponiveis,
+            formas_disponiveis: formasEfetivas as string[],
             config: {
               valor_hora: config.valor_hora,
               valor_fixo: config.valor_fixo,
@@ -567,20 +590,19 @@ export function useProcessoFinanceiro(processoId: string | null) {
     [processoId, escritorioAtivo, supabase, loadDados]
   )
 
-  // Validações baseadas na forma de cobrança do contrato
-  // Usa forma_cobranca do contrato (prioritário) ou modalidade_cobranca do processo (fallback)
-  const formaCobranca = contratoInfo?.forma_cobranca || contratoInfo?.modalidade_cobranca || ''
+  // Validações baseadas no array canônico formas_cobranca do contrato.
+  // A cobrabilidade efetiva da hora é decidida pelo trigger trg_timesheet_set_faturavel
+  // no banco — aqui só definimos o que a UI permite lançar.
 
-  // Horas podem ser lançadas em TODOS os tipos de contrato para monitoramento interno
-  // A diferença é se são cobráveis ou não (definido automaticamente pelo trigger trg_timesheet_set_faturavel):
-  // - por_hora, por_cargo = cobrável (faturavel = true)
-  // - fixo, por_pasta, por_ato = não cobrável (faturavel = false)
-  // - misto = configurável via campo horas_faturaveis do contrato
-  const podelancarHoras = !!contratoInfo // Permite lançar horas se tiver contrato vinculado
+  const formasContrato: FormaCobranca[] = contratoInfo?.formas_cobranca ?? []
 
-  const podeLancarAto = contratoInfo
-    ? ['por_ato', 'misto'].includes(formaCobranca)
-    : false
+  // Horas podem ser lançadas em qualquer contrato vinculado, para monitoramento interno.
+  // O backend decide se é cobrável conforme as formas configuradas no contrato.
+  const podelancarHoras = !!contratoInfo
+
+  // Atos podem ser lançados se o contrato tem 'por_ato' ou 'misto' no array de formas
+  // (contratos híbridos como [fixo, por_ato] agora são reconhecidos)
+  const podeLancarAto = contratoTemAlgumaForma(formasContrato, ['por_ato', 'misto'])
 
   // Despesas reembolsáveis pendentes
   const despesasReembolsaveisPendentes = despesas.filter(

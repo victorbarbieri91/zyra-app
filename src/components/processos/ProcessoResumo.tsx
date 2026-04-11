@@ -55,6 +55,7 @@ import ProcessoCobrancasCard from '@/components/processos/ProcessoCobrancasCard'
 import ProcessoCobrancaFixaCard from '@/components/processos/ProcessoCobrancaFixaCard'
 import ProcessoDocumentos from '@/components/processos/ProcessoDocumentos'
 import ProcessoDepositos from '@/components/processos/ProcessoDepositos'
+import { CnjLink } from '@/components/processos/CnjLink'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import DespesaModal from '@/components/financeiro/DespesaModal'
 import { useRouter } from 'next/navigation'
@@ -71,6 +72,7 @@ interface Processo {
   rito?: string
   tribunal: string
   link_tribunal?: string
+  sistema_tribunal?: import('@/lib/tribunais').SistemaTribunal | null
   comarca?: string
   vara?: string
   juiz?: string
@@ -119,7 +121,8 @@ interface Movimentacao {
 }
 
 export default function ProcessoResumo({ processo, topSectionsSlot }: ProcessoResumoProps) {
-  const [copiedCNJ, setCopiedCNJ] = useState(false)
+  // Copiar CNJ agora é gerenciado pelo componente <CnjLink />
+
   const [openNovoAndamento, setOpenNovoAndamento] = useState(false)
   const [novoAndamento, setNovoAndamento] = useState({
     data: format(new Date(), 'yyyy-MM-dd'),
@@ -431,12 +434,6 @@ export default function ProcessoResumo({ processo, topSectionsSlot }: ProcessoRe
     }
   }
 
-  const copyCNJ = () => {
-    navigator.clipboard.writeText(processo.numero_cnj)
-    setCopiedCNJ(true)
-    setTimeout(() => setCopiedCNJ(false), 2000)
-  }
-
   // Estado para loading ao adicionar andamento
   const [salvandoAndamento, setSalvandoAndamento] = useState(false)
 
@@ -616,26 +613,17 @@ export default function ProcessoResumo({ processo, topSectionsSlot }: ProcessoRe
                       )}
                     </div>
 
-                    {/* CNJ — linha própria em largura cheia para não quebrar */}
+                    {/* CNJ — linha própria em largura cheia, clicável para abrir no tribunal */}
                     {processo.numero_cnj && (
                       <div>
                         <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Número CNJ</p>
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-sm font-mono text-slate-700 dark:text-slate-300 whitespace-nowrap">{processo.numero_cnj}</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={copyCNJ}
-                            className="h-6 w-6 p-0 hover:bg-slate-100 dark:hover:bg-surface-2 flex-shrink-0"
-                            title="Copiar CNJ"
-                          >
-                            {copiedCNJ ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-600" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5 text-slate-400" />
-                            )}
-                          </Button>
-                        </div>
+                        <CnjLink
+                          numeroCnj={processo.numero_cnj}
+                          processoId={processo.id}
+                          escritorioId={escritorioId}
+                          sistemaCache={processo.sistema_tribunal}
+                          linkManual={processo.link_tribunal}
+                        />
                       </div>
                     )}
 

@@ -64,6 +64,7 @@ interface Processo {
   rito?: string
   tribunal: string
   link_tribunal?: string
+  sistema_tribunal?: import('@/lib/tribunais').SistemaTribunal | null
   comarca?: string
   vara?: string
   juiz?: string
@@ -201,6 +202,7 @@ export default function ProcessoDetalhe() {
         rito: data.rito || undefined,
         tribunal: data.tribunal,
         link_tribunal: data.link_tribunal || undefined,
+        sistema_tribunal: data.sistema_tribunal || null,
         comarca: data.comarca || undefined,
         vara: data.vara || undefined,
         juiz: data.juiz || undefined,

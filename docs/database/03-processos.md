@@ -416,3 +416,35 @@ A gestão de partes foi simplificada na tabela principal:
 | 2025-01-21 | Documentação inicial | - |
 | 2025-01-21 | Remoção de processos_partes (posteriormente restaurada) | remover_processos_partes |
 | 2026-04-10 | Drop de processos_estrategia, processos_jurisprudencias e processos_equipe (limpeza de tabelas legadas vazias) | drop_processos_legacy_tables |
+| 2026-04-11 | Nova coluna `sistema_tribunal` em `processos_processos` (cache do sistema processual para link inteligente do CNJ) | add_sistema_tribunal |
+
+---
+
+## Campo `sistema_tribunal` (coluna recente)
+
+**Descrição**: cache do sistema processual do tribunal onde o processo tramita. Usado para construir o link direto de consulta pública ao clicar no CNJ na ficha do processo.
+
+**Tipo**: `text` com `CHECK (sistema_tribunal IN ('saj', 'pje', 'eproc', 'projudi', 'proprio', 'outro'))`
+
+**Valores possíveis**:
+- `saj` — e-SAJ da Softplan (TJSP default, TJAL, TJBA, TJCE, TJMS, TJPE, TJSC legado, TJAM, TJAP, TJAC)
+- `pje` — PJe do CNJ (todos TRFs exceto TRF4, todos TRTs, TJRJ, TJDFT, TJMG, TJPA, TJPB, TJES, TJMA, TJMT, TJPI, TJRN, TJRR, TJRO, TJSE)
+- `eproc` — eproc (TRF4, TJRS, TJSC, TJTO, **TJSP novo a partir de 2025**)
+- `projudi` — Projudi (TJGO, TJPR legado)
+- `proprio` — sistemas proprietários (STJ, STF, TSE, TST)
+- `outro` — desconhecido / legado / inválido
+- `NULL` — ainda não detectado (será preenchido via DataJud em background na primeira abertura da ficha)
+
+**Como é populado**:
+1. `NULL` inicialmente (todos os 360 processos existentes)
+2. Na primeira abertura de uma ficha cuja coluna está NULL e cujo tribunal é ambíguo (hoje só TJSP), o hook `useCnjLink` dispara `detectSistemaViaDataJud` em background e salva o resultado via `salvarSistemaNoCache`
+3. Próximas aberturas usam o valor cacheado diretamente (zero fetch)
+4. O cache é **permanente**: um processo que migrou para o eproc não volta para o e-SAJ, então basta detectar uma vez
+
+**Override manual**: o campo pré-existente `link_tribunal` serve como override absoluto — se preenchido, ignora toda a lógica de detecção e usa aquele link literal (raro, mas útil para processos sigilosos com link autenticado).
+
+**Segurança**: o `UPDATE` do cache filtra por `id` + `escritorio_id` para respeitar multitenancy. RLS policies existentes de `processos_processos` já cobrem essa coluna.
+
+**Índice**: `idx_processos_sistema_tribunal` filtrado (WHERE sistema_tribunal IS NOT NULL) para consultas futuras que queiram agregar processos por sistema.
+
+**Código relacionado**: toda a lógica está em `src/lib/tribunais/` — ver `build-tribunal-url.ts` (orquestrador), `detect-sistema.ts` (DataJud), `tribunais-map.ts` (tabela com 57 tribunais), `src/hooks/useCnjLink.ts` (hook que integra tudo) e `src/components/processos/CnjLink.tsx` (componente visual).

@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -10,8 +9,6 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import {
-  Eye,
-  EyeOff,
   Briefcase,
   User,
   Activity,
@@ -19,15 +16,10 @@ import {
   Tag,
   X,
   ChevronDown,
-  Loader2,
-  RefreshCw,
   FileText
 } from 'lucide-react'
 
 export type BulkAction =
-  | 'ativar_monitoramento'
-  | 'desativar_monitoramento'
-  | 'atualizar_andamentos'
   | 'alterar_area'
   | 'alterar_responsavel'
   | 'alterar_status'
@@ -40,7 +32,6 @@ interface BulkActionsToolbarProps {
   onClearSelection: () => void
   onAction: (action: BulkAction) => void
   loading?: boolean
-  hasMonitoramento?: boolean // true se pelo menos um selecionado tem monitoramento
 }
 
 export function BulkActionsToolbar({
@@ -48,7 +39,6 @@ export function BulkActionsToolbar({
   onClearSelection,
   onAction,
   loading = false,
-  hasMonitoramento = false
 }: BulkActionsToolbarProps) {
   if (selectedCount === 0) return null
 
@@ -69,48 +59,6 @@ export function BulkActionsToolbar({
             <X className="w-4 h-4" />
           </Button>
         </div>
-
-        {/* Atualizar Andamentos */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-white hover:bg-white/10"
-          disabled={loading}
-          onClick={() => onAction('atualizar_andamentos')}
-        >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Atualizar Andamentos
-        </Button>
-
-        {/* Ações de Monitoramento */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-white hover:bg-white/10"
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Eye className="w-4 h-4 mr-2" />
-              )}
-              Monitoramento
-              <ChevronDown className="w-3 h-3 ml-1" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuItem onClick={() => onAction('ativar_monitoramento')}>
-              <Eye className="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-400" />
-              <span>Ativar Monitoramento</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onAction('desativar_monitoramento')}>
-              <EyeOff className="w-4 h-4 mr-2 text-slate-500 dark:text-slate-400" />
-              <span>Desativar Monitoramento</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
 
         {/* Alterar Campos */}
         <DropdownMenu>

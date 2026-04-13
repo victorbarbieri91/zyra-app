@@ -38,7 +38,6 @@ import {
   RefreshCw,
   ExternalLink,
   Trash2,
-  Eye,
   Copy,
   Check,
   X
@@ -51,8 +50,6 @@ import { NovoProcessoDropdown } from '@/components/processos/NovoProcessoDropdow
 import AtualizarCapaModal from '@/components/processos/AtualizarCapaModal'
 import { BulkActionsToolbar, BulkAction } from '@/components/processos/BulkActionsToolbar'
 import { BulkEditModal } from '@/components/processos/BulkEditModal'
-import { MonitoramentoModal } from '@/components/processos/MonitoramentoModal'
-import { AndamentosModal } from '@/components/processos/AndamentosModal'
 import { VincularContratoModal } from '@/components/financeiro/VincularContratoModal'
 import TarefaWizard from '@/components/agenda/TarefaWizard'
 import EventoWizard from '@/components/agenda/EventoWizard'
@@ -74,7 +71,6 @@ interface Processo {
   movimentacoes_nao_lidas: number
   tem_prazo_critico: boolean
   tem_documento_pendente: boolean
-  escavador_monitoramento_id?: number | null
 }
 
 type EditField = 'area' | 'responsavel' | 'status' | 'prioridade' | 'tags'
@@ -87,9 +83,11 @@ export default function ProcessosPage() {
   const viewParam = searchParams.get('view')
   const initialView = viewParam === 'sem_contrato'
     ? 'sem_contrato' as const
-    : viewParam === 'todos'
-      ? 'todos' as const
-      : 'ativos' as const
+    : viewParam === 'alertas_encerramento'
+      ? 'alertas_encerramento' as const
+      : viewParam === 'todos'
+        ? 'todos' as const
+        : 'ativos' as const
 
   const [processos, setProcessos] = useState<Processo[]>([])
   const [loading, setLoading] = useState(true)
@@ -105,7 +103,7 @@ export default function ProcessosPage() {
     }
     return ''
   })
-  const [currentView, setCurrentView] = useState<'todos' | 'ativos' | 'criticos' | 'meus' | 'encerrados' | 'sem_contrato'>(initialView)
+  const [currentView, setCurrentView] = useState<'todos' | 'ativos' | 'criticos' | 'meus' | 'encerrados' | 'sem_contrato' | 'alertas_encerramento'>(initialView)
   const [showFilters, setShowFilters] = useState(false)
 
   // Pagination state
@@ -133,9 +131,6 @@ export default function ProcessosPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkEditField, setBulkEditField] = useState<EditField | null>(null)
   const [showBulkEditModal, setShowBulkEditModal] = useState(false)
-  const [showMonitoramentoModal, setShowMonitoramentoModal] = useState(false)
-  const [monitoramentoAction, setMonitoramentoAction] = useState<'ativar' | 'desativar'>('ativar')
-  const [showAndamentosModal, setShowAndamentosModal] = useState(false)
   const [showVincularContratoModal, setShowVincularContratoModal] = useState(false)
   const [bulkLoading, setBulkLoading] = useState(false)
 
@@ -231,7 +226,6 @@ export default function ProcessosPage() {
           updated_at,
           responsavel_id,
           cliente_id,
-          escavador_monitoramento_id,
           cliente_nome,
           responsavel_nome,
           ultima_movimentacao,
@@ -253,6 +247,20 @@ export default function ProcessosPage() {
         query = query.eq('responsavel_id', userId)
       } else if (currentView === 'sem_contrato') {
         query = query.is('contrato_id', null).eq('status', 'ativo')
+      } else if (currentView === 'alertas_encerramento') {
+        // Busca processos com alertas de encerramento pendentes detectados pelo DataJud
+        const { data: alertas } = await supabase
+          .from('processos_alertas_encerramento')
+          .select('processo_id')
+          .eq('status', 'pendente')
+        const processoIds = (alertas || []).map((a: { processo_id: string }) => a.processo_id)
+        if (processoIds.length === 0) {
+          setProcessos([])
+          setTotalCount(0)
+          setLoading(false)
+          return
+        }
+        query = query.in('id', processoIds)
       }
 
       // Get total count first (for pagination)
@@ -291,7 +299,6 @@ export default function ProcessosPage() {
         movimentacoes_nao_lidas: p.movimentacoes_nao_lidas || 0,
         tem_prazo_critico: false, // TODO: Implementar lógica de prazos críticos
         tem_documento_pendente: false,
-        escavador_monitoramento_id: p.escavador_monitoramento_id
       }))
 
       setProcessos(processosFormatados)
@@ -424,15 +431,7 @@ export default function ProcessosPage() {
   }
 
   const handleBulkAction = (action: BulkAction) => {
-    if (action === 'ativar_monitoramento') {
-      setMonitoramentoAction('ativar')
-      setShowMonitoramentoModal(true)
-    } else if (action === 'desativar_monitoramento') {
-      setMonitoramentoAction('desativar')
-      setShowMonitoramentoModal(true)
-    } else if (action === 'atualizar_andamentos') {
-      setShowAndamentosModal(true)
-    } else if (action === 'alterar_area') {
+    if (action === 'alterar_area') {
       setBulkEditField('area')
       setShowBulkEditModal(true)
     } else if (action === 'alterar_responsavel') {
@@ -512,6 +511,7 @@ export default function ProcessosPage() {
                   <option value="meus">Meus Processos</option>
                   <option value="sem_contrato">Sem Contrato</option>
                   <option value="encerrados">Encerrados</option>
+                  <option value="alertas_encerramento">Aparentam encerrados (DataJud)</option>
                 </select>
 
                 <Button
@@ -570,9 +570,6 @@ export default function ProcessosPage() {
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-[#34495e] dark:text-slate-200">{processo.numero_pasta}</span>
-                  {processo.escavador_monitoramento_id && (
-                    <Eye className="w-3 h-3 text-emerald-500" />
-                  )}
                 </div>
                 <Badge className={`text-[10px] border ${getStatusBadge(processo.status)}`}>
                   {processo.status}
@@ -726,11 +723,6 @@ export default function ProcessosPage() {
                     </td>
                     <td className="p-0 whitespace-nowrap">
                       <Link href={processoHref} className="flex items-center gap-1.5 p-3">
-                        {processo.escavador_monitoramento_id && (
-                          <span title="Monitorado via Escavador">
-                            <Eye className="w-3 h-3 text-emerald-500" />
-                          </span>
-                        )}
                         <span className="text-xs font-bold text-[#34495e] dark:text-slate-200">
                           {processo.numero_pasta}
                         </span>
@@ -847,16 +839,6 @@ export default function ProcessosPage() {
                               >
                                 <RefreshCw className="w-4 h-4 mr-2 text-[#89bcbe]" />
                                 <span className="text-sm">Atualizar Capa</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setSelectedIds(new Set([processo.id]))
-                                  setShowAndamentosModal(true)
-                                }}
-                              >
-                                <FileText className="w-4 h-4 mr-2 text-blue-500" />
-                                <span className="text-sm">Atualizar Andamentos</span>
                               </DropdownMenuItem>
                             </>
                           )}
@@ -1090,41 +1072,7 @@ export default function ProcessosPage() {
         />
       )}
 
-      {/* Modal de Monitoramento */}
-      {showMonitoramentoModal && (
-        <MonitoramentoModal
-          open={showMonitoramentoModal}
-          onClose={() => setShowMonitoramentoModal(false)}
-          action={monitoramentoAction}
-          selectedProcessos={selectedProcessos.map(p => ({
-            id: p.id,
-            numero_cnj: p.numero_cnj,
-            numero_pasta: p.numero_pasta
-          }))}
-          onSuccess={() => {
-            loadProcessos()
-            clearSelection()
-          }}
-        />
-      )}
-
       {/* Modal de Atualizar Andamentos */}
-      {showAndamentosModal && (
-        <AndamentosModal
-          open={showAndamentosModal}
-          onClose={() => setShowAndamentosModal(false)}
-          selectedProcessos={selectedProcessos.map(p => ({
-            id: p.id,
-            numero_cnj: p.numero_cnj,
-            numero_pasta: p.numero_pasta
-          }))}
-          onSuccess={() => {
-            loadProcessos()
-            clearSelection()
-          }}
-        />
-      )}
-
       {/* Modal de Vincular Contrato */}
       <VincularContratoModal
         open={showVincularContratoModal}

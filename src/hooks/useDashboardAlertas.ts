@@ -34,6 +34,7 @@ export interface DashboardAlertas {
   parcelasVencidas: number
   valorParcelasVencidas: number
   valorHorasProntasFaturar: number
+  encerramentosPendentes: number
 }
 
 const defaultAlertas: DashboardAlertas = {
@@ -45,6 +46,7 @@ const defaultAlertas: DashboardAlertas = {
   parcelasVencidas: 0,
   valorParcelasVencidas: 0,
   valorHorasProntasFaturar: 0,
+  encerramentosPendentes: 0,
 }
 
 export function useDashboardAlertas() {
@@ -84,6 +86,7 @@ export function useDashboardAlertas() {
         audienciasResult,
         parcelasVencidasResult,
         horasProntasResult,
+        encerramentosPendentesResult,
       ] = await Promise.all([
         // 1. Prazos vencendo HOJE (filtrado por responsável)
         userId ? supabase
@@ -141,6 +144,13 @@ export function useDashboardAlertas() {
         isSocio ? supabase.rpc('calcular_valor_horas_faturar', {
           p_escritorio_id: escritorioAtivo
         }) : Promise.resolve({ data: null }),
+
+        // 7. Alertas de processos aparentando encerramento (DataJud)
+        supabase
+          .from('processos_alertas_encerramento')
+          .select('id', { count: 'exact', head: true })
+          .eq('escritorio_id', escritorioAtivo)
+          .eq('status', 'pendente'),
       ])
 
       // Processar parcelas vencidas
@@ -198,6 +208,7 @@ export function useDashboardAlertas() {
         parcelasVencidas,
         valorParcelasVencidas,
         valorHorasProntasFaturar: Math.round(valorHorasProntas * 100) / 100,
+        encerramentosPendentes: encerramentosPendentesResult.count || 0,
       })
     } catch (err) {
       console.error('Erro ao carregar alertas do dashboard:', err)
@@ -215,7 +226,8 @@ export function useDashboardAlertas() {
   const totalAlertas = alertas.prazosHoje + alertas.prazosVencidos +
     (alertas.processosSemContrato > 0 ? 1 : 0) +
     (alertas.audienciasProximas > 0 ? 1 : 0) +
-    (alertas.parcelasVencidas > 0 ? 1 : 0)
+    (alertas.parcelasVencidas > 0 ? 1 : 0) +
+    (alertas.encerramentosPendentes > 0 ? 1 : 0)
 
   return {
     alertas,

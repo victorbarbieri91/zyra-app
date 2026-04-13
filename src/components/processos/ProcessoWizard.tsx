@@ -26,6 +26,7 @@ import { PessoaWizardModal } from '@/components/crm/PessoaWizardModal'
 import { ContratoModal } from '@/components/financeiro/ContratoModal'
 import { useContratosHonorarios } from '@/hooks/useContratosHonorarios'
 import { AREA_JURIDICA_LABELS } from '@/lib/constants/areas-juridicas'
+import { classificarProcessoNovo } from '@/lib/processos/classificar-novo'
 
 interface ProcessoData {
   id?: string
@@ -749,6 +750,12 @@ export default function ProcessoWizard({
           if (partesIniciais.length > 0) {
             await supabase.from('processos_partes').insert(partesIniciais)
           }
+        }
+
+        // Dispara classificação DataJud em background se houver CNJ.
+        // Sem CNJ o processo simplesmente não é monitorado.
+        if (processo?.id && formData.numero_cnj) {
+          classificarProcessoNovo(processo.id)
         }
 
         toast.success('Processo criado com sucesso!')

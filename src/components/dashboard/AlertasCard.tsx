@@ -145,6 +145,16 @@ export default function AlertasCard({ className, onAudienciasClick }: AlertasCar
               />
             )}
 
+            {/* Processos aparentando encerrados (DataJud) */}
+            {alertas.encerramentosPendentes > 0 && (
+              <AlertaItem
+                label="Processos aparentam encerrados"
+                value={alertas.encerramentosPendentes}
+                color="amber"
+                href="/dashboard/processos?view=alertas_encerramento"
+              />
+            )}
+
             {/* Horas p/ Faturar - apenas sócios, mostra só o valor */}
             {isSocio && alertas.valorHorasProntasFaturar > 0 && (
               <AlertaItem

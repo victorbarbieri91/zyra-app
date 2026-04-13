@@ -26,8 +26,6 @@ import {
   Users,
   Calendar,
   Banknote,
-  Bell,
-  BellOff,
   UserCircle,
   Briefcase,
   Plus,
@@ -42,6 +40,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { ProcessoEscavadorNormalizado, ParteNormalizada } from '@/lib/escavador/types'
 import { formatarDataExibicao, formatarValorCausa } from '@/lib/escavador/normalizer'
+import { classificarProcessoNovo } from '@/lib/processos/classificar-novo'
 
 interface ProcessoWizardAutomaticoProps {
   open: boolean
@@ -72,7 +71,6 @@ export default function ProcessoWizardAutomatico({
   // Form state
   const [clienteId, setClienteId] = useState('')
   const [responsavelId, setResponsavelId] = useState('')
-  const [ativarMonitoramento, setAtivarMonitoramento] = useState(false)
   const [loading, setLoading] = useState(false)
   const [buscaCliente, setBuscaCliente] = useState('')
 
@@ -230,7 +228,6 @@ export default function ProcessoWizardAutomatico({
   const handleClose = () => {
     setClienteId('')
     setResponsavelId('')
-    setAtivarMonitoramento(false)
     setBuscaCliente('')
     onClose()
   }
@@ -373,26 +370,10 @@ export default function ProcessoWizardAutomatico({
         }
       }
 
-      // Se ativar monitoramento, chamar API
-      if (ativarMonitoramento && novoProcesso) {
-        try {
-          const monitorResponse = await fetch('/api/escavador/monitoramento', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              numero_cnj: dadosEscavador.numero_cnj,
-              tribunal: dadosEscavador.tribunal,
-              processo_id: novoProcesso.id
-            })
-          })
-
-          const monitorResult = await monitorResponse.json()
-          if (monitorResult.sucesso) {
-            toast.success('Monitoramento ativado!')
-          }
-        } catch {
-          // Silently fail monitoring - process was created
-        }
+      // Dispara classificação DataJud em background (fire-and-forget).
+      // O processo é monitorado automaticamente enquanto status='ativo'.
+      if (novoProcesso?.id) {
+        classificarProcessoNovo(novoProcesso.id)
       }
 
       toast.success('Processo criado com sucesso!')
@@ -767,37 +748,6 @@ export default function ProcessoWizardAutomatico({
                 </Select>
               </div>
 
-              {/* Monitoramento */}
-              <div className="bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      ativarMonitoramento ? 'bg-emerald-100 dark:bg-emerald-500/15' : 'bg-slate-100 dark:bg-surface-2'
-                    }`}>
-                      {ativarMonitoramento ? (
-                        <Bell className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                      ) : (
-                        <BellOff className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Monitoramento</p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Alertas automáticos</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setAtivarMonitoramento(!ativarMonitoramento)}
-                    className={`relative w-10 h-5 rounded-full transition-colors ${
-                      ativarMonitoramento ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-slate-300 dark:bg-slate-600'
-                    }`}
-                  >
-                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white dark:bg-surface-1 shadow transition-transform ${
-                      ativarMonitoramento ? 'translate-x-5' : 'translate-x-0.5'
-                    }`} />
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>

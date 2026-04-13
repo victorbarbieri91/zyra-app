@@ -636,7 +636,6 @@ export default function ProcessoDetalhe() {
               <ProcessoRelacionados
                 processoId={processo.id}
                 processoPrincipalData={ppData}
-                autoHide
               />
             )
           })() : undefined}

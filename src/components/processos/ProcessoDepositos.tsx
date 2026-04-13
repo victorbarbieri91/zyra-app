@@ -2,6 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -31,6 +36,7 @@ import {
   Pencil,
   Trash2,
   AlertCircle,
+  ChevronRight,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { formatBrazilDate, formatDateForDB, parseDateInBrazil } from '@/lib/timezone'
@@ -291,198 +297,189 @@ export default function ProcessoDepositos({ processoId, autoHide = false }: Proc
     }
   }
 
-  // AutoHide: suprime totalmente o componente durante o loading inicial
-  // para evitar flash de skeleton em processos sem depósitos
-  if (autoHide && loading) {
-    return null
-  }
-
-  if (loading) {
-    return (
-      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-        <CardContent className="py-12">
-          <div className="flex items-center justify-center">
-            <Loader2 className="w-6 h-6 animate-spin text-[#89bcbe]" />
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
   const isEmpty = depositos.length === 0
+
+  // Collapsible: aberto quando tem dados, fechado quando vazio
+  const [expanded, setExpanded] = useState(!isEmpty)
+
+  // Atualiza o estado quando os dados carregam
+  useEffect(() => {
+    if (!loading) {
+      setExpanded(!isEmpty)
+    }
+  }, [loading, isEmpty])
 
   return (
     <>
-      {isEmpty ? (
-        // Empty state: card com header gradient + linha slim de empty state
-        <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-          <CardHeader className="pb-3 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 border-b border-slate-100 dark:border-slate-800">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
+      <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <Collapsible open={expanded} onOpenChange={setExpanded}>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="w-full flex items-center justify-between px-6 py-4 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 hover:from-[#e8f5f5] hover:to-[#dcefef] dark:hover:from-teal-500/10 dark:hover:to-teal-500/15 transition-colors border-b border-slate-100 dark:border-slate-800"
+            >
+              <div className="flex items-center gap-2">
+                <ChevronRight className={`w-4 h-4 text-[#46627f] dark:text-slate-400 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
                 <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
                   <Landmark className="w-3.5 h-3.5 text-[#89bcbe]" />
                 </div>
-                Depósitos Judiciais
-              </CardTitle>
+                <span className="text-sm font-medium text-[#34495e] dark:text-slate-200">
+                  Depósitos Judiciais
+                </span>
+                {depositos.length > 0 && (
+                  <Badge className="bg-[#89bcbe] text-white text-[10px] px-1.5 py-0">
+                    {depositos.length}
+                  </Badge>
+                )}
+              </div>
+
               <Button
                 size="sm"
-                variant="outline"
-                onClick={handleNovoDeposito}
-                className="h-8 text-xs bg-white/60 dark:bg-surface-0/60 border-[#89bcbe] text-[#34495e] dark:text-slate-200 hover:bg-white dark:hover:bg-surface-0 flex-shrink-0"
+                variant={isEmpty ? 'outline' : 'default'}
+                onClick={(e) => { e.stopPropagation(); handleNovoDeposito() }}
+                className={isEmpty
+                  ? "h-7 text-xs bg-white/60 dark:bg-surface-0/60 border-[#89bcbe] text-[#34495e] dark:text-slate-200 hover:bg-white dark:hover:bg-surface-0 flex-shrink-0"
+                  : "h-7 px-3 text-xs bg-[#34495e] hover:bg-[#46627f] text-white flex-shrink-0"
+                }
               >
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
-                Registrar depósito
+                {isEmpty ? 'Registrar depósito' : 'Novo Depósito'}
               </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="py-4">
-            <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
-              Nenhum depósito registrado neste processo
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-      <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-        <CardHeader className="pb-3 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
-                <Landmark className="w-3.5 h-3.5 text-[#89bcbe]" />
-              </div>
-              Depósitos Judiciais
-            </CardTitle>
-            <Button
-              size="sm"
-              onClick={handleNovoDeposito}
-              className="h-8 px-3 text-xs bg-[#34495e] hover:bg-[#46627f] text-white"
-            >
-              <Plus className="w-3.5 h-3.5 mr-1.5" />
-              Novo Depósito
-            </Button>
-          </div>
-        </CardHeader>
+            </button>
+          </CollapsibleTrigger>
 
-        <CardContent className="space-y-4 pt-5">
-          {/* Totais */}
-          {depositos.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-slate-50 dark:bg-surface-0 rounded-lg">
-              <div>
-                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Ativo</p>
-                <p className="text-sm font-semibold text-blue-700 dark:text-blue-400">{formatCurrency(totais.ativo)}</p>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500">{totais.countAtivo} depósito(s)</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Levantado</p>
-                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{formatCurrency(totais.levantado)}</p>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500">{totais.countLevantado} depósito(s)</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Convertido</p>
-                <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">{formatCurrency(totais.convertido)}</p>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500">{totais.countConvertido} depósito(s)</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Perdido</p>
-                <p className="text-sm font-semibold text-red-700 dark:text-red-400">{formatCurrency(totais.perdido)}</p>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500">{totais.countPerdido} depósito(s)</p>
-              </div>
-            </div>
-          )}
-
-          {/* Lista de Depósitos (isEmpty já tratado no fork acima) */}
-          {depositos.length > 0 && (
-            <div className="space-y-3">
-              {depositos.map((deposito) => (
-                <div
-                  key={deposito.id}
-                  className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200 uppercase tracking-wide">
-                          {TIPO_LABELS[deposito.tipo]}
-                        </span>
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] font-medium h-5 ${STATUS_COLORS[deposito.status]}`}
-                        >
-                          {STATUS_LABELS[deposito.status]}
-                        </Badge>
-                      </div>
-
-                      {deposito.descricao && (
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-2 line-clamp-2">
-                          {deposito.descricao}
-                        </p>
-                      )}
-
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-                        <span className="font-semibold text-[#34495e] dark:text-slate-200 text-base">
-                          {formatCurrency(deposito.valor)}
-                        </span>
-
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {formatBrazilDate(deposito.data_deposito)}
-                        </span>
-
-                        {deposito.numero_guia && (
-                          <span className="flex items-center gap-1">
-                            <FileText className="w-3 h-3" />
-                            Guia: {deposito.numero_guia}
-                          </span>
-                        )}
-                      </div>
-
-                      {deposito.status === 'levantado' && deposito.valor_levantado && (
-                        <div className="mt-2 flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400">
-                          <ArrowUpRight className="w-3.5 h-3.5" />
-                          Levantado: {formatCurrency(deposito.valor_levantado)}
-                          {deposito.data_levantamento && (
-                            <span className="text-slate-500 dark:text-slate-400">
-                              em {formatBrazilDate(deposito.data_levantamento)}
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {deposito.observacoes && (
-                        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 italic">
-                          {deposito.observacoes}
-                        </p>
-                      )}
+          <CollapsibleContent>
+            <CardContent className="space-y-4 pt-5">
+              {loading ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-slate-300" />
+                </div>
+              ) : isEmpty ? (
+                <div className="text-center py-5 text-slate-400 dark:text-slate-500 space-y-1">
+                  <Landmark className="w-7 h-7 mx-auto opacity-25" />
+                  <p className="text-xs">Nenhum depósito registrado neste processo</p>
+                </div>
+              ) : (
+                <>
+                  {/* Totais */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-slate-50 dark:bg-surface-0 rounded-lg">
+                    <div>
+                      <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Ativo</p>
+                      <p className="text-sm font-semibold text-blue-700 dark:text-blue-400">{formatCurrency(totais.ativo)}</p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500">{totais.countAtivo} depósito(s)</p>
                     </div>
-
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditDeposito(deposito)}
-                        className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setDepositoToDelete(deposito.id)
-                          setDeleteConfirmOpen(true)
-                        }}
-                        className="h-8 w-8 p-0 text-slate-400 hover:text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                    <div>
+                      <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Levantado</p>
+                      <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{formatCurrency(totais.levantado)}</p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500">{totais.countLevantado} depósito(s)</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Convertido</p>
+                      <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">{formatCurrency(totais.convertido)}</p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500">{totais.countConvertido} depósito(s)</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Perdido</p>
+                      <p className="text-sm font-semibold text-red-700 dark:text-red-400">{formatCurrency(totais.perdido)}</p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500">{totais.countPerdido} depósito(s)</p>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
+
+                  {/* Lista de Depósitos */}
+                  <div className="space-y-3">
+                    {depositos.map((deposito) => (
+                      <div
+                        key={deposito.id}
+                        className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200 uppercase tracking-wide">
+                                {TIPO_LABELS[deposito.tipo]}
+                              </span>
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] font-medium h-5 ${STATUS_COLORS[deposito.status]}`}
+                              >
+                                {STATUS_LABELS[deposito.status]}
+                              </Badge>
+                            </div>
+
+                            {deposito.descricao && (
+                              <p className="text-sm text-slate-600 dark:text-slate-400 mb-2 line-clamp-2">
+                                {deposito.descricao}
+                              </p>
+                            )}
+
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                              <span className="font-semibold text-[#34495e] dark:text-slate-200 text-base">
+                                {formatCurrency(deposito.valor)}
+                              </span>
+
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {formatBrazilDate(deposito.data_deposito)}
+                              </span>
+
+                              {deposito.numero_guia && (
+                                <span className="flex items-center gap-1">
+                                  <FileText className="w-3 h-3" />
+                                  Guia: {deposito.numero_guia}
+                                </span>
+                              )}
+                            </div>
+
+                            {deposito.status === 'levantado' && deposito.valor_levantado && (
+                              <div className="mt-2 flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400">
+                                <ArrowUpRight className="w-3.5 h-3.5" />
+                                Levantado: {formatCurrency(deposito.valor_levantado)}
+                                {deposito.data_levantamento && (
+                                  <span className="text-slate-500 dark:text-slate-400">
+                                    em {formatBrazilDate(deposito.data_levantamento)}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {deposito.observacoes && (
+                              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 italic">
+                                {deposito.observacoes}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditDeposito(deposito)}
+                              className="h-8 w-8 p-0 text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setDepositoToDelete(deposito.id)
+                                setDeleteConfirmOpen(true)
+                              }}
+                              className="h-8 w-8 p-0 text-slate-400 hover:text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
       </Card>
-      )}
 
       {/* Modal de Cadastro/Edição — compartilhado entre empty state e view completa */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>

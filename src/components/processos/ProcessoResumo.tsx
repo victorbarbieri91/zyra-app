@@ -109,6 +109,8 @@ interface ProcessoResumoProps {
    * (passado pelo parent porque precisa de dados brutos do processo).
    */
   topSectionsSlot?: React.ReactNode
+  /** Slot renderizado entre Documentos e Depósitos — usado para Processos Vinculados */
+  vinculosSlot?: React.ReactNode
 }
 
 interface Movimentacao {
@@ -120,7 +122,7 @@ interface Movimentacao {
   origem?: string
 }
 
-export default function ProcessoResumo({ processo, topSectionsSlot }: ProcessoResumoProps) {
+export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot }: ProcessoResumoProps) {
   // Copiar CNJ agora é gerenciado pelo componente <CnjLink />
 
   const [openNovoAndamento, setOpenNovoAndamento] = useState(false)
@@ -983,6 +985,9 @@ export default function ProcessoResumo({ processo, topSectionsSlot }: ProcessoRe
 
         {/* Documentos — card inline com drag-drop (sempre visível) */}
         <ProcessoDocumentos processoId={processo.id} variant="inline" inlineLimit={5} />
+
+        {/* Processos Vinculados — recursos, incidentes, processo principal */}
+        {vinculosSlot}
 
         {/* Depósitos — empty state compacto quando vazio, com botão para cadastrar */}
         <ProcessoDepositos processoId={processo.id} />

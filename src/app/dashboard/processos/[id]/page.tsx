@@ -603,7 +603,8 @@ export default function ProcessoDetalhe() {
         {/* Conteúdo Principal - Ficha Processual */}
         <ProcessoResumo
           processo={processo}
-          topSectionsSlot={processoRaw ? (() => {
+          topSectionsSlot={<ProcessoPartes processoId={processo.id} autoHide collapsible />}
+          vinculosSlot={processoRaw ? (() => {
             const polo = processoRaw.polo_cliente
             const clienteNome = processo.cliente_nome
             const parteContraria = processoRaw.parte_contraria ?? ''
@@ -632,14 +633,11 @@ export default function ProcessoDetalhe() {
               objeto_acao: processoRaw.objeto_acao,
             }
             return (
-              <>
-                <ProcessoPartes processoId={processo.id} autoHide collapsible />
-                <ProcessoRelacionados
-                  processoId={processo.id}
-                  processoPrincipalData={ppData}
-                  autoHide
-                />
-              </>
+              <ProcessoRelacionados
+                processoId={processo.id}
+                processoPrincipalData={ppData}
+                autoHide
+              />
             )
           })() : undefined}
         />

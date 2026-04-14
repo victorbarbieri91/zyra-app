@@ -87,11 +87,19 @@ async function fetchDashboardPerformance(
     // IMPORTANTE: lê de v_timesheet_profissional para excluir horas lançadas
     // contra tarefas/eventos pessoais — métrica coletiva do escritório.
     // Ver supabase/migrations/20260413000002_view_timesheet_profissional.sql
-    supabase
-      .from('v_timesheet_profissional' as any)
-      .select('user_id, horas, faturavel')
-      .eq('escritorio_id', escritorioAtivo)
-      .gte('data_trabalho', inicioMes.toISOString().split('T')[0]),
+    (async () => {
+      const res = await supabase
+        .from('v_timesheet_profissional' as any)
+        .select('user_id, horas, faturavel')
+        .eq('escritorio_id', escritorioAtivo)
+        .gte('data_trabalho', inicioMes.toISOString().split('T')[0])
+      console.log('[ZYRA-DEBUG Performance] fonte=v_timesheet_profissional', {
+        count: (res.data as any[])?.length ?? 0,
+        error: res.error?.message ?? null,
+        totalHoras: ((res.data as any[]) || []).reduce((acc: number, r: any) => acc + Number(r.horas || 0), 0),
+      })
+      return res
+    })(),
 
     // Profiles para nomes (usuários do escritório)
     supabase

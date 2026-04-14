@@ -289,6 +289,7 @@ export default function AgendaPage() {
         prazo_data_limite: item.prazo_data_limite ? parseDBDate(item.prazo_data_limite) : undefined,
         prioridade: item.prioridade,
         subtipo: item.subtipo,
+        pessoal: item.pessoal || false,
         recorrencia_id: item.recorrencia_id,
       }))
   }, [agendaItems, filters, urlFiltroAtivo])
@@ -1564,6 +1565,7 @@ export default function AgendaPage() {
             local: agendaItem.local,
             responsavel_nome: agendaItem.responsavel_nome,
             status: agendaItem.status as EventCardProps['status'],
+            pessoal: agendaItem.pessoal || false,
           }
           handleEventClick(eventoProps)
         }}

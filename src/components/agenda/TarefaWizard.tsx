@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Calendar, CalendarClock, Clock, Link as LinkIcon, CheckSquare, Briefcase, UserCheck, FileText, ClipboardList, Zap, TrendingUp, ChevronRight, Repeat, ListTree, Pin, Mail, Loader2, Scale, Gavel, CheckCircle2 } from 'lucide-react'
+import { Calendar, CalendarClock, Clock, Link as LinkIcon, CheckSquare, Briefcase, UserCheck, FileText, ClipboardList, Zap, TrendingUp, ChevronRight, Repeat, ListTree, Pin, Mail, Loader2, Scale, Gavel, CheckCircle2, Lock } from 'lucide-react'
 import { ModalWizard, WizardStep, ReviewCard } from '@/components/wizards'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { DateInput } from '@/components/ui/date-picker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useDropzone } from 'react-dropzone'
 import VinculacaoSelector from '@/components/agenda/VinculacaoSelector'
 import RecorrenciaConfig, { RecorrenciaData, getRecorrenciaSummary } from '@/components/agenda/RecorrenciaConfig'
@@ -84,6 +85,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   })
   const [titulo, setTitulo] = useState(initialData?.titulo || '')
   const [descricao, setDescricao] = useState(initialData?.descricao || '')
+  const [isPessoal, setIsPessoal] = useState<boolean>(initialData?.pessoal === true)
 
   // Helper para extrair parte da data (yyyy-MM-dd) de ISO datetime
   const extractDatePart = (dateStr?: string | null) => {
@@ -424,6 +426,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       const formData: TarefaFormData = {
         escritorio_id: escritorioId,
         tipo: isFixa ? 'fixa' : tipo,
+        pessoal: isPessoal,
         titulo,
         descricao: descricao || undefined,
         data_inicio: formatDateToISO(dataInicioFinal),
@@ -526,6 +529,24 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       {steps[currentStep]?.id === 'tipo-identificacao' && (
         <WizardStep title={steps[currentStep].title} subtitle={steps[currentStep].subtitle}>
           <div className="space-y-5">
+            {/* Marcar como pessoal */}
+            <div className="flex items-center gap-2 p-3 rounded-lg border border-rose-200 dark:border-rose-500/30 bg-rose-50/50 dark:bg-rose-500/5">
+              <Checkbox
+                id="tarefa-pessoal"
+                checked={isPessoal}
+                onCheckedChange={(checked) => setIsPessoal(checked === true)}
+              />
+              <Label htmlFor="tarefa-pessoal" className="flex items-center gap-1.5 text-sm font-medium cursor-pointer text-rose-700 dark:text-rose-300">
+                <Lock className="w-3.5 h-3.5" />
+                Marcar como pessoal
+              </Label>
+              {isPessoal && (
+                <span className="text-[11px] text-rose-600/80 dark:text-rose-400/80 ml-auto">
+                  Só você verá esta tarefa
+                </span>
+              )}
+            </div>
+
             {/* Label + Switch inline */}
             <div className="space-y-3">
               <div className="flex items-center gap-3">

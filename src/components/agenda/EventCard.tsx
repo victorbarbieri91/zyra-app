@@ -1,6 +1,6 @@
 'use client'
 
-import { Clock, MapPin, User, FileText } from 'lucide-react'
+import { Clock, MapPin, User, FileText, Lock } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -32,6 +32,8 @@ export interface EventCardProps {
   prioridade?: 'alta' | 'media' | 'baixa'
   // Subtipo (ex: fixa, prazo_processual, etc.)
   subtipo?: string
+  // Privacidade
+  pessoal?: boolean
   // Recorrência
   recorrencia_id?: string | null
   onClick?: () => void
@@ -114,6 +116,7 @@ export default function EventCard({
   prazo_cumprido,
   prazo_perdido,
   prazo_criticidade,
+  pessoal,
   onClick,
   compact = false,
 }: EventCardProps) {
@@ -154,14 +157,26 @@ export default function EventCard({
               >
                 {titulo}
               </h4>
-              {!compact && (
-                <Badge
-                  variant="outline"
-                  className={cn('text-[10px] px-1.5 py-0 h-4 border font-medium', config.color)}
-                >
-                  {config.label}
-                </Badge>
-              )}
+              <div className="flex items-center gap-1">
+                {pessoal && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0 h-4 border font-medium bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/30 flex items-center gap-0.5"
+                    title="Tarefa pessoal — só você vê"
+                  >
+                    <Lock className="w-2.5 h-2.5" />
+                    Pessoal
+                  </Badge>
+                )}
+                {!compact && (
+                  <Badge
+                    variant="outline"
+                    className={cn('text-[10px] px-1.5 py-0 h-4 border font-medium', config.color)}
+                  >
+                    {config.label}
+                  </Badge>
+                )}
+              </div>
             </div>
 
             {/* Horário (apenas para eventos e audiências, não para tarefas) */}

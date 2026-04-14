@@ -51,6 +51,9 @@ export interface Tarefa {
   // Múltiplos responsáveis (array direto na coluna)
   responsaveis_ids: string[]
 
+  // Privacidade: quando true, só criador/responsáveis veem (via RLS)
+  pessoal?: boolean
+
   // Recorrência
   recorrencia_id?: string | null
   is_virtual?: boolean // true se for instância virtual expandida de uma recorrência
@@ -186,6 +189,8 @@ export function useTarefas(escritorioId?: string) {
           // Vinculações
           processo_id: data.processo_id || null,
           consultivo_id: data.consultivo_id || null,
+          // Privacidade
+          pessoal: data.pessoal ?? false,
           // Prazo processual
           prazo_data_intimacao: data.prazo_data_intimacao,
           prazo_quantidade_dias: data.prazo_quantidade_dias,
@@ -257,6 +262,8 @@ export function useTarefas(escritorioId?: string) {
           // Vinculações
           processo_id: data.processo_id !== undefined ? data.processo_id : undefined,
           consultivo_id: data.consultivo_id !== undefined ? data.consultivo_id : undefined,
+          // Privacidade
+          pessoal: data.pessoal,
           // Prazo processual
           prazo_data_intimacao: data.prazo_data_intimacao,
           prazo_quantidade_dias: data.prazo_quantidade_dias,

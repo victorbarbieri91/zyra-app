@@ -20,6 +20,7 @@ import {
   Timer,
   CalendarClock,
   Copy,
+  Lock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -52,6 +53,7 @@ export interface EventDetailCardProps {
   status: string
   prioridade?: 'alta' | 'media' | 'baixa'
   recorrencia_id?: string | null
+  pessoal?: boolean
 
   // Vinculações
   processo_numero?: string
@@ -176,6 +178,7 @@ export default function EventDetailCard({
   prazo_tipo,
   prazo_cumprido,
   prazo_criticidade,
+  pessoal,
   onViewDetails,
   onComplete,
   onReopen,
@@ -218,12 +221,24 @@ export default function EventDetailCard({
           )}>
             {titulo}
           </h4>
-          <Badge
-            variant="outline"
-            className={cn('text-[10px] px-1.5 py-0 h-4 border font-medium flex-shrink-0', config.bg, config.text)}
-          >
-            {config.label}
-          </Badge>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {pessoal && (
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 h-4 border font-medium bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/30 flex items-center gap-0.5"
+                title="Item pessoal — só você vê"
+              >
+                <Lock className="w-2.5 h-2.5" />
+                Pessoal
+              </Badge>
+            )}
+            <Badge
+              variant="outline"
+              className={cn('text-[10px] px-1.5 py-0 h-4 border font-medium', config.bg, config.text)}
+            >
+              {config.label}
+            </Badge>
+          </div>
         </div>
 
         {/* Descrição (se houver) */}

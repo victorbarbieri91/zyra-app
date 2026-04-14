@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Clock, MapPin, Briefcase, Users, Coffee, Phone, FileText, Video, Repeat } from 'lucide-react'
+import { Calendar, Clock, MapPin, Briefcase, Users, Coffee, Phone, FileText, Video, Repeat, Lock } from 'lucide-react'
 import { ModalWizard, WizardStep } from '@/components/wizards'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
@@ -92,9 +92,14 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
   const { createEvento, updateEvento } = useEventos(escritorioId)
 
   // Form State
-  const [tipoEvento, setTipoEvento] = useState<TipoEvento>('reuniao_cliente')
+  const [tipoEvento, setTipoEvento] = useState<TipoEvento>(() => {
+    const t = (initialData as any)?.tipo as TipoEvento | undefined
+    if (t && t in TIPO_CONFIG) return t
+    return 'reuniao_cliente'
+  })
   const [titulo, setTitulo] = useState(initialData?.titulo || '')
   const [descricao, setDescricao] = useState(initialData?.descricao || '')
+  const [isPessoal, setIsPessoal] = useState<boolean>(initialData?.pessoal === true)
 
   // Helpers para normalizar datas vindas do DB (ISO datetime) para formato dos inputs
   const extractDatePart = (dateStr?: string | null) => {
@@ -297,6 +302,8 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
         escritorio_id: escritorioId,
         titulo,
         descricao: descricao || undefined,
+        tipo: tipoEvento,
+        pessoal: isPessoal,
         data_inicio: dataInicio,
         data_fim: dataFim || dataInicio,
         dia_inteiro: diaInteiro,
@@ -386,6 +393,24 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
       {currentStep === 0 && (
         <WizardStep title={steps[0].title} subtitle={steps[0].subtitle}>
           <div className="space-y-4">
+            {/* Marcar como pessoal */}
+            <div className="flex items-center gap-2 p-3 rounded-lg border border-rose-200 dark:border-rose-500/30 bg-rose-50/50 dark:bg-rose-500/5">
+              <Checkbox
+                id="evento-pessoal"
+                checked={isPessoal}
+                onCheckedChange={(checked) => setIsPessoal(checked === true)}
+              />
+              <Label htmlFor="evento-pessoal" className="flex items-center gap-1.5 text-sm font-medium cursor-pointer text-rose-700 dark:text-rose-300">
+                <Lock className="w-3.5 h-3.5" />
+                Marcar como pessoal
+              </Label>
+              {isPessoal && (
+                <span className="text-[11px] text-rose-600/80 dark:text-rose-400/80 ml-auto">
+                  Só você verá este compromisso
+                </span>
+              )}
+            </div>
+
             {/* Tipo de Evento */}
             <div className="space-y-2">
               <Label className="text-sm font-medium text-[#34495e] dark:text-slate-200">Tipo de Compromisso *</Label>

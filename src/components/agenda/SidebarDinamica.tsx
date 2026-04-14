@@ -261,6 +261,7 @@ export default function SidebarDinamica({
                       prazo_tipo={evento.prazo_tipo}
                       prazo_cumprido={evento.prazo_cumprido}
                       subtipo={evento.subtipo}
+                      pessoal={evento.pessoal || false}
                       recorrencia_id={evento.recorrencia_id}
                       onViewDetails={() => onEventClick(evento)}
                       onComplete={() => {

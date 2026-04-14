@@ -17,6 +17,7 @@ import {
   Clock,
   PlayCircle,
   PauseCircle,
+  Lock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -109,7 +110,7 @@ export default function EventoDetailModal({
   // subtipo vem da v_agenda_consolidada; se carregado direto da tabela, usa campo 'tipo'
   const subtipo = evento.subtipo || (evento as any).tipo || 'compromisso'
   const isPrazo = subtipo.includes('prazo')
-  const isCompromisso = subtipo === 'compromisso' || subtipo === 'inicial'
+  const isCompromisso = !isPrazo
 
   // Calcular duração
   const duracao = evento.data_fim && evento.data_inicio && !evento.dia_inteiro
@@ -132,6 +133,12 @@ export default function EventoDetailModal({
     prazo_consultivo: 'Prazo Consultivo',
     inicial: 'Prazo Inicial',
     compromisso: 'Compromisso',
+    reuniao_cliente: 'Reunião Cliente',
+    reuniao_interna: 'Reunião Interna',
+    videoconferencia: 'Videoconferência',
+    ligacao: 'Ligação',
+    almoco: 'Almoço',
+    outro: 'Outro',
   }
 
   const subtipoLabel = subtipoLabels[subtipo] || subtipo
@@ -158,6 +165,12 @@ export default function EventoDetailModal({
                   {evento.titulo}
                 </h2>
                 <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
+                  {(evento as any).pessoal && (
+                    <span className="inline-flex items-center gap-1 bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 rounded px-1.5 py-0.5 text-[10px] font-medium" title="Compromisso pessoal — só você vê">
+                      <Lock className="w-2.5 h-2.5" />
+                      Pessoal
+                    </span>
+                  )}
                   <span>{subtipoLabel}</span>
                   {evento.status && (
                     <span className={cn("font-medium capitalize", getStatusColor())}>

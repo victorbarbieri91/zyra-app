@@ -22,6 +22,8 @@ export interface Evento {
   consultivo_id?: string | null
   // Múltiplos responsáveis (array direto na coluna)
   responsaveis_ids: string[]
+  // Privacidade: quando true, só criador/responsáveis veem (via RLS)
+  pessoal?: boolean
   created_at?: string
   updated_at?: string
 }

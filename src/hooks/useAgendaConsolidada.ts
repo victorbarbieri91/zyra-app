@@ -16,6 +16,7 @@ export interface AgendaItem {
   status: string
   prioridade: 'alta' | 'media' | 'baixa'
   subtipo: string // Tipo específico (prazo_processual, inicial, compromisso, etc)
+  pessoal?: boolean // Quando true, só o criador/responsáveis veem (RLS)
   responsavel_id?: string
   responsavel_nome?: string
   todos_responsaveis?: string  // Todos os responsáveis agregados (separados por vírgula)

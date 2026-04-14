@@ -21,6 +21,7 @@ import {
   Copy,
   PlayCircle,
   PauseCircle,
+  Lock,
 } from 'lucide-react'
 import { cn, formatHoras } from '@/lib/utils'
 import { formatBrazilDate, formatDateTimeForDB, parseDBDate, toBrazilTime } from '@/lib/timezone'
@@ -573,6 +574,12 @@ export default function TarefaDetailModal({
                 {tarefa.titulo}
               </h2>
               <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
+                {tarefa.pessoal && (
+                  <span className="inline-flex items-center gap-1 bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 rounded px-1.5 py-0.5 text-[10px] font-medium" title="Tarefa pessoal — só você vê">
+                    <Lock className="w-2.5 h-2.5" />
+                    Pessoal
+                  </span>
+                )}
                 <span>{getLocalTipoLabel(tarefa.tipo)}</span>
                 {getTipoCategoria(tarefa.tipo) && (
                   <span className={cn(

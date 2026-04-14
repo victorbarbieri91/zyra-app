@@ -10,7 +10,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { DateInput } from '@/components/ui/date-picker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { Checkbox } from '@/components/ui/checkbox'
 import { useDropzone } from 'react-dropzone'
 import VinculacaoSelector from '@/components/agenda/VinculacaoSelector'
 import RecorrenciaConfig, { RecorrenciaData, getRecorrenciaSummary } from '@/components/agenda/RecorrenciaConfig'
@@ -529,24 +528,6 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       {steps[currentStep]?.id === 'tipo-identificacao' && (
         <WizardStep title={steps[currentStep].title} subtitle={steps[currentStep].subtitle}>
           <div className="space-y-5">
-            {/* Marcar como pessoal */}
-            <div className="flex items-center gap-2 p-3 rounded-lg border border-rose-200 dark:border-rose-500/30 bg-rose-50/50 dark:bg-rose-500/5">
-              <Checkbox
-                id="tarefa-pessoal"
-                checked={isPessoal}
-                onCheckedChange={(checked) => setIsPessoal(checked === true)}
-              />
-              <Label htmlFor="tarefa-pessoal" className="flex items-center gap-1.5 text-sm font-medium cursor-pointer text-rose-700 dark:text-rose-300">
-                <Lock className="w-3.5 h-3.5" />
-                Marcar como pessoal
-              </Label>
-              {isPessoal && (
-                <span className="text-[11px] text-rose-600/80 dark:text-rose-400/80 ml-auto">
-                  Só você verá esta tarefa
-                </span>
-              )}
-            </div>
-
             {/* Label + Switch inline */}
             <div className="space-y-3">
               <div className="flex items-center gap-3">
@@ -573,6 +554,25 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
                   )}>
                     Consultivo
                   </span>
+                </div>
+
+                {/* Toggle Pessoal — discreto, alinhado à direita */}
+                <div className="ml-auto flex items-center gap-1.5">
+                  <Lock className={cn(
+                    'w-3 h-3 transition-colors',
+                    isPessoal ? 'text-[#89bcbe]' : 'text-slate-300 dark:text-slate-600'
+                  )} />
+                  <Label htmlFor="tarefa-pessoal" className={cn(
+                    'text-[11px] font-medium cursor-pointer transition-colors',
+                    isPessoal ? 'text-[#34495e] dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'
+                  )}>
+                    Pessoal
+                  </Label>
+                  <Switch
+                    id="tarefa-pessoal"
+                    checked={isPessoal}
+                    onCheckedChange={setIsPessoal}
+                  />
                 </div>
               </div>
 

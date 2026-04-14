@@ -212,8 +212,10 @@ async function fetchDashboardMetrics(
     : Promise.resolve({ data: [] }),
 
     // Horas NÃO COBRÁVEIS DO USUÁRIO LOGADO (faturavel=false)
+    // Usa v_timesheet_profissional para não inflar com horas lançadas
+    // contra tarefas/eventos pessoais (ex: Aula de francês do Almir).
     userId ? supabase
-      .from('financeiro_timesheet')
+      .from('v_timesheet_profissional')
       .select('horas')
       .eq('escritorio_id', escritorioAtivo)
       .eq('user_id', userId)

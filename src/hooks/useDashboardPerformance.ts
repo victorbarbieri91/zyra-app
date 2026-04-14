@@ -84,8 +84,10 @@ async function fetchDashboardPerformance(
     parcelasPendentesResult,
   ] = await Promise.all([
     // Timesheet do mês agrupado por usuário (com campo faturavel)
+    // Usa v_timesheet_profissional para excluir horas lançadas contra
+    // tarefas/eventos pessoais — métrica coletiva do escritório.
     supabase
-      .from('financeiro_timesheet')
+      .from('v_timesheet_profissional')
       .select('user_id, horas, faturavel')
       .eq('escritorio_id', escritorioAtivo)
       .gte('data_trabalho', inicioMes.toISOString().split('T')[0]),

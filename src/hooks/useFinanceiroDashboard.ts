@@ -134,8 +134,10 @@ export function useFinanceiroDashboard({ escritorioIds, mes }: UseFinanceiroDash
           .in('escritorio_id', ids)
           .gte('data_referencia', inicioMesAnt)
           .lte('data_referencia', fimMesAnt),
+        // Usa v_timesheet_profissional para excluir horas pessoais
+        // dos KPIs coletivos (horasTrabalhadasMes / horasFaturaveisMes).
         supabase
-          .from('financeiro_timesheet')
+          .from('v_timesheet_profissional')
           .select('horas, faturavel')
           .in('escritorio_id', ids)
           .gte('data_trabalho', inicioMes)

@@ -211,11 +211,12 @@ async function fetchDashboardMetrics(
       .lte('data_trabalho', fimMesAnterior.toISOString().split('T')[0])
     : Promise.resolve({ data: [] }),
 
-    // Horas NÃO COBRÁVEIS DO USUÁRIO LOGADO (faturavel=false)
-    // Usa v_timesheet_profissional para não inflar com horas lançadas
-    // contra tarefas/eventos pessoais (ex: Aula de francês do Almir).
+    // Horas NÃO COBRÁVEIS DO USUÁRIO LOGADO (faturavel=false).
+    // IMPORTANTE: lê de v_timesheet_profissional para não inflar com horas
+    // lançadas contra tarefas/eventos pessoais (ex: Aula de francês).
+    // Ver supabase/migrations/20260413000002_view_timesheet_profissional.sql
     userId ? supabase
-      .from('v_timesheet_profissional')
+      .from('v_timesheet_profissional' as any)
       .select('horas')
       .eq('escritorio_id', escritorioAtivo)
       .eq('user_id', userId)

@@ -83,11 +83,12 @@ async function fetchDashboardPerformance(
     parcelasResult,
     parcelasPendentesResult,
   ] = await Promise.all([
-    // Timesheet do mês agrupado por usuário (com campo faturavel)
-    // Usa v_timesheet_profissional para excluir horas lançadas contra
-    // tarefas/eventos pessoais — métrica coletiva do escritório.
+    // Timesheet do mês agrupado por usuário (com campo faturavel).
+    // IMPORTANTE: lê de v_timesheet_profissional para excluir horas lançadas
+    // contra tarefas/eventos pessoais — métrica coletiva do escritório.
+    // Ver supabase/migrations/20260413000002_view_timesheet_profissional.sql
     supabase
-      .from('v_timesheet_profissional')
+      .from('v_timesheet_profissional' as any)
       .select('user_id, horas, faturavel')
       .eq('escritorio_id', escritorioAtivo)
       .gte('data_trabalho', inicioMes.toISOString().split('T')[0]),

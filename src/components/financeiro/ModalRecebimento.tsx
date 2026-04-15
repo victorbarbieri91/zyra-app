@@ -9,11 +9,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
-import { AlertCircle, Info, Users } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { AlertCircle, Info, Plus, Users, X } from 'lucide-react'
+import { cn, formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
+import type { ContratoComissaoPadrao } from '@/hooks/useContratosHonorarios'
 
 export interface ModalRecebimentoItem {
   id: string
@@ -28,6 +28,7 @@ export interface ModalRecebimentoItem {
   processo_id: string | null
   escritorio_id: string
   entidade?: string | null
+  contrato_id?: string | null
 }
 
 interface ContaBancaria {
@@ -44,12 +45,23 @@ interface Advogado {
   percentual_comissao?: number | null
 }
 
+interface ParticipanteComissao {
+  localId: string // UUID local (React key)
+  user_id: string
+  nome: string
+  percentual: number
+  ativo: boolean
+  data_vencimento: string
+  origem: 'contrato' | 'manual'
+}
+
 interface ModalRecebimentoProps {
   open: boolean
   onClose: () => void
   item: ModalRecebimentoItem | null
   contasBancarias: ContaBancaria[]
   advogados?: Advogado[]
+  comissoesPadrao?: ContratoComissaoPadrao[]
   onPagamentoRealizado: () => void
 }
 
@@ -59,6 +71,7 @@ export function ModalRecebimento({
   item,
   contasBancarias,
   advogados = [],
+  comissoesPadrao,
   onPagamentoRealizado,
 }: ModalRecebimentoProps) {
   const supabase = createClient()
@@ -72,11 +85,9 @@ export function ModalRecebimento({
   const [observacoes, setObservacoes] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Participacao advogado
+  // Participação de advogados (multi)
   const [temParticipacao, setTemParticipacao] = useState(false)
-  const [advogadoSelecionado, setAdvogadoSelecionado] = useState('')
-  const [percentualParticipacao, setPercentualParticipacao] = useState(0)
-  const [dataVencimentoParticipacao, setDataVencimentoParticipacao] = useState('')
+  const [participantes, setParticipantes] = useState<ParticipanteComissao[]>([])
 
   // Reset form when item changes
   useEffect(() => {
@@ -88,15 +99,66 @@ export function ModalRecebimento({
       setContaBancariaId(item.conta_bancaria_id || contasBancarias[0]?.id || '')
       setDataVencimentoSaldo('')
       setObservacoes('')
-      setTemParticipacao(false)
-      setAdvogadoSelecionado('')
-      setPercentualParticipacao(0)
-      // Default: +30 dias para vencimento da participação
-      const d30 = new Date()
-      d30.setDate(d30.getDate() + 30)
-      setDataVencimentoParticipacao(d30.toISOString().split('T')[0])
+
+      // Pré-preenchimento a partir das comissões padrão do contrato
+      if (comissoesPadrao && comissoesPadrao.length > 0) {
+        const iniciais: ParticipanteComissao[] = comissoesPadrao.map((c) => ({
+          localId: crypto.randomUUID(),
+          user_id: c.user_id,
+          nome: c.nome || '',
+          percentual: Number(c.percentual) || 0,
+          ativo: true,
+          data_vencimento: '', // será preenchido via RPC
+          origem: 'contrato',
+        }))
+        setParticipantes(iniciais)
+        setTemParticipacao(true)
+      } else {
+        setParticipantes([])
+        setTemParticipacao(false)
+      }
     }
-  }, [item, open, contasBancarias])
+  }, [item, open, contasBancarias, comissoesPadrao])
+
+  // Recalcular data_vencimento via RPC quando dataEfetivacao mudar
+  // ou quando houver participantes sem data
+  useEffect(() => {
+    if (!item || !dataEfetivacao) return
+    const precisaCalcular = participantes.some((p) => !p.data_vencimento)
+    if (!precisaCalcular) return
+
+    let cancelled = false
+    ;(async () => {
+      const { data, error } = await supabase.rpc('calcular_data_limite_prazo', {
+        p_data_intimacao: dataEfetivacao,
+        p_quantidade_dias: 3,
+        p_dias_uteis: true,
+        p_escritorio_id: item.escritorio_id,
+      })
+      if (cancelled) return
+      if (error) {
+        console.error('[ModalRecebimento] Erro ao calcular data de vencimento:', error)
+        // Fallback: +3 dias corridos
+        const fallback = new Date(dataEfetivacao + 'T12:00:00')
+        fallback.setDate(fallback.getDate() + 3)
+        const fallbackStr = fallback.toISOString().split('T')[0]
+        setParticipantes((prev) =>
+          prev.map((p) =>
+            p.data_vencimento ? p : { ...p, data_vencimento: fallbackStr }
+          )
+        )
+        return
+      }
+      if (data) {
+        setParticipantes((prev) =>
+          prev.map((p) => (p.data_vencimento ? p : { ...p, data_vencimento: data as string }))
+        )
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [dataEfetivacao, item, participantes, supabase])
 
   // Computed values
   const saldoAberto = useMemo(() => {
@@ -110,9 +172,56 @@ export function ModalRecebimento({
   const saldoRestante = isParcial ? saldoAberto - valorDigitado : 0
   const valorCredito = isExcedente ? valorDigitado - saldoAberto : 0
 
-  const valorParticipacao = temParticipacao && percentualParticipacao > 0
-    ? (valorDigitado * percentualParticipacao) / 100
-    : 0
+  const participantesAtivos = useMemo(
+    () => participantes.filter((p) => p.ativo && p.user_id && p.percentual > 0),
+    [participantes]
+  )
+
+  const totalComissao = useMemo(
+    () =>
+      participantesAtivos.reduce(
+        (sum, p) => sum + (valorDigitado * p.percentual) / 100,
+        0
+      ),
+    [participantesAtivos, valorDigitado]
+  )
+
+  const totalPercentual = useMemo(
+    () => participantesAtivos.reduce((sum, p) => sum + p.percentual, 0),
+    [participantesAtivos]
+  )
+
+  // Handlers de participantes
+  const adicionarParticipante = () => {
+    const novo: ParticipanteComissao = {
+      localId: crypto.randomUUID(),
+      user_id: '',
+      nome: '',
+      percentual: 0,
+      ativo: true,
+      data_vencimento: '', // useEffect preenche via RPC
+      origem: 'manual',
+    }
+    setParticipantes((prev) => [...prev, novo])
+  }
+
+  const removerParticipante = (localId: string) => {
+    setParticipantes((prev) => prev.filter((p) => p.localId !== localId))
+  }
+
+  const atualizarParticipante = (
+    localId: string,
+    patch: Partial<ParticipanteComissao>
+  ) => {
+    setParticipantes((prev) =>
+      prev.map((p) => (p.localId === localId ? { ...p, ...patch } : p))
+    )
+  }
+
+  const usuariosEscolhidos = useMemo(
+    () => new Set(participantes.map((p) => p.user_id).filter(Boolean)),
+    [participantes]
+  )
 
   const handleConfirmar = async () => {
     if (!item) return
@@ -133,13 +242,32 @@ export function ModalRecebimento({
       toast.error('Informe a data de vencimento do saldo restante')
       return
     }
-    if (temParticipacao && (!advogadoSelecionado || !percentualParticipacao)) {
-      toast.error('Selecione o advogado e o percentual de participação')
-      return
-    }
-    if (temParticipacao && !dataVencimentoParticipacao) {
-      toast.error('Informe a data de vencimento da participação')
-      return
+
+    // Validação de participantes
+    if (temParticipacao) {
+      if (participantesAtivos.length === 0) {
+        toast.error('Adicione pelo menos um advogado ou desative a participação')
+        return
+      }
+      for (const p of participantesAtivos) {
+        if (!p.user_id) {
+          toast.error('Selecione o advogado em todas as linhas ativas')
+          return
+        }
+        if (p.percentual <= 0 || p.percentual > 100) {
+          toast.error('Percentual inválido em uma das linhas')
+          return
+        }
+        if (!p.data_vencimento) {
+          toast.error('Data de vencimento da comissão é obrigatória')
+          return
+        }
+      }
+      const userIdsUnicos = new Set(participantesAtivos.map((p) => p.user_id))
+      if (userIdsUnicos.size !== participantesAtivos.length) {
+        toast.error('Não é possível selecionar o mesmo advogado duas vezes')
+        return
+      }
     }
 
     try {
@@ -218,35 +346,43 @@ export function ModalRecebimento({
           .eq('id', item.origem_id)
       }
 
-      // Participação de advogado → cria despesa pendente
-      if (temParticipacao && advogadoSelecionado && percentualParticipacao > 0) {
-        const advogado = advogados.find(a => a.id === advogadoSelecionado)
-
-        const { error: comissaoError } = await supabase.from('financeiro_despesas').insert({
-          escritorio_id: item.escritorio_id,
-          categoria: 'comissao',
-          descricao: `Participação ${advogado?.nome || 'Advogado'} - ${item.descricao}`,
-          valor: valorParticipacao,
-          data_vencimento: dataVencimentoParticipacao,
-          status: 'pendente',
-          advogado_id: advogado?.user_id || null,
-          observacoes: `Participação de ${percentualParticipacao}% sobre recebimento de ${formatCurrency(valorDigitado)}`,
-          processo_id: item.processo_id,
-          cliente_id: item.cliente_id,
+      // Participação de advogados → cria N despesas pendentes (batch insert)
+      if (temParticipacao && participantesAtivos.length > 0) {
+        const rowsComissao = participantesAtivos.map((p) => {
+          const valorComissao = (valorDigitado * p.percentual) / 100
+          const sufixoOrigem = p.origem === 'contrato' ? ' (padrão do contrato)' : ''
+          return {
+            escritorio_id: item.escritorio_id,
+            categoria: 'comissao',
+            descricao: `Participação ${p.nome || 'Advogado'} - ${item.descricao}`,
+            valor: valorComissao,
+            data_vencimento: p.data_vencimento,
+            status: 'pendente',
+            advogado_id: p.user_id,
+            observacoes:
+              `Participação de ${p.percentual}% sobre recebimento de ${formatCurrency(valorDigitado)}${sufixoOrigem}`,
+            processo_id: item.processo_id,
+            cliente_id: item.cliente_id,
+          }
         })
+
+        const { error: comissaoError } = await supabase
+          .from('financeiro_despesas')
+          .insert(rowsComissao)
+
         if (comissaoError) {
-          console.error('Erro ao criar despesa de comissão:', comissaoError)
-          toast.error('Recebimento registrado, mas houve erro ao criar a despesa de comissão')
+          console.error('Erro ao criar despesas de comissão:', comissaoError)
+          toast.error('Recebimento registrado, mas houve erro ao criar as despesas de comissão')
         }
       }
 
       // Recalcular saldo da conta bancária
       await supabase.rpc('recalcular_saldo_conta', { p_conta_id: contaBancariaId })
 
-      if (temParticipacao && advogadoSelecionado) {
-        const advogado = advogados.find(a => a.id === advogadoSelecionado)
-        const dtVenc = new Date(dataVencimentoParticipacao + 'T12:00:00').toLocaleDateString('pt-BR')
-        toast.success(`Recebimento registrado! Participação de ${formatCurrency(valorParticipacao)} pendente para ${advogado?.nome} (venc. ${dtVenc})`)
+      if (temParticipacao && participantesAtivos.length > 0) {
+        toast.success(
+          `Recebimento registrado! ${participantesAtivos.length} comissão${participantesAtivos.length > 1 ? 'ões' : ''} pendente${participantesAtivos.length > 1 ? 's' : ''} — total ${formatCurrency(totalComissao)}`
+        )
       } else {
         toast.success('Recebimento registrado com sucesso!')
       }
@@ -262,6 +398,18 @@ export function ModalRecebimento({
   }
 
   if (!item) return null
+
+  const somaPercentualInvalida = totalPercentual > 100
+
+  // Indica se há algum impedimento para confirmar (botão desabilitado)
+  const confirmDesabilitado =
+    loading ||
+    valorDigitado <= 0 ||
+    !contaBancariaId ||
+    !dataEfetivacao ||
+    (isParcial && !dataVencimentoSaldo) ||
+    (temParticipacao && participantesAtivos.length === 0) ||
+    somaPercentualInvalida
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -410,92 +558,224 @@ export function ModalRecebimento({
             </div>
           )}
 
-          {/* Participação de advogado */}
-          {advogados.length > 0 && (
-            <div className={`rounded-lg border transition-colors ${temParticipacao ? 'border-[#89bcbe] bg-[#f0f9f9]' : 'border-slate-200 bg-slate-50'}`}>
+          {/* Participação de advogados (multi) */}
+          {(advogados.length > 0 || (comissoesPadrao && comissoesPadrao.length > 0)) && (
+            <div
+              className={cn(
+                'rounded-lg border transition-colors',
+                temParticipacao
+                  ? 'border-[#89bcbe] bg-[#f0f9f9]'
+                  : 'border-slate-200 bg-slate-50'
+              )}
+            >
               <div
                 className="flex items-center justify-between p-3 cursor-pointer"
                 onClick={() => setTemParticipacao(!temParticipacao)}
               >
                 <div className="flex items-center gap-2.5">
-                  <div className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${temParticipacao ? 'bg-[#89bcbe]/20 text-[#34495e]' : 'bg-slate-200 text-slate-400'}`}>
+                  <div
+                    className={cn(
+                      'w-7 h-7 rounded-md flex items-center justify-center transition-colors',
+                      temParticipacao
+                        ? 'bg-[#89bcbe]/20 text-[#34495e]'
+                        : 'bg-slate-200 text-slate-400'
+                    )}
+                  >
                     <Users className="w-3.5 h-3.5" />
                   </div>
                   <div>
-                    <p className={`text-xs font-medium ${temParticipacao ? 'text-[#34495e]' : 'text-slate-600'}`}>
-                      Participação de advogado
+                    <p
+                      className={cn(
+                        'text-xs font-medium',
+                        temParticipacao ? 'text-[#34495e]' : 'text-slate-600'
+                      )}
+                    >
+                      Participação de advogados
                     </p>
                     <p className="text-[10px] text-slate-400">
-                      Gera despesa de comissão pendente
+                      {comissoesPadrao && comissoesPadrao.length > 0
+                        ? 'Pré-preenchido a partir do contrato — editável'
+                        : 'Gera uma despesa de comissão por advogado'}
                     </p>
                   </div>
                 </div>
-                <Switch
-                  checked={temParticipacao}
-                  onCheckedChange={setTemParticipacao}
-                />
+                <div className="flex items-center gap-2">
+                  {temParticipacao && participantesAtivos.length > 0 && (
+                    <span className="text-[10px] text-[#46627f] font-medium">
+                      {formatCurrency(totalComissao)}
+                    </span>
+                  )}
+                  <Switch checked={temParticipacao} onCheckedChange={setTemParticipacao} />
+                </div>
               </div>
 
               {temParticipacao && (
-                <div className="px-3 pb-3 space-y-3 border-t border-[#89bcbe]/30 pt-3">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="grid gap-2">
-                      <Label className="text-xs">Advogado</Label>
-                      <Select
-                        value={advogadoSelecionado}
-                        onValueChange={(id) => {
-                          setAdvogadoSelecionado(id)
-                          const adv = advogados.find(a => a.id === id)
-                          if (adv?.percentual_comissao && percentualParticipacao === 0) {
-                            setPercentualParticipacao(adv.percentual_comissao)
-                          }
-                        }}
+                <div className="px-3 pb-3 space-y-2 border-t border-[#89bcbe]/30 pt-3">
+                  {participantes.length === 0 && (
+                    <p className="text-[11px] text-slate-500 italic px-1">
+                      Nenhum advogado adicionado. Clique em "Adicionar advogado".
+                    </p>
+                  )}
+
+                  {participantes.map((p) => {
+                    const valorComissao = p.ativo
+                      ? (valorDigitado * p.percentual) / 100
+                      : 0
+                    const advogadosLinha = advogados.filter(
+                      (a) =>
+                        (a.user_id || '') === p.user_id ||
+                        !usuariosEscolhidos.has(a.user_id || '')
+                    )
+                    return (
+                      <div
+                        key={p.localId}
+                        className="rounded-md border border-[#89bcbe]/30 bg-white/60 p-2 space-y-2"
                       >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Selecione o advogado..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {advogados.map((adv) => (
-                            <SelectItem key={adv.id} value={adv.id}>
-                              {adv.nome}
-                              {adv.percentual_comissao ? ` (${adv.percentual_comissao}%)` : ''}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid gap-1.5">
-                      <Label className="text-xs">Percentual (%)</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.5"
-                        className="h-8 text-xs"
-                        value={percentualParticipacao || ''}
-                        onChange={(e) => setPercentualParticipacao(parseFloat(e.target.value) || 0)}
-                      />
-                    </div>
-                    <div className="grid gap-1.5">
-                      <Label className="text-xs">Vencimento da comissão</Label>
-                      <Input
-                        type="date"
-                        className="h-8 text-xs"
-                        value={dataVencimentoParticipacao}
-                        onChange={(e) => setDataVencimentoParticipacao(e.target.value)}
-                      />
-                    </div>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={p.ativo}
+                            onCheckedChange={(v) =>
+                              atualizarParticipante(p.localId, { ativo: v })
+                            }
+                          />
+                          <div className="flex-1 min-w-0">
+                            <Select
+                              value={p.user_id || undefined}
+                              onValueChange={(userId) => {
+                                const adv = advogados.find(
+                                  (a) => (a.user_id || '') === userId
+                                )
+                                atualizarParticipante(p.localId, {
+                                  user_id: userId,
+                                  nome: adv?.nome || p.nome || '',
+                                  // auto-preenche percentual com o padrão global, se ainda zero
+                                  percentual:
+                                    p.percentual > 0
+                                      ? p.percentual
+                                      : Number(adv?.percentual_comissao) || 0,
+                                })
+                              }}
+                              disabled={!p.ativo}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue
+                                  placeholder={
+                                    p.nome || 'Selecione o advogado...'
+                                  }
+                                />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {advogadosLinha.length === 0 && (
+                                  <div className="px-2 py-1.5 text-xs text-slate-400">
+                                    Nenhum advogado disponível
+                                  </div>
+                                )}
+                                {advogadosLinha.map((adv) => (
+                                  <SelectItem
+                                    key={adv.id}
+                                    value={adv.user_id || adv.id}
+                                  >
+                                    {adv.nome}
+                                    {adv.percentual_comissao
+                                      ? ` (${adv.percentual_comissao}%)`
+                                      : ''}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="relative w-20">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={100}
+                              step="0.5"
+                              className="h-8 text-xs pr-5"
+                              value={p.percentual || ''}
+                              onChange={(e) =>
+                                atualizarParticipante(p.localId, {
+                                  percentual: parseFloat(e.target.value) || 0,
+                                })
+                              }
+                              disabled={!p.ativo}
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none">
+                              %
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50 shrink-0"
+                            onClick={() => removerParticipante(p.localId)}
+                            aria-label="Remover participante"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+
+                        <div className="flex items-center gap-2 pl-10">
+                          <Label className="text-[10px] text-slate-500 uppercase tracking-wide shrink-0">
+                            Vence
+                          </Label>
+                          <Input
+                            type="date"
+                            className="h-7 text-[11px] flex-1"
+                            value={p.data_vencimento}
+                            onChange={(e) =>
+                              atualizarParticipante(p.localId, {
+                                data_vencimento: e.target.value,
+                              })
+                            }
+                            disabled={!p.ativo}
+                          />
+                          <span className="text-[10px] text-[#46627f] font-semibold shrink-0">
+                            {formatCurrency(valorComissao)}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={adicionarParticipante}
+                      disabled={
+                        advogados.length === 0 ||
+                        advogados.length <= participantes.length
+                      }
+                      className="h-7 text-[11px] border-dashed"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Adicionar advogado
+                    </Button>
+                    {participantesAtivos.length > 0 && (
+                      <div className="text-[10px] text-[#46627f]">
+                        Total:{' '}
+                        <span
+                          className={cn(
+                            'font-semibold',
+                            somaPercentualInvalida ? 'text-red-600' : 'text-[#34495e]'
+                          )}
+                        >
+                          {totalPercentual.toFixed(2).replace(/\.?0+$/, '')}%
+                        </span>
+                        {' → '}
+                        <span className="font-semibold text-[#34495e]">
+                          {formatCurrency(totalComissao)}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  {valorParticipacao > 0 && (
-                    <div className="flex items-center gap-1.5 bg-white/70 rounded-md px-2.5 py-1.5 border border-[#89bcbe]/20">
-                      <Info className="w-3 h-3 text-[#46627f] shrink-0" />
-                      <p className="text-[10px] text-[#46627f]">
-                        Despesa pendente de <span className="font-semibold">{formatCurrency(valorParticipacao)}</span> com vencimento em{' '}
-                        {dataVencimentoParticipacao
-                          ? new Date(dataVencimentoParticipacao + 'T12:00:00').toLocaleDateString('pt-BR')
-                          : '—'}
-                      </p>
-                    </div>
+
+                  {somaPercentualInvalida && (
+                    <p className="text-[11px] text-red-600 font-medium px-1">
+                      A soma dos percentuais excede 100%.
+                    </p>
                   )}
                 </div>
               )}
@@ -522,7 +802,7 @@ export function ModalRecebimento({
           </Button>
           <Button
             onClick={handleConfirmar}
-            disabled={loading || valorDigitado <= 0 || !contaBancariaId || !dataEfetivacao || (isParcial && !dataVencimentoSaldo) || (temParticipacao && (!advogadoSelecionado || !percentualParticipacao || !dataVencimentoParticipacao))}
+            disabled={confirmDesabilitado}
             className="bg-emerald-600 hover:bg-emerald-700"
           >
             {loading ? 'Processando...' : 'Confirmar Recebimento'}

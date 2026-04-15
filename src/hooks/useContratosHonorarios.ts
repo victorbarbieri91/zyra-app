@@ -70,6 +70,8 @@ export interface ContratoHonorario {
   formas_configuradas?: FormaCobranca[]
   // Grupo de clientes (grupo econômico)
   grupo_clientes?: GrupoClientes | null
+  // Comissão padrão por advogado (pré-preenche modal de recebimento)
+  comissoes_padrao?: ContratoComissaoPadrao[]
   // Reajuste monetário (contratos fixos)
   reajuste_ativo?: boolean
   valor_atualizado?: number | null
@@ -134,6 +136,17 @@ export interface ValorFixoItem {
   data_inicio_cobranca?: string // formato 'YYYY-MM', mês/ano de início da cobrança
 }
 
+// Comissão padrão de advogado configurada no contrato
+export interface ContratoComissaoPadrao {
+  id?: string // UUID do registro (presente apenas em edição)
+  user_id: string // FK auth.users (advogado participante)
+  nome?: string // nome_completo hidratado de profiles (apenas exibição)
+  percentual: number // > 0 e <= 100
+  ordem?: number
+  ativo?: boolean
+  observacoes?: string | null
+}
+
 // Cliente no grupo econômico
 export interface ClienteGrupo {
   cliente_id: string
@@ -188,6 +201,8 @@ export interface ContratoFormData {
   grupo_habilitado?: boolean
   grupo_clientes?: ClienteGrupo[]
   cliente_pagador_id?: string
+  // Comissão padrão por advogado
+  comissoes_padrao?: ContratoComissaoPadrao[]
 }
 
 export interface ContratosMetrics {
@@ -273,12 +288,40 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
             status,
             data_vencimento,
             dias_atraso
+          ),
+          financeiro_contratos_comissao_padrao (
+            id,
+            user_id,
+            percentual,
+            ordem,
+            ativo,
+            observacoes
           )
         `)
         .in('escritorio_id', idsParaConsulta)
         .order('created_at', { ascending: false })
 
       if (contratosError) throw contratosError
+
+      // Coletar user_ids de comissões para buscar nomes em uma única query
+      const userIdsComissoes = new Set<string>()
+      for (const contrato of contratosData || []) {
+        const comissoes = (contrato as Record<string, any>).financeiro_contratos_comissao_padrao || []
+        for (const c of comissoes) {
+          if (c.user_id) userIdsComissoes.add(c.user_id)
+        }
+      }
+
+      let nomesAdvogadosMap = new Map<string, string>()
+      if (userIdsComissoes.size > 0) {
+        const { data: perfis } = await supabase
+          .from('profiles')
+          .select('id, nome_completo')
+          .in('id', Array.from(userIdsComissoes))
+        if (perfis) {
+          nomesAdvogadosMap = new Map(perfis.map((p: { id: string; nome_completo: string | null }) => [p.id, p.nome_completo || '']))
+        }
+      }
 
       // Processar contratos com dados das receitas
       const contratosComDados: ContratoHonorario[] = (contratosData || []).map((contrato: Record<string, any>) => {
@@ -439,6 +482,29 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           formas_configuradas: formasConfiguradas,
           // Grupo de clientes (carregado do campo JSONB)
           grupo_clientes: contrato.grupo_clientes as GrupoClientes | null,
+          // Comissão padrão por advogado (hidratada com nomes via profiles)
+          comissoes_padrao: (contrato.financeiro_contratos_comissao_padrao || [])
+            .filter((c: { ativo?: boolean }) => c.ativo !== false)
+            .sort(
+              (a: { ordem?: number }, b: { ordem?: number }) =>
+                (a.ordem ?? 0) - (b.ordem ?? 0)
+            )
+            .map((c: {
+              id: string
+              user_id: string
+              percentual: number | string
+              ordem?: number
+              ativo?: boolean
+              observacoes?: string | null
+            }) => ({
+              id: c.id,
+              user_id: c.user_id,
+              nome: nomesAdvogadosMap.get(c.user_id) || '',
+              percentual: Number(c.percentual),
+              ordem: c.ordem,
+              ativo: c.ativo,
+              observacoes: c.observacoes ?? null,
+            })),
         }
       })
 
@@ -630,6 +696,32 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
             .eq('id', novoContrato.id)
 
           if (updateError) throw updateError
+        }
+
+        // Salvar comissões padrão dos advogados (batch insert)
+        const comissoesValidas = (data.comissoes_padrao || []).filter(
+          (c) => c.user_id && c.percentual > 0 && c.percentual <= 100
+        )
+        if (comissoesValidas.length > 0) {
+          const { data: userAuth } = await supabase.auth.getUser()
+          const createdByComissao = userAuth?.user?.id ?? null
+          const rowsComissao = comissoesValidas.map((c, idx) => ({
+            contrato_id: novoContrato.id,
+            escritorio_id: ownerEscritorioId,
+            user_id: c.user_id,
+            percentual: c.percentual,
+            ordem: c.ordem ?? idx,
+            ativo: c.ativo ?? true,
+            observacoes: c.observacoes ?? null,
+            created_by: createdByComissao,
+          }))
+          const { error: comissaoError } = await supabase
+            .from('financeiro_contratos_comissao_padrao')
+            .insert(rowsComissao)
+          if (comissaoError) {
+            // Não aborta a criação do contrato — apenas loga
+            console.error('[createContrato] Erro ao criar comissões padrão:', comissaoError)
+          }
         }
 
         // Criar regras de recorrência e gerar receitas vinculadas
@@ -938,6 +1030,43 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
 
         // Nota: Tabelas auxiliares de cargo e atos foram removidas
         // Agora todos os dados ficam no JSONB config (já atualizado acima)
+
+        // Sincronizar comissões padrão (estratégia delete+insert)
+        if (data.comissoes_padrao !== undefined) {
+          const { error: delComissaoError } = await supabase
+            .from('financeiro_contratos_comissao_padrao')
+            .delete()
+            .eq('contrato_id', id)
+          if (delComissaoError) {
+            console.error('[updateContrato] Erro ao deletar comissões antigas:', delComissaoError)
+            throw delComissaoError
+          }
+
+          const comissoesValidas = data.comissoes_padrao.filter(
+            (c) => c.user_id && c.percentual > 0 && c.percentual <= 100
+          )
+          if (comissoesValidas.length > 0) {
+            const { data: userAuthUpd } = await supabase.auth.getUser()
+            const createdByComissao = userAuthUpd?.user?.id ?? null
+            const rowsComissao = comissoesValidas.map((c, idx) => ({
+              contrato_id: id,
+              escritorio_id: data.escritorio_contrato_id || escritorioAtivo,
+              user_id: c.user_id,
+              percentual: c.percentual,
+              ordem: c.ordem ?? idx,
+              ativo: c.ativo ?? true,
+              observacoes: c.observacoes ?? null,
+              created_by: createdByComissao,
+            }))
+            const { error: insComissaoError } = await supabase
+              .from('financeiro_contratos_comissao_padrao')
+              .insert(rowsComissao)
+            if (insComissaoError) {
+              console.error('[updateContrato] Erro ao inserir comissões:', insComissaoError)
+              throw insComissaoError
+            }
+          }
+        }
 
         // Sincronizar regras de recorrência com valores fixos do contrato
         const valoresComPeriodicidade = (data.valores_fixos || []).filter(

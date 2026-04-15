@@ -48,6 +48,7 @@ import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 import { ContratoHonorario, ContratoFormData, FormaCobranca, ValorPorCargo, AtoContrato, ValorFixoItem, ClienteGrupo, GrupoClientes } from '@/hooks/useContratosHonorarios'
 import { AtoConfigCard } from './AtoConfigCard'
+import { ComissaoPadraoSection } from './ComissaoPadraoSection'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
@@ -191,6 +192,8 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
     grupo_habilitado: false,
     grupo_clientes: [],
     cliente_pagador_id: undefined,
+    // Comissão padrão por advogado
+    comissoes_padrao: [],
   })
 
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null)
@@ -331,6 +334,8 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
           grupo_habilitado: grupoClientes?.habilitado || false,
           grupo_clientes: grupoClientes?.clientes || [],
           cliente_pagador_id: grupoClientes?.cliente_pagador_id || undefined,
+          // Comissão padrão por advogado (hidratada pelo loadContratos)
+          comissoes_padrao: contrato.comissoes_padrao || [],
         })
         setSelectedCliente({
           id: contrato.cliente_id,
@@ -369,6 +374,8 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
           grupo_habilitado: false,
           grupo_clientes: [],
           cliente_pagador_id: undefined,
+          // Comissão padrão por advogado
+          comissoes_padrao: [],
         })
         setSelectedCliente(null)
         setSearchClienteGrupo('')
@@ -714,6 +721,22 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
           if (formData.valor_minimo_mensal > formData.valor_maximo_mensal) {
             return false // Inválido: mínimo maior que máximo
           }
+        }
+
+        // Validar comissões padrão (se houver)
+        const comissoes = formData.comissoes_padrao || []
+        if (comissoes.length > 0) {
+          // Todas as linhas devem ter advogado e percentual válido
+          const temInvalida = comissoes.some(
+            (c) => !c.user_id || c.percentual <= 0 || c.percentual > 100
+          )
+          if (temInvalida) return false
+          // Sem duplicatas
+          const userIds = new Set(comissoes.map((c) => c.user_id))
+          if (userIds.size !== comissoes.length) return false
+          // Soma <= 100
+          const total = comissoes.reduce((s, c) => s + (c.percentual || 0), 0)
+          if (total > 100) return false
         }
 
         return hasValidValue || formas.length === 0
@@ -1927,6 +1950,15 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
               </Card>
             )}
 
+            {/* Comissão padrão por advogado */}
+            <ComissaoPadraoSection
+              escritorioId={formData.escritorio_contrato_id ?? escritorioAtivo ?? undefined}
+              value={formData.comissoes_padrao ?? []}
+              onChange={(next) =>
+                setFormData((prev) => ({ ...prev, comissoes_padrao: next }))
+              }
+            />
+
             {/* Observações */}
             <div className="space-y-2">
               <Label htmlFor="observacoes">Observações (opcional)</Label>
@@ -2160,6 +2192,36 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
                   </div>
                 </div>
 
+
+                {formData.comissoes_padrao && formData.comissoes_padrao.length > 0 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                        Comissão padrão por advogado
+                      </p>
+                      <div className="space-y-1">
+                        {formData.comissoes_padrao.map((c, idx) => (
+                          <div
+                            key={c.user_id || `rev-${idx}`}
+                            className="flex justify-between text-sm"
+                          >
+                            <span className="text-slate-600 dark:text-slate-400">
+                              {c.nome || 'Advogado'}
+                            </span>
+                            <span className="font-medium">{c.percentual}%</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between text-xs pt-1 border-t border-slate-100 dark:border-slate-800 mt-1">
+                          <span className="text-slate-500">Total</span>
+                          <span className="font-semibold text-[#34495e] dark:text-slate-200">
+                            {formData.comissoes_padrao.reduce((s, c) => s + (c.percentual || 0), 0)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {formData.observacoes && (
                   <>

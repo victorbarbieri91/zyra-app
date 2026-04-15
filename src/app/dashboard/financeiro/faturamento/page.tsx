@@ -112,6 +112,8 @@ export default function FaturamentoPage() {
 
   const { notas: notasDebito, clientesComDespesas } = useNotasDebito()
 
+  const supabase = useMemo(() => createClient(), [])
+
   const [activeTab, setActiveTab] = useState<'prontos' | 'faturados' | 'notas_debito'>('prontos')
 
   const [clientes, setClientes] = useState<ClienteParaFaturar[]>([])
@@ -123,6 +125,9 @@ export default function FaturamentoPage() {
 
   // Estado para modal de recebimento
   const [faturaParaReceber, setFaturaParaReceber] = useState<FaturaGerada | null>(null)
+  const [comissoesPadraoDaFatura, setComissoesPadraoDaFatura] = useState<
+    import('@/hooks/useContratosHonorarios').ContratoComissaoPadrao[]
+  >([])
 
   // Estado para editar/excluir lançamentos
   const [editLancamento, setEditLancamento] = useState<LancamentoProntoFaturar | null>(null)
@@ -869,6 +874,53 @@ export default function FaturamentoPage() {
                     setContasBancarias(contas)
                   }
                   setFaturaParaReceber(fatura)
+                  setComissoesPadraoDaFatura([])
+
+                  // Buscar contrato_id da primeira receita vinculada à fatura
+                  try {
+                    const { data: receitaContrato } = await supabase
+                      .from('financeiro_receitas')
+                      .select('contrato_id')
+                      .eq('fatura_id', fatura.fatura_id)
+                      .not('contrato_id', 'is', null)
+                      .limit(1)
+                      .maybeSingle()
+
+                    const contratoId = receitaContrato?.contrato_id ?? null
+                    if (!contratoId) return
+
+                    const { data: comissoes } = await supabase
+                      .from('financeiro_contratos_comissao_padrao')
+                      .select('id, user_id, percentual, ordem, ativo, observacoes')
+                      .eq('contrato_id', contratoId)
+                      .eq('ativo', true)
+                      .order('ordem', { ascending: true })
+
+                    if (!comissoes || comissoes.length === 0) return
+
+                    const hidratadas = comissoes.map((c: {
+                      id: string
+                      user_id: string
+                      percentual: number | string
+                      ordem?: number
+                      ativo?: boolean
+                      observacoes?: string | null
+                    }) => {
+                      const adv = advogadosEscritorio.find((a) => a.user_id === c.user_id)
+                      return {
+                        id: c.id,
+                        user_id: c.user_id,
+                        nome: adv?.nome || '',
+                        percentual: Number(c.percentual),
+                        ordem: c.ordem,
+                        ativo: c.ativo,
+                        observacoes: c.observacoes ?? null,
+                      }
+                    })
+                    setComissoesPadraoDaFatura(hidratadas)
+                  } catch (err) {
+                    console.error('[faturamento] Erro ao carregar comissões do contrato:', err)
+                  }
                 }}
                 loading={loading}
                 showEscritorio={escritoriosGrupo.length > 1}
@@ -1044,7 +1096,10 @@ export default function FaturamentoPage() {
       {/* Modal de Recebimento */}
       <ModalRecebimento
         open={faturaParaReceber !== null}
-        onClose={() => setFaturaParaReceber(null)}
+        onClose={() => {
+          setFaturaParaReceber(null)
+          setComissoesPadraoDaFatura([])
+        }}
         item={faturaParaReceber ? {
           id: faturaParaReceber.fatura_id,
           origem_id: faturaParaReceber.fatura_id,
@@ -1061,6 +1116,7 @@ export default function FaturamentoPage() {
         } : null}
         contasBancarias={contasBancarias}
         advogados={advogadosEscritorio.map(a => ({ id: a.id, user_id: a.user_id, nome: a.nome, percentual_comissao: a.percentual_comissao }))}
+        comissoesPadrao={comissoesPadraoDaFatura}
         onPagamentoRealizado={loadData}
       />
 

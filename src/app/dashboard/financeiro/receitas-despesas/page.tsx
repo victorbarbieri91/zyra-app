@@ -268,6 +268,9 @@ export default function ExtratoFinanceiroPage() {
 
   // Modal unificado de recebimento
   const [itemParaReceber, setItemParaReceber] = useState<ExtratoItem | null>(null)
+  const [comissoesPadraoDoItem, setComissoesPadraoDoItem] = useState<
+    import('@/hooks/useContratosHonorarios').ContratoComissaoPadrao[]
+  >([])
 
   // Modais
   const [modalRecebimentoParcial, setModalRecebimentoParcial] = useState<ExtratoItem | null>(null)
@@ -696,6 +699,73 @@ export default function ExtratoFinanceiroPage() {
       loadAdvogadosEscritorio()
     }
   }, [escritoriosSelecionados, loadExtrato, loadContasBancarias, loadAdvogadosEscritorio])
+
+  // Abrir modal de recebimento — carrega lazy as comissões padrão do contrato vinculado
+  const abrirRecebimento = useCallback(async (item: ExtratoItem) => {
+    setItemParaReceber(item)
+    setComissoesPadraoDoItem([])
+
+    if (!item.origem_id) return
+
+    try {
+      let contratoId: string | null = null
+
+      if (item.origem === 'fatura') {
+        // Fatura pode agregar várias receitas — pega contrato da primeira com contrato
+        const { data } = await supabase
+          .from('financeiro_receitas')
+          .select('contrato_id')
+          .eq('fatura_id', item.origem_id)
+          .not('contrato_id', 'is', null)
+          .limit(1)
+          .maybeSingle()
+        contratoId = data?.contrato_id ?? null
+      } else {
+        // Demais origens de receita (honorario, parcela, saldo, avulso)
+        const { data } = await supabase
+          .from('financeiro_receitas')
+          .select('contrato_id')
+          .eq('id', item.origem_id)
+          .maybeSingle()
+        contratoId = data?.contrato_id ?? null
+      }
+
+      if (!contratoId) return
+
+      const { data: comissoes } = await supabase
+        .from('financeiro_contratos_comissao_padrao')
+        .select('id, user_id, percentual, ordem, ativo, observacoes')
+        .eq('contrato_id', contratoId)
+        .eq('ativo', true)
+        .order('ordem', { ascending: true })
+
+      if (!comissoes || comissoes.length === 0) return
+
+      // Hidratar nomes usando advogadosEscritorio já carregado em memória
+      const hidratadas = comissoes.map((c: {
+        id: string
+        user_id: string
+        percentual: number | string
+        ordem?: number
+        ativo?: boolean
+        observacoes?: string | null
+      }) => {
+        const adv = advogadosEscritorio.find((a) => a.user_id === c.user_id)
+        return {
+          id: c.id,
+          user_id: c.user_id,
+          nome: adv?.nome || '',
+          percentual: Number(c.percentual),
+          ordem: c.ordem,
+          ativo: c.ativo,
+          observacoes: c.observacoes ?? null,
+        }
+      })
+      setComissoesPadraoDoItem(hidratadas)
+    } catch (err) {
+      console.error('[abrirRecebimento] Erro ao carregar comissões do contrato:', err)
+    }
+  }, [supabase, advogadosEscritorio])
 
   // (Funções de materializar/efetivar previsto removidas — materialização eager)
 
@@ -2991,7 +3061,7 @@ export default function ExtratoFinanceiroPage() {
                           size="sm"
                           className="h-6 w-6 p-0 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
                           title="Receber"
-                          onClick={() => setItemParaReceber(item)}
+                          onClick={() => abrirRecebimento(item)}
                         >
                           <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                         </Button>
@@ -3564,7 +3634,7 @@ export default function ExtratoFinanceiroPage() {
                             size="sm"
                             className="h-6 w-6 p-0 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
                             title="Receber"
-                            onClick={() => setItemParaReceber(item)}
+                            onClick={() => abrirRecebimento(item)}
                           >
                             <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                           </Button>
@@ -5295,7 +5365,10 @@ export default function ExtratoFinanceiroPage() {
       {/* Modal Unificado de Recebimento */}
       <ModalRecebimento
         open={itemParaReceber !== null}
-        onClose={() => setItemParaReceber(null)}
+        onClose={() => {
+          setItemParaReceber(null)
+          setComissoesPadraoDoItem([])
+        }}
         item={itemParaReceber ? {
           id: itemParaReceber.id,
           origem_id: itemParaReceber.origem_id || itemParaReceber.id,
@@ -5312,6 +5385,7 @@ export default function ExtratoFinanceiroPage() {
         } : null}
         contasBancarias={contasBancarias}
         advogados={advogadosEscritorio.map(a => ({ id: a.id, user_id: a.user_id, nome: a.nome, percentual_comissao: a.percentual_comissao }))}
+        comissoesPadrao={comissoesPadraoDoItem}
         onPagamentoRealizado={loadExtrato}
       />
 

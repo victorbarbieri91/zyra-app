@@ -182,6 +182,34 @@ const getCategoriaConfig = (categoria: string) => {
 const PAGE_SIZE_OPTIONS = [150, 200, 250]
 const DEFAULT_PAGE_SIZE = 150
 
+type TipoFiltroValue = 'todos' | 'receita' | 'despesa' | 'transferencia'
+type StatusFiltroValue = 'todos' | 'pendente' | 'agendado' | 'liberado' | 'efetivado' | 'vencido'
+
+const TIPO_OPTIONS: ReadonlyArray<{
+  value: TipoFiltroValue
+  label: string
+  icon: typeof FileText
+  iconClass: string
+}> = [
+  { value: 'todos', label: 'Todos', icon: FileText, iconClass: 'text-slate-400' },
+  { value: 'receita', label: 'Receitas', icon: TrendingUp, iconClass: 'text-emerald-600' },
+  { value: 'despesa', label: 'Despesas', icon: TrendingDown, iconClass: 'text-red-600' },
+  { value: 'transferencia', label: 'Transferências', icon: ArrowLeftRight, iconClass: 'text-blue-600' },
+]
+
+const STATUS_OPTIONS: ReadonlyArray<{
+  value: StatusFiltroValue
+  label: string
+  dotClass: string
+}> = [
+  { value: 'todos', label: 'Todos', dotClass: 'bg-slate-300' },
+  { value: 'pendente', label: 'Pendentes', dotClass: 'bg-amber-500' },
+  { value: 'agendado', label: 'Agendados', dotClass: 'bg-blue-500' },
+  { value: 'liberado', label: 'Liberados', dotClass: 'bg-teal-500' },
+  { value: 'efetivado', label: 'Efetivados', dotClass: 'bg-emerald-500' },
+  { value: 'vencido', label: 'Vencidos', dotClass: 'bg-red-500' },
+]
+
 // Helpers para período
 const getInicioMes = (date: Date = new Date()) => {
   return new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0]
@@ -227,13 +255,14 @@ export default function ExtratoFinanceiroPage() {
   const statusUrl = searchParams.get('status')
   const contaUrl = searchParams.get('conta')
   const mesUrl = searchParams.get('mes') // formato YYYY-MM
-  const statusInicial = (statusUrl === 'vencido' || statusUrl === 'pendente' || statusUrl === 'efetivado') ? statusUrl : 'todos'
+  const statusValidosUrl: StatusFiltroValue[] = ['pendente', 'agendado', 'liberado', 'efetivado', 'vencido']
+  const statusInicial: StatusFiltroValue = (statusUrl && (statusValidosUrl as string[]).includes(statusUrl)) ? (statusUrl as StatusFiltroValue) : 'todos'
 
   // Se veio mês da URL (ex: ?mes=2026-03), usar como período inicial
   const mesUrlDate = mesUrl ? new Date(Number(mesUrl.split('-')[0]), Number(mesUrl.split('-')[1]) - 1, 1) : null
 
-  const [tipoFiltro, setTipoFiltro] = useState<'todos' | 'receita' | 'despesa' | 'transferencia'>(statusUrl ? 'receita' : 'todos')
-  const [statusFiltro, setStatusFiltro] = useState<'todos' | 'pendente' | 'vencido' | 'efetivado'>(statusInicial as any)
+  const [tipoFiltro, setTipoFiltro] = useState<TipoFiltroValue>(statusUrl ? 'receita' : 'todos')
+  const [statusFiltro, setStatusFiltro] = useState<StatusFiltroValue>(statusInicial)
   const [contaFiltro, setContaFiltro] = useState<string>(contaUrl || 'todas')  // 'todas' ou ID da conta
 
   // Filtro de período - padrão: mês atual, ou mês da URL se disponível
@@ -2545,46 +2574,49 @@ export default function ExtratoFinanceiroPage() {
 
       {/* Busca e Filtros */}
       <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex gap-2 flex-wrap">
-            {/* Navegador de Mês */}
-            <div className="flex items-center border border-slate-200 dark:border-slate-700 rounded-md h-9">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-full px-2 rounded-r-none hover:bg-slate-100 dark:hover:bg-surface-3"
-                onClick={() => navegarMes(-1)}
-              >
-                <ChevronLeft className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-              </Button>
-              <span className="text-sm font-medium text-[#34495e] dark:text-slate-200 px-2 min-w-[120px] text-center capitalize">
-                {getMesLabel()}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-full px-2 rounded-l-none hover:bg-slate-100 dark:hover:bg-surface-3"
-                onClick={() => navegarMes(1)}
-              >
-                <ChevronRight className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-              </Button>
-            </div>
-
-            {/* Seletor de Período */}
-            <Popover open={periodoAberto} onOpenChange={setPeriodoAberto}>
-              <PopoverTrigger asChild>
+        <CardContent className="p-4 space-y-4">
+          {/* ============ LINHA 1 — primária: mês + período + busca ============ */}
+          <div className="flex flex-col md:flex-row gap-2 md:gap-3 md:items-center">
+            {/* Navegador de Mês + botão de período avançado (lado a lado, inclusive no mobile) */}
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center rounded-lg h-10 bg-[#34495e] text-white shadow-sm">
                 <Button
-                  variant="outline"
-                  className="h-9 px-3 gap-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-surface-3"
+                  variant="ghost"
+                  className="h-full px-2.5 rounded-r-none text-white hover:bg-white/10 hover:text-white"
+                  onClick={() => navegarMes(-1)}
+                  aria-label="Mês anterior"
                 >
-                  <CalendarDays className="h-4 w-4 text-[#89bcbe]" />
-                  <span className="text-sm font-medium text-[#34495e] dark:text-slate-200">
-                    {getPeriodoLabel()}
-                  </span>
-                  <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                  <ChevronLeft className="w-4 h-4" />
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-72 p-0" align="start">
+                <span className="text-sm font-semibold px-2 min-w-[140px] text-center first-letter:uppercase">
+                  {getMesLabel()}
+                </span>
+                <Button
+                  variant="ghost"
+                  className="h-full px-2.5 rounded-l-none text-white hover:bg-white/10 hover:text-white"
+                  onClick={() => navegarMes(1)}
+                  aria-label="Próximo mês"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Período avançado — demovido para botão ícone */}
+              <Popover open={periodoAberto} onOpenChange={setPeriodoAberto}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "h-10 w-10 p-0 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-surface-3",
+                      periodoPreset !== 'mes_atual' && "border-[#89bcbe] bg-[#f0f9f9]/50 dark:bg-teal-900/20"
+                    )}
+                    title="Período personalizado"
+                    aria-label="Período personalizado"
+                  >
+                    <CalendarDays className="w-4 h-4 text-[#89bcbe]" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-0" align="start">
                 <div className="p-3 border-b border-slate-100 dark:border-slate-700">
                   <p className="text-xs font-medium text-[#34495e] dark:text-slate-200">Selecionar período:</p>
                 </div>
@@ -2678,8 +2710,10 @@ export default function ExtratoFinanceiroPage() {
                 </div>
               </PopoverContent>
             </Popover>
+            </div>
 
-            <div className="relative flex-1 min-w-[200px]">
+            {/* Busca — ocupa o resto da linha */}
+            <div className="relative flex-1 min-w-0">
               {loading && searchQuery ? (
                 <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 animate-spin" />
               ) : (
@@ -2689,110 +2723,114 @@ export default function ExtratoFinanceiroPage() {
                 placeholder="Buscar por descrição, entidade ou valor..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="h-10 pl-9 text-sm"
               />
             </div>
+          </div>
 
-            {/* Filtro por Tipo */}
-            <Select value={tipoFiltro} onValueChange={(v) => setTipoFiltro(v as typeof tipoFiltro)}>
-              <SelectTrigger className="h-9 w-[150px] text-sm border-slate-200 dark:border-slate-700">
-                <div className="flex items-center gap-1.5">
-                  {tipoFiltro === 'despesa' ? (
-                    <TrendingDown className="w-3.5 h-3.5 text-red-600" />
-                  ) : tipoFiltro === 'receita' ? (
-                    <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-                  ) : tipoFiltro === 'transferencia' ? (
-                    <ArrowLeftRight className="w-3.5 h-3.5 text-blue-600" />
-                  ) : (
-                    <FileText className="w-3.5 h-3.5 text-slate-400" />
+          {/* ============ LINHA 2 — filtros como chips ============ */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {/* Tipo — segmented control */}
+            <div className="flex p-0.5 bg-slate-100 dark:bg-surface-2 rounded-lg">
+              {TIPO_OPTIONS.map((opt) => {
+                const Icon = opt.icon
+                const ativo = tipoFiltro === opt.value
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setTipoFiltro(opt.value)}
+                    className={cn(
+                      'flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-medium transition-all whitespace-nowrap',
+                      ativo
+                        ? 'bg-[#89bcbe] text-white shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300'
+                    )}
+                  >
+                    <Icon className={cn('w-3.5 h-3.5', ativo ? 'text-white' : opt.iconClass)} />
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Status — segmented control (6 chips) */}
+            <div className="flex p-0.5 bg-slate-100 dark:bg-surface-2 rounded-lg overflow-x-auto max-w-full">
+              {STATUS_OPTIONS.map((opt) => {
+                const ativo = statusFiltro === opt.value
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setStatusFiltro(opt.value)}
+                    className={cn(
+                      'flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-medium transition-all whitespace-nowrap',
+                      ativo
+                        ? 'bg-[#89bcbe] text-white shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300'
+                    )}
+                  >
+                    <span className={cn('w-2 h-2 rounded-full shrink-0', opt.dotClass)} />
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Conta — Popover estilo pill, empurrado para o fim da linha */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    'md:ml-auto h-9 rounded-full px-3.5 gap-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 hover:bg-slate-50 dark:hover:bg-surface-3',
+                    contaFiltro !== 'todas' && 'border-[#89bcbe] bg-[#f0f9f9]/50 dark:bg-teal-900/20'
                   )}
-                  <SelectValue placeholder="Tipo" />
+                >
+                  <Building2 className="w-3.5 h-3.5 text-[#89bcbe]" />
+                  <span className="text-xs font-medium text-[#34495e] dark:text-slate-200">
+                    {contaFiltro === 'todas'
+                      ? 'Todas as contas'
+                      : (() => {
+                          const cb = contasBancarias.find((c) => c.id === contaFiltro)
+                          return cb ? `${cb.banco} — ${cb.numero_conta}` : 'Conta'
+                        })()}
+                  </span>
+                  <ChevronDown className="w-3 h-3 text-slate-400" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-1" align="start">
+                <button
+                  type="button"
+                  onClick={() => setContaFiltro('todas')}
+                  className={cn(
+                    'w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
+                    contaFiltro === 'todas'
+                      ? 'bg-[#89bcbe]/20 text-[#34495e] dark:text-slate-200 font-medium'
+                      : 'hover:bg-slate-50 dark:hover:bg-surface-3 text-slate-600 dark:text-slate-400'
+                  )}
+                >
+                  Todas as contas
+                </button>
+                <div className="max-h-64 overflow-y-auto">
+                  {contasBancarias.map((cb) => (
+                    <button
+                      key={cb.id}
+                      type="button"
+                      onClick={() => setContaFiltro(cb.id)}
+                      className={cn(
+                        'w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
+                        contaFiltro === cb.id
+                          ? 'bg-[#89bcbe]/20 text-[#34495e] dark:text-slate-200 font-medium'
+                          : 'hover:bg-slate-50 dark:hover:bg-surface-3 text-slate-600 dark:text-slate-400'
+                      )}
+                    >
+                      {cb.banco} — {cb.numero_conta}
+                    </button>
+                  ))}
                 </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os tipos</SelectItem>
-                <SelectItem value="despesa">
-                  <span className="flex items-center gap-2">
-                    <TrendingDown className="w-3.5 h-3.5 text-red-600 shrink-0" />
-                    Despesas
-                  </span>
-                </SelectItem>
-                <SelectItem value="receita">
-                  <span className="flex items-center gap-2">
-                    <TrendingUp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    Receitas
-                  </span>
-                </SelectItem>
-                <SelectItem value="transferencia">
-                  <span className="flex items-center gap-2">
-                    <ArrowLeftRight className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    Transferências
-                  </span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Filtro por Status */}
-            <Select value={statusFiltro} onValueChange={(v) => setStatusFiltro(v as typeof statusFiltro)}>
-              <SelectTrigger className="h-9 w-[170px] text-sm border-slate-200 dark:border-slate-700">
-                <div className="flex items-center gap-1.5">
-                  <span className={cn(
-                    "w-2 h-2 rounded-full shrink-0",
-                    statusFiltro === 'vencido' ? 'bg-red-500' :
-                    statusFiltro === 'pendente' ? 'bg-amber-500' :
-                    statusFiltro === 'efetivado' ? 'bg-emerald-500' :
-                    'bg-slate-300'
-                  )} />
-                  <SelectValue placeholder="Status" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os status</SelectItem>
-                <SelectItem value="pendente">
-                  <span className="flex items-center gap-2">
-                    <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                    Pendentes
-                  </span>
-                </SelectItem>
-                <SelectItem value="vencido">
-                  <span className="flex items-center gap-2">
-                    <XCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
-                    Vencidos
-                  </span>
-                </SelectItem>
-                <SelectItem value="efetivado">
-                  <span className="flex items-center gap-2">
-                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    Efetivados
-                  </span>
-                </SelectItem>
-                {/* Previsto removido — tudo é materializado como pendente */
-                false && <SelectItem value="previsto">
-                  <span className="flex items-center gap-2">
-                    <CalendarDays className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    Previstos
-                  </span>
-                </SelectItem>}
-              </SelectContent>
-            </Select>
-
-            {/* Filtro por Conta */}
-            <Select value={contaFiltro} onValueChange={setContaFiltro}>
-              <SelectTrigger className="h-9 w-[180px] text-sm border-slate-200 dark:border-slate-700">
-                <div className="flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                  <SelectValue placeholder="Conta" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todas as contas</SelectItem>
-                {contasBancarias.map((cb) => (
-                  <SelectItem key={cb.id} value={cb.id}>
-                    {cb.banco} - {cb.numero_conta}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              </PopoverContent>
+            </Popover>
           </div>
         </CardContent>
       </Card>
@@ -2807,7 +2845,7 @@ export default function ExtratoFinanceiroPage() {
               className="text-xs h-6 gap-1 cursor-pointer hover:bg-slate-200 dark:hover:bg-surface-3"
               onClick={() => setTipoFiltro('todos')}
             >
-              {tipoFiltro === 'receita' ? 'Receitas' : tipoFiltro === 'despesa' ? 'Despesas' : 'Transferências'}
+              {TIPO_OPTIONS.find((o) => o.value === tipoFiltro)?.label}
               <XCircle className="w-3 h-3" />
             </Badge>
           )}
@@ -2817,7 +2855,7 @@ export default function ExtratoFinanceiroPage() {
               className="text-xs h-6 gap-1 cursor-pointer hover:bg-slate-200 dark:hover:bg-surface-3"
               onClick={() => setStatusFiltro('todos')}
             >
-              {statusFiltro === 'pendente' ? 'Pendentes' : statusFiltro === 'vencido' ? 'Vencidos' : statusFiltro === 'efetivado' ? 'Efetivados' : 'Previstos'}
+              {STATUS_OPTIONS.find((o) => o.value === statusFiltro)?.label}
               <XCircle className="w-3 h-3" />
             </Badge>
           )}

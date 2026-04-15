@@ -508,11 +508,34 @@ export function useFaturamento(escritorioIdOrIds: string | string[] | null) {
           },
         })
 
-        if (fnError) throw fnError
+        // Se a edge function retornou erro HTTP (4xx/5xx), o body pode vir em fnError.context
+        if (fnError) {
+          // Tenta extrair mensagem de erro rica do body HTTP
+          let mensagem = fnError.message
+          try {
+            const ctx: any = (fnError as any).context
+            if (ctx && typeof ctx.json === 'function') {
+              const body = await ctx.json()
+              if (body?.error) mensagem = body.error
+            }
+          } catch {
+            // ignora erros de parsing, usa mensagem original
+          }
+          throw new Error(mensagem)
+        }
         if (response?.error) throw new Error(response.error)
 
+        // Validação defensiva: edge function retornou sucesso mas fatura veio inválida
+        const valorTotalRetornado = Number(response?.valor_total ?? 0)
+        const qtdItensRetornada = Number(response?.qtd_itens ?? 0)
+        if (!response?.fatura_id || valorTotalRetornado <= 0 || qtdItensRetornada === 0) {
+          throw new Error(
+            'Fatura gerada veio inválida (sem itens ou com valor zero). Verifique os lançamentos selecionados.'
+          )
+        }
+
         console.log('Fatura gerada:', response)
-        return response?.fatura_id as string
+        return response.fatura_id as string
       } catch (err: any) {
         setError(err.message)
         captureOperationError(err, { module: 'Faturamento', operation: 'gerar', table: 'financeiro_faturamento_faturas' })

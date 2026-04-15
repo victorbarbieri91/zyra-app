@@ -96,7 +96,7 @@ Deno.serve(async (req: Request) => {
         `)
         .in('id', p_honorarios_ids!)
         .eq('cliente_id', p_cliente_id)
-        .eq('status', 'pendente')
+        .in('status', ['pendente', 'atrasado'])
         .is('fatura_id', null);
 
       if (receitasError) throw receitasError;
@@ -318,7 +318,26 @@ Deno.serve(async (req: Request) => {
     }
 
     // ============================================
-    // 4. Criar a fatura
+    // 4. Validação defensiva: não criar fatura zerada
+    // ============================================
+    if (itens.length === 0 || valorTotal <= 0) {
+      return new Response(
+        JSON.stringify({
+          error: 'Nenhum lançamento válido encontrado para faturamento',
+          detalhe: `Confira se os lançamentos selecionados ainda existem, estão elegíveis e pertencem ao cliente informado.`,
+          honorarios_solicitados: p_honorarios_ids?.length ?? 0,
+          timesheets_solicitados: p_timesheet_ids?.length ?? 0,
+          fechamentos_solicitados: p_fechamentos_ids?.length ?? 0,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // ============================================
+    // 5. Criar a fatura
     // ============================================
     const { data: fatura, error: faturaError } = await supabase
       .from('financeiro_faturamento_faturas')
@@ -342,7 +361,7 @@ Deno.serve(async (req: Request) => {
     const faturaId = fatura.id;
 
     // ============================================
-    // 5. Atualizar honorarios
+    // 6. Atualizar honorarios
     // ============================================
     if (hasHonorarios) {
       await supabase
@@ -350,11 +369,11 @@ Deno.serve(async (req: Request) => {
         .update({ status: 'faturado', fatura_id: faturaId, updated_at: new Date().toISOString() })
         .in('id', p_honorarios_ids!)
         .eq('cliente_id', p_cliente_id)
-        .eq('status', 'pendente');
+        .in('status', ['pendente', 'atrasado']);
     }
 
     // ============================================
-    // 6. Atualizar timesheet
+    // 7. Atualizar timesheets
     // ============================================
     if (hasTimesheet) {
       await supabase
@@ -366,7 +385,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // ============================================
-    // 7. Atualizar fechamentos
+    // 8. Atualizar fechamentos
     // ============================================
     if (hasFechamentos) {
       await supabase
@@ -378,7 +397,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // ============================================
-    // 8. Notificacao
+    // 9. Notificacao
     // ============================================
     if (p_user_id) {
       await supabase

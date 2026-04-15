@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { getNowInBrazil, proximoDiaVencimento } from '@/lib/timezone';
 
 // =====================================================
 // TIPOS
@@ -253,12 +254,42 @@ export function useCobrancaFixa(escritorioId: string | null): UseCobrancaFixaRet
       const valorSelecionado = valoresDisponiveis.find(v => v.id === valorId);
       const descricaoFinal = descricao || valorSelecionado?.descricao || 'Honorário Fixo';
 
-      // Calcular datas
-      const hoje = new Date();
+      // Buscar dia_vencimento do contrato (pode estar no nível do valor fixo específico
+      // ou no nível do contrato/config). Fallback: dia 10 do mês.
+      let diaVencimento = 10;
+      if (contratoId) {
+        const { data: contrato } = await supabase
+          .from('financeiro_contratos_honorarios')
+          .select('config')
+          .eq('id', contratoId)
+          .single();
+
+        const config = (contrato?.config ?? null) as Record<string, unknown> | null;
+        if (config) {
+          // 1. Se o próprio valor fixo tem dia_vencimento, usa
+          const valoresFixos = Array.isArray(config.valores_fixos)
+            ? (config.valores_fixos as Array<Record<string, unknown>>)
+            : [];
+          const vf = valoresFixos.find((v) => v.id === valorId);
+          const diaDoValor = vf?.dia_vencimento;
+          // 2. Senão, usa o dia_cobranca do contrato
+          const diaDoContrato = config.dia_cobranca ?? config.dia_vencimento;
+
+          const diaCandidato =
+            (typeof diaDoValor === 'number' ? diaDoValor : undefined) ??
+            (typeof diaDoContrato === 'number' ? diaDoContrato : undefined);
+
+          if (diaCandidato && diaCandidato >= 1 && diaCandidato <= 31) {
+            diaVencimento = diaCandidato;
+          }
+        }
+      }
+
+      // Calcular datas (respeita o dia_vencimento do contrato)
+      const hoje = getNowInBrazil();
       const dataCompetencia = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
         .toISOString().split('T')[0];
-      const dataVencimento = new Date(hoje.getTime() + 30 * 24 * 60 * 60 * 1000)
-        .toISOString().split('T')[0];
+      const dataVencimento = proximoDiaVencimento(hoje, diaVencimento);
 
       // Criar receita
       const { data: receita, error: receitaError } = await supabase

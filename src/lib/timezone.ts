@@ -209,6 +209,47 @@ export function formatDateTimeForDB(date: Date): string {
 }
 
 /**
+ * Calcula a próxima ocorrência de um dia específico do mês a partir de uma data.
+ *
+ * Regra: se a data de referência ainda não passou do dia do vencimento no mês atual,
+ * usa o mês atual. Se já passou, usa o mês seguinte. Se o dia não existe no mês
+ * alvo (ex: dia 31 em fevereiro), usa o último dia do mês.
+ *
+ * @example
+ * // Hoje é 15/abr/2026, dia_vencimento = 10 → 10/mai/2026 (pulou mês)
+ * // Hoje é 05/abr/2026, dia_vencimento = 10 → 10/abr/2026 (ainda dá tempo)
+ * // Hoje é 31/jan/2026, dia_vencimento = 31 → 31/jan/2026
+ * // Hoje é 15/jan/2026, dia_vencimento = 31 → 31/jan/2026
+ * // Hoje é 01/fev/2026, dia_vencimento = 31 → 28/fev/2026 (ajuste fim do mês)
+ *
+ * @param referencia - Data base (geralmente hoje). Default: agora em Brasília.
+ * @param diaVencimento - Dia do mês (1-31).
+ * @returns Data no formato 'YYYY-MM-DD'.
+ */
+export function proximoDiaVencimento(
+  referencia: Date = getNowInBrazil(),
+  diaVencimento: number
+): string {
+  const dia = Math.max(1, Math.min(31, Math.floor(diaVencimento)))
+  const ano = referencia.getFullYear()
+  const mesAtual = referencia.getMonth() // 0-indexed
+  const diaReferencia = referencia.getDate()
+
+  // Se hoje ainda não passou do dia do vencimento, usa este mês
+  // Se já passou, pula pro mês seguinte
+  const mesAlvo = diaReferencia <= dia ? mesAtual : mesAtual + 1
+
+  // Último dia do mês alvo (ajuste para meses curtos)
+  const ultimoDiaDoMes = new Date(ano, mesAlvo + 1, 0).getDate()
+  const diaFinal = Math.min(dia, ultimoDiaDoMes)
+
+  const ano2 = new Date(ano, mesAlvo, 1).getFullYear()
+  const mes2 = new Date(ano, mesAlvo, 1).getMonth() + 1
+
+  return `${ano2}-${String(mes2).padStart(2, '0')}-${String(diaFinal).padStart(2, '0')}`
+}
+
+/**
  * Verifica se uma data é hoje (no timezone de Brasília)
  */
 export function isToday(date: Date | string): boolean {

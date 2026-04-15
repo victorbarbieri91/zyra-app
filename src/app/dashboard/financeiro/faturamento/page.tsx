@@ -92,6 +92,7 @@ export default function FaturamentoPage() {
 
   const {
     loading,
+    error: faturamentoError,
     loadClientesParaFaturar,
     loadLancamentosPorCliente,
     loadFaturasGeradas,
@@ -427,7 +428,7 @@ export default function FaturamentoPage() {
       loadData()
       setActiveTab('faturados')
     } else {
-      toast.error('Erro ao gerar fatura. Tente novamente.')
+      toast.error(faturamentoError || 'Erro ao gerar fatura. Tente novamente.')
     }
   }
 

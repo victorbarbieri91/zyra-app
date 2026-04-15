@@ -698,6 +698,65 @@ kpi4: from-[#aacfd0] to-[#cbe2e2]  (lightest, dark text)
 
 **Financial Backgrounds**: `#f0f9f9`, `#e8f5f5`
 
+### Alertas e Avisos em Modais — Padrão do Sistema
+
+IMPORTANTE: **NÃO usar vermelho ou amarelo** em banners informativos dentro de modais, nem para escopos de edição nem para avisos de contexto. O sistema tem um padrão visual mais calmo e elegante baseado na paleta teal/slate oficial. Reserve vermelho apenas para **botões realmente destrutivos** (`Button variant="destructive"`) e amarelo apenas para **ícones pontuais** (`AlertTriangle` em estados muito específicos).
+
+**Padrão para banners informativos** (ex: "editando toda a série", "esta ação afeta X itens"):
+```tsx
+<div className="flex items-start gap-2.5 px-4 py-2.5 rounded-lg bg-[#f0f9f9] border border-[#89bcbe]/40 dark:bg-teal-500/10 dark:border-teal-500/30">
+  <Info className="w-4 h-4 text-[#89bcbe] mt-0.5 flex-shrink-0" />
+  <div className="text-sm text-[#46627f] dark:text-slate-300">
+    Texto do aviso com <strong className="text-[#34495e] dark:text-slate-200">destaque em slate escuro</strong>.
+  </div>
+</div>
+```
+
+**Padrão para listas de impacto** (ex: "o que acontecerá ao confirmar"):
+```tsx
+<div className="flex items-start gap-3 px-4 py-3.5 rounded-lg bg-slate-50 dark:bg-surface-2 border border-slate-200 dark:border-slate-700">
+  <AlertCircle className="w-4 h-4 text-[#46627f] dark:text-slate-400 mt-0.5 flex-shrink-0" />
+  <div className="text-sm text-[#46627f] dark:text-slate-300 space-y-2">
+    <p className="font-medium text-[#34495e] dark:text-slate-200">Título</p>
+    <ul className="list-disc list-outside pl-4 space-y-1 text-[13px] leading-relaxed">...</ul>
+  </div>
+</div>
+```
+
+**Segmented control (toggle interno de modais)** — para escolha binária (ex: "Apenas este / Toda a série"):
+```tsx
+<div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-surface-2 rounded-lg">
+  <button
+    type="button"
+    onClick={() => setEscopo('instancia')}
+    className={cn(
+      'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-medium transition-all',
+      escopo === 'instancia'
+        ? 'bg-[#34495e] text-white shadow-sm'  // estado ativo: azul escuro + texto branco
+        : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
+    )}
+  >
+    <CalendarDays className="w-4 h-4" />
+    Opção A
+  </button>
+  {/* segundo botão idêntico */}
+</div>
+```
+- Container: `bg-slate-100` com `p-1` e `rounded-lg`
+- Estado **ativo**: `bg-[#34495e] text-white` (azul escuro do sistema) com `shadow-sm` — fica claro que é um botão
+- Estado **inativo**: `text-slate-500` com hover sutil
+- Cor ativa NÃO é branco/teal claro porque fica parecendo card de informação em vez de botão
+- Ícone + label (um ao lado do outro), `gap-2`
+- Exemplo em produção: [LancamentoEditarModal.tsx](src/components/financeiro/LancamentoEditarModal.tsx), [LancamentoExcluirModal.tsx](src/components/financeiro/LancamentoExcluirModal.tsx)
+
+**Estrutura recomendada de modais de edição/exclusão** (de `Lancamento*Modal.tsx`):
+- `DialogContent` com `!p-0 gap-0` para controlar padding manualmente
+- **Header** (`px-6 pt-6 pb-5 border-b border-slate-100`): ícone em container colorido + título + `DialogDescription` com metadados do item sendo manipulado (descrição, valor, data) — ajuda o usuário a confirmar o contexto
+- **Content** (`px-6 py-5 space-y-5`): seções separadas por `border-t border-slate-100` e título `<SectionTitle>` minúsculo (`text-xs font-semibold uppercase tracking-wider text-[#46627f]`)
+- **Footer** (`px-6 py-4 border-t border-slate-100 bg-slate-50/60`): botões de ação alinhados à direita, `variant="outline"` para cancelar e `default` ou `destructive` para ação principal
+- **Largura**: `sm:max-w-2xl` para exclusão simples, `sm:max-w-3xl` para edição com múltiplas seções
+- Labels `text-sm` (não `text-xs`), inputs padrão `h-10` — evitar UI apertada
+
 ### Typography Scale
 
 From `src/lib/design-system.ts`:

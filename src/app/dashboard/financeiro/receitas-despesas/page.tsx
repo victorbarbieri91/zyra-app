@@ -80,6 +80,9 @@ import { RegistrarPagamentoModal } from '@/components/financeiro/RegistrarPagame
 import DespesaDetalhesModal, { type CustaDespesa } from '@/components/financeiro/DespesaDetalhesModal'
 import TransferenciaDetalhesModal from '@/components/financeiro/TransferenciaDetalhesModal'
 import TransferenciaEditarModal from '@/components/financeiro/TransferenciaEditarModal'
+import LancamentoEditarModal from '@/components/financeiro/LancamentoEditarModal'
+import LancamentoExcluirModal from '@/components/financeiro/LancamentoExcluirModal'
+import type { LancamentoRef } from '@/lib/financeiro/lancamento-types'
 
 interface ExtratoItem {
   id: string
@@ -273,6 +276,9 @@ export default function ExtratoFinanceiroPage() {
   const [modalTransferencia, setModalTransferencia] = useState(false)
   const [modalExcluir, setModalExcluir] = useState<ExtratoItem | null>(null)
   const [modalEditar, setModalEditar] = useState<ExtratoItem | null>(null)
+  // Novos modais unificados de lançamento (editar/excluir com escopo interno)
+  const [lancamentoEditarRef, setLancamentoEditarRef] = useState<LancamentoRef | null>(null)
+  const [lancamentoExcluirRef, setLancamentoExcluirRef] = useState<LancamentoRef | null>(null)
   const [modalReceita, setModalReceita] = useState(false)
   const [modalDespesa, setModalDespesa] = useState(false)
   const [modalLevantamento, setModalLevantamento] = useState(false)
@@ -1447,15 +1453,17 @@ export default function ExtratoFinanceiroPage() {
     }
   }
 
-  // SIMPLIFICADO: Apenas verifica parcelas vinculadas
-  // Não precisa mais verificar lançamentos bancários (não existem mais)
+  // Preparar exclusão
+  // Rota nova (Fase 1.8): despesa/receita regular usa LancamentoExcluirModal (escopo
+  // instância/série + hard delete com confirmação por texto). Transferências, faturas e
+  // notas de débito seguem o fluxo legacy.
   const handlePrepararExclusao = async (item: ExtratoItem) => {
     if (!escritorioAtivo) return
 
     try {
       setSubmitting(true)
 
-      // Transferências não têm parcelas nem complicações
+      // Transferências: fluxo legacy (apaga os dois lados + recalcula saldos pareados)
       if (item.tipo_movimento === 'transferencia_saida' || item.tipo_movimento === 'transferencia_entrada') {
         setExclusaoInfo({
           temParcelas: 0,
@@ -1467,16 +1475,33 @@ export default function ExtratoFinanceiroPage() {
         return
       }
 
-      const temParcelas = 0
-      const jaPago = item.status === 'efetivado'
+      // Receita fatura ou nota de débito: fluxo legacy
+      if (
+        item.tipo_movimento === 'receita' &&
+        (item.origem === 'fatura' || item.origem === 'nota_debito')
+      ) {
+        setExclusaoInfo({
+          temParcelas: 0,
+          jaPago: item.status === 'efetivado',
+          temLancamentoBancario: false,
+          valorEstorno: 0,
+        })
+        setModalExcluir(item)
+        return
+      }
 
-      setExclusaoInfo({
-        temParcelas,
-        jaPago,
-        temLancamentoBancario: false,  // Não usamos mais
-        valorEstorno: 0,  // Não usamos mais
+      // Despesa ou receita regular: fluxo novo com escopo
+      if (!item.origem_id) return
+
+      setLancamentoExcluirRef({
+        origem_id: item.origem_id,
+        tipo_movimento: item.tipo_movimento,
+        descricao: item.descricao,
+        valor: item.valor,
+        status: item.status,
+        data_vencimento: item.data_vencimento,
+        origem: item.origem,
       })
-      setModalExcluir(item)
     } catch (error) {
       console.error('Erro ao preparar exclusão:', error)
       toast.error('Erro ao verificar dependências')
@@ -1602,14 +1627,36 @@ export default function ExtratoFinanceiroPage() {
   }
 
   // Preparar edição
+  // Rota nova (Fase 1.8): despesa/receita regular usa LancamentoEditarModal — o próprio
+  // modal carrega detalhes, detecta se faz parte de série e oferece toggle de escopo.
+  // Fatura, nota de débito e transferência seguem o fluxo legacy.
   const handlePrepararEdicao = async (item: ExtratoItem) => {
-    if (!escritorioAtivo) return
+    if (!escritorioAtivo || !item.origem_id) return
 
+    const ehReceitaRegular =
+      item.tipo_movimento === 'receita' &&
+      item.origem !== 'fatura' &&
+      item.origem !== 'nota_debito'
+    const ehDespesaRegular = item.tipo_movimento === 'despesa'
+
+    if (ehReceitaRegular || ehDespesaRegular) {
+      setLancamentoEditarRef({
+        origem_id: item.origem_id,
+        tipo_movimento: item.tipo_movimento,
+        descricao: item.descricao,
+        valor: item.valor,
+        status: item.status,
+        data_vencimento: item.data_vencimento,
+        origem: item.origem,
+      })
+      return
+    }
+
+    // Fluxo legacy: fatura, nota de débito — mantém modal inline antigo
     try {
       setSubmitting(true)
 
-      // Buscar dados completos do registro
-      if (item.tipo_movimento === 'receita' && item.origem !== 'fatura' && item.origem !== 'nota_debito') {
+      if (item.tipo_movimento === 'receita') {
         const { data } = await supabase
           .from('financeiro_receitas')
           .select('*')
@@ -1624,24 +1671,6 @@ export default function ExtratoFinanceiroPage() {
             categoria: data.categoria || '',
             fornecedor: '',
             observacoes: data.observacoes || '',
-            conta_bancaria_id: data.conta_bancaria_id || '',
-          })
-        }
-      } else if (item.tipo_movimento === 'despesa') {
-        const { data } = await supabase
-          .from('financeiro_despesas')
-          .select('*')
-          .eq('id', item.origem_id)
-          .single()
-
-        if (data) {
-          setEditForm({
-            descricao: data.descricao || '',
-            valor: Number(data.valor) || 0,
-            data_vencimento: data.data_vencimento || '',
-            categoria: data.categoria || '',
-            fornecedor: data.fornecedor || '',
-            observacoes: '',
             conta_bancaria_id: data.conta_bancaria_id || '',
           })
         }
@@ -4333,6 +4362,32 @@ export default function ExtratoFinanceiroPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Fase 1.8 — Modal unificado de edição de lançamento (instância ou série) */}
+      <LancamentoEditarModal
+        open={!!lancamentoEditarRef}
+        onOpenChange={(o) => {
+          if (!o) setLancamentoEditarRef(null)
+        }}
+        lancamento={lancamentoEditarRef}
+        escritorioId={escritorioAtivo || null}
+        contasBancarias={contasBancarias}
+        onSuccess={() => {
+          loadExtrato()
+        }}
+      />
+
+      {/* Fase 1.8 — Modal de exclusão com escopo + confirmação por texto */}
+      <LancamentoExcluirModal
+        open={!!lancamentoExcluirRef}
+        onOpenChange={(o) => {
+          if (!o) setLancamentoExcluirRef(null)
+        }}
+        lancamento={lancamentoExcluirRef}
+        onSuccess={() => {
+          loadExtrato()
+        }}
+      />
 
       {/* Modal Confirmação Exclusão */}
       <Dialog open={!!modalExcluir} onOpenChange={() => { setModalExcluir(null); setExclusaoInfo(null) }}>

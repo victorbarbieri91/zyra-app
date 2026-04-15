@@ -624,8 +624,11 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           if (data.valor_minimo_exito) configJsonb.valor_minimo_exito = data.valor_minimo_exito
         }
 
-        // Por Pasta (disponível como adicional em contratos por_ato)
-        if ((formas.includes('por_pasta') || formas.includes('por_ato')) && data.valor_por_processo) {
+        // Por Pasta — apenas se a forma for declarada explicitamente no Step 2.
+        // Antes permitia "por_ato" como atalho (criava cobrança mensal oculta),
+        // o que causava cadastro acidental. Quem quer combinar "por pasta" com
+        // outras formas deve marcar as duas no Step 2.
+        if (formas.includes('por_pasta') && data.valor_por_processo) {
           configJsonb.valor_por_processo = data.valor_por_processo
           configJsonb.dia_cobranca = data.dia_cobranca || 1
           configJsonb.limite_meses = data.limite_meses || 24
@@ -938,8 +941,10 @@ export function useContratosHonorarios(escritorioIds?: string[]) {
           if (data.valor_minimo_exito) configJsonb.valor_minimo_exito = data.valor_minimo_exito
         }
 
-        // Por Pasta (disponível como adicional em contratos por_ato)
-        if ((formas.includes('por_pasta') || formas.includes('por_ato')) && data.valor_por_processo) {
+        // Por Pasta — apenas se a forma for declarada explicitamente no Step 2.
+        // Se o usuário desmarcar por_pasta na edição, o campo é removido do config
+        // naturalmente (o update substitui o config inteiro).
+        if (formas.includes('por_pasta') && data.valor_por_processo) {
           configJsonb.valor_por_processo = data.valor_por_processo
           configJsonb.dia_cobranca = data.dia_cobranca || 1
           configJsonb.limite_meses = data.limite_meses || 24

@@ -1511,17 +1511,13 @@ export function ContratoModal({ open, onOpenChange, contrato, onSave, defaultCli
               </Card>
             )}
 
-            {/* Por Pasta Mensal (disponível como adicional em contratos por_ato) */}
-            {((formData.formas_selecionadas || []).includes('por_pasta') ||
-              (formData.formas_selecionadas || []).includes('por_ato')) && (
+            {/* Por Pasta Mensal — só aparece quando a forma é marcada no Step 2 */}
+            {(formData.formas_selecionadas || []).includes('por_pasta') && (
               <Card>
                     <CardHeader className="pb-2 pt-3">
                       <CardTitle className="text-sm flex items-center gap-2">
                         <Folders className="h-4 w-4 text-[#89bcbe]" />
                         Cobrança Mensal por Pasta
-                        {!(formData.formas_selecionadas || []).includes('por_pasta') && (
-                          <Badge variant="outline" className="text-[10px] h-5">Opcional</Badge>
-                        )}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pb-3 space-y-3">

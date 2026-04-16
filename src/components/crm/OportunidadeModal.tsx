@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -40,11 +41,12 @@ export function OportunidadeModal({ open, onOpenChange, onSuccess }: Oportunidad
   const [pessoas, setPessoas] = useState<PessoaOption[]>([])
   const [responsaveis, setResponsaveis] = useState<{ id: string; nome: string }[]>([])
 
+  const [valorEstimado, setValorEstimado] = useState(0)
+
   const [formData, setFormData] = useState({
     pessoa_id: '',
     titulo: '',
     descricao: '',
-    valor_estimado: '',
     etapa: 'lead',
     area_juridica: '',
     responsavel_id: '',
@@ -106,10 +108,10 @@ export function OportunidadeModal({ open, onOpenChange, onSuccess }: Oportunidad
       if (!profile?.escritorio_id) return
 
       const { data, error } = await supabase
-        .from('escritorio_membros')
+        .from('escritorios_usuarios')
         .select(`
           user_id,
-          profiles!escritorio_membros_user_id_fkey(nome_completo)
+          profile:profiles!usuarios_escritorios_user_id_fkey(nome_completo)
         `)
         .eq('escritorio_id', profile.escritorio_id)
         .eq('ativo', true)
@@ -118,7 +120,7 @@ export function OportunidadeModal({ open, onOpenChange, onSuccess }: Oportunidad
 
       const resp = (data || []).map((m: any) => ({
         id: m.user_id,
-        nome: m.profiles?.nome_completo || 'Usuario'
+        nome: m.profile?.nome_completo || 'Usuário'
       }))
 
       setResponsaveis(resp)
@@ -143,18 +145,18 @@ export function OportunidadeModal({ open, onOpenChange, onSuccess }: Oportunidad
       return
     }
     if (!formData.titulo.trim()) {
-      toast.error('Titulo e obrigatorio')
+      toast.error('Título é obrigatório')
       return
     }
     if (!formData.responsavel_id) {
-      toast.error('Selecione um responsavel')
+      toast.error('Selecione um responsável')
       return
     }
 
     setLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Usuario nao autenticado')
+      if (!user) throw new Error('Usuário não autenticado')
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -162,14 +164,14 @@ export function OportunidadeModal({ open, onOpenChange, onSuccess }: Oportunidad
         .eq('id', user.id)
         .single()
 
-      if (!profile?.escritorio_id) throw new Error('Escritorio nao encontrado')
+      if (!profile?.escritorio_id) throw new Error('Escritório não encontrado')
 
       const insertData = {
         escritorio_id: profile.escritorio_id,
         pessoa_id: formData.pessoa_id,
         titulo: formData.titulo,
         descricao: formData.descricao || null,
-        valor_estimado: formData.valor_estimado ? parseFloat(formData.valor_estimado) : null,
+        valor_estimado: valorEstimado > 0 ? valorEstimado : null,
         etapa: formData.etapa,
         area_juridica: formData.area_juridica || null,
         responsavel_id: formData.responsavel_id,
@@ -186,11 +188,11 @@ export function OportunidadeModal({ open, onOpenChange, onSuccess }: Oportunidad
       toast.success('Oportunidade criada com sucesso!')
 
       // Resetar form
+      setValorEstimado(0)
       setFormData({
         pessoa_id: '',
         titulo: '',
         descricao: '',
-        valor_estimado: '',
         etapa: 'lead',
         area_juridica: '',
         responsavel_id: '',
@@ -200,8 +202,9 @@ export function OportunidadeModal({ open, onOpenChange, onSuccess }: Oportunidad
       onOpenChange(false)
       onSuccess?.()
     } catch (error: any) {
-      console.error('Erro ao criar oportunidade:', error)
-      toast.error(error.message || 'Erro ao criar oportunidade')
+      console.error('Erro ao criar oportunidade:', JSON.stringify(error, null, 2))
+      const msg = error?.message || error?.details || error?.hint || error?.code || 'Erro ao criar oportunidade'
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
@@ -245,10 +248,10 @@ export function OportunidadeModal({ open, onOpenChange, onSuccess }: Oportunidad
 
           {/* Titulo */}
           <div>
-            <Label htmlFor="titulo">Titulo *</Label>
+            <Label htmlFor="titulo">Título *</Label>
             <Input
               id="titulo"
-              placeholder="Ex: Contratacao trabalhista, Processo de divorcio..."
+              placeholder="Ex: Contratação trabalhista, Processo de divórcio..."
               value={formData.titulo}
               onChange={(e) => updateField('titulo', e.target.value)}
             />
@@ -257,14 +260,11 @@ export function OportunidadeModal({ open, onOpenChange, onSuccess }: Oportunidad
           {/* Valor Estimado e Etapa */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="valor_estimado">Valor Estimado (R$)</Label>
-              <Input
+              <Label htmlFor="valor_estimado">Valor Estimado</Label>
+              <CurrencyInput
                 id="valor_estimado"
-                type="number"
-                step="0.01"
-                placeholder="0,00"
-                value={formData.valor_estimado}
-                onChange={(e) => updateField('valor_estimado', e.target.value)}
+                value={valorEstimado}
+                onChange={setValorEstimado}
               />
             </div>
             <div>
@@ -280,7 +280,7 @@ export function OportunidadeModal({ open, onOpenChange, onSuccess }: Oportunidad
                   <SelectItem value="lead">Lead</SelectItem>
                   <SelectItem value="contato_feito">Contato Feito</SelectItem>
                   <SelectItem value="proposta_enviada">Proposta Enviada</SelectItem>
-                  <SelectItem value="negociacao">Negociacao</SelectItem>
+                  <SelectItem value="negociacao">Negociação</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -289,7 +289,7 @@ export function OportunidadeModal({ open, onOpenChange, onSuccess }: Oportunidad
           {/* Area Juridica e Responsavel */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="area_juridica">Area Juridica</Label>
+              <Label htmlFor="area_juridica">Área Jurídica</Label>
               <Select
                 value={formData.area_juridica}
                 onValueChange={(v) => updateField('area_juridica', v)}
@@ -298,19 +298,22 @@ export function OportunidadeModal({ open, onOpenChange, onSuccess }: Oportunidad
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="civel">Civel</SelectItem>
+                  <SelectItem value="civel">Cível</SelectItem>
                   <SelectItem value="trabalhista">Trabalhista</SelectItem>
-                  <SelectItem value="tributaria">Tributaria</SelectItem>
-                  <SelectItem value="familia">Familia</SelectItem>
+                  <SelectItem value="tributario">Tributário</SelectItem>
+                  <SelectItem value="familia">Família</SelectItem>
                   <SelectItem value="criminal">Criminal</SelectItem>
                   <SelectItem value="consumidor">Consumidor</SelectItem>
                   <SelectItem value="empresarial">Empresarial</SelectItem>
-                  <SelectItem value="previdenciario">Previdenciario</SelectItem>
+                  <SelectItem value="previdenciario">Previdenciário</SelectItem>
+                  <SelectItem value="administrativo">Administrativo</SelectItem>
+                  <SelectItem value="ambiental">Ambiental</SelectItem>
+                  <SelectItem value="outros">Outros</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label htmlFor="responsavel_id">Responsavel *</Label>
+              <Label htmlFor="responsavel_id">Responsável *</Label>
               <Select
                 value={formData.responsavel_id}
                 onValueChange={(v) => updateField('responsavel_id', v)}
@@ -337,10 +340,10 @@ export function OportunidadeModal({ open, onOpenChange, onSuccess }: Oportunidad
               onValueChange={(v) => updateField('origem', v)}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Como chegou ate voce?" />
+                <SelectValue placeholder="Como chegou até você?" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="indicacao">Indicacao</SelectItem>
+                <SelectItem value="indicacao">Indicação</SelectItem>
                 <SelectItem value="site">Site</SelectItem>
                 <SelectItem value="google">Google</SelectItem>
                 <SelectItem value="redes_sociais">Redes Sociais</SelectItem>
@@ -353,7 +356,7 @@ export function OportunidadeModal({ open, onOpenChange, onSuccess }: Oportunidad
 
           {/* Descricao */}
           <div>
-            <Label htmlFor="descricao">Descricao</Label>
+            <Label htmlFor="descricao">Descrição</Label>
             <Textarea
               id="descricao"
               placeholder="Detalhes sobre a oportunidade..."

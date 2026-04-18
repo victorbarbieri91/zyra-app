@@ -85,6 +85,8 @@ interface Andamento {
   tipo?: string
   descricao: string
   user_id?: string
+  referencia_tipo?: string
+  referencia_id?: string
 }
 
 export default function ConsultaDetalhePage() {
@@ -116,6 +118,24 @@ export default function ConsultaDetalhePage() {
 
   // Estado para detalhe de andamento
   const [selectedAndamento, setSelectedAndamento] = useState<Andamento | null>(null)
+  const [andamentoTarefaDescricao, setAndamentoTarefaDescricao] = useState<string | null>(null)
+
+  // Carregar descrição da tarefa vinculada quando o modal de andamento abre
+  useEffect(() => {
+    if (!selectedAndamento?.referencia_id || selectedAndamento?.referencia_tipo !== 'agenda_tarefas') {
+      setAndamentoTarefaDescricao(null)
+      return
+    }
+    const loadDescricao = async () => {
+      const { data } = await supabase
+        .from('agenda_tarefas')
+        .select('descricao')
+        .eq('id', selectedAndamento.referencia_id!)
+        .single()
+      setAndamentoTarefaDescricao(data?.descricao || null)
+    }
+    loadDescricao()
+  }, [selectedAndamento?.referencia_id, selectedAndamento?.referencia_tipo])
 
   // Paginação de andamentos
   const [andamentoPage, setAndamentoPage] = useState(1)
@@ -1489,44 +1509,122 @@ export default function ConsultaDetalhePage() {
 
       {/* Modal Detalhe do Andamento */}
       <Dialog open={!!selectedAndamento} onOpenChange={(open) => !open && setSelectedAndamento(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
-              Detalhe do Andamento
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-2xl p-0 overflow-hidden border-0">
+          <DialogTitle className="sr-only">Detalhe do Andamento</DialogTitle>
+          {selectedAndamento && (() => {
+            // Parsear descrição para tarefa_concluida
+            const parsedTarefa = (() => {
+              if (selectedAndamento.referencia_tipo !== 'agenda_tarefas') return null
+              const match = selectedAndamento.descricao.match(/^Tarefa "(.+)" concluída por (.+)$/)
+              if (match) return { titulo: match[1], concluidaPor: match[2] }
+              return null
+            })()
 
-          {selectedAndamento && (
-            <div className="space-y-4 pt-2">
-              {/* Data e Tipo */}
-              <div className="flex items-baseline gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Data</p>
-                  <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">
-                    {format(new Date(selectedAndamento.data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                  </p>
-                </div>
-                {selectedAndamento.tipo && (
-                  <div className="flex-1">
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Tipo</p>
-                    <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">
-                      {formatTipoAndamento(selectedAndamento.tipo)}
-                    </p>
+            return (
+              <div className="bg-white dark:bg-surface-1 rounded-lg flex flex-col max-h-[85vh]">
+                {/* Header */}
+                <div className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">
+                    {selectedAndamento.tipo ? formatTipoAndamento(selectedAndamento.tipo) : 'Andamento'}
+                  </h2>
+                  <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
+                    <span>{format(new Date(selectedAndamento.data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
                   </div>
-                )}
-              </div>
+                </div>
 
-              {/* Descrição Completa */}
-              <div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Descrição</p>
-                <div className="bg-slate-50 dark:bg-surface-0 rounded-lg p-4 max-h-[400px] overflow-y-auto">
-                  <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                    {selectedAndamento.descricao}
-                  </p>
+                {/* Conteúdo */}
+                <div className="p-6 space-y-4 overflow-y-auto flex-1">
+                  {parsedTarefa ? (
+                    <>
+                      {/* Informação estruturada para tarefa_concluida */}
+                      <div>
+                        <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                          Tarefa
+                        </div>
+                        <p className="text-xs font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
+                          {parsedTarefa.titulo}
+                        </p>
+                      </div>
+
+                      <div>
+                        <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                          Concluída por
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                          <span className="text-xs text-slate-700 dark:text-slate-300">
+                            {parsedTarefa.concluidaPor}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Descrição da tarefa (quando houver) */}
+                      {andamentoTarefaDescricao && (
+                        <div>
+                          <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                            Descrição da Tarefa
+                          </div>
+                          <div className="bg-slate-50 dark:bg-surface-0 rounded-md p-3 max-h-[200px] overflow-y-auto">
+                            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">
+                              {andamentoTarefaDescricao}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {/* Layout genérico para outros andamentos */}
+                      <div>
+                        <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                          Descrição
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap max-h-[300px] overflow-y-auto">
+                          {selectedAndamento.descricao}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-surface-0/50 flex-shrink-0">
+                  <div className="flex items-center justify-end gap-2">
+                    {selectedAndamento.referencia_tipo === 'agenda_tarefas' && selectedAndamento.referencia_id && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200"
+                        onClick={async () => {
+                          const { data: tarefa } = await supabase
+                            .from('agenda_tarefas')
+                            .select('*')
+                            .eq('id', selectedAndamento.referencia_id!)
+                            .single()
+                          if (tarefa) {
+                            setSelectedAndamento(null)
+                            setSelectedTarefa(tarefa)
+                            setTarefaDetailOpen(true)
+                          } else {
+                            toast.error('Tarefa não encontrada')
+                          }
+                        }}
+                      >
+                        Ver detalhes da tarefa
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      className="text-xs bg-[#34495e] hover:bg-[#46627f] text-white"
+                      onClick={() => setSelectedAndamento(null)}
+                    >
+                      Fechar
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
         </DialogContent>
       </Dialog>
 

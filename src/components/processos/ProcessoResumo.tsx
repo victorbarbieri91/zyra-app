@@ -39,7 +39,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { formatBrazilDateTime, formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
@@ -120,6 +120,8 @@ interface Movimentacao {
   descricao: string
   conteudo_completo?: string | null
   origem?: string
+  referencia_tipo?: string | null
+  referencia_id?: string | null
 }
 
 export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot }: ProcessoResumoProps) {
@@ -228,6 +230,24 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([])
   const [loadingMovimentacoes, setLoadingMovimentacoes] = useState(true)
   const [selectedMovimentacao, setSelectedMovimentacao] = useState<Movimentacao | null>(null)
+  const [movimentacaoTarefaDescricao, setMovimentacaoTarefaDescricao] = useState<string | null>(null)
+
+  // Carregar descrição da tarefa vinculada quando o modal de movimentação abre
+  useEffect(() => {
+    if (!selectedMovimentacao?.referencia_id || selectedMovimentacao?.referencia_tipo !== 'agenda_tarefas') {
+      setMovimentacaoTarefaDescricao(null)
+      return
+    }
+    const loadDescricao = async () => {
+      const { data } = await supabase
+        .from('agenda_tarefas')
+        .select('descricao')
+        .eq('id', selectedMovimentacao.referencia_id!)
+        .single()
+      setMovimentacaoTarefaDescricao(data?.descricao || null)
+    }
+    loadDescricao()
+  }, [selectedMovimentacao?.referencia_id, selectedMovimentacao?.referencia_tipo])
 
   // Paginação de movimentações
   const [movimentacaoPage, setMovimentacaoPage] = useState(1)
@@ -249,7 +269,7 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
       setLoadingMovimentacoes(true)
       const { data, error } = await supabase
         .from('processos_movimentacoes')
-        .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem')
+        .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem, referencia_tipo, referencia_id')
         .eq('processo_id', processo.id)
         .order('data_movimento', { ascending: false })
 
@@ -462,7 +482,7 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
           descricao: novoAndamento.descricao,
           origem: 'manual'
         })
-        .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem')
+        .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem, referencia_tipo, referencia_id')
         .single()
 
       if (error) throw error
@@ -1348,52 +1368,134 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
 
       {/* Modal de Detalhe da Movimentação */}
       <Dialog open={!!selectedMovimentacao} onOpenChange={(open) => !open && setSelectedMovimentacao(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
-              Detalhe da Movimentação
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-2xl p-0 overflow-hidden border-0">
+          <DialogTitle className="sr-only">Detalhe da Movimentação</DialogTitle>
+          {selectedMovimentacao && (() => {
+            // Parsear descrição para TAREFA_CONCLUIDA
+            const parsedTarefa = (() => {
+              if (selectedMovimentacao.referencia_tipo !== 'agenda_tarefas') return null
+              const match = selectedMovimentacao.descricao.match(/^Tarefa "(.+)" concluída por (.+)$/)
+              if (match) return { titulo: match[1], concluidaPor: match[2] }
+              return null
+            })()
 
-          {selectedMovimentacao && (
-            <div className="space-y-4 pt-2">
-              {/* Data e Tipo */}
-              <div className="flex items-baseline gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Data</p>
-                  <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">
-                    {format(new Date(selectedMovimentacao.data_movimento), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                  </p>
+            return (
+              <div className="bg-white dark:bg-surface-1 rounded-lg flex flex-col max-h-[85vh]">
+                {/* Header */}
+                <div className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">
+                    {selectedMovimentacao.tipo_descricao || 'Movimentação'}
+                  </h2>
+                  <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
+                    {selectedMovimentacao.origem && (
+                      <span className={cn(
+                        'inline-flex items-center px-1.5 py-0.5 rounded font-medium border',
+                        selectedMovimentacao.origem === 'sistema'
+                          ? 'bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-500/30'
+                          : selectedMovimentacao.origem === 'tribunal'
+                            ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30'
+                            : 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                      )}>
+                        {selectedMovimentacao.origem === 'sistema' ? 'Sistema' : selectedMovimentacao.origem === 'tribunal' ? 'Tribunal' : 'Manual'}
+                      </span>
+                    )}
+                    <span>{format(new Date(selectedMovimentacao.data_movimento), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
+                  </div>
                 </div>
-                {selectedMovimentacao.tipo_descricao && (
-                  <div className="flex-1">
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Tipo</p>
-                    <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">
-                      {selectedMovimentacao.tipo_descricao}
-                    </p>
-                  </div>
-                )}
-                {selectedMovimentacao.origem && (
-                  <div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Origem</p>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 capitalize">
-                      {selectedMovimentacao.origem}
-                    </p>
-                  </div>
-                )}
-              </div>
 
-              {/* Conteúdo Completo */}
-              <div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Descrição</p>
-                <div className="bg-slate-50 dark:bg-surface-0 rounded-lg p-4 max-h-[400px] overflow-y-auto">
-                  <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                    {selectedMovimentacao.conteudo_completo || selectedMovimentacao.descricao}
-                  </p>
+                {/* Conteúdo */}
+                <div className="p-6 space-y-4 overflow-y-auto flex-1">
+                  {parsedTarefa ? (
+                    <>
+                      {/* Informação estruturada para TAREFA_CONCLUIDA */}
+                      <div>
+                        <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                          Tarefa
+                        </div>
+                        <p className="text-xs font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
+                          {parsedTarefa.titulo}
+                        </p>
+                      </div>
+
+                      <div>
+                        <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                          Concluída por
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                          <span className="text-xs text-slate-700 dark:text-slate-300">
+                            {parsedTarefa.concluidaPor}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Descrição da tarefa (quando houver) */}
+                      {movimentacaoTarefaDescricao && (
+                        <div>
+                          <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                            Descrição da Tarefa
+                          </div>
+                          <div className="bg-slate-50 dark:bg-surface-0 rounded-md p-3 max-h-[200px] overflow-y-auto">
+                            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">
+                              {movimentacaoTarefaDescricao}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {/* Layout genérico para outras movimentações */}
+                      <div>
+                        <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                          Descrição
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap max-h-[300px] overflow-y-auto">
+                          {selectedMovimentacao.conteudo_completo || selectedMovimentacao.descricao}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-surface-0/50 flex-shrink-0">
+                  <div className="flex items-center justify-end gap-2">
+                    {selectedMovimentacao.referencia_tipo === 'agenda_tarefas' && selectedMovimentacao.referencia_id && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200"
+                        onClick={async () => {
+                          const { data: tarefa } = await supabase
+                            .from('agenda_tarefas')
+                            .select('*')
+                            .eq('id', selectedMovimentacao.referencia_id!)
+                            .single()
+                          if (tarefa) {
+                            setSelectedMovimentacao(null)
+                            setSelectedTarefa(tarefa)
+                            setTarefaDetailOpen(true)
+                          } else {
+                            toast.error('Tarefa não encontrada')
+                          }
+                        }}
+                      >
+                        Ver detalhes da tarefa
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      className="text-xs bg-[#34495e] hover:bg-[#46627f] text-white"
+                      onClick={() => setSelectedMovimentacao(null)}
+                    >
+                      Fechar
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
         </DialogContent>
       </Dialog>
 

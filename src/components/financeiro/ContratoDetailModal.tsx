@@ -32,6 +32,7 @@ import {
   ChevronRight,
   RefreshCw,
   Heart,
+  Plus,
 } from 'lucide-react'
 import {
   Select,
@@ -45,6 +46,7 @@ import { createClient } from '@/lib/supabase/client'
 import { formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
 import { ContratoHonorario, GrupoClientes, ContratoComissaoPadrao } from '@/hooks/useContratosHonorarios'
 import { cn, formatHoras } from '@/lib/utils'
+import VincularProcessosAoContratoModal from './VincularProcessosAoContratoModal'
 
 interface ContratoDetailModalProps {
   open: boolean
@@ -150,6 +152,8 @@ export default function ContratoDetailModal({
   const [selectedIndice, setSelectedIndice] = useState<string>('INPC')
   const [loadingReajuste, setLoadingReajuste] = useState(false)
   const [reajusteData, setReajusteData] = useState<ReajusteData | null>(null)
+  const [vincularProcessosOpen, setVincularProcessosOpen] = useState(false)
+  const [reloadTrigger, setReloadTrigger] = useState(0)
 
   // Dados derivados do prop contrato (sem query duplicada)
   const derived = useMemo(() => {
@@ -324,7 +328,7 @@ export default function ContratoDetailModal({
     }
 
     load()
-  }, [contrato, open, supabase])
+  }, [contrato, open, supabase, reloadTrigger])
 
   const aplicarReajuste = async () => {
     if (!contrato) return
@@ -584,6 +588,7 @@ export default function ContratoDetailModal({
     : processosVinculados.slice(0, PROCESSOS_LIMITE_INICIAL)
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl lg:max-w-5xl max-h-[92vh] !p-0 gap-0 overflow-hidden flex flex-col">
         {/* ===== HEADER — duas colunas: contrato + cliente ===== */}
@@ -766,29 +771,51 @@ export default function ContratoDetailModal({
                       ({processosVinculados.length})
                     </span>
                   </SectionTitle>
-                  {processosVinculados.length > PROCESSOS_LIMITE_INICIAL && (
+                  <div className="flex items-center gap-1">
+                    {processosVinculados.length > PROCESSOS_LIMITE_INICIAL && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-[11px] text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200"
+                        onClick={() => setProcessosExpandidos(!processosExpandidos)}
+                      >
+                        {processosExpandidos ? (
+                          <>
+                            <ChevronUp className="w-3 h-3 mr-1" />
+                            Recolher
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-3 h-3 mr-1" />
+                            Ver todos
+                          </>
+                        )}
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 px-2 text-[11px] text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200"
-                      onClick={() => setProcessosExpandidos(!processosExpandidos)}
+                      className="h-7 px-2 text-[11px] text-[#34495e] dark:text-slate-200 hover:bg-[#f0f9f9] dark:hover:bg-teal-500/10"
+                      onClick={() => setVincularProcessosOpen(true)}
                     >
-                      {processosExpandidos ? (
-                        <>
-                          <ChevronUp className="w-3 h-3 mr-1" />
-                          Recolher
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="w-3 h-3 mr-1" />
-                          Ver todos
-                        </>
-                      )}
+                      <Plus className="w-3 h-3 mr-1" />
+                      Vincular Processo
                     </Button>
-                  )}
+                  </div>
                 </div>
                 {processosVinculados.length === 0 ? (
-                  <EmptyInline texto="Nenhum processo vinculado a este contrato." />
+                  <div className="flex flex-col items-start gap-2">
+                    <EmptyInline texto="Nenhum processo vinculado a este contrato." />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs border-[#89bcbe] text-[#34495e] dark:text-slate-200 hover:bg-[#89bcbe]/10"
+                      onClick={() => setVincularProcessosOpen(true)}
+                    >
+                      <Plus className="w-3.5 h-3.5 mr-1.5" />
+                      Vincular Processo
+                    </Button>
+                  </div>
                 ) : (
                   <div
                     className={cn(
@@ -925,6 +952,14 @@ export default function ContratoDetailModal({
         </div>
       </DialogContent>
     </Dialog>
+
+    <VincularProcessosAoContratoModal
+      open={vincularProcessosOpen}
+      onOpenChange={setVincularProcessosOpen}
+      contrato={contrato}
+      onSuccess={() => setReloadTrigger((prev) => prev + 1)}
+    />
+    </>
   )
 }
 

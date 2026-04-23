@@ -115,6 +115,16 @@ export default function VincularContratoModal({
   const [error, setError] = useState<string | null>(null)
   const [contratoModalOpen, setContratoModalOpen] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
+  const [pendingSelectionId, setPendingSelectionId] = useState<string | null>(null)
+
+  // Reseta seleção e erro quando o modal abre (não em cada reload)
+  useEffect(() => {
+    if (open) {
+      setSelectedContrato(null)
+      setSelectedModalidade(null)
+      setError(null)
+    }
+  }, [open])
 
   // Carregar contratos do cliente
   useEffect(() => {
@@ -123,11 +133,9 @@ export default function VincularContratoModal({
 
       setLoading(true)
       setError(null)
-      setSelectedContrato(null)
-      setSelectedModalidade(null)
 
       try {
-        const selectFields = 'id, numero_contrato, forma_cobranca, data_inicio, data_fim, config, formas_pagamento, grupo_clientes, cliente_id, cliente:crm_pessoas!cliente_id(nome_completo, razao_social)'
+        const selectFields = 'id, numero_contrato, forma_cobranca, data_inicio, data_fim, config, formas_pagamento, grupo_clientes, cliente_id, cliente:crm_pessoas!cliente_id(nome_completo, nome_fantasia)'
 
         // Query 1: contratos onde o cliente é o titular direto
         const { data: directData, error: directError } = await supabase
@@ -181,7 +189,7 @@ export default function VincularContratoModal({
           const grupoClientes = c.grupo_clientes as { habilitado?: boolean; cliente_pagador_id?: string; clientes?: Array<{ cliente_id: string; nome: string }> } | null
           const isGrupo = grupoClientes?.habilitado === true && (grupoClientes?.clientes?.length || 0) > 1
           const clientePagadorNome = isGrupo
-            ? (c.cliente?.razao_social || c.cliente?.nome_completo || undefined)
+            ? (c.cliente?.nome_fantasia || c.cliente?.nome_completo || undefined)
             : undefined
 
           return {
@@ -198,6 +206,12 @@ export default function VincularContratoModal({
         })
 
         setContratos(contratosProcessados)
+
+        // Pré-selecionar contrato recém-criado (se estiver na lista recarregada)
+        if (pendingSelectionId && contratosProcessados.some((c) => c.id === pendingSelectionId)) {
+          setSelectedContrato(pendingSelectionId)
+          setPendingSelectionId(null)
+        }
       } catch (err) {
         console.error('Erro ao carregar contratos:', err)
         setError('Erro ao carregar contratos do cliente')
@@ -207,6 +221,9 @@ export default function VincularContratoModal({
     }
 
     loadContratos()
+    // pendingSelectionId intencionalmente fora das deps — usado apenas como "inbox"
+    // consumido ao fim do reload disparado por reloadKey.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clienteId, open, supabase, reloadKey])
 
   // Quando seleciona um contrato, preenche a modalidade se só tiver uma
@@ -278,8 +295,9 @@ export default function VincularContratoModal({
     try {
       const contratoId = await createContrato(data)
       if (contratoId) {
+        // Marca o novo contrato para pré-seleção quando o reload terminar
+        setPendingSelectionId(contratoId)
         setReloadKey(prev => prev + 1)
-        setSelectedContrato(contratoId)
         toast.success('Contrato criado com sucesso!')
         setContratoModalOpen(false)
         return contratoId

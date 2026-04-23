@@ -22,6 +22,12 @@ export interface ModalRecebimentoItem {
   descricao: string
   valor: number
   valor_pago: number
+  /** Valor bruto da fatura (antes de retenções). Se não for fatura com retenção, = valor. */
+  valor_bruto?: number
+  /** Valor líquido (após retenções). Se não for fatura com retenção, = valor. */
+  valor_liquido?: number
+  /** Total de retenções tributárias (IRRF+PIS+COFINS+CSLL+ISS+INSS). 0 se não houver. */
+  total_retencoes?: number
   data_vencimento: string | null
   conta_bancaria_id: string | null
   cliente_id: string | null
@@ -92,7 +98,9 @@ export function ModalRecebimento({
   // Reset form when item changes
   useEffect(() => {
     if (item && open) {
-      const saldoAberto = item.valor - (item.valor_pago || 0)
+      // Quando há retenção, usar valor_liquido como referência (o cliente paga o líquido)
+      const totalEsperado = item.valor_liquido ?? item.valor
+      const saldoAberto = totalEsperado - (item.valor_pago || 0)
       setValor(saldoAberto)
       setDataEfetivacao(new Date().toISOString().split('T')[0])
       setFormaPagamento('pix')
@@ -161,10 +169,14 @@ export function ModalRecebimento({
   }, [dataEfetivacao, item, participantes, supabase])
 
   // Computed values
+  const valorBruto = useMemo(() => Number(item?.valor_bruto ?? item?.valor ?? 0), [item])
+  const valorLiquido = useMemo(() => Number(item?.valor_liquido ?? item?.valor ?? 0), [item])
+  const temRetencao = useMemo(() => Number(item?.total_retencoes ?? 0) > 0, [item])
+
   const saldoAberto = useMemo(() => {
     if (!item) return 0
-    return item.valor - (item.valor_pago || 0)
-  }, [item])
+    return valorLiquido - (item.valor_pago || 0)
+  }, [item, valorLiquido])
 
   const valorDigitado = valor
   const isParcial = valorDigitado > 0 && valorDigitado < saldoAberto
@@ -177,13 +189,20 @@ export function ModalRecebimento({
     [participantes]
   )
 
+  // Comissão sempre sobre o BRUTO, proporcional ao quanto foi pago do líquido
+  const baseComissao = useMemo(() => {
+    if (valorLiquido <= 0) return valorDigitado
+    const proporcaoRecebida = valorDigitado / valorLiquido
+    return proporcaoRecebida * valorBruto
+  }, [valorDigitado, valorLiquido, valorBruto])
+
   const totalComissao = useMemo(
     () =>
       participantesAtivos.reduce(
-        (sum, p) => sum + (valorDigitado * p.percentual) / 100,
+        (sum, p) => sum + (baseComissao * p.percentual) / 100,
         0
       ),
-    [participantesAtivos, valorDigitado]
+    [participantesAtivos, baseComissao]
   )
 
   const totalPercentual = useMemo(
@@ -295,29 +314,55 @@ export function ModalRecebimento({
           .eq('id', item.origem_id)
           .single()
 
-        await supabase
-          .from('financeiro_notas_debito')
-          .update({
-            status: valorDigitado >= saldoAberto ? 'paga' : 'emitida',
-            data_pagamento: dataEfetivacao,
-            conta_bancaria_id: contaBancariaId,
-          })
-          .eq('id', item.origem_id)
+        if (isParcial && nota?.receita_id) {
+          // Pagamento parcial: atualizar ND e receita shadow diretamente
+          const novoValorPago = (item.valor_pago || 0) + valorDigitado
 
-        if (nota?.receita_id) {
+          await supabase
+            .from('financeiro_notas_debito')
+            .update({
+              status: 'parcialmente_paga',
+              valor_pago: novoValorPago,
+              data_vencimento_saldo: dataVencimentoSaldo,
+              conta_bancaria_id: contaBancariaId,
+            })
+            .eq('id', item.origem_id)
+
           await supabase
             .from('financeiro_receitas')
             .update({
-              status: valorDigitado >= saldoAberto ? 'pago' : 'parcial',
-              valor_pago: (item.valor_pago || 0) + valorDigitado,
+              status: 'parcial',
+              valor_pago: novoValorPago,
               data_pagamento: dataEfetivacao,
               conta_bancaria_id: contaBancariaId,
             })
             .eq('id', nota.receita_id)
-        }
+        } else {
+          // Pagamento total (ou pagamento do saldo restante)
+          await supabase
+            .from('financeiro_notas_debito')
+            .update({
+              status: 'paga',
+              valor_pago: item.valor,
+              data_pagamento: dataEfetivacao,
+              data_vencimento_saldo: null,
+              conta_bancaria_id: contaBancariaId,
+            })
+            .eq('id', item.origem_id)
 
-        // Marcar despesas vinculadas como reembolsadas se pago integralmente
-        if (valorDigitado >= saldoAberto) {
+          if (nota?.receita_id) {
+            await supabase
+              .from('financeiro_receitas')
+              .update({
+                status: 'pago',
+                valor_pago: item.valor,
+                data_pagamento: dataEfetivacao,
+                conta_bancaria_id: contaBancariaId,
+              })
+              .eq('id', nota.receita_id)
+          }
+
+          // Marcar despesas vinculadas como reembolsadas
           const { data: itensNota } = await supabase
             .from('financeiro_notas_debito_itens')
             .select('despesa_id')
@@ -332,25 +377,41 @@ export function ModalRecebimento({
         }
       } else {
         // Receita normal
-        const novoValorPago = (item.valor_pago || 0) + valorDigitado
-        const isPagoTotal = novoValorPago >= item.valor
-
-        await supabase
-          .from('financeiro_receitas')
-          .update({
-            status: isPagoTotal ? 'pago' : 'parcial',
-            valor_pago: novoValorPago,
-            data_pagamento: dataEfetivacao,
-            conta_bancaria_id: contaBancariaId,
+        if (isParcial) {
+          // Pagamento parcial: usar RPC para criar receita de saldo automaticamente
+          const { error: rpcError } = await supabase.rpc('receber_receita_parcial', {
+            p_receita_id: item.origem_id,
+            p_valor_pago: valorDigitado,
+            p_nova_data_vencimento: dataVencimentoSaldo,
+            p_conta_bancaria_id: contaBancariaId,
+            p_forma_pagamento: formaPagamento,
+            p_data_pagamento: dataEfetivacao,
           })
-          .eq('id', item.origem_id)
+          if (rpcError) throw rpcError
+        } else {
+          // Pagamento total
+          const novoValorPago = (item.valor_pago || 0) + valorDigitado
+          await supabase
+            .from('financeiro_receitas')
+            .update({
+              status: 'pago',
+              valor_pago: novoValorPago,
+              data_pagamento: dataEfetivacao,
+              conta_bancaria_id: contaBancariaId,
+            })
+            .eq('id', item.origem_id)
+        }
       }
 
       // Participação de advogados → cria N despesas pendentes (batch insert)
+      // Comissão SEMPRE sobre o valor BRUTO, proporcional ao quanto foi pago do líquido.
       if (temParticipacao && participantesAtivos.length > 0) {
         const rowsComissao = participantesAtivos.map((p) => {
-          const valorComissao = (valorDigitado * p.percentual) / 100
+          const valorComissao = (baseComissao * p.percentual) / 100
           const sufixoOrigem = p.origem === 'contrato' ? ' (padrão do contrato)' : ''
+          const sufixoRetencao = temRetencao
+            ? ` (base bruta ${formatCurrency(baseComissao)} — recebido líquido ${formatCurrency(valorDigitado)})`
+            : ''
           return {
             escritorio_id: item.escritorio_id,
             categoria: 'comissao',
@@ -360,7 +421,7 @@ export function ModalRecebimento({
             status: 'pendente',
             advogado_id: p.user_id,
             observacoes:
-              `Participação de ${p.percentual}% sobre recebimento de ${formatCurrency(valorDigitado)}${sufixoOrigem}`,
+              `Participação de ${p.percentual}% sobre ${formatCurrency(baseComissao)} (bruto)${sufixoOrigem}${sufixoRetencao}`,
             processo_id: item.processo_id,
             cliente_id: item.cliente_id,
           }
@@ -443,9 +504,20 @@ export function ModalRecebimento({
                 </div>
               )}
               <div className="flex flex-col gap-0.5 text-right">
-                <span className="text-[#46627f]/70 text-[10px] uppercase tracking-wide">Valor total</span>
-                <span className="font-bold text-[#34495e] text-sm">{formatCurrency(item.valor)}</span>
+                <span className="text-[#46627f]/70 text-[10px] uppercase tracking-wide">
+                  {temRetencao ? 'Bruto' : 'Valor total'}
+                </span>
+                <span className="font-bold text-[#34495e] text-sm">{formatCurrency(valorBruto)}</span>
               </div>
+              {temRetencao && (
+                <div className="flex flex-col gap-0.5 text-right pl-3 border-l border-[#89bcbe]/30">
+                  <span className="text-[#46627f]/70 text-[10px] uppercase tracking-wide">Líquido a receber</span>
+                  <span className="font-bold text-[#34495e] text-sm">{formatCurrency(valorLiquido)}</span>
+                  <span className="text-[10px] text-[#46627f]/70">
+                    retenções −{formatCurrency(Number(item.total_retencoes ?? 0))}
+                  </span>
+                </div>
+              )}
               {item.valor_pago > 0 && (
                 <>
                   <div className="flex flex-col gap-0.5 text-right">
@@ -611,6 +683,16 @@ export function ModalRecebimento({
 
               {temParticipacao && (
                 <div className="px-3 pb-3 space-y-2 border-t border-[#89bcbe]/30 pt-3">
+                  {temRetencao && (
+                    <div className="flex items-start gap-2 px-2.5 py-2 rounded-md bg-[#f0f9f9] border border-[#89bcbe]/40">
+                      <Info className="w-3.5 h-3.5 text-[#89bcbe] mt-0.5 flex-shrink-0" />
+                      <p className="text-[11px] text-[#46627f] leading-relaxed">
+                        Comissão sobre <strong className="text-[#34495e]">bruto</strong>: base de{' '}
+                        <strong className="text-[#34495e]">{formatCurrency(baseComissao)}</strong>{' '}
+                        (proporcional ao líquido {formatCurrency(valorDigitado)} de {formatCurrency(valorLiquido)}).
+                      </p>
+                    </div>
+                  )}
                   {participantes.length === 0 && (
                     <p className="text-[11px] text-slate-500 italic px-1">
                       Nenhum advogado adicionado. Clique em "Adicionar advogado".
@@ -619,7 +701,7 @@ export function ModalRecebimento({
 
                   {participantes.map((p) => {
                     const valorComissao = p.ativo
-                      ? (valorDigitado * p.percentual) / 100
+                      ? (baseComissao * p.percentual) / 100
                       : 0
                     const advogadosLinha = advogados.filter(
                       (a) =>

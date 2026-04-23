@@ -1,8 +1,8 @@
 'use client'
 
 import { FileText, Banknote, MoreVertical, CheckCircle, Clock, AlertCircle, Calendar, ExternalLink, Unlink } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +38,66 @@ const formatDate = (date: string) => {
 const formatDateShort = (date: string) => {
   const d = date.length === 10 ? new Date(date + 'T12:00:00') : new Date(date)
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+}
+
+/** Líquido em destaque. Mostra tooltip com breakdown quando há retenção. */
+function ValorLiquido({ fatura }: { fatura: FaturaGerada }): React.ReactElement {
+  const temRetencao = Number(fatura.total_retencoes) > 0
+  const liquido = Number(fatura.valor_liquido ?? fatura.valor_total)
+
+  const conteudo = (
+    <p className="text-xs font-bold text-[#34495e] dark:text-slate-200">
+      {formatCurrency(liquido)}
+    </p>
+  )
+
+  if (!temRetencao) return conteudo
+
+  const r = fatura.retencoes
+  const linha = (label: string, aliquota?: number, valor?: number) =>
+    valor && valor > 0 ? (
+      <div className="flex justify-between gap-3 text-[11px]">
+        <span className="text-slate-300">{label} ({aliquota}%)</span>
+        <span className="font-medium">- {formatCurrency(valor)}</span>
+      </div>
+    ) : null
+
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="cursor-help inline-block">{conteudo}</div>
+        </TooltipTrigger>
+        <TooltipContent className="bg-slate-900 text-white p-3 min-w-[200px]" sideOffset={6}>
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">Retenções tributárias</p>
+            <div className="space-y-1">
+              {linha('IRRF', r?.irrf?.aliquota, r?.irrf?.valor)}
+              {linha('PIS', r?.pis?.aliquota, r?.pis?.valor)}
+              {linha('COFINS', r?.cofins?.aliquota, r?.cofins?.valor)}
+              {linha('CSLL', r?.csll?.aliquota, r?.csll?.valor)}
+              {linha('ISS', r?.iss?.aliquota, r?.iss?.valor)}
+              {linha('INSS', r?.inss?.aliquota, r?.inss?.valor)}
+            </div>
+            <div className="pt-2 border-t border-slate-700 space-y-1">
+              <div className="flex justify-between gap-3 text-[11px]">
+                <span className="text-slate-300">Bruto</span>
+                <span className="font-medium">{formatCurrency(fatura.valor_total)}</span>
+              </div>
+              <div className="flex justify-between gap-3 text-[11px]">
+                <span className="text-slate-300">Total retido</span>
+                <span className="font-medium">- {formatCurrency(Number(fatura.total_retencoes))}</span>
+              </div>
+              <div className="flex justify-between gap-3 text-xs pt-1">
+                <span className="font-semibold">Líquido</span>
+                <span className="font-bold">{formatCurrency(liquido)}</span>
+              </div>
+            </div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
 }
 
 function getDiasAteVencimento(dataVencimento: string): number {
@@ -158,7 +218,8 @@ export function FaturasTable({
               {showEscritorio && <th className="text-left py-2.5 px-2 w-[10%]">Escritorio</th>}
               <th className="text-center py-2.5 px-2 w-[72px]">Emissao</th>
               <th className="text-center py-2.5 px-2 w-[80px]">Vencimento</th>
-              <th className="text-right py-2.5 px-2 w-[120px]">Valor</th>
+              <th className="text-right py-2.5 px-2 w-[105px]">Bruto</th>
+              <th className="text-right py-2.5 px-2 w-[115px]">Líquido</th>
               <th className="text-center py-2.5 px-2 w-[90px]">Situacao</th>
               <th className="text-right py-2.5 px-3 w-[80px]">Acoes</th>
             </tr>
@@ -229,11 +290,16 @@ export function FaturasTable({
                     )}
                   </td>
 
-                  {/* Valor */}
-                  <td className="py-2 px-2 w-[120px] text-right">
-                    <p className="text-xs font-bold text-[#34495e] dark:text-slate-200">
+                  {/* Bruto */}
+                  <td className="py-2 px-2 w-[105px] text-right">
+                    <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
                       {formatCurrency(fatura.valor_total)}
                     </p>
+                  </td>
+
+                  {/* Líquido */}
+                  <td className="py-2 px-2 w-[115px] text-right">
+                    <ValorLiquido fatura={fatura} />
                     {isParcial && (
                       <div className="mt-0.5 flex items-center gap-1 justify-end">
                         <div className="w-12 bg-slate-200 dark:bg-slate-700 rounded-full h-1">
@@ -393,15 +459,22 @@ export function FaturasTable({
                     {vencInfo.text}
                   </span>
                 </div>
-                <div className="text-right">
-                  <span className="text-xs font-bold text-[#34495e] dark:text-slate-200">
-                    {formatCurrency(fatura.valor_total)}
-                  </span>
-                  {isParcial && (
-                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400">
-                      Pago: {formatCurrency(fatura.valor_pago)}
+                <div className="flex items-baseline gap-3">
+                  <div className="text-right">
+                    <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase tracking-wide">Bruto</p>
+                    <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                      {formatCurrency(fatura.valor_total)}
                     </p>
-                  )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[9px] text-[#46627f] dark:text-slate-400 uppercase tracking-wide">Líquido</p>
+                    <ValorLiquido fatura={fatura} />
+                    {isParcial && (
+                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                        Pago: {formatCurrency(fatura.valor_pago)}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 

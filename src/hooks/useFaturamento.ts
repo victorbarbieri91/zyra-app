@@ -86,6 +86,20 @@ export interface FaturaGerada {
   data_vencimento: string
   valor_total: number
   valor_pago: number
+  total_retencoes: number
+  valor_liquido: number
+  retencoes: {
+    base_calculo?: number
+    valor_exportacao?: number
+    total_retencoes: number
+    valor_liquido: number
+    irrf?: { aliquota: number; valor: number; retido: boolean }
+    pis?: { aliquota: number; valor: number; retido: boolean }
+    cofins?: { aliquota: number; valor: number; retido: boolean }
+    csll?: { aliquota: number; valor: number; retido: boolean }
+    iss?: { aliquota: number; valor: number; retido: boolean }
+    inss?: { aliquota: number; valor: number; retido: boolean }
+  } | null
   status: 'rascunho' | 'emitida' | 'enviada' | 'paga' | 'parcialmente_paga' | 'atrasada' | 'cancelada'
   parcelado: boolean
   numero_parcelas: number | null

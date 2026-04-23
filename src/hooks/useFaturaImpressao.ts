@@ -342,43 +342,44 @@ export function useFaturaImpressao() {
           .filter((item: any) => item.contrato_id && contratosExportacaoSet.has(item.contrato_id))
           .reduce((sum: number, item: any) => sum + Number(item.valor || 0), 0)
 
-        // Calcular impostos baseado na configuração fiscal
+        // Impostos: preferir colunas persistidas (calculadas por atualizar_retencoes_fatura no DB).
+        // Cálculo em TS só como fallback defensivo para faturas sem backfill.
         let impostosCalculados: ImpostosCalculados | null = null
         let regimeTributarioLabel: string | null = null
 
         if (configFiscal && configFiscal.exibir_impostos_fatura) {
           const valorTotal = Number(faturaData.valor_total)
-          const valorBaseRetencao = valorTotal - valorExportacao
           regimeTributarioLabel = REGIME_TRIBUTARIO_LABELS[configFiscal.regime_tributario]
 
-          const clienteContext: ClienteRetencaoContext = {
-            tipo_pessoa: clienteData.tipo_pessoa || 'pj',
-            optante_simples: clienteData.optante_simples || false,
-          }
-
-          if (configFiscal.regime_tributario === 'lucro_presumido') {
-            const impostos = configFiscal.lucro_presumido?.impostos || ALIQUOTAS_LUCRO_PRESUMIDO
-            const calculado = calcularImpostosLucroPresumido(valorBaseRetencao, impostos, clienteContext)
-            // valor_liquido deve ser sobre o total da fatura, não só a base de retenção
-            impostosCalculados = {
-              ...calculado,
-              base_calculo: valorBaseRetencao,
-              valor_liquido: valorTotal - calculado.total_retencoes,
+          if (faturaData.retencoes) {
+            impostosCalculados = faturaData.retencoes as ImpostosCalculados
+          } else {
+            const valorBaseRetencao = valorTotal - valorExportacao
+            const clienteContext: ClienteRetencaoContext = {
+              tipo_pessoa: clienteData.tipo_pessoa || 'pj',
+              optante_simples: clienteData.optante_simples || false,
             }
-          } else if (configFiscal.regime_tributario === 'simples_nacional') {
-            // No Simples Nacional, geralmente não há retenções na fatura
-            // A tributação é paga pelo prestador via DAS
-            const aliquotaEfetiva = configFiscal.simples_nacional?.aliquota_efetiva || 0
-            impostosCalculados = {
-              base_calculo: valorTotal,
-              irrf: { aliquota: 0, valor: 0, retido: false },
-              pis: { aliquota: 0, valor: 0, retido: false },
-              cofins: { aliquota: 0, valor: 0, retido: false },
-              csll: { aliquota: 0, valor: 0, retido: false },
-              iss: { aliquota: 0, valor: 0, retido: false },
-              inss: { aliquota: 0, valor: 0, retido: false },
-              total_retencoes: 0,
-              valor_liquido: valorTotal,
+
+            if (configFiscal.regime_tributario === 'lucro_presumido') {
+              const impostos = configFiscal.lucro_presumido?.impostos || ALIQUOTAS_LUCRO_PRESUMIDO
+              const calculado = calcularImpostosLucroPresumido(valorBaseRetencao, impostos, clienteContext)
+              impostosCalculados = {
+                ...calculado,
+                base_calculo: valorBaseRetencao,
+                valor_liquido: valorTotal - calculado.total_retencoes,
+              }
+            } else if (configFiscal.regime_tributario === 'simples_nacional') {
+              impostosCalculados = {
+                base_calculo: valorTotal,
+                irrf: { aliquota: 0, valor: 0, retido: false },
+                pis: { aliquota: 0, valor: 0, retido: false },
+                cofins: { aliquota: 0, valor: 0, retido: false },
+                csll: { aliquota: 0, valor: 0, retido: false },
+                iss: { aliquota: 0, valor: 0, retido: false },
+                inss: { aliquota: 0, valor: 0, retido: false },
+                total_retencoes: 0,
+                valor_liquido: valorTotal,
+              }
             }
           }
         }

@@ -94,6 +94,9 @@ interface ExtratoItem {
   descricao: string
   valor: number
   valor_pago: number | null
+  valor_bruto?: number | null
+  valor_liquido?: number | null
+  total_retencoes?: number | null
   data_referencia: string
   data_vencimento: string | null
   data_efetivacao: string | null
@@ -579,6 +582,9 @@ export default function ExtratoFinanceiroPage() {
         descricao: item.descricao,
         valor: Number(item.valor) || 0,
         valor_pago: item.valor_pago ? Number(item.valor_pago) : null,
+        valor_bruto: item.valor_bruto != null ? Number(item.valor_bruto) : null,
+        valor_liquido: item.valor_liquido != null ? Number(item.valor_liquido) : null,
+        total_retencoes: item.total_retencoes != null ? Number(item.total_retencoes) : null,
         data_referencia: item.data_referencia,
         data_vencimento: item.data_vencimento,
         data_efetivacao: item.data_efetivacao,
@@ -653,15 +659,17 @@ export default function ExtratoFinanceiroPage() {
       const totalFiltered = combinedData.length
 
       // Calcular totais de toda a lista filtrada (antes de paginar)
+      // Usa valor líquido — o que efetivamente entra/sai do caixa quando há retenção.
       let somaReceitas = 0
       let somaDespesas = 0
       for (const item of combinedData) {
         // Levantamentos são neutros — não somam em receitas nem despesas
         if (item.tipo_movimento === 'levantamento') continue
+        const valorCaixa = Number(item.valor_liquido ?? item.valor)
         if (item.tipo_movimento === 'receita' || item.tipo_movimento === 'transferencia_entrada') {
-          somaReceitas += item.valor
+          somaReceitas += valorCaixa
         } else {
-          somaDespesas += item.valor
+          somaDespesas += valorCaixa
         }
       }
       setTotalReceitas(somaReceitas)
@@ -844,12 +852,12 @@ export default function ExtratoFinanceiroPage() {
     }
   }
 
-  const handlePagarDespesa = async (id: string, opts: { contaBancariaId: string; formaPagamento?: string }) => {
+  const handlePagarDespesa = async (id: string, opts: { contaBancariaId: string; formaPagamento?: string; dataEfetivacao?: string }) => {
     try {
       const hoje = new Date().toISOString().split('T')[0]
       const { error } = await supabase.from('financeiro_despesas').update({
         status: 'pago',
-        data_pagamento: hoje,
+        data_pagamento: opts.dataEfetivacao || hoje,
         conta_bancaria_id: opts.contaBancariaId,
         forma_pagamento: opts.formaPagamento || null,
       }).eq('id', id)
@@ -3060,7 +3068,7 @@ export default function ExtratoFinanceiroPage() {
                       )}>
                         {item.tipo_movimento === 'receita' ? '+ ' :
                          item.tipo_movimento === 'despesa' ? '- ' :
-                         ''}{formatCurrency(item.valor)}
+                         ''}{formatCurrency(Number(item.valor_liquido ?? item.valor))}
                       </span>
                     </div>
                   </div>
@@ -3646,7 +3654,7 @@ export default function ExtratoFinanceiroPage() {
                          item.tipo_movimento === 'despesa' ? '- ' :
                          item.tipo_movimento === 'transferencia_saida' && contaFiltro !== 'todas' ? '- ' :
                          item.tipo_movimento === 'transferencia_entrada' ? '+ ' :
-                         ''}{formatCurrency(item.valor)}
+                         ''}{formatCurrency(Number(item.valor_liquido ?? item.valor))}
                       </span>
                     </td>
 
@@ -5414,6 +5422,9 @@ export default function ExtratoFinanceiroPage() {
           descricao: itemParaReceber.descricao,
           valor: itemParaReceber.valor,
           valor_pago: itemParaReceber.valor_pago || 0,
+          valor_bruto: itemParaReceber.valor_bruto ?? itemParaReceber.valor,
+          valor_liquido: itemParaReceber.valor_liquido ?? itemParaReceber.valor,
+          total_retencoes: itemParaReceber.total_retencoes ?? 0,
           data_vencimento: itemParaReceber.data_vencimento,
           conta_bancaria_id: itemParaReceber.conta_bancaria_id,
           cliente_id: itemParaReceber.cliente_id,

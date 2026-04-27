@@ -4374,6 +4374,24 @@ export default function ExtratoFinanceiroPage() {
                 )}
               </div>
 
+              {Number(modalDetalhes.total_retencoes ?? 0) > 0 && (
+                <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-surface-2 p-3 space-y-1.5">
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">Retenção tributária</p>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600 dark:text-slate-400">Bruto</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">{formatCurrency(Number(modalDetalhes.valor_bruto ?? modalDetalhes.valor))}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600 dark:text-slate-400">Retido</span>
+                    <span className="font-medium text-red-600">- {formatCurrency(Number(modalDetalhes.total_retencoes))}</span>
+                  </div>
+                  <div className="flex justify-between text-sm pt-1 border-t border-slate-200 dark:border-slate-700">
+                    <span className="font-semibold text-[#34495e] dark:text-slate-200">Líquido</span>
+                    <span className="font-bold text-[#34495e] dark:text-slate-200">{formatCurrency(Number(modalDetalhes.valor_liquido ?? modalDetalhes.valor))}</span>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">Vencimento</p>

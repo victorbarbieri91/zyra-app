@@ -641,9 +641,11 @@ export default function ExtratoFinanceiroPage() {
         combinedData = combinedData.filter((item) => {
           if (item.descricao?.toLowerCase().includes(termo)) return true
           if (item.entidade?.toLowerCase().includes(termo)) return true
-          if (ehBuscaNumerica && item.valor != null) {
-            // Casa tanto valor exato quanto prefixo (ex: "150" casa com 150,00 e 1.500,00)
-            if (item.valor.toFixed(2).includes(termoNumerico)) return true
+          if (ehBuscaNumerica) {
+            // Casa contra bruto, valor pago e líquido (cobre faturas com retenção)
+            if (item.valor != null && item.valor.toFixed(2).includes(termoNumerico)) return true
+            if (item.valor_pago != null && Number(item.valor_pago).toFixed(2).includes(termoNumerico)) return true
+            if (item.valor_liquido != null && Number(item.valor_liquido).toFixed(2).includes(termoNumerico)) return true
           }
           return false
         })
@@ -4353,26 +4355,36 @@ export default function ExtratoFinanceiroPage() {
                 <p className="text-sm text-slate-700">{modalDetalhes.descricao}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">Valor</p>
-                  <p className={`text-lg font-bold ${
-                    modalDetalhes.tipo_movimento === 'receita' || modalDetalhes.tipo_movimento === 'transferencia_entrada'
-                      ? 'text-emerald-600'
-                      : modalDetalhes.tipo_movimento === 'transferencia_saida'
-                      ? 'text-blue-600'
-                      : 'text-red-600'
-                  }`}>
-                    {formatCurrency(modalDetalhes.valor)}
-                  </p>
-                </div>
-                {modalDetalhes.valor_pago && modalDetalhes.valor_pago > 0 && (
-                  <div>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">Valor Pago</p>
-                    <p className="text-lg font-bold text-emerald-600">{formatCurrency(modalDetalhes.valor_pago)}</p>
+              {(() => {
+                const temRetencao = Number(modalDetalhes.total_retencoes ?? 0) > 0
+                  || (modalDetalhes.valor_pago != null && Number(modalDetalhes.valor_pago) > 0 && Number(modalDetalhes.valor_pago) !== modalDetalhes.valor)
+                return (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">
+                        {temRetencao ? 'Valor Bruto' : 'Valor'}
+                      </p>
+                      <p className={`text-lg font-bold ${
+                        modalDetalhes.tipo_movimento === 'receita' || modalDetalhes.tipo_movimento === 'transferencia_entrada'
+                          ? 'text-emerald-600'
+                          : modalDetalhes.tipo_movimento === 'transferencia_saida'
+                          ? 'text-blue-600'
+                          : 'text-red-600'
+                      }`}>
+                        {formatCurrency(modalDetalhes.valor)}
+                      </p>
+                    </div>
+                    {modalDetalhes.valor_pago && modalDetalhes.valor_pago > 0 && (
+                      <div>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">
+                          {temRetencao ? 'Valor Líquido' : 'Valor Pago'}
+                        </p>
+                        <p className="text-lg font-bold text-emerald-600">{formatCurrency(modalDetalhes.valor_pago)}</p>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                )
+              })()}
 
               {Number(modalDetalhes.total_retencoes ?? 0) > 0 && (
                 <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-surface-2 p-3 space-y-1.5">

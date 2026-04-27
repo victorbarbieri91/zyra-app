@@ -164,15 +164,21 @@ export default function FaturamentoPage() {
   const faturasFiltradas = useMemo(() => {
     let resultado = [...faturas]
 
-    // Filtro por texto (número, cliente ou valor)
+    // Filtro por texto (número, cliente, valor bruto ou líquido)
     if (searchFaturas.trim()) {
       const termo = searchFaturas.toLowerCase().trim()
-      resultado = resultado.filter(
-        (f) =>
-          f.numero_fatura.toLowerCase().includes(termo) ||
-          f.cliente_nome.toLowerCase().includes(termo) ||
-          f.valor_total.toFixed(2).includes(termo)
-      )
+      // Normaliza termo numérico: remove milhar (.) e troca vírgula decimal por ponto
+      const termoNumerico = termo.replace(/\./g, '').replace(',', '.')
+      const ehBuscaNumerica = /^[\d.,]+$/.test(termo) && !isNaN(parseFloat(termoNumerico))
+      resultado = resultado.filter((f) => {
+        if (f.numero_fatura.toLowerCase().includes(termo)) return true
+        if (f.cliente_nome.toLowerCase().includes(termo)) return true
+        if (ehBuscaNumerica) {
+          if (f.valor_total != null && f.valor_total.toFixed(2).includes(termoNumerico)) return true
+          if (f.valor_liquido != null && Number(f.valor_liquido).toFixed(2).includes(termoNumerico)) return true
+        }
+        return false
+      })
     }
 
     // Filtros toggle (combinação OR entre ativos)

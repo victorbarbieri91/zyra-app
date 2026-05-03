@@ -58,12 +58,46 @@ export function useLancamentoMutations() {
           .single()
 
         if (regraData) {
-          // Conta pendentes futuras (incluindo a atual se for pendente)
+          // Conta ocorrências afetáveis na série (não-quitadas).
+          // Para despesa, inclui pendente/agendado/liberado — todas serão atualizadas
+          // pela função atualizar_regra_em_serie. Receita só tem pendente.
+          const statusAfetaveis =
+            tipo === 'despesa' ? ['pendente', 'agendado', 'liberado'] : ['pendente']
           const { count } = await supabase
             .from(tabela)
             .select('id', { count: 'exact', head: true })
             .eq('regra_recorrencia_id', regraId)
-            .eq('status', 'pendente')
+            .in('status', statusAfetaveis)
+
+          // Calcular a próxima parcela AFETÁVEL a partir da data desta instância (inclusive).
+          // Se a instância clicada estiver editável, retorna ela própria.
+          // Se estiver paga/cancelada, retorna a próxima editável.
+          const dataAtual = (raw.data_vencimento as string) ?? ''
+          let pendentesAPartirDestaCount = 0
+          let proximaDataAfetavel: string | null = null
+          let proximoNumeroParcela: number | null = null
+          if (dataAtual) {
+            const colunasProxima =
+              tipo === 'despesa'
+                ? 'data_vencimento, numero_parcela'
+                : 'data_vencimento'
+
+            const { data: proximas, count: cAPartir } = await supabase
+              .from(tabela)
+              .select(colunasProxima, { count: 'exact' })
+              .eq('regra_recorrencia_id', regraId)
+              .in('status', statusAfetaveis)
+              .gte('data_vencimento', dataAtual)
+              .order('data_vencimento', { ascending: true })
+              .limit(1)
+
+            pendentesAPartirDestaCount = cAPartir ?? 0
+            if (proximas && proximas.length > 0) {
+              const r = proximas[0] as Record<string, unknown>
+              proximaDataAfetavel = (r.data_vencimento as string) ?? null
+              proximoNumeroParcela = (r.numero_parcela as number | null) ?? null
+            }
+          }
 
           regra = {
             id: regraData.id as string,
@@ -72,6 +106,9 @@ export function useLancamentoMutations() {
             dia_vencimento: regraData.dia_vencimento as number,
             frequencia: regraData.frequencia as string,
             pendentes_futuras: count ?? 0,
+            pendentes_a_partir_desta: pendentesAPartirDestaCount,
+            proxima_data_afetavel: proximaDataAfetavel,
+            proximo_numero_parcela: proximoNumeroParcela,
           }
         }
       }
@@ -149,6 +186,14 @@ export function useLancamentoMutations() {
         return false
       }
 
+      // Se for parcelamento, recalcular valor_total_original da regra
+      // (corrige bug onde edição pontual deixava o total da regra divergente)
+      if (detalhes.regra?.is_parcelamento && detalhes.regra.id) {
+        await supabase.rpc('recalcular_valor_total_parcelamento', {
+          p_regra_id: detalhes.regra.id,
+        })
+      }
+
       // Recalcular saldo se houver conta bancária vinculada
       if (form.conta_bancaria_id) {
         await supabase.rpc('recalcular_saldo_conta', {
@@ -162,13 +207,17 @@ export function useLancamentoMutations() {
   )
 
   /**
-   * Atualiza a regra de recorrência e todas as instâncias pendentes da série.
-   * Pagas e canceladas ficam intactas (preserva histórico).
+   * Atualiza a regra de recorrência e instâncias afetáveis (pendente/agendado/liberado).
+   * Pagas, canceladas e demais status terminais ficam intactos (preserva histórico).
+   *
+   * @param dataCorte Quando informado, atualiza apenas instâncias com data_vencimento >= dataCorte
+   *                  ("desta em diante"). Quando omitido, atualiza toda a série.
    */
   const atualizarSerie = useCallback(
     async (
       detalhes: LancamentoDetalhes,
       form: LancamentoEditFormData,
+      dataCorte?: string,
     ): Promise<number | null> => {
       if (!detalhes.regra) return null
 
@@ -181,6 +230,7 @@ export function useLancamentoMutations() {
         p_dia_vencimento: form.dia_vencimento || null,
         p_conta_bancaria_id: form.conta_bancaria_id || null,
         p_observacoes: detalhes.tipo === 'receita' ? form.observacoes || null : null,
+        p_data_corte: dataCorte || null,
       })
 
       if (error) {
@@ -221,17 +271,27 @@ export function useLancamentoMutations() {
   )
 
   /**
-   * Hard delete da série: inativa a regra + apaga instâncias pendentes.
-   * Pagas e canceladas ficam intactas (histórico preservado).
+   * Hard delete da série: apaga instâncias afetáveis (pendente/agendado/liberado).
+   *
+   * Sem dataCorte (escopo "Toda a série"): inativa a regra + apaga todas afetáveis.
+   * Com dataCorte (escopo "Desta em diante"):
+   *   - Recorrência: regra continua ativa, vigencia_fim = dataCorte - 1 dia.
+   *     Apaga instâncias com data_vencimento >= dataCorte.
+   *   - Parcelamento: ajusta parcela_total + vigencia_fim e recalcula valor_total_original.
+   *     Apaga instâncias com data_vencimento >= dataCorte.
+   *
+   * Pagas e canceladas sempre ficam intactas (histórico preservado).
    */
   const excluirSerie = useCallback(
     async (
       detalhes: LancamentoDetalhes,
+      dataCorte?: string,
     ): Promise<{ removidas: number; contaId: string | null } | null> => {
       if (!detalhes.regra) return null
 
       const { data, error } = await supabase.rpc('excluir_regra_em_serie', {
         p_regra_id: detalhes.regra.id,
+        p_data_corte: dataCorte || null,
       })
 
       if (error) {

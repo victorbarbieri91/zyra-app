@@ -520,13 +520,16 @@ export default function ReceitaModal({
 
       if (isRecorrente || isParcelada) {
         // ──────────────────────────────────────────────────
-        // RECORRENTE ou PARCELADA: criar regra + 1ª instância
+        // RECORRENTE ou PARCELADA
+        // O trigger materializar_regra_after_insert cria todas
+        // as N receitas automaticamente. O modal só cadastra a
+        // regra (com campos a serem propagados) e ajusta a
+        // receita do mês de vencimento se "já recebido".
         // ──────────────────────────────────────────────────
         const valorParcela = isParcelada
           ? Math.floor((valorTotal / formData.numero_parcelas) * 100) / 100
           : valorTotal
 
-        // 1. Criar regra de recorrência
         const { data: regra, error: errRegra } = await supabase
           .from('financeiro_regras_recorrencia')
           .insert({
@@ -554,6 +557,9 @@ export default function ReceitaModal({
             ativo: true,
             is_parcelamento: isParcelada,
             parcela_total: isParcelada ? formData.numero_parcelas : null,
+            tipo_receita: formData.tipo,
+            responsavel_id: user.id,
+            observacoes: formData.observacoes || null,
             created_by: user.id,
           })
           .select('id')
@@ -561,36 +567,24 @@ export default function ReceitaModal({
 
         if (errRegra) throw errRegra
 
-        // 2. Criar primeira instância real (mês atual)
-        const { error: errInst } = await supabase
-          .from('financeiro_receitas')
-          .insert({
-            escritorio_id: escritorioAtivo,
-            tipo: formData.tipo,
-            categoria: formData.categoria,
-            descricao: isParcelada
-              ? `Parcela 1/${formData.numero_parcelas} - ${formData.descricao}`
-              : formData.descricao,
-            valor: valorParcela,
-            data_competencia: formData.data_competencia,
-            data_vencimento: formData.data_vencimento,
-            cliente_id: clienteIdFinal,
-            processo_id: processoIdFinal,
-            consulta_id: consultaIdFinal,
-            contrato_id: contratoIdFinal,
-            observacoes: formData.observacoes || null,
-            status: formData.ja_recebido ? 'pago' : 'pendente',
-            data_pagamento: formData.ja_recebido ? formData.data_pagamento : null,
-            valor_pago: formData.ja_recebido ? valorParcela : null,
-            conta_bancaria_id: formData.ja_recebido ? formData.conta_bancaria_id : null,
-            forma_pagamento: formData.ja_recebido ? formData.forma_pagamento : null,
-            responsavel_id: user.id,
-            created_by: user.id,
-            regra_recorrencia_id: regra.id,
-            periodo_referencia: formData.data_vencimento.substring(0, 7),
-          })
-
-        if (errInst) throw errInst
+        // Se "já recebido" → atualiza apenas a receita do mês de
+        // vencimento informado (a 1ª do parcelamento ou a do mês
+        // atual em recorrências).
+        if (formData.ja_recebido) {
+          const periodoAlvo = formData.data_vencimento.substring(0, 7)
+          const { error: errUpd } = await supabase
+            .from('financeiro_receitas')
+            .update({
+              status: 'pago',
+              data_pagamento: formData.data_pagamento,
+              valor_pago: valorParcela,
+              conta_bancaria_id: formData.conta_bancaria_id || null,
+              forma_pagamento: formData.forma_pagamento || null,
+            })
+            .eq('regra_recorrencia_id', regra.id)
+            .eq('periodo_referencia', periodoAlvo)
+          if (errUpd) throw errUpd
+        }
       } else {
         // ──────────────────────────────────────────────────
         // ÚNICA: insert direto sem regra

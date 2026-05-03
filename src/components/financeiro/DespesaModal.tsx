@@ -649,6 +649,7 @@ export default function DespesaModal({
           reembolsavel: formData.reembolsavel,
           reembolso_status: formData.reembolsavel ? 'pendente' : null,
           processo_id: processoSelecionado?.id || null,
+          consulta_id: consultaSelecionada?.id || null,
           consultivo_id: consultaSelecionada?.id || null,
           cliente_id: derivedClienteId || clienteId || null,
           fornecedor: formData.fornecedor.trim() || null,
@@ -680,15 +681,22 @@ export default function DespesaModal({
         const vencimentoFormatado = formatDateForDB(formData.data_vencimento)
         const vencimentoDay = new Date(formData.data_vencimento + 'T12:00:00').getDate()
 
+        const consultivoIdSelecionado = consultaSelecionada?.id || null
+
         if (isRecorrente || isParcelada) {
           // ──────────────────────────────────────────────────
-          // RECORRENTE ou PARCELADA: criar regra + 1ª instância
+          // RECORRENTE ou PARCELADA
+          // O trigger materializar_regra_after_insert da tabela
+          // financeiro_regras_recorrencia cria automaticamente
+          // todas as N parcelas/instâncias em financeiro_despesas
+          // (com ON CONFLICT DO NOTHING em (regra, periodo)).
+          // O modal só precisa cadastrar a regra com os campos
+          // a serem propagados, e ajustar a 1ª parcela se "já pago".
           // ──────────────────────────────────────────────────
           const valorParcela = isParcelada
             ? Math.floor((formData.valor / formData.numero_parcelas) * 100) / 100
             : formData.valor
 
-          // 1. Criar regra de recorrência
           const { data: regra, error: errRegra } = await supabase
             .from('financeiro_regras_recorrencia')
             .insert({
@@ -701,8 +709,9 @@ export default function DespesaModal({
               fornecedor: formData.fornecedor.trim() || null,
               cliente_id: derivedClienteId || clienteId || null,
               processo_id: processoSelecionado?.id || null,
-              consulta_id: consultaSelecionada?.id || null,
-              conta_bancaria_id: formData.ja_pago ? formData.conta_bancaria_id : null,
+              consulta_id: consultivoIdSelecionado,
+              consultivo_id: consultivoIdSelecionado,
+              conta_bancaria_id: formData.ja_pago ? formData.conta_bancaria_id || null : null,
               frequencia: isRecorrente ? formData.config_recorrencia.frequencia : 'mensal',
               dia_vencimento: vencimentoDay,
               vigencia_inicio: vencimentoFormatado,
@@ -716,6 +725,9 @@ export default function DespesaModal({
               ativo: true,
               is_parcelamento: isParcelada,
               parcela_total: isParcelada ? formData.numero_parcelas : null,
+              reembolsavel: formData.reembolsavel,
+              responsavel_id: currentUser?.id || null,
+              comprovante_url: comprovanteUrl,
               created_by: currentUser?.id || null,
             })
             .select('id')
@@ -723,49 +735,35 @@ export default function DespesaModal({
 
           if (errRegra) throw errRegra
 
-          // 2. Criar primeira instância real
-          const despesaInst: Record<string, unknown> = {
-            escritorio_id: escritorioAtivo,
-            processo_id: processoSelecionado?.id || null,
-            consultivo_id: consultaSelecionada?.id || null,
-            cliente_id: derivedClienteId || clienteId || null,
-            categoria: formData.categoria,
-            descricao: isParcelada
-              ? `Parcela 1/${formData.numero_parcelas} - ${formData.descricao.trim()}`
-              : formData.descricao.trim(),
-            valor: valorParcela,
-            data_vencimento: vencimentoFormatado,
-            comprovante_url: comprovanteUrl,
-            reembolsavel: formData.reembolsavel,
-            reembolso_status: formData.reembolsavel ? 'pendente' : null,
-            advogado_id: currentUser?.id || null,
-            fornecedor: formData.fornecedor.trim() || null,
-            regra_recorrencia_id: regra.id,
-            periodo_referencia: formData.data_vencimento.substring(0, 7),
-            numero_parcela: isParcelada ? 1 : null,
-          }
-
+          // Se "já pago" estiver marcado, atualizar APENAS a parcela
+          // do mês de vencimento (a 1ª do parcelamento ou a do mês
+          // atual em recorrências). As demais ficam pendentes.
           if (formData.ja_pago) {
-            despesaInst.status = 'pago'
-            despesaInst.fluxo_status = 'pago'
-            despesaInst.data_pagamento = formatDateForDB(formData.data_pagamento)
-            despesaInst.conta_bancaria_id = formData.conta_bancaria_id || null
-            despesaInst.forma_pagamento = formData.forma_pagamento || null
-          } else {
-            despesaInst.status = 'pendente'
-            despesaInst.fluxo_status = 'pendente'
+            const periodoAlvo = formData.data_vencimento.substring(0, 7)
+            const { error: errUpd } = await supabase
+              .from('financeiro_despesas')
+              .update({
+                status: 'pago',
+                fluxo_status: 'pago',
+                data_pagamento: formatDateForDB(formData.data_pagamento),
+                conta_bancaria_id: formData.conta_bancaria_id || null,
+                forma_pagamento: formData.forma_pagamento || null,
+              })
+              .eq('regra_recorrencia_id', regra.id)
+              .eq('periodo_referencia', periodoAlvo)
+            if (errUpd) throw errUpd
           }
-
-          const { error: errInst } = await supabase.from('financeiro_despesas').insert(despesaInst)
-          if (errInst) throw errInst
         } else {
           // ──────────────────────────────────────────────────
           // ÚNICA: insert direto sem regra
+          // Popula consulta_id E consultivo_id (mesma FK em duas
+          // colunas — convivência durante migração).
           // ──────────────────────────────────────────────────
           const despesaData: Record<string, unknown> = {
             escritorio_id: escritorioAtivo,
             processo_id: processoSelecionado?.id || null,
-            consultivo_id: consultaSelecionada?.id || null,
+            consulta_id: consultivoIdSelecionado,
+            consultivo_id: consultivoIdSelecionado,
             cliente_id: derivedClienteId || clienteId || null,
             categoria: formData.categoria,
             descricao: formData.descricao.trim(),

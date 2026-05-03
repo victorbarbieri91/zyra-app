@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { CurrencyInput } from '@/components/ui/currency-input'
-import { CalendarDays, Info, Loader2, Pencil, Repeat } from 'lucide-react'
+import { CalendarDays, ChevronsRight, Info, Loader2, Pencil, Repeat } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { cn, formatCurrency } from '@/lib/utils'
@@ -30,7 +30,7 @@ import { useLancamentoMutations } from '@/lib/financeiro/useLancamentoMutations'
 
 const supabase = createClient()
 
-type Escopo = 'instancia' | 'serie'
+type Escopo = 'instancia' | 'em-diante' | 'serie'
 
 interface ContaBancariaOption {
   id: string
@@ -88,8 +88,19 @@ export default function LancamentoEditarModal({
   const isDespesa = detalhes?.tipo === 'despesa'
   const isEfetivado = detalhes?.status === 'pago'
   const pendentes = detalhes?.regra?.pendentes_futuras ?? 0
+  const pendentesAPartirDesta = detalhes?.regra?.pendentes_a_partir_desta ?? 0
+  // Data efetiva de corte: usa próxima parcela editável (ignora paga/cancelada)
+  const proximaDataAfetavel = detalhes?.regra?.proxima_data_afetavel ?? null
+  const proximoNumeroParcela = detalhes?.regra?.proximo_numero_parcela ?? null
   const temSerieEditavel = Boolean(detalhes?.regra && pendentes > 1)
+  // "Desta em diante" só faz sentido se houver pelo menos 2 parcelas afetáveis
+  // a partir da clicada (ou se a clicada não for editável, ao menos 1 posterior)
+  const temEmDianteEditavel = Boolean(
+    detalhes?.regra && pendentesAPartirDesta >= 1 && proximaDataAfetavel,
+  )
   const isSerie = escopo === 'serie'
+  const isEmDiante = escopo === 'em-diante'
+  const ehParteDeSerie = isSerie || isEmDiante
   const isParcelamento = detalhes?.regra?.is_parcelamento ?? false
 
   const categorias = useMemo(
@@ -193,16 +204,22 @@ export default function LancamentoEditarModal({
 
     setSaving(true)
     try {
-      if (isSerie) {
-        const atualizadas = await atualizarSerie(detalhes, form)
+      if (ehParteDeSerie) {
+        // "Toda a série" → dataCorte=undefined
+        // "Desta em diante" → dataCorte = próxima parcela afetável (ignora paga/cancelada)
+        const dataCorte = isEmDiante
+          ? (proximaDataAfetavel ?? detalhes.data_vencimento)
+          : undefined
+        const atualizadas = await atualizarSerie(detalhes, form, dataCorte)
         if (atualizadas === null) {
           toast.error('Erro ao atualizar a série')
           return
         }
+        const sufixo = isEmDiante ? ' (desta data em diante)' : ''
         toast.success(
           atualizadas === 0
-            ? 'Regra atualizada. Nenhuma ocorrência pendente foi alterada.'
-            : `${atualizadas} ${atualizadas === 1 ? 'ocorrência pendente atualizada' : 'ocorrências pendentes atualizadas'}.`,
+            ? 'Regra atualizada. Nenhuma ocorrência foi alterada.'
+            : `${atualizadas} ${atualizadas === 1 ? 'ocorrência atualizada' : 'ocorrências atualizadas'}${sufixo}.`,
         )
       } else {
         const ok = await atualizarInstancia(detalhes, form)
@@ -262,7 +279,7 @@ export default function LancamentoEditarModal({
 
         {!loading && detalhes && (
           <div className="px-6 py-5 space-y-5">
-            {/* Escopo (toggle dentro do modal — sem mini dialog prévio) */}
+            {/* Escopo (toggle de 3 botões: apenas esta / desta em diante / toda a série) */}
             {temSerieEditavel && (
               <div>
                 <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-surface-2 rounded-lg">
@@ -277,8 +294,23 @@ export default function LancamentoEditarModal({
                     )}
                   >
                     <CalendarDays className="w-4 h-4" />
-                    Apenas este mês
+                    Apenas esta
                   </button>
+                  {temEmDianteEditavel && (
+                    <button
+                      type="button"
+                      onClick={() => setEscopo('em-diante')}
+                      className={cn(
+                        'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-medium transition-all',
+                        escopo === 'em-diante'
+                          ? 'bg-[#34495e] text-white shadow-sm'
+                          : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
+                      )}
+                    >
+                      <ChevronsRight className="w-4 h-4" />
+                      Desta em diante ({pendentesAPartirDesta})
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setEscopo('serie')}
@@ -293,20 +325,38 @@ export default function LancamentoEditarModal({
                     Toda a série ({pendentes})
                   </button>
                 </div>
-                {isSerie && (
-                  <div className="mt-3 flex items-start gap-2.5 px-4 py-2.5 rounded-lg bg-[#f0f9f9] border border-[#89bcbe]/40 dark:bg-teal-500/10 dark:border-teal-500/30">
-                    <Info className="w-4 h-4 text-[#89bcbe] mt-0.5 flex-shrink-0" />
-                    <div className="text-sm text-[#46627f] dark:text-slate-300">
-                      Alterações aplicadas a{' '}
-                      <strong className="text-[#34495e] dark:text-slate-200">
-                        {pendentes}{' '}
-                        {pendentes === 1 ? 'ocorrência pendente' : 'ocorrências pendentes'}
-                      </strong>
-                      . Lançamentos já pagos permanecem intactos.
-                      {isParcelamento && (
-                        <span className="block mt-1 text-xs">
-                          Parcelamento: o novo valor se aplica apenas às parcelas pendentes.
-                        </span>
+                {ehParteDeSerie && (
+                  <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-md bg-[#f0f9f9] border border-[#89bcbe]/40 dark:bg-teal-500/10 dark:border-teal-500/30">
+                    <Info className="w-3.5 h-3.5 text-[#89bcbe] flex-shrink-0" />
+                    <div className="text-xs text-[#46627f] dark:text-slate-300">
+                      {isEmDiante ? (
+                        <>
+                          A partir{' '}
+                          {isParcelamento && proximoNumeroParcela && detalhes.regra?.parcela_total ? (
+                            <>
+                              da{' '}
+                              <strong className="text-[#34495e] dark:text-slate-200">
+                                Parcela {proximoNumeroParcela}/{detalhes.regra.parcela_total}
+                              </strong>{' '}
+                              (
+                              {formatBrazilDate(
+                                proximaDataAfetavel ?? detalhes.data_vencimento,
+                              )}
+                              )
+                            </>
+                          ) : (
+                            <>
+                              de{' '}
+                              <strong className="text-[#34495e] dark:text-slate-200">
+                                {formatBrazilDate(
+                                  proximaDataAfetavel ?? detalhes.data_vencimento,
+                                )}
+                              </strong>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <>Toda a série</>
                       )}
                     </div>
                   </div>
@@ -334,13 +384,13 @@ export default function LancamentoEditarModal({
                   <CurrencyInput
                     value={form.valor}
                     onChange={(val) => setForm({ ...form, valor: val })}
-                    disabled={!isSerie && isEfetivado}
+                    disabled={!ehParteDeSerie && isEfetivado}
                     className={cn(
                       'mt-1.5',
-                      !isSerie && isEfetivado ? 'bg-slate-50 dark:bg-surface-2' : '',
+                      !ehParteDeSerie && isEfetivado ? 'bg-slate-50 dark:bg-surface-2' : '',
                     )}
                   />
-                  {!isSerie && isEfetivado && (
+                  {!ehParteDeSerie && isEfetivado && (
                     <p className="text-xs text-slate-500 mt-1">
                       Não editável em lançamento efetivado.
                     </p>
@@ -348,9 +398,9 @@ export default function LancamentoEditarModal({
                 </div>
                 <div>
                   <Label className="text-sm">
-                    {isSerie ? 'Dia do vencimento' : 'Data de vencimento'}
+                    {ehParteDeSerie ? 'Dia do vencimento' : 'Data de vencimento'}
                   </Label>
-                  {isSerie ? (
+                  {ehParteDeSerie ? (
                     <select
                       value={form.dia_vencimento}
                       onChange={(e) =>
@@ -427,7 +477,7 @@ export default function LancamentoEditarModal({
             </section>
 
             {/* Seção: Pagamento (apenas instância + efetivado) */}
-            {!isSerie && isEfetivado && (
+            {!ehParteDeSerie && isEfetivado && (
               <section className="space-y-4 pt-5 border-t border-slate-100 dark:border-slate-800">
                 <SectionTitle>Pagamento</SectionTitle>
 

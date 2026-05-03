@@ -2598,9 +2598,20 @@ export default function ExtratoFinanceiroPage() {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <span className="text-sm font-semibold px-2 min-w-[140px] text-center first-letter:uppercase">
-                  {getMesLabel()}
-                </span>
+                {dataInicio === getInicioMes(new Date()) ? (
+                  <span className="text-sm font-semibold px-2 min-w-[140px] text-center first-letter:uppercase">
+                    {getMesLabel()}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handlePeriodoChange('mes_atual')}
+                    title="Voltar ao mês atual"
+                    className="text-sm font-semibold px-2 min-w-[140px] text-center first-letter:uppercase h-full hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    {getMesLabel()}
+                  </button>
+                )}
                 <Button
                   variant="ghost"
                   className="h-full px-2.5 rounded-l-none text-white hover:bg-white/10 hover:text-white"

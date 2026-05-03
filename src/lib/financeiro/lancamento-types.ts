@@ -56,7 +56,19 @@ export interface LancamentoDetalhes {
     parcela_total: number | null
     dia_vencimento: number
     frequencia: string
+    /** Total de ocorrências afetáveis em toda a série (pendente/agendado/liberado) */
     pendentes_futuras: number
+    /** Subconjunto de ocorrências afetáveis com data_vencimento >= a desta instância */
+    pendentes_a_partir_desta: number
+    /**
+     * Data efetiva de corte para o escopo "desta em diante".
+     * Quando a instância clicada está pendente/agendado/liberado, é a própria data dela.
+     * Quando está pago/cancelado, é a data da PRÓXIMA parcela editável (ignora a clicada).
+     * null = não há mais nenhuma parcela editável a partir desta.
+     */
+    proxima_data_afetavel: string | null
+    /** Numero da próxima parcela afetável (parcelamento). null em recorrência ou sem próxima */
+    proximo_numero_parcela: number | null
   } | null
 }
 

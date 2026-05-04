@@ -16,6 +16,8 @@ import type { ConfigRecorrencia, FrequenciaRecorrencia } from '@/hooks/useReceit
 
 export type LancamentoModalidade = 'unica' | 'parcelada' | 'recorrente'
 
+export type ModoCalculoParcelas = 'total' | 'parcela'
+
 interface LancamentoModalidadeSelectorProps {
   modalidade: LancamentoModalidade
   onModalidadeChange: (m: LancamentoModalidade) => void
@@ -24,6 +26,13 @@ interface LancamentoModalidadeSelectorProps {
   onNumeroParcelasChange: (n: number) => void
   supportsParcelamento?: boolean
   valor?: number
+  /**
+   * Modo de cálculo das parcelas:
+   *   'total'   → o valor digitado no campo principal é o total (default; sistema divide).
+   *   'parcela' → o valor digitado é o de cada parcela (sistema multiplica para obter total).
+   */
+  modoCalculoParcelas?: ModoCalculoParcelas
+  onModoCalculoParcelasChange?: (m: ModoCalculoParcelas) => void
   // Recorrência
   configRecorrencia: ConfigRecorrencia
   onConfigRecorrenciaChange: (c: ConfigRecorrencia) => void
@@ -57,6 +66,8 @@ export default function LancamentoModalidadeSelector({
   onNumeroParcelasChange,
   supportsParcelamento = true,
   valor = 0,
+  modoCalculoParcelas = 'total',
+  onModoCalculoParcelasChange,
   configRecorrencia,
   onConfigRecorrenciaChange,
   dataVencimento,
@@ -84,7 +95,17 @@ export default function LancamentoModalidadeSelector({
     { value: 'recorrente', label: 'Fixa / Recorrente', icon: <Repeat className="w-3.5 h-3.5" /> },
   ]
 
-  const valorParcela = numeroParcelas > 0 ? valor / numeroParcelas : 0
+  // Cálculo derivado conforme o modo:
+  //   modo 'total'   → valor digitado é o total; dividimos para obter a parcela.
+  //   modo 'parcela' → valor digitado é a parcela; multiplicamos para obter o total.
+  const valorParcelaCalculado =
+    modoCalculoParcelas === 'parcela'
+      ? valor
+      : numeroParcelas > 0
+        ? valor / numeroParcelas
+        : 0
+  const valorTotalCalculado =
+    modoCalculoParcelas === 'parcela' ? valor * numeroParcelas : valor
 
   return (
     <div className="space-y-3">
@@ -115,7 +136,44 @@ export default function LancamentoModalidadeSelector({
 
       {/* Campos de Parcelamento */}
       {modalidade === 'parcelada' && (
-        <div className="p-3 bg-[#f0f9f9] dark:bg-teal-950/30 border border-[#aacfd0] dark:border-teal-800 rounded-lg space-y-2">
+        <div className="p-3 bg-[#f0f9f9] dark:bg-teal-950/30 border border-[#aacfd0] dark:border-teal-800 rounded-lg space-y-3">
+          {/* Toggle: calcular pelo valor total OU pelo valor da parcela */}
+          {onModoCalculoParcelasChange && (
+            <div>
+              <Label className="text-xs text-[#34495e] dark:text-teal-300">Calcular pelo</Label>
+              <div className="flex gap-1 mt-1 p-1 bg-slate-100 dark:bg-surface-1 rounded-lg">
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onModoCalculoParcelasChange('total')}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all',
+                    modoCalculoParcelas === 'total'
+                      ? 'bg-[#34495e] text-white shadow-sm'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300',
+                    disabled && 'opacity-50 cursor-not-allowed',
+                  )}
+                >
+                  Valor total
+                </button>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onModoCalculoParcelasChange('parcela')}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all',
+                    modoCalculoParcelas === 'parcela'
+                      ? 'bg-[#34495e] text-white shadow-sm'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300',
+                    disabled && 'opacity-50 cursor-not-allowed',
+                  )}
+                >
+                  Valor da parcela
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-3">
             <div className="flex-1">
               <Label className="text-xs text-[#34495e] dark:text-teal-300">Número de parcelas</Label>
@@ -136,16 +194,23 @@ export default function LancamentoModalidadeSelector({
             </div>
             {valor > 0 && numeroParcelas >= 2 && (
               <div className="text-right">
-                <p className="text-[11px] text-[#46627f] dark:text-teal-400">Valor por parcela</p>
+                <p className="text-[11px] text-[#46627f] dark:text-teal-400">
+                  {modoCalculoParcelas === 'parcela' ? 'Valor total' : 'Valor por parcela'}
+                </p>
                 <p className="text-sm font-semibold text-[#34495e] dark:text-teal-200">
-                  {fmtCurrency(valorParcela)}
+                  {fmtCurrency(
+                    modoCalculoParcelas === 'parcela'
+                      ? valorTotalCalculado
+                      : valorParcelaCalculado,
+                  )}
                 </p>
               </div>
             )}
           </div>
           {numeroParcelas >= 2 && valor > 0 && (
             <p className="text-[11px] text-[#46627f] dark:text-teal-400">
-              {numeroParcelas}x de {fmtCurrency(valorParcela)} = {fmtCurrency(valor)}
+              {numeroParcelas}x de {fmtCurrency(valorParcelaCalculado)} ={' '}
+              {fmtCurrency(valorTotalCalculado)}
             </p>
           )}
         </div>

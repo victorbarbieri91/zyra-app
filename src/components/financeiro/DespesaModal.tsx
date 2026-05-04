@@ -45,7 +45,7 @@ import { toast } from 'sonner'
 import ContaBancariaSelect from '@/components/financeiro/ContaBancariaSelect'
 import { cn } from '@/lib/utils'
 import { formatDateForDB, formatBrazilDate } from '@/lib/timezone'
-import LancamentoModalidadeSelector, { DEFAULT_CONFIG_RECORRENCIA, type LancamentoModalidade } from './LancamentoModalidadeSelector'
+import LancamentoModalidadeSelector, { DEFAULT_CONFIG_RECORRENCIA, type LancamentoModalidade, type ModoCalculoParcelas } from './LancamentoModalidadeSelector'
 import type { ConfigRecorrencia } from '@/hooks/useReceitas'
 
 export interface DespesaEditData {
@@ -114,6 +114,7 @@ interface FormData {
   fornecedor: string
   modalidade: LancamentoModalidade
   numero_parcelas: number
+  modo_calculo_parcelas: ModoCalculoParcelas
   config_recorrencia: ConfigRecorrencia
 }
 
@@ -181,6 +182,7 @@ const makeInitialFormData = (hasVinculo: boolean): FormData => ({
   fornecedor: '',
   modalidade: 'unica',
   numero_parcelas: 2,
+  modo_calculo_parcelas: 'total',
   config_recorrencia: { ...DEFAULT_CONFIG_RECORRENCIA },
 })
 
@@ -327,6 +329,7 @@ export default function DespesaModal({
           fornecedor: editData.fornecedor || '',
           modalidade: 'unica',
           numero_parcelas: 2,
+          modo_calculo_parcelas: 'total',
           config_recorrencia: { ...DEFAULT_CONFIG_RECORRENCIA },
         })
         setSearchTerm('')
@@ -678,6 +681,8 @@ export default function DespesaModal({
 
         const isParcelada = formData.modalidade === 'parcelada'
         const isRecorrente = formData.modalidade === 'recorrente'
+        const modoParcela =
+          isParcelada && formData.modo_calculo_parcelas === 'parcela'
         const vencimentoFormatado = formatDateForDB(formData.data_vencimento)
         const vencimentoDay = new Date(formData.data_vencimento + 'T12:00:00').getDate()
 
@@ -692,10 +697,22 @@ export default function DespesaModal({
           // (com ON CONFLICT DO NOTHING em (regra, periodo)).
           // O modal só precisa cadastrar a regra com os campos
           // a serem propagados, e ajustar a 1ª parcela se "já pago".
+          //
+          // Cálculo conforme o modo de entrada do parcelamento:
+          //   modo 'total'   → form.valor é o total; valor_atual = total/N
+          //   modo 'parcela' → form.valor é a parcela; valor_total_original = parcela*N
           // ──────────────────────────────────────────────────
           const valorParcela = isParcelada
-            ? Math.floor((formData.valor / formData.numero_parcelas) * 100) / 100
+            ? (modoParcela
+                ? formData.valor
+                : Math.floor((formData.valor / formData.numero_parcelas) * 100) / 100)
             : formData.valor
+
+          const valorTotalParcelamento = isParcelada
+            ? (modoParcela
+                ? formData.valor * formData.numero_parcelas
+                : formData.valor)
+            : null
 
           const { data: regra, error: errRegra } = await supabase
             .from('financeiro_regras_recorrencia')
@@ -705,7 +722,7 @@ export default function DespesaModal({
               descricao: formData.descricao.trim(),
               categoria: formData.categoria,
               valor_atual: valorParcela,
-              valor_total_original: isParcelada ? formData.valor : null,
+              valor_total_original: valorTotalParcelamento,
               fornecedor: formData.fornecedor.trim() || null,
               cliente_id: derivedClienteId || clienteId || null,
               processo_id: processoSelecionado?.id || null,
@@ -1070,7 +1087,12 @@ export default function DespesaModal({
           {/* Valor e Data de Vencimento */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="valor">Valor *</Label>
+              <Label htmlFor="valor">
+                {formData.modalidade === 'parcelada' &&
+                formData.modo_calculo_parcelas === 'parcela'
+                  ? 'Valor da parcela *'
+                  : 'Valor *'}
+              </Label>
               <CurrencyInput
                 id="valor"
                 value={formData.valor}
@@ -1099,6 +1121,8 @@ export default function DespesaModal({
             onNumeroParcelasChange={(n) => updateField('numero_parcelas', n)}
             supportsParcelamento={true}
             valor={formData.valor}
+            modoCalculoParcelas={formData.modo_calculo_parcelas}
+            onModoCalculoParcelasChange={(m) => updateField('modo_calculo_parcelas', m)}
             configRecorrencia={formData.config_recorrencia}
             onConfigRecorrenciaChange={(c) => updateField('config_recorrencia', c)}
             dataVencimento={formData.data_vencimento}

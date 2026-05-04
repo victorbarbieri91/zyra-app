@@ -37,6 +37,7 @@ import { cn } from '@/lib/utils'
 import LancamentoModalidadeSelector, {
   DEFAULT_CONFIG_RECORRENCIA,
   type LancamentoModalidade,
+  type ModoCalculoParcelas,
 } from './LancamentoModalidadeSelector'
 import type { ConfigRecorrencia } from '@/hooks/useReceitas'
 import { getEscritoriosDoGrupo } from '@/lib/supabase/escritorio-helpers'
@@ -66,6 +67,7 @@ interface FormData {
   observacoes: string
   modalidade: LancamentoModalidade
   numero_parcelas: number
+  modo_calculo_parcelas: ModoCalculoParcelas
   config_recorrencia: ConfigRecorrencia
   ja_recebido: boolean
   data_pagamento: string
@@ -123,6 +125,7 @@ const makeInitialFormData = (): FormData => ({
   observacoes: '',
   modalidade: 'unica',
   numero_parcelas: 2,
+  modo_calculo_parcelas: 'total',
   config_recorrencia: { ...DEFAULT_CONFIG_RECORRENCIA },
   ja_recebido: false,
   data_pagamento: new Date().toISOString().split('T')[0],
@@ -511,7 +514,13 @@ export default function ReceitaModal({
 
       const isParcelada = formData.modalidade === 'parcelada'
       const isRecorrente = formData.modalidade === 'recorrente'
-      const valorTotal = parseFloat(formData.valor)
+      const modoParcela =
+        isParcelada && formData.modo_calculo_parcelas === 'parcela'
+      const valorDigitado = parseFloat(formData.valor)
+      // Se modo 'parcela', form.valor é a parcela; se 'total', é o total.
+      const valorTotal = modoParcela
+        ? valorDigitado * formData.numero_parcelas
+        : valorDigitado
       const clienteIdFinal = derivedClienteId || clienteId || null
       const processoIdFinal = processoSelecionado?.id || null
       const consultaIdFinal = consultaSelecionada?.id || consultaId || null
@@ -525,9 +534,15 @@ export default function ReceitaModal({
         // as N receitas automaticamente. O modal só cadastra a
         // regra (com campos a serem propagados) e ajusta a
         // receita do mês de vencimento se "já recebido".
+        //
+        // Cálculo conforme o modo de entrada do parcelamento:
+        //   modo 'total'   → form.valor é o total; valor_atual = total/N
+        //   modo 'parcela' → form.valor é a parcela; valor_total_original = parcela*N
         // ──────────────────────────────────────────────────
         const valorParcela = isParcelada
-          ? Math.floor((valorTotal / formData.numero_parcelas) * 100) / 100
+          ? (modoParcela
+              ? valorDigitado
+              : Math.floor((valorTotal / formData.numero_parcelas) * 100) / 100)
           : valorTotal
 
         const { data: regra, error: errRegra } = await supabase
@@ -850,7 +865,12 @@ export default function ReceitaModal({
             <p className="text-xs font-medium text-[#46627f] dark:text-slate-400 uppercase tracking-wide">Valores e Datas</p>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <Label className="text-xs text-slate-600 dark:text-slate-400">Valor (R$) *</Label>
+                <Label className="text-xs text-slate-600 dark:text-slate-400">
+                  {formData.modalidade === 'parcelada' &&
+                  formData.modo_calculo_parcelas === 'parcela'
+                    ? 'Valor da parcela (R$) *'
+                    : 'Valor (R$) *'}
+                </Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -892,6 +912,8 @@ export default function ReceitaModal({
               onNumeroParcelasChange={(n) => updateField('numero_parcelas', n)}
               supportsParcelamento={true}
               valor={parseFloat(formData.valor) || 0}
+              modoCalculoParcelas={formData.modo_calculo_parcelas}
+              onModoCalculoParcelasChange={(m) => updateField('modo_calculo_parcelas', m)}
               configRecorrencia={formData.config_recorrencia}
               onConfigRecorrenciaChange={(c) => updateField('config_recorrencia', c)}
               dataVencimento={formData.data_vencimento}

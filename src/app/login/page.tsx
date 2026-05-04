@@ -7,11 +7,48 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Loader2, Eye, EyeOff, Brain, Shield, Zap, X, Mail, ArrowLeft } from 'lucide-react'
+import { Loader2, Eye, EyeOff, Brain, Shield, Zap, X, Mail, ArrowLeft, WifiOff, RefreshCw } from 'lucide-react'
 import { motion, AnimatePresence, Variants } from 'framer-motion'
 import { AuthVisualSide } from '@/components/auth'
 
 type AuthMode = 'login' | 'register'
+
+function isNetworkError(err: any): boolean {
+  const msg = (err?.message || '').toLowerCase()
+  return (
+    msg.includes('failed to fetch') ||
+    msg.includes('networkerror') ||
+    msg.includes('err_name_not_resolved') ||
+    msg.includes('load failed') ||
+    msg.includes('network request failed') ||
+    msg.includes('fetch failed') ||
+    msg.includes('net::') ||
+    err?.name === 'TypeError' && msg.includes('fetch')
+  )
+}
+
+function getFriendlyErrorMessage(err: any): string {
+  if (isNetworkError(err)) {
+    return 'Nosso servidor está temporariamente indisponível. Isso geralmente se resolve em alguns minutos. Tente novamente.'
+  }
+  const msg = err?.message || ''
+  if (msg.includes('Invalid login credentials')) {
+    return 'E-mail ou senha incorretos. Verifique seus dados e tente novamente.'
+  }
+  if (msg.includes('Email not confirmed')) {
+    return 'Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada.'
+  }
+  if (msg.includes('User already registered')) {
+    return 'Este e-mail já está cadastrado. Tente fazer login.'
+  }
+  if (msg.includes('Password should be at least')) {
+    return 'A senha deve ter no mínimo 6 caracteres.'
+  }
+  if (msg.includes('rate limit') || msg.includes('too many requests')) {
+    return 'Muitas tentativas. Aguarde alguns instantes antes de tentar novamente.'
+  }
+  return msg || 'Ocorreu um erro inesperado. Tente novamente.'
+}
 
 export default function LoginPage() {
   const [mode, setMode] = useState<AuthMode>('login')
@@ -63,7 +100,7 @@ export default function LoginPage() {
       router.push('/dashboard')
       router.refresh()
     } catch (err: any) {
-      setError(err.message || 'Erro ao fazer login')
+      setError(getFriendlyErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -102,7 +139,7 @@ export default function LoginPage() {
       router.push('/dashboard')
       router.refresh()
     } catch (err: any) {
-      setError(err.message || 'Erro ao criar conta')
+      setError(getFriendlyErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -120,7 +157,7 @@ export default function LoginPage() {
 
       setForgotSuccess(true)
     } catch (err: any) {
-      setForgotError(err.message || 'Erro ao enviar email de recuperacao')
+      setForgotError(getFriendlyErrorMessage(err))
     } finally {
       setForgotLoading(false)
     }
@@ -332,9 +369,29 @@ export default function LoginPage() {
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl text-sm"
+                      className={`px-4 py-3 rounded-xl text-sm ${
+                        error.includes('temporariamente indisponível')
+                          ? 'bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-700 dark:text-amber-400'
+                          : 'bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400'
+                      }`}
                     >
-                      {error}
+                      <div className="flex items-start gap-2.5">
+                        {error.includes('temporariamente indisponível') && (
+                          <WifiOff className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        )}
+                        <div className="flex-1">
+                          <p>{error}</p>
+                          {error.includes('temporariamente indisponível') && (
+                            <button
+                              type="submit"
+                              className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium underline hover:no-underline"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              Tentar novamente
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </motion.div>
                   )}
 

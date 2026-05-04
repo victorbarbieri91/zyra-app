@@ -10,12 +10,28 @@ import { useRouter, usePathname } from 'next/navigation';
 interface AuthContextData {
   user: User | null;
   loading: boolean;
+  connectionError: boolean;
   signOut: () => Promise<void>;
+}
+
+function isNetworkError(err: any): boolean {
+  const msg = (err?.message || '').toLowerCase();
+  return (
+    msg.includes('failed to fetch') ||
+    msg.includes('networkerror') ||
+    msg.includes('err_name_not_resolved') ||
+    msg.includes('load failed') ||
+    msg.includes('network request failed') ||
+    msg.includes('fetch failed') ||
+    msg.includes('net::') ||
+    (err?.name === 'TypeError' && msg.includes('fetch'))
+  );
 }
 
 const AuthContext = createContext<AuthContextData>({
   user: null,
   loading: true,
+  connectionError: false,
   signOut: async () => {},
 });
 
@@ -27,6 +43,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
+  const [connectionError, setConnectionError] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createClient();
@@ -36,11 +53,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const { data: { user }, error } = await supabase.auth.getUser();
 
       if (error) {
+        // Erro de rede — NÃO derrubar a sessão
+        if (isNetworkError(error)) {
+          logger.warn('Erro de rede ao verificar auth — mantendo sessão local', { module: 'auth', action: 'verificacao' });
+          // Tentar usar sessão local (localStorage)
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            setUser(session.user);
+            setConnectionError(true);
+            Sentry.setUser({ id: session.user.id, email: session.user.email || undefined });
+            return;
+          }
+          // Sem sessão local → realmente não está logado
+          setConnectionError(true);
+          router.replace('/login');
+          return;
+        }
+
         logger.error('Erro ao verificar autenticacao', { module: 'auth', action: 'verificacao' });
 
-        // Se houver erro de sessao, limpar e redirecionar
+        // Se houver erro de sessão expirada/corrompida, limpar e redirecionar
         if (error.message.includes('session') || error.name === 'AuthSessionMissingError') {
-          await supabase.auth.signOut();
+          await supabase.auth.signOut().catch(() => {});
           setUser(null);
           router.replace('/login');
           return;
@@ -48,16 +82,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       if (!user) {
-        // Nao autenticado - redirecionar para login
+        // Não autenticado - redirecionar para login
         router.replace('/login');
         return;
       }
 
       setUser(user);
+      setConnectionError(false);
       Sentry.setUser({ id: user.id, email: user.email || undefined });
     } catch (err) {
+      // Erro de rede no catch (TypeError: Failed to fetch) — NÃO derrubar sessão
+      if (isNetworkError(err)) {
+        logger.warn('Erro de rede (catch) ao verificar auth — tentando sessão local', { module: 'auth', action: 'verificacao' });
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            setUser(session.user);
+            setConnectionError(true);
+            Sentry.setUser({ id: session.user.id, email: session.user.email || undefined });
+            return;
+          }
+        } catch {
+          // getSession também falhou — sem internet mesmo
+        }
+        setConnectionError(true);
+        // Só redireciona se não tem nenhuma sessão local
+        router.replace('/login');
+        return;
+      }
+
       logger.error('Erro inesperado na verificacao de auth', { module: 'auth', action: 'verificacao' }, err instanceof Error ? err : undefined);
-      // Em caso de erro inesperado, redirecionar para login
       router.replace('/login');
     } finally {
       setLoading(false);
@@ -68,14 +122,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
-      setUser(null);
-      Sentry.setUser(null);
-      router.replace('/login');
     } catch (error) {
       logger.error('Erro ao fazer logout', { module: 'auth', action: 'logout' }, error instanceof Error ? error : undefined);
-      // Mesmo com erro, redirecionar
-      router.replace('/login');
+      // Se for erro de rede, limpar sessão local manualmente
     }
+    // Sempre limpar estado local e redirecionar, mesmo se o signOut falhar
+    setUser(null);
+    setConnectionError(false);
+    Sentry.setUser(null);
+    router.replace('/login');
   };
 
   // Verificar autenticacao ao montar
@@ -130,7 +185,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signOut }}>
+    <AuthContext.Provider value={{ user, loading, connectionError, signOut }}>
       {children}
     </AuthContext.Provider>
   );

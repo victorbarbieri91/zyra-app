@@ -8,6 +8,7 @@ import { EscritorioProvider } from '@/contexts/EscritorioContext'
 import { TimerProvider } from '@/contexts/TimerContext'
 import { QueryProvider } from '@/providers/QueryProvider'
 import { FloatingTimerWidget } from '@/components/timer'
+import { ConnectionBanner } from '@/components/shared/ConnectionBanner'
 
 export default function DashboardLayout({
   children,
@@ -22,6 +23,7 @@ export default function DashboardLayout({
           <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-surface-0">
             <Sidebar />
             <div className="flex-1 flex flex-col overflow-hidden">
+              <ConnectionBanner />
               <Header />
               <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
                 {children}

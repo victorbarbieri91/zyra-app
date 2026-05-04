@@ -56,36 +56,50 @@ export async function middleware(request: NextRequest) {
 
   // Tentar obter usuario, tratando erros de sessao corrompida
   let user = null
+  let networkError = false
   try {
     const { data, error } = await supabase.auth.getUser()
 
     if (error) {
-      // Sessao ausente e esperado para rotas publicas (login, etc) - nao logar como erro
+      const errorMsg = (error.message || '').toLowerCase()
+      const isNetworkErr =
+        errorMsg.includes('failed to fetch') ||
+        errorMsg.includes('fetch failed') ||
+        errorMsg.includes('networkerror') ||
+        errorMsg.includes('load failed') ||
+        errorMsg.includes('net::')
 
-      // Limpar cookies de autenticacao do Supabase
-      // Extrair project ref da URL (formato: https://<ref>.supabase.co)
-      const projectRef = process.env.NEXT_PUBLIC_SUPABASE_URL?.match(/https:\/\/([^.]+)\./)?.[1] || ''
-      const cookiesToClear = [
-        `sb-${projectRef}-auth-token`,
-        `sb-${projectRef}-auth-token.0`,
-        `sb-${projectRef}-auth-token.1`,
-      ]
+      if (isNetworkErr) {
+        // Erro de rede — NÃO limpar cookies, deixar o request passar
+        // O client-side vai lidar com o estado degradado
+        networkError = true
+        user = null
+      } else {
+        // Sessao ausente ou expirada — limpar cookies
+        const projectRef = process.env.NEXT_PUBLIC_SUPABASE_URL?.match(/https:\/\/([^.]+)\./)?.[1] || ''
+        const cookiesToClear = [
+          `sb-${projectRef}-auth-token`,
+          `sb-${projectRef}-auth-token.0`,
+          `sb-${projectRef}-auth-token.1`,
+        ]
 
-      for (const cookieName of cookiesToClear) {
-        response.cookies.set({
-          name: cookieName,
-          value: '',
-          maxAge: 0,
-          path: '/',
-        })
+        for (const cookieName of cookiesToClear) {
+          response.cookies.set({
+            name: cookieName,
+            value: '',
+            maxAge: 0,
+            path: '/',
+          })
+        }
+
+        user = null
       }
-
-      user = null
     } else {
       user = data.user
     }
   } catch {
-    // Erro inesperado ao verificar sessao - tratar como nao autenticado
+    // Erro inesperado (provavelmente rede) — não derrubar sessão
+    networkError = true
     user = null
   }
 
@@ -98,6 +112,11 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/auth/callback') ||
     request.nextUrl.pathname.startsWith('/auth/confirm')
 
+  // Durante erro de rede, deixar o request passar — o client-side lida com estado degradado
+  if (networkError) {
+    return response
+  }
+
   if (!user && !isPublicRoute) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
@@ -107,29 +126,34 @@ export async function middleware(request: NextRequest) {
     const isOnOnboardingPage = request.nextUrl.pathname.startsWith('/onboarding')
     const isOnAuthPage = request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/cadastro'
 
-    // Get user profile to check onboarding status
+    // Get user profile to check onboarding status — com fallback para erro de rede
     const { data: profile } = await supabase
       .from('profiles')
       .select('onboarding_completo, primeiro_acesso')
       .eq('id', user.id)
       .single()
 
+    // Se não conseguiu buscar profile (rede), deixar passar
+    if (!profile) {
+      return response
+    }
+
     // Redirect to onboarding if first access and not completed
-    if (profile && !profile.onboarding_completo && profile.primeiro_acesso) {
+    if (!profile.onboarding_completo && profile.primeiro_acesso) {
       if (!isOnOnboardingPage) {
         return NextResponse.redirect(new URL('/onboarding', request.url))
       }
     }
 
     // Redirect to dashboard if onboarding is complete
-    if (profile && profile.onboarding_completo) {
+    if (profile.onboarding_completo) {
       if (isOnOnboardingPage || isOnAuthPage) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
     }
 
     // Redirect to dashboard if user is logged in and trying to access auth pages (and onboarding is complete or not first access)
-    if (isOnAuthPage && profile && !profile.primeiro_acesso) {
+    if (isOnAuthPage && !profile.primeiro_acesso) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }

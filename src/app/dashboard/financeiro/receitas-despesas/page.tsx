@@ -82,6 +82,7 @@ import TransferenciaDetalhesModal from '@/components/financeiro/TransferenciaDet
 import TransferenciaEditarModal from '@/components/financeiro/TransferenciaEditarModal'
 import LancamentoEditarModal from '@/components/financeiro/LancamentoEditarModal'
 import LancamentoExcluirModal from '@/components/financeiro/LancamentoExcluirModal'
+import LancamentoDescricao from '@/components/financeiro/LancamentoDescricao'
 import type { LancamentoRef } from '@/lib/financeiro/lancamento-types'
 
 interface ExtratoItem {
@@ -3568,12 +3569,10 @@ export default function ExtratoFinanceiroPage() {
 
                     {/* Descrição */}
                     <td className="py-2.5 px-2">
-                      <p
-                        className="text-xs text-slate-700 dark:text-slate-300 truncate max-w-[220px]"
-                        title={item.descricao}
-                      >
-                        {item.descricao}
-                      </p>
+                      <LancamentoDescricao
+                        descricao={item.descricao}
+                        className="max-w-[220px] xl:max-w-[320px] 2xl:max-w-[480px]"
+                      />
                     </td>
 
                     {/* Beneficiário */}

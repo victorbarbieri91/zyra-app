@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import ContaBancariaSelect from '@/components/financeiro/ContaBancariaSelect'
 import { formatCurrency } from '@/lib/utils'
 import { CheckCircle, Loader2 } from 'lucide-react'
@@ -18,16 +19,17 @@ interface RegistrarPagamentoModalProps {
   onOpenChange: (open: boolean) => void
   despesa: { id: string; descricao: string; valor: number } | null
   escritorioIds: string[]
-  onConfirm: (id: string, opts: { contaBancariaId: string; formaPagamento?: string }) => Promise<void>
+  onConfirm: (id: string, opts: { contaBancariaId: string; formaPagamento?: string; dataEfetivacao?: string }) => Promise<void>
 }
 
 export function RegistrarPagamentoModal({ open, onOpenChange, despesa, escritorioIds, onConfirm }: RegistrarPagamentoModalProps) {
   const [conta, setConta] = useState('')
   const [forma, setForma] = useState('')
+  const [dataEfetivacao, setDataEfetivacao] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   const handleOpenChange = (v: boolean) => {
-    if (v) { setConta(''); setForma('') }
+    if (v) { setConta(''); setForma(''); setDataEfetivacao(new Date().toISOString().split('T')[0]) }
     onOpenChange(v)
   }
 
@@ -38,6 +40,7 @@ export function RegistrarPagamentoModal({ open, onOpenChange, despesa, escritori
       await onConfirm(despesa.id, {
         contaBancariaId: conta,
         formaPagamento: forma || undefined,
+        dataEfetivacao: dataEfetivacao || undefined,
       })
       onOpenChange(false)
     } catch {
@@ -67,6 +70,14 @@ export function RegistrarPagamentoModal({ open, onOpenChange, despesa, escritori
               value={conta}
               onValueChange={setConta}
               escritorioIds={escritorioIds}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Data de Efetivação *</Label>
+            <Input
+              type="date"
+              value={dataEfetivacao}
+              onChange={(e) => setDataEfetivacao(e.target.value)}
             />
           </div>
           <div>

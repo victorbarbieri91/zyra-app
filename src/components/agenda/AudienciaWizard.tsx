@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 // TagSelector removido - tabelas de tags não são mais utilizadas
 import VinculacaoSelector, { Vinculacao } from '@/components/agenda/VinculacaoSelector'
 import ResponsaveisSelector from '@/components/agenda/ResponsaveisSelector'
-import { useAudiencias, type AudienciaFormData } from '@/hooks/useAudiencias'
+import { useAudiencias, type Audiencia, type AudienciaFormData } from '@/hooks/useAudiencias'
 import type { WizardStep as WizardStepType } from '@/components/wizards/types'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -29,7 +29,7 @@ interface AudienciaWizardProps {
   processoId?: string | null
   consultivoId?: string | null
   onClose: () => void
-  onSubmit: (data: AudienciaFormData) => Promise<any> // Retorna a audiência criada para salvar responsáveis N:N
+  onSubmit: (data: AudienciaFormData, audiencia?: Audiencia) => Promise<any> // Recebe os dados do form e a audiência criada (quando há)
   initialData?: Partial<AudienciaFormData>
 }
 
@@ -341,6 +341,7 @@ export default function AudienciaWizard({
 
       console.log('[AudienciaWizard] FormData sendo enviado:', formData)
 
+      let audienciaCriada: Audiencia | undefined
       if (initialData?.id) {
         // Modo edição - atualizar audiência existente
         // responsaveis_ids já está incluído no formData e será salvo diretamente
@@ -349,13 +350,13 @@ export default function AudienciaWizard({
       } else {
         // Criar nova audiência usando o hook diretamente
         // responsaveis_ids já está incluído no formData e será salvo diretamente
-        await createAudiencia(formData)
+        audienciaCriada = await createAudiencia(formData)
         toast.success('Audiência criada com sucesso!')
       }
 
       // Notificar o pai (para refresh de listas se necessário)
       try {
-        await onSubmit(formData)
+        await onSubmit(formData, audienciaCriada)
       } catch {
         // Ignora erro do callback - a audiência já foi criada
       }

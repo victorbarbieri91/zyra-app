@@ -14,7 +14,7 @@ import { useDropzone } from 'react-dropzone'
 import VinculacaoSelector from '@/components/agenda/VinculacaoSelector'
 import RecorrenciaConfig, { RecorrenciaData, getRecorrenciaSummary } from '@/components/agenda/RecorrenciaConfig'
 import ResponsaveisSelector from '@/components/agenda/ResponsaveisSelector'
-import type { TarefaFormData } from '@/hooks/useTarefas'
+import type { Tarefa, TarefaFormData } from '@/hooks/useTarefas'
 import type { WizardStep as WizardStepType } from '@/components/wizards/types'
 import { format, parse } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -40,7 +40,7 @@ interface TarefaWizardProps {
   escritorioId: string
   onClose: () => void
   onSubmit?: (data: TarefaFormData) => Promise<void> // Callback opcional após criação
-  onCreated?: () => void | Promise<void> // Callback após tarefa criada
+  onCreated?: (tarefa?: Tarefa) => void | Promise<void> // Callback após tarefa criada (recebe a tarefa quando criada via createTarefa)
   initialData?: Partial<TarefaFormData>
 }
 
@@ -488,12 +488,12 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       } else {
         // Tarefa única nova - criar usando useTarefas diretamente
         // responsaveis_ids já está incluído no formData e será salvo diretamente
-        await createTarefa(formData)
+        const tarefaCriada = await createTarefa(formData)
         toast.success(isFixa ? 'Tarefa fixa criada com sucesso!' : 'Tarefa criada com sucesso!')
 
         // Callback opcional para o pai saber que foi criado (para atualizar listas)
         if (onCreated) {
-          await onCreated()
+          await onCreated(tarefaCriada)
         }
       }
 

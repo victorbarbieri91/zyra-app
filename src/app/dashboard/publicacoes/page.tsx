@@ -580,6 +580,49 @@ export default function PublicacoesPage() {
     vara: pub.vara || '',
   })
 
+  // Após o wizard criar a entidade, fecha os vínculos:
+  //  • Resolve processo_id da publicação (cai no match por CNJ se ainda NULL)
+  //  • Garante que a entidade criada (tarefa/evento/audiência) também aponte para o processo
+  //  • Atualiza a publicação com agendamento_id/tipo/status (e processo_id se foi resolvido agora)
+  const vincularPublicacaoAposCriacao = async (
+    pub: Publicacao,
+    entidade: { id?: string; processo_id?: string | null } | undefined,
+    tabelaEntidade: 'agenda_tarefas' | 'agenda_eventos' | 'agenda_audiencias',
+    tipo: 'tarefa' | 'compromisso' | 'audiencia',
+  ) => {
+    let processoIdResolvido: string | null = pub.processo_id ?? null
+    if (!processoIdResolvido && pub.numero_processo && escritorioAtivo) {
+      const { data: proc } = await supabase
+        .from('processos_processos')
+        .select('id')
+        .eq('escritorio_id', escritorioAtivo)
+        .eq('numero_cnj', pub.numero_processo)
+        .maybeSingle()
+      processoIdResolvido = proc?.id ?? null
+    }
+
+    if (entidade?.id && processoIdResolvido && !entidade.processo_id) {
+      const { error } = await supabase
+        .from(tabelaEntidade)
+        .update({ processo_id: processoIdResolvido })
+        .eq('id', entidade.id)
+      if (error) console.error(`Erro ao vincular ${tipo} ao processo:`, error)
+    }
+
+    const updatePayload: Record<string, unknown> = {
+      status: 'processada',
+      agendamento_tipo: tipo,
+    }
+    if (entidade?.id) updatePayload.agendamento_id = entidade.id
+    if (processoIdResolvido && !pub.processo_id) updatePayload.processo_id = processoIdResolvido
+
+    const { error } = await supabase
+      .from('publicacoes_publicacoes')
+      .update(updatePayload)
+      .eq('id', pub.id)
+    if (error) console.error('Erro ao atualizar publicação após agendamento:', error)
+  }
+
   // Registrar na pasta do processo
   const registrarNaPasta = async (pub: Publicacao, e?: React.MouseEvent) => {
     e?.stopPropagation()
@@ -1411,13 +1454,9 @@ export default function PublicacoesPage() {
           escritorioId={escritorioAtivo}
           onClose={() => setWizardTarefa({ open: false, pub: null })}
           initialData={getInitialDataTarefa(wizardTarefa.pub)}
-          onCreated={async () => {
-            // Marcar publicação como tratada após criar tarefa
+          onCreated={async (tarefa) => {
             if (wizardTarefa.pub) {
-              await supabase
-                .from('publicacoes_publicacoes')
-                .update({ status: 'processada', agendamento_tipo: 'tarefa' })
-                .eq('id', wizardTarefa.pub.id)
+              await vincularPublicacaoAposCriacao(wizardTarefa.pub, tarefa, 'agenda_tarefas', 'tarefa')
             }
             toast.success('Tarefa criada e publicação marcada como tratada')
             setWizardTarefa({ open: false, pub: null })
@@ -1432,14 +1471,9 @@ export default function PublicacoesPage() {
           escritorioId={escritorioAtivo}
           onClose={() => setWizardEvento({ open: false, pub: null })}
           initialData={getInitialDataEvento(wizardEvento.pub)}
-          onSubmit={async () => {
-            // O wizard cria o evento diretamente via useEventos
-            // Aqui apenas marcamos a publicação como tratada
+          onSubmit={async (_data, evento) => {
             if (wizardEvento.pub) {
-              await supabase
-                .from('publicacoes_publicacoes')
-                .update({ status: 'processada', agendamento_tipo: 'compromisso' })
-                .eq('id', wizardEvento.pub.id)
+              await vincularPublicacaoAposCriacao(wizardEvento.pub, evento, 'agenda_eventos', 'compromisso')
             }
             toast.success('Compromisso criado e publicação marcada como tratada')
             setWizardEvento({ open: false, pub: null })
@@ -1454,14 +1488,9 @@ export default function PublicacoesPage() {
           escritorioId={escritorioAtivo}
           onClose={() => setWizardAudiencia({ open: false, pub: null })}
           initialData={getInitialDataAudiencia(wizardAudiencia.pub)}
-          onSubmit={async () => {
-            // O wizard já cria a audiência internamente via useAudiencias
-            // Aqui apenas marcamos a publicação como tratada
+          onSubmit={async (_data, audiencia) => {
             if (wizardAudiencia.pub) {
-              await supabase
-                .from('publicacoes_publicacoes')
-                .update({ status: 'processada', agendamento_tipo: 'audiencia' })
-                .eq('id', wizardAudiencia.pub.id)
+              await vincularPublicacaoAposCriacao(wizardAudiencia.pub, audiencia, 'agenda_audiencias', 'audiencia')
             }
             toast.success('Audiência criada e publicação marcada como tratada')
             setWizardAudiencia({ open: false, pub: null })

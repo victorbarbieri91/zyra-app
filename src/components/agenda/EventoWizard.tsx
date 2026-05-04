@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import VinculacaoSelector, { Vinculacao } from '@/components/agenda/VinculacaoSelector'
 import RecorrenciaConfig, { RecorrenciaData, getRecorrenciaSummary } from '@/components/agenda/RecorrenciaConfig'
 import ResponsaveisSelector from '@/components/agenda/ResponsaveisSelector'
-import { useEventos, type EventoFormData } from '@/hooks/useEventos'
+import { useEventos, type Evento, type EventoFormData } from '@/hooks/useEventos'
 import type { WizardStep as WizardStepType } from '@/components/wizards/types'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -33,7 +33,7 @@ import { EVENTO_TIPO_CONFIG, type TipoEvento } from '@/lib/constants/evento-tipo
 interface EventoWizardProps {
   escritorioId: string
   onClose: () => void
-  onSubmit: (data: EventoFormData) => Promise<any> // Retorna o evento criado para salvar responsáveis N:N
+  onSubmit: (data: EventoFormData, evento?: Evento) => Promise<any> // Recebe os dados do form e o evento criado (quando há)
   initialData?: Partial<EventoFormData>
 }
 
@@ -312,19 +312,20 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
         toast.success('Compromisso recorrente criado com sucesso!')
       } else {
         // Evento único - criar/atualizar usando hook diretamente
+        let eventoCriado: Evento | undefined
         if (initialData?.id) {
           // Modo edição - responsaveis_ids já está no formData
           await updateEvento(initialData.id, formData)
           toast.success('Compromisso atualizado com sucesso!')
         } else {
           // Criar novo evento - responsaveis_ids já está no formData
-          await createEvento(formData)
+          eventoCriado = await createEvento(formData)
           toast.success('Compromisso criado com sucesso!')
         }
 
         // Notificar o pai (para refresh de listas se necessário)
         try {
-          await onSubmit(formData)
+          await onSubmit(formData, eventoCriado)
         } catch {
           // Ignora erro do callback - o evento já foi criado
         }

@@ -41,6 +41,7 @@ import { toast } from 'sonner'
 import type { ProcessoEscavadorNormalizado, ParteNormalizada } from '@/lib/escavador/types'
 import { formatarDataExibicao, formatarValorCausa } from '@/lib/escavador/normalizer'
 import { classificarProcessoNovo } from '@/lib/processos/classificar-novo'
+import { inferirPoloCliente } from '@/lib/processos/inferir-polo-cliente'
 
 interface ProcessoWizardAutomaticoProps {
   open: boolean
@@ -264,23 +265,35 @@ export default function ProcessoWizardAutomatico({
         return
       }
 
-      // Extrair parte contraria do polo oposto
-      const parteContraria = partesPassivas[0]?.nome ||
+      // Inferir polo do cliente e parte contrária por matching real cliente↔partes
+      // (CPF/CNPJ → nome → fallback heurística). Evita o bug de assumir cliente
+      // sempre no polo ativo quando o Escavador traz partes ativas.
+      const clienteSelecionado = clientes.find(c => c.id === clienteId) || null
+      const inferencia = inferirPoloCliente(clienteSelecionado, dadosEscavador.partes)
+      const { poloCliente, parteContraria: parteContrariaInferida, matchPor } = inferencia
+
+      const parteContraria = parteContrariaInferida ||
                              dadosEscavador.titulo_polo_passivo ||
-                             partesAtivas[0]?.nome ||
                              dadosEscavador.titulo_polo_ativo || ''
 
-      // Derivar autor e réu a partir do polo do cliente e parte contrária
-      const nomeCliente = clientes.find(c => c.id === clienteId)?.nome_completo || null
-      const poloCliente = partesAtivas.length > 0 ? 'ativo' : 'passivo'
+      const nomeCliente = clienteSelecionado?.nome_completo || null
       let autor: string | null = null
       let reu: string | null = null
       if (poloCliente === 'ativo') {
         autor = nomeCliente
         reu = parteContraria || null
-      } else if (poloCliente === 'passivo') {
+      } else {
         autor = parteContraria || null
         reu = nomeCliente
+      }
+
+      if (matchPor === 'fallback_heuristica' && clienteSelecionado) {
+        console.warn('[ProcessoWizardAutomatico] Cliente não encontrado entre as partes do Escavador; polo definido por heurística.', {
+          cliente: clienteSelecionado.nome_completo,
+          docCliente: clienteSelecionado.cpf_cnpj,
+          partes: dadosEscavador.partes.map(p => ({ nome: p.nome, polo: p.polo, doc: p.documento })),
+        })
+        toast.warning('Cliente não foi encontrado entre as partes do processo. Confira o polo após criar.')
       }
 
       // Determinar área jurídica (mapear se necessário)
@@ -355,14 +368,16 @@ export default function ProcessoWizardAutomatico({
             ordem: i + 1,
           })),
         ]
-        // Vincular o cliente à parte correspondente
-        if (clienteId && partesParaInserir.length > 0) {
-          const nomeClienteMatch = clientes.find(c => c.id === clienteId)?.nome_completo?.toLowerCase()
-          if (nomeClienteMatch) {
-            const idx = partesParaInserir.findIndex(p => p.nome.toLowerCase().includes(nomeClienteMatch) || nomeClienteMatch.includes(p.nome.toLowerCase()))
-            if (idx >= 0) {
-              (partesParaInserir[idx] as Record<string, unknown>).cliente_id = clienteId
-            }
+        // Vincular o cliente à parte correspondente — usa a parte resolvida por
+        // inferirPoloCliente (que prioriza CPF/CNPJ) ao invés de matching textual local.
+        if (clienteId && inferencia.parteEncontrada && partesParaInserir.length > 0) {
+          const tipoEsperado = poloCliente === 'ativo' ? 'autor' : 'reu'
+          const nomeAlvo = inferencia.parteEncontrada.nome
+          const idx = partesParaInserir.findIndex(
+            p => p.tipo === tipoEsperado && p.nome === nomeAlvo,
+          )
+          if (idx >= 0) {
+            (partesParaInserir[idx] as Record<string, unknown>).cliente_id = clienteId
           }
         }
         if (partesParaInserir.length > 0) {

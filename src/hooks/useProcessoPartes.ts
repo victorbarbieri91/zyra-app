@@ -74,7 +74,10 @@ export function useProcessoPartes(processoId: string) {
     carregarPartes()
   }, [carregarPartes])
 
-  // Sincronizar campos desnormalizados autor/reu em processos_processos
+  // Sincronizar campos desnormalizados autor/reu em processos_processos.
+  // OBS: desde a migration 20260504190000, um trigger SQL em processos_partes
+  // mantém autor/reu sempre derivados do banco. Este hook é redundância benigna
+  // (UPDATE idempotente) e ajuda em UIs que precisam refletir o estado imediato.
   const sincronizarAutorReu = useCallback(async (partesAtuais: ProcessoParte[]) => {
     const autores = partesAtuais.filter(p => p.tipo === 'autor').map(p => p.nome)
     const reus = partesAtuais.filter(p => p.tipo === 'reu').map(p => p.nome)

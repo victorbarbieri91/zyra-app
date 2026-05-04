@@ -26,6 +26,16 @@ export default function FaturaImprimirPage() {
     }
   }, [faturaId, loadFaturaCompleta])
 
+  // Define o título da aba como o número da fatura para que o PDF salvo pelo navegador use esse nome
+  useEffect(() => {
+    if (!dados?.fatura?.numero_fatura) return
+    const tituloAnterior = document.title
+    document.title = dados.fatura.numero_fatura
+    return () => {
+      document.title = tituloAnterior
+    }
+  }, [dados?.fatura?.numero_fatura])
+
   const handlePrint = () => {
     window.print()
   }
@@ -125,6 +135,19 @@ export default function FaturaImprimirPage() {
   const timesheetItens = itens.filter(i => i.tipo_item === 'timesheet')
   const nonTimesheetItens = itens.filter(i => i.tipo_item !== 'timesheet')
   const hasTimesheet = timesheetItens.length > 0
+
+  // Itens de pasta com processos detalhados (geram anexo "Relação de Processos")
+  const pastaItensComAnexo = itens.filter(
+    i => i.tipo_item === 'pasta' && i.processos_lista && i.processos_lista.length > 0
+  )
+
+  // Formata "YYYY-MM-DD" para "MM/YYYY"
+  const formatCompetenciaMMYYYY = (comp: string | null) => {
+    if (!comp) return 'N/A'
+    const [ano, mes] = comp.split('-')
+    if (!ano || !mes) return comp
+    return `${mes}/${ano}`
+  }
 
   // Calcular dados consolidados do timesheet
   const timesheetDatas = timesheetItens
@@ -862,6 +885,118 @@ export default function FaturaImprimirPage() {
               </div>
             </div>
           )}
+
+          {/* ============================================ */}
+          {/* ANEXO - RELAÇÃO DE PROCESSOS (uma página por competência) */}
+          {/* ============================================ */}
+          {pastaItensComAnexo.map((item) => (
+            <div
+              key={`anexo-pasta-${item.id}`}
+              className="paper-preview print-card mt-8 print:mt-0 print-page-break-before"
+            >
+              <div className="p-8 print:p-4 flex flex-col min-h-[inherit]">
+                {/* Header do Anexo */}
+                <div className="bg-gradient-to-r from-[#34495e] to-[#46627f] text-white py-3 px-5 print-anexo-title rounded-lg mb-4 text-center">
+                  <p className="text-[10px] print-text-xs uppercase tracking-widest text-white/80 mb-0.5">
+                    Anexo - Relação de Processos
+                  </p>
+                  <p className="text-sm print-anexo-subtitle font-semibold text-white">
+                    {fatura.numero_fatura}
+                    <span className="font-normal text-white/80">
+                      {' '}| Competência: {formatCompetenciaMMYYYY(item.competencia)}
+                    </span>
+                  </p>
+                </div>
+
+                {/* Info do cliente no anexo */}
+                <div className="mb-3 pb-2 border-b border-slate-200">
+                  <p className="text-[10px] print-text-xs text-slate-500">
+                    Cliente: <span className="font-semibold text-[#34495e]">{cliente.nome_completo}</span>
+                  </p>
+                </div>
+
+                {/* Tabela de Processos */}
+                <table className="w-full print-anexo-table">
+                  <thead>
+                    <tr className="bg-slate-100 text-[9px] print-text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      <th className="py-1.5 px-1.5 text-left w-[12%]">Pasta</th>
+                      <th className="py-1.5 px-1.5 text-left w-[24%]">Número CNJ</th>
+                      <th className="py-1.5 px-1.5 text-left w-[40%]">Título / Partes</th>
+                      <th className="py-1.5 px-1.5 text-left w-[24%]">Cliente</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {item.processos_lista?.map((proc, pIdx) => (
+                      <tr
+                        key={proc.id || pIdx}
+                        className={`border-b border-slate-100 ${
+                          pIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'
+                        }`}
+                      >
+                        <td className="py-1 px-1.5 text-[10px] print-text-xs text-slate-600 align-top whitespace-nowrap">
+                          {proc.numero_pasta || '-'}
+                        </td>
+                        <td className="py-1 px-1.5 text-[10px] print-text-xs text-slate-700 font-mono align-top whitespace-nowrap">
+                          {proc.numero_cnj || '-'}
+                        </td>
+                        <td className="py-1 px-1.5 align-top">
+                          <p className="text-[10px] print-text-xs text-slate-600 leading-snug">
+                            {proc.titulo || '-'}
+                          </p>
+                        </td>
+                        <td className="py-1 px-1.5 align-top">
+                          <p className="text-[10px] print-text-xs text-slate-600 leading-snug">
+                            {proc.cliente_nome || '-'}
+                          </p>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Totais do Anexo */}
+                <div className="mt-3 pt-2 border-t-2 border-[#34495e]">
+                  <div className="flex justify-end">
+                    <div className="w-64 space-y-0.5">
+                      <div className="flex justify-between text-xs print-text-sm">
+                        <span className="font-bold text-[#34495e] uppercase">Quantidade:</span>
+                        <span className="font-bold text-[#34495e]">
+                          {item.processos_lista?.length || 0} processo(s)
+                        </span>
+                      </div>
+                      {item.valor_unitario != null && (
+                        <div className="flex justify-between text-xs print-text-sm">
+                          <span className="font-bold text-[#34495e] uppercase">Valor unitário:</span>
+                          <span className="font-bold text-[#34495e]">
+                            {formatCurrency(Number(item.valor_unitario))}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-baseline text-xs print-text-sm">
+                        <span className="font-bold text-[#34495e] uppercase">Valor total:</span>
+                        <span className="font-bold text-[#1E3A8A] text-sm">
+                          {formatCurrency(Number(item.valor_total))}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Spacer para empurrar rodapé para o final da página A4 */}
+                <div className="flex-1" />
+
+                {/* Rodapé do Anexo */}
+                <footer className="mt-6 print-footer pt-2 border-t border-slate-200 text-center">
+                  <p className="text-[10px] print-text-xs text-slate-400">
+                    Anexo da Fatura {fatura.numero_fatura} - {escritorio.nome}
+                  </p>
+                  <p className="text-[10px] print-text-xs text-slate-400 mt-0.5">
+                    Documento gerado em {formatBrazilDateTime(new Date())} - Sistema Zyra Legal
+                  </p>
+                </footer>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </>

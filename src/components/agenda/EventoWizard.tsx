@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Clock, MapPin, Briefcase, Users, Coffee, Phone, FileText, Video, Repeat, Lock } from 'lucide-react'
+import { Calendar, Clock, MapPin, Repeat, Lock } from 'lucide-react'
 import { ModalWizard, WizardStep } from '@/components/wizards'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
@@ -28,6 +28,7 @@ import { useRecorrencias } from '@/hooks/useRecorrencias'
 import { useEscritorioMembros } from '@/hooks/useEscritorioMembros'
 import { toBrazilTime, formatBrazilDateLong, formatBrazilDateTime } from '@/lib/timezone'
 import { useAuth } from '@/contexts/AuthContext'
+import { EVENTO_TIPO_CONFIG, type TipoEvento } from '@/lib/constants/evento-tipos'
 
 interface EventoWizardProps {
   escritorioId: string
@@ -36,46 +37,7 @@ interface EventoWizardProps {
   initialData?: Partial<EventoFormData>
 }
 
-type TipoEvento = 'reuniao_interna' | 'reuniao_cliente' | 'ligacao' | 'almoco' | 'videoconferencia' | 'outro'
-
-const TIPO_CONFIG = {
-  reuniao_cliente: {
-    label: 'Reunião Cliente',
-    icon: Briefcase,
-    color: 'blue',
-    description: 'Com cliente',
-  },
-  reuniao_interna: {
-    label: 'Reunião Interna',
-    icon: Users,
-    color: 'purple',
-    description: 'Equipe',
-  },
-  videoconferencia: {
-    label: 'Videoconferência',
-    icon: Video,
-    color: 'emerald',
-    description: 'Online',
-  },
-  ligacao: {
-    label: 'Ligação',
-    icon: Phone,
-    color: 'amber',
-    description: 'Telefone',
-  },
-  almoco: {
-    label: 'Almoço',
-    icon: Coffee,
-    color: 'red',
-    description: 'Refeição',
-  },
-  outro: {
-    label: 'Outro',
-    icon: FileText,
-    color: 'slate',
-    description: 'Outros',
-  },
-}
+const TIPO_CONFIG = EVENTO_TIPO_CONFIG
 
 export default function EventoWizard({ escritorioId, onClose, onSubmit, initialData }: EventoWizardProps) {
   const { user } = useAuth()

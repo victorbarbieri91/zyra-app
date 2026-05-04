@@ -29,6 +29,7 @@ import {
 import { differenceInMinutes, differenceInDays, parseISO, isBefore, startOfDay } from 'date-fns'
 import { useTimer } from '@/contexts/TimerContext'
 import { toast } from 'sonner'
+import { getEventoTipoLabel, isTipoEvento } from '@/lib/constants/evento-tipos'
 
 interface EventoDetailModalProps {
   open: boolean
@@ -126,22 +127,19 @@ export default function EventoDetailModal({
     ? isBefore(parseISO(evento.prazo_data_limite), startOfDay(new Date()))
     : false
 
-  // Subtipo label
-  const subtipoLabels: Record<string, string> = {
+  // Labels de prazo (de agenda_tarefas) — específicos deste modal consolidado
+  const prazoLabels: Record<string, string> = {
     prazo_processual: 'Prazo Processual',
     prazo_contratual: 'Prazo Contratual',
     prazo_consultivo: 'Prazo Consultivo',
     inicial: 'Prazo Inicial',
-    compromisso: 'Compromisso',
-    reuniao_cliente: 'Reunião Cliente',
-    reuniao_interna: 'Reunião Interna',
-    videoconferencia: 'Videoconferência',
-    ligacao: 'Ligação',
-    almoco: 'Almoço',
-    outro: 'Outro',
   }
 
-  const subtipoLabel = subtipoLabels[subtipo] || subtipo
+  // Para subtipos de evento, delega ao constants central (evento-tipos.ts).
+  // Para prazos e demais valores, usa o mapa local com fallback para o valor cru.
+  const subtipoLabel = isTipoEvento(subtipo) || subtipo === 'compromisso'
+    ? getEventoTipoLabel(subtipo)
+    : prazoLabels[subtipo] || subtipo
 
   // Status badge color
   const getStatusColor = () => {

@@ -42,7 +42,14 @@ import {
   Timer,
   CircleDollarSign,
   Activity,
+  Info,
 } from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { formatCurrency, formatHoras } from '@/lib/utils'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -125,7 +132,8 @@ function CircularProgress({ value, max, size = 64, strokeWidth = 5, color = '#89
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { escritorioAtivo } = useEscritorioAtivo()
+  const { escritorioAtivo, escritorioAtivoData } = useEscritorioAtivo()
+  const percentualMeta = escritorioAtivoData?.config?.metas?.percentual_crescimento ?? 20
 
   // Estado do modal de comando IA
   const [commandOpen, setCommandOpen] = useState(false)
@@ -1210,7 +1218,25 @@ export default function DashboardPage() {
           <div className="lg:col-span-5 space-y-6">
             {/* Meus Números do Mês */}
             <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 p-6">
-              <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200 mb-5">Meus Números</h2>
+              <div className="flex items-center gap-1.5 mb-5">
+                <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200">Meus Números</h2>
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label="Como a meta é calculada"
+                        className="text-slate-400 hover:text-[#46627f] transition-colors"
+                      >
+                        <Info className="w-3.5 h-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[280px] text-xs leading-relaxed">
+                      Sua meta do mês é o realizado do mês passado +{percentualMeta}%, com piso mínimo de 15h e R$ 10.000 (caso o cálculo dê menos, vale o piso). O percentual é configurável na gestão do escritório.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
 
               <div className="grid grid-cols-2 gap-5">
                 {/* Horas Cobráveis */}
@@ -1218,7 +1244,7 @@ export default function DashboardPage() {
                   <div className="relative flex-shrink-0">
                     <CircularProgress
                       value={metrics?.horas_cobraveis_usuario || 0}
-                      max={metrics?.horas_meta || 160}
+                      max={metrics?.horas_meta || 15}
                       size={64}
                       strokeWidth={5}
                       color="#89bcbe"
@@ -1230,7 +1256,7 @@ export default function DashboardPage() {
                   <div>
                     <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Horas Cobráveis</p>
                     <p className="text-base font-bold text-[#34495e] dark:text-slate-200">{formatHoras(metrics?.horas_cobraveis_usuario || 0, 'curto')}</p>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500">de {formatHoras(metrics?.horas_meta || 160, 'curto')}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500">de {formatHoras(metrics?.horas_meta || 15, 'curto')}</p>
                     {(metrics?.horas_ja_faturadas_usuario ?? 0) > 0 && (
                       <p className="text-[10px] text-emerald-500">{formatHoras(metrics?.horas_ja_faturadas_usuario || 0, 'curto')} já faturadas</p>
                     )}
@@ -1242,7 +1268,7 @@ export default function DashboardPage() {
                   <div className="relative flex-shrink-0">
                     <CircularProgress
                       value={metrics?.honorarios_mes || 0}
-                      max={metrics?.receita_meta || 40000}
+                      max={metrics?.receita_meta || 10000}
                       size={64}
                       strokeWidth={5}
                       color="#10b981"
@@ -1254,7 +1280,7 @@ export default function DashboardPage() {
                   <div>
                     <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Honorários</p>
                     <p className="text-base font-bold text-[#34495e] dark:text-slate-200">{formatCurrency(metrics?.honorarios_mes || 0)}</p>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500">Meta: {formatCurrency(metrics?.receita_meta || 40000)}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500">Meta: {formatCurrency(metrics?.receita_meta || 10000)}</p>
                   </div>
                 </div>
               </div>

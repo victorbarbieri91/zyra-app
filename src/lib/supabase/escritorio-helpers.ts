@@ -20,6 +20,9 @@ export interface Escritorio {
     fiscal?: any;
     telefone?: string;
     email?: string;
+    metas?: {
+      percentual_crescimento?: number;
+    };
     [key: string]: any;
   };
   telefone?: string;

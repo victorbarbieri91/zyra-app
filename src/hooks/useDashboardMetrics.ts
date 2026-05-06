@@ -5,6 +5,14 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from './useEscritorioAtivo'
 
+// Meta dinâmica do painel "Meus Números":
+// meta_mes = max(piso_minimo, realizado_mes_passado * (1 + percentual / 100))
+// O piso evita metas desmotivadoras quando o mês anterior teve volume baixo
+// (e cobre também o caso de usuário sem histórico).
+const PERCENTUAL_CRESCIMENTO_DEFAULT = 20
+const PISO_HORAS_META = 15
+const PISO_RECEITA_META = 10000
+
 export interface DashboardMetrics {
   // KPIs
   processos_ativos: number
@@ -53,8 +61,8 @@ const defaultMetrics: DashboardMetrics = {
   horas_nao_cobraveis: 0,
   valor_horas_nao_cobraveis: 0,
   valor_hora_usuario: 0,
-  horas_meta: 160, // Meta padrão de horas
-  receita_meta: 40000, // Meta padrão
+  horas_meta: PISO_HORAS_META, // Meta dinâmica: mes_anterior * (1+%); fallback quando sem histórico
+  receita_meta: PISO_RECEITA_META, // Idem para honorários
   horas_cobraveis: 0,
   horas_cobraveis_trend_percent: 0,
   processos_trend_qtd: 0,
@@ -66,7 +74,8 @@ const defaultMetrics: DashboardMetrics = {
 
 async function fetchDashboardMetrics(
   supabase: ReturnType<typeof createClient>,
-  escritorioAtivo: string
+  escritorioAtivo: string,
+  percentualCrescimento: number
 ): Promise<DashboardMetrics> {
   // Obter usuário logado para filtrar "Seus Números do Mês"
   const { data: { user } } = await supabase.auth.getUser()
@@ -103,8 +112,8 @@ async function fetchDashboardMetrics(
     horasNaoCobraveisResult,
     horasCobraveisEsteMesResult,
     horasCobraveisAteDiaMesPassadoResult,
-    metasResult,
     receitasGeradasResult,
+    receitasMesAnteriorResult,
     valorHoraResult,
     aReceberResult,
   ] = await Promise.all([
@@ -242,15 +251,6 @@ async function fetchDashboardMetrics(
       .gte('data_trabalho', inicioMesAnterior.toISOString().split('T')[0])
       .lte('data_trabalho', mesmoDiaMesPassado.toISOString().split('T')[0]),
 
-    // Metas do escritório
-    supabase
-      .from('financeiro_metas')
-      .select('tipo_meta, valor_meta, valor_realizado')
-      .eq('escritorio_id', escritorioAtivo)
-      .eq('ativa', true)
-      .gte('data_fim', hoje.toISOString().split('T')[0])
-      .lte('data_inicio', hoje.toISOString().split('T')[0]),
-
     // Honorários do mês DO USUÁRIO LOGADO (por data_competencia, anti-duplicação no processamento)
     userId ? supabase
       .from('financeiro_receitas')
@@ -260,6 +260,17 @@ async function fetchDashboardMetrics(
       .neq('status', 'cancelado')
       .gte('data_competencia', inicioMes.toISOString().split('T')[0])
       .lt('data_competencia', inicioProximoMes.toISOString().split('T')[0])
+    : Promise.resolve({ data: [] }),
+
+    // Honorários do MÊS ANTERIOR DO USUÁRIO LOGADO — base da meta dinâmica
+    userId ? supabase
+      .from('financeiro_receitas')
+      .select('valor, tipo')
+      .eq('escritorio_id', escritorioAtivo)
+      .eq('responsavel_id', userId)
+      .neq('status', 'cancelado')
+      .gte('data_competencia', inicioMesAnterior.toISOString().split('T')[0])
+      .lte('data_competencia', fimMesAnterior.toISOString().split('T')[0])
     : Promise.resolve({ data: [] }),
 
     // Valor/hora do usuário logado (direto ou via cargo)
@@ -324,16 +335,6 @@ async function fetchDashboardMetrics(
     ? Math.round(((horasCobraveisEsteMes - horasCobraveisAteDiaMesPassado) / horasCobraveisAteDiaMesPassado) * 100)
     : (horasCobraveisEsteMes > 0 ? 100 : 0)
 
-  // Buscar metas específicas
-  let horasMeta = 160
-  let receitaMeta = 40000
-  if (metasResult.data) {
-    const metaHoras = metasResult.data.find((m: { tipo_meta: string }) => m.tipo_meta === 'horas')
-    const metaReceita = metasResult.data.find((m: { tipo_meta: string }) => m.tipo_meta === 'receita')
-    if (metaHoras) horasMeta = Number(metaHoras.valor_meta)
-    if (metaReceita) receitaMeta = Number(metaReceita.valor_meta)
-  }
-
   // Calcular honorários do mês (excluir saldos já contabilizados)
   const honorariosMes = receitasGeradasResult.data?.reduce(
     (acc: number, item: { valor: number | null; tipo: string | null }) => {
@@ -343,6 +344,23 @@ async function fetchDashboardMetrics(
     },
     0
   ) || 0
+
+  // Honorários do mês ANTERIOR (mesma regra: exclui tipo='saldo') — base da meta dinâmica
+  const honorariosMesAnterior = receitasMesAnteriorResult.data?.reduce(
+    (acc: number, item: { valor: number | null; tipo: string | null }) => {
+      if (item.tipo === 'saldo') return acc
+      return acc + (Number(item.valor) || 0)
+    },
+    0
+  ) || 0
+
+  // Meta dinâmica: realizado_mes_anterior * (1 + percentual/100), com piso mínimo
+  // que evita metas desmotivadoras quando o mês passado teve volume baixo (ou zero).
+  const fatorCrescimento = 1 + (percentualCrescimento / 100)
+  const horasMetaCalculada = Math.round(horasMesAnterior * fatorCrescimento * 10) / 10
+  const receitaMetaCalculada = Math.round(honorariosMesAnterior * fatorCrescimento)
+  const horasMeta = Math.max(horasMetaCalculada, PISO_HORAS_META)
+  const receitaMeta = Math.max(receitaMetaCalculada, PISO_RECEITA_META)
 
   // Calcular total a receber (valor pendente das receitas)
   const totalAReceber = aReceberResult.data?.reduce(
@@ -393,13 +411,18 @@ async function fetchDashboardMetrics(
 }
 
 export function useDashboardMetrics() {
-  const { escritorioAtivo } = useEscritorioAtivo()
+  const { escritorioAtivo, escritorioAtivoData } = useEscritorioAtivo()
   const supabaseRef = useRef(createClient())
   const queryClient = useQueryClient()
 
+  // Percentual configurado pelo escritório (default 20%). Já vem em escritorioAtivoData.config.
+  const percentualCrescimento =
+    escritorioAtivoData?.config?.metas?.percentual_crescimento ??
+    PERCENTUAL_CRESCIMENTO_DEFAULT
+
   const { data: metrics = defaultMetrics, isLoading: loading, error } = useQuery({
-    queryKey: ['dashboard', 'metrics', escritorioAtivo],
-    queryFn: () => fetchDashboardMetrics(supabaseRef.current, escritorioAtivo!),
+    queryKey: ['dashboard', 'metrics', escritorioAtivo, percentualCrescimento],
+    queryFn: () => fetchDashboardMetrics(supabaseRef.current, escritorioAtivo!, percentualCrescimento),
     enabled: !!escritorioAtivo,
     staleTime: 5 * 60 * 1000, // 5 minutes
   })

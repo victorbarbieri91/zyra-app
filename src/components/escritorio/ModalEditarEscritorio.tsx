@@ -22,7 +22,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Building2, Upload, X, Calculator, FileText } from 'lucide-react';
+import { Building2, Upload, X, Calculator, FileText, Target } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { ConfiguracaoFiscal } from './ConfiguracaoFiscal';
@@ -38,6 +38,11 @@ const escritorioSchema = z.object({
   telefone: z.string().optional(),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   site: z.string().url('URL inválida').optional().or(z.literal('')),
+  percentual_crescimento_meta: z
+    .number()
+    .int('Use um número inteiro')
+    .min(0, 'Mínimo 0%')
+    .max(200, 'Máximo 200%'),
 });
 
 type EscritorioFormData = z.infer<typeof escritorioSchema>;
@@ -55,12 +60,17 @@ interface ModalEditarEscritorioProps {
     site?: string;
     config?: {
       fiscal?: ConfiguracaoFiscalType;
+      metas?: {
+        percentual_crescimento?: number;
+      };
       [key: string]: any;
     };
   };
   onSuccess?: () => void;
-  initialTab?: 'geral' | 'fiscal';
+  initialTab?: 'geral' | 'fiscal' | 'metas';
 }
+
+const PERCENTUAL_META_DEFAULT = 20;
 
 const defaultFiscalConfig: ConfiguracaoFiscalType = {
   regime_tributario: 'lucro_presumido',
@@ -102,6 +112,8 @@ export function ModalEditarEscritorio({
       telefone: escritorio.telefone || '',
       email: escritorio.email || '',
       site: escritorio.site || '',
+      percentual_crescimento_meta:
+        escritorio.config?.metas?.percentual_crescimento ?? PERCENTUAL_META_DEFAULT,
     },
   });
 
@@ -125,6 +137,8 @@ export function ModalEditarEscritorio({
         telefone: escritorio.telefone || '',
         email: escritorio.email || '',
         site: escritorio.site || '',
+        percentual_crescimento_meta:
+          escritorio.config?.metas?.percentual_crescimento ?? PERCENTUAL_META_DEFAULT,
       });
     }
   }, [open, escritorio, initialTab, form]);
@@ -198,6 +212,11 @@ export function ModalEditarEscritorio({
         fiscal: configFiscal,
         telefone: data.telefone || null,
         email: data.email || null,
+        metas: {
+          ...(existingConfig.metas || {}),
+          percentual_crescimento:
+            data.percentual_crescimento_meta ?? PERCENTUAL_META_DEFAULT,
+        },
       };
 
       console.log('=== SUBMITTING FORM ===');
@@ -261,7 +280,7 @@ export function ModalEditarEscritorio({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsList className="grid w-full grid-cols-3 mb-4">
                 <TabsTrigger value="geral" className="flex items-center gap-1.5 text-sm">
                   <FileText className="w-4 h-4" />
                   Dados Gerais
@@ -269,6 +288,10 @@ export function ModalEditarEscritorio({
                 <TabsTrigger value="fiscal" className="flex items-center gap-1.5 text-sm">
                   <Calculator className="w-4 h-4" />
                   Configuração Fiscal
+                </TabsTrigger>
+                <TabsTrigger value="metas" className="flex items-center gap-1.5 text-sm">
+                  <Target className="w-4 h-4" />
+                  Metas
                 </TabsTrigger>
               </TabsList>
 
@@ -425,6 +448,64 @@ export function ModalEditarEscritorio({
                   value={configFiscal}
                   onChange={setConfigFiscal}
                 />
+              </TabsContent>
+
+              {/* Aba Metas */}
+              <TabsContent value="metas" className="space-y-4">
+                <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-[#f0f9f9] border border-[#89bcbe]/40 flex items-center justify-center flex-shrink-0">
+                      <Target className="w-4 h-4 text-[#89bcbe]" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-semibold text-[#34495e]">
+                        Crescimento da meta mensal
+                      </h3>
+                      <p className="text-xs text-[#46627f] leading-relaxed mt-0.5">
+                        A cada mês, a meta de horas cobráveis e honorários de cada advogado é
+                        calculada como o realizado dele no mês anterior somado a este percentual.
+                      </p>
+                    </div>
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="percentual_crescimento_meta"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[#34495e]">
+                          Percentual de crescimento*
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative w-32">
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              step={1}
+                              min={0}
+                              max={200}
+                              {...field}
+                              value={field.value ?? ''}
+                              onChange={(e) => {
+                                const v = e.target.value
+                                field.onChange(v === '' ? undefined : Number(v))
+                              }}
+                              className="border-slate-200 focus:ring-[#89bcbe] pr-8"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 pointer-events-none">
+                              %
+                            </span>
+                          </div>
+                        </FormControl>
+                        <p className="text-[11px] text-slate-500 mt-1.5">
+                          Padrão: 20%. A meta tem piso mínimo de 15h e R$ 10.000 — quando o
+                          cálculo fica abaixo disso (ou o advogado não tem histórico), o piso vale.
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </TabsContent>
             </Tabs>
 

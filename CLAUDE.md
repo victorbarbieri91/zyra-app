@@ -606,6 +606,45 @@ format(new Date(dateString), "dd/MM/yyyy")
 
 ---
 
+## Git Workflow e Deploy
+
+**Histórico linear na `main` — sem PRs/merges no GitHub.**
+
+Este repositório usa histórico linear: o `git log origin/main` é uma sequência de commits diretos, sem `Merge pull request`. O Vercel deploya produção automaticamente quando `origin/main` muda. Não há ambiente de staging separado — a `main` é produção.
+
+### Como colocar uma feature no ar
+
+A partir da branch de feature já commitada e pushada como `claude/<nome>`:
+
+```bash
+# Fast-forward direto da branch para main no remote:
+git push origin <nome-da-branch>:main
+```
+
+Se a feature não for fast-forward (a `main` avançou enquanto você trabalhava), antes do push:
+```bash
+git fetch origin
+git rebase origin/main
+git push origin <nome-da-branch>:main
+```
+
+Após o push, o deploy do Vercel demora ~2–3 min. O usuário deve dar **hard refresh (Cmd+Shift+R)** pra evitar cache do navegador no client.
+
+### O que NÃO fazer
+
+- ❌ **Não usar `gh` CLI** — não está instalado neste setup e não é o padrão de trabalho.
+- ❌ **Não abrir PR no GitHub web** — gera commit de merge e polui o histórico linear que o usuário mantém. O usuário não trabalha assim.
+- ❌ **Não fazer `git checkout main` em um worktree de feature** — `main` está checkada no worktree principal (`/Users/victortavolarobarbieri/Developer/zyra-app`); o git bloqueia checkout duplicado. Sempre prefira `git push origin branch:main`.
+- ❌ **Não fazer push direto pra main sem ter commitado e validado a feature** — `main` é produção.
+
+### Antes de pushar para main
+
+- Confirme que `npx tsc --noEmit` passa sem erros.
+- Se a mudança for visível em browser, valide no preview local (`preview_start` + verificação visual).
+- Confira que o commit não inclui arquivos não relacionados (ex: `.claude/settings.local.json`, `next-env.d.ts`, `node_modules`). Stagear só os arquivos da feature.
+
+---
+
 ## Figma MCP Integration Rules
 
 These rules define how to translate Figma inputs into code for this project and must be followed for every Figma-driven change.

@@ -94,43 +94,57 @@ export function useLevantamentos() {
         return null
       }
 
+      const temRetencao = input.valor_retido > 0
+      // Sem retenção, "retenção recebida" não faz sentido — normaliza pra evitar status incoerente
+      const retencaoRecebidaNorm = temRetencao && input.retencao_recebida
+
       // Determinar status
       let status = 'pendente'
-      if (input.retencao_recebida && input.repasse_realizado) {
-        status = 'concluido'
-      } else if (input.retencao_recebida || input.repasse_realizado) {
-        status = 'parcial'
+      if (temRetencao) {
+        if (retencaoRecebidaNorm && input.repasse_realizado) {
+          status = 'concluido'
+        } else if (retencaoRecebidaNorm || input.repasse_realizado) {
+          status = 'parcial'
+        }
+      } else {
+        // Sem retenção: o ciclo se fecha quando o repasse acontece
+        status = input.repasse_realizado ? 'concluido' : 'pendente'
       }
 
-      // 1. Criar a receita (honorários retidos) — sem conta_bancaria_id para não duplicar no saldo
-      const dataComp = input.data_levantamento.substring(0, 7) + '-01'
-      const { data: receita, error: receitaError } = await supabase
-        .from('financeiro_receitas')
-        .insert({
-          escritorio_id: escritorioAtivo,
-          tipo: 'avulso',
-          categoria: input.retencao_categoria || 'honorarios',
-          descricao: `Honorários - ${input.descricao}`,
-          valor: input.valor_retido,
-          data_competencia: dataComp,
-          data_vencimento: input.data_levantamento,
-          status: input.retencao_recebida ? 'pago' : 'pendente',
-          valor_pago: input.retencao_recebida ? input.valor_retido : 0,
-          data_pagamento: input.retencao_recebida ? input.data_levantamento : null,
-          // conta_bancaria_id = NULL — saldo do banco é calculado via financeiro_levantamentos
-          conta_bancaria_id: null,
-          forma_pagamento: input.retencao_recebida ? input.forma_pagamento : null,
-          processo_id: input.processo_id || null,
-          consulta_id: input.consulta_id || null,
-          cliente_id: input.cliente_id || null,
-          created_by: user.id,
-        })
-        .select('id')
-        .single()
+      // 1. Criar a receita (honorários retidos) — só quando há valor retido.
+      //    Sem retenção, o levantamento é apenas trânsito; não há receita do escritório.
+      let receitaId: string | null = null
+      if (temRetencao) {
+        const dataComp = input.data_levantamento.substring(0, 7) + '-01'
+        const { data: receita, error: receitaError } = await supabase
+          .from('financeiro_receitas')
+          .insert({
+            escritorio_id: escritorioAtivo,
+            tipo: 'avulso',
+            categoria: input.retencao_categoria || 'honorarios',
+            descricao: `Honorários - ${input.descricao}`,
+            valor: input.valor_retido,
+            data_competencia: dataComp,
+            data_vencimento: input.data_levantamento,
+            status: retencaoRecebidaNorm ? 'pago' : 'pendente',
+            valor_pago: retencaoRecebidaNorm ? input.valor_retido : 0,
+            data_pagamento: retencaoRecebidaNorm ? input.data_levantamento : null,
+            // conta_bancaria_id = NULL — saldo do banco é calculado via financeiro_levantamentos
+            conta_bancaria_id: null,
+            forma_pagamento: retencaoRecebidaNorm ? input.forma_pagamento : null,
+            processo_id: input.processo_id || null,
+            consulta_id: input.consulta_id || null,
+            cliente_id: input.cliente_id || null,
+            created_by: user.id,
+          })
+          .select('id')
+          .single()
 
-      if (receitaError) throw receitaError
+        if (receitaError) throw receitaError
+        receitaId = receita.id
+      }
 
-      // 2. Criar o levantamento
+      // 2. Criar o levantamento (sempre)
       const { data: levantamento, error: levError } = await supabase
         .from('financeiro_levantamentos')
         .insert({
@@ -143,10 +157,10 @@ export function useLevantamentos() {
           valor_total: input.valor_total,
           valor_retido: input.valor_retido,
           valor_cliente: input.valor_cliente,
-          conta_bancaria_id: input.conta_bancaria_id || null,
-          forma_pagamento: input.forma_pagamento || null,
-          receita_id: receita.id,
-          retencao_recebida: input.retencao_recebida,
+          conta_bancaria_id: temRetencao ? (input.conta_bancaria_id || null) : null,
+          forma_pagamento: temRetencao ? (input.forma_pagamento || null) : null,
+          receita_id: receitaId,
+          retencao_recebida: retencaoRecebidaNorm,
           retencao_categoria: input.retencao_categoria || 'honorarios',
           repasse_realizado: input.repasse_realizado,
           data_repasse: input.repasse_realizado ? input.data_repasse : null,
@@ -163,7 +177,7 @@ export function useLevantamentos() {
       if (levError) throw levError
 
       // 3. Recalcular saldos das contas afetadas
-      if (input.retencao_recebida && input.conta_bancaria_id) {
+      if (retencaoRecebidaNorm && input.conta_bancaria_id) {
         await supabase.rpc('recalcular_saldo_conta', { p_conta_id: input.conta_bancaria_id })
       }
       if (input.repasse_realizado && input.conta_repasse_id) {

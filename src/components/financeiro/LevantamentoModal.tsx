@@ -166,6 +166,14 @@ export default function LevantamentoModal({
 
   // Computed
   const valorCliente = useMemo(() => Math.max(0, valorTotal - valorRetido), [valorTotal, valorRetido])
+
+  // Sem retenção, não há receita pra "receber" — limpa os campos da seção de retenção
+  useEffect(() => {
+    if (valorRetido === 0) {
+      setRetencaoRecebida(false)
+      setContaBancariaId('')
+    }
+  }, [valorRetido])
   const percentualRetido = useMemo(() => {
     if (valorTotal <= 0) return 0
     return (valorRetido / valorTotal) * 100
@@ -644,70 +652,73 @@ export default function LevantamentoModal({
           </div>
 
           {/* === SEÇÃO 4: HONORÁRIOS RETIDOS === */}
-          <div className={cn(
-            'rounded-lg border transition-colors p-4 space-y-3',
-            retencaoRecebida
-              ? 'border-[#89bcbe] dark:border-teal-500/30 bg-[#f0f9f9] dark:bg-teal-500/5'
-              : 'border-slate-200 dark:border-slate-700'
-          )}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Switch checked={retencaoRecebida} onCheckedChange={setRetencaoRecebida} />
-                <div>
-                  <p className="text-xs font-medium text-[#34495e] dark:text-slate-200">Já recebido na conta</p>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500">Valor total entrou na conta bancária</p>
+          {/* Sem retenção, não há receita do escritório — seção fica oculta */}
+          {valorRetido > 0 && (
+            <div className={cn(
+              'rounded-lg border transition-colors p-4 space-y-3',
+              retencaoRecebida
+                ? 'border-[#89bcbe] dark:border-teal-500/30 bg-[#f0f9f9] dark:bg-teal-500/5'
+                : 'border-slate-200 dark:border-slate-700'
+            )}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Switch checked={retencaoRecebida} onCheckedChange={setRetencaoRecebida} />
+                  <div>
+                    <p className="text-xs font-medium text-[#34495e] dark:text-slate-200">Já recebido na conta</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500">Valor total entrou na conta bancária</p>
+                  </div>
                 </div>
+                {retencaoRecebida && (
+                  <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px]">
+                    <CheckCircle2 className="w-3 h-3 mr-0.5" />
+                    Recebido
+                  </Badge>
+                )}
               </div>
+
               {retencaoRecebida && (
-                <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px]">
-                  <CheckCircle2 className="w-3 h-3 mr-0.5" />
-                  Recebido
-                </Badge>
+                <div className="space-y-3 pt-2 border-t border-[#89bcbe]/20 dark:border-teal-500/20">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="grid gap-1.5">
+                      <Label className="text-xs">Categoria da receita</Label>
+                      <Select value={retencaoCategoria} onValueChange={setRetencaoCategoria}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CATEGORIAS_RETENCAO.map((c) => (
+                            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label className="text-xs">Conta bancária *</Label>
+                      <ContaBancariaSelect
+                        value={contaBancariaId}
+                        onValueChange={setContaBancariaId}
+                        escritorioIds={grupoIds}
+                        placeholder="Selecione..."
+                      />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label className="text-xs">Forma de pagamento</Label>
+                      <Select value={formaPagamento} onValueChange={setFormaPagamento}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FORMAS_PAGAMENTO.map((f) => (
+                            <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
-
-            {retencaoRecebida && (
-              <div className="space-y-3 pt-2 border-t border-[#89bcbe]/20 dark:border-teal-500/20">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="grid gap-1.5">
-                    <Label className="text-xs">Categoria da receita</Label>
-                    <Select value={retencaoCategoria} onValueChange={setRetencaoCategoria}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CATEGORIAS_RETENCAO.map((c) => (
-                          <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-1.5">
-                    <Label className="text-xs">Conta bancária *</Label>
-                    <ContaBancariaSelect
-                      value={contaBancariaId}
-                      onValueChange={setContaBancariaId}
-                      escritorioIds={grupoIds}
-                      placeholder="Selecione..."
-                    />
-                  </div>
-                  <div className="grid gap-1.5">
-                    <Label className="text-xs">Forma de pagamento</Label>
-                    <Select value={formaPagamento} onValueChange={setFormaPagamento}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {FORMAS_PAGAMENTO.map((f) => (
-                          <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* === SEÇÃO 5: REPASSE AO CLIENTE === */}
           <div className={cn(

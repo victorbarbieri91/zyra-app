@@ -52,6 +52,7 @@ import AudienciaWizard from '@/components/agenda/AudienciaWizard'
 import TarefaDetailModal from '@/components/agenda/TarefaDetailModal'
 import EventoDetailModal from '@/components/agenda/EventoDetailModal'
 import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
+import AgendaCancelarModal, { TipoAgenda } from '@/components/agenda/AgendaCancelarModal'
 import TransformarConsultivoWizard from '@/components/consultivo/TransformarConsultivoWizard'
 import EditarConsultivoModal from '@/components/consultivo/EditarConsultivoModal'
 import ConsultivoFinanceiroCard from '@/components/consultivo/ConsultivoFinanceiroCard'
@@ -165,6 +166,32 @@ export default function ConsultaDetalhePage() {
   const [editingEvento, setEditingEvento] = useState(false)
   const [editingAudiencia, setEditingAudiencia] = useState(false)
 
+  // Modal de cancelamento (genérico para tarefa/evento/audiência)
+  const [cancelarModalOpen, setCancelarModalOpen] = useState(false)
+  const [cancelarTarget, setCancelarTarget] = useState<{
+    tipo: TipoAgenda
+    registro: {
+      id: string
+      titulo: string
+      data: string
+      recorrencia_id?: string | null
+      is_virtual?: boolean
+    }
+  } | null>(null)
+
+  const openCancelarModal = (
+    tipo: TipoAgenda,
+    registro: { id: string; titulo: string; data: string; recorrencia_id?: string | null; is_virtual?: boolean },
+  ) => {
+    setTarefaDetailOpen(false)
+    setEventoDetailOpen(false)
+    setAudienciaDetailOpen(false)
+    setTimeout(() => {
+      setCancelarTarget({ tipo, registro })
+      setCancelarModalOpen(true)
+    }, 150)
+  }
+
   // Estados para Financeiro
   const [timesheetModalOpen, setTimesheetModalOpen] = useState(false)
   const [despesaModalOpen, setDespesaModalOpen] = useState(false)
@@ -259,16 +286,19 @@ export default function ConsultaDetalhePage() {
           .from('agenda_tarefas')
           .select('id, titulo, status, data_inicio, responsavel_id, prazo_data_limite, profiles!agenda_tarefas_responsavel_id_fkey(nome_completo)')
           .eq('consultivo_id', params.id)
+          .neq('status', 'cancelada')
           .order('data_inicio', { ascending: true }),
         supabase
           .from('agenda_eventos')
           .select('id, titulo, status, data_inicio, responsavel_id, profiles!agenda_eventos_responsavel_id_fkey(nome_completo)')
           .eq('consultivo_id', params.id)
+          .neq('status', 'cancelado')
           .order('data_inicio', { ascending: true }),
         supabase
           .from('agenda_audiencias')
           .select('id, titulo, status, data_hora, responsavel_id, profiles!agenda_audiencias_responsavel_id_fkey(nome_completo)')
           .eq('consultivo_id', params.id)
+          .neq('status', 'cancelada')
           .order('data_hora', { ascending: true })
       ])
 
@@ -1344,6 +1374,13 @@ export default function ConsultaDetalhePage() {
           tarefa={selectedTarefa}
           onEdit={handleEditTarefa}
           onDelete={() => handleDeleteTarefa(selectedTarefa.id)}
+          onCancelar={() => openCancelarModal('tarefa', {
+            id: selectedTarefa.id,
+            titulo: selectedTarefa.titulo,
+            data: selectedTarefa.data_inicio,
+            recorrencia_id: selectedTarefa.recorrencia_id,
+            is_virtual: selectedTarefa.is_virtual,
+          })}
           onConcluir={() => handleConcluirTarefa(selectedTarefa.id)}
           onReabrir={() => handleReabrirTarefa(selectedTarefa.id)}
           onLancarHoras={handleLancarHorasTarefa}
@@ -1360,7 +1397,12 @@ export default function ConsultaDetalhePage() {
           }}
           evento={selectedEvento}
           onEdit={handleEditEvento}
-          onCancelar={() => handleDeleteEvento(selectedEvento.id)}
+          onCancelar={() => openCancelarModal('evento', {
+            id: selectedEvento.id,
+            titulo: selectedEvento.titulo,
+            data: selectedEvento.data_inicio,
+            recorrencia_id: selectedEvento.recorrencia_id,
+          })}
         />
       )}
 
@@ -1373,9 +1415,30 @@ export default function ConsultaDetalhePage() {
           }}
           audiencia={selectedAudiencia}
           onEdit={handleEditAudiencia}
-          onCancelar={() => handleDeleteAudiencia(selectedAudiencia.id)}
+          onCancelar={() => openCancelarModal('audiencia', {
+            id: selectedAudiencia.id,
+            titulo: selectedAudiencia.titulo,
+            data: selectedAudiencia.data_hora ?? selectedAudiencia.data_inicio,
+          })}
         />
       )}
+
+      {/* Modal de Cancelamento (genérico) */}
+      <AgendaCancelarModal
+        open={cancelarModalOpen}
+        onOpenChange={(open) => {
+          setCancelarModalOpen(open)
+          if (!open) setCancelarTarget(null)
+        }}
+        tipo={cancelarTarget?.tipo ?? 'tarefa'}
+        registro={cancelarTarget?.registro ?? null}
+        onSuccess={async () => {
+          await loadAgenda()
+          setSelectedTarefa(null)
+          setSelectedEvento(null)
+          setSelectedAudiencia(null)
+        }}
+      />
 
       {/* Modal Editar Consultivo */}
       {consulta && (

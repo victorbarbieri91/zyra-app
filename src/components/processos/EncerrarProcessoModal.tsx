@@ -238,17 +238,24 @@ export default function EncerrarProcessoModal({
         .filter(p => p.tipo === 'audiencia' && p.checked)
         .map(p => p.id)
 
+      const { data: authData } = await supabase.auth.getUser()
+      const auditoriaCancelamento = {
+        status: 'cancelada' as const,
+        cancelado_em: new Date().toISOString(),
+        cancelado_por: authData.user?.id ?? null,
+      }
+
       if (tarefasParaCancelar.length > 0) {
         await supabase
           .from('agenda_tarefas')
-          .update({ status: 'cancelada' })
+          .update(auditoriaCancelamento)
           .in('id', tarefasParaCancelar)
       }
 
       if (audienciasParaCancelar.length > 0) {
         await supabase
           .from('agenda_audiencias')
-          .update({ status: 'cancelada' })
+          .update(auditoriaCancelamento)
           .in('id', audienciasParaCancelar)
       }
 

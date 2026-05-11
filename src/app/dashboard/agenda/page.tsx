@@ -47,6 +47,7 @@ import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
 import EventoDetailModal from '@/components/agenda/EventoDetailModal'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import RecorrenciaDeleteModal from '@/components/agenda/RecorrenciaDeleteModal'
+import AgendaCancelarModal, { TipoAgenda } from '@/components/agenda/AgendaCancelarModal'
 import { EventCardProps } from '@/components/agenda/EventCard'
 
 // Hooks
@@ -124,6 +125,19 @@ export default function AgendaPage() {
     tipo: 'tarefa' | 'evento'
     recorrenciaId: string
     dataOcorrencia: string
+  } | null>(null)
+
+  // Modal de cancelamento (genérico para tarefa/evento/audiência)
+  const [cancelarModalOpen, setCancelarModalOpen] = useState(false)
+  const [cancelarTarget, setCancelarTarget] = useState<{
+    tipo: TipoAgenda
+    registro: {
+      id: string
+      titulo: string
+      data: string
+      recorrencia_id?: string | null
+      is_virtual?: boolean
+    }
   } | null>(null)
 
   // Modal de aviso quando reagendar ultrapassa prazo fatal (sidebar)
@@ -1009,27 +1023,21 @@ export default function AgendaPage() {
     }
   }
 
-  const handleCancelarAudiencia = async (audienciaId: string) => {
-    if (!confirm('Tem certeza que deseja cancelar esta audiência?')) return
-
-    try {
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-
-      const { error } = await supabase
-        .from('agenda_audiencias')
-        .update({ status: 'cancelada' })
-        .eq('id', audienciaId)
-
-      if (error) throw error
-
-      setAudienciaDetailOpen(false)
-      await refreshItems()
-      toast.success('Audiência cancelada com sucesso!')
-    } catch (error) {
-      console.error('Erro ao cancelar audiência:', error)
-      toast.error('Erro ao cancelar audiência')
-    }
+  // Abre o modal genérico de cancelamento. Funciona para tarefa, evento ou audiência.
+  // O modal preserva o registro no banco (status='cancelada/o' + cancelado_em + cancelado_por).
+  const openCancelarModal = (
+    tipo: TipoAgenda,
+    registro: { id: string; titulo: string; data: string; recorrencia_id?: string | null; is_virtual?: boolean },
+  ) => {
+    // Fecha modais de detalhe para evitar conflito de focus trap/z-index
+    setTarefaDetailOpen(false)
+    setAudienciaDetailOpen(false)
+    setEventoDetailOpen(false)
+    setSidebarOpen(false)
+    setTimeout(() => {
+      setCancelarTarget({ tipo, registro })
+      setCancelarModalOpen(true)
+    }, 150)
   }
 
   const handleRealizarAudiencia = async (audienciaId: string) => {
@@ -1126,50 +1134,17 @@ export default function AgendaPage() {
     }
   }
 
-  const handleCancelarEvento = async (eventoId: string) => {
-    // Instâncias virtuais → fechar modal de detalhe primeiro, depois abrir modal de exclusão
-    if (eventoId.startsWith('virtual_')) {
-      const parts = eventoId.split('_')
-      const recId = parts[1]
-      const dataOc = parts[2]
-      const titulo = eventoSelecionado?.titulo || 'Evento recorrente'
-      // Fechar modais e sidebar antes para evitar conflito de z-index e focus trap
-      setTarefaDetailOpen(false)
-      setEventoDetailOpen(false)
-      setSidebarOpen(false)
-      setTimeout(() => {
-        setRecorrenciaDeleteTarget({
-          itemId: eventoId,
-          titulo,
-          tipo: 'evento',
-          recorrenciaId: recId,
-          dataOcorrencia: dataOc,
-        })
-        setRecorrenciaDeleteOpen(true)
-      }, 150)
-      return
-    }
-
-    if (!confirm('Tem certeza que deseja cancelar este evento?')) return
-
-    try {
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-
-      const { error } = await supabase
-        .from('agenda_eventos')
-        .update({ status: 'cancelado' })
-        .eq('id', eventoId)
-
-      if (error) throw error
-
-      setEventoDetailOpen(false)
-      await refreshItems()
-      toast.success('Evento cancelado com sucesso!')
-    } catch (error) {
-      console.error('Erro ao cancelar evento:', error)
-      toast.error('Erro ao cancelar evento')
-    }
+  // Cancelamento de evento: abre modal genérico (que trata virtuais materializando).
+  const handleCancelarEvento = (eventoId: string) => {
+    if (!eventoSelecionado) return
+    const isVirtual = eventoId.startsWith('virtual_')
+    openCancelarModal('evento', {
+      id: eventoId,
+      titulo: eventoSelecionado.titulo,
+      data: eventoSelecionado.data_inicio,
+      recorrencia_id: eventoSelecionado.recorrencia_id,
+      is_virtual: isVirtual,
+    })
   }
 
   // Handler para o modal de exclusão de recorrência
@@ -1596,6 +1571,13 @@ export default function AgendaPage() {
           tarefa={tarefaSelecionada}
           onEdit={handleEditTarefa}
           onDelete={() => handleDeleteTarefa(tarefaSelecionada.id)}
+          onCancelar={() => openCancelarModal('tarefa', {
+            id: tarefaSelecionada.id,
+            titulo: tarefaSelecionada.titulo,
+            data: tarefaSelecionada.data_inicio,
+            recorrencia_id: tarefaSelecionada.recorrencia_id,
+            is_virtual: tarefaSelecionada.is_virtual,
+          })}
           onConcluir={() => handleCompleteTask(tarefaSelecionada.id)}
           onReabrir={() => handleReopenTask(tarefaSelecionada.id)}
           onLancarHoras={() => {
@@ -1661,7 +1643,11 @@ export default function AgendaPage() {
             ].filter(Boolean).join(' - ') || undefined,
           } as any}
           onEdit={handleEditAudiencia}
-          onCancelar={() => handleCancelarAudiencia(audienciaSelecionada.id)}
+          onCancelar={() => openCancelarModal('audiencia', {
+            id: audienciaSelecionada.id,
+            titulo: audienciaSelecionada.titulo,
+            data: audienciaSelecionada.data_hora,
+          })}
           onRealizar={() => handleRealizarAudiencia(audienciaSelecionada.id)}
           onReabrir={() => handleReabrirAudiencia(audienciaSelecionada.id)}
           onProcessoClick={handleProcessoClick}
@@ -1913,6 +1899,23 @@ export default function AgendaPage() {
         tipo={recorrenciaDeleteTarget?.tipo || 'tarefa'}
         onDeleteEsta={handleRecorrenciaDeleteEsta}
         onDeleteTodas={handleRecorrenciaDeleteTodas}
+      />
+
+      {/* Modal de Cancelamento (genérico) */}
+      <AgendaCancelarModal
+        open={cancelarModalOpen}
+        onOpenChange={(open) => {
+          setCancelarModalOpen(open)
+          if (!open) setCancelarTarget(null)
+        }}
+        tipo={cancelarTarget?.tipo ?? 'tarefa'}
+        registro={cancelarTarget?.registro ?? null}
+        onSuccess={async () => {
+          await Promise.all([refreshItems(), refreshTarefas(), refreshAudiencias(), refreshEventos()])
+          setTarefaSelecionada(null)
+          setAudienciaSelecionada(null)
+          setEventoSelecionado(null)
+        }}
       />
     </div>
   )

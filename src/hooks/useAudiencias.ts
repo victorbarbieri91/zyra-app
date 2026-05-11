@@ -86,6 +86,7 @@ export function useAudiencias(escritorioId?: string) {
           responsavel:profiles!agenda_audiencias_responsavel_id_fkey(nome_completo),
           criado_por_user:profiles!agenda_audiencias_criado_por_fkey(nome_completo)
         `)
+        .neq('status', 'cancelada')
         .order('data_hora', { ascending: true })
 
       if (escritorioId) {
@@ -290,14 +291,17 @@ export function useAudiencias(escritorioId?: string) {
     }
   }
 
-  // Cancelar audiência
-  const cancelarAudiencia = async (id: string, motivo?: string): Promise<void> => {
+  // Cancelar audiência: marca como cancelada com auditoria (quem, quando)
+  // O registro permanece no banco — consultar via SQL se precisar saber o que houve.
+  const cancelarAudiencia = async (id: string): Promise<void> => {
     try {
+      const { data: { user } } = await supabase.auth.getUser()
       const { error } = await supabase
         .from('agenda_audiencias')
         .update({
           status: 'cancelada',
-          observacoes: motivo ? `CANCELADA: ${motivo}` : 'CANCELADA',
+          cancelado_em: new Date().toISOString(),
+          cancelado_por: user?.id ?? null,
         })
         .eq('id', id)
 

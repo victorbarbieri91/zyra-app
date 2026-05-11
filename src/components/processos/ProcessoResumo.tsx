@@ -49,6 +49,7 @@ import AudienciaWizard from '@/components/agenda/AudienciaWizard'
 import TarefaDetailModal from '@/components/agenda/TarefaDetailModal'
 import EventoDetailModal from '@/components/agenda/EventoDetailModal'
 import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
+import AgendaCancelarModal, { TipoAgenda } from '@/components/agenda/AgendaCancelarModal'
 import ProcessoTimelineHorizontal from '@/components/processos/ProcessoTimelineHorizontal'
 import ProcessoFinanceiroCard from '@/components/processos/ProcessoFinanceiroCard'
 import ProcessoCobrancasCard from '@/components/processos/ProcessoCobrancasCard'
@@ -156,6 +157,32 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
   const [tarefaDetailOpen, setTarefaDetailOpen] = useState(false)
   const [eventoDetailOpen, setEventoDetailOpen] = useState(false)
   const [audienciaDetailOpen, setAudienciaDetailOpen] = useState(false)
+
+  // Modal de cancelamento (genérico para tarefa/evento/audiência)
+  const [cancelarModalOpen, setCancelarModalOpen] = useState(false)
+  const [cancelarTarget, setCancelarTarget] = useState<{
+    tipo: TipoAgenda
+    registro: {
+      id: string
+      titulo: string
+      data: string
+      recorrencia_id?: string | null
+      is_virtual?: boolean
+    }
+  } | null>(null)
+
+  const openCancelarModal = (
+    tipo: TipoAgenda,
+    registro: { id: string; titulo: string; data: string; recorrencia_id?: string | null; is_virtual?: boolean },
+  ) => {
+    setTarefaDetailOpen(false)
+    setEventoDetailOpen(false)
+    setAudienciaDetailOpen(false)
+    setTimeout(() => {
+      setCancelarTarget({ tipo, registro })
+      setCancelarModalOpen(true)
+    }, 150)
+  }
 
   // Estados para edição de tarefa/evento/audiência
   const [editingTarefa, setEditingTarefa] = useState(false)
@@ -1333,6 +1360,13 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
           tarefa={selectedTarefa}
           onEdit={handleEditTarefa}
           onDelete={() => handleDeleteTarefa(selectedTarefa.id)}
+          onCancelar={() => openCancelarModal('tarefa', {
+            id: selectedTarefa.id,
+            titulo: selectedTarefa.titulo,
+            data: selectedTarefa.data_inicio,
+            recorrencia_id: selectedTarefa.recorrencia_id,
+            is_virtual: selectedTarefa.is_virtual,
+          })}
           onConcluir={() => handleConcluirTarefa(selectedTarefa.id)}
           onReabrir={() => handleReabrirTarefa(selectedTarefa.id)}
           onLancarHoras={handleLancarHorasTarefa}
@@ -1349,7 +1383,12 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
           }}
           evento={selectedEvento}
           onEdit={handleEditEvento}
-          onCancelar={() => handleDeleteEvento(selectedEvento.id)}
+          onCancelar={() => openCancelarModal('evento', {
+            id: selectedEvento.id,
+            titulo: selectedEvento.titulo,
+            data: selectedEvento.data_inicio,
+            recorrencia_id: selectedEvento.recorrencia_id,
+          })}
         />
       )}
 
@@ -1362,9 +1401,30 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
           }}
           audiencia={selectedAudiencia}
           onEdit={handleEditAudiencia}
-          onCancelar={() => handleDeleteAudiencia(selectedAudiencia.id)}
+          onCancelar={() => openCancelarModal('audiencia', {
+            id: selectedAudiencia.id,
+            titulo: selectedAudiencia.titulo,
+            data: selectedAudiencia.data_hora ?? selectedAudiencia.data_inicio,
+          })}
         />
       )}
+
+      {/* Modal de Cancelamento (genérico) */}
+      <AgendaCancelarModal
+        open={cancelarModalOpen}
+        onOpenChange={(open) => {
+          setCancelarModalOpen(open)
+          if (!open) setCancelarTarget(null)
+        }}
+        tipo={cancelarTarget?.tipo ?? 'tarefa'}
+        registro={cancelarTarget?.registro ?? null}
+        onSuccess={async () => {
+          await reloadAgenda()
+          setSelectedTarefa(null)
+          setSelectedEvento(null)
+          setSelectedAudiencia(null)
+        }}
+      />
 
       {/* Modal de Detalhe da Movimentação */}
       <Dialog open={!!selectedMovimentacao} onOpenChange={(open) => !open && setSelectedMovimentacao(null)}>

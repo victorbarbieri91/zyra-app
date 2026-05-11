@@ -85,6 +85,7 @@ export function useTarefas(escritorioId?: string) {
           processo:processos_processos!processo_id(autor, reu),
           consultivo:consultivo_consultas!consultivo_id(titulo)
         `)
+        .neq('status', 'cancelada')
         .order('data_inicio', { ascending: true })
 
       if (escritorioId) {
@@ -343,6 +344,69 @@ export function useTarefas(escritorioId?: string) {
     }
   }
 
+  // Cancelar tarefa: marca como cancelada sem deletar (preserva para auditoria)
+  // escopo='instancia' cancela só a tarefa indicada
+  // escopo='serie' cancela todas as ocorrências não-concluídas da recorrência + desativa a regra
+  const cancelarTarefa = async (
+    id: string,
+    escopo: 'instancia' | 'serie' = 'instancia',
+  ): Promise<void> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const userId = user?.id
+      const cancelarPayload = {
+        status: 'cancelada' as const,
+        cancelado_em: new Date().toISOString(),
+        cancelado_por: userId,
+      }
+
+      // Instância virtual: materializa em vez de UPDATE (não existe no banco ainda)
+      const tarefa = tarefas.find((t) => t.id === id)
+      if (tarefa?.is_virtual && tarefa.recorrencia_id) {
+        const { data: regra, error: regraErr } = await supabase
+          .from('agenda_recorrencias')
+          .select('template_dados, escritorio_id')
+          .eq('id', tarefa.recorrencia_id)
+          .single()
+        if (regraErr || !regra) throw regraErr ?? new Error('Regra não encontrada')
+        const template = (regra.template_dados as Record<string, any>) ?? {}
+        const { error } = await supabase.from('agenda_tarefas').insert({
+          ...template,
+          recorrencia_id: tarefa.recorrencia_id,
+          escritorio_id: regra.escritorio_id,
+          data_inicio: tarefa.data_inicio,
+          titulo: tarefa.titulo,
+          ...cancelarPayload,
+        })
+        if (error) throw error
+      } else if (escopo === 'instancia') {
+        const { error } = await supabase
+          .from('agenda_tarefas')
+          .update(cancelarPayload)
+          .eq('id', id)
+        if (error) throw error
+      } else {
+        if (!tarefa?.recorrencia_id) throw new Error('Tarefa não pertence a uma série')
+        const { error: updateError } = await supabase
+          .from('agenda_tarefas')
+          .update(cancelarPayload)
+          .eq('recorrencia_id', tarefa.recorrencia_id)
+          .not('status', 'in', '(cancelada,concluida)')
+        if (updateError) throw updateError
+        const { error: regraError } = await supabase
+          .from('agenda_recorrencias')
+          .update({ ativo: false })
+          .eq('id', tarefa.recorrencia_id)
+        if (regraError) throw regraError
+      }
+
+      await loadTarefas()
+    } catch (err) {
+      console.error('Erro ao cancelar tarefa:', err)
+      throw err
+    }
+  }
+
   // Reabrir tarefa (voltar para pendente)
   const reabrirTarefa = async (id: string): Promise<void> => {
     try {
@@ -387,6 +451,7 @@ export function useTarefas(escritorioId?: string) {
     createTarefa,
     updateTarefa,
     deleteTarefa,
+    cancelarTarefa,
     concluirTarefa,
     reabrirTarefa,
     refreshTarefas: loadTarefas,

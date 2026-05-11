@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import {
   Edit2,
   Trash2,
+  Ban,
   Check,
   RotateCcw,
   Calendar,
@@ -153,6 +154,7 @@ interface TarefaDetailModalProps {
   tarefa: Tarefa
   onEdit?: () => void
   onDelete?: () => void
+  onCancelar?: () => void
   onConcluir?: () => void
   onReabrir?: () => void
   onLancarHoras?: () => void
@@ -195,6 +197,7 @@ export default function TarefaDetailModal({
   tarefa,
   onEdit,
   onDelete,
+  onCancelar,
   onConcluir,
   onReabrir,
   onLancarHoras,
@@ -578,6 +581,12 @@ export default function TarefaDetailModal({
                   <span className="inline-flex items-center gap-1 bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 rounded px-1.5 py-0.5 text-[10px] font-medium" title="Tarefa pessoal — só você vê">
                     <Lock className="w-2.5 h-2.5" />
                     Pessoal
+                  </span>
+                )}
+                {tarefa.status === 'cancelada' && (
+                  <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded px-1.5 py-0.5 text-[10px] font-medium">
+                    <Ban className="w-2.5 h-2.5" />
+                    Cancelada
                   </span>
                 )}
                 <span>{getLocalTipoLabel(tarefa.tipo)}</span>
@@ -970,7 +979,7 @@ export default function TarefaDetailModal({
                 </Button>
               </div>
 
-              {/* Grupo direito: editar + excluir */}
+              {/* Grupo direito: editar + cancelar + excluir */}
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
@@ -982,15 +991,29 @@ export default function TarefaDetailModal({
                   Editar
                 </Button>
 
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={onDelete}
-                  className="h-8 text-xs text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                  Excluir
-                </Button>
+                {onCancelar && tarefa.status !== 'cancelada' && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={onCancelar}
+                    className="h-8 text-xs text-slate-600 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-100"
+                  >
+                    <Ban className="w-3.5 h-3.5 mr-1.5" />
+                    Cancelar
+                  </Button>
+                )}
+
+                {onDelete && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={onDelete}
+                    className="h-8 text-xs text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                    Excluir
+                  </Button>
+                )}
               </div>
             </div>
           </div>

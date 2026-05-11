@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export interface RecorrenciaFormData {
@@ -133,8 +133,8 @@ export function useRecorrencias(escritorioId?: string) {
     }
   }
 
-  // Buscar recorrência por ID
-  const getRecorrencia = async (id: string): Promise<Recorrencia | null> => {
+  // Buscar recorrência por ID — memoizado para evitar re-disparar useEffects que dependem dele
+  const getRecorrencia = useCallback(async (id: string): Promise<Recorrencia | null> => {
     try {
       const { data, error } = await supabase
         .from('agenda_recorrencias')
@@ -148,7 +148,7 @@ export function useRecorrencias(escritorioId?: string) {
       console.error('Erro ao buscar recorrência:', error)
       return null
     }
-  }
+  }, [supabase])
 
   /**
    * Atualiza a regra e propaga para instâncias pendentes futuras.

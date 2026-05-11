@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Repeat, Pin } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -134,6 +134,14 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
   }
 
   const [modo, setModo] = useState<Modo>(getModoInicial)
+
+  // Sincroniza o modo interno quando o `value` muda externamente
+  // (caso típico: TarefaWizard/EventoWizard carrega regra de recorrência via useEffect
+  // após o mount inicial — sem isto, o `modo` ficaria preso em "nenhum").
+  useEffect(() => {
+    const novoModo: Modo = value?.isFixa ? 'fixa' : value?.ativa ? 'recorrente' : 'nenhum'
+    setModo(novoModo)
+  }, [value?.isFixa, value?.ativa])
 
   const handleModoChange = (novoModo: Modo) => {
     if (novoModo === modo) {

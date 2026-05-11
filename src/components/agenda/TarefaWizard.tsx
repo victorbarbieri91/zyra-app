@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Calendar, CalendarClock, Clock, Link as LinkIcon, CheckSquare, Briefcase, UserCheck, FileText, ClipboardList, Zap, TrendingUp, ChevronRight, Repeat, ListTree, Pin, Mail, Loader2, Scale, Gavel, CheckCircle2, Lock, CalendarDays, Info } from 'lucide-react'
 import { ModalWizard, WizardStep, ReviewCard } from '@/components/wizards'
 import { cn } from '@/lib/utils'
@@ -372,14 +372,20 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   // Carregar regra de recorrência quando editando uma instância recorrente.
   // Popula o estado `recorrencia` com a config real (frequência, dias, etc.)
   // e habilita o segmented control "Apenas esta / Toda a série".
+  // Ref garante que a regra é carregada uma única vez por id (evita loop com setRecorrencia).
+  const regraLoadedRef = useRef<string | null>(null)
   useEffect(() => {
-    const loadRegra = async () => {
-      const recorrenciaId = (initialData as any)?.recorrencia_id
-      if (!initialData?.id || !recorrenciaId) {
-        setRegraRecorrencia(null)
-        return
-      }
+    const recorrenciaId = (initialData as any)?.recorrencia_id as string | undefined
+    if (!initialData?.id || !recorrenciaId) {
+      setRegraRecorrencia(null)
+      regraLoadedRef.current = null
+      return
+    }
 
+    if (regraLoadedRef.current === recorrenciaId) return
+    regraLoadedRef.current = recorrenciaId
+
+    ;(async () => {
       const regra = await getRecorrencia(recorrenciaId)
       if (!regra) return
 
@@ -409,8 +415,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
         numeroOcorrencias: regra.max_ocorrencias ?? undefined,
         apenasUteis: regra.regra_apenas_uteis ?? false,
       })
-    }
-    loadRegra()
+    })()
   }, [initialData?.id, (initialData as any)?.recorrencia_id, getRecorrencia])
 
   const isFixa = recorrencia?.isFixa === true

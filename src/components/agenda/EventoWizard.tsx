@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Calendar, Clock, MapPin, Repeat, Lock, CalendarDays, Info } from 'lucide-react'
 import { ModalWizard, WizardStep } from '@/components/wizards'
 import { cn } from '@/lib/utils'
@@ -109,13 +109,20 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
   const [escopoEdicao, setEscopoEdicao] = useState<'instancia' | 'serie'>('instancia')
 
   // Carregar regra de recorrência quando editando uma instância recorrente.
+  // Ref garante que a regra é carregada uma única vez por id (evita loop com setRecorrencia).
+  const regraLoadedRef = useRef<string | null>(null)
   useEffect(() => {
-    const loadRegra = async () => {
-      const recorrenciaId = (initialData as any)?.recorrencia_id
-      if (!initialData?.id || !recorrenciaId) {
-        setRegraRecorrencia(null)
-        return
-      }
+    const recorrenciaId = (initialData as any)?.recorrencia_id as string | undefined
+    if (!initialData?.id || !recorrenciaId) {
+      setRegraRecorrencia(null)
+      regraLoadedRef.current = null
+      return
+    }
+
+    if (regraLoadedRef.current === recorrenciaId) return
+    regraLoadedRef.current = recorrenciaId
+
+    ;(async () => {
       const regra = await getRecorrencia(recorrenciaId)
       if (!regra) return
 
@@ -145,8 +152,7 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
         numeroOcorrencias: regra.max_ocorrencias ?? undefined,
         apenasUteis: regra.regra_apenas_uteis ?? false,
       })
-    }
-    loadRegra()
+    })()
   }, [initialData?.id, (initialData as any)?.recorrencia_id, getRecorrencia])
 
   // Estado unificado de vinculação

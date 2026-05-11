@@ -442,9 +442,6 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
       {/* Banner de escopo: aparece quando editando uma instância recorrente */}
       {initialData?.id && regraRecorrencia && (
         <div className="mb-3 flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] uppercase tracking-wider font-medium text-slate-400 dark:text-slate-500">
-            Aplicar a
-          </span>
           <div className="inline-flex items-center gap-0.5 p-0.5 bg-slate-100 dark:bg-surface-2 rounded-md">
             <button
               type="button"
@@ -452,7 +449,7 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
               className={cn(
                 'inline-flex items-center gap-1.5 py-1 px-2.5 rounded text-xs font-medium transition-all',
                 escopoEdicao === 'instancia'
-                  ? 'bg-white dark:bg-surface-1 text-[#34495e] dark:text-slate-200 shadow-sm'
+                  ? 'bg-[#34495e] text-white shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
               )}
             >
@@ -465,7 +462,7 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
               className={cn(
                 'inline-flex items-center gap-1.5 py-1 px-2.5 rounded text-xs font-medium transition-all',
                 escopoEdicao === 'serie'
-                  ? 'bg-white dark:bg-surface-1 text-[#34495e] dark:text-slate-200 shadow-sm'
+                  ? 'bg-[#34495e] text-white shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
               )}
             >

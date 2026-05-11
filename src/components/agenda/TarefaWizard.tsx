@@ -602,17 +602,17 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   }
 
   // Toggle de escopo de edição (renderizado no header do modal quando editando recorrente).
-  // Mesmo `rounded-md` em container e botões: o botão ativo encaixa exatamente no slot,
-  // sem diferença visual de altura ou de raio entre o fundo e a borda externa.
+  // Estilo on/off: sem padding no container, botões sem radius próprio + overflow-hidden.
+  // O lado ativo preenche 100% do slot (sem revelar a borda cinza ao redor).
   const escopoToggle = initialData?.id && regraRecorrencia ? (
-    <div className="inline-flex items-center gap-1 p-1 bg-slate-100 dark:bg-surface-2 rounded-md">
+    <div className="inline-flex items-center bg-slate-100 dark:bg-surface-2 rounded-md overflow-hidden">
       <button
         type="button"
         onClick={() => setEscopoEdicao('instancia')}
         className={cn(
-          'inline-flex items-center gap-1.5 py-1.5 px-3 rounded text-xs font-medium transition-all',
+          'inline-flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium transition-colors',
           escopoEdicao === 'instancia'
-            ? 'bg-[#34495e] text-white shadow-sm'
+            ? 'bg-[#34495e] text-white'
             : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
         )}
       >
@@ -623,9 +623,9 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
         type="button"
         onClick={() => setEscopoEdicao('serie')}
         className={cn(
-          'inline-flex items-center gap-1.5 py-1.5 px-3 rounded text-xs font-medium transition-all',
+          'inline-flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium transition-colors',
           escopoEdicao === 'serie'
-            ? 'bg-[#34495e] text-white shadow-sm'
+            ? 'bg-[#34495e] text-white'
             : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
         )}
       >

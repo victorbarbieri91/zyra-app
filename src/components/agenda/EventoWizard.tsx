@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Clock, MapPin, Repeat, Lock } from 'lucide-react'
+import { Calendar, Clock, MapPin, Repeat, Lock, CalendarDays, Info } from 'lucide-react'
 import { ModalWizard, WizardStep } from '@/components/wizards'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
@@ -100,7 +100,54 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
   const [recorrencia, setRecorrencia] = useState<RecorrenciaData | null>(null)
 
   // Hook de recorrências
-  const { createRecorrencia } = useRecorrencias(escritorioId)
+  const { createRecorrencia, getRecorrencia, atualizarSerie } = useRecorrencias(escritorioId)
+
+  // Estado de edição em série
+  const [regraRecorrencia, setRegraRecorrencia] = useState<
+    { id: string; data_inicio: string; data_fim: string | null; max_ocorrencias: number | null } | null
+  >(null)
+  const [escopoEdicao, setEscopoEdicao] = useState<'instancia' | 'serie'>('instancia')
+
+  // Carregar regra de recorrência quando editando uma instância recorrente.
+  useEffect(() => {
+    const loadRegra = async () => {
+      const recorrenciaId = (initialData as any)?.recorrencia_id
+      if (!initialData?.id || !recorrenciaId) {
+        setRegraRecorrencia(null)
+        return
+      }
+      const regra = await getRecorrencia(recorrenciaId)
+      if (!regra) return
+
+      setRegraRecorrencia({
+        id: regra.id,
+        data_inicio: regra.data_inicio,
+        data_fim: regra.data_fim,
+        max_ocorrencias: regra.max_ocorrencias,
+      })
+
+      setRecorrencia({
+        ativa: true,
+        isFixa: false,
+        frequencia: regra.regra_frequencia,
+        intervalo: regra.regra_intervalo || 1,
+        diasSemana: regra.regra_dias_semana ?? undefined,
+        diaMes: regra.regra_dia_mes ?? undefined,
+        mes: regra.regra_mes ?? undefined,
+        horaPadrao: (regra.regra_hora || '09:00').substring(0, 5),
+        dataInicio: regra.data_inicio,
+        terminoTipo: regra.data_fim
+          ? 'data'
+          : regra.max_ocorrencias
+            ? 'ocorrencias'
+            : 'permanente',
+        dataFim: regra.data_fim ?? undefined,
+        numeroOcorrencias: regra.max_ocorrencias ?? undefined,
+        apenasUteis: regra.regra_apenas_uteis ?? false,
+      })
+    }
+    loadRegra()
+  }, [initialData?.id, (initialData as any)?.recorrencia_id, getRecorrencia])
 
   // Estado unificado de vinculação
   const [vinculacao, setVinculacao] = useState<Vinculacao | null>(() => {
@@ -279,9 +326,46 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
         consultivo_id: consultivoId,
       }
 
-      // Se tem recorrência, criar a recorrência em vez do evento direto
-      if (recorrencia && recorrencia.ativa) {
-        // Enriquecer templateDados com dados de display para instâncias virtuais
+      const isEditing = !!initialData?.id
+
+      // Edição de instância recorrente: respeitar o escopo escolhido pelo usuário
+      if (isEditing && regraRecorrencia) {
+        if (escopoEdicao === 'serie' && recorrencia) {
+          const templateComDisplay = {
+            ...formData,
+            _display: {
+              responsavel_nome: membros.find(m => m.user_id === responsaveisIds[0])?.nome,
+              caso_titulo: vinculacao?.metadados?.partes,
+              processo_numero: vinculacao?.metadados?.numero_cnj,
+              consultivo_titulo: vinculacao?.metadados?.titulo,
+            },
+          }
+          await atualizarSerie(regraRecorrencia.id, {
+            dataCorte: null,
+            templateDados: templateComDisplay,
+            templateNome: titulo,
+            templateDescricao: descricao || undefined,
+            regraFrequencia: recorrencia.frequencia,
+            regraIntervalo: recorrencia.intervalo,
+            regraDiasSemana: recorrencia.diasSemana,
+            regraDiaMes: recorrencia.diaMes,
+            regraMes: recorrencia.mes,
+            regraHora: recorrencia.horaPadrao,
+            dataFim: recorrencia.dataFim ?? null,
+            dataFimExplicito: true,
+          })
+          toast.success('Série atualizada')
+        } else {
+          await updateEvento(initialData!.id!, formData)
+          toast.success('Compromisso atualizado')
+        }
+        try {
+          await onSubmit(formData)
+        } catch {
+          // ignora erro do callback
+        }
+      } else if (recorrencia && recorrencia.ativa && !isEditing) {
+        // Criar nova recorrência (trigger SQL materializa instâncias)
         const templateComDisplay = {
           ...formData,
           _display: {
@@ -311,23 +395,19 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
         })
         toast.success('Compromisso recorrente criado com sucesso!')
       } else {
-        // Evento único - criar/atualizar usando hook diretamente
+        // Evento único — criar/atualizar
         let eventoCriado: Evento | undefined
-        if (initialData?.id) {
-          // Modo edição - responsaveis_ids já está no formData
-          await updateEvento(initialData.id, formData)
+        if (isEditing) {
+          await updateEvento(initialData!.id!, formData)
           toast.success('Compromisso atualizado com sucesso!')
         } else {
-          // Criar novo evento - responsaveis_ids já está no formData
           eventoCriado = await createEvento(formData)
           toast.success('Compromisso criado com sucesso!')
         }
-
-        // Notificar o pai (para refresh de listas se necessário)
         try {
           await onSubmit(formData, eventoCriado)
         } catch {
-          // Ignora erro do callback - o evento já foi criado
+          // ignora erro do callback
         }
       }
 
@@ -353,6 +433,48 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
       onComplete={handleComplete}
       isSubmitting={isSubmitting}
     >
+      {/* Banner de escopo: aparece quando editando uma instância recorrente */}
+      {initialData?.id && regraRecorrencia && (
+        <div className="mb-5">
+          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-surface-2 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setEscopoEdicao('instancia')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-medium transition-all',
+                escopoEdicao === 'instancia'
+                  ? 'bg-[#34495e] text-white shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
+              )}
+            >
+              <CalendarDays className="w-4 h-4" />
+              Apenas este
+            </button>
+            <button
+              type="button"
+              onClick={() => setEscopoEdicao('serie')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-medium transition-all',
+                escopoEdicao === 'serie'
+                  ? 'bg-[#34495e] text-white shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
+              )}
+            >
+              <Repeat className="w-4 h-4" />
+              Toda a série
+            </button>
+          </div>
+          {escopoEdicao === 'serie' && (
+            <div className="mt-3 flex items-start gap-2.5 px-4 py-2.5 rounded-lg bg-[#f0f9f9] border border-[#89bcbe]/40 dark:bg-teal-500/10 dark:border-teal-500/30">
+              <Info className="w-4 h-4 text-[#89bcbe] mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-[#46627f] dark:text-slate-300">
+                As alterações serão aplicadas a <strong className="text-[#34495e] dark:text-slate-200">este compromisso e às próximas ocorrências pendentes</strong>. Compromissos já realizados, em andamento ou cancelados não são afetados.
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ETAPA 1: Tipo e Identificação */}
       {currentStep === 0 && (
         <WizardStep title={steps[0].title} subtitle={steps[0].subtitle}>

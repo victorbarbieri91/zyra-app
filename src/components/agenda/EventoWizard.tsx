@@ -429,14 +429,16 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
 
   const getTipoLabel = (t: TipoEvento) => TIPO_CONFIG[t].label
 
-  // Toggle de escopo de edição (renderizado no header do modal quando editando recorrente)
+  // Toggle de escopo de edição (renderizado no header do modal quando editando recorrente).
+  // Mesmo padrão visual de LancamentoEditarModal: container rounded-lg + botões rounded-md
+  // com gap/padding p-1, garantindo que o botão ativo preencha o container uniformemente.
   const escopoToggle = initialData?.id && regraRecorrencia ? (
-    <div className="inline-flex items-center gap-0.5 p-0.5 bg-slate-100 dark:bg-surface-2 rounded-md">
+    <div className="inline-flex items-center gap-1 p-1 bg-slate-100 dark:bg-surface-2 rounded-lg">
       <button
         type="button"
         onClick={() => setEscopoEdicao('instancia')}
         className={cn(
-          'inline-flex items-center gap-1.5 py-1 px-2.5 rounded text-xs font-medium transition-all',
+          'inline-flex items-center gap-1.5 py-1 px-2.5 rounded-md text-xs font-medium transition-all',
           escopoEdicao === 'instancia'
             ? 'bg-[#34495e] text-white shadow-sm'
             : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
@@ -449,7 +451,7 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
         type="button"
         onClick={() => setEscopoEdicao('serie')}
         className={cn(
-          'inline-flex items-center gap-1.5 py-1 px-2.5 rounded text-xs font-medium transition-all',
+          'inline-flex items-center gap-1.5 py-1 px-2.5 rounded-md text-xs font-medium transition-all',
           escopoEdicao === 'serie'
             ? 'bg-[#34495e] text-white shadow-sm'
             : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',

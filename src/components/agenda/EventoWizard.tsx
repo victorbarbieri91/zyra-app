@@ -441,42 +441,43 @@ export default function EventoWizard({ escritorioId, onClose, onSubmit, initialD
     >
       {/* Banner de escopo: aparece quando editando uma instância recorrente */}
       {initialData?.id && regraRecorrencia && (
-        <div className="mb-5">
-          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-surface-2 rounded-lg">
+        <div className="mb-3 flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] uppercase tracking-wider font-medium text-slate-400 dark:text-slate-500">
+            Aplicar a
+          </span>
+          <div className="inline-flex items-center gap-0.5 p-0.5 bg-slate-100 dark:bg-surface-2 rounded-md">
             <button
               type="button"
               onClick={() => setEscopoEdicao('instancia')}
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-medium transition-all',
+                'inline-flex items-center gap-1.5 py-1 px-2.5 rounded text-xs font-medium transition-all',
                 escopoEdicao === 'instancia'
-                  ? 'bg-[#34495e] text-white shadow-sm'
+                  ? 'bg-white dark:bg-surface-1 text-[#34495e] dark:text-slate-200 shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
               )}
             >
-              <CalendarDays className="w-4 h-4" />
+              <CalendarDays className="w-3 h-3" />
               Apenas este
             </button>
             <button
               type="button"
               onClick={() => setEscopoEdicao('serie')}
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-medium transition-all',
+                'inline-flex items-center gap-1.5 py-1 px-2.5 rounded text-xs font-medium transition-all',
                 escopoEdicao === 'serie'
-                  ? 'bg-[#34495e] text-white shadow-sm'
+                  ? 'bg-white dark:bg-surface-1 text-[#34495e] dark:text-slate-200 shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
               )}
             >
-              <Repeat className="w-4 h-4" />
+              <Repeat className="w-3 h-3" />
               Toda a série
             </button>
           </div>
           {escopoEdicao === 'serie' && (
-            <div className="mt-3 flex items-start gap-2.5 px-4 py-2.5 rounded-lg bg-[#f0f9f9] border border-[#89bcbe]/40 dark:bg-teal-500/10 dark:border-teal-500/30">
-              <Info className="w-4 h-4 text-[#89bcbe] mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-[#46627f] dark:text-slate-300">
-                As alterações serão aplicadas a <strong className="text-[#34495e] dark:text-slate-200">este compromisso e às próximas ocorrências pendentes</strong>. Compromissos já realizados, em andamento ou cancelados não são afetados.
-              </div>
-            </div>
+            <span className="text-[11px] text-[#46627f] dark:text-slate-400 inline-flex items-center gap-1">
+              <Info className="w-3 h-3 text-[#89bcbe]" />
+              Afeta este e os próximos pendentes — realizados e cancelados ficam intactos.
+            </span>
           )}
         </div>
       )}

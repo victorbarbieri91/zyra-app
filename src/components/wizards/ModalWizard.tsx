@@ -14,6 +14,7 @@ export default function ModalWizard({
   onStepChange,
   children,
   title,
+  headerRight,
   onClose,
   onComplete,
   isSubmitting = false,
@@ -61,8 +62,9 @@ export default function ModalWizard({
         </VisuallyHidden>
 
         {/* Header with Title */}
-        <div className="px-5 pt-3 pb-2 border-b border-slate-200">
+        <div className="px-5 pt-3 pb-2 border-b border-slate-200 flex items-center justify-between gap-4">
           <h2 className="text-lg font-semibold text-[#34495e]">{title}</h2>
+          {headerRight && <div className="flex-shrink-0">{headerRight}</div>}
         </div>
 
         {/* Step Indicator */}

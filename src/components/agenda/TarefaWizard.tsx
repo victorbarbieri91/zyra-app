@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Calendar, CalendarClock, Clock, Link as LinkIcon, CheckSquare, Briefcase, UserCheck, FileText, ClipboardList, Zap, TrendingUp, ChevronRight, Repeat, ListTree, Pin, Mail, Loader2, Scale, Gavel, CheckCircle2, Lock, CalendarDays, Info } from 'lucide-react'
+import { Calendar, CalendarClock, Clock, Link as LinkIcon, CheckSquare, Briefcase, UserCheck, FileText, ClipboardList, Zap, TrendingUp, ChevronRight, Repeat, ListTree, Pin, Mail, Loader2, Scale, Gavel, CheckCircle2, Lock, CalendarDays } from 'lucide-react'
 import { ModalWizard, WizardStep, ReviewCard } from '@/components/wizards'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
@@ -601,56 +601,50 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
     return labels[p]
   }
 
+  // Toggle de escopo de edição (renderizado no header do modal quando editando recorrente)
+  const escopoToggle = initialData?.id && regraRecorrencia ? (
+    <div className="inline-flex items-center gap-0.5 p-0.5 bg-slate-100 dark:bg-surface-2 rounded-md">
+      <button
+        type="button"
+        onClick={() => setEscopoEdicao('instancia')}
+        className={cn(
+          'inline-flex items-center gap-1.5 py-1 px-2.5 rounded text-xs font-medium transition-all',
+          escopoEdicao === 'instancia'
+            ? 'bg-[#34495e] text-white shadow-sm'
+            : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
+        )}
+      >
+        <CalendarDays className="w-3 h-3" />
+        Apenas esta
+      </button>
+      <button
+        type="button"
+        onClick={() => setEscopoEdicao('serie')}
+        className={cn(
+          'inline-flex items-center gap-1.5 py-1 px-2.5 rounded text-xs font-medium transition-all',
+          escopoEdicao === 'serie'
+            ? 'bg-[#34495e] text-white shadow-sm'
+            : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
+        )}
+      >
+        <Repeat className="w-3 h-3" />
+        Toda a série
+      </button>
+    </div>
+  ) : undefined
+
   return (
     <ModalWizard
       steps={steps}
       currentStep={currentStep}
       onStepChange={setCurrentStep}
-      title="Nova Tarefa"
+      title={initialData?.id ? 'Editar Tarefa' : 'Nova Tarefa'}
+      headerRight={escopoToggle}
       onClose={onClose}
       onComplete={handleComplete}
       isSubmitting={isSubmitting}
       className="max-w-3xl"
     >
-      {/* Banner de escopo: aparece quando editando uma instância recorrente */}
-      {initialData?.id && regraRecorrencia && (
-        <div className="mb-4 flex flex-col items-center gap-2">
-          <div className="inline-flex items-center gap-0.5 p-0.5 bg-slate-100 dark:bg-surface-2 rounded-md">
-            <button
-              type="button"
-              onClick={() => setEscopoEdicao('instancia')}
-              className={cn(
-                'inline-flex items-center gap-1.5 py-1.5 px-3 rounded text-[13px] font-medium transition-all',
-                escopoEdicao === 'instancia'
-                  ? 'bg-[#34495e] text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
-              )}
-            >
-              <CalendarDays className="w-3.5 h-3.5" />
-              Apenas esta
-            </button>
-            <button
-              type="button"
-              onClick={() => setEscopoEdicao('serie')}
-              className={cn(
-                'inline-flex items-center gap-1.5 py-1.5 px-3 rounded text-[13px] font-medium transition-all',
-                escopoEdicao === 'serie'
-                  ? 'bg-[#34495e] text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
-              )}
-            >
-              <Repeat className="w-3.5 h-3.5" />
-              Toda a série
-            </button>
-          </div>
-          {escopoEdicao === 'serie' && (
-            <span className="text-[11px] text-[#46627f] dark:text-slate-400 inline-flex items-center gap-1 text-center">
-              <Info className="w-3 h-3 text-[#89bcbe]" />
-              Afeta esta e as próximas pendentes — concluídas e canceladas ficam intactas.
-            </span>
-          )}
-        </div>
-      )}
 
       {/* ETAPA 1: Tipo e Identificação */}
       {steps[currentStep]?.id === 'tipo-identificacao' && (

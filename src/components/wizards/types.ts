@@ -15,6 +15,8 @@ export interface WizardProps {
   onStepChange: (step: number) => void
   children: React.ReactNode
   title: string
+  /** Conteúdo opcional renderizado à direita do título no header (ex: toggle de escopo) */
+  headerRight?: React.ReactNode
   onClose: () => void
   onComplete: () => void | Promise<void>
   isSubmitting?: boolean

@@ -61,8 +61,8 @@ export default function ModalWizard({
           <DialogTitle>{title}</DialogTitle>
         </VisuallyHidden>
 
-        {/* Header with Title */}
-        <div className="px-5 pt-3 pb-2 border-b border-slate-200 flex items-center justify-between gap-4">
+        {/* Header with Title — pr-12 reserva espaço para o botão X (absolute right-4) */}
+        <div className="pl-5 pr-12 pt-3 pb-2 border-b border-slate-200 flex items-center justify-between gap-4">
           <h2 className="text-lg font-semibold text-[#34495e]">{title}</h2>
           {headerRight && <div className="flex-shrink-0">{headerRight}</div>}
         </div>

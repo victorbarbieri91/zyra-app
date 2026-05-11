@@ -27,6 +27,7 @@ interface AgendaCancelarModalProps {
     titulo: string
     data: string
     recorrencia_id?: string | null
+    /** @deprecated mantido para compat — instâncias virtuais não existem mais. Sempre `false`. */
     is_virtual?: boolean
   } | null
   onSuccess: () => void
@@ -117,26 +118,7 @@ export default function AgendaCancelarModal({
         cancelado_por: userId,
       }
 
-      // Caso especial: instância virtual de tarefa/evento recorrente — INSERT (materializar)
-      // Audiências não suportam recorrência, então nunca caem aqui.
-      if (registro.is_virtual && registro.recorrencia_id && tipo !== 'audiencia') {
-        const { data: regra, error: regraErr } = await supabase
-          .from('agenda_recorrencias')
-          .select('template_dados, escritorio_id')
-          .eq('id', registro.recorrencia_id)
-          .single()
-        if (regraErr || !regra) throw regraErr ?? new Error('Regra não encontrada')
-        const template = (regra.template_dados as Record<string, any>) ?? {}
-        const { error } = await supabase.from(TABELA[tipo]).insert({
-          ...template,
-          recorrencia_id: registro.recorrencia_id,
-          escritorio_id: regra.escritorio_id,
-          data_inicio: registro.data,
-          titulo: registro.titulo,
-          ...cancelarPayload,
-        })
-        if (error) throw error
-      } else if (escopo === 'instancia') {
+      if (escopo === 'instancia') {
         const { error } = await supabase
           .from(TABELA[tipo])
           .update(cancelarPayload)

@@ -124,7 +124,6 @@ export default function AgendaPage() {
     titulo: string
     tipo: 'tarefa' | 'evento'
     recorrenciaId: string
-    dataOcorrencia: string
   } | null>(null)
 
   // Modal de cancelamento (genérico para tarefa/evento/audiência)
@@ -215,32 +214,7 @@ export default function AgendaPage() {
   const { tarefas, createTarefa, updateTarefa, concluirTarefa, reabrirTarefa, refreshTarefas } = useTarefas(escritorioId || undefined)
   const { audiencias, createAudiencia, updateAudiencia, refreshAudiencias } = useAudiencias(escritorioId || undefined)
   const { eventos, createEvento, updateEvento, refreshEventos } = useEventos(escritorioId || undefined)
-  const { materializarInstancia, excluirOcorrencia, deactivateRecorrencia } = useRecorrencias(escritorioId || undefined)
-
-  /**
-   * Se o item é virtual (recorrência expandida), materializa no banco e retorna o ID real.
-   * Caso contrário, retorna o ID original inalterado.
-   */
-  const materializarSeVirtual = useCallback(async (itemId: string): Promise<string> => {
-    if (!itemId.startsWith('virtual_')) return itemId
-
-    // Extrair recorrencia_id e data do ID virtual: "virtual_{recId}_{YYYY-MM-DD}"
-    const parts = itemId.split('_')
-    // parts = ['virtual', recorrencia_id, 'YYYY-MM-DD']
-    const recorrenciaId = parts[1]
-    const dataOcorrencia = parts[2]
-
-    if (!recorrenciaId || !dataOcorrencia) {
-      throw new Error('ID virtual inválido: ' + itemId)
-    }
-
-    const { id: realId } = await materializarInstancia(recorrenciaId, dataOcorrencia)
-
-    // Refresh both data sources to show the materialized instance
-    await Promise.all([refreshItems(), refreshTarefas()])
-
-    return realId
-  }, [materializarInstancia, refreshItems, refreshTarefas])
+  const { excluirOcorrencia, excluirSerie } = useRecorrencias(escritorioId || undefined)
 
   // Converter items consolidados para formato do EventCard
   const eventosFormatados = useMemo((): EventCardProps[] => {
@@ -422,7 +396,6 @@ export default function AgendaPage() {
           prazo_data_limite: item.prazo_data_limite,
           cor: item.cor,
           recorrencia_id: item.recorrencia_id,
-          is_virtual: item.is_virtual,
           created_at: item.created_at,
           updated_at: item.updated_at,
         } as Tarefa
@@ -529,8 +502,7 @@ export default function AgendaPage() {
 
   // Handler para lançar horas manualmente (sem concluir)
   const handleLancarHoras = async (taskId: string) => {
-    // Materializar se virtual antes de lançar horas
-    const effectiveId = await materializarSeVirtual(taskId)
+    const effectiveId = taskId
 
     // Buscar a tarefa
     let tarefa = tarefas.find(t => t.id === effectiveId)
@@ -660,10 +632,7 @@ export default function AgendaPage() {
       }
 
       // Lógica original para tarefas
-      // Materializar se for instância virtual de recorrência
-      const realId = await materializarSeVirtual(taskId)
-      // Se foi materializado, usar o ID real daqui em diante
-      const effectiveId = realId
+      const effectiveId = taskId
 
       // Encontrar a tarefa para verificar o status atual
       let tarefa = tarefas.find(t => t.id === effectiveId)
@@ -863,8 +832,7 @@ export default function AgendaPage() {
   // Handler para reabrir tarefa
   const handleReopenTask = async (taskId: string) => {
     try {
-      const effectiveId = await materializarSeVirtual(taskId)
-      await reabrirTarefa(effectiveId)
+      await reabrirTarefa(taskId)
       await refreshItems()
       toast.success('Tarefa reaberta com sucesso!')
     } catch (error) {
@@ -875,8 +843,7 @@ export default function AgendaPage() {
 
   // Handler para reagendar tarefa (com verificação de prazo fatal)
   const handleRescheduleTask = async (taskId: string, newDate: Date) => {
-    // Materializar se virtual antes de reagendar
-    const effectiveId = await materializarSeVirtual(taskId)
+    const effectiveId = taskId
 
     // Encontrar a tarefa para verificar prazo fatal
     // Nota: agendaItems usa tipo_entidade da view v_agenda_consolidada
@@ -976,24 +943,21 @@ export default function AgendaPage() {
 
   // Handlers para deletar
   const handleDeleteTarefa = async (tarefaId: string) => {
-    // Instâncias virtuais → fechar detail modal e abrir modal de exclusão de recorrência
-    if (tarefaId.startsWith('virtual_')) {
-      const parts = tarefaId.split('_')
-      const recId = parts[1]
-      const dataOc = parts[2]
-      const tarefa = tarefas.find(t => t.id === tarefaId)
-      // Fechar modais e sidebar ANTES de abrir o de exclusão (evita conflito de z-index e focus trap)
+    // Tarefa pertencente a uma série recorrente → abrir modal "apenas esta / toda a série"
+    const tarefa = tarefas.find(t => t.id === tarefaId)
+    const itemConsolidado = agendaItems.find(item => item.id === tarefaId)
+    const recorrenciaId = tarefa?.recorrencia_id ?? itemConsolidado?.recorrencia_id ?? null
+
+    if (recorrenciaId) {
       setTarefaDetailOpen(false)
       setEventoDetailOpen(false)
       setSidebarOpen(false)
-      // Pequeno delay para garantir que os modais/sidebar fecharam
       setTimeout(() => {
         setRecorrenciaDeleteTarget({
           itemId: tarefaId,
-          titulo: tarefa?.titulo || 'Tarefa recorrente',
+          titulo: tarefa?.titulo || itemConsolidado?.titulo || 'Tarefa recorrente',
           tipo: 'tarefa',
-          recorrenciaId: recId,
-          dataOcorrencia: dataOc,
+          recorrenciaId,
         })
         setRecorrenciaDeleteOpen(true)
       }, 150)
@@ -1090,14 +1054,13 @@ export default function AgendaPage() {
     if (!confirm('Deseja marcar este evento/prazo como cumprido?')) return
 
     try {
-      const effectiveId = await materializarSeVirtual(eventoId)
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
 
       const { error } = await supabase
         .from('agenda_eventos')
         .update({ status: 'realizado' })
-        .eq('id', effectiveId)
+        .eq('id', eventoId)
 
       if (error) throw error
 
@@ -1113,14 +1076,13 @@ export default function AgendaPage() {
 
   const handleReabrirEvento = async (eventoId: string) => {
     try {
-      const effectiveId = await materializarSeVirtual(eventoId)
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
 
       const { error } = await supabase
         .from('agenda_eventos')
         .update({ status: 'agendado' })
-        .eq('id', effectiveId)
+        .eq('id', eventoId)
 
       if (error) throw error
 
@@ -1134,16 +1096,14 @@ export default function AgendaPage() {
     }
   }
 
-  // Cancelamento de evento: abre modal genérico (que trata virtuais materializando).
   const handleCancelarEvento = (eventoId: string) => {
     if (!eventoSelecionado) return
-    const isVirtual = eventoId.startsWith('virtual_')
     openCancelarModal('evento', {
       id: eventoId,
       titulo: eventoSelecionado.titulo,
       data: eventoSelecionado.data_inicio,
       recorrencia_id: eventoSelecionado.recorrencia_id,
-      is_virtual: isVirtual,
+      is_virtual: false,
     })
   }
 
@@ -1151,7 +1111,8 @@ export default function AgendaPage() {
   const handleRecorrenciaDeleteEsta = async () => {
     if (!recorrenciaDeleteTarget) return
     try {
-      await excluirOcorrencia(recorrenciaDeleteTarget.recorrenciaId, recorrenciaDeleteTarget.dataOcorrencia)
+      const tabela = recorrenciaDeleteTarget.tipo === 'tarefa' ? 'agenda_tarefas' : 'agenda_eventos'
+      await excluirOcorrencia(recorrenciaDeleteTarget.itemId, tabela)
       setRecorrenciaDeleteOpen(false)
       setRecorrenciaDeleteTarget(null)
       setTarefaDetailOpen(false)
@@ -1169,7 +1130,7 @@ export default function AgendaPage() {
   const handleRecorrenciaDeleteTodas = async () => {
     if (!recorrenciaDeleteTarget) return
     try {
-      await deactivateRecorrencia(recorrenciaDeleteTarget.recorrenciaId)
+      await excluirSerie(recorrenciaDeleteTarget.recorrenciaId, null)
       setRecorrenciaDeleteOpen(false)
       setRecorrenciaDeleteTarget(null)
       setTarefaDetailOpen(false)
@@ -1194,11 +1155,10 @@ export default function AgendaPage() {
 
   const handleEventMove = async (eventId: string, newDate: Date) => {
     try {
-      // Materializar se virtual antes de mover
-      const effectiveId = await materializarSeVirtual(eventId)
+      const effectiveId = eventId
 
       // Encontrar o evento nos dados consolidados
-      const evento = agendaItems.find(item => item.id === effectiveId || item.id === eventId)
+      const evento = agendaItems.find(item => item.id === effectiveId)
       if (!evento) {
         throw new Error('Evento não encontrado')
       }
@@ -1576,7 +1536,7 @@ export default function AgendaPage() {
             titulo: tarefaSelecionada.titulo,
             data: tarefaSelecionada.data_inicio,
             recorrencia_id: tarefaSelecionada.recorrencia_id,
-            is_virtual: tarefaSelecionada.is_virtual,
+            is_virtual: false,
           })}
           onConcluir={() => handleCompleteTask(tarefaSelecionada.id)}
           onReabrir={() => handleReopenTask(tarefaSelecionada.id)}

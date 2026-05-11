@@ -8,9 +8,74 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { DateInput } from '@/components/ui/date-picker'
 import { cn } from '@/lib/utils'
-import { getRecorrenciaSummary } from '@/lib/recorrencia-utils'
 
-export { getRecorrenciaSummary }
+const NOMES_DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+const NOMES_MESES = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+]
+
+export function getRecorrenciaSummary(data: RecorrenciaData | null): string {
+  if (!data || !data.ativa) return 'Sem recorrência'
+
+  const intervalo = data.intervalo || 1
+  let descricao: string
+
+  switch (data.frequencia) {
+    case 'diaria':
+      descricao = intervalo === 1 ? 'Diariamente' : `A cada ${intervalo} dias`
+      if (data.apenasUteis) descricao += ' (apenas dias úteis)'
+      break
+
+    case 'semanal':
+      if (data.diasSemana && data.diasSemana.length > 0) {
+        const dias = data.diasSemana
+          .map((d) => NOMES_DIAS_SEMANA[d])
+          .filter(Boolean)
+          .join(', ')
+        descricao = intervalo === 1
+          ? `Semanalmente: ${dias}`
+          : `A cada ${intervalo} semanas: ${dias}`
+      } else {
+        descricao = intervalo === 1 ? 'Semanalmente' : `A cada ${intervalo} semanas`
+      }
+      break
+
+    case 'mensal':
+      if (data.diaMes === 99) {
+        descricao = intervalo === 1 ? 'Mensalmente, no último dia' : `A cada ${intervalo} meses, no último dia`
+      } else if (data.diaMes) {
+        descricao = intervalo === 1
+          ? `Mensalmente, no dia ${data.diaMes}`
+          : `A cada ${intervalo} meses, no dia ${data.diaMes}`
+      } else {
+        descricao = intervalo === 1 ? 'Mensalmente' : `A cada ${intervalo} meses`
+      }
+      break
+
+    case 'anual':
+      if (data.diaMes && data.mes) {
+        const mesNome = NOMES_MESES[data.mes - 1]
+        descricao = intervalo === 1
+          ? `Anualmente, em ${data.diaMes} de ${mesNome}`
+          : `A cada ${intervalo} anos, em ${data.diaMes} de ${mesNome}`
+      } else {
+        descricao = intervalo === 1 ? 'Anualmente' : `A cada ${intervalo} anos`
+      }
+      break
+
+    default:
+      descricao = 'Recorrência'
+  }
+
+  if (data.terminoTipo === 'data' && data.dataFim) {
+    descricao += ` até ${data.dataFim.split('-').reverse().join('/')}`
+  } else if (data.terminoTipo === 'ocorrencias' && data.numeroOcorrencias) {
+    descricao += ` (${data.numeroOcorrencias} ocorrências)`
+  }
+
+  return descricao
+}
 
 export interface RecorrenciaData {
   ativa: boolean
@@ -237,7 +302,6 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="diaria">Diária</SelectItem>
                 <SelectItem value="semanal">Semanal</SelectItem>
                 <SelectItem value="mensal">Mensal</SelectItem>
                 <SelectItem value="anual">Anual</SelectItem>

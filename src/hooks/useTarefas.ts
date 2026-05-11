@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatDateForDB, formatDateTimeForDB, getNowInBrazil } from '@/lib/timezone'
 import { format } from 'date-fns'
-import { expandirRecorrencias, type RecorrenciaRegra } from '@/lib/recorrencia-utils'
 import type { TipoTarefa } from '@/lib/constants/tarefa-tipos'
 
 export interface Tarefa {
@@ -54,9 +53,8 @@ export interface Tarefa {
   // Privacidade: quando true, só criador/responsáveis veem (via RLS)
   pessoal?: boolean
 
-  // Recorrência
+  // Recorrência (instância materializada — sempre UUID real, sem virtuais)
   recorrencia_id?: string | null
-  is_virtual?: boolean // true se for instância virtual expandida de uma recorrência
 
   created_at: string
   updated_at: string
@@ -96,7 +94,7 @@ export function useTarefas(escritorioId?: string) {
 
       if (queryError) throw queryError
 
-      // Transform data
+      // Transform data — instâncias recorrentes já vêm materializadas como linhas reais
       const tarefasFormatadas = (data || []).map((t: any) => ({
         ...t,
         responsavel_nome: t.responsavel?.nome_completo,
@@ -106,59 +104,7 @@ export function useTarefas(escritorioId?: string) {
           : t.consultivo?.titulo || null,
       }))
 
-      // Expandir recorrências do tipo 'tarefa' para os próximos 30 dias (para Kanban)
-      let tarefasFinais = tarefasFormatadas
-      try {
-        const { data: regrasData } = await supabase
-          .from('agenda_recorrencias')
-          .select('*')
-          .eq('escritorio_id', escritorioId)
-          .eq('ativo', true)
-          .eq('entidade_tipo', 'tarefa')
-
-        const regras: RecorrenciaRegra[] = regrasData || []
-        if (regras.length > 0) {
-          const hoje = new Date()
-          hoje.setHours(0, 0, 0, 0)
-          const fim = new Date(hoje.getTime() + 30 * 24 * 60 * 60 * 1000)
-
-          const existentes = tarefasFormatadas
-            .filter((t: any) => t.recorrencia_id)
-            .map((t: any) => ({ recorrencia_id: t.recorrencia_id, data_inicio: t.data_inicio }))
-
-          const virtuais = expandirRecorrencias(regras, hoje, fim, existentes)
-
-          // Converter AgendaItem virtuais para formato Tarefa
-          const tarefasVirtuais: Tarefa[] = virtuais.map(v => ({
-            id: v.id,
-            escritorio_id: v.escritorio_id,
-            titulo: v.titulo,
-            descricao: v.descricao,
-            tipo: (v.subtipo || 'outro') as Tarefa['tipo'],
-            prioridade: v.prioridade as Tarefa['prioridade'],
-            status: 'pendente' as Tarefa['status'],
-            data_inicio: v.data_inicio,
-            responsavel_id: v.responsavel_id,
-            responsavel_nome: v.responsavel_nome,
-            caso_titulo: v.caso_titulo || null,
-            responsaveis_ids: v.responsaveis_ids || [],
-            processo_id: v.processo_id || null,
-            consultivo_id: v.consultivo_id || null,
-            cor: v.cor,
-            recorrencia_id: v.recorrencia_id,
-            is_virtual: true,
-            created_at: v.created_at,
-            updated_at: v.updated_at,
-          }))
-
-          tarefasFinais = [...tarefasFormatadas, ...tarefasVirtuais]
-        }
-      } catch (recErr) {
-        // Falha na expansão não deve bloquear carregamento normal
-        console.warn('Aviso: expansão de recorrências falhou:', recErr)
-      }
-
-      setTarefas(tarefasFinais)
+      setTarefas(tarefasFormatadas)
     } catch (err) {
       setError(err as Error)
       console.error('Erro ao carregar tarefas:', err)
@@ -360,26 +306,8 @@ export function useTarefas(escritorioId?: string) {
         cancelado_por: userId,
       }
 
-      // Instância virtual: materializa em vez de UPDATE (não existe no banco ainda)
       const tarefa = tarefas.find((t) => t.id === id)
-      if (tarefa?.is_virtual && tarefa.recorrencia_id) {
-        const { data: regra, error: regraErr } = await supabase
-          .from('agenda_recorrencias')
-          .select('template_dados, escritorio_id')
-          .eq('id', tarefa.recorrencia_id)
-          .single()
-        if (regraErr || !regra) throw regraErr ?? new Error('Regra não encontrada')
-        const template = (regra.template_dados as Record<string, any>) ?? {}
-        const { error } = await supabase.from('agenda_tarefas').insert({
-          ...template,
-          recorrencia_id: tarefa.recorrencia_id,
-          escritorio_id: regra.escritorio_id,
-          data_inicio: tarefa.data_inicio,
-          titulo: tarefa.titulo,
-          ...cancelarPayload,
-        })
-        if (error) throw error
-      } else if (escopo === 'instancia') {
+      if (escopo === 'instancia') {
         const { error } = await supabase
           .from('agenda_tarefas')
           .update(cancelarPayload)

@@ -1365,7 +1365,7 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
             titulo: selectedTarefa.titulo,
             data: selectedTarefa.data_inicio,
             recorrencia_id: selectedTarefa.recorrencia_id,
-            is_virtual: selectedTarefa.is_virtual,
+            is_virtual: false,
           })}
           onConcluir={() => handleConcluirTarefa(selectedTarefa.id)}
           onReabrir={() => handleReabrirTarefa(selectedTarefa.id)}

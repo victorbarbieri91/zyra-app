@@ -353,7 +353,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   // Pular para instâncias virtuais (não existem no banco)
   useEffect(() => {
     const loadResponsaveis = async () => {
-      if (initialData?.id && !initialData.id.startsWith('virtual_') && !initialData.is_virtual) {
+      if (initialData?.id) {
         const responsaveis = await getResponsaveis('tarefa', initialData.id)
         if (responsaveis.length > 0) {
           setResponsaveisIds(responsaveis.map(r => r.user_id))

@@ -212,8 +212,7 @@ export default function TarefaDetailModal({
   const timerExistente = timersAtivos.find(t => t.tarefa_id === tarefa.id)
 
   // Horas lançadas vinculadas à tarefa
-  const isVirtual = tarefa.id?.startsWith('virtual_')
-  const { data: timesheetEntries } = useTimesheetPorTarefa(open && !isVirtual ? tarefa.id : null)
+  const { data: timesheetEntries } = useTimesheetPorTarefa(open ? tarefa.id : null)
   const [timesheetListOpen, setTimesheetListOpen] = useState(false)
   const [editTimesheetEntry, setEditTimesheetEntry] = useState<TimesheetEntryRecente | null>(null)
 
@@ -228,7 +227,7 @@ export default function TarefaDetailModal({
       } else {
         await iniciarTimer({
           titulo: tarefa.titulo,
-          tarefa_id: isVirtual ? undefined : tarefa.id,
+          tarefa_id: tarefa.id,
           processo_id: tarefa.processo_id || undefined,
           consulta_id: tarefa.consultivo_id || undefined,
           faturavel: true,
@@ -286,19 +285,14 @@ export default function TarefaDetailModal({
   useEffect(() => {
     if (!tarefa) return
 
-    // Instâncias virtuais de recorrência não existem no banco — pular queries
-    const isVirtual = tarefa.is_virtual || tarefa.id?.startsWith('virtual_')
-
     async function loadAdditionalInfo() {
       const supabase = createClient()
 
-      // Carregar responsáveis (múltiplos) — pular para virtuais (não existe no banco)
+      // Carregar responsáveis (múltiplos)
       setLoadingResponsaveis(true)
       try {
-        if (!isVirtual) {
-          const responsaveisList = await getResponsaveis('tarefa', tarefa.id)
-          setResponsaveis(responsaveisList)
-        }
+        const responsaveisList = await getResponsaveis('tarefa', tarefa.id)
+        setResponsaveis(responsaveisList)
       } catch (err) {
         console.error('[TarefaDetail] Erro ao carregar responsáveis:', err)
       } finally {
@@ -350,8 +344,8 @@ export default function TarefaDetailModal({
         if (consultivo) setConsultivoInfo(consultivo)
       }
 
-      // Carregar recorrência (recorrencia_id é UUID real mesmo para instâncias virtuais)
-      if (tarefa.recorrencia_id && !tarefa.recorrencia_id.startsWith('virtual_')) {
+      // Carregar recorrência
+      if (tarefa.recorrencia_id) {
         const { data: recorrencia } = await supabase
           .from('agenda_recorrencias')
           .select('regra_frequencia, regra_intervalo, data_inicio, data_fim')

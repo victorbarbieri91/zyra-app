@@ -121,11 +121,16 @@ export function useTimers(escritorioId: string | null): UseTimersReturn {
     await loadTimers();
   }, [supabase, loadTimers]);
 
-  // Finalizar timer
+  // Finalizar timer.
+  // Se o timer estava vinculado a uma tarefa pendente, marca a tarefa
+  // como concluída automaticamente (o trigger do banco registra movimentação).
   const finalizarTimer = useCallback(async (
     timerId: string,
     dados?: FinalizarTimerData
   ): Promise<string> => {
+    const timer = timers.find((t) => t.id === timerId);
+    const tarefaId = timer?.tarefa_id ?? null;
+
     const { data, error: rpcError } = await supabase.rpc('finalizar_timer', {
       p_timer_id: timerId,
       p_descricao: dados?.descricao || null,
@@ -134,9 +139,25 @@ export function useTimers(escritorioId: string | null): UseTimersReturn {
 
     if (rpcError) throw rpcError;
 
+    if (tarefaId) {
+      const { error: updateError } = await supabase
+        .from('agenda_tarefas')
+        .update({ status: 'concluida', data_conclusao: new Date().toISOString() })
+        .eq('id', tarefaId)
+        .in('status', ['pendente', 'em_andamento', 'em_pausa']);
+
+      if (updateError) {
+        captureOperationError(updateError, {
+          module: 'Timers',
+          operation: 'concluir_tarefa_apos_timer',
+          table: 'agenda_tarefas',
+        });
+      }
+    }
+
     await loadTimers();
     return data as string;
-  }, [supabase, loadTimers]);
+  }, [supabase, loadTimers, timers]);
 
   // Descartar timer
   const descartarTimer = useCallback(async (timerId: string): Promise<void> => {

@@ -4528,9 +4528,7 @@ export default function ExtratoFinanceiroPage() {
         lancamento={lancamentoEditarRef}
         escritorioId={escritorioAtivo || null}
         contasBancarias={contasBancarias}
-        escritoriosDoGrupo={escritoriosGrupo
-          .filter((e) => ['owner', 'admin', 'financeiro'].includes(e.role))
-          .map((e) => ({ id: e.id, nome: e.nome }))}
+        escritoriosDoGrupo={escritoriosGrupo.map((e) => ({ id: e.id, nome: e.nome }))}
         onSuccess={() => {
           loadExtrato()
         }}

@@ -135,7 +135,6 @@ export default function AgendaPage() {
       titulo: string
       data: string
       recorrencia_id?: string | null
-      is_virtual?: boolean
     }
   } | null>(null)
 
@@ -991,7 +990,7 @@ export default function AgendaPage() {
   // O modal preserva o registro no banco (status='cancelada/o' + cancelado_em + cancelado_por).
   const openCancelarModal = (
     tipo: TipoAgenda,
-    registro: { id: string; titulo: string; data: string; recorrencia_id?: string | null; is_virtual?: boolean },
+    registro: { id: string; titulo: string; data: string; recorrencia_id?: string | null },
   ) => {
     // Fecha modais de detalhe para evitar conflito de focus trap/z-index
     setTarefaDetailOpen(false)
@@ -1103,7 +1102,6 @@ export default function AgendaPage() {
       titulo: eventoSelecionado.titulo,
       data: eventoSelecionado.data_inicio,
       recorrencia_id: eventoSelecionado.recorrencia_id,
-      is_virtual: false,
     })
   }
 
@@ -1536,7 +1534,6 @@ export default function AgendaPage() {
             titulo: tarefaSelecionada.titulo,
             data: tarefaSelecionada.data_inicio,
             recorrencia_id: tarefaSelecionada.recorrencia_id,
-            is_virtual: false,
           })}
           onConcluir={() => handleCompleteTask(tarefaSelecionada.id)}
           onReabrir={() => handleReopenTask(tarefaSelecionada.id)}

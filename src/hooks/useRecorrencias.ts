@@ -37,7 +37,6 @@ export interface Recorrencia {
   data_inicio: string
   data_fim: string | null
   max_ocorrencias: number | null
-  proxima_execucao: string | null
   ultima_execucao: string | null
   total_criados: number
   exclusoes: string[]
@@ -102,7 +101,6 @@ export function useRecorrencias(escritorioId?: string) {
           data_inicio: data.dataInicio,
           data_fim: data.terminoTipo === 'data' ? data.dataFim : null,
           max_ocorrencias: data.terminoTipo === 'ocorrencias' ? data.numeroOcorrencias : null,
-          proxima_execucao: data.dataInicio,
           total_criados: 0,
         })
         .select()

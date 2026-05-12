@@ -27,8 +27,6 @@ interface AgendaCancelarModalProps {
     titulo: string
     data: string
     recorrencia_id?: string | null
-    /** @deprecated mantido para compat — instâncias virtuais não existem mais. Sempre `false`. */
-    is_virtual?: boolean
   } | null
   onSuccess: () => void
 }

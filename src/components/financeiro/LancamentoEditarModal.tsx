@@ -113,24 +113,43 @@ export default function LancamentoEditarModal({
   )
 
   /**
-   * Contas filtradas pelo escritório atualmente selecionado no form.
-   * Inclui sempre a conta atual mesmo se for de outro escritório (legado)
-   * — a opção do select recebe sufixo " (de outro escritório)" para
-   * o usuário entender que pode trocar.
+   * Contas filtradas estritamente pelo escritório selecionado.
+   * Conta de outro escritório nunca aparece — o sistema não permite
+   * lançamento em um escritório com conta de outro. O useEffect abaixo
+   * auto-corrige `form.conta_bancaria_id` quando o escritório muda.
    */
   const contasBancariasFiltradas = useMemo(() => {
     if (!form.escritorio_id) return contasBancarias
-    const doEscritorio = contasBancarias.filter(
+    return contasBancarias.filter(
       (c) => !c.escritorio_id || c.escritorio_id === form.escritorio_id,
     )
+  }, [contasBancarias, form.escritorio_id])
+
+  /**
+   * Garantir coerência: se a conta atual não pertence ao escritório
+   * selecionado, troca automaticamente para a primeira conta do
+   * escritório (ou vazia se o escritório não tiver contas).
+   * Cobre tanto a troca manual de escritório quanto lançamentos legados
+   * com inconsistência conta vs escritório preexistente.
+   */
+  useEffect(() => {
+    if (!form.escritorio_id || !contasBancarias.length) return
     const contaAtual = form.conta_bancaria_id
       ? contasBancarias.find((c) => c.id === form.conta_bancaria_id)
       : null
-    if (contaAtual && !doEscritorio.some((c) => c.id === contaAtual.id)) {
-      return [contaAtual, ...doEscritorio]
+    const pertenceAoEscritorio =
+      !!contaAtual &&
+      (!contaAtual.escritorio_id || contaAtual.escritorio_id === form.escritorio_id)
+    if (form.conta_bancaria_id && !pertenceAoEscritorio) {
+      const primeiraDoEscritorio = contasBancarias.find(
+        (c) => c.escritorio_id === form.escritorio_id,
+      )
+      setForm((prev) => ({
+        ...prev,
+        conta_bancaria_id: primeiraDoEscritorio?.id ?? '',
+      }))
     }
-    return doEscritorio
-  }, [contasBancarias, form.escritorio_id, form.conta_bancaria_id])
+  }, [form.escritorio_id, form.conta_bancaria_id, contasBancarias])
 
   const tipoLabel = isDespesa ? 'Despesa' : 'Receita'
 
@@ -468,9 +487,6 @@ export default function LancamentoEditarModal({
                       <option key={conta.id} value={conta.id}>
                         {conta.banco}
                         {conta.apelido ? ` — ${conta.apelido}` : ''}
-                        {conta.escritorio_id && conta.escritorio_id !== form.escritorio_id
-                          ? ' (de outro escritório)'
-                          : ''}
                       </option>
                     ))}
                   </select>

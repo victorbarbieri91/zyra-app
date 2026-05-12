@@ -48,6 +48,7 @@ export interface LancamentoDetalhes {
   conta_bancaria_id: string | null
   forma_pagamento: string | null
   pago_por_id: string | null
+  escritorio_id: string
   regra_recorrencia_id: string | null
   // Metadados da regra (quando houver)
   regra: {
@@ -85,6 +86,8 @@ export interface LancamentoEditFormData {
   pago_por_id: string
   forma_pagamento: string
   data_pagamento: string
+  /** Escritório do lançamento. Pode ser trocado para outro do mesmo grupo se o usuário tiver permissão. */
+  escritorio_id: string
 }
 
 export const CATEGORIAS_DESPESA = [

@@ -695,7 +695,7 @@ export default function ExtratoFinanceiroPage() {
     if (escritoriosSelecionados.length === 0) return
     const { data } = await supabase
       .from('financeiro_contas_bancarias')
-      .select('id, banco, numero_conta')
+      .select('id, banco, numero_conta, escritorio_id')
       .in('escritorio_id', escritoriosSelecionados)
       .eq('ativa', true)
     setContasBancarias(data || [])
@@ -4528,6 +4528,9 @@ export default function ExtratoFinanceiroPage() {
         lancamento={lancamentoEditarRef}
         escritorioId={escritorioAtivo || null}
         contasBancarias={contasBancarias}
+        escritoriosDoGrupo={escritoriosGrupo
+          .filter((e) => ['owner', 'admin', 'financeiro'].includes(e.role))
+          .map((e) => ({ id: e.id, nome: e.nome }))}
         onSuccess={() => {
           loadExtrato()
         }}

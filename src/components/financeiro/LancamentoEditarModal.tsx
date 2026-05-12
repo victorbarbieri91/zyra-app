@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { CurrencyInput } from '@/components/ui/currency-input'
-import { CalendarDays, ChevronsRight, Info, Loader2, Pencil, Repeat } from 'lucide-react'
+import { AlertTriangle, Building2, CalendarDays, ChevronsRight, Info, Loader2, Pencil, Repeat } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { cn, formatCurrency } from '@/lib/utils'
@@ -38,9 +38,15 @@ interface ContaBancariaOption {
   apelido: string | null
   tipo: string
   numero_conta: string | null
+  escritorio_id?: string | null
 }
 
 interface PessoaOption {
+  id: string
+  nome: string
+}
+
+export interface EscritorioOption {
   id: string
   nome: string
 }
@@ -51,6 +57,8 @@ interface LancamentoEditarModalProps {
   lancamento: LancamentoRef | null
   escritorioId: string | null
   contasBancarias: ContaBancariaOption[]
+  /** Escritórios do mesmo grupo onde o usuário tem permissão de gerenciar financeiro. */
+  escritoriosDoGrupo?: EscritorioOption[]
   onSuccess: () => void
 }
 
@@ -66,6 +74,7 @@ const formInicial: LancamentoEditFormData = {
   pago_por_id: '',
   forma_pagamento: '',
   data_pagamento: '',
+  escritorio_id: '',
 }
 
 export default function LancamentoEditarModal({
@@ -74,6 +83,7 @@ export default function LancamentoEditarModal({
   lancamento,
   escritorioId,
   contasBancarias,
+  escritoriosDoGrupo = [],
   onSuccess,
 }: LancamentoEditarModalProps) {
   const { carregarDetalhes, atualizarInstancia, atualizarSerie } = useLancamentoMutations()
@@ -145,6 +155,7 @@ export default function LancamentoEditarModal({
           pago_por_id: det.pago_por_id ?? '',
           forma_pagamento: det.forma_pagamento ?? '',
           data_pagamento: det.data_pagamento ?? '',
+          escritorio_id: det.escritorio_id,
         })
       })
       .finally(() => {
@@ -427,6 +438,43 @@ export default function LancamentoEditarModal({
                 </div>
               </div>
 
+              {/* Escritório do lançamento — só aparece se o user tem 2+ escritórios no grupo */}
+              {escritoriosDoGrupo.length > 1 && (
+                <div>
+                  <Label className="text-sm flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-[#89bcbe]" />
+                    Escritório
+                  </Label>
+                  <select
+                    value={form.escritorio_id}
+                    onChange={(e) => setForm({ ...form, escritorio_id: e.target.value })}
+                    className="w-full mt-1.5 h-10 rounded-md border border-slate-200 dark:border-slate-700 px-3 text-sm dark:bg-surface-1 dark:text-slate-300"
+                  >
+                    {escritoriosDoGrupo.map((esc) => (
+                      <option key={esc.id} value={esc.id}>
+                        {esc.nome}
+                      </option>
+                    ))}
+                  </select>
+                  {detalhes && form.escritorio_id !== detalhes.escritorio_id && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5 flex items-start gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                      <span>
+                        Lançamento será transferido de{' '}
+                        <strong>
+                          {escritoriosDoGrupo.find((e) => e.id === detalhes.escritorio_id)?.nome ?? 'escritório atual'}
+                        </strong>{' '}
+                        para{' '}
+                        <strong>
+                          {escritoriosDoGrupo.find((e) => e.id === form.escritorio_id)?.nome ?? 'destino'}
+                        </strong>
+                        {ehParteDeSerie && ' (incluindo as próximas pendentes).'}
+                      </span>
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm">Categoria</Label>
@@ -460,6 +508,22 @@ export default function LancamentoEditarModal({
                       </option>
                     ))}
                   </select>
+                  {/* Aviso quando a conta selecionada é de outro escritório do grupo */}
+                  {form.conta_bancaria_id && form.escritorio_id && (() => {
+                    const conta = contasBancarias.find((c) => c.id === form.conta_bancaria_id)
+                    if (!conta?.escritorio_id || conta.escritorio_id === form.escritorio_id) return null
+                    const escritorioConta = escritoriosDoGrupo.find((e) => e.id === conta.escritorio_id)
+                    const escritorioForm = escritoriosDoGrupo.find((e) => e.id === form.escritorio_id)
+                    return (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5 flex items-start gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                        <span>
+                          Conta de <strong>{escritorioConta?.nome ?? 'outro escritório'}</strong>
+                          {' '}sendo usada para lançamento de <strong>{escritorioForm?.nome ?? 'outro'}</strong>.
+                        </span>
+                      </p>
+                    )
+                  })()}
                 </div>
               </div>
 

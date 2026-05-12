@@ -31,8 +31,8 @@ export function useLancamentoMutations() {
       const tabela = tipo === 'despesa' ? 'financeiro_despesas' : 'financeiro_receitas'
       const colunas =
         tipo === 'despesa'
-          ? 'id, descricao, valor, data_vencimento, data_pagamento, status, categoria, fornecedor, observacoes_financeiro, conta_bancaria_id, forma_pagamento, pago_por_id, regra_recorrencia_id'
-          : 'id, descricao, valor, data_vencimento, data_pagamento, status, categoria, observacoes, conta_bancaria_id, forma_pagamento, pago_por_id, regra_recorrencia_id'
+          ? 'id, descricao, valor, data_vencimento, data_pagamento, status, categoria, fornecedor, observacoes_financeiro, conta_bancaria_id, forma_pagamento, pago_por_id, escritorio_id, regra_recorrencia_id'
+          : 'id, descricao, valor, data_vencimento, data_pagamento, status, categoria, observacoes, conta_bancaria_id, forma_pagamento, pago_por_id, escritorio_id, regra_recorrencia_id'
 
       const { data, error } = await supabase
         .from(tabela)
@@ -130,6 +130,7 @@ export function useLancamentoMutations() {
         conta_bancaria_id: (raw.conta_bancaria_id as string | null) ?? null,
         forma_pagamento: (raw.forma_pagamento as string | null) ?? null,
         pago_por_id: (raw.pago_por_id as string | null) ?? null,
+        escritorio_id: raw.escritorio_id as string,
         regra_recorrencia_id: regraId,
         regra,
       }
@@ -159,6 +160,12 @@ export function useLancamentoMutations() {
         pago_por_id: form.pago_por_id || null,
         forma_pagamento: form.forma_pagamento || null,
         updated_at: new Date().toISOString(),
+      }
+
+      // Mudança de escritório só vai no payload se realmente diferente do atual
+      // (RLS valida permissão no escritório destino via with_check).
+      if (form.escritorio_id && form.escritorio_id !== detalhes.escritorio_id) {
+        payload.escritorio_id = form.escritorio_id
       }
 
       // Valor só muda se não estiver pago
@@ -221,6 +228,13 @@ export function useLancamentoMutations() {
     ): Promise<number | null> => {
       if (!detalhes.regra) return null
 
+      // Só passa p_escritorio_id se o usuário trocou — função SQL valida
+      // permissão no destino e que ambos pertencem ao mesmo grupo.
+      const escritorioDestino =
+        form.escritorio_id && form.escritorio_id !== detalhes.escritorio_id
+          ? form.escritorio_id
+          : null
+
       const { data, error } = await supabase.rpc('atualizar_regra_em_serie', {
         p_regra_id: detalhes.regra.id,
         p_descricao: form.descricao || null,
@@ -231,6 +245,7 @@ export function useLancamentoMutations() {
         p_conta_bancaria_id: form.conta_bancaria_id || null,
         p_observacoes: detalhes.tipo === 'receita' ? form.observacoes || null : null,
         p_data_corte: dataCorte || null,
+        p_escritorio_id: escritorioDestino,
       })
 
       if (error) {

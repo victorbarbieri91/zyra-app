@@ -9,7 +9,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { Repeat, Trash2, X } from 'lucide-react'
+import { ChevronsRight, Repeat, Trash2, X } from 'lucide-react'
 
 interface RecorrenciaDeleteModalProps {
   open: boolean
@@ -17,6 +17,11 @@ interface RecorrenciaDeleteModalProps {
   titulo: string
   tipo: 'tarefa' | 'evento'
   onDeleteEsta: () => void
+  /**
+   * Recorta a série a partir da data da instância (inclusive). Pendentes anteriores são preservadas.
+   * Recebido como opcional para compat — quando ausente, o botão "Desta em diante" não é renderizado.
+   */
+  onDeleteEmDiante?: () => void
   onDeleteTodas: () => void
   loading?: boolean
 }
@@ -27,6 +32,7 @@ export default function RecorrenciaDeleteModal({
   titulo,
   tipo,
   onDeleteEsta,
+  onDeleteEmDiante,
   onDeleteTodas,
   loading,
 }: RecorrenciaDeleteModalProps) {
@@ -60,6 +66,22 @@ export default function RecorrenciaDeleteModal({
             </div>
           </button>
 
+          {onDeleteEmDiante && (
+            <button
+              onClick={onDeleteEmDiante}
+              disabled={loading}
+              className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-[#89bcbe]/60 hover:bg-slate-50 dark:hover:bg-surface-2 transition-all text-left group"
+            >
+              <div className="w-9 h-9 rounded-lg bg-[#f0f9f9] dark:bg-teal-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-[#aacfd0]/30 transition-colors">
+                <ChevronsRight className="w-4 h-4 text-[#89bcbe]" />
+              </div>
+              <div>
+                <div className="text-sm font-medium text-[#34495e] dark:text-slate-200">Desta em diante</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Remove esta e as próximas ocorrências. As anteriores ficam intactas.</div>
+              </div>
+            </button>
+          )}
+
           <button
             onClick={onDeleteTodas}
             disabled={loading}
@@ -70,7 +92,7 @@ export default function RecorrenciaDeleteModal({
             </div>
             <div>
               <div className="text-sm font-medium text-[#34495e] dark:text-slate-200">Todas as ocorrências</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Desativa a regra de recorrência. Nenhuma nova ocorrência será exibida.</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Desativa a recorrência e remove todas as ocorrências pendentes (passadas e futuras). Concluídas e canceladas ficam preservadas.</div>
             </div>
           </button>
         </div>

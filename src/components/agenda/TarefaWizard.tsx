@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Calendar, CalendarClock, Clock, Link as LinkIcon, CheckSquare, Briefcase, UserCheck, FileText, ClipboardList, Zap, TrendingUp, ChevronRight, Repeat, ListTree, Pin, Mail, Loader2, Scale, Gavel, CheckCircle2, Lock, CalendarDays } from 'lucide-react'
+import { Calendar, CalendarClock, Clock, Link as LinkIcon, CheckSquare, Briefcase, UserCheck, FileText, ClipboardList, Zap, TrendingUp, ChevronRight, ChevronsRight, Repeat, ListTree, Pin, Mail, Loader2, Scale, Gavel, CheckCircle2, Lock, CalendarDays } from 'lucide-react'
 import { ModalWizard, WizardStep, ReviewCard } from '@/components/wizards'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
@@ -130,7 +130,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   const [regraRecorrencia, setRegraRecorrencia] = useState<
     { id: string; data_inicio: string; data_fim: string | null; max_ocorrencias: number | null } | null
   >(null)
-  const [escopoEdicao, setEscopoEdicao] = useState<'instancia' | 'serie'>('instancia')
+  const [escopoEdicao, setEscopoEdicao] = useState<'instancia' | 'em-diante' | 'serie'>('instancia')
 
   // Estado unificado de vinculação para o novo componente
   const [vinculacao, setVinculacao] = useState<{modulo: 'processo' | 'consultivo', modulo_registro_id: string, metadados?: any} | null>(() => {
@@ -501,8 +501,13 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
 
       // Edição de instância recorrente: respeitar o escopo escolhido pelo usuário
       if (isEditing && regraRecorrencia) {
-        if (escopoEdicao === 'serie' && recorrencia) {
-          // Atualizar a regra inteira + propagar para pendentes futuras via RPC.
+        if ((escopoEdicao === 'serie' || escopoEdicao === 'em-diante') && recorrencia) {
+          // Atualizar a regra inteira ou "desta em diante" + propagar via RPC.
+          // dataCorte = null → toda a série (a partir de hoje)
+          // dataCorte = data_inicio da instância → desta em diante
+          const dataCorte = escopoEdicao === 'em-diante'
+            ? (initialData?.data_inicio ?? '').split('T')[0] || null
+            : null
           const templateComDisplay = {
             ...formData,
             _display: {
@@ -513,7 +518,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
             },
           }
           await atualizarSerie(regraRecorrencia.id, {
-            dataCorte: null, // toda a série a partir de hoje (preserva históricas)
+            dataCorte,
             templateDados: templateComDisplay,
             templateNome: titulo,
             templateDescricao: descricao || undefined,
@@ -526,7 +531,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
             dataFim: recorrencia.dataFim ?? null,
             dataFimExplicito: true,
           })
-          toast.success('Série atualizada')
+          toast.success(escopoEdicao === 'em-diante' ? 'Aplicado desta em diante' : 'Série atualizada')
         } else if (onSubmit) {
           // "Apenas esta": UPDATE direto na instância via callback do pai
           await onSubmit(formData)
@@ -618,6 +623,19 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       >
         <CalendarDays className="w-3 h-3" />
         Apenas esta
+      </button>
+      <button
+        type="button"
+        onClick={() => setEscopoEdicao('em-diante')}
+        className={cn(
+          'inline-flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium transition-colors',
+          escopoEdicao === 'em-diante'
+            ? 'bg-[#34495e] text-white'
+            : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
+        )}
+      >
+        <ChevronsRight className="w-3 h-3" />
+        Desta em diante
       </button>
       <button
         type="button"

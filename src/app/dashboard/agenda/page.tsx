@@ -117,13 +117,15 @@ export default function AgendaPage() {
   const [audienciaSelecionada, setAudienciaSelecionada] = useState<Audiencia | null>(null)
   const [eventoSelecionado, setEventoSelecionado] = useState<Evento | null>(null)
 
-  // Modal de exclusão de recorrência (apenas esta vs todas)
+  // Modal de exclusão de recorrência (apenas esta / desta em diante / todas)
   const [recorrenciaDeleteOpen, setRecorrenciaDeleteOpen] = useState(false)
   const [recorrenciaDeleteTarget, setRecorrenciaDeleteTarget] = useState<{
     itemId: string
     titulo: string
     tipo: 'tarefa' | 'evento'
     recorrenciaId: string
+    /** data_inicio (date) da instância — usado para "Desta em diante" como p_data_corte. */
+    dataInicio: string
   } | null>(null)
 
   // Modal de cancelamento (genérico para tarefa/evento/audiência)
@@ -948,6 +950,7 @@ export default function AgendaPage() {
     const recorrenciaId = tarefa?.recorrencia_id ?? itemConsolidado?.recorrencia_id ?? null
 
     if (recorrenciaId) {
+      const dataInicioInstancia = (tarefa?.data_inicio ?? itemConsolidado?.data_inicio ?? '').split('T')[0]
       setTarefaDetailOpen(false)
       setEventoDetailOpen(false)
       setSidebarOpen(false)
@@ -957,6 +960,7 @@ export default function AgendaPage() {
           titulo: tarefa?.titulo || itemConsolidado?.titulo || 'Tarefa recorrente',
           tipo: 'tarefa',
           recorrenciaId,
+          dataInicio: dataInicioInstancia,
         })
         setRecorrenciaDeleteOpen(true)
       }, 150)
@@ -1125,6 +1129,26 @@ export default function AgendaPage() {
     }
   }
 
+  const handleRecorrenciaDeleteEmDiante = async () => {
+    if (!recorrenciaDeleteTarget) return
+    try {
+      const dataCorte = recorrenciaDeleteTarget.dataInicio
+      if (!dataCorte) throw new Error('Data da instância não disponível')
+      await excluirSerie(recorrenciaDeleteTarget.recorrenciaId, dataCorte)
+      setRecorrenciaDeleteOpen(false)
+      setRecorrenciaDeleteTarget(null)
+      setTarefaDetailOpen(false)
+      setTarefaSelecionada(null)
+      setEventoDetailOpen(false)
+      setEventoSelecionado(null)
+      await Promise.all([refreshItems(), refreshTarefas()])
+      toast.success('Ocorrências futuras removidas — as anteriores ficam preservadas')
+    } catch (error) {
+      console.error('Erro ao excluir ocorrências futuras:', error)
+      toast.error('Erro ao excluir ocorrências futuras')
+    }
+  }
+
   const handleRecorrenciaDeleteTodas = async () => {
     if (!recorrenciaDeleteTarget) return
     try {
@@ -1136,7 +1160,7 @@ export default function AgendaPage() {
       setEventoDetailOpen(false)
       setEventoSelecionado(null)
       await Promise.all([refreshItems(), refreshTarefas()])
-      toast.success('Recorrência desativada — nenhuma nova ocorrência será exibida')
+      toast.success('Recorrência desativada — todas as ocorrências pendentes foram removidas')
     } catch (error) {
       console.error('Erro ao desativar recorrência:', error)
       toast.error('Erro ao desativar recorrência')
@@ -1855,6 +1879,7 @@ export default function AgendaPage() {
         titulo={recorrenciaDeleteTarget?.titulo || ''}
         tipo={recorrenciaDeleteTarget?.tipo || 'tarefa'}
         onDeleteEsta={handleRecorrenciaDeleteEsta}
+        onDeleteEmDiante={recorrenciaDeleteTarget?.dataInicio ? handleRecorrenciaDeleteEmDiante : undefined}
         onDeleteTodas={handleRecorrenciaDeleteTodas}
       />
 

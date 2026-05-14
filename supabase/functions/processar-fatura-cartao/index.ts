@@ -18,7 +18,7 @@ const MAX_PDF_SIZE_MB = 20
 const MAX_PDF_SIZE_BYTES = MAX_PDF_SIZE_MB * 1024 * 1024
 
 const GPT_MODEL = 'gpt-5-mini'
-const CLAUDE_FALLBACK_MODEL = 'claude-haiku-3-5-sonnet-20241022'
+const CLAUDE_FALLBACK_MODEL = 'claude-haiku-4-5-20251001'
 
 interface TransacaoExtraida {
   data: string

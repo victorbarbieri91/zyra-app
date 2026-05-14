@@ -96,8 +96,6 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
     loadCartoes,
     verificarDuplicatasEmLote,
     verificarFaturaExistente,
-    vincularLancamentosAFatura,
-    criarFaturaCartao,
     importarLancamentosEmLote,
   } = useCartoesCredito(escritorioIds.length > 0 ? escritorioIds : escritorioAtivo)
 
@@ -397,14 +395,10 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
           const venc = new Date(dados.data_vencimento + 'T12:00:00')
           anoVencimento = venc.getFullYear()
           mesVencimento = venc.getMonth()
-          const mesFatura = mesVencimento === 0 ? 11 : mesVencimento - 1
-          const anoFatura = mesVencimento === 0 ? anoVencimento - 1 : anoVencimento
-          mesRef = `${anoFatura}-${String(mesFatura + 1).padStart(2, '0')}`
+          mesRef = `${anoVencimento}-${String(mesVencimento + 1).padStart(2, '0')}`
         } else {
           const hoje = new Date()
-          const mesFatura = hoje.getMonth() === 0 ? 11 : hoje.getMonth() - 1
-          const anoFatura = hoje.getMonth() === 0 ? hoje.getFullYear() - 1 : hoje.getFullYear()
-          mesRef = `${anoFatura}-${String(mesFatura + 1).padStart(2, '0')}`
+          mesRef = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`
         }
         setMesReferenciaFatura(mesRef)
 
@@ -686,33 +680,24 @@ export function useImportarFatura({ open, onSuccess, onClose }: UseImportarFatur
           parcela_numero,
           parcela_total,
           regra_recorrencia_id: t.regraRecorrenteId || novasRegrasMap.get(t.id) || undefined,
+          tipo_transacao: t.tipo_transacao,
         }
       })
 
-      const { total_importados, lancamento_ids } = await importarLancamentosEmLote(
+      const { total_importados } = await importarLancamentosEmLote(
         cartao.id,
         mesRef,
-        transacoesParaImportar
+        transacoesParaImportar,
       )
 
-      if (lancamento_ids.length > 0 && mesReferenciaFatura) {
-        let faturaParaVincular = faturaExistente
-        if (!faturaParaVincular) {
-          const novaFatura = await criarFaturaCartao(
-            selectedCartao,
-            mesRef,
-            null,
-            dadosFatura?.data_vencimento || null,
-            dadosFatura?.valor_total || null
-          )
-          if (novaFatura) {
-            faturaParaVincular = novaFatura
-            setFaturaExistente(novaFatura)
-          }
-        }
-        if (faturaParaVincular) {
-          await vincularLancamentosAFatura(faturaParaVincular.id, lancamento_ids)
-        }
+      // Cria/atualiza a fatura E a despesa vinculada em uma única chamada.
+      // A RPC cobre: criar fatura no mes_referencia certo, vincular lançamentos,
+      // gerar/atualizar a financeiro_despesa para aparecer em Receitas/Despesas.
+      if (mesReferenciaFatura) {
+        await supabase.rpc('criar_ou_atualizar_fatura_cartao', {
+          p_cartao_id: selectedCartao,
+          p_mes_referencia: mesRef,
+        })
       }
 
       if (importacaoId) {

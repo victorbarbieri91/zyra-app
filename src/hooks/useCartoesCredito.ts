@@ -59,6 +59,8 @@ export interface LancamentoCartao {
   documento_fiscal: string | null
   comprovante_url: string | null
   observacoes: string | null
+  regra_recorrencia_id: string | null
+  periodo_referencia: string | null
   created_at: string
   updated_at: string
   // Campos de JOIN
@@ -1087,6 +1089,7 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
       parcela_numero?: number
       parcela_total?: number
       regra_recorrencia_id?: string
+      tipo_transacao?: 'debito' | 'credito'
     }>
   ): Promise<{ total_importados: number; lancamento_ids: string[] }> => {
     try {

@@ -11,7 +11,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -20,7 +19,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Edit2, Loader2, Repeat, Calendar, Receipt } from 'lucide-react'
+import {
+  Edit2,
+  Loader2,
+  Repeat,
+  Calendar,
+  Receipt,
+  CalendarDays,
+  ChevronsRight,
+  Info,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -29,6 +37,8 @@ import {
   CATEGORIAS_DESPESA_CARTAO,
 } from '@/hooks/useCartoesCredito'
 import { cn } from '@/lib/utils'
+
+type Escopo = 'instancia' | 'em-diante' | 'serie'
 
 interface EditarLancamentoCartaoModalProps {
   open: boolean
@@ -63,9 +73,16 @@ export default function EditarLancamentoCartaoModal({
   })
   const [submitting, setSubmitting] = useState(false)
   const [processos, setProcessos] = useState<ProcessoOption[]>([])
+  const [escopo, setEscopo] = useState<Escopo>('instancia')
+  const [pendentesSerie, setPendentesSerie] = useState<number>(0)
+  const [pendentesAPartirDesta, setPendentesAPartirDesta] = useState<number>(0)
 
   const supabase = createClient()
   const { updateLancamento, cancelarRecorrente } = useCartoesCredito(escritorioId)
+
+  const temRegra = !!lancamento?.regra_recorrencia_id
+  const temSerieEditavel = temRegra && pendentesSerie > 1
+  const temEmDianteEditavel = temRegra && pendentesAPartirDesta >= 1 && pendentesAPartirDesta < pendentesSerie
 
   // Carregar processos
   useEffect(() => {
@@ -98,8 +115,38 @@ export default function EditarLancamentoCartaoModal({
         documento_fiscal: lancamento.documento_fiscal || '',
         observacoes: lancamento.observacoes || '',
       })
+      setEscopo('instancia')
     }
   }, [open, lancamento])
+
+  // Contar pendentes da série (lançamentos cuja fatura ainda não está paga)
+  useEffect(() => {
+    const carregarPendentes = async () => {
+      if (!open || !lancamento?.regra_recorrencia_id) {
+        setPendentesSerie(0)
+        setPendentesAPartirDesta(0)
+        return
+      }
+
+      const { data } = await supabase
+        .from('cartoes_credito_lancamentos')
+        .select('mes_referencia, fatura_id, cartoes_credito_faturas(status)')
+        .eq('regra_recorrencia_id', lancamento.regra_recorrencia_id)
+
+      if (!data) return
+
+      const pendentes = data.filter((l: any) => {
+        const status = l.cartoes_credito_faturas?.status
+        return !status || status !== 'paga'
+      })
+      const aPartir = pendentes.filter(
+        (l: any) => l.mes_referencia >= lancamento.mes_referencia,
+      )
+      setPendentesSerie(pendentes.length)
+      setPendentesAPartirDesta(aPartir.length)
+    }
+    carregarPendentes()
+  }, [open, lancamento, supabase])
 
   const updateField = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -129,6 +176,29 @@ export default function EditarLancamentoCartaoModal({
     try {
       setSubmitting(true)
 
+      // Se for edição em série (com regra), usar RPC atualizar_regra_em_serie
+      if (lancamento.regra_recorrencia_id && escopo !== 'instancia') {
+        const dataCorte = escopo === 'em-diante' ? lancamento.mes_referencia : null
+        const { error: rpcError } = await supabase.rpc('atualizar_regra_em_serie', {
+          p_regra_id: lancamento.regra_recorrencia_id,
+          p_descricao: formData.descricao.trim(),
+          p_valor: formData.valor,
+          p_categoria: formData.categoria,
+          p_fornecedor: formData.fornecedor?.trim() || null,
+          p_data_corte: dataCorte,
+        })
+
+        if (rpcError) throw rpcError
+
+        toast.success(
+          escopo === 'serie' ? 'Série atualizada com sucesso!' : 'Atualizado desta em diante!',
+        )
+        onOpenChange(false)
+        onSuccess?.()
+        return
+      }
+
+      // Edição "apenas esta" ou lançamento avulso — update direto
       const success = await updateLancamento(lancamento.id, {
         descricao: formData.descricao.trim(),
         categoria: formData.categoria,
@@ -141,15 +211,15 @@ export default function EditarLancamentoCartaoModal({
       })
 
       if (success) {
-        toast.success('Lancamento atualizado com sucesso!')
+        toast.success('Lançamento atualizado com sucesso!')
         onOpenChange(false)
         onSuccess?.()
       } else {
-        toast.error('Erro ao atualizar lancamento. Tente novamente.')
+        toast.error('Erro ao atualizar lançamento. Tente novamente.')
       }
-    } catch (error) {
-      console.error('Erro ao atualizar lancamento:', error)
-      toast.error('Erro ao atualizar lancamento. Tente novamente.')
+    } catch (error: any) {
+      console.error('Erro ao atualizar lançamento:', error)
+      toast.error(error?.message || 'Erro ao atualizar lançamento. Tente novamente.')
     } finally {
       setSubmitting(false)
     }
@@ -214,6 +284,65 @@ export default function EditarLancamentoCartaoModal({
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Segmented control de escopo (apenas se tem regra de série) */}
+          {temSerieEditavel && (
+            <div>
+              <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-surface-2 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setEscopo('instancia')}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-medium transition-all',
+                    escopo === 'instancia'
+                      ? 'bg-[#34495e] text-white shadow-sm'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
+                  )}
+                >
+                  <CalendarDays className="w-4 h-4" />
+                  Apenas esta
+                </button>
+                {temEmDianteEditavel && (
+                  <button
+                    type="button"
+                    onClick={() => setEscopo('em-diante')}
+                    className={cn(
+                      'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-medium transition-all',
+                      escopo === 'em-diante'
+                        ? 'bg-[#34495e] text-white shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
+                    )}
+                  >
+                    <ChevronsRight className="w-4 h-4" />
+                    Desta em diante ({pendentesAPartirDesta})
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setEscopo('serie')}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-medium transition-all',
+                    escopo === 'serie'
+                      ? 'bg-[#34495e] text-white shadow-sm'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
+                  )}
+                >
+                  <Repeat className="w-4 h-4" />
+                  Toda a série ({pendentesSerie})
+                </button>
+              </div>
+              {escopo !== 'instancia' && (
+                <div className="mt-3 flex items-start gap-2 px-3 py-2 rounded-md bg-[#f0f9f9] border border-[#89bcbe]/40 dark:bg-teal-500/10 dark:border-teal-500/30">
+                  <Info className="w-3.5 h-3.5 text-[#89bcbe] mt-0.5 flex-shrink-0" />
+                  <div className="text-xs text-[#46627f] dark:text-slate-300">
+                    {escopo === 'em-diante'
+                      ? `Alterações aplicadas a partir desta parcela em todos os lançamentos pendentes da série (${pendentesAPartirDesta}).`
+                      : `Alterações aplicadas a toda a série de lançamentos pendentes (${pendentesSerie}). Faturas já pagas não são afetadas.`}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Tipo de lançamento */}
           <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-2">
@@ -336,22 +465,12 @@ export default function EditarLancamentoCartaoModal({
             </div>
           </div>
 
-          {/* Aviso para parcelado */}
-          {lancamento.tipo === 'parcelada' && (
-            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200">
-              <p className="text-xs text-amber-700 dark:text-amber-400">
-                <strong>Atencao:</strong> Esta edicao altera apenas esta parcela ({lancamento.parcela_numero}/{lancamento.parcela_total}).
-                As demais parcelas permanecem inalteradas.
-              </p>
-            </div>
-          )}
-
-          {/* Aviso para recorrente */}
-          {lancamento.tipo === 'recorrente' && (
-            <div className="p-3 rounded-lg bg-purple-50 border border-purple-200">
-              <p className="text-xs text-purple-700">
-                <strong>Atencao:</strong> Esta edicao altera apenas este lancamento do mes atual.
-                Lancamentos futuros nao serao afetados.
+          {/* Aviso "apenas esta" quando lançamento parte de série mas sem segmented control */}
+          {escopo === 'instancia' && temRegra && (
+            <div className="flex items-start gap-2 px-3 py-2 rounded-md bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700">
+              <Info className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                Alterações aplicadas apenas a este lançamento. Outros itens da série permanecem inalterados.
               </p>
             </div>
           )}

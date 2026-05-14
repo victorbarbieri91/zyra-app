@@ -84,25 +84,35 @@ function buildPrompt(cartao: { banco: string; nome: string; bandeira: string }, 
 
   return `Você é um assistente especializado em extrair dados de faturas de cartão de crédito brasileiras.
 
-Analise ${sourceDesc} fatura do cartão ${cartao.banco} - ${cartao.nome} (bandeira ${cartao.bandeira}) e extraia TODAS as transações.
+Analise ${sourceDesc} fatura do cartão ${cartao.banco} - ${cartao.nome} (bandeira ${cartao.bandeira}) e extraia APENAS as compras e estornos REAIS do período atual.
 
-Para cada transação, extraia:
+Para cada transação válida, extraia:
 - data: Data da compra no formato YYYY-MM-DD
 - descricao: Nome do estabelecimento/descrição
 - valor: Valor em reais (número decimal positivo, sem R$ e sem sinal)
 - parcela: Se for compra parcelada, formato "1/3" ou null se não for
 - categoria_sugerida: Uma das categorias: custas, fornecedor, folha, impostos, aluguel, marketing, capacitacao, material, tecnologia, viagem, alimentacao, combustivel, assinatura, outros
 - confianca: Nível de confiança na extração de 0 a 1
-- tipo_transacao: "debito" para compras/gastos normais, "credito" para devoluções/estornos/pagamentos. Identifique pelo contexto: valores com "C", "+", "CR", "CREDITO", "ESTORNO", "DEVOLUCAO" ou sinal negativo geralmente são créditos. Na dúvida, assuma "debito"
+- tipo_transacao: "debito" para compras normais, "credito" SOMENTE para estornos/devoluções de compra real (ex: "ESTORNO COMPRA X", "DEVOLUCAO LOJA Y")
+
+⚠️ NÃO EXTRAIA AS SEGUINTES LINHAS (são informativas/administrativas, NÃO são compras nem estornos):
+- "SALDO ANTERIOR" / "SALDO DEVEDOR ANTERIOR" / "DEVEDOR MES ANTERIOR"
+- "PAGAMENTO DE FATURA" / "PAGTO. POR DEB EM C/C" / "PAGAMENTO RECEBIDO" / "PAGTO FATURA"
+- "JUROS PAGAMENTO MÍNIMO" / "JUROS DO ROTATIVO" / "ENCARGOS DE FINANCIAMENTO"
+- "PARC FATURA" / "PARCELAMENTO DE FATURA" / "ROLAGEM DE FATURA"
+- "MULTA POR ATRASO" / "ENCARGOS S/ COMPRA" (encargos sobre saldo, não compras)
+- "DEMONSTRATIVO DE FATURA" / "RESUMO" / "TOTAL DA FATURA" / "TOTAL A PAGAR"
+- Linhas que repetem o total da fatura, juros, IOF de rolagem, anuidade já paga
+- Qualquer linha que represente uma SOMA, SUBTOTAL ou TOTAL (queremos itens individuais)
 
 Também extraia:
-- valor_total: Valor total da fatura
+- valor_total: Valor total da fatura (campo "Total", "Total da fatura" ou similar)
 - data_vencimento: Data de vencimento no formato YYYY-MM-DD
 - data_fechamento: Data de fechamento no formato YYYY-MM-DD (se disponível)
 
 IMPORTANTE:
-- Extraia TODAS as transações sem exceção, não pule nenhuma
-- Se houver muitas transações, inclua TODAS no JSON
+- Extraia TODAS as compras e estornos reais sem exceção
+- Se houver dúvida se uma linha é compra ou administrativa, prefira PULAR (mais seguro)
 - Retorne APENAS um JSON válido, sem explicações ou markdown
 
 Retorne no formato:
@@ -123,16 +133,25 @@ function buildChunkPrompt(
 
 Esta é a PARTE ${chunkIndex + 1} de ${totalChunks} do texto da fatura do cartão ${cartao.banco} - ${cartao.nome} (bandeira ${cartao.bandeira}).
 
-Extraia TODAS as transações encontradas neste trecho.
+Extraia APENAS as compras e estornos REAIS do período atual encontrados neste trecho.
 
-Para cada transação, extraia:
+Para cada transação válida, extraia:
 - data: Data da compra no formato YYYY-MM-DD
 - descricao: Nome do estabelecimento/descrição
 - valor: Valor em reais (número decimal positivo, sem R$ e sem sinal)
 - parcela: Se for compra parcelada, formato "1/3" ou null se não for
 - categoria_sugerida: Uma das categorias: custas, fornecedor, folha, impostos, aluguel, marketing, capacitacao, material, tecnologia, viagem, alimentacao, combustivel, assinatura, outros
 - confianca: Nível de confiança na extração de 0 a 1
-- tipo_transacao: "debito" ou "credito"
+- tipo_transacao: "debito" para compras, "credito" SOMENTE para estornos/devoluções de compra real
+
+⚠️ NÃO EXTRAIA AS SEGUINTES LINHAS (informativas/administrativas):
+- "SALDO ANTERIOR" / "SALDO DEVEDOR ANTERIOR"
+- "PAGAMENTO DE FATURA" / "PAGTO. POR DEB EM C/C" / "PAGAMENTO RECEBIDO"
+- "JUROS PAGAMENTO MÍNIMO" / "JUROS DO ROTATIVO" / "ENCARGOS DE FINANCIAMENTO"
+- "PARC FATURA" / "PARCELAMENTO DE FATURA" / "ROLAGEM DE FATURA"
+- "MULTA POR ATRASO" / "ENCARGOS S/ COMPRA"
+- "TOTAL DA FATURA" / "TOTAL A PAGAR" / linhas de soma/subtotal
+- Qualquer linha que NÃO seja uma compra/estorno individual real
 
 ${chunkIndex === 0 ? `Também extraia (se disponível):
 - valor_total: Valor total da fatura

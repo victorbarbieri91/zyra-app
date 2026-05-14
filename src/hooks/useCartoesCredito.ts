@@ -52,7 +52,6 @@ export interface LancamentoCartao {
   data_compra: string
   mes_referencia: string
   recorrente_ativo: boolean
-  recorrente_data_fim: string | null
   importado_de_fatura: boolean
   hash_transacao: string | null
   processo_id: string | null
@@ -78,7 +77,6 @@ export interface FaturaCartao {
   valor_total: number
   despesa_id: string | null
   status: 'pendente' | 'paga'
-  pdf_url: string | null
   data_pagamento: string | null
   forma_pagamento: string | null
   observacoes: string | null
@@ -94,17 +92,14 @@ export interface ImportacaoFatura {
   id: string
   escritorio_id: string
   cartao_id: string
-  fatura_id: string | null
   arquivo_nome: string
   arquivo_url: string
   status: 'pendente' | 'processando' | 'concluido' | 'erro'
   transacoes_encontradas: number
   transacoes_importadas: number
-  transacoes_duplicadas: number
   modelo_ia: string | null
   confianca_media: number | null
   erro_mensagem: string | null
-  erro_detalhes: any
   dados_extraidos: any
   processado_em: string | null
   created_at: string

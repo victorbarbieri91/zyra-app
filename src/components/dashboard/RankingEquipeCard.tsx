@@ -16,6 +16,7 @@ interface RankingEquipeCardProps {
   metaIndividual: number // horas/mês
   loading?: boolean
   mesNome: string // ex: "abril"
+  anoAtual: number // ex: 2026
 }
 
 export default function RankingEquipeCard({
@@ -26,7 +27,13 @@ export default function RankingEquipeCard({
   metaIndividual,
   loading,
   mesNome,
+  anoAtual,
 }: RankingEquipeCardProps) {
+  // Totais detalhados — separa cobrável vs não-cobrável para o subtítulo.
+  const totalCobraveis = equipe.reduce((acc, m) => acc + m.horasCobraveis, 0)
+  const totalNaoCobraveis = equipe.reduce((acc, m) => acc + m.horasNaoCobraveis, 0)
+  const mesAnoLabel = `${mesNome.charAt(0).toUpperCase()}${mesNome.slice(1)} de ${anoAtual}`
+
   return (
     <div
       className={cn(
@@ -35,22 +42,28 @@ export default function RankingEquipeCard({
         className,
       )}
     >
-      <div className="flex justify-between items-baseline mb-3.5">
-        <div>
-          <h3
-            className="text-warm-primary m-0 font-semibold"
-            style={{ fontSize: 14, letterSpacing: '-0.01em' }}
-          >
-            Ranking da equipe
-          </h3>
-          <div className="text-[11px] text-warm-secondary mt-0.5">
-            Horas cobráveis · {mesNome} ·{' '}
-            <span className="text-warm-primary font-semibold">
-              {formatHoras(totalHorasEquipe, 'curto')}
-            </span>{' '}
-            totais
-          </div>
-        </div>
+      <div className="flex justify-between items-baseline mb-1">
+        <h3
+          className="text-warm-primary m-0 font-semibold"
+          style={{ fontSize: 14, letterSpacing: '-0.01em' }}
+        >
+          Ranking da equipe
+        </h3>
+        <span className="text-[11px] font-medium text-warm-muted">{mesAnoLabel}</span>
+      </div>
+      <div className="text-[11px] text-warm-secondary mb-3.5">
+        <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+          {formatHoras(totalCobraveis, 'curto')}
+        </span>{' '}
+        cobráveis ·{' '}
+        <span className="text-warm-primary font-semibold">
+          {formatHoras(totalNaoCobraveis, 'curto')}
+        </span>{' '}
+        não-cobráveis ·{' '}
+        <span className="text-warm-primary font-semibold">
+          {formatHoras(totalHorasEquipe, 'curto')}
+        </span>{' '}
+        total
       </div>
 
       {loading ? (

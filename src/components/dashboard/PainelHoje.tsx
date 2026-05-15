@@ -45,7 +45,7 @@ export default function PainelHoje({ className, onItemClick }: PainelHojeProps) 
   return (
     <aside
       className={cn(
-        'w-[200px] flex-shrink-0 bg-rail border-r border-warm flex flex-col gap-[22px] overflow-y-auto',
+        'w-[200px] flex-shrink-0 bg-rail border-r border-warm flex flex-col gap-[22px] overflow-y-auto no-scrollbar',
         'px-[18px] py-[28px]',
         className,
       )}

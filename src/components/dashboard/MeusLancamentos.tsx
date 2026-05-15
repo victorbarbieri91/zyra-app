@@ -20,20 +20,13 @@ interface MeusLancamentosProps {
   onEditEntry: (entry: TimesheetEntryRecente) => void
 }
 
-type StatusVisual = 'faturado' | 'pendente' | 'rascunho'
-
-function classificarStatus(entry: TimesheetEntryRecente): StatusVisual {
-  if (entry.faturado) return 'faturado'
-  if (entry.faturavel) return 'pendente'
-  return 'rascunho'
-}
-
-// Status só aparece como cor da barra vertical à esquerda (indicador visual sutil).
-// Os rótulos textuais (FATURADO/PENDENTE/RASCUNHO) são tratados no módulo Financeiro.
-function corBarraStatus(status: StatusVisual): string {
-  if (status === 'faturado') return 'bg-state-success'
-  if (status === 'pendente') return 'bg-state-warning'
-  return 'bg-warm-muted/60'
+// Indicador visual de COBRABILIDADE — mesma convenção do RankingEquipeCard:
+// verde emerald = hora cobrável (faturavel=true); slate-blue = não-cobrável.
+// O status FATURADO/PENDENTE/RASCUNHO continua tratado no módulo Financeiro.
+function corBarraCobravel(entry: TimesheetEntryRecente): string {
+  return entry.faturavel
+    ? 'bg-emerald-500 dark:bg-emerald-400'
+    : 'bg-[#34495e] dark:bg-[#8a97a8]'
 }
 
 function diasSemanaSigla(date: Date): string {
@@ -160,38 +153,53 @@ export default function MeusLancamentos({ className, onEditEntry }: MeusLancamen
                   </span>
                 </div>
                 {grupo.entries.map((entry) => {
-                  const status = classificarStatus(entry)
                   const casoTitulo = entry.processo_titulo || entry.consulta_titulo || ''
+                  const cobravel = entry.faturavel
                   return (
                     <button
                       key={entry.id}
                       type="button"
                       onClick={() => onEditEntry(entry)}
-                      className="w-full flex gap-2.5 items-center py-2 hover:bg-rail/40 transition-colors text-left rounded-md"
+                      className="w-full flex gap-2.5 items-start py-2 hover:bg-rail/40 transition-colors text-left rounded-md"
                     >
                       <div
                         className={cn(
-                          'w-[3px] h-7 rounded-sm flex-shrink-0',
-                          corBarraStatus(status),
+                          'w-[3px] h-7 rounded-sm flex-shrink-0 mt-0.5',
+                          corBarraCobravel(entry),
                         )}
+                        title={cobravel ? 'Hora cobrável' : 'Hora não cobrável'}
                       />
                       <div className="flex-1 min-w-0">
                         <div
                           className="text-warm-primary truncate"
                           style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.3 }}
+                          title={entry.atividade}
                         >
                           {entry.atividade}
                         </div>
-                        {casoTitulo && (
-                          <div
-                            className="text-warm-muted truncate mt-0.5"
-                            style={{ fontSize: 10.5 }}
+                        <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                          {casoTitulo && (
+                            <span
+                              className="text-warm-muted truncate min-w-0"
+                              style={{ fontSize: 10.5 }}
+                              title={casoTitulo}
+                            >
+                              {casoTitulo}
+                            </span>
+                          )}
+                          <span
+                            className={cn(
+                              'text-[8.5px] font-bold px-1.5 py-0.5 rounded tracking-[0.05em] flex-shrink-0 uppercase',
+                              cobravel
+                                ? 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300'
+                                : 'bg-[#34495e]/10 text-[#46627f] dark:bg-[#8a97a8]/15 dark:text-[#cbd5e1]',
+                            )}
                           >
-                            {casoTitulo}
-                          </div>
-                        )}
+                            {cobravel ? 'Cobrável' : 'Não cobrável'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-warm-primary font-semibold font-mono flex-shrink-0 w-14 text-right text-[13px]">
+                      <div className="text-warm-primary font-semibold font-mono flex-shrink-0 w-14 text-right text-[13px] pt-0.5">
                         {formatarHoras(Number(entry.horas))}
                       </div>
                     </button>

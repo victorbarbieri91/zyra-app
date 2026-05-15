@@ -94,12 +94,13 @@ async function fetchDashboardPerformance(
       .eq('escritorio_id', escritorioAtivo)
       .gte('data_trabalho', inicioMes.toISOString().split('T')[0]),
 
-    // Profiles para nomes (usuários do escritório)
+    // Profiles para nomes (usuários do escritório, apenas os incluídos no ranking)
     supabase
       .from('escritorios_usuarios')
       .select('user_id, profiles:user_id(id, nome_completo)')
       .eq('escritorio_id', escritorioAtivo)
-      .eq('ativo', true),
+      .eq('ativo', true)
+      .eq('incluir_em_ranking', true),
 
     // Processos por área com valores
     supabase

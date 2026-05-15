@@ -19,6 +19,7 @@ import { toast } from 'sonner'
 import { useEscritorio } from '@/contexts/EscritorioContext'
 import SearchDropdown from '@/components/search/SearchDropdown'
 import MobileDrawer from './MobileDrawer'
+import SinoAlertasPopover from './SinoAlertasPopover'
 
 export default function Header() {
   const [user, setUser] = useState<any>(null)
@@ -89,6 +90,9 @@ export default function Header() {
 
       {/* Desktop: Right Section */}
       <div className="hidden md:flex items-center gap-3">
+        {/* Sino de notificações */}
+        <SinoAlertasPopover />
+
         {/* Theme Toggle */}
         <ThemeToggle />
 

@@ -2,102 +2,50 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useUserPreferences } from '@/hooks/useUserPreferences'
+import Image from 'next/image'
+import { usePathname, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard,
   Users,
-  FileText,
   Calendar,
   DollarSign,
-  BookOpen,
-  FolderOpen,
-  MessageSquareCode,
   LogOut,
-  ChevronRight,
-  ChevronLeft,
   Scale,
-  UserCircle,
-  Briefcase,
   FileSearch,
   Newspaper,
-  Files
+  ChevronLeft,
+  ChevronRight,
+  type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Badge } from '@/components/ui/badge'
+import { useUserPreferences } from '@/hooks/useUserPreferences'
 import { usePublicacoesPendentesCount } from '@/hooks/usePublicacoesPendentesCount'
+import { Badge } from '@/components/ui/badge'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 interface MenuItem {
   title: string
-  icon: any
+  icon: LucideIcon
   href: string
-  group: string
-  disabled?: boolean
-  badge?: string
 }
 
 const menuItems: MenuItem[] = [
-  {
-    title: 'Dashboard',
-    icon: LayoutDashboard,
-    href: '/dashboard',
-    group: 'main',
-  },
-  // Centro de Comando temporariamente desativado do menu
-  // {
-  //   title: 'Centro de Comando',
-  //   icon: MessageSquareCode,
-  //   href: '/dashboard/centro-comando',
-  //   group: 'main',
-  // },
-  {
-    title: 'Agenda',
-    icon: Calendar,
-    href: '/dashboard/agenda',
-    group: 'operations',
-  },
-  {
-    title: 'Processos',
-    icon: Scale,
-    href: '/dashboard/processos',
-    group: 'operations',
-  },
-  {
-    title: 'Consultivo',
-    icon: FileSearch,
-    href: '/dashboard/consultivo',
-    group: 'operations',
-  },
-  {
-    title: 'Publicações',
-    icon: Newspaper,
-    href: '/dashboard/publicacoes',
-    group: 'operations',
-  },
-  {
-    title: 'CRM',
-    icon: Users,
-    href: '/dashboard/crm/pessoas',
-    group: 'management',
-  },
-  // Portfólio removido temporariamente - módulo ainda não finalizado
-  // {
-  //   title: 'Portfólio',
-  //   icon: Briefcase,
-  //   href: '/dashboard/portfolio',
-  //   group: 'management',
-  // },
-  {
-    title: 'Financeiro',
-    icon: DollarSign,
-    href: '/dashboard/financeiro',
-    group: 'management',
-  },
-  // Peças e Teses removido temporariamente - módulo ainda não implementado
+  { title: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
+  { title: 'Agenda', icon: Calendar, href: '/dashboard/agenda' },
+  { title: 'Processos', icon: Scale, href: '/dashboard/processos' },
+  { title: 'Consultivo', icon: FileSearch, href: '/dashboard/consultivo' },
+  { title: 'Publicações', icon: Newspaper, href: '/dashboard/publicacoes' },
+  { title: 'CRM', icon: Users, href: '/dashboard/crm/pessoas' },
+  { title: 'Financeiro', icon: DollarSign, href: '/dashboard/financeiro' },
+  // Centro de Comando temporariamente oculto — módulo não está em uso ativo.
 ]
 
 export default function Sidebar() {
@@ -106,10 +54,9 @@ export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
-  const { preferences, loading: preferencesLoading } = useUserPreferences()
+  const { preferences, loading: preferencesLoading, updatePreferences } = useUserPreferences()
   const publicacoesPendentes = usePublicacoesPendentesCount()
 
-  // Aplica a preferência do usuário quando carrega
   useEffect(() => {
     if (!preferencesLoading && !initialized) {
       setCollapsed(!preferences.sidebar_aberta)
@@ -117,188 +64,196 @@ export default function Sidebar() {
     }
   }, [preferencesLoading, preferences.sidebar_aberta, initialized])
 
+  const toggleCollapsed = () => {
+    const next = !collapsed
+    setCollapsed(next)
+    void updatePreferences({ sidebar_aberta: !next })
+  }
+
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut()
       toast.success('Logout realizado com sucesso')
       router.push('/login')
-    } catch (error) {
+    } catch {
       toast.error('Erro ao fazer logout')
     }
   }
 
   return (
-    <motion.aside
-      initial={false}
-      animate={{ width: collapsed ? 72 : 280 }}
-      transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="hidden md:flex bg-gradient-to-b from-white to-slate-50/50 dark:from-surface-1 dark:to-surface-1 border-r border-slate-200 dark:border-slate-700 flex-col relative shadow-sm dark:shadow-none"
-    >
-      {/* Collapse Button */}
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-4 top-[3.75rem] z-50 w-10 h-10 bg-gradient-to-br from-[#34495e] to-[#1E3A8A] dark:from-[#89bcbe] dark:to-[#6ba9ab] border-2 border-white dark:border-surface-1 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all group"
-      >
-        {collapsed ? (
-          <ChevronRight className="w-5.5 h-5.5 text-white dark:text-slate-900" />
-        ) : (
-          <ChevronLeft className="w-5.5 h-5.5 text-white dark:text-slate-900" />
+    <TooltipProvider delayDuration={200}>
+      <motion.aside
+        initial={false}
+        animate={{ width: collapsed ? 80 : 280 }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        className={cn(
+          'hidden md:flex flex-col relative flex-shrink-0',
+          'bg-gradient-to-b from-white to-slate-50/60 dark:from-[#1a1f2a] dark:to-[#0f1419]',
+          'border-r border-slate-200 dark:border-slate-800',
         )}
-      </button>
-
-      {/* Logo */}
-      <div className="px-3 py-3 border-b border-slate-200 dark:border-slate-700">
-        <div className="flex items-center justify-center">
-          <AnimatePresence mode="wait">
-            {!collapsed ? (
-              <motion.img
-                key="logo-expanded"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.2 }}
-                src="/zyra.logo.png"
-                alt="Zyra Legal"
-                className="h-16 w-auto object-contain"
-              />
-            ) : (
-              <motion.img
-                key="logo-collapsed"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.2 }}
-                src="/zyra.logo.png"
-                alt="Zyra Legal"
-                className="h-12 w-auto object-contain"
-              />
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-
-      {/* Menu */}
-      <nav className="flex-1 px-3 py-2 overflow-y-auto">
-        {menuItems.map((item, index) => {
-          const isActive = pathname === item.href
-          const Icon = item.icon
-          const isDisabled = item.disabled || false
-
-          // Badge dinâmico para publicações pendentes
-          const dynamicBadge = item.href === '/dashboard/publicacoes' && publicacoesPendentes > 0
-            ? String(publicacoesPendentes)
-            : item.badge
-
-          const linkContent = (
-            <Link
-              key={item.href}
-              href={isDisabled ? '#' : item.href}
-              onClick={(e) => {
-                if (isDisabled) e.preventDefault()
-              }}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-300 group relative mb-1',
-                collapsed ? 'justify-center' : '',
-                isDisabled
-                  ? 'text-slate-400 dark:text-slate-600 opacity-60 cursor-not-allowed'
-                  : isActive
-                  ? 'bg-gradient-to-r from-[#34495e] to-[#46627f] dark:from-[#89bcbe]/20 dark:to-[#89bcbe]/10 text-white dark:text-[#89bcbe] shadow-lg shadow-[#34495e]/20 dark:shadow-none'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-gradient-to-r hover:from-slate-50 hover:to-slate-100/80 dark:hover:from-surface-2 dark:hover:to-surface-3 hover:text-[#34495e] dark:hover:text-slate-200 hover:shadow-md dark:hover:shadow-none'
-              )}
-            >
-              <div className={cn(
-                'flex items-center justify-center transition-all duration-300 relative',
-                'w-8 h-8',
-                !isActive && !isDisabled && 'group-hover:scale-110'
-              )}>
-                <Icon className={cn(
-                  'w-[18px] h-[18px] transition-all duration-300 flex-shrink-0',
-                  isActive && 'drop-shadow-sm'
-                )} />
-                {collapsed && dynamicBadge && (
-                  <span className={cn(
-                    "absolute -top-1 -right-1 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-bold px-1 leading-none",
-                    isActive
-                      ? "bg-white text-[#34495e] dark:bg-[#89bcbe] dark:text-slate-900"
-                      : "bg-amber-500 text-white dark:bg-amber-400 dark:text-slate-900"
-                  )}>
-                    {Number(dynamicBadge) > 99 ? '99+' : dynamicBadge}
-                  </span>
-                )}
-              </div>
-
-              <AnimatePresence>
-                {!collapsed && (
-                  <motion.div
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: 'auto' }}
-                    exit={{ opacity: 0, width: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex items-center gap-2 flex-1 overflow-hidden"
-                  >
-                    <span className="font-semibold text-sm whitespace-nowrap">{item.title}</span>
-                    {dynamicBadge && (
-                      <Badge className={cn(
-                        "text-[10px] px-2 py-0.5 h-5 border-0 font-medium ml-auto",
-                        isActive
-                          ? "bg-white/30 text-white dark:bg-[#89bcbe]/30 dark:text-[#89bcbe] backdrop-blur-sm"
-                          : item.href === '/dashboard/publicacoes'
-                            ? "bg-amber-500 text-white dark:bg-amber-400 dark:text-slate-900"
-                            : "bg-gradient-to-r from-[#89bcbe] to-[#6ba9ab] text-white dark:from-teal-700 dark:to-teal-600"
-                      )}>
-                        {dynamicBadge}
-                      </Badge>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </Link>
-          )
-
-          if (collapsed) {
-            return (
-              <div
-                key={item.href}
-                className="relative"
-                title={item.title}
-              >
-                {linkContent}
-              </div>
-            )
-          }
-
-          return linkContent
-        })}
-      </nav>
-
-      {/* Logout */}
-      <div className="px-3 py-1.5 border-t border-slate-200 dark:border-slate-700">
+      >
+        {/* Botão de collapse */}
         <button
-          onClick={handleLogout}
+          type="button"
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
           className={cn(
-            'flex items-center gap-3 w-full px-3 py-1.5 text-slate-600 dark:text-slate-400 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100/80 dark:hover:from-red-500/10 dark:hover:to-red-500/5 hover:text-red-600 dark:hover:text-red-400 rounded-xl transition-all duration-300 group hover:shadow-md dark:hover:shadow-none',
-            collapsed && 'justify-center'
+            'absolute -right-3 top-14 z-50 w-7 h-7 rounded-full',
+            'bg-gradient-to-br from-[#34495e] to-[#46627f] dark:from-[#89bcbe] dark:to-[#6ba9ab]',
+            'border-2 border-white dark:border-[#0f1419] shadow-md hover:shadow-lg',
+            'flex items-center justify-center hover:scale-105 transition-all',
           )}
-          title={collapsed ? 'Sair' : ''}
         >
-          <div className="flex items-center justify-center rounded-lg transition-all duration-300 group-hover:bg-red-100/50 group-hover:scale-110 w-8 h-8">
-            <LogOut className="w-[18px] h-[18px] dark:group-hover:text-red-400" />
-          </div>
-          <AnimatePresence>
-            {!collapsed && (
-              <motion.span
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: 'auto' }}
-                exit={{ opacity: 0, width: 0 }}
-                transition={{ duration: 0.2 }}
-                className="font-semibold text-sm whitespace-nowrap overflow-hidden"
-              >
-                Sair
-              </motion.span>
-            )}
-          </AnimatePresence>
+          {collapsed ? (
+            <ChevronRight className="w-3.5 h-3.5 text-white dark:text-slate-900" />
+          ) : (
+            <ChevronLeft className="w-3.5 h-3.5 text-white dark:text-slate-900" />
+          )}
         </button>
-      </div>
-    </motion.aside>
+
+        {/* Logo */}
+        <div className="flex items-center justify-center px-3 py-4 border-b border-slate-200 dark:border-slate-800">
+          <Link href="/dashboard" className="block">
+            <Image
+              src="/zyra.logo.png"
+              alt="Zyra Legal"
+              width={collapsed ? 48 : 160}
+              height={collapsed ? 48 : 56}
+              priority
+              className={cn(
+                'object-contain transition-all',
+                collapsed ? 'h-12 w-12' : 'h-14 w-auto',
+              )}
+            />
+          </Link>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 px-3.5 py-4 flex flex-col gap-1 overflow-y-auto">
+          {menuItems.map((item) => {
+            // Dashboard é match exato; demais módulos casam com subpáginas (ex: /processos/123).
+            const isActive =
+              item.href === '/dashboard'
+                ? pathname === '/dashboard'
+                : pathname === item.href || pathname.startsWith(item.href + '/')
+            const Icon = item.icon
+            const badge =
+              item.href === '/dashboard/publicacoes' && publicacoesPendentes > 0
+                ? publicacoesPendentes
+                : undefined
+            const badgeWarn = (badge ?? 0) > 0
+
+            const linkInner = (
+              <Link
+                href={item.href}
+                className={cn(
+                  'relative rounded-[10px] flex items-center transition-colors',
+                  collapsed ? 'h-10 w-10 mx-auto justify-center' : 'h-10 px-3 gap-3',
+                  isActive
+                    ? 'bg-gradient-to-r from-[#34495e] to-[#46627f] text-white shadow-[0_4px_10px_-2px_rgba(52,73,94,0.25)]'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-[#34495e] dark:hover:text-slate-200',
+                )}
+              >
+                <div className="relative flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-[17px] h-[17px]" />
+                  {collapsed && badge !== undefined && (
+                    <span
+                      className={cn(
+                        'absolute -top-1.5 -right-1.5',
+                        // Círculo perfeito para 1-2 dígitos; vira pill só para 100+.
+                        badge > 99
+                          ? 'min-w-[22px] h-[18px] px-1 rounded-full'
+                          : 'w-[18px] h-[18px] rounded-full',
+                        'flex items-center justify-center text-[10px] font-bold leading-none',
+                        badgeWarn
+                          ? 'bg-state-warning text-white'
+                          : isActive
+                            ? 'bg-white text-[#34495e]'
+                            : 'bg-teal-300 text-white',
+                      )}
+                    >
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  )}
+                </div>
+                <AnimatePresence initial={false}>
+                  {!collapsed && (
+                    <motion.div
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: 'auto' }}
+                      exit={{ opacity: 0, width: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="flex-1 flex items-center gap-2 overflow-hidden whitespace-nowrap"
+                    >
+                      <span className="text-sm font-medium">{item.title}</span>
+                      {badge !== undefined && (
+                        <Badge
+                          className={cn(
+                            'ml-auto text-[10px] font-bold border-0 p-0',
+                            // Círculo perfeito para 1-2 dígitos.
+                            badge > 99
+                              ? 'min-w-[22px] h-[20px] px-1.5 rounded-full inline-flex items-center justify-center'
+                              : 'w-5 h-5 rounded-full inline-flex items-center justify-center',
+                            isActive
+                              ? 'bg-white/25 text-white'
+                              : badgeWarn
+                                ? 'bg-state-warning text-white'
+                                : 'bg-teal-300 text-white',
+                          )}
+                        >
+                          {badge > 99 ? '99+' : badge}
+                        </Badge>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </Link>
+            )
+
+            if (collapsed) {
+              return (
+                <Tooltip key={item.href}>
+                  <TooltipTrigger asChild>{linkInner}</TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={8}>
+                    {item.title}
+                  </TooltipContent>
+                </Tooltip>
+              )
+            }
+            return <div key={item.href}>{linkInner}</div>
+          })}
+        </nav>
+
+        {/* Logout */}
+        <div className="px-3.5 py-3 border-t border-slate-200 dark:border-slate-800">
+          {collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="h-10 w-10 mx-auto rounded-[10px] flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-state-danger-bg hover:text-state-danger-fg transition-colors"
+                  aria-label="Sair"
+                >
+                  <LogOut className="w-[17px] h-[17px]" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>
+                Sair
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="h-10 w-full px-3 rounded-[10px] flex items-center gap-3 text-slate-500 dark:text-slate-400 hover:bg-state-danger-bg hover:text-state-danger-fg transition-colors"
+            >
+              <LogOut className="w-[17px] h-[17px]" />
+              <span className="text-sm font-medium">Sair</span>
+            </button>
+          )}
+        </div>
+      </motion.aside>
+    </TooltipProvider>
   )
 }

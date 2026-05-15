@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Fraunces } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'sonner'
 import { RegisterSW } from '@/components/layout/RegisterSW'
@@ -9,6 +9,17 @@ const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-inter',
+})
+
+// Fraunces (serif) é usada apenas em momentos editoriais do dashboard:
+// saudação do hero, métrica grande ("2h55") e data do painel "Hoje".
+// Não aplicar no <body>.
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  weight: ['500', '600'],
+  style: ['normal', 'italic'],
+  display: 'swap',
+  variable: '--font-fraunces',
 })
 
 export const viewport: Viewport = {
@@ -41,7 +52,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="pt-BR" className={inter.variable} suppressHydrationWarning>
+    <html lang="pt-BR" className={`${inter.variable} ${fraunces.variable}`} suppressHydrationWarning>
       <body className={`${inter.className} antialiased`}>
         <ThemeProvider>
           <RegisterSW />

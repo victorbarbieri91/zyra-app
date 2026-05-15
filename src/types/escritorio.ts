@@ -54,6 +54,9 @@ export interface MembroCompleto {
   ultimo_acesso: string | null;
   is_owner: boolean;
   remuneracao: MembroRemuneracao;
+  // Quando true (default), o membro aparece no ranking da equipe do dashboard.
+  // Desligue para perfis administrativos que não advogam (ex: gerente operacional).
+  incluir_em_ranking?: boolean;
   created_at?: string;
 }
 

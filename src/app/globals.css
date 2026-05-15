@@ -81,6 +81,37 @@
     --chart-tick: #64748b;
     --chart-tooltip-bg: #ffffff;
     --chart-tooltip-border: #e2e8f0;
+
+    /* ─────────────────────────────────────────────────────────── */
+    /* Paleta WARM (novo dashboard) — coexiste com slate, não substitui */
+    /* HSL sem wrapper `hsl()` para consistência com vars shadcn      */
+    /* ─────────────────────────────────────────────────────────── */
+    --page-warm: 50 22% 97%;            /* #fafaf7 */
+    --rail: 45 28% 93%;                 /* #f3f0e8 */
+    --card-warm: 0 0% 100%;             /* #ffffff */
+    --border-warm: 43 17% 91%;          /* #ece9e2 */
+    --border-warm-subtle: 45 24% 93%;   /* #f3f1ea */
+    --text-ink: 217 31% 14%;            /* #1a2330 — números grandes */
+    --text-warm-primary: 210 29% 24%;   /* #2c3e50 */
+    --text-warm-secondary: 213 13% 41%; /* #5a6775 */
+    --text-warm-muted: 212 8% 63%;      /* #9aa1a8 */
+    --rail-bar-inactive: 213 27% 80%;   /* #cbd5e1 — barrinhas do painel Hoje */
+    --rail-divider: 41 32% 84%;         /* #e4ddcd — divisores do painel Hoje */
+
+    /* Cores semânticas MUTED (sage/sand/brick/slate-blue)
+       — coexistem com emerald/amber/red/blue vivos */
+    --state-success: 149 19% 52%;       /* #6b9e84 */
+    --state-success-bg: 140 23% 95%;    /* #eef5f1 */
+    --state-success-fg: 143 26% 33%;    /* #3f6a54 */
+    --state-warning: 28 41% 59%;        /* #c2956b */
+    --state-warning-bg: 35 49% 94%;     /* #f7f0e7 */
+    --state-warning-fg: 28 42% 38%;     /* #8a6438 */
+    --state-danger: 0 32% 56%;          /* #b56a6a */
+    --state-danger-bg: 0 38% 93%;       /* #f4e8e8 */
+    --state-danger-fg: 0 31% 39%;       /* #834545 */
+    --state-info: 213 26% 54%;          /* #6a85a8 */
+    --state-info-bg: 214 38% 95%;       /* #edf1f7 */
+    --state-info-fg: 214 32% 37%;       /* #415a7e */
   }
 
   /* ═══════════════════════════════════════════════════════════ */
@@ -166,6 +197,35 @@
     --chart-tick: #9ca3af;
     --chart-tooltip-bg: #1a2233;
     --chart-tooltip-border: #2d3748;
+
+    /* ─────────────────────────────────────────────────────────── */
+    /* Paleta WARM no modo escuro (novo dashboard)                */
+    /* ─────────────────────────────────────────────────────────── */
+    --page-warm: 213 27% 6%;            /* #0b0f14 */
+    --rail: 218 32% 7%;                 /* #0d1119 */
+    --card-warm: 218 25% 11%;           /* #141922 */
+    --border-warm: 214 26% 16%;         /* #1e2733 */
+    --border-warm-subtle: 215 26% 12%;  /* #161c26 */
+    --text-ink: 218 24% 93%;            /* #e8ecf2 */
+    --text-warm-primary: 218 24% 93%;   /* #e8ecf2 */
+    --text-warm-secondary: 213 14% 60%; /* #8a97a8 */
+    --text-warm-muted: 213 13% 41%;     /* #5a6675 */
+    --rail-bar-inactive: 215 23% 22%;   /* #2a3544 */
+    --rail-divider: 215 28% 14%;        /* #1a2230 */
+
+    /* Cores semânticas muted (variantes dark) */
+    --state-success: 143 19% 64%;       /* #8db8a0 */
+    --state-success-bg: 149 19% 52% / 0.15;
+    --state-success-fg: 143 19% 64%;
+    --state-warning: 28 47% 66%;        /* #d6a87a */
+    --state-warning-bg: 28 41% 59% / 0.15;
+    --state-warning-fg: 28 47% 66%;
+    --state-danger: 0 38% 64%;          /* #c98080 */
+    --state-danger-bg: 0 32% 56% / 0.15;
+    --state-danger-fg: 0 38% 64%;
+    --state-info: 213 27% 65%;          /* #8ba1c0 */
+    --state-info-bg: 213 26% 54% / 0.15;
+    --state-info-fg: 213 27% 65%;
   }
 }
 

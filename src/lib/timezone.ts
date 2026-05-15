@@ -9,7 +9,7 @@
  * Este módulo garante a conversão correta entre UTC (database) e BRT (interface).
  */
 
-import { format, parse, parseISO } from 'date-fns'
+import { format, parse, parseISO, eachDayOfInterval, endOfMonth, isWeekend } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toZonedTime, fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 
@@ -394,4 +394,24 @@ export function calcularHorarioFim(horarioInicio: string, duracaoMinutos: number
   const minutoFim = minutosFim % 60
 
   return `${String(horaFim).padStart(2, '0')}:${String(minutoFim).padStart(2, '0')}`
+}
+
+/**
+ * Conta quantos dias úteis (segunda a sexta) restam no mês atual,
+ * a partir de hoje (inclusive), no timezone de Brasília.
+ *
+ * Feriados não são considerados — apenas fins de semana.
+ *
+ * @param referencia - Data base. Default: hoje em Brasília.
+ * @returns Inteiro >= 0
+ *
+ * @example
+ * // Hoje é terça 21/abr, fim do mês é 30/abr (qua):
+ * diasUteisRestantesNoMes() // 8 (21, 22, 23, 24, 27, 28, 29, 30)
+ */
+export function diasUteisRestantesNoMes(referencia: Date = getNowInBrazil()): number {
+  const inicio = startOfDayInBrazil(referencia)
+  const fim = endOfMonth(inicio)
+
+  return eachDayOfInterval({ start: inicio, end: fim }).filter((d) => !isWeekend(d)).length
 }

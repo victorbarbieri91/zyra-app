@@ -1,66 +1,40 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Checkbox } from '@/components/ui/checkbox'
-// @/components/ui/collapsible imports removed
 import {
   Briefcase,
   Users,
-  FileText,
   Calendar,
   Clock,
   Sparkles,
-  RefreshCw,
-  Loader2,
   Search,
   MessageSquare,
   Building2,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Check,
   Bell,
   FileBarChart,
-  Plus,
-  CheckSquare,
-  Scale,
-  List,
-  BarChart3,
   Gavel,
   X,
-  AlertTriangle,
-  TrendingUp,
-  TrendingDown,
-  Zap,
-  ArrowRight,
-  Timer,
-  CircleDollarSign,
-  Activity,
-  Info,
+  Loader2,
 } from 'lucide-react'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { formatCurrency, formatHoras } from '@/lib/utils'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 // Custom components
-import EmptyState from '@/components/dashboard/EmptyState'
-import AlertasCard from '@/components/dashboard/AlertasCard'
 import MeusLancamentos from '@/components/dashboard/MeusLancamentos'
+import PainelHoje from '@/components/dashboard/PainelHoje'
+import HeroGreetingCard from '@/components/dashboard/HeroGreetingCard'
+import MetaPessoalCard from '@/components/dashboard/MetaPessoalCard'
+import KpiStrip from '@/components/dashboard/KpiStrip'
+import RankingEquipeCard from '@/components/dashboard/RankingEquipeCard'
 import type { TimesheetEntryRecente } from '@/hooks/useTimesheetRecentes'
 
 // Modais de ações rápidas
@@ -88,47 +62,7 @@ import { useDashboardResumoIA } from '@/hooks/useDashboardResumoIA'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 import { cn } from '@/lib/utils'
-import { getNowInBrazil } from '@/lib/timezone'
-
-// ── Circular Progress Component ──────────────────────────────────────
-function CircularProgress({ value, max, size = 64, strokeWidth = 5, color = '#89bcbe', bgColor = 'rgba(137,188,190,0.15)' }: {
-  value: number
-  max: number
-  size?: number
-  strokeWidth?: number
-  color?: string
-  bgColor?: string
-}) {
-  const radius = (size - strokeWidth) / 2
-  const circumference = 2 * Math.PI * radius
-  const percentage = Math.min((value / (max || 1)) * 100, 100)
-  const strokeDashoffset = circumference - (percentage / 100) * circumference
-
-  return (
-    <svg width={size} height={size} className="transform -rotate-90">
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        stroke={bgColor}
-        strokeWidth={strokeWidth}
-        fill="none"
-      />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        stroke={color}
-        strokeWidth={strokeWidth}
-        fill="none"
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        strokeDashoffset={strokeDashoffset}
-        className="transition-all duration-1000 ease-out"
-      />
-    </svg>
-  )
-}
+import { getNowInBrazil, diasUteisRestantesNoMes } from '@/lib/timezone'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -276,7 +210,13 @@ export default function DashboardPage() {
   const { items: agendaItems, loading: loadingAgenda, isEmpty: isAgendaEmpty, audienciasHoje, prazosHoje, refresh: refreshAgenda } = useDashboardAgenda()
   const { equipe, totalHorasEquipe, currentUserId, loading: loadingPerformance, refresh: refreshPerformance } = useDashboardPerformance()
   // publicações removido do dashboard
-  const { resumo, loading: loadingResumo, refresh: refreshResumo, tempoDesdeAtualizacao } = useDashboardResumoIA()
+  const { resumo, loading: loadingResumo, refresh: refreshResumo, tempoDesdeAtualizacao } = useDashboardResumoIA({
+    horas_atual: metrics?.horas_cobraveis_usuario,
+    horas_meta: metrics?.horas_meta,
+    honorarios_atual: metrics?.honorarios_mes,
+    honorarios_meta: metrics?.receita_meta,
+    dias_uteis_restantes: diasUteisRestantesNoMes(),
+  })
 
   // Handler para clique nos itens da agenda do dashboard
   const handleAgendaItemClick = async (item: AgendaItemDashboard) => {
@@ -642,687 +582,159 @@ export default function DashboardPage() {
     )
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f0f9f9]/20 to-slate-50 dark:from-surface-0 dark:via-surface-0 dark:to-surface-0">
-      {/* ═══════════════════════════════════════════════════════════════
-          HERO BANNER - Light gradient with decorative elements
-          ═══════════════════════════════════════════════════════════════ */}
-      <div className="bg-white dark:bg-surface-1 px-4 md:px-6 pt-3 md:pt-4 pb-8 md:pb-10 relative overflow-hidden border-b border-slate-100 dark:border-slate-700">
-        {/* Subtle decorative accents - thin outlines, no fills */}
-        <div className="hidden md:block">
-          <div className="absolute top-6 right-[10%] w-20 h-20 rounded-full border border-[#89bcbe]/15" />
-          <div className="absolute bottom-8 right-[40%] w-14 h-14 rounded-lg border border-[#46627f]/10 rotate-12" />
-          <div className="absolute top-[25%] left-[42%] w-10 h-10 rounded-full border border-[#89bcbe]/12" />
-          <div className="absolute bottom-5 right-[18%] w-16 h-16 rounded-xl border border-[#46627f]/8 -rotate-6" />
-          <div className="absolute top-[55%] left-[55%] w-2 h-2 rounded-full bg-[#89bcbe]/20" />
-          <div className="absolute top-4 left-[48%] w-1.5 h-1.5 rounded-full bg-[#46627f]/15" />
-        </div>
+  // Mês corrente em português pro Ranking
+  const mesNomeAtual = getNowInBrazil().toLocaleDateString('pt-BR', { month: 'long' })
 
-        <div className="relative z-10">
-          {/* Top bar */}
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-[#89bcbe] text-[10px] font-medium tracking-wide uppercase">
-                {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* Seletor de Escritórios */}
-              {escritoriosGrupo.length > 1 && (
-                <Popover open={seletorAberto} onOpenChange={setSeletorAberto}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className={cn(
-                        "h-8 px-3 gap-2 text-[#46627f] dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 hover:bg-white/70 dark:hover:bg-surface-2/70 border border-[#aacfd0]/30 shadow-sm"
-                      )}
-                    >
-                      <Building2 className="h-3.5 w-3.5" />
-                      <span className="text-xs font-medium">{getSeletorLabel()}</span>
-                      <ChevronDown className="h-3 w-3 opacity-60" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-72 p-0" align="end">
-                    <div className="p-3 border-b border-slate-100 dark:border-slate-800">
-                      <p className="text-xs font-medium text-[#34495e] dark:text-slate-200">Visualizar dados de:</p>
-                    </div>
+  return (
+    <div className="min-h-screen flex bg-page-warm">
+      {/* Painel lateral "Hoje" — data grande + barrinhas semana + agenda */}
+      <PainelHoje onItemClick={handleAgendaItemClick} />
+
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        <div className="p-7 flex flex-col gap-[18px]">
+          {/* Top bar: seletor de escritórios (grupo) */}
+          {escritoriosGrupo.length > 1 && (
+            <div className="flex items-center justify-end">
+              <Popover open={seletorAberto} onOpenChange={setSeletorAberto}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="h-8 px-3 gap-2 text-warm-secondary hover:text-warm-primary hover:bg-card-warm border border-warm shadow-sm"
+                  >
+                    <Building2 className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">{getSeletorLabel()}</span>
+                    <ChevronDown className="h-3 w-3 opacity-60" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-0" align="end">
+                  <div className="p-3 border-b border-warm-subtle">
+                    <p className="text-xs font-medium text-warm-primary">Visualizar dados de:</p>
+                  </div>
+                  <div
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-rail border-b border-warm-subtle',
+                      escritoriosSelecionados.length === escritoriosGrupo.length && 'bg-rail',
+                    )}
+                    onClick={selecionarTodos}
+                  >
                     <div
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 border-b border-slate-100 dark:border-slate-800",
-                        escritoriosSelecionados.length === escritoriosGrupo.length && "bg-[#f0f9f9] dark:bg-teal-900/20"
-                      )}
-                      onClick={selecionarTodos}
-                    >
-                      <div className={cn(
-                        "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                        'w-5 h-5 rounded border-2 flex items-center justify-center transition-colors',
                         escritoriosSelecionados.length === escritoriosGrupo.length
-                          ? "bg-[#89bcbe] border-[#89bcbe]"
-                          : "border-slate-300"
-                      )}>
-                        {escritoriosSelecionados.length === escritoriosGrupo.length && (
-                          <Check className="h-3 w-3 text-white" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">Todos os escritórios</p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400">Visão consolidada do grupo</p>
-                      </div>
-                    </div>
-                    <div className="max-h-64 overflow-y-auto">
-                      {escritoriosGrupo.map((escritorio) => {
-                        const isSelected = escritoriosSelecionados.includes(escritorio.id)
-                        const isAtivo = escritorio.id === escritorioAtivo
-                        return (
-                          <div
-                            key={escritorio.id}
-                            className={cn(
-                              "flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 border-b border-slate-50 dark:border-slate-800 last:border-0",
-                              isSelected && escritoriosSelecionados.length < escritoriosGrupo.length && "bg-[#f0f9f9]/50 dark:bg-teal-900/15"
-                            )}
-                            onClick={() => toggleEscritorio(escritorio.id)}
-                          >
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => toggleEscritorio(escritorio.id)}
-                              className="data-[state=checked]:bg-[#89bcbe] data-[state=checked]:border-[#89bcbe]"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">{escritorio.nome}</p>
-                                {isAtivo && (
-                                  <span className="text-[9px] font-medium text-[#89bcbe] bg-[#89bcbe]/10 px-1.5 py-0.5 rounded">Atual</span>
-                                )}
-                              </div>
-                              {escritorio.cnpj && <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{escritorio.cnpj}</p>}
-                            </div>
-                            {escritoriosSelecionados.length > 1 && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); selecionarApenas(escritorio.id) }}
-                                className="text-[10px] text-[#89bcbe] hover:text-[#6ba9ab] hover:underline whitespace-nowrap"
-                              >
-                                Apenas
-                              </button>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                    <div className="p-2.5 bg-slate-50 dark:bg-surface-2 border-t border-slate-100 dark:border-slate-800">
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 text-center">
-                        {escritoriosSelecionados.length === 1
-                          ? 'Exibindo dados de 1 escritório'
-                          : `Exibindo dados consolidados de ${escritoriosSelecionados.length} escritórios`}
-                      </p>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              )}
-            </div>
-          </div>
-
-          {/* Greeting + AI Summary */}
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h1 className="text-xl font-bold text-[#34495e] dark:text-slate-200 mb-0.5">
-                {saudacao}{nomeUsuario ? `, ${nomeUsuario}!` : '!'}
-              </h1>
-              {loadingResumo ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="w-3 h-3 text-[#89bcbe] animate-spin" />
-                  <span className="text-sm text-[#46627f]/60 dark:text-slate-400/60">Analisando seu dia...</span>
-                </div>
-              ) : (
-                <p className="text-sm text-[#46627f]/80 dark:text-slate-300/80 leading-relaxed max-w-2xl line-clamp-2">
-                  {resumo.mensagem}
-                </p>
-              )}
-
-              {/* Quick stat pills */}
-              {!loadingResumo && resumo.dados && (
-                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                  {resumo.dados.audiencias > 0 && (
-                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-[11px] font-medium text-red-600 border border-red-100">
-                      <Gavel className="w-3 h-3" />
-                      {resumo.dados.audiencias} {resumo.dados.audiencias === 1 ? 'audiência' : 'audiências'}
-                    </span>
-                  )}
-                  {resumo.dados.tarefas > 0 && (
-                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#e8f5f5] dark:bg-teal-900/15 text-[11px] font-medium text-[#46627f] dark:text-slate-400 border border-[#aacfd0]/30">
-                      <CheckSquare className="w-3 h-3" />
-                      {resumo.dados.tarefas} {resumo.dados.tarefas === 1 ? 'tarefa' : 'tarefas'}
-                    </span>
-                  )}
-                  {resumo.dados.eventos > 0 && (
-                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-[11px] font-medium text-blue-600 border border-blue-100">
-                      <Calendar className="w-3 h-3" />
-                      {resumo.dados.eventos} {resumo.dados.eventos === 1 ? 'evento' : 'eventos'}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Refresh */}
-            <div className="flex items-center gap-1.5 ml-4 flex-shrink-0">
-              <span className="text-[10px] text-[#46627f]/40 dark:text-slate-500/40">{loadingResumo ? '' : tempoDesdeAtualizacao}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 text-[#46627f]/50 dark:text-slate-400/50 hover:text-[#34495e] dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-surface-2/60"
-                onClick={() => refreshResumo()}
-                disabled={loadingResumo}
-              >
-                <RefreshCw className={cn("w-3.5 h-3.5", loadingResumo && "animate-spin")} />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          KPI STRIP - Floating cards overlapping the hero
-          ═══════════════════════════════════════════════════════════════ */}
-      <div className="px-4 md:px-6 -mt-6 relative z-20">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
-          {([
-            {
-              label: 'Processos Ativos',
-              value: metrics?.processos_ativos || 0,
-              trend: metrics?.processos_trend_qtd,
-              trendLabel: 'este mês',
-              icon: Briefcase,
-              gradient: 'from-[#34495e] to-[#4a6fa5]',
-              iconBg: 'bg-white/15',
-              kpiType: 'processos' as KpiType,
-            },
-            {
-              label: 'Clientes Ativos',
-              value: metrics?.clientes_ativos || 0,
-              trend: metrics?.clientes_trend_qtd,
-              trendLabel: 'este mês',
-              icon: Users,
-              gradient: 'from-[#46627f] to-[#5a8f9e]',
-              iconBg: 'bg-white/15',
-              kpiType: 'clientes' as KpiType,
-            },
-            {
-              label: 'Casos Consultivos',
-              value: metrics?.consultas_abertas || 0,
-              trend: metrics?.consultas_trend_qtd,
-              trendLabel: 'este mês',
-              icon: FileText,
-              gradient: 'from-[#5a8f9e] to-[#89bcbe]',
-              iconBg: 'bg-white/20',
-              kpiType: 'consultivo' as KpiType,
-            },
-            {
-              label: 'Horas Cobráveis',
-              value: formatHoras(metrics?.horas_cobraveis || 0, 'curto'),
-              trend: metrics?.horas_cobraveis_trend_percent,
-              trendLabel: 'vs mês',
-              trendSuffix: '%',
-              icon: Activity,
-              gradient: 'from-[#89bcbe] to-[#6ba9ab]',
-              iconBg: 'bg-white/20',
-              kpiType: 'horas' as KpiType,
-            },
-          ]).map((kpi) => (
-            <div
-              key={kpi.label}
-              onClick={() => setKpiDetailOpen(kpi.kpiType)}
-              className={cn(
-                "rounded-xl p-4 md:p-5 bg-gradient-to-br shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 cursor-pointer",
-                kpi.gradient
-              )}
-            >
-              <span className="text-[11px] font-medium text-white/80 mb-2 block">{kpi.label}</span>
-              <div className="text-base md:text-xl font-bold text-white tracking-tight">{kpi.value}</div>
-              {(kpi.trend ?? 0) !== 0 && (
-                <div className="flex items-center gap-1 mt-1.5">
-                  {(kpi.trend ?? 0) > 0 ? (
-                    <TrendingUp className="w-3 h-3 text-emerald-300" />
-                  ) : (
-                    <TrendingDown className="w-3 h-3 text-red-300" />
-                  )}
-                  <span className={cn(
-                    "text-[10px] font-semibold",
-                    (kpi.trend ?? 0) > 0 ? "text-emerald-300" : "text-red-300"
-                  )}>
-                    {(kpi.trend ?? 0) > 0 ? '+' : ''}{kpi.trend}{kpi.trendSuffix || ''}
-                  </span>
-                  <span className="text-[10px] text-white/50">{kpi.trendLabel}</span>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          MAIN CONTENT
-          ═══════════════════════════════════════════════════════════════ */}
-      <div className="px-4 md:px-6 pt-5 md:pt-6 pb-8 space-y-6">
-        {/* Main Grid: Agenda + Performance | Números + Lançamentos + Alertas + Insights */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* ── LEFT: AGENDA + PERFORMANCE ── */}
-          <div className="lg:col-span-7 space-y-6">
-            {/* ── AGENDA DO DIA (Hero) ── */}
-            <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
-              {/* Agenda Header */}
-              <div className="flex items-center justify-between px-5 pt-5 pb-3">
-                <div>
-                  <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200">Agenda do Dia</h2>
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-                    {agendaItems.length > 0
-                      ? `${agendaItems.length} ${agendaItems.length === 1 ? 'compromisso' : 'compromissos'} hoje`
-                      : 'Nenhum compromisso'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {audienciasHoje > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-red-50 text-[10px] font-semibold text-red-600">
-                      {audienciasHoje} {audienciasHoje === 1 ? 'audiência' : 'audiências'}
-                    </span>
-                  )}
-                  <Link href="/dashboard/agenda" className="text-[11px] font-medium text-[#89bcbe] hover:text-[#6ba9ab] transition-colors">
-                    Ver agenda →
-                  </Link>
-                </div>
-              </div>
-
-              {/* Agenda Items */}
-              <div className="px-5 pb-4">
-                <div className="min-h-[280px] flex flex-col">
-                  {loadingAgenda ? (
-                    <div className="flex-1 flex items-center justify-center">
-                      <Loader2 className="w-5 h-5 text-[#89bcbe] animate-spin" />
-                    </div>
-                  ) : isAgendaEmpty ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center">
-                      <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 mb-1">Dia livre!</p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">Aproveite para organizar suas tarefas ou registrar horas</p>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Items area */}
-                      <div className="flex-1">
-                        <div className="space-y-1">
-                          {agendaItems
-                            .slice(agendaPage * AGENDA_PER_PAGE, (agendaPage + 1) * AGENDA_PER_PAGE)
-                            .map((event, index) => {
-                              const barColor: Record<string, string> = {
-                                audiencia: 'bg-red-500',
-                                tarefa: 'bg-[#89bcbe]',
-                                evento: 'bg-[#1E3A8A]',
-                              }
-                              const badgeConfig: Record<string, { bg: string; text: string; label: string }> = {
-                                audiencia: { bg: 'bg-red-50 dark:bg-red-500/10', text: 'text-red-600 dark:text-red-400', label: 'Audiência' },
-                                tarefa: { bg: 'bg-[#e8f5f5] dark:bg-teal-500/10', text: 'text-[#46627f] dark:text-slate-400', label: 'Tarefa' },
-                                evento: { bg: 'bg-blue-50 dark:bg-blue-500/10', text: 'text-[#1E3A8A] dark:text-blue-400', label: 'Evento' },
-                              }
-                              const bar = barColor[event.tipo] || barColor.evento
-                              const badge = badgeConfig[event.tipo] || badgeConfig.evento
-                              const temHorario = event.time && event.time !== 'Dia todo'
-
-                              return (
-                                <button
-                                  key={`${event.id}-${index}`}
-                                  onClick={() => handleAgendaItemClick(event)}
-                                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors cursor-pointer text-left group"
-                                >
-                                  {/* Dot */}
-                                  <div className={cn("w-2 h-2 rounded-full flex-shrink-0", bar)} />
-
-                                  {/* Content */}
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1.5">
-                                      <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate group-hover:text-[#1E3A8A] dark:group-hover:text-blue-400 transition-colors">{event.title}</p>
-                                    </div>
-                                    {event.subtitle && (
-                                      <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{event.subtitle}</p>
-                                    )}
-                                  </div>
-
-                                  {/* Priority + Time + Type badge */}
-                                  <div className="flex items-center gap-2 flex-shrink-0">
-                                    {event.prioridade && (event.tipo === 'tarefa') && (
-                                      <span className={cn(
-                                        "text-[9px] font-semibold px-1.5 py-0.5 rounded",
-                                        event.prioridade === 'alta' && 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400',
-                                        event.prioridade === 'media' && 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400',
-                                        event.prioridade === 'baixa' && 'bg-slate-100 text-slate-500 dark:bg-surface-2 dark:text-slate-400',
-                                      )}>
-                                        {event.prioridade === 'alta' ? 'Alta' : event.prioridade === 'media' ? 'Média' : 'Baixa'}
-                                      </span>
-                                    )}
-                                    {(event.tipo === 'audiencia' || event.tipo === 'evento') && temHorario && (
-                                      <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
-                                        {event.time}
-                                      </span>
-                                    )}
-                                    <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full", badge.bg, badge.text)}>
-                                      {badge.label}
-                                    </span>
-                                  </div>
-                                </button>
-                              )
-                            })}
-                        </div>
-                      </div>
-
-                      {/* Pagination */}
-                      {agendaItems.length > AGENDA_PER_PAGE && (
-                        <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                            {agendaPage * AGENDA_PER_PAGE + 1}-{Math.min((agendaPage + 1) * AGENDA_PER_PAGE, agendaItems.length)} de {agendaItems.length}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => setAgendaPage(p => Math.max(0, p - 1))}
-                              disabled={agendaPage === 0}
-                              className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                            >
-                              <ChevronLeft className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-                            </button>
-                            <button
-                              onClick={() => setAgendaPage(p => Math.min(Math.ceil(agendaItems.length / AGENDA_PER_PAGE) - 1, p + 1))}
-                              disabled={agendaPage >= Math.ceil(agendaItems.length / AGENDA_PER_PAGE) - 1}
-                              className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                            >
-                              <ChevronRight className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-                            </button>
-                          </div>
-                        </div>
+                          ? 'bg-teal-300 border-teal-300'
+                          : 'border-warm',
                       )}
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* ── PERFORMANCE DA EQUIPE ── */}
-            <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
-              <div className="flex items-center justify-between px-5 pt-5 pb-3">
-                <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200">Performance da Equipe</h2>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={refreshPerformance}
-                    disabled={loadingPerformance}
-                    className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-surface-2 transition-all"
-                    title="Atualizar"
-                  >
-                    <RefreshCw className={cn("w-3.5 h-3.5 text-slate-400 dark:text-slate-500", loadingPerformance && "animate-spin")} />
-                  </button>
-                  <div className="flex items-center gap-1 p-0.5 bg-slate-100 dark:bg-surface-2 rounded-lg">
-                    <button
-                      onClick={() => setHorasViewMode('list')}
-                      className={cn("p-1.5 rounded-md transition-all", horasViewMode === 'list' ? 'bg-white dark:bg-surface-2 shadow-sm dark:shadow-none' : 'hover:bg-slate-200 dark:hover:bg-surface-3')}
                     >
-                      <List className={cn("w-3.5 h-3.5", horasViewMode === 'list' ? 'text-[#1E3A8A] dark:text-blue-400' : 'text-slate-400 dark:text-slate-500')} />
-                    </button>
-                    <button
-                      onClick={() => setHorasViewMode('bars')}
-                      className={cn("p-1.5 rounded-md transition-all", horasViewMode === 'bars' ? 'bg-white dark:bg-surface-2 shadow-sm dark:shadow-none' : 'hover:bg-slate-200 dark:hover:bg-surface-3')}
-                    >
-                      <BarChart3 className={cn("w-3.5 h-3.5", horasViewMode === 'bars' ? 'text-[#1E3A8A] dark:text-blue-400' : 'text-slate-400 dark:text-slate-500')} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-5 pb-5">
-                {loadingPerformance ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="w-6 h-6 text-[#89bcbe] animate-spin" />
-                  </div>
-                ) : equipe.length === 0 ? (
-                  <EmptyState
-                    icon={Clock}
-                    title="Sem registro de horas"
-                    description="Registre horas no timesheet para ver métricas"
-                    variant="default"
-                  />
-                ) : horasViewMode === 'list' ? (
-                  <div className="space-y-3">
-                    <ScrollArea className={equipe.length > 10 ? "h-[420px] pr-2" : ""}>
-                      <div className="space-y-2">
-                        {equipe.map((membro, index) => {
-                          const isCurrentUser = membro.id === currentUserId
-                          const position = index + 1
-                          const cobraveisPercent = membro.horas > 0 ? (membro.horasCobraveis / membro.horas) * 100 : 0
-                          const naoCobraveisPercent = membro.horas > 0 ? (membro.horasNaoCobraveis / membro.horas) * 100 : 0
-
-                          return (
-                            <div key={membro.id} className={cn(
-                              "flex items-center gap-3 p-2 rounded-xl transition-colors",
-                              isCurrentUser ? "bg-[#f0f9f9] dark:bg-teal-900/20" : "hover:bg-slate-50 dark:hover:bg-surface-2"
-                            )}>
-                              {/* Position */}
-                              <span className={cn(
-                                "w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0",
-                                position <= 3 ? "bg-[#89bcbe]/15 text-[#46627f] dark:text-slate-400" : "bg-slate-50 dark:bg-surface-2 text-slate-400 dark:text-slate-500"
-                              )}>
-                                {position}
-                              </span>
-
-                              {/* Name + Bar */}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 mb-1">
-                                  <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200 truncate">{membro.nome}</span>
-                                  {isCurrentUser && (
-                                    <span className="px-1.5 py-0.5 rounded-full bg-[#89bcbe]/20 text-[8px] font-bold text-[#46627f] dark:text-slate-400">
-                                      Você
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="w-full h-1.5 bg-slate-100 dark:bg-surface-2 rounded-full overflow-hidden flex">
-                                  <div
-                                    className="h-full bg-emerald-500 transition-all duration-500"
-                                    style={{ width: `${cobraveisPercent}%` }}
-                                  />
-                                  <div
-                                    className="h-full bg-[#34495e] transition-all duration-500"
-                                    style={{ width: `${naoCobraveisPercent}%` }}
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Hours */}
-                              <span className="text-xs font-bold text-[#34495e] dark:text-slate-200 tabular-nums flex-shrink-0">
-                                {formatHoras(membro.horas, 'curto')}
-                              </span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </ScrollArea>
-                    {/* Legend + Total */}
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-2.5 h-1.5 rounded-full bg-emerald-500" />
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500">Cobráveis</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-2.5 h-1.5 rounded-full bg-[#34495e]" />
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500">Não cobráveis</span>
-                        </div>
-                      </div>
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500">Total: <span className="font-semibold text-[#34495e] dark:text-slate-200">{formatHoras(totalHorasEquipe, 'curto')}</span></span>
+                      {escritoriosSelecionados.length === escritoriosGrupo.length && (
+                        <Check className="h-3 w-3 text-white" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-warm-primary">Todos os escritórios</p>
+                      <p className="text-[10px] text-warm-muted">Visão consolidada do grupo</p>
                     </div>
                   </div>
-                ) : (
-                  /* Bar chart view */
-                  <div className="space-y-3">
-                    <div className="flex items-end justify-center gap-3 h-[180px] pt-4">
-                      {equipe.slice(0, 6).map((membro) => {
-                        const isCurrentUser = membro.id === currentUserId
-                        const maxHoras = equipe[0]?.horas || 1
-                        const totalHeight = (membro.horas / maxHoras) * 100
-                        const cobraveisPercent = membro.horas > 0 ? (membro.horasCobraveis / membro.horas) * 100 : 0
-                        const naoCobraveisPercent = membro.horas > 0 ? (membro.horasNaoCobraveis / membro.horas) * 100 : 0
-
-                        return (
-                          <div key={membro.id} className="flex flex-col items-center group" style={{ width: `${100 / Math.min(equipe.length, 6)}%`, maxWidth: '80px' }}>
-                            <div className="w-full max-w-[36px] flex flex-col justify-end h-[130px] mx-auto">
-                              <div className="w-full flex flex-col rounded-t overflow-hidden transition-all duration-500" style={{ height: `${totalHeight}%` }}>
-                                {naoCobraveisPercent > 0 && (
-                                  <div
-                                    className="w-full bg-[#34495e] transition-all duration-500"
-                                    style={{ height: `${naoCobraveisPercent}%` }}
-                                  />
-                                )}
-                                {cobraveisPercent > 0 && (
-                                  <div
-                                    className="w-full bg-emerald-500 transition-all duration-500"
-                                    style={{ height: `${cobraveisPercent}%` }}
-                                  />
-                                )}
-                              </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {escritoriosGrupo.map((escritorio) => {
+                      const isSelected = escritoriosSelecionados.includes(escritorio.id)
+                      const isAtivo = escritorio.id === escritorioAtivo
+                      return (
+                        <div
+                          key={escritorio.id}
+                          className={cn(
+                            'flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-rail border-b border-warm-subtle last:border-0',
+                            isSelected &&
+                              escritoriosSelecionados.length < escritoriosGrupo.length &&
+                              'bg-rail/60',
+                          )}
+                          onClick={() => toggleEscritorio(escritorio.id)}
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleEscritorio(escritorio.id)}
+                            className="data-[state=checked]:bg-teal-300 data-[state=checked]:border-teal-300"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-warm-primary truncate">
+                                {escritorio.nome}
+                              </p>
+                              {isAtivo && (
+                                <span className="text-[9px] font-medium text-teal-500 bg-teal-300/15 px-1.5 py-0.5 rounded">
+                                  Atual
+                                </span>
+                              )}
                             </div>
-                            <div className="flex flex-col items-center mt-2">
-                              <span className={cn(
-                                "text-[10px] truncate max-w-[60px] text-center",
-                                isCurrentUser ? 'font-semibold text-[#34495e] dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'
-                              )}>
-                                {isCurrentUser ? 'Você' : membro.nome.split(' ')[0]}
-                              </span>
-                              <span className="text-[10px] font-semibold text-[#34495e] dark:text-slate-200">
-                                {formatHoras(membro.horas, 'curto')}
-                              </span>
-                            </div>
+                            {escritorio.cnpj && (
+                              <p className="text-[10px] text-warm-muted truncate">
+                                {escritorio.cnpj}
+                              </p>
+                            )}
                           </div>
-                        )
-                      })}
-                    </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-2.5 h-1.5 rounded-full bg-emerald-500" />
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500">Cobráveis</span>
+                          {escritoriosSelecionados.length > 1 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                selecionarApenas(escritorio.id)
+                              }}
+                              className="text-[10px] text-teal-500 hover:underline whitespace-nowrap"
+                            >
+                              Apenas
+                            </button>
+                          )}
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-2.5 h-1.5 rounded-full bg-[#34495e]" />
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500">Não cobráveis</span>
-                        </div>
-                      </div>
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500">Total: <span className="font-semibold text-[#34495e] dark:text-slate-200">{formatHoras(totalHorasEquipe, 'curto')}</span></span>
-                    </div>
+                      )
+                    })}
                   </div>
-                )}
-              </div>
+                  <div className="p-2.5 bg-rail border-t border-warm-subtle">
+                    <p className="text-[10px] text-warm-muted text-center">
+                      {escritoriosSelecionados.length === 1
+                        ? 'Exibindo dados de 1 escritório'
+                        : `Exibindo dados consolidados de ${escritoriosSelecionados.length} escritórios`}
+                    </p>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
+          )}
+
+          {/* Hero + Meta */}
+          <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-[18px] items-stretch">
+            <HeroGreetingCard
+              nomeUsuario={nomeUsuario}
+              saudacao={saudacao}
+              mensagemIA={resumo?.mensagem}
+              loadingResumo={loadingResumo}
+              tempoDesdeAtualizacao={tempoDesdeAtualizacao}
+              onRefresh={refreshResumo}
+              horasUsuario={metrics?.horas_cobraveis_usuario ?? 0}
+              horasTrendValor={metrics?.horas_trend_valor ?? 0}
+            />
+            <MetaPessoalCard
+              horasUsuario={metrics?.horas_cobraveis_usuario ?? 0}
+              horasMeta={metrics?.horas_meta ?? 15}
+              honorariosAtuais={metrics?.honorarios_mes ?? 0}
+              receitaMeta={metrics?.receita_meta ?? 10000}
+              percentualMeta={percentualMeta}
+              onNovoProcesso={() => setProcessoModalOpen(true)}
+              onRegistrarHoras={() => setTimesheetModalOpen(true)}
+            />
           </div>
 
-          {/* ── RIGHT: MEUS NÚMEROS + LANÇAMENTOS + ALERTAS + INSIGHTS ── */}
-          <div className="lg:col-span-5 space-y-6">
-            {/* Meus Números do Mês */}
-            <div className="bg-white dark:bg-surface-1 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 p-6">
-              <div className="flex items-center gap-1.5 mb-5">
-                <h2 className="text-sm font-bold text-[#34495e] dark:text-slate-200">Meus Números</h2>
-                <TooltipProvider delayDuration={150}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        aria-label="Como a meta é calculada"
-                        className="text-slate-400 hover:text-[#46627f] transition-colors"
-                      >
-                        <Info className="w-3.5 h-3.5" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[280px] text-xs leading-relaxed">
-                      Sua meta do mês é o realizado do mês passado +{percentualMeta}%, com piso mínimo de 15h e R$ 10.000 (caso o cálculo dê menos, vale o piso). O percentual é configurável na gestão do escritório.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
+          {/* KPI Strip */}
+          <KpiStrip metrics={metrics} onKpiClick={setKpiDetailOpen} />
 
-              <div className="grid grid-cols-2 gap-5">
-                {/* Horas Cobráveis */}
-                <div className="flex items-center gap-3.5">
-                  <div className="relative flex-shrink-0">
-                    <CircularProgress
-                      value={metrics?.horas_cobraveis_usuario || 0}
-                      max={metrics?.horas_meta || 15}
-                      size={64}
-                      strokeWidth={5}
-                      color="#89bcbe"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-[11px] font-bold text-[#34495e] dark:text-slate-200">{Math.round(progressoHoras)}%</span>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Horas Cobráveis</p>
-                    <p className="text-base font-bold text-[#34495e] dark:text-slate-200">{formatHoras(metrics?.horas_cobraveis_usuario || 0, 'curto')}</p>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500">de {formatHoras(metrics?.horas_meta || 15, 'curto')}</p>
-                    {(metrics?.horas_ja_faturadas_usuario ?? 0) > 0 && (
-                      <p className="text-[10px] text-emerald-500">{formatHoras(metrics?.horas_ja_faturadas_usuario || 0, 'curto')} já faturadas</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Honorários */}
-                <div className="flex items-center gap-3.5">
-                  <div className="relative flex-shrink-0">
-                    <CircularProgress
-                      value={metrics?.honorarios_mes || 0}
-                      max={metrics?.receita_meta || 10000}
-                      size={64}
-                      strokeWidth={5}
-                      color="#10b981"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-[11px] font-bold text-[#34495e] dark:text-slate-200">{Math.round(progressoReceita)}%</span>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Honorários</p>
-                    <p className="text-base font-bold text-[#34495e] dark:text-slate-200">{formatCurrency(metrics?.honorarios_mes || 0)}</p>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500">Meta: {formatCurrency(metrics?.receita_meta || 10000)}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Horas não cobráveis - compact */}
-              <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-slate-800">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600" />
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">Horas não cobráveis</span>
-                  </div>
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{formatHoras(metrics?.horas_nao_cobraveis || 0, 'curto')}</span>
-                </div>
-                {(metrics?.valor_horas_nao_cobraveis ?? 0) > 0 && (
-                  <p className="text-[9px] text-slate-400 dark:text-slate-500 ml-4 mt-0.5">
-                    Oportunidade: {formatCurrency(metrics?.valor_horas_nao_cobraveis || 0)}
-                  </p>
-                )}
-                {(metrics?.horas_trend_valor ?? 0) !== 0 && (
-                  <div className="flex items-center gap-1 ml-4 mt-1">
-                    {(metrics?.horas_trend_valor ?? 0) > 0 ? (
-                      <TrendingUp className="w-3 h-3 text-emerald-500" />
-                    ) : (
-                      <TrendingDown className="w-3 h-3 text-red-500" />
-                    )}
-                    <span className={cn(
-                      "text-[10px] font-medium",
-                      (metrics?.horas_trend_valor ?? 0) > 0 ? "text-emerald-600" : "text-red-500"
-                    )}>
-                      {formatHoras(Math.abs(metrics?.horas_trend_valor || 0), 'curto')} vs mês passado
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Meus Lançamentos de Horas */}
+          {/* Ranking + Meus timesheets */}
+          <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.05fr] gap-[14px] flex-1 min-h-0">
+            <RankingEquipeCard
+              equipe={equipe}
+              totalHorasEquipe={totalHorasEquipe}
+              currentUserId={currentUserId}
+              metaIndividual={metrics?.horas_meta ?? 160}
+              loading={loadingPerformance}
+              mesNome={mesNomeAtual}
+            />
             <MeusLancamentos onEditEntry={handleEditTimesheetEntry} />
-
-            {/* Atenção Imediata */}
-            <AlertasCard onAudienciasClick={handleAudienciasClick} />
-
           </div>
         </div>
       </div>
@@ -1330,6 +742,7 @@ export default function DashboardPage() {
       {/* ═══════════════════════════════════════════════════════════════
           MODAIS (unchanged)
           ═══════════════════════════════════════════════════════════════ */}
+
       <Dialog open={commandOpen} onOpenChange={setCommandOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>

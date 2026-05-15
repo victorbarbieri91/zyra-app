@@ -1,25 +1,33 @@
 'use client'
 
 import { useRef } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from './useEscritorioAtivo'
+
+export interface MetaResumoInput {
+  horas_atual?: number
+  horas_meta?: number
+  honorarios_atual?: number
+  honorarios_meta?: number
+  dias_uteis_restantes?: number
+}
+
+export interface ResumoIADados {
+  total_hoje?: number
+  total_atrasados?: number
+  audiencias_hoje?: number
+  prazos_hoje?: number
+  cobraveis_pendentes?: number
+  meta_status?: 'sem_meta' | 'ok' | 'atrasada' | 'avancada'
+}
 
 export interface ResumoIA {
   saudacao: string
   mensagem: string
   gerado_em: string
   gerado_por_ia: boolean
-  dados: {
-    audiencias: number
-    tarefas: number
-    eventos: number
-    prazos_urgentes: number
-    publicacoes_pendentes: number
-    horas_nao_faturadas: number
-    valor_nao_faturado: number
-    ocupacao_agenda: number
-  }
+  dados: ResumoIADados
 }
 
 const defaultResumo: ResumoIA = {
@@ -27,43 +35,33 @@ const defaultResumo: ResumoIA = {
   mensagem: 'Carregando seu resumo do dia...',
   gerado_em: new Date().toISOString(),
   gerado_por_ia: false,
-  dados: {
-    audiencias: 0,
-    tarefas: 0,
-    eventos: 0,
-    prazos_urgentes: 0,
-    publicacoes_pendentes: 0,
-    horas_nao_faturadas: 0,
-    valor_nao_faturado: 0,
-    ocupacao_agenda: 0,
-  },
+  dados: {},
 }
 
 async function fetchDashboardResumoIA(
   supabase: ReturnType<typeof createClient>,
   escritorioAtivo: string,
-  forceRefresh: boolean
+  forceRefresh: boolean,
+  meta: MetaResumoInput | undefined,
 ): Promise<{ resumo: ResumoIA; geradoEm: string }> {
-  // Buscar usuário atual
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     throw new Error('Usuário não autenticado')
   }
 
-  // Buscar nome do usuário
   const { data: profile } = await supabase
     .from('profiles')
     .select('nome_completo')
     .eq('id', user.id)
     .single()
 
-  // Chamar Edge Function
   const { data, error: fnError } = await supabase.functions.invoke('dashboard-resumo-ia', {
     body: {
       user_id: user.id,
       escritorio_id: escritorioAtivo,
-      user_name: profile?.nome_completo || 'Advogado',
+      user_name: profile?.nome_completo || 'advogado',
       force_refresh: forceRefresh,
+      meta,
     },
   })
 
@@ -78,27 +76,46 @@ async function fetchDashboardResumoIA(
         mensagem: data.mensagem,
         gerado_em: data.gerado_em,
         gerado_por_ia: data.gerado_por_ia,
-        dados: data.dados,
+        dados: data.dados ?? {},
       },
       geradoEm: data.gerado_em,
     }
-  } else {
-    throw new Error(data?.erro || 'Erro ao gerar resumo')
   }
+  throw new Error(data?.erro || 'Erro ao gerar resumo')
 }
 
-export function useDashboardResumoIA() {
+/**
+ * Resumo IA do dashboard.
+ *
+ * `meta` é passado pra Edge no body (não entra na queryKey) — isso evita refetch
+ * a cada mudança de horas/honorários, já que a Edge tem cache próprio por
+ * (user_id, data_referencia, periodo). Ao clicar refresh, a meta atual viaja junto.
+ *
+ * `refresh()` força regeneração via `force_refresh=true` lendo um ref que é setado
+ * antes do `refetch()` e resetado depois — assim a queryFn capta o sinal sem
+ * depender de `setQueryDefaults` (que não substitui o queryFn em execução).
+ */
+export function useDashboardResumoIA(meta?: MetaResumoInput) {
   const { escritorioAtivo } = useEscritorioAtivo()
   const supabaseRef = useRef(createClient())
-  const queryClient = useQueryClient()
 
-  const { data, isLoading: loading, error } = useQuery({
+  const metaRef = useRef<MetaResumoInput | undefined>(meta)
+  metaRef.current = meta
+
+  const forceRef = useRef(false)
+
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ['dashboard', 'resumoIA', escritorioAtivo],
-    queryFn: () => fetchDashboardResumoIA(supabaseRef.current, escritorioAtivo!, false),
+    queryFn: () =>
+      fetchDashboardResumoIA(
+        supabaseRef.current,
+        escritorioAtivo!,
+        forceRef.current,
+        metaRef.current,
+      ),
     enabled: !!escritorioAtivo,
-    staleTime: 30 * 60 * 1000, // 30 minutes - AI generated, expensive
+    staleTime: 30 * 60 * 1000,
     meta: {
-      // On error, return fallback resumo
       errorHandler: 'silent',
     },
   })
@@ -106,27 +123,32 @@ export function useDashboardResumoIA() {
   const resumo = data?.resumo ?? {
     ...defaultResumo,
     saudacao: error ? getSaudacao() : defaultResumo.saudacao,
-    mensagem: error ? 'Não foi possível gerar o resumo do dia. Verifique sua conexão.' : defaultResumo.mensagem,
+    mensagem: error
+      ? 'Não foi possível gerar o resumo do dia. Verifique sua conexão.'
+      : defaultResumo.mensagem,
   }
 
   const lastUpdated = data?.geradoEm ? new Date(data.geradoEm) : null
 
-  const refresh = () => {
-    // Force refresh by invalidating and refetching with forceRefresh=true
-    queryClient.setQueryDefaults(['dashboard', 'resumoIA', escritorioAtivo], {
-      queryFn: () => fetchDashboardResumoIA(supabaseRef.current, escritorioAtivo!, true),
-    })
-    queryClient.invalidateQueries({ queryKey: ['dashboard', 'resumoIA', escritorioAtivo] })
+  const refresh = async () => {
+    forceRef.current = true
+    try {
+      await refetch()
+    } finally {
+      forceRef.current = false
+    }
   }
 
-  // Calcular tempo desde última atualização
   const tempoDesdeAtualizacao = lastUpdated
     ? formatTempoRelativo(lastUpdated)
     : 'Carregando...'
 
   return {
     resumo,
-    loading,
+    // `loading` reflete qualquer busca ativa (primeira carga OU refresh) — assim o
+    // ícone do botão refresh gira durante o force_refresh.
+    loading: isFetching,
+    isInitialLoading: isLoading,
     error: error as Error | null,
     refresh,
     lastUpdated,
@@ -134,7 +156,6 @@ export function useDashboardResumoIA() {
   }
 }
 
-// Helpers
 function getSaudacao(): string {
   const hora = new Date().getHours()
   if (hora >= 5 && hora < 12) return 'Bom dia!'

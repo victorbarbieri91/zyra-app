@@ -28,8 +28,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserCog, Trash2, AlertTriangle, DollarSign, Clock, Percent, User } from 'lucide-react';
+import { UserCog, Trash2, AlertTriangle, DollarSign, Clock, Percent, User, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { MembroCompleto, Cargo, MembroRemuneracao } from '@/types/escritorio';
@@ -60,6 +61,7 @@ export function ModalEditarMembro({
     meta_horas_mensal: 160,
     valor_hora: 0,
   });
+  const [incluirEmRanking, setIncluirEmRanking] = useState(true);
   const [dialogRemoverAberto, setDialogRemoverAberto] = useState(false);
   const [activeTab, setActiveTab] = useState('cargo');
 
@@ -75,6 +77,7 @@ export function ModalEditarMembro({
         meta_horas_mensal: membro.remuneracao.meta_horas_mensal || 160,
         valor_hora: membro.remuneracao.valor_hora || 0,
       });
+      setIncluirEmRanking(membro.incluir_em_ranking ?? true);
       setActiveTab('cargo');
     }
   }, [membro]);
@@ -95,13 +98,14 @@ export function ModalEditarMembro({
       remuneracao.percentual_comissao !== membro.remuneracao.percentual_comissao ||
       remuneracao.meta_horas_mensal !== membro.remuneracao.meta_horas_mensal ||
       remuneracao.valor_hora !== membro.remuneracao.valor_hora;
+    const rankingAlterado = incluirEmRanking !== (membro.incluir_em_ranking ?? true);
 
-    return cargoAlterado || remuneracaoAlterada;
+    return cargoAlterado || remuneracaoAlterada || rankingAlterado;
   };
 
   const handleSalvar = async () => {
     if (!hasChanges()) {
-      toast.info('Nenhuma alteracao foi feita');
+      toast.info('Nenhuma alteração foi feita');
       return;
     }
 
@@ -112,6 +116,7 @@ export function ModalEditarMembro({
         percentual_comissao: remuneracao.percentual_comissao,
         meta_horas_mensal: remuneracao.meta_horas_mensal,
         valor_hora: remuneracao.valor_hora,
+        incluir_em_ranking: incluirEmRanking,
       };
 
       // Só atualiza cargo se não for dono
@@ -268,8 +273,31 @@ export function ModalEditarMembro({
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-[#adb5bd]">
-                  O cargo define as permissoes do membro no sistema.
+                  O cargo define as permissões do membro no sistema.
                 </p>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
+                <div className="w-8 h-8 rounded-lg bg-[#89bcbe]/15 flex items-center justify-center flex-shrink-0">
+                  <Trophy className="w-4 h-4 text-[#89bcbe]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <Label
+                    htmlFor="incluir-em-ranking"
+                    className="text-sm font-medium text-[#34495e] cursor-pointer block"
+                  >
+                    Incluir no ranking de horas
+                  </Label>
+                  <p className="text-xs text-[#6c757d] mt-0.5 leading-relaxed">
+                    Quando ligado, este membro aparece no Ranking da Equipe do dashboard.
+                    Desligue para perfis administrativos que não advogam.
+                  </p>
+                </div>
+                <Switch
+                  id="incluir-em-ranking"
+                  checked={incluirEmRanking}
+                  onCheckedChange={setIncluirEmRanking}
+                />
               </div>
             </TabsContent>
 

@@ -44,6 +44,7 @@ export function useEscritorioMembros(escritorioId: string | undefined): UseEscri
         percentual_comissao,
         meta_horas_mensal,
         valor_hora,
+        incluir_em_ranking,
         created_at,
         cargo:escritorios_cargos(
           id,
@@ -90,6 +91,7 @@ export function useEscritorioMembros(escritorioId: string | undefined): UseEscri
         meta_horas_mensal: item.meta_horas_mensal || 160,
         valor_hora: item.valor_hora || 0,
       },
+      incluir_em_ranking: item.incluir_em_ranking ?? true,
       created_at: item.created_at,
     }));
   }, [escritorioId, supabase]);

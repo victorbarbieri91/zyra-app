@@ -81,6 +81,40 @@ const config: Config = {
           2: "hsl(var(--surface-2))",
           3: "hsl(var(--surface-3))",
         },
+        // ─── Paleta WARM (novo dashboard) ───────────────────────
+        // Coexiste com slate. Usar via classes: bg-page-warm, bg-rail,
+        // bg-card-warm, border-warm, border-warm-subtle, text-ink,
+        // text-warm-primary, text-warm-secondary, text-warm-muted.
+        "page-warm": "hsl(var(--page-warm))",
+        rail: "hsl(var(--rail))",
+        "card-warm": "hsl(var(--card-warm))",
+        "border-warm": "hsl(var(--border-warm))",
+        "border-warm-subtle": "hsl(var(--border-warm-subtle))",
+        ink: "hsl(var(--text-ink))",
+        "warm-primary": "hsl(var(--text-warm-primary))",
+        "warm-secondary": "hsl(var(--text-warm-secondary))",
+        "warm-muted": "hsl(var(--text-warm-muted))",
+        "rail-bar-inactive": "hsl(var(--rail-bar-inactive))",
+        "rail-divider": "hsl(var(--rail-divider))",
+        // ─── Cores semânticas MUTED ─────────────────────────────
+        // sage/sand/brick/slate-blue. Use {state}-{bg,fg} para
+        // backgrounds e foregrounds de contraste.
+        "state-success": "hsl(var(--state-success))",
+        "state-success-bg": "hsl(var(--state-success-bg))",
+        "state-success-fg": "hsl(var(--state-success-fg))",
+        "state-warning": "hsl(var(--state-warning))",
+        "state-warning-bg": "hsl(var(--state-warning-bg))",
+        "state-warning-fg": "hsl(var(--state-warning-fg))",
+        "state-danger": "hsl(var(--state-danger))",
+        "state-danger-bg": "hsl(var(--state-danger-bg))",
+        "state-danger-fg": "hsl(var(--state-danger-fg))",
+        "state-info": "hsl(var(--state-info))",
+        "state-info-bg": "hsl(var(--state-info-bg))",
+        "state-info-fg": "hsl(var(--state-info-fg))",
+      },
+      fontFamily: {
+        sans: ["var(--font-inter)", "ui-sans-serif", "system-ui"],
+        serif: ["var(--font-fraunces)", "Georgia", "serif"],
       },
       borderRadius: {
         lg: "var(--radius)",

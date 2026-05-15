@@ -3,7 +3,7 @@
 import { useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { useEscritorioAtivo } from './useEscritorioAtivo'
+import { useEscritoriosDoGrupoUsuario } from './useEscritoriosDoGrupoUsuario'
 
 export type TimesheetPeriodo = 'semana' | 'mes'
 
@@ -41,17 +41,18 @@ function inicioPeriodoISO(periodo: TimesheetPeriodo): string {
 
 async function fetchTimesheetRecentes(
   supabase: ReturnType<typeof createClient>,
-  escritorioId: string,
+  escritoriosIds: string[],
   periodo: TimesheetPeriodo,
-  limit: number
+  limit: number,
 ): Promise<TimesheetEntryRecente[]> {
+  if (escritoriosIds.length === 0) return []
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
   const { data, error } = await supabase
     .from('v_timesheet_aprovacao')
     .select('id, data_trabalho, horas, atividade, faturavel, faturado, status, processo_id, processo_titulo, consulta_id, consulta_titulo, tarefa_id, cliente_nome, editado, hora_inicio, hora_fim')
-    .eq('escritorio_id', escritorioId)
+    .in('escritorio_id', escritoriosIds)
     .eq('user_id', user.id)
     .gte('data_trabalho', inicioPeriodoISO(periodo))
     .order('data_trabalho', { ascending: false })
@@ -85,19 +86,21 @@ export function useTimesheetRecentes(
   const periodo: TimesheetPeriodo = typeof periodoOuLimit === 'number' ? 'semana' : periodoOuLimit
   const limitFinal = typeof periodoOuLimit === 'number' ? periodoOuLimit : limit
 
-  const { escritorioAtivo } = useEscritorioAtivo()
+  const { escritoriosIds } = useEscritoriosDoGrupoUsuario()
   const supabaseRef = useRef(createClient())
   const queryClient = useQueryClient()
 
+  const escritoriosKey = [...escritoriosIds].sort().join(',')
+
   const { data = [], isLoading: loading, error } = useQuery({
-    queryKey: ['timesheet-recentes', escritorioAtivo, periodo, limitFinal],
-    queryFn: () => fetchTimesheetRecentes(supabaseRef.current, escritorioAtivo!, periodo, limitFinal),
-    enabled: !!escritorioAtivo,
+    queryKey: ['timesheet-recentes', escritoriosKey, periodo, limitFinal],
+    queryFn: () => fetchTimesheetRecentes(supabaseRef.current, escritoriosIds, periodo, limitFinal),
+    enabled: escritoriosIds.length > 0,
     staleTime: 2 * 60 * 1000,
   })
 
   const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['timesheet-recentes', escritorioAtivo] })
+    queryClient.invalidateQueries({ queryKey: ['timesheet-recentes'] })
   }
 
   return { data, loading, error: error as Error | null, refresh }

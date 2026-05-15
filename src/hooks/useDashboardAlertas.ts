@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from './useEscritorioAtivo'
+import { useEscritoriosDoGrupoUsuario } from './useEscritoriosDoGrupoUsuario'
 
 export interface AudienciaProxima {
   id: string
@@ -53,15 +54,19 @@ export function useDashboardAlertas() {
   const [alertas, setAlertas] = useState<DashboardAlertas>(defaultAlertas)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const { escritorioAtivo, isOwner, roleAtual } = useEscritorioAtivo()
+  const { isOwner, roleAtual } = useEscritorioAtivo()
+  const { escritoriosIds } = useEscritoriosDoGrupoUsuario()
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
 
   // Verificar se é sócio (owner ou admin)
   const isSocio = isOwner || roleAtual === 'admin' || roleAtual === 'owner'
 
+  // Chave estável pra deps do useCallback.
+  const escritoriosKey = [...escritoriosIds].sort().join(',')
+
   const loadAlertas = useCallback(async () => {
-    if (!escritorioAtivo) {
+    if (escritoriosIds.length === 0) {
       setAlertas(defaultAlertas)
       setLoading(false)
       return
@@ -92,7 +97,7 @@ export function useDashboardAlertas() {
         userId ? supabase
           .from('agenda_tarefas')
           .select('id', { count: 'exact', head: true })
-          .eq('escritorio_id', escritorioAtivo)
+          .in('escritorio_id', escritoriosIds)
           .eq('tipo', 'prazo_processual')
           .eq('prazo_data_limite', hojeStr)
           .neq('status', 'concluida')
@@ -103,7 +108,7 @@ export function useDashboardAlertas() {
         userId ? supabase
           .from('agenda_tarefas')
           .select('id', { count: 'exact', head: true })
-          .eq('escritorio_id', escritorioAtivo)
+          .in('escritorio_id', escritoriosIds)
           .eq('tipo', 'prazo_processual')
           .lt('prazo_data_limite', hojeStr)
           .neq('status', 'concluida')
@@ -114,7 +119,7 @@ export function useDashboardAlertas() {
         supabase
           .from('processos_processos')
           .select('id', { count: 'exact', head: true })
-          .eq('escritorio_id', escritorioAtivo)
+          .in('escritorio_id', escritoriosIds)
           .in('status', ['ativo', 'em_andamento', 'aguardando'])
           .is('contrato_id', null),
 
@@ -123,7 +128,7 @@ export function useDashboardAlertas() {
         userId ? supabase
           .from('agenda_audiencias')
           .select('id, titulo, data_hora, tipo_audiencia, modalidade, status, forum, link_virtual, processo_id, responsavel_id, observacoes, descricao, tribunal, comarca, vara, juiz, promotor, advogado_contrario')
-          .eq('escritorio_id', escritorioAtivo)
+          .in('escritorio_id', escritoriosIds)
           .gte('data_hora', hojeStr)
           .lte('data_hora', em7dias.toISOString().split('T')[0])
           .not('status', 'in', '("realizada","cancelada")')
@@ -135,21 +140,31 @@ export function useDashboardAlertas() {
         isSocio ? supabase
           .from('financeiro_receitas')
           .select('valor, valor_pago')
-          .eq('escritorio_id', escritorioAtivo)
+          .in('escritorio_id', escritoriosIds)
           .eq('status', 'atrasado')
         : Promise.resolve({ data: [] }),
 
-        // 6. Horas prontas para faturar com valor correto - apenas para sócios
-        // Usa RPC para calcular valor com valor_hora do cargo
-        isSocio ? supabase.rpc('calcular_valor_horas_faturar', {
-          p_escritorio_id: escritorioAtivo
-        }) : Promise.resolve({ data: null }),
+        // 6. Horas prontas para faturar — soma valor de todos escritórios do grupo.
+        // RPC `calcular_valor_horas_faturar` aceita um escritório só, então
+        // chamamos em paralelo e somamos os resultados.
+        isSocio
+          ? Promise.all(
+              escritoriosIds.map((id) =>
+                supabase.rpc('calcular_valor_horas_faturar', { p_escritorio_id: id }),
+              ),
+            ).then((results) => ({
+              data: results.reduce((acc, r) => {
+                const v = typeof r.data === 'number' ? r.data : 0
+                return acc + v
+              }, 0) as number | null,
+            }))
+          : Promise.resolve({ data: null }),
 
         // 7. Alertas de processos aparentando encerramento (DataJud)
         supabase
           .from('processos_alertas_encerramento')
           .select('id', { count: 'exact', head: true })
-          .eq('escritorio_id', escritorioAtivo)
+          .in('escritorio_id', escritoriosIds)
           .eq('status', 'pendente'),
       ])
 
@@ -179,7 +194,7 @@ export function useDashboardAlertas() {
               )
             )
           `)
-          .eq('escritorio_id', escritorioAtivo)
+          .in('escritorio_id', escritoriosIds)
           .eq('faturavel', true)
           .eq('faturado', false)
           .eq('aprovado', true)
@@ -216,7 +231,8 @@ export function useDashboardAlertas() {
     } finally {
       setLoading(false)
     }
-  }, [escritorioAtivo, isSocio, supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [escritoriosKey, isSocio, supabase])
 
   useEffect(() => {
     loadAlertas()

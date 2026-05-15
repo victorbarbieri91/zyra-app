@@ -4,8 +4,6 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Briefcase,
   Users,
@@ -14,9 +12,6 @@ import {
   Sparkles,
   Search,
   MessageSquare,
-  Building2,
-  ChevronDown,
-  Check,
   Bell,
   FileBarChart,
   Gavel,
@@ -60,7 +55,6 @@ import { useDashboardPerformance } from '@/hooks/useDashboardPerformance'
 // useDashboardPublicacoes removido - card de publicações removido do dashboard
 import { useDashboardResumoIA } from '@/hooks/useDashboardResumoIA'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
-import { getEscritoriosDoGrupo, EscritorioComRole } from '@/lib/supabase/escritorio-helpers'
 import { cn } from '@/lib/utils'
 import { getNowInBrazil, diasUteisRestantesNoMes } from '@/lib/timezone'
 
@@ -84,11 +78,6 @@ export default function DashboardPage() {
   const [audienciaSelecionada, setAudienciaSelecionada] = useState<AudienciaProxima | null>(null)
   const [audienciasListOpen, setAudienciasListOpen] = useState(false)
   const [audienciasProximas, setAudienciasProximas] = useState<AudienciaProxima[]>([])
-
-  // Estados para multi-escritório
-  const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
-  const [escritoriosSelecionados, setEscritoriosSelecionados] = useState<string[]>([])
-  const [seletorAberto, setSeletorAberto] = useState(false)
 
   // Estado para modal de detalhamento KPI
   const [kpiDetailOpen, setKpiDetailOpen] = useState<KpiType | null>(null)
@@ -156,51 +145,6 @@ export default function DashboardPage() {
     }
     loadNomeUsuario()
   }, [])
-
-  // Carregar escritórios do grupo
-  useEffect(() => {
-    const loadEscritoriosGrupo = async () => {
-      try {
-        const escritorios = await getEscritoriosDoGrupo()
-        setEscritoriosGrupo(escritorios)
-        if (escritorios.length > 0) {
-          setEscritoriosSelecionados(escritorios.map(e => e.id))
-        }
-      } catch (error) {
-        console.error('Erro ao carregar escritórios do grupo:', error)
-      }
-    }
-    loadEscritoriosGrupo()
-  }, [])
-
-  // Funções de seleção
-  const toggleEscritorio = (id: string) => {
-    setEscritoriosSelecionados(prev => {
-      if (prev.includes(id)) {
-        if (prev.length === 1) return prev
-        return prev.filter(e => e !== id)
-      }
-      return [...prev, id]
-    })
-  }
-
-  const selecionarTodos = () => {
-    setEscritoriosSelecionados(escritoriosGrupo.map(e => e.id))
-  }
-
-  const selecionarApenas = (id: string) => {
-    setEscritoriosSelecionados([id])
-  }
-
-  const getSeletorLabel = () => {
-    if (escritoriosSelecionados.length === 0) return 'Selecione'
-    if (escritoriosSelecionados.length === escritoriosGrupo.length) return 'Todos os escritórios'
-    if (escritoriosSelecionados.length === 1) {
-      const escritorio = escritoriosGrupo.find(e => e.id === escritoriosSelecionados[0])
-      return escritorio?.nome || 'Escritório'
-    }
-    return `${escritoriosSelecionados.length} escritórios`
-  }
 
   // Hook para updateTarefa (necessário para edição de tarefas via wizard)
   const { updateTarefa } = useTarefas(escritorioAtivo || undefined)
@@ -593,112 +537,6 @@ export default function DashboardPage() {
 
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto no-scrollbar">
         <div className="px-7 pt-7 pb-16 flex flex-col gap-[18px]">
-          {/* Top bar: seletor de escritórios (grupo) */}
-          {escritoriosGrupo.length > 1 && (
-            <div className="flex items-center justify-end">
-              <Popover open={seletorAberto} onOpenChange={setSeletorAberto}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="h-8 px-3 gap-2 text-warm-secondary hover:text-warm-primary hover:bg-card-warm border border-warm shadow-sm"
-                  >
-                    <Building2 className="h-3.5 w-3.5" />
-                    <span className="text-xs font-medium">{getSeletorLabel()}</span>
-                    <ChevronDown className="h-3 w-3 opacity-60" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-72 p-0" align="end">
-                  <div className="p-3 border-b border-warm-subtle">
-                    <p className="text-xs font-medium text-warm-primary">Visualizar dados de:</p>
-                  </div>
-                  <div
-                    className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-rail border-b border-warm-subtle',
-                      escritoriosSelecionados.length === escritoriosGrupo.length && 'bg-rail',
-                    )}
-                    onClick={selecionarTodos}
-                  >
-                    <div
-                      className={cn(
-                        'w-5 h-5 rounded border-2 flex items-center justify-center transition-colors',
-                        escritoriosSelecionados.length === escritoriosGrupo.length
-                          ? 'bg-teal-300 border-teal-300'
-                          : 'border-warm',
-                      )}
-                    >
-                      {escritoriosSelecionados.length === escritoriosGrupo.length && (
-                        <Check className="h-3 w-3 text-white" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-warm-primary">Todos os escritórios</p>
-                      <p className="text-[10px] text-warm-muted">Visão consolidada do grupo</p>
-                    </div>
-                  </div>
-                  <div className="max-h-64 overflow-y-auto">
-                    {escritoriosGrupo.map((escritorio) => {
-                      const isSelected = escritoriosSelecionados.includes(escritorio.id)
-                      const isAtivo = escritorio.id === escritorioAtivo
-                      return (
-                        <div
-                          key={escritorio.id}
-                          className={cn(
-                            'flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-rail border-b border-warm-subtle last:border-0',
-                            isSelected &&
-                              escritoriosSelecionados.length < escritoriosGrupo.length &&
-                              'bg-rail/60',
-                          )}
-                          onClick={() => toggleEscritorio(escritorio.id)}
-                        >
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={() => toggleEscritorio(escritorio.id)}
-                            className="data-[state=checked]:bg-teal-300 data-[state=checked]:border-teal-300"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium text-warm-primary truncate">
-                                {escritorio.nome}
-                              </p>
-                              {isAtivo && (
-                                <span className="text-[9px] font-medium text-teal-500 bg-teal-300/15 px-1.5 py-0.5 rounded">
-                                  Atual
-                                </span>
-                              )}
-                            </div>
-                            {escritorio.cnpj && (
-                              <p className="text-[10px] text-warm-muted truncate">
-                                {escritorio.cnpj}
-                              </p>
-                            )}
-                          </div>
-                          {escritoriosSelecionados.length > 1 && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                selecionarApenas(escritorio.id)
-                              }}
-                              className="text-[10px] text-teal-500 hover:underline whitespace-nowrap"
-                            >
-                              Apenas
-                            </button>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <div className="p-2.5 bg-rail border-t border-warm-subtle">
-                    <p className="text-[10px] text-warm-muted text-center">
-                      {escritoriosSelecionados.length === 1
-                        ? 'Exibindo dados de 1 escritório'
-                        : `Exibindo dados consolidados de ${escritoriosSelecionados.length} escritórios`}
-                    </p>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-          )}
-
           {/* Hero + Meta */}
           <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-[18px] items-stretch">
             <HeroGreetingCard

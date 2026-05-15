@@ -4,6 +4,7 @@ import { useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from './useEscritorioAtivo'
+import { useEscritoriosDoGrupoUsuario } from './useEscritoriosDoGrupoUsuario'
 
 // Meta dinâmica do painel "Meus Números":
 // meta_mes = max(piso_minimo, realizado_mes_passado * (1 + percentual / 100))
@@ -74,9 +75,11 @@ const defaultMetrics: DashboardMetrics = {
 
 async function fetchDashboardMetrics(
   supabase: ReturnType<typeof createClient>,
-  escritorioAtivo: string,
+  escritoriosIds: string[],
   percentualCrescimento: number
 ): Promise<DashboardMetrics> {
+  // Garante que sempre tem ao menos 1 ID — evita query inválida `.in('id', [])`.
+  if (escritoriosIds.length === 0) return defaultMetrics
   // Obter usuário logado para filtrar "Seus Números do Mês"
   const { data: { user } } = await supabase.auth.getUser()
   const userId = user?.id
@@ -121,28 +124,28 @@ async function fetchDashboardMetrics(
     supabase
       .from('processos_processos')
       .select('id', { count: 'exact', head: true })
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .in('status', ['ativo', 'em_andamento', 'aguardando']),
 
     // Processos novos na semana
     supabase
       .from('processos_processos')
       .select('id', { count: 'exact', head: true })
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .gte('created_at', inicioSemana.toISOString()),
 
     // Processos novos ESTE MÊS (entradas)
     supabase
       .from('processos_processos')
       .select('id', { count: 'exact', head: true })
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .gte('created_at', inicioMes.toISOString()),
 
     // Processos encerrados ESTE MÊS (saídas) - status arquivado/encerrado com updated_at este mês
     supabase
       .from('processos_processos')
       .select('id', { count: 'exact', head: true })
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .in('status', ['arquivado', 'encerrado', 'baixado'])
       .gte('updated_at', inicioMes.toISOString()),
 
@@ -150,7 +153,7 @@ async function fetchDashboardMetrics(
     supabase
       .from('crm_pessoas')
       .select('id', { count: 'exact', head: true })
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .eq('tipo_cadastro', 'cliente')
       .eq('status', 'ativo'),
 
@@ -158,7 +161,7 @@ async function fetchDashboardMetrics(
     supabase
       .from('crm_pessoas')
       .select('id', { count: 'exact', head: true })
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .eq('tipo_cadastro', 'cliente')
       .gte('created_at', inicioMes.toISOString()),
 
@@ -166,7 +169,7 @@ async function fetchDashboardMetrics(
     supabase
       .from('crm_pessoas')
       .select('id', { count: 'exact', head: true })
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .eq('tipo_cadastro', 'cliente')
       .gte('created_at', inicioMes.toISOString()),
 
@@ -174,36 +177,35 @@ async function fetchDashboardMetrics(
     supabase
       .from('consultivo_consultas')
       .select('id', { count: 'exact', head: true })
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .eq('status', 'ativo'),
 
     // Consultas novas ESTE MÊS
     supabase
       .from('consultivo_consultas')
       .select('id', { count: 'exact', head: true })
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .gte('created_at', inicioMes.toISOString()),
 
     // Consultas finalizadas ESTE MÊS (status existentes: ativo, arquivado)
     supabase
       .from('consultivo_consultas')
       .select('id', { count: 'exact', head: true })
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .eq('status', 'arquivado')
       .gte('updated_at', inicioMes.toISOString()),
 
-    // Publicações - usar a view
+    // Publicações - usar a view (uma linha por escritório; somamos no agregador).
     supabase
       .from('v_publicacoes_dashboard')
       .select('*')
-      .eq('escritorio_id', escritorioAtivo)
-      .single(),
+      .in('escritorio_id', escritoriosIds),
 
     // Horas COBRÁVEIS no mês DO USUÁRIO LOGADO (faturavel=true, independente de faturado)
     userId ? supabase
       .from('financeiro_timesheet')
       .select('horas, faturado')
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .eq('user_id', userId)
       .eq('faturavel', true)
       .gte('data_trabalho', inicioMes.toISOString().split('T')[0])
@@ -213,7 +215,7 @@ async function fetchDashboardMetrics(
     userId ? supabase
       .from('financeiro_timesheet')
       .select('horas')
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .eq('user_id', userId)
       .eq('faturavel', true)
       .gte('data_trabalho', inicioMesAnterior.toISOString().split('T')[0])
@@ -227,7 +229,7 @@ async function fetchDashboardMetrics(
     userId ? supabase
       .from('v_timesheet_profissional' as any)
       .select('horas')
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .eq('user_id', userId)
       .eq('faturavel', false)
       .gte('data_trabalho', inicioMes.toISOString().split('T')[0])
@@ -237,7 +239,7 @@ async function fetchDashboardMetrics(
     supabase
       .from('financeiro_timesheet')
       .select('horas')
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .eq('faturavel', true)
       .gte('data_trabalho', inicioMes.toISOString().split('T')[0])
       .lte('data_trabalho', hoje.toISOString().split('T')[0]),
@@ -246,7 +248,7 @@ async function fetchDashboardMetrics(
     supabase
       .from('financeiro_timesheet')
       .select('horas')
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .eq('faturavel', true)
       .gte('data_trabalho', inicioMesAnterior.toISOString().split('T')[0])
       .lte('data_trabalho', mesmoDiaMesPassado.toISOString().split('T')[0]),
@@ -255,7 +257,7 @@ async function fetchDashboardMetrics(
     userId ? supabase
       .from('financeiro_receitas')
       .select('valor, tipo')
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .eq('responsavel_id', userId)
       .neq('status', 'cancelado')
       .gte('data_competencia', inicioMes.toISOString().split('T')[0])
@@ -266,28 +268,30 @@ async function fetchDashboardMetrics(
     userId ? supabase
       .from('financeiro_receitas')
       .select('valor, tipo')
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .eq('responsavel_id', userId)
       .neq('status', 'cancelado')
       .gte('data_competencia', inicioMesAnterior.toISOString().split('T')[0])
       .lte('data_competencia', fimMesAnterior.toISOString().split('T')[0])
     : Promise.resolve({ data: [] }),
 
-    // Valor/hora do usuário logado (direto ou via cargo)
+    // Valor/hora do usuário logado (direto ou via cargo).
+    // Pega o PRIMEIRO registro do usuário no grupo de escritórios — assumimos
+    // que o valor_hora é consistente entre escritórios do mesmo grupo.
     userId ? supabase
       .from('escritorios_usuarios')
       .select('valor_hora, cargo:cargo_id(valor_hora_padrao)')
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .eq('user_id', userId)
       .eq('ativo', true)
-      .maybeSingle()
-    : Promise.resolve({ data: null }),
+      .limit(1)
+    : Promise.resolve({ data: [] }),
 
     // A receber DO USUÁRIO LOGADO (receitas pendentes)
     userId ? supabase
       .from('financeiro_receitas')
       .select('valor, valor_pago')
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .eq('responsavel_id', userId)
       .in('status', ['pendente', 'atrasado', 'parcial'])
     : Promise.resolve({ data: [] }),
@@ -314,8 +318,11 @@ async function fetchDashboardMetrics(
   ) || 0
 
   // Valor/hora do usuário (direto ou via cargo)
-  const valorHoraDireto = Number(valorHoraResult.data?.valor_hora) || 0
-  const valorHoraCargo = Number((valorHoraResult.data?.cargo as { valor_hora_padrao: number } | null)?.valor_hora_padrao) || 0
+  const valorHoraRow = (valorHoraResult.data || [])[0] as
+    | { valor_hora?: number; cargo?: { valor_hora_padrao?: number } | null }
+    | undefined
+  const valorHoraDireto = Number(valorHoraRow?.valor_hora) || 0
+  const valorHoraCargo = Number(valorHoraRow?.cargo?.valor_hora_padrao) || 0
   const valorHoraUsuario = valorHoraDireto > 0 ? valorHoraDireto : valorHoraCargo
 
   // Horas COBRÁVEIS do escritório (faturavel=true, independente de faturado)
@@ -406,29 +413,36 @@ async function fetchDashboardMetrics(
     clientes_trend_qtd: clientesTrendQtd,
     consultas_trend_qtd: consultasTrendQtd,
     horas_trend_valor: horasTrend,
-    publicacoes_pendentes: publicacoesResult.data?.pendentes || 0,
+    publicacoes_pendentes: (publicacoesResult.data || []).reduce(
+      (acc: number, row: { pendentes?: number | null }) => acc + (Number(row.pendentes) || 0),
+      0,
+    ),
   }
 }
 
 export function useDashboardMetrics() {
-  const { escritorioAtivo, escritorioAtivoData } = useEscritorioAtivo()
+  const { escritorioAtivoData } = useEscritorioAtivo()
+  const { escritoriosIds } = useEscritoriosDoGrupoUsuario()
   const supabaseRef = useRef(createClient())
   const queryClient = useQueryClient()
 
-  // Percentual configurado pelo escritório (default 20%). Já vem em escritorioAtivoData.config.
+  // Percentual configurado pelo escritório (default 20%).
   const percentualCrescimento =
     escritorioAtivoData?.config?.metas?.percentual_crescimento ??
     PERCENTUAL_CRESCIMENTO_DEFAULT
 
+  // Chave estável (sorted) pra garantir cache hit independente da ordem.
+  const queryKey = ['dashboard', 'metrics', [...escritoriosIds].sort().join(','), percentualCrescimento]
+
   const { data: metrics = defaultMetrics, isLoading: loading, error } = useQuery({
-    queryKey: ['dashboard', 'metrics', escritorioAtivo, percentualCrescimento],
-    queryFn: () => fetchDashboardMetrics(supabaseRef.current, escritorioAtivo!, percentualCrescimento),
-    enabled: !!escritorioAtivo,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryKey,
+    queryFn: () => fetchDashboardMetrics(supabaseRef.current, escritoriosIds, percentualCrescimento),
+    enabled: escritoriosIds.length > 0,
+    staleTime: 5 * 60 * 1000,
   })
 
   const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['dashboard', 'metrics', escritorioAtivo] })
+    queryClient.invalidateQueries({ queryKey: ['dashboard', 'metrics'] })
   }
 
   return {

@@ -3,7 +3,7 @@
 import { useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { useEscritorioAtivo } from './useEscritorioAtivo'
+import { useEscritoriosDoGrupoUsuario } from './useEscritoriosDoGrupoUsuario'
 
 export interface EquipeMember {
   id: string
@@ -67,9 +67,10 @@ const defaultPerformance: PerformanceData = {
 
 async function fetchDashboardPerformance(
   supabase: ReturnType<typeof createClient>,
-  escritorioAtivo: string
+  escritoriosIds: string[],
 ): Promise<PerformanceData> {
-  // Obter usuário logado para destacar no ranking
+  if (escritoriosIds.length === 0) return defaultPerformance
+
   const { data: { user } } = await supabase.auth.getUser()
   const currentUserId = user?.id || null
 
@@ -83,22 +84,18 @@ async function fetchDashboardPerformance(
     parcelasResult,
     parcelasPendentesResult,
   ] = await Promise.all([
-    // Timesheet do mês agrupado por usuário (com campo faturavel).
-    // IMPORTANTE: lê de v_timesheet_profissional para excluir horas lançadas
-    // contra tarefas/eventos pessoais — métrica coletiva do escritório.
-    // Ver supabase/migrations/20260413000002_view_timesheet_profissional.sql
-    // e supabase/migrations/20260414000001_fix_view_timesheet_profissional_security_definer.sql
+    // Timesheet do mês — consolidado de todos escritórios do grupo.
     supabase
       .from('v_timesheet_profissional' as any)
       .select('user_id, horas, faturavel')
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .gte('data_trabalho', inicioMes.toISOString().split('T')[0]),
 
-    // Profiles para nomes (usuários do escritório, apenas os incluídos no ranking)
+    // Membros do grupo, deduplicados depois por user_id no agregador.
     supabase
       .from('escritorios_usuarios')
       .select('user_id, profiles:user_id(id, nome_completo)')
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .eq('ativo', true)
       .eq('incluir_em_ranking', true),
 
@@ -106,7 +103,7 @@ async function fetchDashboardPerformance(
     supabase
       .from('processos_processos')
       .select('id, area, valor_causa')
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .in('status', ['ativo', 'em_andamento', 'aguardando']),
 
     // Receitas pagas no mês para top clientes
@@ -117,7 +114,7 @@ async function fetchDashboardPerformance(
         cliente_id,
         cliente:crm_pessoas(id, nome_completo)
       `)
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .eq('status', 'pago')
       .gte('data_pagamento', inicioMes.toISOString().split('T')[0]),
 
@@ -125,7 +122,7 @@ async function fetchDashboardPerformance(
     supabase
       .from('financeiro_receitas')
       .select('valor, status, data_vencimento')
-      .eq('escritorio_id', escritorioAtivo)
+      .in('escritorio_id', escritoriosIds)
       .in('status', ['pendente', 'atrasado', 'pago', 'parcial']),
   ])
 
@@ -146,17 +143,15 @@ async function fetchDashboardPerformance(
     }
   })
 
-  // Mapear nomes (agora vem de escritorios_usuarios com join em profiles)
-  // E incluir TODOS os usuários do escritório, mesmo sem horas
+  // Mapear nomes — usuário pode aparecer em N escritórios do grupo. Dedupe por user_id.
   const profilesMap: Record<string, string> = {}
-  const todosUsuariosIds: string[] = []
   profilesResult.data?.forEach((eu: any) => {
     const profile = eu.profiles as { id: string; nome_completo: string } | null
-    if (profile?.id) {
+    if (profile?.id && !profilesMap[profile.id]) {
       profilesMap[profile.id] = profile.nome_completo || 'Usuário'
-      todosUsuariosIds.push(profile.id)
     }
   })
+  const todosUsuariosIds: string[] = Object.keys(profilesMap)
 
   // Criar lista de equipe com TODOS os membros (incluindo os sem horas)
   const equipe: EquipeMember[] = todosUsuariosIds
@@ -255,19 +250,21 @@ async function fetchDashboardPerformance(
 }
 
 export function useDashboardPerformance() {
-  const { escritorioAtivo } = useEscritorioAtivo()
+  const { escritoriosIds } = useEscritoriosDoGrupoUsuario()
   const supabaseRef = useRef(createClient())
   const queryClient = useQueryClient()
 
+  const escritoriosKey = [...escritoriosIds].sort().join(',')
+
   const { data = defaultPerformance, isLoading: loading, error } = useQuery({
-    queryKey: ['dashboard', 'performance', escritorioAtivo],
-    queryFn: () => fetchDashboardPerformance(supabaseRef.current, escritorioAtivo!),
-    enabled: !!escritorioAtivo,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryKey: ['dashboard', 'performance', escritoriosKey],
+    queryFn: () => fetchDashboardPerformance(supabaseRef.current, escritoriosIds),
+    enabled: escritoriosIds.length > 0,
+    staleTime: 5 * 60 * 1000,
   })
 
   const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['dashboard', 'performance', escritorioAtivo] })
+    queryClient.invalidateQueries({ queryKey: ['dashboard', 'performance'] })
   }
 
   return {

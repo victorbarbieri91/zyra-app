@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { useEscritorioAtivo } from './useEscritorioAtivo'
+import { useEscritoriosDoGrupoUsuario } from './useEscritoriosDoGrupoUsuario'
 import { startOfDayInBrazil, endOfDayInBrazil, formatBrazilTime, parseDBDate } from '@/lib/timezone'
 
 export interface AgendaItemDashboard {
@@ -36,8 +36,10 @@ const colorMap: Record<string, string> = {
 
 async function fetchDashboardAgenda(
   supabase: ReturnType<typeof createClient>,
-  escritorioAtivo: string
+  escritoriosIds: string[],
 ): Promise<AgendaItemDashboard[]> {
+  if (escritoriosIds.length === 0) return []
+
   // Buscar usuário logado para filtrar apenas seus itens
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
@@ -47,16 +49,16 @@ async function fetchDashboardAgenda(
   const inicioHoje = startOfDayInBrazil(new Date())
   const fimHoje = endOfDayInBrazil(new Date())
 
-  // Buscar apenas itens onde o usuário está no array de responsáveis
-  // Isso garante que cada pessoa veja apenas sua própria agenda no dashboard
+  // Buscar apenas itens onde o usuário está no array de responsáveis.
+  // O dashboard considera TODOS os escritórios do grupo do usuário.
   const { data, error: queryError } = await supabase
     .from('v_agenda_consolidada')
     .select('*')
-    .eq('escritorio_id', escritorioAtivo)
+    .in('escritorio_id', escritoriosIds)
     .contains('responsaveis_ids', [user.id])
     .gte('data_inicio', inicioHoje.toISOString())
     .lte('data_inicio', fimHoje.toISOString())
-    .neq('status', 'concluida') // Mostrar apenas itens pendentes
+    .neq('status', 'concluida')
     .order('data_inicio', { ascending: true })
     .limit(20)
 
@@ -134,57 +136,59 @@ async function fetchDashboardAgenda(
 }
 
 export function useDashboardAgenda() {
-  const { escritorioAtivo } = useEscritorioAtivo()
+  const { escritoriosIds } = useEscritoriosDoGrupoUsuario()
   const supabaseRef = useRef(createClient())
   const queryClient = useQueryClient()
 
+  // Chave estável independente da ordem.
+  const escritoriosKey = [...escritoriosIds].sort().join(',')
+
   const { data: items = [], isLoading: loading, error } = useQuery({
-    queryKey: ['dashboard', 'agenda', escritorioAtivo],
-    queryFn: () => fetchDashboardAgenda(supabaseRef.current, escritorioAtivo!),
-    enabled: !!escritorioAtivo,
-    staleTime: 2 * 60 * 1000, // 2 minutes - agenda changes more frequently
+    queryKey: ['dashboard', 'agenda', escritoriosKey],
+    queryFn: () => fetchDashboardAgenda(supabaseRef.current, escritoriosIds),
+    enabled: escritoriosIds.length > 0,
+    staleTime: 2 * 60 * 1000,
   })
 
-  // Supabase Realtime: invalidar cache quando agenda mudar no banco
+  // Supabase Realtime: um canal por escritório do grupo.
   useEffect(() => {
-    if (!escritorioAtivo) return
+    if (escritoriosIds.length === 0) return
 
     const supabase = supabaseRef.current
-    const queryKey = ['dashboard', 'agenda', escritorioAtivo]
+    const invalidate = () =>
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'agenda', escritoriosKey] })
 
-    const channel = supabase
-      .channel(`dashboard-agenda-${escritorioAtivo}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'agenda_tarefas',
-        filter: `escritorio_id=eq.${escritorioAtivo}`,
-      }, () => {
-        queryClient.invalidateQueries({ queryKey })
-      })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'agenda_eventos',
-        filter: `escritorio_id=eq.${escritorioAtivo}`,
-      }, () => {
-        queryClient.invalidateQueries({ queryKey })
-      })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'agenda_audiencias',
-        filter: `escritorio_id=eq.${escritorioAtivo}`,
-      }, () => {
-        queryClient.invalidateQueries({ queryKey })
-      })
-      .subscribe()
+    const channels = escritoriosIds.map((escId) =>
+      supabase
+        .channel(`dashboard-agenda-${escId}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'agenda_tarefas',
+          filter: `escritorio_id=eq.${escId}`,
+        }, invalidate)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'agenda_eventos',
+          filter: `escritorio_id=eq.${escId}`,
+        }, invalidate)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'agenda_audiencias',
+          filter: `escritorio_id=eq.${escId}`,
+        }, invalidate)
+        .subscribe(),
+    )
 
-    return () => { supabase.removeChannel(channel) }
-  }, [escritorioAtivo, queryClient])
+    return () => {
+      channels.forEach((c) => supabase.removeChannel(c))
+    }
+  }, [escritoriosKey, escritoriosIds, queryClient])
 
   const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['dashboard', 'agenda', escritorioAtivo] })
+    queryClient.invalidateQueries({ queryKey: ['dashboard', 'agenda'] })
   }
 
   return {

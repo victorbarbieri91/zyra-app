@@ -100,8 +100,6 @@ const initialFormData: LancamentoFormData = {
   data_compra: new Date().toISOString().split('T')[0],
   mes_referencia: undefined,
   processo_id: null,
-  consulta_id: null,
-  observacoes: null,
 }
 
 export default function DespesaCartaoModal({
@@ -158,11 +156,11 @@ export default function DespesaCartaoModal({
     setVinculacao(v)
     if (!v) {
       updateField('processo_id', null)
-      updateField('consulta_id', null)
     } else if (v.modulo === 'processo') {
-      setFormData((prev) => ({ ...prev, processo_id: v.modulo_registro_id, consulta_id: null }))
+      setFormData((prev) => ({ ...prev, processo_id: v.modulo_registro_id }))
     } else {
-      setFormData((prev) => ({ ...prev, consulta_id: v.modulo_registro_id, processo_id: null }))
+      // Apenas processo é suportado como vinculação de lançamento de cartão
+      setFormData((prev) => ({ ...prev, processo_id: null }))
     }
   }
 

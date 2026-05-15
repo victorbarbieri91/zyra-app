@@ -55,9 +55,6 @@ export interface LancamentoCartao {
   importado_de_fatura: boolean
   hash_transacao: string | null
   processo_id: string | null
-  documento_fiscal: string | null
-  comprovante_url: string | null
-  observacoes: string | null
   regra_recorrencia_id: string | null
   periodo_referencia: string | null
   created_at: string
@@ -79,7 +76,6 @@ export interface FaturaCartao {
   status: 'pendente' | 'paga'
   data_pagamento: string | null
   forma_pagamento: string | null
-  observacoes: string | null
   created_at: string
   updated_at: string
   // Campos de JOIN
@@ -130,9 +126,6 @@ export interface LancamentoFormData {
   data_compra: string
   mes_referencia?: string // Força o mês de referência (formato: YYYY-MM-DD)
   processo_id?: string | null
-  consulta_id?: string | null
-  documento_fiscal?: string | null
-  observacoes?: string | null
   importado_de_fatura?: boolean
 }
 
@@ -512,9 +505,6 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
           p_data_compra: data.data_compra,
           p_mes_referencia: data.mes_referencia || null,
           p_processo_id: data.processo_id || null,
-          p_consulta_id: data.consulta_id || null,
-          p_documento_fiscal: data.documento_fiscal || null,
-          p_observacoes: data.observacoes || null,
           p_importado_de_fatura: data.importado_de_fatura || false,
           p_parcela_inicial: data.parcela_inicial || 1,
         })

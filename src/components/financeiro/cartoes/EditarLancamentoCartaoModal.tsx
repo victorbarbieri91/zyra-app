@@ -68,8 +68,6 @@ export default function EditarLancamentoCartaoModal({
     valor: 0,
     data_compra: '',
     processo_id: null as string | null,
-    documento_fiscal: '',
-    observacoes: '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [processos, setProcessos] = useState<ProcessoOption[]>([])
@@ -112,8 +110,6 @@ export default function EditarLancamentoCartaoModal({
         valor: lancamento.valor || 0,
         data_compra: lancamento.data_compra?.split('T')[0] || '',
         processo_id: lancamento.processo_id || null,
-        documento_fiscal: lancamento.documento_fiscal || '',
-        observacoes: lancamento.observacoes || '',
       })
       setEscopo('instancia')
     }
@@ -206,8 +202,6 @@ export default function EditarLancamentoCartaoModal({
         valor: formData.valor,
         data_compra: formData.data_compra,
         processo_id: formData.processo_id || null,
-        documento_fiscal: formData.documento_fiscal?.trim() || null,
-        observacoes: formData.observacoes?.trim() || null,
       })
 
       if (success) {
@@ -496,27 +490,6 @@ export default function EditarLancamentoCartaoModal({
             </Select>
           </div>
 
-          {/* Documento Fiscal e Observacoes */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="documento_fiscal">N Documento/NF</Label>
-              <Input
-                id="documento_fiscal"
-                placeholder="Opcional"
-                value={formData.documento_fiscal}
-                onChange={(e) => updateField('documento_fiscal', e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="observacoes">Observacoes</Label>
-              <Input
-                id="observacoes"
-                placeholder="Opcional"
-                value={formData.observacoes}
-                onChange={(e) => updateField('observacoes', e.target.value)}
-              />
-            </div>
-          </div>
         </div>
 
         {/* Botoes */}

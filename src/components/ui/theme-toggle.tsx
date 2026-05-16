@@ -38,25 +38,32 @@ const LABEL_BY_PREF: Record<ThemePreference, string> = {
 
 /**
  * Toggle de tema com 3 estados: Claro → Escuro → Automático → Claro.
+ *
+ * IMPORTANTE: `setTheme` do next-themes v0.4 NÃO é estável (sua referência
+ * muda a cada troca de tema). Por isso usamos `useRef` pra acessar a versão
+ * atual sem incluir nas deps de useEffect/useCallback. Se deixássemos como
+ * dep, o efeito de hidratação re-rodaria a cada troca de tema, fazendo
+ * fetch do DB com valor antigo e causando flashes.
+ *
  * Persiste em `profiles.preferencias.tema` (per-usuário, cross-device) e
  * em `localStorage` (cache pra hidratação rápida e fallback offline).
  */
 export function ThemeToggle({ className, size = 'default' }: ThemeToggleProps) {
   const { setTheme } = useTheme()
+  const setThemeRef = useRef(setTheme)
+  setThemeRef.current = setTheme
+
   const [mounted, setMounted] = useState(false)
   const [preference, setPreferenceState] = useState<ThemePreference>('light')
   const supabaseRef = useRef(createClient())
 
-  const applyPreference = useCallback(
-    (pref: ThemePreference) => {
-      if (pref === 'auto') setTheme(resolveAutoTheme())
-      else setTheme(pref)
-    },
-    [setTheme],
-  )
+  const applyPreference = useCallback((pref: ThemePreference) => {
+    if (pref === 'auto') setThemeRef.current(resolveAutoTheme())
+    else setThemeRef.current(pref)
+  }, [])
 
-  // Hidratação: aplica imediatamente o cache do localStorage (sem flash) e
-  // depois busca o valor canônico no banco — se divergir, atualiza.
+  // Hidratação: roda UMA vez no mount. Aplica cache local imediato e depois
+  // sincroniza com o canônico no banco se divergir.
   useEffect(() => {
     setMounted(true)
     const cached = loadLocalPreference()
@@ -77,28 +84,27 @@ export function ThemeToggle({ className, size = 'default' }: ThemeToggleProps) {
 
       const remoto = (data?.preferencias as { tema?: ThemePreference } | null)?.tema
       if (cancelled) return
-      if (remoto === 'light' || remoto === 'dark' || remoto === 'auto') {
-        if (remoto !== cached) {
-          setPreferenceState(remoto)
-          applyPreference(remoto)
-          window.localStorage.setItem(PREFERENCE_KEY, remoto)
-        }
+      if ((remoto === 'light' || remoto === 'dark' || remoto === 'auto') && remoto !== cached) {
+        setPreferenceState(remoto)
+        applyPreference(remoto)
+        window.localStorage.setItem(PREFERENCE_KEY, remoto)
       }
     })()
 
     return () => {
       cancelled = true
     }
-  }, [applyPreference])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // No modo automático, revalida a cada 1min pra capturar a virada de 06h/18h.
   useEffect(() => {
     if (!mounted || preference !== 'auto') return
     const id = window.setInterval(() => {
-      setTheme(resolveAutoTheme())
+      setThemeRef.current(resolveAutoTheme())
     }, 60_000)
     return () => window.clearInterval(id)
-  }, [mounted, preference, setTheme])
+  }, [mounted, preference])
 
   const handleClick = useCallback(async () => {
     const idx = ORDER.indexOf(preference)
@@ -110,7 +116,6 @@ export function ThemeToggle({ className, size = 'default' }: ThemeToggleProps) {
       window.localStorage.setItem(PREFERENCE_KEY, next)
     }
 
-    // Persiste no banco (não bloqueia a UI — fire-and-forget com log de erro).
     try {
       const supabase = supabaseRef.current
       const { data: { user } } = await supabase.auth.getUser()
@@ -157,13 +162,10 @@ export function ThemeToggle({ className, size = 'default' }: ThemeToggleProps) {
     )
   }
 
-  // 3 ícones sobrepostos. Sem `transition-*` porque o `disableTransitionOnChange`
-  // do next-themes injeta `* { transition: none }` por 1 frame durante a troca
-  // de tema, o que interrompe animações JS-driven no meio (causa "piscadas").
-  // Igual ao padrão binário antigo, que efetivamente snapava os ícones.
+  // 3 ícones sobrepostos, sem CSS transition — snapam instantaneamente
+  // (igual ao comportamento efetivo do padrão binário antigo, cujas
+  // transições eram canceladas pelo `disableTransitionOnChange`).
   const baseIcon = cn(iconSize, 'absolute')
-  const visible = 'opacity-100'
-  const hidden = 'opacity-0'
 
   return (
     <Button
@@ -174,9 +176,9 @@ export function ThemeToggle({ className, size = 'default' }: ThemeToggleProps) {
       aria-label={LABEL_BY_PREF[preference]}
       title={LABEL_BY_PREF[preference]}
     >
-      <Sun className={cn(baseIcon, preference === 'light' ? visible : hidden)} />
-      <Moon className={cn(baseIcon, preference === 'dark' ? visible : hidden)} />
-      <Clock className={cn(baseIcon, preference === 'auto' ? visible : hidden)} />
+      <Sun className={cn(baseIcon, preference === 'light' ? 'opacity-100' : 'opacity-0')} />
+      <Moon className={cn(baseIcon, preference === 'dark' ? 'opacity-100' : 'opacity-0')} />
+      <Clock className={cn(baseIcon, preference === 'auto' ? 'opacity-100' : 'opacity-0')} />
     </Button>
   )
 }

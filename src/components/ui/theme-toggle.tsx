@@ -157,11 +157,13 @@ export function ThemeToggle({ className, size = 'default' }: ThemeToggleProps) {
     )
   }
 
-  // 3 ícones sobrepostos com transição CSS — evita unmount/mount que causa
-  // a piscada entre estados (mesmo padrão da versão binária antiga).
-  const baseIcon = cn(iconSize, 'absolute transition-all duration-200')
-  const visible = 'rotate-0 scale-100 opacity-100'
-  const hidden = '-rotate-90 scale-0 opacity-0'
+  // 3 ícones sobrepostos. Sem `transition-*` porque o `disableTransitionOnChange`
+  // do next-themes injeta `* { transition: none }` por 1 frame durante a troca
+  // de tema, o que interrompe animações JS-driven no meio (causa "piscadas").
+  // Igual ao padrão binário antigo, que efetivamente snapava os ícones.
+  const baseIcon = cn(iconSize, 'absolute')
+  const visible = 'opacity-100'
+  const hidden = 'opacity-0'
 
   return (
     <Button

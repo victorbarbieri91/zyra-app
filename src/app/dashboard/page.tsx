@@ -536,7 +536,7 @@ export default function DashboardPage() {
       <PainelHoje onItemClick={handleAgendaItemClick} />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto no-scrollbar">
-        <div className="px-7 pt-7 pb-16 flex flex-col gap-[18px]">
+        <div className="px-7 pt-7 pb-3 flex flex-col gap-[18px]">
           {/* Hero + Meta */}
           <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-[18px] items-stretch">
             <HeroGreetingCard

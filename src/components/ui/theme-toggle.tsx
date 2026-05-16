@@ -30,12 +30,6 @@ function loadLocalPreference(): ThemePreference {
   return 'light'
 }
 
-const ICON_BY_PREF = {
-  light: Sun,
-  dark: Moon,
-  auto: Clock,
-} as const
-
 const LABEL_BY_PREF: Record<ThemePreference, string> = {
   light: 'Modo claro · clique para escuro',
   dark: 'Modo escuro · clique para automático',
@@ -142,10 +136,10 @@ export function ThemeToggle({ className, size = 'default' }: ThemeToggleProps) {
     }
   }, [preference, applyPreference])
 
-  const iconClass = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4'
+  const iconSize = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4'
   const buttonClass = cn(
     size === 'sm' ? 'h-7 w-7' : 'h-8 w-8',
-    'rounded-lg',
+    'rounded-lg relative',
     className,
   )
 
@@ -158,12 +152,16 @@ export function ThemeToggle({ className, size = 'default' }: ThemeToggleProps) {
         aria-label="Alternar tema"
         disabled
       >
-        <Sun className={iconClass} />
+        <Sun className={iconSize} />
       </Button>
     )
   }
 
-  const Icon = ICON_BY_PREF[preference]
+  // 3 ícones sobrepostos com transição CSS — evita unmount/mount que causa
+  // a piscada entre estados (mesmo padrão da versão binária antiga).
+  const baseIcon = cn(iconSize, 'absolute transition-all duration-200')
+  const visible = 'rotate-0 scale-100 opacity-100'
+  const hidden = '-rotate-90 scale-0 opacity-0'
 
   return (
     <Button
@@ -174,7 +172,9 @@ export function ThemeToggle({ className, size = 'default' }: ThemeToggleProps) {
       aria-label={LABEL_BY_PREF[preference]}
       title={LABEL_BY_PREF[preference]}
     >
-      <Icon className={iconClass} />
+      <Sun className={cn(baseIcon, preference === 'light' ? visible : hidden)} />
+      <Moon className={cn(baseIcon, preference === 'dark' ? visible : hidden)} />
+      <Clock className={cn(baseIcon, preference === 'auto' ? visible : hidden)} />
     </Button>
   )
 }

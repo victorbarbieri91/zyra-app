@@ -72,7 +72,6 @@ export interface FaturaCartao {
   mes_referencia: string
   data_vencimento: string
   valor_total: number
-  despesa_id: string | null
   status: 'pendente' | 'paga'
   data_pagamento: string | null
   forma_pagamento: string | null
@@ -705,7 +704,7 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
 
       let faturaId = cartaoIdOuFaturaId
 
-      // Se mesReferencia fornecido, garantir que fatura+despesa existem
+      // Se mesReferencia fornecido, garantir que a fatura existe (cria se não)
       if (mesReferencia) {
         const { data: newFaturaId, error: rpcError } = await supabase
           .rpc('criar_ou_atualizar_fatura_cartao', {
@@ -716,26 +715,18 @@ export function useCartoesCredito(escritorioIdOrIds: string | string[] | null) {
         faturaId = newFaturaId
       }
 
-      const { data: fatura } = await supabase
+      // Atualiza a fatura direto — sem despesa-espelho.
+      const { error: faturaError } = await supabase
         .from('cartoes_credito_faturas')
-        .select('despesa_id')
-        .eq('id', faturaId)
-        .single()
-
-      if (!fatura?.despesa_id) {
-        throw new Error('Fatura não possui despesa vinculada')
-      }
-
-      const { error: despesaError } = await supabase
-        .from('financeiro_despesas')
         .update({
-          status: 'pago',
+          status: 'paga',
           data_pagamento: dataPagamento || new Date().toISOString().split('T')[0],
           forma_pagamento: formaPagamento,
+          updated_at: new Date().toISOString(),
         })
-        .eq('id', fatura.despesa_id)
+        .eq('id', faturaId)
 
-      if (despesaError) throw despesaError
+      if (faturaError) throw faturaError
 
       return true
     } catch (err: any) {

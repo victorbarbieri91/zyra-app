@@ -95,15 +95,18 @@ Para cada transação válida, extraia:
 - confianca: Nível de confiança na extração de 0 a 1
 - tipo_transacao: "debito" para compras normais, "credito" SOMENTE para estornos/devoluções de compra real (ex: "ESTORNO COMPRA X", "DEVOLUCAO LOJA Y")
 
-⚠️ NÃO EXTRAIA AS SEGUINTES LINHAS (são informativas/administrativas, NÃO são compras nem estornos):
+✅ EXTRAIA todas as linhas que afetam o saldo desta fatura, incluindo:
+- Compras nacionais e internacionais
+- IOF de cada transação internacional (linha separada — extraia como item individual)
+- IOF de saque
+- Anuidade lançada nesta fatura
+- Estornos / devoluções (use tipo_transacao="credito")
+- Juros, multa ou encargos lançados como item da fatura
+
+❌ NÃO EXTRAIA as linhas abaixo (representam pagamentos de fatura ANTERIOR — não afetam o saldo a pagar deste mês):
+- "PAGAMENTO DE FATURA" / "PAGTO. POR DEB EM C/C" / "PAGAMENTO RECEBIDO" / "PAGTO FATURA" / "INCLUSAO DE PAGAMENTO"
 - "SALDO ANTERIOR" / "SALDO DEVEDOR ANTERIOR" / "DEVEDOR MES ANTERIOR"
-- "PAGAMENTO DE FATURA" / "PAGTO. POR DEB EM C/C" / "PAGAMENTO RECEBIDO" / "PAGTO FATURA"
-- "JUROS PAGAMENTO MÍNIMO" / "JUROS DO ROTATIVO" / "ENCARGOS DE FINANCIAMENTO"
-- "PARC FATURA" / "PARCELAMENTO DE FATURA" / "ROLAGEM DE FATURA"
-- "MULTA POR ATRASO" / "ENCARGOS S/ COMPRA" (encargos sobre saldo, não compras)
-- "DEMONSTRATIVO DE FATURA" / "RESUMO" / "TOTAL DA FATURA" / "TOTAL A PAGAR"
-- Linhas que repetem o total da fatura, juros, IOF de rolagem, anuidade já paga
-- Qualquer linha que represente uma SOMA, SUBTOTAL ou TOTAL (queremos itens individuais)
+- Linhas de TOTAL / SUBTOTAL / RESUMO (queremos só itens individuais, não somas)
 
 Também extraia:
 - valor_total: Valor total da fatura (campo "Total", "Total da fatura" ou similar)
@@ -111,8 +114,8 @@ Também extraia:
 - data_fechamento: Data de fechamento no formato YYYY-MM-DD (se disponível)
 
 IMPORTANTE:
-- Extraia TODAS as compras e estornos reais sem exceção
-- Se houver dúvida se uma linha é compra ou administrativa, prefira PULAR (mais seguro)
+- A soma de todas as transações que você extrair DEVE ser igual a valor_total. Se não bater, revise — você provavelmente pulou alguma linha.
+- Cada IOF de transação internacional é uma linha separada e DEVE entrar.
 - Retorne APENAS um JSON válido, sem explicações ou markdown
 
 Retorne no formato:
@@ -144,14 +147,12 @@ Para cada transação válida, extraia:
 - confianca: Nível de confiança na extração de 0 a 1
 - tipo_transacao: "debito" para compras, "credito" SOMENTE para estornos/devoluções de compra real
 
-⚠️ NÃO EXTRAIA AS SEGUINTES LINHAS (informativas/administrativas):
+✅ EXTRAIA todas as linhas que afetam o saldo, incluindo IOF de cada transação internacional como item separado.
+
+❌ NÃO EXTRAIA (são pagamentos de fatura ANTERIOR, não afetam saldo deste mês):
+- "PAGAMENTO DE FATURA" / "PAGTO. POR DEB EM C/C" / "PAGAMENTO RECEBIDO" / "INCLUSAO DE PAGAMENTO"
 - "SALDO ANTERIOR" / "SALDO DEVEDOR ANTERIOR"
-- "PAGAMENTO DE FATURA" / "PAGTO. POR DEB EM C/C" / "PAGAMENTO RECEBIDO"
-- "JUROS PAGAMENTO MÍNIMO" / "JUROS DO ROTATIVO" / "ENCARGOS DE FINANCIAMENTO"
-- "PARC FATURA" / "PARCELAMENTO DE FATURA" / "ROLAGEM DE FATURA"
-- "MULTA POR ATRASO" / "ENCARGOS S/ COMPRA"
-- "TOTAL DA FATURA" / "TOTAL A PAGAR" / linhas de soma/subtotal
-- Qualquer linha que NÃO seja uma compra/estorno individual real
+- Linhas de TOTAL / SUBTOTAL / RESUMO
 
 ${chunkIndex === 0 ? `Também extraia (se disponível):
 - valor_total: Valor total da fatura

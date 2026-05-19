@@ -4852,7 +4852,6 @@ export default function ExtratoFinanceiroPage() {
                   <option value="marketing">Marketing</option>
                   <option value="tecnologia">Tecnologia</option>
                   <option value="assinatura">Assinatura</option>
-                  <option value="cartao_credito">Cartão de Crédito</option>
                   <option value="infraestrutura">Infraestrutura</option>
                   <option value="pessoal">Pessoal</option>
                   <option value="beneficios">Benefícios</option>
@@ -4938,7 +4937,6 @@ export default function ExtratoFinanceiroPage() {
                       <option value="marketing">Marketing</option>
                       <option value="tecnologia">Tecnologia</option>
                       <option value="assinatura">Assinatura</option>
-                      <option value="cartao_credito">Cartão de Crédito</option>
                       <option value="infraestrutura">Infraestrutura</option>
                       <option value="pessoal">Pessoal</option>
                       <option value="beneficios">Benefícios</option>

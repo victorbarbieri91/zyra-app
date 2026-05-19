@@ -154,7 +154,6 @@ const CATEGORIAS_OPERACIONAIS = [
   { value: 'fornecedor', label: 'Fornecedor' },
   { value: 'emprestimos', label: 'Empréstimos' },
   { value: 'juros', label: 'Juros' },
-  { value: 'cartao_credito', label: 'Fatura Cartão de Crédito' },
   { value: 'comissao', label: 'Comissão' },
 ]
 

@@ -54,7 +54,6 @@ interface ResumoFaturaMes {
   status: string // 'pendente' | 'paga' | 'vazia'
   total_lancamentos: number
   data_vencimento: string
-  despesa_id: string | null
 }
 import { cn } from '@/lib/utils'
 import CartaoModal from '@/components/financeiro/cartoes/CartaoModal'
@@ -191,7 +190,6 @@ export default function CartoesPage() {
             status: r.status,
             total_lancamentos: Number(r.total_lancamentos) || 0,
             data_vencimento: r.data_vencimento,
-            despesa_id: r.despesa_id,
           } : null
         })
       )

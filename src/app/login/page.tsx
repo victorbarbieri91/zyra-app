@@ -272,7 +272,7 @@ export default function LoginPage() {
               <img
                 src="/zyra.logo.png"
                 alt="Zyra Legal"
-                className="h-16 w-auto object-contain block -ml-2"
+                className="h-16 w-auto object-contain block -ml-2 dark:brightness-0 dark:invert"
               />
             </motion.div>
 

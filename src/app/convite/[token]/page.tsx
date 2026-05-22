@@ -252,7 +252,7 @@ export default function ConvitePage() {
           <img
             src="/zyra.logo.png"
             alt="Zyra Legal"
-            className="h-12 w-auto mx-auto"
+            className="h-12 w-auto mx-auto dark:brightness-0 dark:invert"
           />
         </div>
 

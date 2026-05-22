@@ -64,7 +64,7 @@ export default function Header() {
         >
           <Menu className="w-5 h-5" />
         </button>
-        <img src="/zyra.logo.png" alt="Zyra Legal" className="h-7 w-auto object-contain" />
+        <img src="/zyra.logo.png" alt="Zyra Legal" className="h-7 w-auto object-contain dark:brightness-0 dark:invert" />
       </div>
 
       {/* Mobile: Search + Avatar */}

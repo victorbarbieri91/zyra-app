@@ -320,7 +320,7 @@ function WelcomeScreen({ onSend, disabled }: WelcomeScreenProps) {
               alt="Zyra"
               width={130}
               height={130}
-              className="rounded-2xl"
+              className="rounded-2xl dark:brightness-0 dark:invert"
               priority
             />
           </div>

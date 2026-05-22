@@ -121,7 +121,7 @@ export default function Sidebar() {
               height={collapsed ? 48 : 56}
               priority
               className={cn(
-                'object-contain transition-all',
+                'object-contain transition-all dark:brightness-0 dark:invert',
                 collapsed ? 'h-12 w-12' : 'h-14 w-auto',
               )}
             />

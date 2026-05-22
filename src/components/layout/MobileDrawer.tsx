@@ -58,7 +58,7 @@ export default function MobileDrawer({ open, onOpenChange }: MobileDrawerProps) 
             <img
               src="/zyra.logo.png"
               alt="Zyra Legal"
-              className="h-10 w-auto object-contain"
+              className="h-10 w-auto object-contain dark:brightness-0 dark:invert"
             />
             <button
               onClick={() => onOpenChange(false)}

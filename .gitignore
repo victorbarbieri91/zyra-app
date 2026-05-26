@@ -46,6 +46,14 @@ supabase/.temp/
 
 # Claude local settings
 .claude/settings.local.json
+.claude/worktrees/
+
+# Local scratch / backup folders (nunca commitar)
+claude-design/
+docs/backup/
+
+# Assets soltos (avaliar caso a caso antes de adicionar ao repo)
+public/zy-novo.png
 
 # Serwist/PWA build artifacts
 public/sw.js

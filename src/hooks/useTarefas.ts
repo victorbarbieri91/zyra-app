@@ -290,42 +290,35 @@ export function useTarefas(escritorioId?: string) {
     }
   }
 
-  // Cancelar tarefa: marca como cancelada sem deletar (preserva para auditoria)
+  // Cancelar tarefa via RPC (registra motivo + entrada no histórico de auditoria do processo).
   // escopo='instancia' cancela só a tarefa indicada
   // escopo='serie' cancela todas as ocorrências não-concluídas da recorrência + desativa a regra
   const cancelarTarefa = async (
     id: string,
+    motivo: string,
     escopo: 'instancia' | 'serie' = 'instancia',
   ): Promise<void> => {
+    const motivoLimpo = motivo.trim()
+    if (motivoLimpo.length === 0) {
+      throw new Error('Motivo do cancelamento é obrigatório.')
+    }
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      const userId = user?.id
-      const cancelarPayload = {
-        status: 'cancelada' as const,
-        cancelado_em: new Date().toISOString(),
-        cancelado_por: userId,
-      }
-
-      const tarefa = tarefas.find((t) => t.id === id)
       if (escopo === 'instancia') {
-        const { error } = await supabase
-          .from('agenda_tarefas')
-          .update(cancelarPayload)
-          .eq('id', id)
+        const { error } = await supabase.rpc('cancelar_agenda_instancia', {
+          p_tabela: 'agenda_tarefas',
+          p_id: id,
+          p_motivo: motivoLimpo,
+        })
         if (error) throw error
       } else {
+        const tarefa = tarefas.find((t) => t.id === id)
         if (!tarefa?.recorrencia_id) throw new Error('Tarefa não pertence a uma série')
-        const { error: updateError } = await supabase
-          .from('agenda_tarefas')
-          .update(cancelarPayload)
-          .eq('recorrencia_id', tarefa.recorrencia_id)
-          .not('status', 'in', '(cancelada,concluida)')
-        if (updateError) throw updateError
-        const { error: regraError } = await supabase
-          .from('agenda_recorrencias')
-          .update({ ativo: false })
-          .eq('id', tarefa.recorrencia_id)
-        if (regraError) throw regraError
+        const { error } = await supabase.rpc('cancelar_agenda_serie', {
+          p_tabela: 'agenda_tarefas',
+          p_recorrencia_id: tarefa.recorrencia_id,
+          p_motivo: motivoLimpo,
+        })
+        if (error) throw error
       }
 
       await loadTarefas()

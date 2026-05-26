@@ -291,20 +291,18 @@ export function useAudiencias(escritorioId?: string) {
     }
   }
 
-  // Cancelar audiência: marca como cancelada com auditoria (quem, quando)
-  // O registro permanece no banco — consultar via SQL se precisar saber o que houve.
-  const cancelarAudiencia = async (id: string): Promise<void> => {
+  // Cancelar audiência via RPC (registra motivo + entrada no histórico de auditoria do processo).
+  const cancelarAudiencia = async (id: string, motivo: string): Promise<void> => {
+    const motivoLimpo = motivo.trim()
+    if (motivoLimpo.length === 0) {
+      throw new Error('Motivo do cancelamento é obrigatório.')
+    }
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      const { error } = await supabase
-        .from('agenda_audiencias')
-        .update({
-          status: 'cancelada',
-          cancelado_em: new Date().toISOString(),
-          cancelado_por: user?.id ?? null,
-        })
-        .eq('id', id)
-
+      const { error } = await supabase.rpc('cancelar_agenda_instancia', {
+        p_tabela: 'agenda_audiencias',
+        p_id: id,
+        p_motivo: motivoLimpo,
+      })
       if (error) throw error
 
       await loadAudiencias()

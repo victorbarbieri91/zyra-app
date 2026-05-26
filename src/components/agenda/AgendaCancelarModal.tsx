@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 import { AlertCircle, Ban, CalendarDays, Loader2, Repeat } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -76,11 +77,13 @@ export default function AgendaCancelarModal({
   const [escopo, setEscopo] = useState<Escopo>('instancia')
   const [executando, setExecutando] = useState(false)
   const [ocorrenciasNaoConcluidas, setOcorrenciasNaoConcluidas] = useState<number | null>(null)
+  const [motivo, setMotivo] = useState('')
 
   useEffect(() => {
     if (!open || !registro) {
       setEscopo('instancia')
       setOcorrenciasNaoConcluidas(null)
+      setMotivo('')
       return
     }
     if (!podeCancelarSerie || !registro.recorrencia_id) return
@@ -102,47 +105,43 @@ export default function AgendaCancelarModal({
 
   const handleCancelar = async () => {
     if (!registro) return
+    const motivoLimpo = motivo.trim()
+    if (motivoLimpo.length === 0) return
     setExecutando(true)
     const supabase = createClient()
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      const userId = user?.id
-
-      const cancelarPayload = {
-        status: STATUS_CANCELADO[tipo],
-        cancelado_em: new Date().toISOString(),
-        cancelado_por: userId,
-      }
-
       if (escopo === 'instancia') {
-        const { error } = await supabase
-          .from(TABELA[tipo])
-          .update(cancelarPayload)
-          .eq('id', registro.id)
+        const { error } = await supabase.rpc('cancelar_agenda_instancia', {
+          p_tabela: TABELA[tipo],
+          p_id: registro.id,
+          p_motivo: motivoLimpo,
+        })
         if (error) throw error
       } else {
         if (!registro.recorrencia_id) throw new Error('Recorrência não encontrada')
-        const { error: updateError } = await supabase
-          .from(TABELA[tipo])
-          .update(cancelarPayload)
-          .eq('recorrencia_id', registro.recorrencia_id)
-          .not('status', 'in', `(${STATUS_CANCELADO[tipo]},${STATUS_CONCLUIDO[tipo]})`)
-        if (updateError) throw updateError
-        const { error: regraError } = await supabase
-          .from('agenda_recorrencias')
-          .update({ ativo: false })
-          .eq('id', registro.recorrencia_id)
-        if (regraError) throw regraError
+        if (tipo === 'audiencia') throw new Error('Audiências não têm série')
+        const { data, error } = await supabase.rpc('cancelar_agenda_serie', {
+          p_tabela: TABELA[tipo] as 'agenda_tarefas' | 'agenda_eventos',
+          p_recorrencia_id: registro.recorrencia_id,
+          p_motivo: motivoLimpo,
+        })
+        if (error) throw error
+        const cancelled =
+          data && typeof data === 'object' && 'cancelled_count' in data
+            ? (data as { cancelled_count: number }).cancelled_count
+            : ocorrenciasNaoConcluidas
+        toast.success(
+          `Série cancelada${cancelled !== null && cancelled !== undefined ? ` (${cancelled} ${cancelled === 1 ? 'ocorrência' : 'ocorrências'})` : ''}.`,
+        )
+        onSuccess()
+        onOpenChange(false)
+        return
       }
 
       toast.success(
-        escopo === 'serie'
-          ? `Série cancelada${ocorrenciasNaoConcluidas !== null ? ` (${ocorrenciasNaoConcluidas} ${ocorrenciasNaoConcluidas === 1 ? 'ocorrência' : 'ocorrências'})` : ''}.`
-          : tipo === 'evento'
-            ? 'Compromisso cancelado com sucesso.'
-            : `${tipoLabel} cancelada com sucesso.`,
+        tipo === 'evento'
+          ? 'Compromisso cancelado com sucesso.'
+          : `${tipoLabel} cancelada com sucesso.`,
       )
       onSuccess()
       onOpenChange(false)
@@ -219,6 +218,27 @@ export default function AgendaCancelarModal({
             </div>
           )}
 
+          <div className="space-y-1.5">
+            <label
+              htmlFor="agenda-cancelar-motivo"
+              className="text-sm font-medium text-[#34495e] dark:text-slate-200"
+            >
+              Motivo do cancelamento <span className="text-red-500">*</span>
+            </label>
+            <Textarea
+              id="agenda-cancelar-motivo"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              rows={3}
+              placeholder={`Por que ${demonstrativo.toLowerCase()} ${tipoLabel.toLowerCase()} está sendo ${STATUS_CANCELADO[tipo]}?`}
+              disabled={executando}
+              className="resize-none"
+            />
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Fica registrado no <strong className="font-medium text-[#46627f] dark:text-slate-300">Histórico de Auditoria</strong> do processo. Para consultá-lo depois, abra a ficha do processo e clique no botão <strong className="font-medium text-[#46627f] dark:text-slate-300">Histórico</strong>.
+            </p>
+          </div>
+
           <div className="flex items-start gap-3 px-4 py-3.5 rounded-lg bg-slate-50 dark:bg-surface-2 border border-slate-200 dark:border-slate-700">
             <AlertCircle className="w-4 h-4 text-[#46627f] dark:text-slate-400 mt-0.5 flex-shrink-0" />
             <div className="flex-1 text-sm text-[#46627f] dark:text-slate-300 space-y-2">
@@ -239,6 +259,15 @@ export default function AgendaCancelarModal({
                     A repetição automática será interrompida — nenhuma nova ocorrência será criada.
                   </li>
                   <li>Ocorrências que já foram concluídas não serão afetadas.</li>
+                  <li>
+                    O motivo será registrado no{' '}
+                    <strong className="text-[#34495e] dark:text-slate-200">
+                      Histórico de Auditoria
+                    </strong>{' '}
+                    do processo, junto com a data e o nome de quem cancelou — acessível pelo botão{' '}
+                    <strong className="text-[#34495e] dark:text-slate-200">Histórico</strong> na
+                    ficha do processo.
+                  </li>
                 </ul>
               ) : (
                 <ul className="list-disc list-outside pl-4 space-y-1 text-[13px] leading-relaxed">
@@ -247,8 +276,13 @@ export default function AgendaCancelarModal({
                     processo e das demais listagens.
                   </li>
                   <li>
-                    Você poderá consultar o histórico mais tarde, caso precise saber o que
-                    aconteceu.
+                    O motivo informado acima será registrado no{' '}
+                    <strong className="text-[#34495e] dark:text-slate-200">
+                      Histórico de Auditoria
+                    </strong>{' '}
+                    do processo, junto com a data e o nome de quem cancelou — acessível pelo botão{' '}
+                    <strong className="text-[#34495e] dark:text-slate-200">Histórico</strong> na
+                    ficha do processo.
                   </li>
                   {podeCancelarSerie && (
                     <li>As demais ocorrências da série continuam normalmente.</li>
@@ -265,7 +299,7 @@ export default function AgendaCancelarModal({
           </Button>
           <Button
             onClick={handleCancelar}
-            disabled={executando}
+            disabled={executando || motivo.trim().length === 0}
             className="bg-[#34495e] hover:bg-[#46627f] text-white"
           >
             {executando ? (

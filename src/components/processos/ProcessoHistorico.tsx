@@ -12,7 +12,8 @@ import {
   Paperclip,
   Activity,
   Loader2,
-  History
+  History,
+  Ban
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatBrazilDateTime } from '@/lib/timezone'
@@ -70,12 +71,19 @@ export default function ProcessoHistorico({ processoId }: ProcessoHistoricoProps
       status: UserCheck,
       arquivamento: Archive,
       valores: DollarSign,
-      documento: Paperclip
+      documento: Paperclip,
+      cancelamento_tarefa: Ban,
+      cancelamento_evento: Ban,
+      cancelamento_audiencia: Ban,
+      cancelamento_serie_tarefa: Ban,
+      cancelamento_serie_evento: Ban,
+      cancelamento_lote_encerramento: Ban,
     }
     return icons[acao as keyof typeof icons] || Activity
   }
 
   const getColorClass = (acao: string) => {
+    const cancelColor = 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400'
     const colors = {
       criacao: 'bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400',
       edicao: 'bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400',
@@ -83,7 +91,13 @@ export default function ProcessoHistorico({ processoId }: ProcessoHistoricoProps
       status: 'bg-teal-100 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400',
       arquivamento: 'bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400',
       valores: 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-      documento: 'bg-pink-100 dark:bg-pink-500/10 text-pink-600 dark:text-pink-400'
+      documento: 'bg-pink-100 dark:bg-pink-500/10 text-pink-600 dark:text-pink-400',
+      cancelamento_tarefa: cancelColor,
+      cancelamento_evento: cancelColor,
+      cancelamento_audiencia: cancelColor,
+      cancelamento_serie_tarefa: cancelColor,
+      cancelamento_serie_evento: cancelColor,
+      cancelamento_lote_encerramento: cancelColor,
     }
     return colors[acao as keyof typeof colors] || colors.edicao
   }

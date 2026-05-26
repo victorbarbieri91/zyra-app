@@ -230,25 +230,13 @@ export default function EncerrarProcessoModal({
         .filter(p => p.tipo === 'audiencia' && p.checked)
         .map(p => p.id)
 
-      const { data: authData } = await supabase.auth.getUser()
-      const auditoriaCancelamento = {
-        status: 'cancelada' as const,
-        cancelado_em: new Date().toISOString(),
-        cancelado_por: authData.user?.id ?? null,
-      }
-
-      if (tarefasParaCancelar.length > 0) {
-        await supabase
-          .from('agenda_tarefas')
-          .update(auditoriaCancelamento)
-          .in('id', tarefasParaCancelar)
-      }
-
-      if (audienciasParaCancelar.length > 0) {
-        await supabase
-          .from('agenda_audiencias')
-          .update(auditoriaCancelamento)
-          .in('id', audienciasParaCancelar)
+      if (tarefasParaCancelar.length > 0 || audienciasParaCancelar.length > 0) {
+        const { error: cancError } = await supabase.rpc('cancelar_agenda_lote', {
+          p_tarefa_ids: tarefasParaCancelar.length > 0 ? tarefasParaCancelar : null,
+          p_audiencia_ids: audienciasParaCancelar.length > 0 ? audienciasParaCancelar : null,
+          p_motivo: 'Cancelada automaticamente pelo encerramento do processo.',
+        })
+        if (cancError) throw cancError
       }
 
       onSuccess()

@@ -136,42 +136,35 @@ export function useEventos(escritorioId?: string) {
     }
   }
 
-  // Cancelar evento: marca como cancelado sem deletar (preserva para auditoria)
+  // Cancelar evento via RPC (registra motivo + entrada no histórico de auditoria do processo).
   // escopo='instancia' cancela só o evento indicado
   // escopo='serie' cancela todas as ocorrências não-realizadas da recorrência + desativa a regra
   const cancelarEvento = async (
     id: string,
+    motivo: string,
     escopo: 'instancia' | 'serie' = 'instancia',
   ): Promise<void> => {
+    const motivoLimpo = motivo.trim()
+    if (motivoLimpo.length === 0) {
+      throw new Error('Motivo do cancelamento é obrigatório.')
+    }
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      const userId = user?.id
-      const cancelarPayload = {
-        status: 'cancelado' as const,
-        cancelado_em: new Date().toISOString(),
-        cancelado_por: userId,
-      }
-
       if (escopo === 'instancia') {
-        const { error } = await supabase
-          .from('agenda_eventos')
-          .update(cancelarPayload)
-          .eq('id', id)
+        const { error } = await supabase.rpc('cancelar_agenda_instancia', {
+          p_tabela: 'agenda_eventos',
+          p_id: id,
+          p_motivo: motivoLimpo,
+        })
         if (error) throw error
       } else {
         const evento = eventos.find((e) => e.id === id)
         if (!evento?.recorrencia_id) throw new Error('Evento não pertence a uma série')
-        const { error: updateError } = await supabase
-          .from('agenda_eventos')
-          .update(cancelarPayload)
-          .eq('recorrencia_id', evento.recorrencia_id)
-          .not('status', 'in', '(cancelado,realizado)')
-        if (updateError) throw updateError
-        const { error: regraError } = await supabase
-          .from('agenda_recorrencias')
-          .update({ ativo: false })
-          .eq('id', evento.recorrencia_id)
-        if (regraError) throw regraError
+        const { error } = await supabase.rpc('cancelar_agenda_serie', {
+          p_tabela: 'agenda_eventos',
+          p_recorrencia_id: evento.recorrencia_id,
+          p_motivo: motivoLimpo,
+        })
+        if (error) throw error
       }
 
       await loadEventos()

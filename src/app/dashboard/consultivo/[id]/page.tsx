@@ -641,6 +641,41 @@ export default function ConsultaDetalhePage() {
     }
   }
 
+  const handleConcluirEvento = async (eventoId: string) => {
+    if (!confirm('Deseja marcar este evento/prazo como cumprido?')) return
+    try {
+      const { error } = await supabase
+        .from('agenda_eventos')
+        .update({ status: 'realizado' })
+        .eq('id', eventoId)
+      if (error) throw error
+      toast.success('Evento marcado como cumprido!')
+      setEventoDetailOpen(false)
+      setSelectedEvento(null)
+      await loadAgenda()
+    } catch (error) {
+      console.error('Erro ao marcar evento como cumprido:', error)
+      toast.error('Erro ao marcar evento como cumprido')
+    }
+  }
+
+  const handleReabrirEvento = async (eventoId: string) => {
+    try {
+      const { error } = await supabase
+        .from('agenda_eventos')
+        .update({ status: 'agendado' })
+        .eq('id', eventoId)
+      if (error) throw error
+      toast.success('Evento reaberto!')
+      setEventoDetailOpen(false)
+      setSelectedEvento(null)
+      await loadAgenda()
+    } catch (error) {
+      console.error('Erro ao reabrir evento:', error)
+      toast.error('Erro ao reabrir evento')
+    }
+  }
+
   // Handlers para Audiências
   const handleEditAudiencia = () => {
     setAudienciaDetailOpen(false)
@@ -664,6 +699,7 @@ export default function ConsultaDetalhePage() {
   }
 
   const handleConcluirAudiencia = async (audienciaId: string) => {
+    if (!confirm('Deseja marcar esta audiência como realizada?')) return
     try {
       const { error } = await supabase
         .from('agenda_audiencias')
@@ -677,6 +713,23 @@ export default function ConsultaDetalhePage() {
     } catch (error) {
       console.error('Erro ao concluir audiência:', error)
       toast.error('Erro ao atualizar audiência')
+    }
+  }
+
+  const handleReabrirAudiencia = async (audienciaId: string) => {
+    try {
+      const { error } = await supabase
+        .from('agenda_audiencias')
+        .update({ status: 'agendada' })
+        .eq('id', audienciaId)
+      if (error) throw error
+      toast.success('Audiência reaberta!')
+      setAudienciaDetailOpen(false)
+      setSelectedAudiencia(null)
+      await loadAgenda()
+    } catch (error) {
+      console.error('Erro ao reabrir audiência:', error)
+      toast.error('Erro ao reabrir audiência')
     }
   }
 
@@ -1395,6 +1448,8 @@ export default function ConsultaDetalhePage() {
           }}
           evento={selectedEvento}
           onEdit={handleEditEvento}
+          onMarcarCumprido={() => handleConcluirEvento(selectedEvento.id)}
+          onReabrir={() => handleReabrirEvento(selectedEvento.id)}
           onCancelar={() => openCancelarModal('evento', {
             id: selectedEvento.id,
             titulo: selectedEvento.titulo,
@@ -1413,6 +1468,8 @@ export default function ConsultaDetalhePage() {
           }}
           audiencia={selectedAudiencia}
           onEdit={handleEditAudiencia}
+          onRealizar={() => handleConcluirAudiencia(selectedAudiencia.id)}
+          onReabrir={() => handleReabrirAudiencia(selectedAudiencia.id)}
           onCancelar={() => openCancelarModal('audiencia', {
             id: selectedAudiencia.id,
             titulo: selectedAudiencia.titulo,

@@ -10,7 +10,7 @@ import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { AlertCircle, Info, Plus, Users, X } from 'lucide-react'
+import { AlertCircle, CalendarDays, Info, Plus, Users, X, XCircle } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
 import type { ContratoComissaoPadrao } from '@/hooks/useContratosHonorarios'
@@ -88,6 +88,7 @@ export function ModalRecebimento({
   const [formaPagamento, setFormaPagamento] = useState('pix')
   const [contaBancariaId, setContaBancariaId] = useState('')
   const [dataVencimentoSaldo, setDataVencimentoSaldo] = useState('')
+  const [gerarSaldo, setGerarSaldo] = useState(true)
   const [observacoes, setObservacoes] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -106,6 +107,7 @@ export function ModalRecebimento({
       setFormaPagamento('pix')
       setContaBancariaId(item.conta_bancaria_id || contasBancarias[0]?.id || '')
       setDataVencimentoSaldo('')
+      setGerarSaldo(true)
       setObservacoes('')
 
       // Pré-preenchimento a partir das comissões padrão do contrato
@@ -257,7 +259,7 @@ export function ModalRecebimento({
       toast.error('Informe a data de efetivação')
       return
     }
-    if (isParcial && !dataVencimentoSaldo) {
+    if (isParcial && gerarSaldo && !dataVencimentoSaldo) {
       toast.error('Informe a data de vencimento do saldo restante')
       return
     }
@@ -303,7 +305,8 @@ export function ModalRecebimento({
           p_conta_bancaria_id: contaBancariaId,
           p_user_id: user?.id || null,
           p_observacoes: observacoes || null,
-          p_data_vencimento_saldo: isParcial ? dataVencimentoSaldo : null,
+          p_data_vencimento_saldo: isParcial && gerarSaldo ? dataVencimentoSaldo : null,
+          p_gerar_saldo: !isParcial || gerarSaldo,
         })
         if (rpcError) throw rpcError
       } else if (item.origem === 'nota_debito') {
@@ -314,8 +317,8 @@ export function ModalRecebimento({
           .eq('id', item.origem_id)
           .single()
 
-        if (isParcial && nota?.receita_id) {
-          // Pagamento parcial: atualizar ND e receita shadow diretamente
+        if (isParcial && gerarSaldo && nota?.receita_id) {
+          // Pagamento parcial cobrando a diferença: ND e receita-shadow ficam parciais
           const novoValorPago = (item.valor_pago || 0) + valorDigitado
 
           await supabase
@@ -338,12 +341,18 @@ export function ModalRecebimento({
             })
             .eq('id', nota.receita_id)
         } else {
-          // Pagamento total (ou pagamento do saldo restante)
+          // Encerra a cobrança: pagamento total OU perdão da diferença.
+          // Total: valor_pago = item.valor (zera arredondamentos).
+          // Perdão (parcial sem cobrar): valor_pago = o que entrou de fato; `valor` da ND/receita preservado.
+          const valorPagoFinal = isParcial
+            ? (item.valor_pago || 0) + valorDigitado
+            : item.valor
+
           await supabase
             .from('financeiro_notas_debito')
             .update({
               status: 'paga',
-              valor_pago: item.valor,
+              valor_pago: valorPagoFinal,
               data_pagamento: dataEfetivacao,
               data_vencimento_saldo: null,
               conta_bancaria_id: contaBancariaId,
@@ -355,7 +364,7 @@ export function ModalRecebimento({
               .from('financeiro_receitas')
               .update({
                 status: 'pago',
-                valor_pago: item.valor,
+                valor_pago: valorPagoFinal,
                 data_pagamento: dataEfetivacao,
                 conta_bancaria_id: contaBancariaId,
               })
@@ -378,14 +387,15 @@ export function ModalRecebimento({
       } else {
         // Receita normal
         if (isParcial) {
-          // Pagamento parcial: usar RPC para criar receita de saldo automaticamente
+          // Pagamento parcial: RPC trata cobrar/perdoar a diferença via p_gerar_saldo
           const { error: rpcError } = await supabase.rpc('receber_receita_parcial', {
             p_receita_id: item.origem_id,
             p_valor_pago: valorDigitado,
-            p_nova_data_vencimento: dataVencimentoSaldo,
+            p_nova_data_vencimento: gerarSaldo ? dataVencimentoSaldo : null,
             p_conta_bancaria_id: contaBancariaId,
             p_forma_pagamento: formaPagamento,
             p_data_pagamento: dataEfetivacao,
+            p_gerar_saldo: gerarSaldo,
           })
           if (rpcError) throw rpcError
         } else {
@@ -468,7 +478,7 @@ export function ModalRecebimento({
     valorDigitado <= 0 ||
     !contaBancariaId ||
     !dataEfetivacao ||
-    (isParcial && !dataVencimentoSaldo) ||
+    (isParcial && gerarSaldo && !dataVencimentoSaldo) ||
     (temParticipacao && participantesAtivos.length === 0) ||
     somaPercentualInvalida
 
@@ -602,21 +612,69 @@ export function ModalRecebimento({
             </div>
           </div>
 
-          {/* Vencimento do saldo (apenas quando parcial) */}
+          {/* Diferença a cobrar (apenas quando parcial) */}
           {isParcial && (
-            <div className="bg-[#f0f9f9] border border-[#aacfd0]/40 rounded-lg p-3 space-y-2">
-              <Label htmlFor="data-vencimento-saldo" className="text-xs text-[#34495e]">
-                Vencimento do saldo restante *
+            <div className="space-y-2">
+              <Label className="text-xs text-[#46627f]">
+                Diferença de {formatCurrency(saldoRestante)}
               </Label>
-              <Input
-                id="data-vencimento-saldo"
-                type="date"
-                value={dataVencimentoSaldo}
-                onChange={(e) => setDataVencimentoSaldo(e.target.value)}
-              />
-              <p className="text-[10px] text-[#46627f]">
-                Saldo de {formatCurrency(saldoRestante)} com novo vencimento
-              </p>
+              <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-surface-2 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setGerarSaldo(true)}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-medium transition-all',
+                    gerarSaldo
+                      ? 'bg-[#34495e] text-white shadow-sm'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
+                  )}
+                >
+                  <CalendarDays className="w-4 h-4" />
+                  Cobrar diferença
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGerarSaldo(false)}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-medium transition-all',
+                    !gerarSaldo
+                      ? 'bg-[#34495e] text-white shadow-sm'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
+                  )}
+                >
+                  <XCircle className="w-4 h-4" />
+                  Não cobrar
+                </button>
+              </div>
+
+              {gerarSaldo ? (
+                <div className="bg-[#f0f9f9] border border-[#aacfd0]/40 rounded-lg p-3 space-y-2">
+                  <Label htmlFor="data-vencimento-saldo" className="text-xs text-[#34495e]">
+                    Vencimento do saldo restante *
+                  </Label>
+                  <Input
+                    id="data-vencimento-saldo"
+                    type="date"
+                    value={dataVencimentoSaldo}
+                    onChange={(e) => setDataVencimentoSaldo(e.target.value)}
+                  />
+                  <p className="text-[10px] text-[#46627f]">
+                    Saldo de {formatCurrency(saldoRestante)} com novo vencimento
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2.5 px-4 py-2.5 rounded-lg bg-[#f0f9f9] border border-[#89bcbe]/40 dark:bg-teal-500/10 dark:border-teal-500/30">
+                  <Info className="w-4 h-4 text-[#89bcbe] mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-[#46627f] dark:text-slate-300">
+                    A diferença de{' '}
+                    <strong className="text-[#34495e] dark:text-slate-200">
+                      {formatCurrency(saldoRestante)}
+                    </strong>{' '}
+                    será desconsiderada e a cobrança encerrada. O valor contratado
+                    original é preservado para histórico.
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

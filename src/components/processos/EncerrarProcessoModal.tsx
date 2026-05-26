@@ -11,8 +11,8 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
@@ -38,6 +38,7 @@ import { createClient } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import { formatBrazilDate } from '@/lib/timezone'
 import {
+  PROCESSO_RESULTADO,
   PROCESSO_RESULTADO_LABELS,
 } from '@/lib/constants/processo-enums'
 
@@ -71,10 +72,10 @@ export default function EncerrarProcessoModal({
 
   // Toggles opcionais
   const [houveAcordo, setHouveAcordo] = useState(false)
-  const [valorAcordo, setValorAcordo] = useState('')
+  const [valorAcordo, setValorAcordo] = useState(0)
 
   const [houveCondenacao, setHouveCondenacao] = useState(false)
-  const [valorCondenacao, setValorCondenacao] = useState('')
+  const [valorCondenacao, setValorCondenacao] = useState(0)
 
   const [transitoJulgado, setTransitoJulgado] = useState(false)
   const [dataTransito, setDataTransito] = useState('')
@@ -168,13 +169,6 @@ export default function EncerrarProcessoModal({
     return 'arquivado'
   }
 
-  const parseCurrencyValue = (val: string): number | null => {
-    if (!val.trim()) return null
-    const cleaned = val.replace(/[^\d,.-]/g, '').replace(',', '.')
-    const num = parseFloat(cleaned)
-    return isNaN(num) ? null : num
-  }
-
   const handleSubmit = async () => {
     setSubmitting(true)
 
@@ -195,14 +189,12 @@ export default function EncerrarProcessoModal({
         encerrado_em: new Date().toISOString(),
       }
 
-      if (houveAcordo) {
-        const val = parseCurrencyValue(valorAcordo)
-        if (val !== null) updateData.valor_acordo = val
+      if (houveAcordo && valorAcordo > 0) {
+        updateData.valor_acordo = valorAcordo
       }
 
-      if (houveCondenacao) {
-        const val = parseCurrencyValue(valorCondenacao)
-        if (val !== null) updateData.valor_condenacao = val
+      if (houveCondenacao && valorCondenacao > 0) {
+        updateData.valor_condenacao = valorCondenacao
       }
 
       if (transitoJulgado && dataTransito) {
@@ -324,13 +316,10 @@ export default function EncerrarProcessoModal({
                 {houveAcordo && (
                   <div className="pl-6">
                     <Label className="text-xs text-slate-500 dark:text-slate-400">Valor do acordo</Label>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="R$ 0,00"
+                    <CurrencyInput
                       value={valorAcordo}
-                      onChange={(e) => setValorAcordo(e.target.value)}
-                      className="mt-1 text-sm"
+                      onChange={setValorAcordo}
+                      className="mt-1"
                     />
                   </div>
                 )}
@@ -348,13 +337,10 @@ export default function EncerrarProcessoModal({
                 {houveCondenacao && (
                   <div className="pl-6">
                     <Label className="text-xs text-slate-500 dark:text-slate-400">Valor da condenação</Label>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="R$ 0,00"
+                    <CurrencyInput
                       value={valorCondenacao}
-                      onChange={(e) => setValorCondenacao(e.target.value)}
-                      className="mt-1 text-sm"
+                      onChange={setValorCondenacao}
+                      className="mt-1"
                     />
                   </div>
                 )}
@@ -398,9 +384,9 @@ export default function EncerrarProcessoModal({
                         <SelectValue placeholder="Selecione o resultado" />
                       </SelectTrigger>
                       <SelectContent>
-                        {Object.entries(PROCESSO_RESULTADO_LABELS).map(([value, label]) => (
+                        {Object.values(PROCESSO_RESULTADO).map((value) => (
                           <SelectItem key={value} value={value}>
-                            {label}
+                            {PROCESSO_RESULTADO_LABELS[value]}
                           </SelectItem>
                         ))}
                       </SelectContent>

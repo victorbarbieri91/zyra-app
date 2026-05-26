@@ -137,19 +137,31 @@ export const PROCESSO_MODALIDADE_COBRANCA_LABELS: Record<string, string> = {
   pro_bono: 'Pró-Bono',
 }
 
-// Valores aceitos pelo banco para o campo 'resultado' (encerramento)
+// Valores canônicos aceitos para o campo 'resultado' (encerramento de processo).
+// Esta lista é a fonte para o Select do modal de encerramento — novos registros
+// usam apenas estes valores. Os legados (favoravel/desfavoravel/parcial) continuam
+// válidos no banco para preservar o histórico e são traduzidos pelos labels abaixo.
 export const PROCESSO_RESULTADO = {
-  FAVORAVEL: 'favoravel',
-  DESFAVORAVEL: 'desfavoravel',
-  PARCIAL: 'parcial',
+  PROCEDENTE: 'procedente',
+  PARCIALMENTE_PROCEDENTE: 'parcialmente_procedente',
+  PARCIALMENTE_IMPROCEDENTE: 'parcialmente_improcedente',
+  IMPROCEDENTE: 'improcedente',
   SEM_MERITO: 'sem_merito',
 } as const
 
+// Labels exibidos na UI. Cobre valores canônicos (escrita) e legados (leitura do histórico).
+// NOTA para filtros/relatórios futuros: ao filtrar por "procedente", incluir também o legado
+// 'favoravel' (e analogamente para improcedente/desfavoravel e parcialmente_procedente/parcial).
 export const PROCESSO_RESULTADO_LABELS: Record<string, string> = {
-  favoravel: 'Favorável',
-  desfavoravel: 'Desfavorável',
-  parcial: 'Parcialmente Favorável',
-  sem_merito: 'Sem Mérito / N/A',
+  procedente: 'Procedente',
+  parcialmente_procedente: 'Parcialmente procedente',
+  parcialmente_improcedente: 'Parcialmente improcedente',
+  improcedente: 'Improcedente',
+  sem_merito: 'Sem mérito / N/A',
+  // Legados (preservados no banco; nunca oferecidos para nova escrita)
+  favoravel: 'Procedente',
+  desfavoravel: 'Improcedente',
+  parcial: 'Parcialmente procedente',
 }
 
 // Status que representam processo encerrado (para filtros de listagem)

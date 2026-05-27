@@ -36,6 +36,7 @@ import { toast } from 'sonner'
 import { normalizarInstancia } from '@/lib/constants/processo-enums'
 import { formatAreaJuridica } from '@/lib/constants/areas-juridicas'
 import { formatCurrency, cn } from '@/lib/utils'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { BuscaCNJModal } from '@/components/processos/BuscaCNJModal'
 import type { ProcessoEscavadorNormalizado } from '@/lib/escavador/types'
 
@@ -130,7 +131,7 @@ export default function TransformarConsultivoWizard({
   const [uf, setUf] = useState('')
   const [fase, setFase] = useState('conhecimento')
   const [instancia, setInstancia] = useState('1a')
-  const [valorCausa, setValorCausa] = useState('')
+  const [valorCausa, setValorCausa] = useState(0)
 
   // Opções de transformação
   const [manterContrato, setManterContrato] = useState(true)
@@ -175,7 +176,7 @@ export default function TransformarConsultivoWizard({
     setUf('')
     setFase('conhecimento')
     setInstancia('1a')
-    setValorCausa('')
+    setValorCausa(0)
     setManterContrato(true)
     setMigrarAndamentos(true)
     setArquivarConsultivo(true)
@@ -197,7 +198,7 @@ export default function TransformarConsultivoWizard({
       setDataDistribuicao(dados.data_distribuicao.split('T')[0])
     }
     if (dados.valor_causa != null) {
-      setValorCausa(String(dados.valor_causa))
+      setValorCausa(dados.valor_causa)
     }
 
     // Instância via grau (1, 2, 3)
@@ -237,7 +238,7 @@ export default function TransformarConsultivoWizard({
         p_uf: uf || null,
         p_fase: fase,
         p_instancia: normalizarInstancia(instancia) || '1a',
-        p_valor_causa: valorCausa ? parseFloat(valorCausa) : null,
+        p_valor_causa: valorCausa > 0 ? valorCausa : null,
         p_manter_contrato: manterContrato,
         p_migrar_andamentos: migrarAndamentos,
         p_arquivar_consultivo: arquivarConsultivo,
@@ -565,13 +566,10 @@ export default function TransformarConsultivoWizard({
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-sm">Valor da causa (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
+                    <Label className="text-sm">Valor da causa</Label>
+                    <CurrencyInput
                       value={valorCausa}
-                      onChange={(e) => setValorCausa(e.target.value)}
+                      onChange={setValorCausa}
                       className="h-10"
                     />
                   </div>

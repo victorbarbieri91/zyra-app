@@ -1961,7 +1961,7 @@ export type Database = {
         Row: {
           andamentos: Json | null
           anexos: Json | null
-          area: string
+          area: Database["public"]["Enums"]["area_juridica_enum"]
           cliente_id: string
           contrato_id: string | null
           created_at: string | null
@@ -1980,7 +1980,7 @@ export type Database = {
         Insert: {
           andamentos?: Json | null
           anexos?: Json | null
-          area: string
+          area: Database["public"]["Enums"]["area_juridica_enum"]
           cliente_id: string
           contrato_id?: string | null
           created_at?: string | null
@@ -1999,7 +1999,7 @@ export type Database = {
         Update: {
           andamentos?: Json | null
           anexos?: Json | null
-          area?: string
+          area?: Database["public"]["Enums"]["area_juridica_enum"]
           cliente_id?: string
           contrato_id?: string | null
           created_at?: string | null
@@ -3924,9 +3924,6 @@ export type Database = {
           escritorio_id: string
           fatura_id: string | null
           faturado: boolean | null
-          fluxo_status:
-            | Database["public"]["Enums"]["despesa_fluxo_status"]
-            | null
           forma_pagamento:
             | Database["public"]["Enums"]["forma_pagamento_enum"]
             | null
@@ -3973,9 +3970,6 @@ export type Database = {
           escritorio_id: string
           fatura_id?: string | null
           faturado?: boolean | null
-          fluxo_status?:
-            | Database["public"]["Enums"]["despesa_fluxo_status"]
-            | null
           forma_pagamento?:
             | Database["public"]["Enums"]["forma_pagamento_enum"]
             | null
@@ -4022,9 +4016,6 @@ export type Database = {
           escritorio_id?: string
           fatura_id?: string | null
           faturado?: boolean | null
-          fluxo_status?:
-            | Database["public"]["Enums"]["despesa_fluxo_status"]
-            | null
           forma_pagamento?:
             | Database["public"]["Enums"]["forma_pagamento_enum"]
             | null
@@ -11002,7 +10993,7 @@ export type Database = {
         Row: {
           andamentos: Json | null
           anexos: Json | null
-          area: string | null
+          area: Database["public"]["Enums"]["area_juridica_enum"] | null
           cliente_id: string | null
           cliente_nome: string | null
           contrato_id: string | null
@@ -13108,7 +13099,9 @@ export type Database = {
       vw_consultivo_processos_convertidos: {
         Row: {
           cliente_nome: string | null
-          consultivo_area: string | null
+          consultivo_area:
+            | Database["public"]["Enums"]["area_juridica_enum"]
+            | null
           consultivo_criado_em: string | null
           consultivo_id: string | null
           consultivo_numero: string | null
@@ -13684,7 +13677,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      efetivar_custas_liberadas: { Args: never; Returns: number }
       encerrar_contrato_limite: {
         Args: { p_contrato_id: string; p_user_id: string }
         Returns: boolean
@@ -14615,6 +14607,11 @@ export type Database = {
         | "administrativo"
         | "outros"
         | "ambiental"
+        | "contratual"
+        | "societario"
+        | "imobiliario"
+        | "propriedade_intelectual"
+        | "compliance"
       despesa_categoria_enum:
         | "custas"
         | "cartorio"
@@ -14652,13 +14649,6 @@ export type Database = {
         | "comissao"
         | "outra"
         | "outros"
-      despesa_fluxo_status:
-        | "pendente"
-        | "agendado"
-        | "liberado"
-        | "pago"
-        | "rejeitado"
-        | "cancelado"
       despesa_status_enum:
         | "pendente"
         | "pago"
@@ -14917,6 +14907,11 @@ export const Constants = {
         "administrativo",
         "outros",
         "ambiental",
+        "contratual",
+        "societario",
+        "imobiliario",
+        "propriedade_intelectual",
+        "compliance",
       ],
       despesa_categoria_enum: [
         "custas",
@@ -14955,14 +14950,6 @@ export const Constants = {
         "comissao",
         "outra",
         "outros",
-      ],
-      despesa_fluxo_status: [
-        "pendente",
-        "agendado",
-        "liberado",
-        "pago",
-        "rejeitado",
-        "cancelado",
       ],
       despesa_status_enum: [
         "pendente",

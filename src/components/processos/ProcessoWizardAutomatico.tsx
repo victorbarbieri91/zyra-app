@@ -402,17 +402,23 @@ export default function ProcessoWizardAutomatico({
     }
   }
 
-  // Mapear área jurídica (valores do banco: civel, trabalhista, tributaria, familia, criminal, previdenciaria, consumidor, empresarial, ambiental, outra)
+  // Mapear área jurídica (valores correspondem ao enum area_juridica_enum)
   const mapearArea = (area: string): string => {
     const areaLower = area.toLowerCase()
     if (areaLower.includes('trabalhist') || areaLower.includes('trabalho')) return 'trabalhista'
     if (areaLower.includes('família') || areaLower.includes('familia')) return 'familia'
     if (areaLower.includes('criminal') || areaLower.includes('penal')) return 'criminal'
-    if (areaLower.includes('tributár') || areaLower.includes('tributar') || areaLower.includes('fiscal')) return 'tributaria'
+    if (areaLower.includes('tributár') || areaLower.includes('tributar') || areaLower.includes('fiscal')) return 'tributario'
     if (areaLower.includes('consumidor') || areaLower.includes('cdc')) return 'consumidor'
+    if (areaLower.includes('societ')) return 'societario'
+    if (areaLower.includes('contrat')) return 'contratual'
+    if (areaLower.includes('imobil') || areaLower.includes('imóvel') || areaLower.includes('imovel')) return 'imobiliario'
+    if (areaLower.includes('propriedade intelectual') || areaLower.includes('marca') || areaLower.includes('patente')) return 'propriedade_intelectual'
+    if (areaLower.includes('compliance')) return 'compliance'
     if (areaLower.includes('empresar') || areaLower.includes('falência') || areaLower.includes('falencia')) return 'empresarial'
-    if (areaLower.includes('previdenci') || areaLower.includes('inss')) return 'previdenciaria'
+    if (areaLower.includes('previdenci') || areaLower.includes('inss')) return 'previdenciario'
     if (areaLower.includes('ambiental') || areaLower.includes('meio ambiente')) return 'ambiental'
+    if (areaLower.includes('administ')) return 'administrativo'
     return 'civel'
   }
 

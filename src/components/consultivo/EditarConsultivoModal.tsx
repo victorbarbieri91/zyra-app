@@ -31,6 +31,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { AREAS_JURIDICAS_OPTIONS } from '@/lib/constants/areas-juridicas'
 
 interface EditarConsultivoModalProps {
   open: boolean
@@ -60,23 +61,7 @@ interface Responsavel {
   nome_completo: string
 }
 
-const AREAS = [
-  { value: 'civel', label: 'Cível' },
-  { value: 'trabalhista', label: 'Trabalhista' },
-  { value: 'tributaria', label: 'Tributária' },
-  { value: 'societaria', label: 'Societária' },
-  { value: 'empresarial', label: 'Empresarial' },
-  { value: 'contratual', label: 'Contratual' },
-  { value: 'familia', label: 'Família' },
-  { value: 'criminal', label: 'Criminal' },
-  { value: 'previdenciaria', label: 'Previdenciária' },
-  { value: 'consumidor', label: 'Consumidor' },
-  { value: 'ambiental', label: 'Ambiental' },
-  { value: 'imobiliario', label: 'Imobiliário' },
-  { value: 'propriedade_intelectual', label: 'Propriedade Intelectual' },
-  { value: 'compliance', label: 'Compliance' },
-  { value: 'outra', label: 'Outra' },
-]
+const AREAS = AREAS_JURIDICAS_OPTIONS
 
 const PRIORIDADES = [
   { value: 'baixa', label: 'Baixa', color: 'bg-slate-100 text-slate-600' },

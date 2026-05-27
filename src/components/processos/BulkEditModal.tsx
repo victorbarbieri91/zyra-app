@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, AlertTriangle, Check, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { AREAS_JURIDICAS_OPTIONS } from '@/lib/constants/areas-juridicas'
 
 type EditField = 'area' | 'responsavel' | 'status' | 'prioridade' | 'tags'
 
@@ -38,18 +39,7 @@ interface Profile {
   nome_completo: string
 }
 
-const AREAS = [
-  { value: 'civel', label: 'Civel' },
-  { value: 'trabalhista', label: 'Trabalhista' },
-  { value: 'tributaria', label: 'Tributaria' },
-  { value: 'familia', label: 'Familia' },
-  { value: 'criminal', label: 'Criminal' },
-  { value: 'previdenciaria', label: 'Previdenciaria' },
-  { value: 'consumidor', label: 'Consumidor' },
-  { value: 'empresarial', label: 'Empresarial' },
-  { value: 'ambiental', label: 'Ambiental' },
-  { value: 'outra', label: 'Outra' },
-]
+const AREAS = AREAS_JURIDICAS_OPTIONS
 
 const STATUS = [
   { value: 'ativo', label: 'Ativo' },

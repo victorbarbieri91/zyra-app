@@ -185,6 +185,13 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
     let updates: Partial<RecorrenciaData> = { [field]: newValue }
 
     if (field === 'frequencia') {
+      // Clamp do intervalo conforme novo limite da frequência
+      const limites: Record<string, number> = { semanal: 3, mensal: 11, anual: 5 }
+      const novoMax = limites[newValue as string] ?? 1
+      if ((value.intervalo || 1) > novoMax) {
+        updates.intervalo = novoMax
+      }
+
       switch (newValue) {
         case 'diaria':
           updates.diasSemana = undefined
@@ -233,6 +240,16 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
       case 'mensal': return 'mês(es)'
       case 'anual': return 'ano(s)'
       default: return ''
+    }
+  }
+
+  // Limite máximo de intervalo por frequência
+  const maxIntervalo = () => {
+    switch (value?.frequencia) {
+      case 'semanal': return 3
+      case 'mensal': return 11
+      case 'anual': return 5
+      default: return 1
     }
   }
 
@@ -318,12 +335,19 @@ export default function RecorrenciaConfig({ value, onChange, tipo }: Recorrencia
             <span className="text-sm text-slate-500 dark:text-slate-400">a cada</span>
             <Input
               type="number"
-              min="1"
+              min={1}
+              max={maxIntervalo()}
               value={value.intervalo || 1}
-              onChange={(e) => handleFieldChange('intervalo', parseInt(e.target.value) || 1)}
+              onChange={(e) => {
+                const raw = parseInt(e.target.value) || 1
+                const max = maxIntervalo()
+                handleFieldChange('intervalo', Math.max(1, Math.min(raw, max)))
+              }}
               className="w-16 text-center"
             />
-            <span className="text-sm text-slate-500 dark:text-slate-400">{unidadeLabel()}</span>
+            <span className="text-sm text-slate-500 dark:text-slate-400">
+              {unidadeLabel()} <span className="text-slate-400 dark:text-slate-500">(máx. {maxIntervalo()})</span>
+            </span>
           </div>
 
           {/* Condicional: dias úteis (diária) */}

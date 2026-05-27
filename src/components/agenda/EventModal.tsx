@@ -52,7 +52,7 @@ export interface EventFormData {
   // Recorrência
   recorrente?: boolean
   recorrencia?: {
-    frequencia: 'diaria' | 'semanal' | 'mensal' | 'anual'
+    frequencia: 'semanal' | 'mensal' | 'anual'
     intervalo: number
     dias_semana?: number[]
     data_fim?: Date
@@ -738,16 +738,27 @@ export default function EventModal({
                       </Label>
                       <Select
                         value={formData.recorrencia?.frequencia}
-                        onValueChange={(value: any) => setFormData(prev => ({
-                          ...prev,
-                          recorrencia: { ...(prev.recorrencia || { intervalo: 1 }), frequencia: value }
-                        }))}
+                        onValueChange={(value: any) => {
+                          const limites: Record<string, number> = { semanal: 3, mensal: 11, anual: 5 }
+                          const novoMax = limites[value] ?? 1
+                          setFormData(prev => {
+                            const intervaloAtual = prev.recorrencia?.intervalo || 1
+                            const intervaloClampado = Math.max(1, Math.min(intervaloAtual, novoMax))
+                            return {
+                              ...prev,
+                              recorrencia: {
+                                ...(prev.recorrencia || { intervalo: 1 }),
+                                frequencia: value,
+                                intervalo: intervaloClampado,
+                              },
+                            }
+                          })
+                        }}
                       >
                         <SelectTrigger className="border-slate-200 bg-white">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="diaria">Diariamente</SelectItem>
                           <SelectItem value="semanal">Semanalmente</SelectItem>
                           <SelectItem value="mensal">Mensalmente</SelectItem>
                           <SelectItem value="anual">Anualmente</SelectItem>
@@ -761,15 +772,35 @@ export default function EventModal({
                       </Label>
                       <Input
                         type="number"
-                        min="1"
-                        value={formData.recorrencia?.intervalo || 1}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          recorrencia: {
-                            ...(prev.recorrencia || { frequencia: 'semanal' }),
-                            intervalo: parseInt(e.target.value)
+                        min={1}
+                        max={(() => {
+                          switch (formData.recorrencia?.frequencia) {
+                            case 'semanal': return 3
+                            case 'mensal': return 11
+                            case 'anual': return 5
+                            default: return 1
                           }
-                        }))}
+                        })()}
+                        value={formData.recorrencia?.intervalo || 1}
+                        onChange={(e) => {
+                          const raw = parseInt(e.target.value) || 1
+                          const max = (() => {
+                            switch (formData.recorrencia?.frequencia) {
+                              case 'semanal': return 3
+                              case 'mensal': return 11
+                              case 'anual': return 5
+                              default: return 1
+                            }
+                          })()
+                          const intervalo = Math.max(1, Math.min(raw, max))
+                          setFormData(prev => ({
+                            ...prev,
+                            recorrencia: {
+                              ...(prev.recorrencia || { frequencia: 'semanal' }),
+                              intervalo,
+                            },
+                          }))
+                        }}
                         className="border-slate-200 bg-white"
                       />
                     </div>

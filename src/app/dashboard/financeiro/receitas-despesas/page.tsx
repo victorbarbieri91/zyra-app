@@ -77,7 +77,7 @@ import LevantamentoModal from '@/components/financeiro/LevantamentoModal'
 import { ModalRecebimento, type ModalRecebimentoItem } from '@/components/financeiro/ModalRecebimento'
 import { AgendarPagamentoModal } from '@/components/financeiro/AgendarPagamentoModal'
 import { RegistrarPagamentoModal } from '@/components/financeiro/RegistrarPagamentoModal'
-import DespesaDetalhesModal, { type CustaDespesa } from '@/components/financeiro/DespesaDetalhesModal'
+import DespesaDetalhesModal, { type DespesaDetalhada } from '@/components/financeiro/DespesaDetalhesModal'
 import TransferenciaDetalhesModal from '@/components/financeiro/TransferenciaDetalhesModal'
 import TransferenciaEditarModal from '@/components/financeiro/TransferenciaEditarModal'
 import LancamentoEditarModal from '@/components/financeiro/LancamentoEditarModal'
@@ -333,7 +333,7 @@ export default function ExtratoFinanceiroPage() {
   // Modais de workflow de despesa
   const [modalAgendarDespesa, setModalAgendarDespesa] = useState<ExtratoItem | null>(null)
   const [modalPagarDespesa, setModalPagarDespesa] = useState<ExtratoItem | null>(null)
-  const [modalDetalhesDespesa, setModalDetalhesDespesa] = useState<CustaDespesa | null>(null)
+  const [modalDetalhesDespesa, setModalDetalhesDespesa] = useState<DespesaDetalhada | null>(null)
   const [loadingDetalhesDespesa, setLoadingDetalhesDespesa] = useState(false)
   const [workflowSubmitting, setWorkflowSubmitting] = useState(false)
 
@@ -972,9 +972,8 @@ export default function ExtratoFinanceiroPage() {
         .single()
       if (error) throw error
 
-      const despesa: CustaDespesa = {
+      const despesa: DespesaDetalhada = {
         ...data,
-        fluxo_status: data.status,
         processo_autor: data.processo?.autor || null,
         processo_reu: data.processo?.reu || null,
         processo_numero_pasta: data.processo?.numero_pasta || null,

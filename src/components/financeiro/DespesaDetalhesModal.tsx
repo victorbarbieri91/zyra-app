@@ -29,8 +29,43 @@ import {
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { formatBrazilDate } from '@/lib/timezone'
-import type { CustaDespesa } from '@/hooks/useCustasDespesas'
-export type { CustaDespesa }
+
+export interface DespesaDetalhada {
+  id: string
+  escritorio_id: string
+  processo_id: string | null
+  consultivo_id: string | null
+  cliente_id: string | null
+  categoria: string
+  descricao: string
+  valor: number
+  data_vencimento: string
+  data_pagamento: string | null
+  data_pagamento_programada: string | null
+  status: 'pendente' | 'agendado' | 'liberado' | 'pago' | 'cancelado'
+  fornecedor: string | null
+  documento_fiscal: string | null
+  comprovante_url: string | null
+  reembolsavel: boolean
+  reembolso_status: string | null
+  reembolsado: boolean
+  conta_bancaria_id: string | null
+  forma_pagamento: string | null
+  aprovado_por: string | null
+  data_aprovacao: string | null
+  motivo_rejeicao: string | null
+  observacoes_financeiro: string | null
+  advogado_id: string | null
+  created_at: string
+  // JOINs
+  processo_autor: string | null
+  processo_reu: string | null
+  processo_numero_pasta: string | null
+  processo_numero_cnj: string | null
+  consulta_titulo: string | null
+  cliente_nome: string | null
+  advogado_nome: string | null
+}
 
 const CATEGORIAS_LABELS: Record<string, string> = {
   custas: 'Custas Processuais',
@@ -107,17 +142,17 @@ const REEMBOLSO_STATUS_LABELS: Record<string, string> = {
 interface DespesaDetalhesModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  despesa: CustaDespesa | null
-  onEditar: (item: CustaDespesa) => void
-  onCancelar: (item: CustaDespesa) => void
-  onAgendar: (item: CustaDespesa) => void
-  onLiberar: (item: CustaDespesa) => void
-  onRejeitar: (item: CustaDespesa) => void
-  onPagar: (item: CustaDespesa) => void
-  onReverter?: (item: CustaDespesa) => void
+  despesa: DespesaDetalhada | null
+  onEditar: (item: DespesaDetalhada) => void
+  onCancelar: (item: DespesaDetalhada) => void
+  onAgendar: (item: DespesaDetalhada) => void
+  onLiberar: (item: DespesaDetalhada) => void
+  onRejeitar: (item: DespesaDetalhada) => void
+  onPagar: (item: DespesaDetalhada) => void
+  onReverter?: (item: DespesaDetalhada) => void
 }
 
-function getCasoLabel(item: CustaDespesa) {
+function getCasoLabel(item: DespesaDetalhada) {
   if (item.processo_id) {
     const pasta = item.processo_numero_pasta ? `${item.processo_numero_pasta} - ` : ''
     if (item.processo_autor && item.processo_reu) {

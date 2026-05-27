@@ -289,6 +289,24 @@ const { data } = await supabase
 | CRM | `useCrmPessoas`, `useCrmOportunidades` |
 | Sistema | `useTags`, `useTimers`, `useGlobalSearch`, `useEscritorioAtivo` |
 
+## Submódulo Receitas e Despesas — convenções consolidadas
+
+A página única do submódulo é `/dashboard/financeiro/receitas-despesas`. A página antiga `/dashboard/financeiro/custas-despesas` foi removida — o workflow de aprovação de custas processuais agora vive dentro de `/receitas-despesas`.
+
+**Status de despesa (fonte única da verdade):**
+- Campo: `financeiro_despesas.status`
+- Enum: `despesa_status_enum` com 5 valores: `pendente`, `agendado`, `liberado`, `pago`, `cancelado`
+- O workflow padrão é `pendente → agendado → liberado → pago`, mas o usuário pode pular pra qualquer estado (inclusive criar já como `pago`) — sem trava
+- ❌ **NÃO existe mais `fluxo_status` nem o enum `despesa_fluxo_status`** — foi removido junto com a página antiga. Toda mudança de status escreve apenas em `status`
+
+**Triggers ativos em `financeiro_despesas`** (após cleanup de maio/2026):
+- `auto_quitar_liberada` → `trigger_auto_quitar_despesa_liberada()`: se `status='liberado'` + `auto_pagamento=true` + `data_pagamento_programada <= hoje`, vira `status='pago'` automaticamente
+- `gerar_parcelas_despesa` → `trigger_gerar_parcelas_despesa()`: se `parcelado=true` e `numero_parcelas>1`, cria as N filhas no AFTER INSERT
+- `trigger_set_reembolso_status` → `set_reembolso_status()`: mantém `reembolso_status` consistente com `reembolsavel`
+- `trg_validar_responsavel_membro_grupo`: valida que `advogado_id` é membro do grupo
+
+⚠️ **Ressalva conhecida (não corrigida ainda)**: o trigger `auto_quitar_liberada` e o cron `auto-pagamento-despesas` não chamam `recalcular_saldo_conta` quando auto-pagam — saldo da conta pode ficar defasado. Bug subjacente antigo, registrado pra arrumar em rodada separada.
+
 ## Common Development Commands
 
 ### Frontend Development

@@ -59,7 +59,6 @@ export interface DespesaEditData {
   processo_id?: string | null
   consultivo_id?: string | null
   cliente_id?: string | null
-  fluxo_status?: string | null
   status?: string | null
   data_pagamento?: string | null
   conta_bancaria_id?: string | null
@@ -312,7 +311,7 @@ export default function DespesaModal({
     if (open) {
       if (editData) {
         // Modo edição: preencher form com dados existentes
-        const isPago = editData.status === 'pago' || editData.fluxo_status === 'pago'
+        const isPago = editData.status === 'pago'
         setFormData({
           categoria: editData.categoria || '',
           descricao: editData.descricao || '',
@@ -660,7 +659,6 @@ export default function DespesaModal({
 
         if (formData.ja_pago) {
           updateData.status = 'pago'
-          updateData.fluxo_status = 'pago'
           updateData.data_pagamento = formatDateForDB(formData.data_pagamento)
           updateData.conta_bancaria_id = formData.conta_bancaria_id || null
           updateData.forma_pagamento = formData.forma_pagamento || null
@@ -760,7 +758,6 @@ export default function DespesaModal({
               .from('financeiro_despesas')
               .update({
                 status: 'pago',
-                fluxo_status: 'pago',
                 data_pagamento: formatDateForDB(formData.data_pagamento),
                 conta_bancaria_id: formData.conta_bancaria_id || null,
                 forma_pagamento: formData.forma_pagamento || null,
@@ -794,13 +791,11 @@ export default function DespesaModal({
 
           if (formData.ja_pago) {
             despesaData.status = 'pago'
-            despesaData.fluxo_status = 'pago'
             despesaData.data_pagamento = formatDateForDB(formData.data_pagamento)
             despesaData.conta_bancaria_id = formData.conta_bancaria_id || null
             despesaData.forma_pagamento = formData.forma_pagamento || null
           } else {
             despesaData.status = 'pendente'
-            despesaData.fluxo_status = 'pendente'
           }
 
           const { error } = await supabase.from('financeiro_despesas').insert(despesaData)

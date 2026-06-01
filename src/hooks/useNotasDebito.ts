@@ -104,6 +104,13 @@ export interface DespesaReembolsavel {
   processo_reu: string | null
   processo_numero_pasta: string | null
   consulta_titulo: string | null
+  // Campos necessários para edição via DespesaModal e recálculo de saldo
+  conta_bancaria_id: string | null
+  status: string | null
+  data_pagamento: string | null
+  forma_pagamento: string | null
+  fornecedor: string | null
+  comprovante_url: string | null
 }
 
 export function useNotasDebito() {
@@ -233,6 +240,7 @@ export function useNotasDebito() {
       .from('financeiro_despesas')
       .select(`
         id, descricao, valor, categoria, data_vencimento, processo_id, consultivo_id,
+        conta_bancaria_id, status, data_pagamento, forma_pagamento, fornecedor, comprovante_url,
         processo:processos_processos!processo_id(autor, reu, numero_pasta),
         consulta:consultivo_consultas!consultivo_id(titulo)
       `)
@@ -259,6 +267,12 @@ export function useNotasDebito() {
       processo_reu: d.processo?.reu || null,
       processo_numero_pasta: d.processo?.numero_pasta || null,
       consulta_titulo: d.consulta?.titulo || null,
+      conta_bancaria_id: d.conta_bancaria_id || null,
+      status: d.status || null,
+      data_pagamento: d.data_pagamento || null,
+      forma_pagamento: d.forma_pagamento || null,
+      fornecedor: d.fornecedor || null,
+      comprovante_url: d.comprovante_url || null,
     }))
   }
 
@@ -555,6 +569,51 @@ export function useNotasDebito() {
     }))
   }
 
+  // Parar de cobrar do cliente: a despesa deixa de ser reembolsável (sai da
+  // lista de candidatas à nota), mas continua intacta no extrato e no saldo.
+  // Reversível — não exclui nada nem mexe em conta bancária.
+  const pararDeCobrar = async (despesaId: string): Promise<boolean> => {
+    if (!escritorioAtivo) return false
+    const { error } = await supabase
+      .from('financeiro_despesas')
+      .update({
+        reembolsavel: false,
+        reembolso_status: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', despesaId)
+      .eq('escritorio_id', escritorioAtivo)
+
+    if (error) {
+      console.error('Erro ao parar de cobrar despesa:', error)
+      toast.error('Erro ao remover a despesa da cobrança')
+      return false
+    }
+    return true
+  }
+
+  // Apagar de vez: exclui o registro da despesa e recalcula o saldo da conta
+  // bancária vinculada (se houver). Irreversível.
+  const excluirDespesaDeVez = async (despesa: DespesaReembolsavel): Promise<boolean> => {
+    if (!escritorioAtivo) return false
+    const { error } = await supabase
+      .from('financeiro_despesas')
+      .delete()
+      .eq('id', despesa.id)
+      .eq('escritorio_id', escritorioAtivo)
+
+    if (error) {
+      console.error('Erro ao excluir despesa:', error)
+      toast.error('Erro ao excluir a despesa')
+      return false
+    }
+
+    if (despesa.conta_bancaria_id) {
+      await supabase.rpc('recalcular_saldo_conta', { p_conta_id: despesa.conta_bancaria_id })
+    }
+    return true
+  }
+
   const recarregar = useCallback(async () => {
     await Promise.all([carregarNotas(), carregarClientesComDespesas()])
   }, [carregarNotas, carregarClientesComDespesas])
@@ -574,5 +633,7 @@ export function useNotasDebito() {
     marcarPaga,
     cancelarNota,
     carregarItens,
+    pararDeCobrar,
+    excluirDespesaDeVez,
   }
 }

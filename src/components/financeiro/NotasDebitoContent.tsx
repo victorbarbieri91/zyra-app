@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +14,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
 import {
@@ -43,6 +45,11 @@ import {
   DollarSign,
   ChevronRight,
   Users,
+  FolderOpen,
+  ExternalLink,
+  Pencil,
+  Trash2,
+  Info,
 } from 'lucide-react'
 import {
   AlertDialog,
@@ -69,6 +76,7 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { getEscritoriosDoGrupo } from '@/lib/supabase/escritorio-helpers'
 import ContaBancariaSelect from '@/components/financeiro/ContaBancariaSelect'
+import DespesaModal, { type DespesaEditData } from '@/components/financeiro/DespesaModal'
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   rascunho: { label: 'Rascunho', color: 'bg-slate-100 text-slate-700 border-slate-200' },
@@ -131,6 +139,8 @@ export default function NotasDebitoContent({ embedded = false, showEscritorio = 
     marcarEnviada,
     marcarPaga,
     carregarItens,
+    pararDeCobrar,
+    excluirDespesaDeVez,
   } = useNotasDebito()
 
   const [activeTab, setActiveTab] = useState<'disponiveis' | 'geradas'>('disponiveis')
@@ -156,6 +166,12 @@ export default function NotasDebitoContent({ embedded = false, showEscritorio = 
 
   // Dialog desmontar nota
   const [notaParaDesmontar, setNotaParaDesmontar] = useState<string | null>(null)
+
+  // Editar / excluir despesa na aba "Disponível para Gerar"
+  const [despesaParaEditar, setDespesaParaEditar] = useState<DespesaReembolsavel | null>(null)
+  const [despesaParaExcluir, setDespesaParaExcluir] = useState<DespesaReembolsavel | null>(null)
+  const [modoExclusao, setModoExclusao] = useState<'parar' | 'apagar'>('parar')
+  const [excluindoDespesa, setExcluindoDespesa] = useState(false)
 
   // === Handlers Tab 1: Disponível para Gerar ===
 
@@ -221,6 +237,79 @@ export default function NotasDebitoContent({ embedded = false, showEscritorio = 
     }
   }
 
+  // Recarrega as despesas do cliente atual (após editar/excluir) e os agregados
+  // da aba. Remove da seleção os ids que deixaram de existir e fecha o modal de
+  // criação se o cliente não tiver mais despesas disponíveis.
+  const recarregarDespesasCliente = async () => {
+    await recarregar()
+    if (!clienteParaNota) return
+    const despesas = await buscarDespesasReembolsaveis(clienteParaNota.cliente_id)
+    setDespesasDisponiveis(despesas)
+    const idsValidos = new Set(despesas.map(d => d.id))
+    setDespesasSelecionadas(prev => new Set([...prev].filter(id => idsValidos.has(id))))
+    if (despesas.length === 0) {
+      setModalCriar(false)
+    }
+  }
+
+  // Monta o editData para o DespesaModal a partir de uma despesa reembolsável
+  const despesaEditData: DespesaEditData | null = despesaParaEditar
+    ? {
+        id: despesaParaEditar.id,
+        categoria: despesaParaEditar.categoria,
+        descricao: despesaParaEditar.descricao,
+        valor: despesaParaEditar.valor,
+        data_vencimento: despesaParaEditar.data_vencimento,
+        reembolsavel: true,
+        conta_bancaria_id: despesaParaEditar.conta_bancaria_id,
+        status: despesaParaEditar.status,
+        data_pagamento: despesaParaEditar.data_pagamento,
+        forma_pagamento: despesaParaEditar.forma_pagamento,
+        fornecedor: despesaParaEditar.fornecedor,
+        comprovante_url: despesaParaEditar.comprovante_url,
+        processo_id: despesaParaEditar.processo_id,
+        consultivo_id: despesaParaEditar.consultivo_id,
+        cliente_id: clienteParaNota?.cliente_id || null,
+      }
+    : null
+
+  const handleEditarDespesaSuccess = async () => {
+    const contaId = despesaParaEditar?.conta_bancaria_id
+    setDespesaParaEditar(null)
+    // Editar valor de despesa paga não recalcula saldo dentro do DespesaModal —
+    // garantimos a consistência do saldo aqui.
+    if (contaId) {
+      await supabase.rpc('recalcular_saldo_conta', { p_conta_id: contaId })
+    }
+    await recarregarDespesasCliente()
+  }
+
+  const abrirExclusao = (despesa: DespesaReembolsavel) => {
+    setModoExclusao('parar')
+    setDespesaParaExcluir(despesa)
+  }
+
+  const handleConfirmarExclusao = async () => {
+    if (!despesaParaExcluir) return
+    setExcluindoDespesa(true)
+    try {
+      const ok = modoExclusao === 'parar'
+        ? await pararDeCobrar(despesaParaExcluir.id)
+        : await excluirDespesaDeVez(despesaParaExcluir)
+      if (ok) {
+        toast.success(
+          modoExclusao === 'parar'
+            ? 'Despesa removida da cobrança'
+            : 'Despesa excluída'
+        )
+        setDespesaParaExcluir(null)
+        await recarregarDespesasCliente()
+      }
+    } finally {
+      setExcluindoDespesa(false)
+    }
+  }
+
   // === Handlers Ações (Tab 2) ===
 
   const handleDesmontar = async (notaId: string) => {
@@ -271,11 +360,14 @@ export default function NotasDebitoContent({ embedded = false, showEscritorio = 
   }
 
   const getCasoLabel = (d: DespesaReembolsavel) => {
-    if (d.processo_autor && d.processo_reu) {
-      const pasta = d.processo_numero_pasta ? `${d.processo_numero_pasta} - ` : ''
-      return `${pasta}${d.processo_autor} x ${d.processo_reu}`
+    if (d.processo_id) {
+      const partes = [d.processo_autor, d.processo_reu].filter(Boolean).join(' x ')
+      const pasta = d.processo_numero_pasta || ''
+      if (pasta && partes) return `${pasta} - ${partes}`
+      return partes || pasta || 'Ver processo'
     }
     if (d.consulta_titulo) return d.consulta_titulo
+    if (d.consultivo_id) return 'Ver consultivo'
     return '—'
   }
 
@@ -574,130 +666,175 @@ export default function NotasDebitoContent({ embedded = false, showEscritorio = 
         </TabsContent>
       </Tabs>
 
-      {/* === Modal Criar Nota (simplificado — sem busca de cliente) === */}
+      {/* === Modal Criar Nota === */}
       <Dialog open={modalCriar} onOpenChange={setModalCriar}>
-        <DialogContent className="sm:max-w-xl max-h-[85vh] flex flex-col overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base text-[#34495e] dark:text-slate-200">
-              <FileOutput className="w-4 h-4 text-[#89bcbe]" />
-              Nova Nota de Débito
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-            {/* Cliente (read-only) */}
-            {clienteParaNota && (
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700">
-                <div className="w-8 h-8 rounded-full bg-[#34495e] dark:bg-slate-600 flex items-center justify-center">
-                  <span className="text-xs font-bold text-white">
-                    {clienteParaNota.cliente_nome.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">{clienteParaNota.cliente_nome}</p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                    {clienteParaNota.qtd_despesas} {clienteParaNota.qtd_despesas === 1 ? 'despesa disponível' : 'despesas disponíveis'} — Total: {formatCurrency(clienteParaNota.total_valor)}
-                  </p>
-                </div>
+        <DialogContent className="sm:max-w-2xl !p-0 gap-0 max-h-[88vh] flex flex-col overflow-hidden">
+          {/* Header */}
+          <DialogHeader className="px-6 pt-6 pb-5 border-b border-slate-100 dark:border-slate-700 space-y-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-[#f0f9f9] dark:bg-teal-500/10 flex items-center justify-center shrink-0">
+                <FileOutput className="w-5 h-5 text-[#89bcbe]" />
               </div>
-            )}
+              <div className="min-w-0">
+                <DialogTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
+                  Nova Nota de Débito
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                  {clienteParaNota
+                    ? `${clienteParaNota.cliente_nome} · ${clienteParaNota.qtd_despesas} ${clienteParaNota.qtd_despesas === 1 ? 'despesa disponível' : 'despesas disponíveis'}`
+                    : 'Selecione as despesas que serão cobradas do cliente'}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
 
-            {/* Despesas disponíveis */}
+          {/* Conteúdo */}
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+            {/* Despesas */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">Despesas Reembolsáveis Pagas</Label>
+              <div className="flex items-center justify-between mb-2.5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#46627f] dark:text-slate-400">
+                  Despesas reembolsáveis pagas
+                </p>
                 {despesasDisponiveis.length > 0 && (
-                  <Button variant="ghost" size="sm" className="text-xs h-6" onClick={toggleTodasDespesas}>
+                  <Button variant="ghost" size="sm" className="text-xs h-7 text-[#46627f] hover:text-[#34495e]" onClick={toggleTodasDespesas}>
                     {despesasSelecionadas.size === despesasDisponiveis.length ? 'Desmarcar todas' : 'Selecionar todas'}
                   </Button>
                 )}
               </div>
 
               {loadingDespesas ? (
-                <div className="flex items-center justify-center py-8">
+                <div className="flex items-center justify-center py-10">
                   <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
                 </div>
               ) : despesasDisponiveis.length === 0 ? (
-                <div className="text-center py-8 text-slate-400">
-                  <p className="text-xs">Nenhuma despesa reembolsável paga disponível</p>
+                <div className="text-center py-10 text-slate-400">
+                  <p className="text-sm">Nenhuma despesa reembolsável paga disponível</p>
                 </div>
               ) : (
-                <div className="border border-slate-200 dark:border-slate-700 rounded-md max-h-60 overflow-y-auto">
+                <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden divide-y divide-slate-100 dark:divide-slate-700/50 max-h-[19rem] overflow-y-auto">
                   {despesasDisponiveis.map(d => (
                     <div
                       key={d.id}
                       className={cn(
-                        'flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-slate-700/50 last:border-b-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-1 transition-colors',
-                        despesasSelecionadas.has(d.id) && 'bg-blue-50 dark:bg-blue-500/10'
+                        'group flex items-center gap-3 px-3.5 py-3 cursor-pointer transition-colors',
+                        despesasSelecionadas.has(d.id)
+                          ? 'bg-[#1E3A8A]/5 dark:bg-blue-500/10'
+                          : 'hover:bg-slate-50 dark:hover:bg-surface-1'
                       )}
                       onClick={() => toggleDespesa(d.id)}
                     >
                       <Checkbox
                         checked={despesasSelecionadas.has(d.id)}
                         onCheckedChange={() => toggleDespesa(d.id)}
+                        onClick={(e) => e.stopPropagation()}
                       />
                       <div className="flex-1 min-w-0 overflow-hidden">
-                        <p className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{d.descricao}</p>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{getCasoLabel(d)}</p>
+                        <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate leading-snug">{d.descricao}</p>
+                        {(d.processo_id || d.consultivo_id) ? (
+                          <Link
+                            href={d.processo_id
+                              ? `/dashboard/processos/${d.processo_id}`
+                              : `/dashboard/consultivo/${d.consultivo_id}`
+                            }
+                            className="inline-flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 hover:underline mt-0.5"
+                            onClick={(e) => e.stopPropagation()}
+                            target="_blank"
+                          >
+                            <FolderOpen className="h-2.5 w-2.5 shrink-0" />
+                            <span className="truncate max-w-[280px]">{getCasoLabel(d)}</span>
+                            <ExternalLink className="h-2 w-2 text-slate-400 shrink-0" />
+                          </Link>
+                        ) : (
+                          <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">{getCasoLabel(d)}</p>
+                        )}
                       </div>
-                      <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200 whitespace-nowrap shrink-0">
+                      {/* Ações — visíveis no hover */}
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-slate-400 hover:text-[#1E3A8A] hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                          onClick={(e) => { e.stopPropagation(); setDespesaParaEditar(d) }}
+                          title="Editar despesa"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+                          onClick={(e) => { e.stopPropagation(); abrirExclusao(d) }}
+                          title="Excluir despesa"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200 tabular-nums whitespace-nowrap shrink-0">
                         {formatCurrency(d.valor)}
                       </span>
                     </div>
                   ))}
                 </div>
               )}
-
-              {despesasSelecionadas.size > 0 && (
-                <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg border border-emerald-200 dark:border-emerald-500/20">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                      {despesasSelecionadas.size} despesa(s) selecionada(s)
-                    </span>
-                    <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
-                      {formatCurrency(totalSelecionado)}
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
 
-            {/* Vencimento e observações */}
+            {/* Dados da nota */}
             {despesasSelecionadas.size > 0 && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Data de Vencimento *</Label>
-                  <Input
-                    type="date"
-                    value={novaNotaVencimento}
-                    onChange={e => setNovaNotaVencimento(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Observações</Label>
-                  <Input
-                    placeholder="Observações..."
-                    value={novaNotaObs}
-                    onChange={e => setNovaNotaObs(e.target.value)}
-                  />
+              <div className="pt-5 border-t border-slate-100 dark:border-slate-700">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#46627f] dark:text-slate-400 mb-2.5">
+                  Dados da nota
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm text-[#46627f] dark:text-slate-400">Data de vencimento *</Label>
+                    <Input
+                      type="date"
+                      value={novaNotaVencimento}
+                      onChange={e => setNovaNotaVencimento(e.target.value)}
+                      className="h-10"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm text-[#46627f] dark:text-slate-400">Observações</Label>
+                    <Input
+                      placeholder="Opcional"
+                      value={novaNotaObs}
+                      onChange={e => setNovaNotaObs(e.target.value)}
+                      className="h-10"
+                    />
+                  </div>
                 </div>
               </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setModalCriar(false)}>Cancelar</Button>
-            <Button
-              onClick={handleCriarNota}
-              disabled={submitting || despesasSelecionadas.size === 0 || !novaNotaVencimento}
-              className="bg-[#34495e] hover:bg-[#46627f]"
-            >
-              {submitting ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-1" />
-              ) : (
-                <DollarSign className="w-4 h-4 mr-1" />
-              )}
-              Gerar Nota de Débito
-            </Button>
-          </DialogFooter>
+
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-surface-2/40 flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {despesasSelecionadas.size} {despesasSelecionadas.size === 1 ? 'despesa selecionada' : 'despesas selecionadas'}
+              </p>
+              <p className="text-base font-bold text-[#34495e] dark:text-slate-200 tabular-nums">
+                {formatCurrency(totalSelecionado)}
+              </p>
+            </div>
+            <div className="flex items-center gap-2.5 shrink-0">
+              <Button variant="outline" onClick={() => setModalCriar(false)}>Cancelar</Button>
+              <Button
+                onClick={handleCriarNota}
+                disabled={submitting || despesasSelecionadas.size === 0 || !novaNotaVencimento}
+                className="bg-[#34495e] hover:bg-[#46627f]"
+              >
+                {submitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                ) : (
+                  <DollarSign className="w-4 h-4 mr-1.5" />
+                )}
+                Gerar Nota de Débito
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -827,6 +964,104 @@ export default function NotasDebitoContent({ embedded = false, showEscritorio = 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* === Editar despesa (reaproveita DespesaModal) === */}
+      <DespesaModal
+        open={!!despesaParaEditar}
+        onOpenChange={(open) => { if (!open) setDespesaParaEditar(null) }}
+        editData={despesaEditData}
+        onSuccess={handleEditarDespesaSuccess}
+      />
+
+      {/* === Excluir despesa — duas opções === */}
+      <Dialog
+        open={!!despesaParaExcluir}
+        onOpenChange={(open) => { if (!open) setDespesaParaExcluir(null) }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base text-[#34495e] dark:text-slate-200">
+              <Trash2 className="w-4 h-4 text-red-500" />
+              Excluir despesa
+            </DialogTitle>
+            {despesaParaExcluir && (
+              <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
+                {despesaParaExcluir.descricao} — {formatCurrency(despesaParaExcluir.valor)}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          <div className="space-y-4 py-1">
+            {/* Segmented control */}
+            <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-surface-2 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setModoExclusao('parar')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-medium transition-all',
+                  modoExclusao === 'parar'
+                    ? 'bg-[#34495e] text-white shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
+                )}
+              >
+                <Ban className="w-4 h-4" />
+                Parar de cobrar
+              </button>
+              <button
+                type="button"
+                onClick={() => setModoExclusao('apagar')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-medium transition-all',
+                  modoExclusao === 'apagar'
+                    ? 'bg-[#34495e] text-white shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
+                )}
+              >
+                <Trash2 className="w-4 h-4" />
+                Apagar de vez
+              </button>
+            </div>
+
+            {/* Explicação da opção escolhida */}
+            {modoExclusao === 'parar' ? (
+              <div className="flex items-start gap-2.5 px-4 py-2.5 rounded-lg bg-[#f0f9f9] border border-[#89bcbe]/40 dark:bg-teal-500/10 dark:border-teal-500/30">
+                <Info className="w-4 h-4 text-[#89bcbe] mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-[#46627f] dark:text-slate-300">
+                  A despesa deixa de ser <strong className="text-[#34495e] dark:text-slate-200">reembolsável</strong> e sai desta lista, mas continua existindo normalmente no extrato e no saldo da conta. Você pode reativá-la depois.
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start gap-3 px-4 py-3.5 rounded-lg bg-slate-50 dark:bg-surface-2 border border-slate-200 dark:border-slate-700">
+                <Trash2 className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-[#46627f] dark:text-slate-300">
+                  O registro da despesa será <strong className="text-[#34495e] dark:text-slate-200">excluído do sistema</strong>, sumindo do extrato, e o saldo da conta será recalculado. Esta ação <strong className="text-[#34495e] dark:text-slate-200">não pode ser desfeita</strong>.
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDespesaParaExcluir(null)} disabled={excluindoDespesa}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmarExclusao}
+              disabled={excluindoDespesa}
+              className={modoExclusao === 'apagar' ? '' : 'bg-[#34495e] hover:bg-[#46627f]'}
+              variant={modoExclusao === 'apagar' ? 'destructive' : 'default'}
+            >
+              {excluindoDespesa ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-1" />
+              ) : modoExclusao === 'apagar' ? (
+                <Trash2 className="w-4 h-4 mr-1" />
+              ) : (
+                <Ban className="w-4 h-4 mr-1" />
+              )}
+              {modoExclusao === 'apagar' ? 'Apagar de vez' : 'Parar de cobrar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

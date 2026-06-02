@@ -7,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -28,6 +27,8 @@ import {
   PieChart,
   Plus,
   Heart,
+  Info,
+  Repeat,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -61,6 +62,8 @@ interface VincularContratoModalProps {
   processoId: string
   clienteId: string | null
   clienteNome?: string
+  /** Quando informado, o modal entra em modo "trocar" (já existe contrato vinculado). */
+  contratoAtualId?: string | null
   onSuccess?: () => void
 }
 
@@ -103,6 +106,7 @@ export default function VincularContratoModal({
   processoId,
   clienteId,
   clienteNome,
+  contratoAtualId,
   onSuccess,
 }: VincularContratoModalProps) {
   const supabase = createClient()
@@ -116,15 +120,36 @@ export default function VincularContratoModal({
   const [contratoModalOpen, setContratoModalOpen] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
   const [pendingSelectionId, setPendingSelectionId] = useState<string | null>(null)
+  const [horasPendentes, setHorasPendentes] = useState(0)
 
-  // Reseta seleção e erro quando o modal abre (não em cada reload)
+  const isTrocar = !!contratoAtualId
+
+  // Reseta seleção e erro quando o modal abre (em modo trocar, pré-seleciona o atual)
   useEffect(() => {
     if (open) {
-      setSelectedContrato(null)
+      setSelectedContrato(contratoAtualId ?? null)
       setSelectedModalidade(null)
       setError(null)
     }
-  }, [open])
+  }, [open, contratoAtualId])
+
+  // Em modo trocar, verificar se há horas faturáveis pendentes no processo
+  useEffect(() => {
+    const checarHoras = async () => {
+      if (!open || !isTrocar || !processoId) {
+        setHorasPendentes(0)
+        return
+      }
+      const { count } = await supabase
+        .from('financeiro_timesheet')
+        .select('id', { count: 'exact', head: true })
+        .eq('processo_id', processoId)
+        .eq('faturavel', true)
+        .eq('faturado', false)
+      setHorasPendentes(count || 0)
+    }
+    checarHoras()
+  }, [open, isTrocar, processoId, supabase])
 
   // Carregar contratos do cliente
   useEffect(() => {
@@ -148,7 +173,6 @@ export default function VincularContratoModal({
         if (directError) throw directError
 
         // Query 2: contratos de grupo que contenham este cliente como membro
-        // Busca todos contratos com grupo habilitado e filtra client-side
         const { data: grupoData, error: grupoError } = await supabase
           .from('financeiro_contratos_honorarios')
           .select(selectFields)
@@ -171,12 +195,10 @@ export default function VincularContratoModal({
 
         // Processar dados usando colunas JSONB
         const contratosProcessados: ContratoDisponivel[] = (data || []).map((c: any) => {
-          // Extrair formas de cobrança do JSONB formas_pagamento
           const formasAtivas: FormaCobranca[] = c.formas_pagamento
             ? (c.formas_pagamento as Array<{ forma: FormaCobranca }>).map((f: any) => f.forma)
             : [c.forma_cobranca]
 
-          // Extrair config do JSONB
           const config: ContratoDisponivel['config'] = {}
           if (c.config) {
             const configData = c.config as Record<string, any>
@@ -185,7 +207,6 @@ export default function VincularContratoModal({
             if (configData.valor_por_processo) config.valor_por_processo = Number(configData.valor_por_processo)
           }
 
-          // Verificar se é contrato de grupo
           const grupoClientes = c.grupo_clientes as { habilitado?: boolean; cliente_pagador_id?: string; clientes?: Array<{ cliente_id: string; nome: string }> } | null
           const isGrupo = grupoClientes?.habilitado === true && (grupoClientes?.clientes?.length || 0) > 1
           const clientePagadorNome = isGrupo
@@ -254,17 +275,9 @@ export default function VincularContratoModal({
     setError(null)
 
     try {
-      // Determinar modalidade: selecionada ou a primeira (ou a forma principal se não houver formas_disponiveis)
       const modalidade = selectedModalidade || contrato.formas_disponiveis[0] || contrato.forma_cobranca
 
-      console.log('[VincularContrato] Iniciando vinculação:', {
-        processoId,
-        contratoId: selectedContrato,
-        modalidade,
-        contrato: contrato,
-      })
-
-      const { data, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('processos_processos')
         .update({
           contrato_id: selectedContrato,
@@ -273,13 +286,9 @@ export default function VincularContratoModal({
         .eq('id', processoId)
         .select('id, contrato_id, modalidade_cobranca')
 
-      console.log('[VincularContrato] Resultado UPDATE:', { data, error: updateError })
+      if (updateError) throw updateError
 
-      if (updateError) {
-        console.error('[VincularContrato] Erro no UPDATE:', updateError)
-        throw updateError
-      }
-
+      toast.success(isTrocar ? 'Contrato trocado com sucesso!' : 'Contrato vinculado com sucesso!')
       onSuccess?.()
       onOpenChange(false)
     } catch (err: any) {
@@ -295,7 +304,6 @@ export default function VincularContratoModal({
     try {
       const contratoId = await createContrato(data)
       if (contratoId) {
-        // Marca o novo contrato para pré-seleção quando o reload terminar
         setPendingSelectionId(contratoId)
         setReloadKey(prev => prev + 1)
         toast.success('Contrato criado com sucesso!')
@@ -311,35 +319,48 @@ export default function VincularContratoModal({
   }
 
   const contratoSelecionado = contratos.find((c) => c.id === selectedContrato)
+  const precisaModalidade = (contratoSelecionado?.formas_disponiveis.length || 0) > 1 && !selectedModalidade
+  const semContratos = !loading && clienteId && contratos.length === 0
+  const semCliente = !loading && !clienteId
+  const podeSalvar = !!selectedContrato && !precisaModalidade && (!isTrocar || selectedContrato !== contratoAtualId)
 
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
-            <FileText className="h-5 w-5 text-[#89bcbe]" />
-            Vincular Contrato
-          </DialogTitle>
-          <DialogDescription>
-            Selecione o contrato de honorários para vincular a este processo
-            {clienteNome && (
-              <span className="block mt-1 font-medium text-[#34495e] dark:text-slate-200">
-                Cliente: {clienteNome}
-              </span>
-            )}
-          </DialogDescription>
+      <DialogContent className="sm:max-w-lg !p-0 gap-0 max-h-[88vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <DialogHeader className="px-6 pt-6 pb-5 border-b border-slate-100 dark:border-slate-700 space-y-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-[#f0f9f9] dark:bg-teal-500/10 flex items-center justify-center shrink-0">
+              {isTrocar ? (
+                <Repeat className="w-5 h-5 text-[#89bcbe]" />
+              ) : (
+                <FileText className="w-5 h-5 text-[#89bcbe]" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <DialogTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">
+                {isTrocar ? 'Trocar contrato de honorários' : 'Vincular contrato'}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                {clienteNome
+                  ? `Cliente: ${clienteNome}`
+                  : 'Selecione o contrato de honorários para este processo'}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="py-4">
+        {/* Conteúdo */}
+        <div className="flex-1 overflow-y-auto px-6 py-5">
           {loading ? (
-            <div className="text-center py-8">
+            <div className="text-center py-10">
               <Loader2 className="w-6 h-6 animate-spin text-[#89bcbe] mx-auto mb-2" />
               <p className="text-sm text-slate-600 dark:text-slate-400">Carregando contratos...</p>
             </div>
-          ) : !clienteId ? (
-            <div className="text-center py-8">
-              <AlertTriangle className="w-8 h-8 text-amber-500 dark:text-amber-400 mx-auto mb-2" />
+          ) : semCliente ? (
+            <div className="text-center py-10">
+              <AlertTriangle className="w-8 h-8 text-[#89bcbe] mx-auto mb-2" />
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 Este processo não tem um cliente vinculado.
               </p>
@@ -347,8 +368,8 @@ export default function VincularContratoModal({
                 Vincule um cliente ao processo primeiro.
               </p>
             </div>
-          ) : contratos.length === 0 ? (
-            <div className="text-center py-8">
+          ) : semContratos ? (
+            <div className="text-center py-10">
               <FileText className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 Nenhum contrato ativo encontrado para este cliente.
@@ -358,14 +379,24 @@ export default function VincularContratoModal({
               </p>
               <Button
                 onClick={() => setContratoModalOpen(true)}
-                className="bg-gradient-to-r from-[#89bcbe] to-[#aacfd0] hover:from-[#aacfd0] hover:to-[#89bcbe] text-white"
+                className="bg-[#34495e] hover:bg-[#46627f] text-white"
               >
                 <Plus className="w-4 h-4 mr-1.5" />
-                Criar Novo Contrato
+                Criar novo contrato
               </Button>
             </div>
           ) : (
             <div className="space-y-4">
+              {/* Aviso de horas pendentes (modo trocar) */}
+              {isTrocar && horasPendentes > 0 && (
+                <div className="flex items-start gap-2.5 px-4 py-2.5 rounded-lg bg-[#f0f9f9] border border-[#89bcbe]/40 dark:bg-teal-500/10 dark:border-teal-500/30">
+                  <Info className="w-4 h-4 text-[#89bcbe] mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-[#46627f] dark:text-slate-300">
+                    Há <strong className="text-[#34495e] dark:text-slate-200">{horasPendentes} hora(s) faturável(is)</strong> ainda não faturada(s) neste processo. Ao trocar, elas passarão a seguir o novo contrato. Se quiser cobrá-las pelo contrato atual, fature-as antes de trocar.
+                  </div>
+                </div>
+              )}
+
               {/* Lista de Contratos */}
               <RadioGroup
                 value={selectedContrato || ''}
@@ -374,6 +405,7 @@ export default function VincularContratoModal({
               >
                 {contratos.map((contrato) => {
                   const isSelected = selectedContrato === contrato.id
+                  const isAtual = contrato.id === contratoAtualId
                   return (
                     <div
                       key={contrato.id}
@@ -396,6 +428,11 @@ export default function VincularContratoModal({
                               <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
                                 {contrato.numero_contrato}
                               </p>
+                              {isAtual && (
+                                <Badge className="text-[9px] px-1.5 py-0 bg-slate-100 text-slate-600 border-slate-200 dark:bg-surface-2 dark:text-slate-400">
+                                  Atual
+                                </Badge>
+                              )}
                               {contrato.is_grupo && (
                                 <Badge className="text-[9px] px-1.5 py-0 bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-400">
                                   <Users className="w-2.5 h-2.5 mr-0.5" />
@@ -501,12 +538,12 @@ export default function VincularContratoModal({
                 </div>
               )}
 
-              {/* Aviso obrigatório */}
-              {contratoSelecionado && contratoSelecionado.formas_disponiveis.length > 1 && !selectedModalidade && (
-                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-700">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  <span className="text-xs text-amber-700 dark:text-amber-400">
-                    Selecione a modalidade de cobrança acima
+              {/* Aviso de modalidade obrigatória (calmo) */}
+              {precisaModalidade && (
+                <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-lg bg-[#f0f9f9] border border-[#89bcbe]/40 dark:bg-teal-500/10 dark:border-teal-500/30">
+                  <Info className="w-4 h-4 text-[#89bcbe] flex-shrink-0" />
+                  <span className="text-sm text-[#46627f] dark:text-slate-300">
+                    Selecione a modalidade de cobrança acima.
                   </span>
                 </div>
               )}
@@ -522,24 +559,26 @@ export default function VincularContratoModal({
           )}
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={saving}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleVincular}
-            disabled={!selectedContrato || saving || (contratoSelecionado?.formas_disponiveis.length || 0) > 1 && !selectedModalidade}
-            className="bg-gradient-to-r from-[#89bcbe] to-[#aacfd0] hover:from-[#aacfd0] hover:to-[#89bcbe] text-white"
-          >
-            {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            <CheckCircle className="w-4 h-4 mr-1.5" />
-            Vincular
-          </Button>
-        </DialogFooter>
+        {/* Footer */}
+        {!semContratos && !semCliente && (
+          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-surface-2/40 flex items-center justify-end gap-2.5">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={saving}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleVincular}
+              disabled={!podeSalvar || saving}
+              className="bg-[#34495e] hover:bg-[#46627f] text-white"
+            >
+              {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1.5" />}
+              {isTrocar ? 'Salvar troca' : 'Vincular'}
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
 

@@ -13,6 +13,7 @@ import {
   Receipt,
   Banknote,
   ChevronRight,
+  Repeat,
 } from 'lucide-react'
 import { cn, formatCurrency, formatHoras } from '@/lib/utils'
 import { useProcessoFinanceiro, type Despesa } from '@/hooks/useProcessoFinanceiro'
@@ -265,6 +266,15 @@ export default function ProcessoFinanceiroCard({
             >
               {MODALIDADE_LABELS[contratoInfo.forma_cobranca || ''] || 'Padrão'}
             </Badge>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 ml-auto text-[11px] text-slate-500 hover:text-[#34495e] hover:bg-slate-100 dark:hover:bg-surface-2"
+              onClick={() => setVincularModalOpen(true)}
+            >
+              <Repeat className="w-3 h-3 mr-1" />
+              Trocar
+            </Button>
           </div>
         </CardHeader>
 
@@ -398,6 +408,17 @@ export default function ProcessoFinanceiroCard({
           }}
         />
       )}
+
+      {/* Modal Trocar Contrato (já existe contrato vinculado) */}
+      <VincularContratoModal
+        open={vincularModalOpen}
+        onOpenChange={setVincularModalOpen}
+        processoId={processoId}
+        clienteId={processoInfo?.cliente_id || null}
+        clienteNome={processoInfo?.cliente_nome}
+        contratoAtualId={contratoInfo.id}
+        onSuccess={() => loadDados()}
+      />
     </>
   )
 }

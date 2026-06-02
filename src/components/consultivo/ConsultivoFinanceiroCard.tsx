@@ -20,6 +20,7 @@ import {
   Banknote,
   Clock,
   Receipt,
+  Repeat,
 } from 'lucide-react'
 import { formatCurrency, formatHoras } from '@/lib/utils'
 import { useConsultivoFinanceiro, type Despesa } from '@/hooks/useConsultivoFinanceiro'
@@ -248,6 +249,15 @@ export default function ConsultivoFinanceiroCard({
             <Badge variant="outline" className="text-[10px] font-medium h-5 bg-slate-50 text-slate-600 border-slate-200">
               {MODALIDADE_LABELS[contratoInfo.forma_cobranca || ''] || 'Padrao'}
             </Badge>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 ml-auto text-[11px] text-slate-500 hover:text-[#34495e] hover:bg-slate-100"
+              onClick={() => setVincularModalOpen(true)}
+            >
+              <Repeat className="w-3 h-3 mr-1" />
+              Trocar
+            </Button>
           </div>
         </div>
 
@@ -351,6 +361,17 @@ export default function ConsultivoFinanceiroCard({
           }}
         />
       )}
+
+      {/* Modal Trocar Contrato (já existe contrato vinculado) */}
+      <VincularContratoConsultivoModal
+        open={vincularModalOpen}
+        onOpenChange={setVincularModalOpen}
+        consultaId={consultivoId}
+        clienteId={clienteId}
+        clienteNome={clienteNome}
+        contratoAtualId={contratoInfo.id}
+        onSuccess={handleContratoVinculado}
+      />
     </>
   )
 }

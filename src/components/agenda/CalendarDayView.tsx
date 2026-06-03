@@ -38,8 +38,20 @@ export default function CalendarDayView({
   className,
 }: CalendarDayViewProps) {
   const supabase = createClient()
-  const { tarefas: todasTarefas, refreshTarefas } = useTarefas(escritorioId)
-  const { items: todosEventos } = useAgendaConsolidada(escritorioId)
+  // Janela do dia exibido — pedida ao banco para não puxar todas as tarefas do
+  // escritório (teto de 1.000 linhas do PostgREST).
+  const diaStr = format(selectedDate, 'yyyy-MM-dd')
+  const { tarefas: todasTarefas, refreshTarefas } = useTarefas(escritorioId, {
+    responsavelId: userId,
+    dataInicio: diaStr,
+    dataFim: diaStr,
+    incluirFixas: true,
+  })
+  const { items: todosEventos } = useAgendaConsolidada(escritorioId, {
+    responsavel_id: userId,
+    data_inicio: `${diaStr}T00:00:00`,
+    data_fim: `${diaStr}T23:59:59`,
+  })
   const [activeTarefa, setActiveTarefa] = useState<Tarefa | null>(null)
 
   const previousDay = () => onDateSelect(subDays(selectedDate, 1))

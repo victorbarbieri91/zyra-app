@@ -65,13 +65,34 @@ export default function CalendarKanbanView({
   className,
 }: CalendarKanbanViewProps) {
   const supabase = createClient()
-  const { tarefas: todasTarefas, refreshTarefas: refetchTarefas } = useTarefas(escritorioId)
-  const { eventos: todosEventos, refreshEventos } = useEventos(escritorioId)
-  const { audiencias: todasAudiencias, refreshAudiencias } = useAudiencias(escritorioId)
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
+
+  // Janela de datas visível (dia único ou intervalo) — pedida ao banco para
+  // não puxar todas as tarefas do escritório (teto de 1.000 linhas do
+  // PostgREST). As fixas vêm sempre (incluirFixas), fora do filtro de data.
+  const rangeAtivo = !!(dateRange?.from && dateRange?.to && !isSameDay(dateRange.from, dateRange.to))
+  const windowStart = format(rangeAtivo ? dateRange!.from! : selectedDate, 'yyyy-MM-dd')
+  const windowEnd = format(rangeAtivo ? dateRange!.to! : selectedDate, 'yyyy-MM-dd')
+
+  const { tarefas: todasTarefas, refreshTarefas: refetchTarefas } = useTarefas(escritorioId, {
+    responsavelId: userId,
+    dataInicio: windowStart,
+    dataFim: windowEnd,
+    incluirFixas: true,
+  })
+  const { eventos: todosEventos, refreshEventos } = useEventos(escritorioId, {
+    responsavelId: userId,
+    dataInicio: windowStart,
+    dataFim: windowEnd,
+  })
+  const { audiencias: todasAudiencias, refreshAudiencias } = useAudiencias(escritorioId, {
+    responsavelId: userId,
+    dataInicio: windowStart,
+    dataFim: windowEnd,
+  })
   const [activeTarefa, setActiveTarefa] = useState<Tarefa | null>(null)
   const [activeAgendaItem, setActiveAgendaItem] = useState<AgendaCardItem | null>(null)
   const [activeFilter, setActiveFilter] = useState<KanbanFilter>('todos')
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const [calendarOpen, setCalendarOpen] = useState(false)
 
   // Hook de timers para automação

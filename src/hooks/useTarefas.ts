@@ -62,7 +62,25 @@ export interface Tarefa {
 
 export interface TarefaFormData extends Partial<Tarefa> {}
 
-export function useTarefas(escritorioId?: string) {
+/**
+ * Filtros opcionais de leitura. Quando omitidos, o hook mantém o comportamento
+ * antigo (busca todas as tarefas não-canceladas do escritório). Usados pelo
+ * Kanban para pedir só a janela visível + o responsável, evitando o teto de
+ * 1.000 linhas do PostgREST em escritórios com muitas tarefas.
+ */
+export interface UseTarefasOptions {
+  /** Filtra por responsável (minhas OU públicas), igual à visão mensal. */
+  responsavelId?: string
+  /** Início da janela visível (YYYY-MM-DD). */
+  dataInicio?: string
+  /** Fim da janela visível (YYYY-MM-DD). */
+  dataFim?: string
+  /** Mantém as tarefas fixas sempre incluídas (fora do filtro de data). */
+  incluirFixas?: boolean
+}
+
+export function useTarefas(escritorioId?: string, options?: UseTarefasOptions) {
+  const { responsavelId, dataInicio, dataFim, incluirFixas } = options || {}
   const [tarefas, setTarefas] = useState<Tarefa[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
@@ -88,6 +106,21 @@ export function useTarefas(escritorioId?: string) {
 
       if (escritorioId) {
         query = query.eq('escritorio_id', escritorioId)
+      }
+
+      // Filtro por responsável (minhas OU públicas) — mesma regra da visão mensal
+      if (responsavelId) {
+        query = query.or(`responsaveis_ids.cs.{${responsavelId}},responsaveis_ids.eq.{}`)
+      }
+
+      // Janela de datas. As fixas têm data_inicio antiga (data de criação) e
+      // aparecem todo dia, então ficam SEMPRE incluídas quando incluirFixas=true.
+      if (dataInicio && dataFim) {
+        if (incluirFixas) {
+          query = query.or(`tipo.eq.fixa,and(data_inicio.gte.${dataInicio},data_inicio.lte.${dataFim})`)
+        } else {
+          query = query.gte('data_inicio', dataInicio).lte('data_inicio', dataFim)
+        }
       }
 
       const { data, error: queryError } = await query
@@ -363,7 +396,9 @@ export function useTarefas(escritorioId?: string) {
       setLoading(false)
       setTarefas([])
     }
-  }, [escritorioId])
+    // Recarrega quando o escritório ou os filtros (responsável/janela) mudam
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [escritorioId, responsavelId, dataInicio, dataFim, incluirFixas])
 
   return {
     tarefas,

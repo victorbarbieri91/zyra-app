@@ -30,7 +30,19 @@ export interface Evento {
 
 export interface EventoFormData extends Partial<Evento> {}
 
-export function useEventos(escritorioId?: string) {
+/**
+ * Filtros opcionais de leitura. Omitidos = comportamento antigo (todos os
+ * eventos não-cancelados do escritório). Usados pelo Kanban para pedir só a
+ * janela visível + o responsável (evita o teto de 1.000 linhas).
+ */
+export interface UseEventosOptions {
+  responsavelId?: string
+  dataInicio?: string // YYYY-MM-DD
+  dataFim?: string // YYYY-MM-DD
+}
+
+export function useEventos(escritorioId?: string, options?: UseEventosOptions) {
+  const { responsavelId, dataInicio, dataFim } = options || {}
   const [eventos, setEventos] = useState<Evento[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
@@ -51,6 +63,14 @@ export function useEventos(escritorioId?: string) {
       if (escritorioId) {
         query = query.eq('escritorio_id', escritorioId)
       }
+
+      if (responsavelId) {
+        query = query.or(`responsaveis_ids.cs.{${responsavelId}},responsaveis_ids.eq.{}`)
+      }
+
+      // data_inicio é timestamp → fecha o dia final com T23:59:59
+      if (dataInicio) query = query.gte('data_inicio', dataInicio)
+      if (dataFim) query = query.lte('data_inicio', `${dataFim}T23:59:59`)
 
       const { data, error: queryError } = await query
 
@@ -182,7 +202,8 @@ export function useEventos(escritorioId?: string) {
       setLoading(false)
       setEventos([])
     }
-  }, [escritorioId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [escritorioId, responsavelId, dataInicio, dataFim])
 
   return {
     eventos,

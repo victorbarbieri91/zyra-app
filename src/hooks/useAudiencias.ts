@@ -65,7 +65,19 @@ export interface AudienciaFormData extends Partial<Audiencia> {
   consultivo_id?: string | null
 }
 
-export function useAudiencias(escritorioId?: string) {
+/**
+ * Filtros opcionais de leitura. Omitidos = comportamento antigo (todas as
+ * audiências não-canceladas do escritório). Usados pelo Kanban para pedir só a
+ * janela visível + o responsável (evita o teto de 1.000 linhas).
+ */
+export interface UseAudienciasOptions {
+  responsavelId?: string
+  dataInicio?: string // YYYY-MM-DD
+  dataFim?: string // YYYY-MM-DD
+}
+
+export function useAudiencias(escritorioId?: string, options?: UseAudienciasOptions) {
+  const { responsavelId, dataInicio, dataFim } = options || {}
   const [audiencias, setAudiencias] = useState<Audiencia[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
@@ -92,6 +104,14 @@ export function useAudiencias(escritorioId?: string) {
       if (escritorioId) {
         query = query.eq('escritorio_id', escritorioId)
       }
+
+      if (responsavelId) {
+        query = query.or(`responsaveis_ids.cs.{${responsavelId}},responsaveis_ids.eq.{}`)
+      }
+
+      // data_hora é timestamp → fecha o dia final com T23:59:59
+      if (dataInicio) query = query.gte('data_hora', dataInicio)
+      if (dataFim) query = query.lte('data_hora', `${dataFim}T23:59:59`)
 
       const { data, error: queryError } = await query
 
@@ -373,7 +393,8 @@ export function useAudiencias(escritorioId?: string) {
       setLoading(false)
       setAudiencias([])
     }
-  }, [escritorioId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [escritorioId, responsavelId, dataInicio, dataFim])
 
   return {
     audiencias,

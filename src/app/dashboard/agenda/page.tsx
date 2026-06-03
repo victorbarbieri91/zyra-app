@@ -199,22 +199,34 @@ export default function AgendaPage() {
     loadUser()
   }, [])
 
-  // Filtros para agenda consolidada - sempre filtra por responsável (usuário logado)
+  // Janela de datas visível na visão mensal (emitida pelo CalendarGridDnD).
+  // Usada para a leitura consolidada seguir a navegação de mês e não puxar
+  // todos os itens de uma vez (teto de 1.000 linhas do PostgREST).
+  const [agendaRange, setAgendaRange] = useState<{ inicio: string; fim: string } | null>(null)
+
+  // Filtros para agenda consolidada — sempre filtra por responsável (usuário
+  // logado) e, na visão mensal, também pela janela de datas exibida.
   const agendaFilters = useMemo(() => {
-    if (userId) {
-      return { responsavel_id: userId }
+    const f: { responsavel_id?: string; data_inicio?: string; data_fim?: string } = {}
+    if (userId) f.responsavel_id = userId
+    if (viewMode === 'month' && agendaRange) {
+      f.data_inicio = `${agendaRange.inicio}T00:00:00`
+      f.data_fim = `${agendaRange.fim}T23:59:59`
     }
-    return undefined
-  }, [userId])
+    return Object.keys(f).length > 0 ? f : undefined
+  }, [userId, viewMode, agendaRange])
 
   // Timer context - para descartar timer ao concluir tarefa via Kanban
   const { descartarTimer } = useTimer()
 
-  // Hooks - usar agenda consolidada e hooks específicos
+  // Hooks - usar agenda consolidada e hooks específicos.
+  // As listas crus (tarefas/audiencias/eventos) servem como fonte de lookup dos
+  // handlers de clique; filtradas por responsável para nunca truncar no teto de
+  // 1.000 linhas (a regra de responsável já inclui itens públicos).
   const { items: agendaItems, loading, refreshItems } = useAgendaConsolidada(escritorioId || undefined, agendaFilters)
-  const { tarefas, createTarefa, updateTarefa, concluirTarefa, reabrirTarefa, refreshTarefas } = useTarefas(escritorioId || undefined)
-  const { audiencias, createAudiencia, updateAudiencia, refreshAudiencias } = useAudiencias(escritorioId || undefined)
-  const { eventos, createEvento, updateEvento, refreshEventos } = useEventos(escritorioId || undefined)
+  const { tarefas, createTarefa, updateTarefa, concluirTarefa, reabrirTarefa, refreshTarefas } = useTarefas(escritorioId || undefined, userId ? { responsavelId: userId } : undefined)
+  const { audiencias, createAudiencia, updateAudiencia, refreshAudiencias } = useAudiencias(escritorioId || undefined, userId ? { responsavelId: userId } : undefined)
+  const { eventos, createEvento, updateEvento, refreshEventos } = useEventos(escritorioId || undefined, userId ? { responsavelId: userId } : undefined)
   const { excluirOcorrencia, excluirSerie } = useRecorrencias(escritorioId || undefined)
 
   // Converter items consolidados para formato do EventCard
@@ -1412,6 +1424,9 @@ export default function AgendaPage() {
                 feriados={[]}
                 filters={filters}
                 onFiltersChange={setFilters}
+                onVisibleRangeChange={(start, end) =>
+                  setAgendaRange({ inicio: format(start, 'yyyy-MM-dd'), fim: format(end, 'yyyy-MM-dd') })
+                }
               />
             )}
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, Move, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -70,6 +70,9 @@ interface CalendarGridDnDProps {
   feriados?: Date[]
   filters?: EventFiltersState
   onFiltersChange?: (filters: EventFiltersState) => void
+  /** Emite a janela de datas visível (grade do mês / semana) para a página
+   *  pedir ao banco só esse intervalo, evitando o teto de 1.000 linhas. */
+  onVisibleRangeChange?: (start: Date, end: Date) => void
   className?: string
 }
 
@@ -184,6 +187,7 @@ export default function CalendarGridDnD({
   feriados = [],
   filters,
   onFiltersChange,
+  onVisibleRangeChange,
   className,
 }: CalendarGridDnDProps) {
   const [currentDate, setCurrentDate] = useState(selectedDate || new Date())
@@ -240,6 +244,15 @@ export default function CalendarGridDnD({
 
   const days = calendarView === 'month' ? monthDays : weekDays
   const isWeekView = calendarView === 'week'
+
+  // Informa a página a janela visível, para a leitura no banco seguir a
+  // navegação de mês/semana (em vez de puxar tudo de uma vez).
+  const rangeStart = days[0]
+  const rangeEnd = days[days.length - 1]
+  useEffect(() => {
+    if (rangeStart && rangeEnd) onVisibleRangeChange?.(rangeStart, rangeEnd)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rangeStart?.getTime(), rangeEnd?.getTime()])
 
   // === Navegação ===
   const navigateBack = () => {

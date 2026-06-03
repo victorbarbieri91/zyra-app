@@ -1406,8 +1406,11 @@ export default function AgendaPage() {
           </div>
         )}
 
-        {/* Layout Principal - Largura Completa */}
-        {loading ? (
+        {/* Layout Principal - Largura Completa.
+            Só mostra "Carregando" no 1º carregamento (sem itens ainda). Em
+            refetches (ex.: troca de mês), mantém a visão montada para não piscar
+            nem perder o mês navegado. */}
+        {loading && agendaItems.length === 0 ? (
           <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-8 text-center bg-white dark:bg-surface-1">
             <p className="text-sm text-[#6c757d] dark:text-slate-400">Carregando eventos...</p>
           </div>
@@ -1424,9 +1427,15 @@ export default function AgendaPage() {
                 feriados={[]}
                 filters={filters}
                 onFiltersChange={setFilters}
-                onVisibleRangeChange={(start, end) =>
-                  setAgendaRange({ inicio: format(start, 'yyyy-MM-dd'), fim: format(end, 'yyyy-MM-dd') })
-                }
+                onVisibleRangeChange={(start, end) => {
+                  const inicio = format(start, 'yyyy-MM-dd')
+                  const fim = format(end, 'yyyy-MM-dd')
+                  // Dedupe: mantém a mesma referência quando o intervalo não muda,
+                  // evitando refetch em loop (o grid é montado/desmontado com o loading).
+                  setAgendaRange((prev) =>
+                    prev && prev.inicio === inicio && prev.fim === fim ? prev : { inicio, fim }
+                  )
+                }}
               />
             )}
 

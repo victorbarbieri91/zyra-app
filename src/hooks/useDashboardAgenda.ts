@@ -58,7 +58,9 @@ async function fetchDashboardAgenda(
     .contains('responsaveis_ids', [user.id])
     .gte('data_inicio', inicioHoje.toISOString())
     .lte('data_inicio', fimHoje.toISOString())
-    .neq('status', 'concluida')
+    // Esconde itens já encerrados: tarefa concluída, compromisso realizado e
+    // audiência realizada (cancelados já saem pela própria view).
+    .not('status', 'in', '("concluida","realizado","realizada")')
     .order('data_inicio', { ascending: true })
     .limit(20)
 

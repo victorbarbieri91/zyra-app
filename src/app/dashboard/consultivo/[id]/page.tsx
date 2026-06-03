@@ -326,9 +326,13 @@ export default function ConsultaDetalhePage() {
         }))
       }
 
-      // Filtrar itens concluídos/realizados (ficam apenas nos andamentos)
+      // Filtrar itens encerrados (ficam apenas nos andamentos): tarefa concluída,
+      // audiência realizada ('realizada') e compromisso realizado ('realizado').
       const activeItems = items.filter(item =>
-        item.status !== 'concluida' && item.status !== 'realizada' && item.status !== 'cancelada'
+        item.status !== 'concluida' &&
+        item.status !== 'realizada' &&
+        item.status !== 'realizado' &&
+        item.status !== 'cancelada'
       )
 
       activeItems.sort((a, b) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime())

@@ -229,6 +229,20 @@ export default function AgendaPage() {
   const { eventos, createEvento, updateEvento, refreshEventos } = useEventos(escritorioId || undefined, userId ? { responsavelId: userId } : undefined)
   const { excluirOcorrencia, excluirSerie } = useRecorrencias(escritorioId || undefined)
 
+  // Sinal de recarga do Kanban: o Kanban tem instâncias próprias de
+  // useTarefas/useEventos/useAudiencias (com janela de datas), separadas das
+  // desta página. Mutações feitas aqui (conclusão via modal de horas, etc.) não
+  // atualizam as listas do Kanban. Incrementar este contador faz o Kanban
+  // recarregar. Disparado centralmente por reloadAgenda().
+  const [kanbanRefreshKey, setKanbanRefreshKey] = useState(0)
+
+  // Helper único de recarga: atualiza as listas desta página E sinaliza o
+  // Kanban. Todo handler que altera um item da agenda deve terminar chamando-o.
+  const reloadAgenda = useCallback(async () => {
+    await Promise.all([refreshItems(), refreshTarefas(), refreshAudiencias(), refreshEventos()])
+    setKanbanRefreshKey(k => k + 1)
+  }, [refreshItems, refreshTarefas, refreshAudiencias, refreshEventos])
+
   // Converter items consolidados para formato do EventCard
   const eventosFormatados = useMemo((): EventCardProps[] => {
     const hoje = startOfDay(new Date())
@@ -632,14 +646,12 @@ export default function AgendaPage() {
           const sb = createSb()
           if (entityType === 'evento') {
             await sb.from('agenda_eventos').update({ status: 'realizado' }).eq('id', taskId)
-            await refreshEventos()
             toast.success('Compromisso marcado como realizado!')
           } else {
             await sb.from('agenda_audiencias').update({ status: 'realizada' }).eq('id', taskId)
-            await refreshAudiencias()
             toast.success('Audiência marcada como realizada!')
           }
-          await refreshItems()
+          await reloadAgenda()
         }
         return
       }
@@ -678,7 +690,7 @@ export default function AgendaPage() {
       if (tarefa?.status === 'concluida') {
         // Se já está concluída, reabrir diretamente
         await reabrirTarefa(effectiveId)
-        await refreshItems()
+        await reloadAgenda()
         toast.success('Tarefa reaberta com sucesso!')
       } else if (tarefa?.processo_id || tarefa?.consultivo_id) {
         // Se tem processo ou consultivo vinculado, abrir modal de horas ANTES de concluir
@@ -697,7 +709,7 @@ export default function AgendaPage() {
           try { await descartarTimer(timerData.timerId) } catch {}
         }
         await concluirTarefa(effectiveId)
-        await refreshItems()
+        await reloadAgenda()
         toast.success('Tarefa concluída com sucesso!')
       }
     } catch (error) {
@@ -725,7 +737,7 @@ export default function AgendaPage() {
     setTarefaParaConcluir(null)
     setTimerDataParaConcluir(null)
     setModoLancamentoAvulso(false)
-    await refreshItems()
+    await reloadAgenda()
   }
 
   // Handler "Salvar e Concluir" - registrar horas E concluir a entidade
@@ -745,17 +757,15 @@ export default function AgendaPage() {
         const sb = createSb()
         if (tipoEntidadeLancamento === 'evento') {
           await sb.from('agenda_eventos').update({ status: 'realizado' }).eq('id', tarefaParaConcluir.id)
-          await refreshEventos()
           toast.success('Compromisso concluído!')
         } else if (tipoEntidadeLancamento === 'audiencia') {
           await sb.from('agenda_audiencias').update({ status: 'realizada' }).eq('id', tarefaParaConcluir.id)
-          await refreshAudiencias()
           toast.success('Audiência concluída!')
         } else {
           await concluirTarefa(tarefaParaConcluir.id)
           toast.success('Tarefa concluída!')
         }
-        await refreshItems()
+        await reloadAgenda()
       } catch (error) {
         console.error('Erro ao concluir após timesheet:', error)
         toast.error('Horas registradas, mas erro ao concluir')
@@ -811,19 +821,17 @@ export default function AgendaPage() {
           const { createClient: createSb } = await import('@/lib/supabase/client')
           const sb = createSb()
           await sb.from('agenda_eventos').update({ status: 'realizado' }).eq('id', tarefaParaConcluir.id)
-          await refreshEventos()
           toast.success('Compromisso concluído!')
         } else if (tipoEntidadeLancamento === 'audiencia') {
           const { createClient: createSb } = await import('@/lib/supabase/client')
           const sb = createSb()
           await sb.from('agenda_audiencias').update({ status: 'realizada' }).eq('id', tarefaParaConcluir.id)
-          await refreshAudiencias()
           toast.success('Audiência concluída!')
         } else {
           await concluirTarefa(tarefaParaConcluir.id)
           toast.success('Tarefa concluída!')
         }
-        await refreshItems()
+        await reloadAgenda()
       } catch (error) {
         console.error('Erro ao concluir:', error)
         toast.error('Erro ao concluir')
@@ -846,7 +854,7 @@ export default function AgendaPage() {
   const handleReopenTask = async (taskId: string) => {
     try {
       await reabrirTarefa(taskId)
-      await refreshItems()
+      await reloadAgenda()
       toast.success('Tarefa reaberta com sucesso!')
     } catch (error) {
       console.error('Erro ao reabrir tarefa:', error)
@@ -917,7 +925,7 @@ export default function AgendaPage() {
       if (error) throw error
 
       // Atualizar ambas as fontes de dados para manter consistência
-      await Promise.all([refreshItems(), refreshTarefas()])
+      await reloadAgenda()
       toast.success(newPrazoFatal ? 'Tarefa e prazo fatal reagendados!' : 'Tarefa reagendada com sucesso!')
     } catch (error) {
       console.error('Erro ao reagendar tarefa:', error)
@@ -994,7 +1002,7 @@ export default function AgendaPage() {
 
       setTarefaDetailOpen(false)
       setTarefaSelecionada(null)
-      await refreshItems()
+      await reloadAgenda()
       toast.success('Tarefa excluída com sucesso!')
     } catch (error) {
       console.error('Erro ao excluir tarefa:', error)
@@ -1035,7 +1043,7 @@ export default function AgendaPage() {
 
       setAudienciaDetailOpen(false)
       setAudienciaSelecionada(null)
-      await refreshItems()
+      await reloadAgenda()
       toast.success('Audiência marcada como realizada!')
     } catch (error) {
       console.error('Erro ao marcar audiência como realizada:', error)
@@ -1057,7 +1065,7 @@ export default function AgendaPage() {
 
       setAudienciaDetailOpen(false)
       setAudienciaSelecionada(null)
-      await refreshItems()
+      await reloadAgenda()
       toast.success('Audiência reaberta!')
     } catch (error) {
       console.error('Erro ao reabrir audiência:', error)
@@ -1081,7 +1089,7 @@ export default function AgendaPage() {
 
       setEventoDetailOpen(false)
       setEventoSelecionado(null)
-      await refreshItems()
+      await reloadAgenda()
       toast.success('Evento marcado como cumprido!')
     } catch (error) {
       console.error('Erro ao marcar evento como cumprido:', error)
@@ -1103,7 +1111,7 @@ export default function AgendaPage() {
 
       setEventoDetailOpen(false)
       setEventoSelecionado(null)
-      await refreshItems()
+      await reloadAgenda()
       toast.success('Evento reaberto!')
     } catch (error) {
       console.error('Erro ao reabrir evento:', error)
@@ -1133,7 +1141,7 @@ export default function AgendaPage() {
       setTarefaSelecionada(null)
       setEventoDetailOpen(false)
       setEventoSelecionado(null)
-      await Promise.all([refreshItems(), refreshTarefas()])
+      await reloadAgenda()
       toast.success('Ocorrência removida')
     } catch (error) {
       console.error('Erro ao excluir ocorrência:', error)
@@ -1153,7 +1161,7 @@ export default function AgendaPage() {
       setTarefaSelecionada(null)
       setEventoDetailOpen(false)
       setEventoSelecionado(null)
-      await Promise.all([refreshItems(), refreshTarefas()])
+      await reloadAgenda()
       toast.success('Ocorrências futuras removidas — as anteriores ficam preservadas')
     } catch (error) {
       console.error('Erro ao excluir ocorrências futuras:', error)
@@ -1171,7 +1179,7 @@ export default function AgendaPage() {
       setTarefaSelecionada(null)
       setEventoDetailOpen(false)
       setEventoSelecionado(null)
-      await Promise.all([refreshItems(), refreshTarefas()])
+      await reloadAgenda()
       toast.success('Recorrência desativada — todas as ocorrências pendentes foram removidas')
     } catch (error) {
       console.error('Erro ao desativar recorrência:', error)
@@ -1258,7 +1266,7 @@ export default function AgendaPage() {
       await new Promise(resolve => setTimeout(resolve, 300))
 
       // Atualizar os dados localmente para feedback imediato
-      await Promise.all([refreshItems(), refreshTarefas()])
+      await reloadAgenda()
 
     } catch (error) {
       console.error('Erro ao mover evento:', error)
@@ -1286,7 +1294,7 @@ export default function AgendaPage() {
       await new Promise(resolve => setTimeout(resolve, 300))
 
       // Atualizar os dados localmente para feedback imediato
-      await Promise.all([refreshItems(), refreshTarefas()])
+      await reloadAgenda()
 
     } catch (error) {
       console.error('Erro ao mover tarefa com prazo fatal:', error)
@@ -1462,6 +1470,7 @@ export default function AgendaPage() {
                   setTarefaModalOpen(true)
                 }}
                 onTaskComplete={handleCompleteTask}
+                refreshKey={kanbanRefreshKey}
               />
             )}
 
@@ -1593,7 +1602,7 @@ export default function AgendaPage() {
           onConsultivoClick={handleConsultivoClick}
           onUpdate={async () => {
             // Atualizar ambas as fontes de dados
-            await Promise.all([refreshItems(), refreshTarefas()])
+            await reloadAgenda()
 
             // Buscar dados atualizados da tarefa diretamente do banco
             if (tarefaSelecionada) {
@@ -1698,7 +1707,7 @@ export default function AgendaPage() {
             if (!tarefaSelecionada) {
               toast.success('Tarefa criada com sucesso!')
             }
-            await refreshItems()
+            await reloadAgenda()
           }}
           initialData={tarefaSelecionada || undefined}
         />
@@ -1714,7 +1723,7 @@ export default function AgendaPage() {
           onSubmit={async () => {
             // O wizard agora cria/atualiza a audiência diretamente usando useAudiencias
             // Este callback é apenas para refresh da lista
-            await refreshItems()
+            await reloadAgenda()
           }}
           initialData={audienciaSelecionada || undefined}
         />
@@ -1730,7 +1739,7 @@ export default function AgendaPage() {
           onSubmit={async () => {
             // O wizard agora cria/atualiza o evento diretamente usando useEventos
             // Este callback é apenas para refresh da lista
-            await refreshItems()
+            await reloadAgenda()
           }}
           initialData={eventoSelecionado || undefined}
         />
@@ -1917,7 +1926,7 @@ export default function AgendaPage() {
         tipo={cancelarTarget?.tipo ?? 'tarefa'}
         registro={cancelarTarget?.registro ?? null}
         onSuccess={async () => {
-          await Promise.all([refreshItems(), refreshTarefas(), refreshAudiencias(), refreshEventos()])
+          await reloadAgenda()
           setTarefaSelecionada(null)
           setAudienciaSelecionada(null)
           setEventoSelecionado(null)

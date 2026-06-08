@@ -49,6 +49,13 @@ interface CalendarKanbanViewProps {
     defaultAtividade: string
     entityType?: 'tarefa' | 'evento' | 'audiencia'
   }) => void
+  /**
+   * Sinal de recarga vindo da página. Quando muda, o Kanban recarrega suas
+   * próprias listas. Necessário porque conclusões de itens com vínculo são
+   * feitas pelo modal de horas na página (fora dos handlers internos do
+   * Kanban), e a página não tem como atualizar as instâncias de hook do Kanban.
+   */
+  refreshKey?: number
   className?: string
 }
 
@@ -62,6 +69,7 @@ export default function CalendarKanbanView({
   onClickAudiencia,
   onCreateTarefa,
   onTaskComplete,
+  refreshKey,
   className,
 }: CalendarKanbanViewProps) {
   const supabase = createClient()
@@ -94,6 +102,23 @@ export default function CalendarKanbanView({
   const [activeAgendaItem, setActiveAgendaItem] = useState<AgendaCardItem | null>(null)
   const [activeFilter, setActiveFilter] = useState<KanbanFilter>('todos')
   const [calendarOpen, setCalendarOpen] = useState(false)
+
+  // Recarrega as listas quando a página sinaliza uma mudança (ex.: conclusão de
+  // tarefa com vínculo, feita pelo modal de horas na página). Pula o 1º render
+  // para evitar busca duplicada na montagem — os hooks já buscam sozinhos.
+  const refreshKeyInicialRef = useRef(true)
+  useEffect(() => {
+    if (refreshKeyInicialRef.current) {
+      refreshKeyInicialRef.current = false
+      return
+    }
+    refetchTarefas()
+    refreshEventos()
+    refreshAudiencias()
+    // refetch* não são memoizados (recriados a cada render); depender só de
+    // refreshKey evita loop de recarga.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey])
 
   // Hook de timers para automação
   const {

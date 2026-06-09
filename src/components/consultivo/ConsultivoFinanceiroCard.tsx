@@ -216,7 +216,7 @@ export default function ConsultivoFinanceiroCard({
                   className="text-xs cursor-pointer py-2.5"
                 >
                   <Banknote className="w-4 h-4 mr-2.5 text-slate-500" />
-                  Honorario
+                  Honorário
                 </DropdownMenuItem>
                 {podeLancarHoras && (
                   <DropdownMenuItem

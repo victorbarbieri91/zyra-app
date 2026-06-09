@@ -59,6 +59,7 @@ import ConsultivoFinanceiroCard from '@/components/consultivo/ConsultivoFinancei
 import ProcessoCobrancaFixaCard from '@/components/processos/ProcessoCobrancaFixaCard'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import DespesaModal from '@/components/financeiro/DespesaModal'
+import ReceitaModal from '@/components/financeiro/ReceitaModal'
 import type { TarefaFormData } from '@/hooks/useTarefas'
 
 interface Consulta {
@@ -194,6 +195,7 @@ export default function ConsultaDetalhePage() {
   // Estados para Financeiro
   const [timesheetModalOpen, setTimesheetModalOpen] = useState(false)
   const [despesaModalOpen, setDespesaModalOpen] = useState(false)
+  const [receitaModalOpen, setReceitaModalOpen] = useState(false)
   const [financeiroRefreshTrigger, setFinanceiroRefreshTrigger] = useState(0)
   const [editTimesheetEntry, setEditTimesheetEntry] = useState<import('@/hooks/useConsultivoFinanceiro').TimesheetEntry | null>(null)
   const [editTimesheetModalOpen, setEditTimesheetModalOpen] = useState(false)
@@ -1336,10 +1338,7 @@ export default function ConsultaDetalhePage() {
               clienteNome={consulta.cliente_nome}
               onLancarHoras={() => setTimesheetModalOpen(true)}
               onLancarDespesa={() => setDespesaModalOpen(true)}
-              onLancarHonorario={() => {
-                // TODO: Implementar modal de honorario
-                toast.info('Lancamento de honorarios em desenvolvimento')
-              }}
+              onLancarHonorario={() => setReceitaModalOpen(true)}
               onEditTimesheet={(entry) => {
                 setEditTimesheetEntry(entry)
                 setEditTimesheetModalOpen(true)
@@ -1535,6 +1534,15 @@ export default function ConsultaDetalhePage() {
         open={despesaModalOpen}
         onOpenChange={setDespesaModalOpen}
         consultaId={consulta.id}
+        onSuccess={() => setFinanceiroRefreshTrigger(prev => prev + 1)}
+      />
+
+      {/* Modal Lançar Honorário (Receita) */}
+      <ReceitaModal
+        open={receitaModalOpen}
+        onOpenChange={setReceitaModalOpen}
+        consultaId={consulta.id}
+        clienteId={consulta.cliente_id}
         onSuccess={() => setFinanceiroRefreshTrigger(prev => prev + 1)}
       />
 

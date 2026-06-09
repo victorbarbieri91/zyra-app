@@ -29,6 +29,7 @@ import {
   Briefcase,
   X,
   CheckCircle2,
+  Info,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
@@ -87,6 +88,9 @@ interface ProcessoOption {
   numero_pasta?: string
   cliente_nome?: string
   cliente_id?: string
+  contrato_id?: string | null
+  contrato_numero?: string | null
+  contrato_titulo?: string | null
 }
 
 interface ConsultaOption {
@@ -95,6 +99,9 @@ interface ConsultaOption {
   titulo: string
   cliente_nome?: string
   cliente_id?: string
+  contrato_id?: string | null
+  contrato_numero?: string | null
+  contrato_titulo?: string | null
 }
 
 // =====================================================
@@ -198,7 +205,7 @@ export default function ReceitaModal({
   const loadProcessoById = async (id: string) => {
     const { data: processoData, error } = await supabase
       .from('processos_processos')
-      .select('id, numero_cnj, numero_pasta, cliente_id')
+      .select('id, numero_cnj, numero_pasta, cliente_id, contrato_id')
       .eq('id', id)
       .single()
 
@@ -214,19 +221,34 @@ export default function ReceitaModal({
       clienteNome = clienteData?.nome_completo
     }
 
+    let contratoNumero: string | undefined
+    let contratoTitulo: string | undefined
+    if (processoData.contrato_id) {
+      const { data: contratoData } = await supabase
+        .from('financeiro_contratos_honorarios')
+        .select('numero_contrato, titulo')
+        .eq('id', processoData.contrato_id)
+        .single()
+      contratoNumero = contratoData?.numero_contrato
+      contratoTitulo = contratoData?.titulo
+    }
+
     setProcessoSelecionado({
       id: processoData.id,
       numero_cnj: processoData.numero_cnj,
       numero_pasta: processoData.numero_pasta,
       cliente_nome: clienteNome,
       cliente_id: processoData.cliente_id,
+      contrato_id: processoData.contrato_id ?? null,
+      contrato_numero: contratoNumero ?? null,
+      contrato_titulo: contratoTitulo ?? null,
     })
   }
 
   const loadConsultaById = async (id: string) => {
     const { data: consultaData, error } = await supabase
       .from('consultivo_consultas')
-      .select('id, numero, titulo, cliente_id')
+      .select('id, numero, titulo, cliente_id, contrato_id')
       .eq('id', id)
       .single()
 
@@ -242,12 +264,27 @@ export default function ReceitaModal({
       clienteNome = clienteData?.nome_completo
     }
 
+    let contratoNumero: string | undefined
+    let contratoTitulo: string | undefined
+    if (consultaData.contrato_id) {
+      const { data: contratoData } = await supabase
+        .from('financeiro_contratos_honorarios')
+        .select('numero_contrato, titulo')
+        .eq('id', consultaData.contrato_id)
+        .single()
+      contratoNumero = contratoData?.numero_contrato
+      contratoTitulo = contratoData?.titulo
+    }
+
     setConsultaSelecionada({
       id: consultaData.id,
       numero: consultaData.numero,
       titulo: consultaData.titulo,
       cliente_nome: clienteNome,
       cliente_id: consultaData.cliente_id,
+      contrato_id: consultaData.contrato_id ?? null,
+      contrato_numero: contratoNumero ?? null,
+      contrato_titulo: contratoTitulo ?? null,
     })
   }
 
@@ -325,7 +362,7 @@ export default function ReceitaModal({
         if (vinculoTipo === 'processo') {
           const { data: processosData } = await supabase
             .from('processos_processos')
-            .select('id, numero_cnj, numero_pasta, parte_contraria, cliente_id')
+            .select('id, numero_cnj, numero_pasta, parte_contraria, cliente_id, contrato_id')
             .in('escritorio_id', grupoIds)
             .or(`numero_cnj.ilike.%${searchTerm}%,numero_pasta.ilike.%${searchTerm}%,parte_contraria.ilike.%${searchTerm}%`)
             .limit(15)
@@ -343,7 +380,7 @@ export default function ReceitaModal({
           if (clienteMap.size > 0) {
             const { data: pcData } = await supabase
               .from('processos_processos')
-              .select('id, numero_cnj, numero_pasta, parte_contraria, cliente_id')
+              .select('id, numero_cnj, numero_pasta, parte_contraria, cliente_id, contrato_id')
               .in('escritorio_id', grupoIds)
               .in('cliente_id', Array.from(clienteMap.keys()))
               .limit(10)
@@ -374,12 +411,13 @@ export default function ReceitaModal({
               numero_pasta: p.numero_pasta,
               cliente_nome: clienteMap.get(p.cliente_id) || p.parte_contraria,
               cliente_id: p.cliente_id,
+              contrato_id: p.contrato_id ?? null,
             }))
           )
         } else {
           const { data: consultasResultado } = await supabase
             .from('consultivo_consultas')
-            .select('id, numero, titulo, cliente_id')
+            .select('id, numero, titulo, cliente_id, contrato_id')
             .in('escritorio_id', grupoIds)
             .or(`titulo.ilike.%${searchTerm}%,numero.ilike.%${searchTerm}%`)
             .limit(15)
@@ -397,7 +435,7 @@ export default function ReceitaModal({
           if (clienteMapConsultas.size > 0) {
             const { data: ccData } = await supabase
               .from('consultivo_consultas')
-              .select('id, numero, titulo, cliente_id')
+              .select('id, numero, titulo, cliente_id, contrato_id')
               .in('escritorio_id', grupoIds)
               .in('cliente_id', Array.from(clienteMapConsultas.keys()))
               .limit(10)
@@ -428,6 +466,7 @@ export default function ReceitaModal({
               titulo: c.titulo,
               cliente_nome: clienteMapConsultas.get(c.cliente_id) as string | undefined,
               cliente_id: c.cliente_id,
+              contrato_id: c.contrato_id ?? null,
             }))
           )
         }
@@ -457,6 +496,10 @@ export default function ReceitaModal({
   }
 
   const derivedClienteId = processoSelecionado?.cliente_id || consultaSelecionada?.cliente_id || null
+  const derivedContratoId = processoSelecionado?.contrato_id || consultaSelecionada?.contrato_id || null
+  const derivedContratoLabel =
+    processoSelecionado?.contrato_numero || processoSelecionado?.contrato_titulo ||
+    consultaSelecionada?.contrato_numero || consultaSelecionada?.contrato_titulo || null
   const hasSelection = processoSelecionado || consultaSelecionada
   const hasPresetVinculo = !!(processoId || consultaId)
   const opcoes = vinculoTipo === 'processo' ? processos : consultas
@@ -524,7 +567,7 @@ export default function ReceitaModal({
       const clienteIdFinal = derivedClienteId || clienteId || null
       const processoIdFinal = processoSelecionado?.id || null
       const consultaIdFinal = consultaSelecionada?.id || consultaId || null
-      const contratoIdFinal = contratoId || null
+      const contratoIdFinal = derivedContratoId || contratoId || null
       const vencimentoDay = new Date(formData.data_vencimento + 'T12:00:00').getDate()
 
       if (isRecorrente || isParcelada) {
@@ -712,6 +755,17 @@ export default function ReceitaModal({
                       <User className="w-3 h-3 inline mr-1" />
                       {processoSelecionado?.cliente_nome || consultaSelecionada?.cliente_nome}
                     </p>
+                  )}
+                  {derivedContratoId && (
+                    <div className="mt-2 flex items-start gap-1.5 rounded-md border border-[#89bcbe]/40 bg-[#f0f9f9] dark:bg-teal-500/10 dark:border-teal-500/30 px-2 py-1.5">
+                      <Info className="w-3.5 h-3.5 mt-0.5 text-[#89bcbe] shrink-0" />
+                      <p className="text-[11px] leading-snug text-[#46627f] dark:text-slate-300">
+                        Comporá a fatura do contrato
+                        {derivedContratoLabel ? (
+                          <strong className="text-[#34495e] dark:text-slate-200"> {derivedContratoLabel}</strong>
+                        ) : ' vinculado a esta pasta'}
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>

@@ -59,6 +59,7 @@ import ProcessoDepositos from '@/components/processos/ProcessoDepositos'
 import { CnjLink } from '@/components/processos/CnjLink'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import DespesaModal from '@/components/financeiro/DespesaModal'
+import ReceitaModal from '@/components/financeiro/ReceitaModal'
 import { useRouter } from 'next/navigation'
 import type { TarefaFormData } from '@/hooks/useTarefas'
 
@@ -145,6 +146,7 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
   const [showAudienciaWizard, setShowAudienciaWizard] = useState(false)
   const [showTimesheetModal, setShowTimesheetModal] = useState(false)
   const [showDespesaModal, setShowDespesaModal] = useState(false)
+  const [showReceitaModal, setShowReceitaModal] = useState(false)
   const [editTimesheetEntry, setEditTimesheetEntry] = useState<import('@/hooks/useProcessoFinanceiro').TimesheetEntry | null>(null)
   const [editTimesheetModalOpen, setEditTimesheetModalOpen] = useState(false)
   const [escritorioId, setEscritorioId] = useState<string | null>(null)
@@ -1320,10 +1322,7 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
         {/* Card Financeiro */}
         <ProcessoFinanceiroCard
           processoId={processo.id}
-          onLancarHonorario={() => {
-            // TODO: Abrir modal de honorário
-            console.log('Lançar honorário')
-          }}
+          onLancarHonorario={() => setShowReceitaModal(true)}
           onLancarHoras={() => setShowTimesheetModal(true)}
           onLancarDespesa={() => setShowDespesaModal(true)}
           onEditTimesheet={(entry) => {
@@ -1627,6 +1626,15 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
         open={showDespesaModal}
         onOpenChange={setShowDespesaModal}
         processoId={processo.id}
+        onSuccess={() => setFinanceiroRefreshTrigger(prev => prev + 1)}
+      />
+
+      {/* Modal de Honorário (Receita) */}
+      <ReceitaModal
+        open={showReceitaModal}
+        onOpenChange={setShowReceitaModal}
+        processoId={processo.id}
+        clienteId={processo.cliente_id}
         onSuccess={() => setFinanceiroRefreshTrigger(prev => prev + 1)}
       />
 

@@ -221,6 +221,33 @@ export default function EncerrarProcessoModal({
         return
       }
 
+      // 3.1 Andamento automático: processo encerrado (não bloqueia o fluxo se falhar)
+      try {
+        const { data: procRow } = await supabase
+          .from('processos_processos')
+          .select('escritorio_id')
+          .eq('id', processoId)
+          .single()
+        if (procRow?.escritorio_id) {
+          const s = getInferredStatus()
+          const labelStatus = s === 'acordo' ? 'Acordo' : s === 'transito_julgado' ? 'Trânsito em julgado' : 'Arquivado'
+          const descParts = [`Processo encerrado — ${labelStatus}`]
+          if (addObservacoes && observacoes.trim()) descParts.push(observacoes.trim())
+          await supabase.from('processos_movimentacoes').insert({
+            processo_id: processoId,
+            escritorio_id: procRow.escritorio_id,
+            data_movimento: new Date().toISOString(),
+            tipo_codigo: 'processo_encerrado',
+            tipo_descricao: 'Processo encerrado',
+            descricao: descParts.join('. '),
+            origem: 'sistema',
+            created_by: user.id,
+          })
+        }
+      } catch (movErr) {
+        console.error('Erro ao registrar andamento de encerramento:', movErr)
+      }
+
       // 4. Cancelar pendências marcadas
       const tarefasParaCancelar = pendencias
         .filter(p => p.tipo === 'tarefa' && p.checked)

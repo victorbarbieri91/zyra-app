@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -31,7 +31,7 @@ import { ptBR } from 'date-fns/locale'
 import { formatCurrency, cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { formatBrazilDateTime, formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
+import { formatBrazilDateTime, formatBrazilDate } from '@/lib/timezone'
 import TarefaWizard from '@/components/agenda/TarefaWizard'
 import EventoWizard from '@/components/agenda/EventoWizard'
 import AudienciaWizard from '@/components/agenda/AudienciaWizard'
@@ -45,6 +45,8 @@ import ProcessoCobrancaFixaCard from '@/components/processos/ProcessoCobrancaFix
 import ProcessoDocumentos from '@/components/processos/ProcessoDocumentos'
 import ProcessoDepositos from '@/components/processos/ProcessoDepositos'
 import { CnjLink } from '@/components/processos/CnjLink'
+import RegistrarAndamentoModal from '@/components/processos/RegistrarAndamentoModal'
+import { ANDAMENTO_TIPOS, classificarTribunal, TRIBUNAL_CATEGORIAS, type AndamentoTipo } from '@/lib/constants/andamento-tipos'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import DespesaModal from '@/components/financeiro/DespesaModal'
 import ReceitaModal from '@/components/financeiro/ReceitaModal'
@@ -114,6 +116,8 @@ interface Movimentacao {
   lida?: boolean | null
   created_by?: string | null
   autor_nome?: string | null
+  tipo_codigo?: AndamentoTipo | null
+  codigo_cnj_movimento?: number | null
 }
 
 // ── V4: chrome compartilhado dos cards da ficha do processo ──
@@ -121,14 +125,6 @@ const V4_CARD = 'rounded-xl border border-[#e6e3da] dark:border-[#253345] bg-whi
 const V4_HEADER = 'px-5 py-3 bg-[#f3f0e8] dark:bg-[#0f141c] border-b border-[#e6e3da] dark:border-[#253345] flex items-center gap-2'
 const V4_HEADER_TITLE = 'text-[12.5px] font-bold text-[#2c3e50] dark:text-slate-200 tracking-[-0.01em]'
 const V4_LABEL = 'text-[9px] font-bold uppercase tracking-[0.16em] text-[#9aa1a8] dark:text-[#5a6675]'
-
-// Cores por tipo de andamento (timeline V4)
-const ANDAMENTO_TIPO: Record<string, { color: string; label: string }> = {
-  conclusao: { color: '#6b9e84', label: 'Tarefa concluída' },
-  andamento: { color: '#89bcbe', label: 'Andamento' },
-  documento: { color: '#8a6438', label: 'Documento' },
-  tribunal: { color: '#6a85a8', label: 'Tribunal' },
-}
 
 // Iniciais para avatar (1ª do primeiro + 1ª do último nome)
 function inic(nome: string): string {
@@ -154,37 +150,10 @@ function FichaField({ label, children, span = 1, mono = false }: { label: string
   )
 }
 
-// Descreve um andamento do escritório para a timeline V4
-function describeEscritorio(mov: Movimentacao): { acao: string; autor: string | null; titulo: string; sub: string | null; tipo: string } {
-  if (mov.referencia_tipo === 'agenda_tarefas') {
-    const m = mov.descricao.match(/^Tarefa "(.+)" conclu[ií]da por (.+)$/)
-    if (m) return { acao: 'concluiu a tarefa', autor: m[2], titulo: m[1], sub: null, tipo: 'conclusao' }
-    return { acao: 'concluiu a tarefa', autor: mov.autor_nome ?? null, titulo: mov.descricao, sub: null, tipo: 'conclusao' }
-  }
-  if (mov.referencia_tipo === 'documentos') {
-    return { acao: 'adicionou documento', autor: mov.autor_nome ?? null, titulo: mov.descricao, sub: null, tipo: 'documento' }
-  }
-  // andamento manual / sistema — título = tipo; corpo = descrição completa
-  const titulo = mov.tipo_descricao || 'Andamento'
-  const sub = mov.descricao && mov.descricao !== titulo ? mov.descricao : null
-  return {
-    acao: 'registrou andamento',
-    autor: mov.autor_nome ?? null,
-    titulo,
-    sub,
-    tipo: 'andamento',
-  }
-}
-
 export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot }: ProcessoResumoProps) {
   // Copiar CNJ agora é gerenciado pelo componente <CnjLink />
 
   const [openNovoAndamento, setOpenNovoAndamento] = useState(false)
-  const [novoAndamento, setNovoAndamento] = useState({
-    data: format(new Date(), 'yyyy-MM-dd'),
-    tipo: '',
-    descricao: ''
-  })
 
   // Estados para Agenda
   const [agendaItems, setAgendaItems] = useState<any[]>([])
@@ -348,7 +317,7 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
       setLoadingMovimentacoes(true)
       const { data, error } = await supabase
         .from('processos_movimentacoes')
-        .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem, referencia_tipo, referencia_id, lida, created_by')
+        .select('id, data_movimento, tipo_codigo, tipo_descricao, descricao, conteudo_completo, origem, referencia_tipo, referencia_id, lida, created_by, codigo_cnj_movimento')
         .eq('processo_id', processo.id)
         .order('data_movimento', { ascending: false })
 
@@ -606,58 +575,6 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
     }
   }
 
-  // Estado para loading ao adicionar andamento
-  const [salvandoAndamento, setSalvandoAndamento] = useState(false)
-
-  const handleAddAndamento = async () => {
-    if (!novoAndamento.tipo || !novoAndamento.descricao || !escritorioId) {
-      if (!escritorioId) {
-        toast.error('Erro: escritório não identificado')
-      }
-      return
-    }
-
-    setSalvandoAndamento(true)
-    try {
-      // Usar parseDateInBrazil para evitar problema de timezone
-      const dataMovimento = parseDateInBrazil(novoAndamento.data, 'yyyy-MM-dd')
-      const { data: { user } } = await supabase.auth.getUser()
-
-      const { data: inserted, error } = await supabase
-        .from('processos_movimentacoes')
-        .insert({
-          processo_id: processo.id,
-          escritorio_id: escritorioId,
-          data_movimento: dataMovimento.toISOString(),
-          tipo_descricao: novoAndamento.tipo,
-          descricao: novoAndamento.descricao,
-          origem: 'manual',
-          created_by: user?.id ?? null,
-        })
-        .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem, referencia_tipo, referencia_id, lida, created_by')
-        .single()
-
-      if (error) throw error
-
-      toast.success('Andamento adicionado com sucesso!')
-
-      // Recarregar movimentações do banco para garantir consistência
-      await loadMovimentacoes()
-
-      setNovoAndamento({
-        data: format(new Date(), 'yyyy-MM-dd'),
-        tipo: '',
-        descricao: ''
-      })
-      setOpenNovoAndamento(false)
-    } catch (error) {
-      console.error('Erro ao adicionar andamento:', error)
-      toast.error('Erro ao adicionar andamento')
-    } finally {
-      setSalvandoAndamento(false)
-    }
-  }
-
   // Divisão por origem: Escritório (equipe) x Tribunal (automático)
   const movEscritorio = movimentacoes.filter((m) => m.origem === 'sistema' || m.origem === 'manual')
   const movTribunal = movimentacoes.filter((m) => m.origem !== 'sistema' && m.origem !== 'manual')
@@ -910,64 +827,13 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
                 Tribunal
               </button>
             </div>
-            <Dialog open={openNovoAndamento} onOpenChange={setOpenNovoAndamento}>
-              <DialogTrigger asChild>
-                <button className="h-[26px] px-[9px] rounded-md bg-transparent border border-[#e6e3da] dark:border-[#253345] text-[#5a6775] dark:text-slate-300 text-[10.5px] font-semibold inline-flex items-center gap-1 hover:bg-slate-50 dark:hover:bg-[#1a212c] transition-colors">
-                  <Plus className="w-2.5 h-2.5" />
-                  Registrar
-                </button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle className="text-lg font-semibold text-[#34495e] dark:text-slate-200">
-                    Novo Andamento Manual
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 pt-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">Data</label>
-                      <Input
-                        type="date"
-                        value={novoAndamento.data}
-                        onChange={(e) => setNovoAndamento({ ...novoAndamento, data: e.target.value })}
-                        className="text-sm"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">Tipo de Andamento</label>
-                      <Input
-                        placeholder="Ex: Atualização, Reunião com cliente, Análise..."
-                        value={novoAndamento.tipo}
-                        onChange={(e) => setNovoAndamento({ ...novoAndamento, tipo: e.target.value })}
-                        className="text-sm"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">Descrição</label>
-                    <Textarea
-                      placeholder="Descreva o andamento..."
-                      value={novoAndamento.descricao}
-                      onChange={(e) => setNovoAndamento({ ...novoAndamento, descricao: e.target.value })}
-                      className="text-sm min-h-[120px]"
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2 pt-2">
-                    <Button variant="outline" onClick={() => setOpenNovoAndamento(false)} disabled={salvandoAndamento}>
-                      Cancelar
-                    </Button>
-                    <Button
-                      onClick={handleAddAndamento}
-                      disabled={!novoAndamento.tipo || !novoAndamento.descricao || salvandoAndamento}
-                      className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e]"
-                    >
-                      {salvandoAndamento ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</>) : 'Adicionar Andamento'}
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <button
+              onClick={() => setOpenNovoAndamento(true)}
+              className="h-[26px] px-[9px] rounded-md bg-transparent border border-[#e6e3da] dark:border-[#253345] text-[#5a6775] dark:text-slate-300 text-[10.5px] font-semibold inline-flex items-center gap-1 hover:bg-slate-50 dark:hover:bg-[#1a212c] transition-colors"
+            >
+              <Plus className="w-2.5 h-2.5" />
+              Registrar
+            </button>
           </div>
 
           {/* timeline */}
@@ -986,9 +852,11 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
             ) : (
               paginatedMovimentacoes.map((mov, index) => {
                 const isEscritorio = andamentoTab === 'escritorio'
-                const desc = isEscritorio ? describeEscritorio(mov) : null
-                const tipo = isEscritorio ? (desc!.tipo) : 'tribunal'
-                const cfg = ANDAMENTO_TIPO[tipo] || ANDAMENTO_TIPO.andamento
+                const cfgEsc = mov.tipo_codigo ? ANDAMENTO_TIPOS[mov.tipo_codigo] : null
+                const tribCat = !isEscritorio ? TRIBUNAL_CATEGORIAS[classificarTribunal(mov.codigo_cnj_movimento, mov.tipo_descricao)] : null
+                const cor = isEscritorio ? (cfgEsc?.cor ?? '#89bcbe') : (tribCat?.cor ?? '#6a85a8')
+                const label = isEscritorio ? (cfgEsc?.label ?? (mov.tipo_descricao || 'Andamento')) : (tribCat?.label ?? 'Tribunal')
+                const isManual = mov.origem === 'manual'
                 const d = new Date(mov.data_movimento)
                 const isLast = index === paginatedMovimentacoes.length - 1
                 return (
@@ -1001,7 +869,7 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
                     {/* track */}
                     <div className="flex flex-col items-center relative">
                       <div className="w-[1.5px] h-3.5 bg-[#f0ede3] dark:bg-[#1d2a3c]" />
-                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 z-10 ring-[3px] ring-white dark:ring-[#151e2b]" style={{ background: cfg.color }} />
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 z-10 ring-[3px] ring-white dark:ring-[#151e2b]" style={{ background: cor }} />
                       {!isLast && <div className="flex-1 w-[1.5px] bg-[#f0ede3] dark:bg-[#1d2a3c] min-h-[20px]" />}
                     </div>
                     {/* conteúdo */}
@@ -1013,20 +881,16 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
                         >
                           {isEscritorio ? (
                             <>
-                              <div className="flex items-center gap-1.5 mb-0.5">
-                                {desc!.autor && (
-                                  <span className="w-5 h-5 rounded-full bg-gradient-to-br from-[#89bcbe] to-[#6ba9ab] flex items-center justify-center text-[8.5px] font-bold text-white flex-shrink-0">{inic(desc!.autor)}</span>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded tracking-[0.06em]" style={{ background: `${cor}28`, color: cor }}>{label}</span>
+                                {mov.autor_nome && (
+                                  <span className="inline-flex items-center gap-1 text-[10.5px] text-[#9aa1a8] dark:text-slate-500">
+                                    <span className="w-4 h-4 rounded-full bg-gradient-to-br from-[#89bcbe] to-[#6ba9ab] flex items-center justify-center text-[7px] font-bold text-white">{inic(mov.autor_nome)}</span>
+                                    {mov.autor_nome.split(' ')[0]}
+                                  </span>
                                 )}
-                                <span className="text-[12.5px] text-[#2c3e50] dark:text-slate-300 leading-snug">
-                                  {desc!.autor && <strong className="font-semibold">{desc!.autor.split(' ')[0]}</strong>}
-                                  <span className="text-[#9aa1a8] dark:text-slate-500">{desc!.autor ? ' ' : ''}{desc!.acao}</span>
-                                </span>
                               </div>
-                              <div className={`text-[12.5px] font-medium text-[#2c3e50] dark:text-slate-200 leading-relaxed tracking-[-0.005em] ${desc!.autor ? 'pl-[26px]' : ''}`}>{desc!.titulo}</div>
-                              {desc!.sub && (
-                                <div className={`text-[12px] text-[#5a6775] dark:text-slate-400 leading-relaxed mt-0.5 line-clamp-2 ${desc!.autor ? 'pl-[26px]' : ''}`}>{desc!.sub}</div>
-                              )}
-                              <span className={`mt-1 inline-block text-[9px] font-bold px-1.5 py-0.5 rounded tracking-[0.06em] ${desc!.autor ? 'ml-[26px]' : ''}`} style={{ background: `${cfg.color}28`, color: cfg.color }}>{cfg.label}</span>
+                              <div className="text-[12.5px] text-[#2c3e50] dark:text-slate-200 leading-relaxed tracking-[-0.005em] line-clamp-3">{mov.descricao}</div>
                             </>
                           ) : (
                             <>
@@ -1045,12 +909,12 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
                                   ? <div className="text-[12px] text-[#5a6775] dark:text-slate-400 leading-relaxed line-clamp-3">{detalhe}</div>
                                   : null
                               })()}
-                              <span className="mt-1 inline-block text-[9px] font-bold px-1.5 py-0.5 rounded tracking-[0.06em]" style={{ background: `${cfg.color}28`, color: cfg.color }}>{cfg.label}</span>
+                              <span className="mt-1 inline-block text-[9px] font-bold px-1.5 py-0.5 rounded tracking-[0.06em]" style={{ background: `${cor}28`, color: cor }}>{label}</span>
                             </>
                           )}
                         </div>
-                        {/* editar/excluir (só andamentos do escritório) */}
-                        {isEscritorio && (
+                        {/* editar/excluir (só andamentos manuais) */}
+                        {isManual && (
                           <div className="flex items-start gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                             <button onClick={(e) => handleEditMovimentacao(mov, e)} className="h-6 w-6 rounded flex items-center justify-center text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200">
                               <Pencil className="w-3 h-3" />
@@ -1630,6 +1494,19 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Modal Registrar Andamento (V4) */}
+      <RegistrarAndamentoModal
+        open={openNovoAndamento}
+        onOpenChange={setOpenNovoAndamento}
+        processoId={processo.id}
+        escritorioId={escritorioId}
+        clienteNome={processo.cliente_nome}
+        parteContraria={processo.parte_contraria}
+        numeroPasta={processo.numero_pasta}
+        area={processo.area}
+        onSuccess={loadMovimentacoes}
+      />
 
       {/* Modal de Despesa */}
       <DespesaModal

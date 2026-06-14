@@ -168,7 +168,7 @@ export function useProcessoDocumentos(processoId: string): UseProcessoDocumentos
         if (uploadError) throw uploadError
 
         // Registrar na tabela documentos
-        const { error: insertError } = await supabase
+        const { data: docInserido, error: insertError } = await supabase
           .from('documentos')
           .insert({
             escritorio_id: escritorioAtivo,
@@ -180,12 +180,29 @@ export function useProcessoDocumentos(processoId: string): UseProcessoDocumentos
             storage_path: storagePath,
             created_by: user.id,
           })
+          .select('id')
+          .single()
 
         if (insertError) {
           // Rollback do storage
           await supabase.storage.from(BUCKET).remove([storagePath])
           throw insertError
         }
+
+        // Andamento automático: documento anexado (não bloqueia o upload se falhar)
+        const { error: movError } = await supabase.from('processos_movimentacoes').insert({
+          processo_id: processoId,
+          escritorio_id: escritorioAtivo,
+          data_movimento: new Date().toISOString(),
+          tipo_codigo: 'documento_anexado',
+          tipo_descricao: 'Documento anexado',
+          descricao: `Documento "${file.name}" anexado`,
+          origem: 'sistema',
+          created_by: user.id,
+          referencia_tipo: 'documentos',
+          referencia_id: docInserido?.id ?? null,
+        })
+        if (movError) console.error('Erro ao registrar andamento de documento:', movError)
 
         sucessos++
       } catch (error) {

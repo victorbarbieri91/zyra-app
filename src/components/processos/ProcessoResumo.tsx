@@ -121,7 +121,6 @@ const V4_CARD = 'rounded-xl border border-[#e6e3da] dark:border-[#253345] bg-whi
 const V4_HEADER = 'px-5 py-3 bg-[#f3f0e8] dark:bg-[#0f141c] border-b border-[#e6e3da] dark:border-[#253345] flex items-center gap-2'
 const V4_HEADER_TITLE = 'text-[12.5px] font-bold text-[#2c3e50] dark:text-slate-200 tracking-[-0.01em]'
 const V4_LABEL = 'text-[9px] font-bold uppercase tracking-[0.16em] text-[#9aa1a8] dark:text-[#5a6675]'
-const V4_COUNT = 'text-[11px] font-bold text-white bg-[#89bcbe] rounded-lg px-[7px] min-w-[18px] text-center leading-[18px]'
 
 // Cores por tipo de andamento (timeline V4)
 const ANDAMENTO_TIPO: Record<string, { color: string; label: string }> = {
@@ -1037,7 +1036,15 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
                                   <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#89bcbe] text-white tracking-[0.05em] flex-shrink-0">NOVO</span>
                                 )}
                               </div>
-                              <div className="text-[12px] text-[#5a6775] dark:text-slate-400 leading-relaxed line-clamp-2">{mov.descricao}</div>
+                              {(() => {
+                                const titulo = (mov.tipo_descricao || '').trim()
+                                const detalhe = [mov.conteudo_completo, mov.descricao]
+                                  .map(x => (x || '').trim())
+                                  .find(x => x && x !== titulo)
+                                return detalhe
+                                  ? <div className="text-[12px] text-[#5a6775] dark:text-slate-400 leading-relaxed line-clamp-3">{detalhe}</div>
+                                  : null
+                              })()}
                               <span className="mt-1 inline-block text-[9px] font-bold px-1.5 py-0.5 rounded tracking-[0.06em]" style={{ background: `${cfg.color}28`, color: cfg.color }}>{cfg.label}</span>
                             </>
                           )}

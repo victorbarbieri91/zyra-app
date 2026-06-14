@@ -112,6 +112,8 @@ interface Movimentacao {
   referencia_tipo?: string | null
   referencia_id?: string | null
   lida?: boolean | null
+  created_by?: string | null
+  autor_nome?: string | null
 }
 
 // ── V4: chrome compartilhado dos cards da ficha do processo ──
@@ -154,19 +156,23 @@ function FichaField({ label, children, span = 1, mono = false }: { label: string
 }
 
 // Descreve um andamento do escritório para a timeline V4
-function describeEscritorio(mov: Movimentacao): { acao: string; autor: string | null; titulo: string; tipo: string } {
+function describeEscritorio(mov: Movimentacao): { acao: string; autor: string | null; titulo: string; sub: string | null; tipo: string } {
   if (mov.referencia_tipo === 'agenda_tarefas') {
     const m = mov.descricao.match(/^Tarefa "(.+)" conclu[ií]da por (.+)$/)
-    if (m) return { acao: 'concluiu a tarefa', autor: m[2], titulo: m[1], tipo: 'conclusao' }
-    return { acao: 'concluiu a tarefa', autor: null, titulo: mov.descricao, tipo: 'conclusao' }
+    if (m) return { acao: 'concluiu a tarefa', autor: m[2], titulo: m[1], sub: null, tipo: 'conclusao' }
+    return { acao: 'concluiu a tarefa', autor: mov.autor_nome ?? null, titulo: mov.descricao, sub: null, tipo: 'conclusao' }
   }
   if (mov.referencia_tipo === 'documentos') {
-    return { acao: 'adicionou documento', autor: null, titulo: mov.descricao, tipo: 'documento' }
+    return { acao: 'adicionou documento', autor: mov.autor_nome ?? null, titulo: mov.descricao, sub: null, tipo: 'documento' }
   }
+  // andamento manual / sistema — título = tipo; corpo = descrição completa
+  const titulo = mov.tipo_descricao || 'Andamento'
+  const sub = mov.descricao && mov.descricao !== titulo ? mov.descricao : null
   return {
     acao: 'registrou andamento',
-    autor: null,
-    titulo: mov.tipo_descricao || mov.descricao,
+    autor: mov.autor_nome ?? null,
+    titulo,
+    sub,
     tipo: 'andamento',
   }
 }
@@ -343,12 +349,22 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
       setLoadingMovimentacoes(true)
       const { data, error } = await supabase
         .from('processos_movimentacoes')
-        .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem, referencia_tipo, referencia_id, lida')
+        .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem, referencia_tipo, referencia_id, lida, created_by')
         .eq('processo_id', processo.id)
         .order('data_movimento', { ascending: false })
 
       if (!error && data) {
-        setMovimentacoes(data)
+        // Hidrata o nome de quem registrou (andamentos manuais)
+        const ids = [...new Set((data as Movimentacao[]).map(m => m.created_by).filter((v): v is string => !!v))]
+        const nomes = new Map<string, string>()
+        if (ids.length > 0) {
+          const { data: profs } = await supabase.from('profiles').select('id, nome_completo').in('id', ids)
+          ;(profs ?? []).forEach((p: { id: string; nome_completo: string }) => nomes.set(p.id, p.nome_completo))
+        }
+        setMovimentacoes((data as Movimentacao[]).map(m => ({
+          ...m,
+          autor_nome: m.created_by ? (nomes.get(m.created_by) ?? null) : null,
+        })))
       }
     } catch (error) {
       console.error('Erro ao carregar movimentações:', error)
@@ -606,6 +622,7 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
     try {
       // Usar parseDateInBrazil para evitar problema de timezone
       const dataMovimento = parseDateInBrazil(novoAndamento.data, 'yyyy-MM-dd')
+      const { data: { user } } = await supabase.auth.getUser()
 
       const { data: inserted, error } = await supabase
         .from('processos_movimentacoes')
@@ -615,9 +632,10 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
           data_movimento: dataMovimento.toISOString(),
           tipo_descricao: novoAndamento.tipo,
           descricao: novoAndamento.descricao,
-          origem: 'manual'
+          origem: 'manual',
+          created_by: user?.id ?? null,
         })
-        .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem, referencia_tipo, referencia_id, lida')
+        .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem, referencia_tipo, referencia_id, lida, created_by')
         .single()
 
       if (error) throw error
@@ -1005,7 +1023,10 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
                                   <span className="text-[#9aa1a8] dark:text-slate-500">{desc!.autor ? ' ' : ''}{desc!.acao}</span>
                                 </span>
                               </div>
-                              <div className={`text-[12.5px] text-[#2c3e50] dark:text-slate-200 leading-relaxed tracking-[-0.005em] ${desc!.autor ? 'pl-[26px]' : ''}`}>{desc!.titulo}</div>
+                              <div className={`text-[12.5px] font-medium text-[#2c3e50] dark:text-slate-200 leading-relaxed tracking-[-0.005em] ${desc!.autor ? 'pl-[26px]' : ''}`}>{desc!.titulo}</div>
+                              {desc!.sub && (
+                                <div className={`text-[12px] text-[#5a6775] dark:text-slate-400 leading-relaxed mt-0.5 line-clamp-2 ${desc!.autor ? 'pl-[26px]' : ''}`}>{desc!.sub}</div>
+                              )}
                               <span className={`mt-1 inline-block text-[9px] font-bold px-1.5 py-0.5 rounded tracking-[0.06em] ${desc!.autor ? 'ml-[26px]' : ''}`} style={{ background: `${cfg.color}28`, color: cfg.color }}>{cfg.label}</span>
                             </>
                           ) : (

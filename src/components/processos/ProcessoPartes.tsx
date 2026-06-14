@@ -389,18 +389,16 @@ export default function ProcessoPartes({
 
   if (collapsible) {
     return (
-      <Card className={`${className ?? ''} overflow-hidden`}>
+      <Card className={`${className ?? ''} border-[#e6e3da] dark:border-[#253345] bg-white dark:bg-[#151e2b] rounded-xl shadow-none overflow-hidden`}>
         <Collapsible open={expanded} onOpenChange={setExpanded}>
           <CollapsibleTrigger asChild>
             <button
               type="button"
-              className="w-full flex items-center justify-between px-6 py-4 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 hover:from-[#e8f5f5] hover:to-[#dcefef] dark:hover:from-teal-500/10 dark:hover:to-teal-500/15 transition-colors group border-b border-slate-100 dark:border-slate-800"
+              className="w-full flex items-center justify-between px-5 py-3 bg-[#f3f0e8] dark:bg-[#0f141c] hover:bg-[#ece9e2] dark:hover:bg-[#141a24] transition-colors group border-b border-[#e6e3da] dark:border-[#253345]"
             >
-              <div className="flex items-center gap-2 text-sm font-medium text-[#34495e] dark:text-slate-200">
-                <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
-                  <Users className="w-3.5 h-3.5 text-[#89bcbe]" />
-                </div>
-                Partes Adicionais
+              <div className="flex items-center gap-2 text-[12.5px] font-bold tracking-[-0.01em] text-[#2c3e50] dark:text-slate-200">
+                <Users className="w-3.5 h-3.5 text-[#89bcbe]" />
+                Partes
                 <Badge
                   variant="secondary"
                   className="text-[10px] h-4 px-1.5 font-medium ml-1"

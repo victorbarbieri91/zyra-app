@@ -358,12 +358,6 @@ function mapeamentoHeuristico(headers: string[], amostra: Record<string, unknown
     'juízo': [{ campo: 'vara', confianca: 85 }],
     'juizo': [{ campo: 'vara', confianca: 85 }],
 
-    // Juiz
-    'juiz': [{ campo: 'juiz', confianca: 95 }],
-    'juíz': [{ campo: 'juiz', confianca: 95 }],
-    'magistrado': [{ campo: 'juiz', confianca: 90 }],
-    'relator': [{ campo: 'juiz', confianca: 80 }],
-
     // Polo do cliente
     'polo': [{ campo: 'polo_cliente', confianca: 90 }],
     'polo cliente': [{ campo: 'polo_cliente', confianca: 95 }],

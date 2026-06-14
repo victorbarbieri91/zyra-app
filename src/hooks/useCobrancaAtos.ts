@@ -54,6 +54,7 @@ export interface AtoDisponivel {
   receitaStatus?: string;
   receitaValor?: number;
   receitaCriadaEm?: string;
+  recebidoForaSistema?: boolean; // marcado via "já recebido" (reversível)
 }
 
 // =====================================================
@@ -118,6 +119,8 @@ export interface UseCobrancaAtosReturn {
   // Cobranca manual
   loadAtosDisponiveis: (processoId: string) => Promise<AtoDisponivel[]>;
   cobrarAto: (processoId: string, atoTipoId: string, valor: number, titulo?: string, descricao?: string) => Promise<string>;
+  marcarAtoRecebido: (processoId: string, atoTipoId: string, valor: number, titulo?: string) => Promise<string>;
+  desfazerAtoRecebido: (receitaId: string) => Promise<boolean>;
   // Historico
   loadHistoricoCobrancas: (processoId: string) => Promise<ReceitaHonorario[]>;
   // Contadores
@@ -342,21 +345,21 @@ export function useCobrancaAtos(escritorioId: string | null): UseCobrancaAtosRet
         .filter((a: { receita_id: string | null }) => a.receita_id)
         .map((a: { receita_id: string | null }) => a.receita_id as string);
 
-      const receitasValidas = new Map<string, { id: string; status: string; valor: number; created_at: string }>();
+      const receitasValidas = new Map<string, { id: string; status: string; valor: number; created_at: string; descricao: string | null }>();
       if (receitaIds.length > 0) {
         const { data: receitasData } = await supabase
           .from('financeiro_receitas')
-          .select('id, status, valor, created_at')
+          .select('id, status, valor, created_at, descricao')
           .in('id', receitaIds)
           .neq('status', 'cancelado');
 
-        (receitasData || []).forEach((r: { id: string; status: string; valor: number; created_at: string }) => {
+        (receitasData || []).forEach((r: { id: string; status: string; valor: number; created_at: string; descricao: string | null }) => {
           receitasValidas.set(r.id, r);
         });
       }
 
       // Montar mapa de ato_tipo_id → info da receita cobrada
-      const atosJaCobrados = new Map<string, { receitaId: string; receitaStatus: string; receitaValor: number; receitaCriadaEm: string }>();
+      const atosJaCobrados = new Map<string, { receitaId: string; receitaStatus: string; receitaValor: number; receitaCriadaEm: string; recebidoForaSistema: boolean }>();
       (alertasCobrados || []).forEach((alerta: { ato_tipo_id: string | null; receita_id: string | null }) => {
         if (alerta.ato_tipo_id && alerta.receita_id && receitasValidas.has(alerta.receita_id)) {
           const recInfo = receitasValidas.get(alerta.receita_id)!;
@@ -365,6 +368,7 @@ export function useCobrancaAtos(escritorioId: string | null): UseCobrancaAtosRet
             receitaStatus: recInfo.status,
             receitaValor: recInfo.valor,
             receitaCriadaEm: recInfo.created_at,
+            recebidoForaSistema: (recInfo.descricao || '').toLowerCase().includes('recebido fora do sistema'),
           });
         }
       });
@@ -414,6 +418,7 @@ export function useCobrancaAtos(escritorioId: string | null): UseCobrancaAtosRet
           receitaStatus: cobradoInfo?.receitaStatus,
           receitaValor: cobradoInfo?.receitaValor,
           receitaCriadaEm: cobradoInfo?.receitaCriadaEm,
+          recebidoForaSistema: cobradoInfo?.recebidoForaSistema ?? false,
         };
       });
     } catch (err) {
@@ -465,6 +470,99 @@ export function useCobrancaAtos(escritorioId: string | null): UseCobrancaAtosRet
       return receitaId as string;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao cobrar ato';
+      setError(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [supabase]);
+
+  /**
+   * Marca um ato como "recebido fora do sistema": registra a cobrança mas já
+   * quitada (status 'pago'), de modo que NÃO entra na fila de faturamento.
+   * Usado quando o honorário daquele ato já foi pago por fora, ou quando se
+   * desistiu de cobrar e quer apenas desativar o faturamento daquele item.
+   */
+  const marcarAtoRecebido = useCallback(async (
+    processoId: string,
+    atoTipoId: string,
+    valor: number,
+    titulo?: string
+  ): Promise<string> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      const descricao = titulo ? `${titulo} — recebido fora do sistema` : 'Recebido fora do sistema';
+
+      // Cria o alerta e converte em receita (marca o ato como cobrado)
+      const { data: alertaId, error: alertaError } = await supabase.rpc('criar_alerta_cobranca_manual', {
+        p_processo_id: processoId,
+        p_ato_tipo_id: atoTipoId,
+        p_valor_sugerido: valor,
+        p_titulo: titulo || null,
+        p_descricao: descricao,
+      });
+      if (alertaError) throw alertaError;
+
+      const { data: receitaId, error: receitaError } = await supabase.rpc('converter_alerta_em_receita', {
+        p_alerta_id: alertaId,
+        p_valor: valor,
+        p_descricao: descricao,
+        p_user_id: user.id,
+      });
+      if (receitaError) throw receitaError;
+
+      // Quita a receita imediatamente para tirá-la da fila de faturamento
+      const hoje = new Date().toISOString().split('T')[0];
+      const { error: updateError } = await supabase
+        .from('financeiro_receitas')
+        .update({ status: 'pago', data_pagamento: hoje })
+        .eq('id', receitaId as string);
+      if (updateError) throw updateError;
+
+      return receitaId as string;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao marcar ato como recebido';
+      setError(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [supabase]);
+
+  /**
+   * Desfaz um ato marcado como "recebido fora do sistema": remove o alerta e a
+   * receita criados, devolvendo o ato à fila de cobrança. Por segurança, só
+   * apaga receitas marcadas como "recebido fora do sistema" (nunca um honorário
+   * pago de verdade).
+   */
+  const desfazerAtoRecebido = useCallback(async (receitaId: string): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Remove o alerta que vincula essa receita (libera a FK)
+      const { error: alertaError } = await supabase
+        .from('financeiro_alertas_cobranca')
+        .delete()
+        .eq('receita_id', receitaId);
+      if (alertaError) throw alertaError;
+
+      // Remove a receita — apenas se for "recebido fora do sistema"
+      const { error: receitaError } = await supabase
+        .from('financeiro_receitas')
+        .delete()
+        .eq('id', receitaId)
+        .ilike('descricao', '%recebido fora do sistema%');
+      if (receitaError) throw receitaError;
+
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao desfazer recebimento';
       setError(message);
       throw err;
     } finally {
@@ -542,6 +640,8 @@ export function useCobrancaAtos(escritorioId: string | null): UseCobrancaAtosRet
     ignorarAlerta,
     loadAtosDisponiveis,
     cobrarAto,
+    marcarAtoRecebido,
+    desfazerAtoRecebido,
     loadHistoricoCobrancas,
     countAlertasPendentes,
   };

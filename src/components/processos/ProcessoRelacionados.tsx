@@ -477,12 +477,12 @@ export default function ProcessoRelacionados({ processoId, processoPrincipalData
   )
 
   return (
-    <Card className="border-slate-200 dark:border-slate-700 overflow-hidden">
+    <Card className="border-[#e6e3da] dark:border-[#253345] bg-white dark:bg-[#151e2b] rounded-xl overflow-hidden">
       <Collapsible open={expanded} onOpenChange={setExpanded}>
         <CollapsibleTrigger asChild>
           <button
             type="button"
-            className="w-full px-6 py-4 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 hover:from-[#e8f5f5] hover:to-[#dcefef] dark:hover:from-teal-500/10 dark:hover:to-teal-500/15 transition-colors border-b border-slate-100 dark:border-slate-800"
+            className="w-full px-6 py-4 bg-[#f3f0e8] dark:bg-[#0f141c] hover:bg-[#ece9e2] dark:hover:bg-[#141a24] transition-colors border-b border-[#e6e3da] dark:border-[#253345]"
           >
             {headerContent}
           </button>

@@ -12,7 +12,6 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import {
-  ArrowLeft,
   Edit,
   Copy,
   Check,
@@ -21,6 +20,9 @@ import {
   Info,
   GitBranch,
   History,
+  ChevronRight,
+  ChevronLeft,
+  ExternalLink,
 } from 'lucide-react'
 import {
   AlertDialog,
@@ -67,7 +69,6 @@ interface Processo {
   sistema_tribunal?: import('@/lib/tribunais').SistemaTribunal | null
   comarca?: string
   vara?: string
-  juiz?: string
   data_distribuicao: string
   cliente_id: string
   cliente_nome: string
@@ -190,6 +191,19 @@ export default function ProcessoDetalhe() {
         return
       }
 
+      // Hidratar nomes dos colaboradores (mantendo a ordem dos IDs)
+      let colaboradoresNomes: string[] = []
+      if (data.colaboradores_ids?.length) {
+        const { data: colabs } = await supabase
+          .from('profiles')
+          .select('id, nome_completo')
+          .in('id', data.colaboradores_ids)
+        const colabsList = (colabs ?? []) as { id: string; nome_completo: string }[]
+        colaboradoresNomes = (data.colaboradores_ids as string[])
+          .map((cid) => colabsList.find((c) => c.id === cid)?.nome_completo)
+          .filter((n): n is string => !!n)
+      }
+
       // Transformar dados do banco para o formato da interface
       const processoFormatado: Processo = {
         id: data.id,
@@ -205,7 +219,6 @@ export default function ProcessoDetalhe() {
         sistema_tribunal: data.sistema_tribunal || null,
         comarca: data.comarca || undefined,
         vara: data.vara || undefined,
-        juiz: data.juiz || undefined,
         data_distribuicao: data.data_distribuicao,
         cliente_id: data.cliente_id,
         cliente_nome: data.cliente?.nome_completo || 'N/A',
@@ -214,7 +227,7 @@ export default function ProcessoDetalhe() {
         responsavel_id: data.responsavel_id,
         responsavel_nome: data.responsavel?.nome_completo || 'N/A',
         colaboradores_ids: data.colaboradores_ids || [],
-        colaboradores_nomes: [], // TODO: buscar nomes dos colaboradores
+        colaboradores_nomes: colaboradoresNomes,
         status: data.status,
         valor_causa: data.valor_causa || undefined,
         valor_atualizado: data.valor_atualizado || undefined,
@@ -349,6 +362,29 @@ export default function ProcessoDetalhe() {
     return styles[status as keyof typeof styles] || styles.ativo
   }
 
+  // Estilo do badge de status sobre o hero escuro (V4)
+  const getHeroStatus = (status: string) => {
+    const map: Record<string, { dot: string; bg: string; fg: string }> = {
+      ativo: { dot: '#9fdfbd', bg: 'rgba(107,158,132,0.35)', fg: '#9fdfbd' },
+      suspenso: { dot: '#e6c79a', bg: 'rgba(194,149,107,0.30)', fg: '#e6c79a' },
+      acordo: { dot: '#9fdfbd', bg: 'rgba(107,158,132,0.30)', fg: '#bfe6cf' },
+      arquivado: { dot: '#c2cad3', bg: 'rgba(148,163,184,0.25)', fg: '#cbd5e1' },
+      baixado: { dot: '#c2cad3', bg: 'rgba(148,163,184,0.25)', fg: '#cbd5e1' },
+      transito_julgado: { dot: '#b9a9d6', bg: 'rgba(124,103,168,0.30)', fg: '#cfc0e6' },
+      extinto: { dot: '#c2cad3', bg: 'rgba(148,163,184,0.25)', fg: '#cbd5e1' },
+    }
+    const style = map[status] || map.ativo
+    return { ...style, label: PROCESSO_STATUS_LABELS[status] || status }
+  }
+
+  // Iniciais para avatar (1ª letra do 1º e do último nome)
+  const getIniciais = (nome: string) => {
+    const parts = (nome || '').trim().split(/\s+/).filter(Boolean)
+    if (parts.length === 0) return '—'
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase()
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
+  }
+
   const copyCNJ = () => {
     if (processo?.numero_cnj) {
       navigator.clipboard.writeText(processo.numero_cnj)
@@ -406,45 +442,64 @@ export default function ProcessoDetalhe() {
     )
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 dark:from-surface-0 dark:via-surface-0 dark:to-surface-0 p-6">
-      <div className="max-w-[1800px] mx-auto space-y-6">
+  const heroStatus = getHeroStatus(processo.status)
 
-        {/* Header da Ficha */}
-        <div className="bg-gradient-to-r from-[#34495e] to-[#46627f] border border-slate-300 dark:border-slate-600 rounded-lg p-5 pb-7 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push('/dashboard/processos')}
-              className="text-white/80 hover:text-white hover:bg-white/10 h-8"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Voltar
-            </Button>
-            <div className="flex items-center gap-1">
+  return (
+    <div className="min-h-screen bg-[#fafaf7] dark:bg-[#0c1017] p-6">
+      <div className="max-w-[1800px] mx-auto space-y-4">
+
+        {/* HERO — card flutuante (V4) */}
+        <div
+          className="relative overflow-hidden rounded-[18px] px-6 pt-[18px] pb-5 shadow-[0_14px_36px_rgba(44,62,80,0.20)]"
+          style={{ background: 'linear-gradient(155deg,#2c3e50 0%,#34495e 45%,#46627f 100%)' }}
+        >
+          {/* glows decorativos */}
+          <div className="pointer-events-none absolute -bottom-20 -right-20 w-[300px] h-[300px] rounded-full" style={{ background: 'radial-gradient(circle,rgba(137,188,190,0.20),transparent 70%)' }} />
+          <div className="pointer-events-none absolute -top-10 left-[140px] w-[200px] h-[200px] rounded-full" style={{ background: 'radial-gradient(circle,rgba(255,255,255,0.04),transparent 70%)' }} />
+
+          {/* breadcrumb + ações */}
+          <div className="relative flex items-center justify-between mb-4">
+            <div className="flex items-center gap-1.5 text-[11.5px] text-white/50">
+              <button onClick={() => router.push('/dashboard/processos')} className="flex items-center gap-1.5 hover:text-white/90 transition-colors">
+                <ChevronLeft className="w-3 h-3" />
+                Processos
+              </button>
+              <ChevronRight className="w-2.5 h-2.5" />
+              <span className="text-white/70">{processo.area}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setShowHistorico(true)}
+                className="h-7 px-2.5 rounded-md bg-white/10 border border-white/15 text-white/85 text-[11px] font-semibold inline-flex items-center gap-1.5 hover:bg-white/20 transition-colors"
+              >
+                <History className="w-3 h-3" />
+                Histórico
+              </button>
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="h-7 px-2.5 rounded-md bg-white/10 border border-white/15 text-white/85 text-[11px] font-semibold inline-flex items-center gap-1.5 hover:bg-white/20 transition-colors"
+              >
+                <Edit className="w-3 h-3" />
+                Editar
+              </button>
               {!isEncerrado ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-white/80 hover:text-white hover:bg-white/10 h-8"
+                <button
                   onClick={() => setShowEncerrarModal(true)}
+                  className="h-7 px-2.5 rounded-md bg-white/10 border border-white/15 text-white/85 text-[11px] font-semibold inline-flex items-center gap-1.5 hover:bg-white/20 transition-colors"
                 >
-                  <Archive className="w-4 h-4 mr-2" />
+                  <Archive className="w-3 h-3" />
                   Encerrar
-                </Button>
+                </button>
               ) : (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-white/80 hover:text-white hover:bg-white/10 h-8"
+                    <button
                       disabled={reabrindo}
+                      className="h-7 px-2.5 rounded-md bg-white/10 border border-white/15 text-white/85 text-[11px] font-semibold inline-flex items-center gap-1.5 hover:bg-white/20 transition-colors disabled:opacity-50"
                     >
-                      <RotateCcw className="w-4 h-4 mr-2" />
+                      <RotateCcw className="w-3 h-3" />
                       Reabrir
-                    </Button>
+                    </button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
@@ -462,72 +517,98 @@ export default function ProcessoDetalhe() {
                   </AlertDialogContent>
                 </AlertDialog>
               )}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white/80 hover:text-white hover:bg-white/10 h-8"
-                onClick={() => setShowHistorico(true)}
-              >
-                <History className="w-4 h-4 mr-2" />
-                Histórico
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white/80 hover:text-white hover:bg-white/10 h-8"
-                onClick={() => setShowEditModal(true)}
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Editar
-              </Button>
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 min-w-0 flex-1">
-              <div className="flex-shrink-0">
-                <span className="text-xs font-medium text-white/60 uppercase tracking-wide">Pasta</span>
-                <h1 className="text-2xl font-bold text-white">
+          {/* kicker: área · status · tags */}
+          <div className="relative flex items-center gap-2.5 mb-2.5 flex-wrap">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/70">{processo.area}</span>
+            <span className="w-px h-3 bg-white/20" />
+            <span
+              className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold px-2.5 py-[3px] rounded"
+              style={{ background: heroStatus.bg, color: heroStatus.fg }}
+            >
+              <span className="w-[5px] h-[5px] rounded-full" style={{ background: heroStatus.dot }} />
+              {heroStatus.label}
+            </span>
+            {processo.tags.map((tag, i) => (
+              <span key={i} className="text-[10.5px] font-medium px-2 py-[3px] rounded bg-white/10 text-white/75">
+                {tag}
+              </span>
+            ))}
+          </div>
+
+          {/* título */}
+          <h1 className="relative m-0 font-serif text-[34px] font-medium tracking-[-0.03em] text-white leading-[1.1]">
+            {processo.cliente_nome} <span className="italic opacity-50 font-normal">v.</span> {processo.parte_contraria || '—'}
+          </h1>
+
+          {/* meta strip */}
+          <div className="relative mt-[18px] pt-3.5 border-t border-white/10 flex gap-6 flex-wrap items-end">
+            {/* Pasta */}
+            <div>
+              <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#89bcbe] mb-1.5">Pasta</div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[21px] font-bold text-white tracking-[0.03em] leading-none whitespace-nowrap border-b-2 border-[#89bcbe] pb-[3px]">
                   {processo.numero_pasta}
-                </h1>
-              </div>
-              <div className="w-px h-10 bg-white/20 flex-shrink-0" />
-              <div className="min-w-0 flex-1">
-                <h2 className="text-lg font-semibold text-white truncate" title={`${processo.cliente_nome} vs ${processo.parte_contraria}`}>
-                  <span className="truncate">{processo.cliente_nome}</span> <span className="text-white/50 font-normal">vs</span> <span className="truncate">{processo.parte_contraria}</span>
-                </h2>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-white/60">CNJ:</span>
-                  <span className="text-xs text-white/90 font-mono">{processo.numero_cnj}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={copyCNJ}
-                    className="h-5 w-5 p-0 hover:bg-white/10"
-                  >
-                    {copiedCNJ ? (
-                      <Check className="w-3 h-3 text-emerald-300" />
-                    ) : (
-                      <Copy className="w-3 h-3 text-white/60" />
-                    )}
-                  </Button>
-                </div>
+                </span>
+                <button
+                  onClick={copyCNJ}
+                  title="Copiar número da pasta"
+                  className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-white/55 hover:text-white transition-colors flex-shrink-0"
+                >
+                  {copiedCNJ ? <Check className="w-2.5 h-2.5 text-[#9fdfbd]" /> : <Copy className="w-2.5 h-2.5" />}
+                </button>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              {processo.tags.map((tag, index) => (
-                <Badge key={index} className="bg-[#89bcbe] text-white border-0 text-xs">
-                  {tag}
-                </Badge>
-              ))}
-              <div className="w-px h-8 bg-white/20 mx-1" />
-              <Badge className={`text-xs border-0 ${getStatusBadge(processo.status)}`}>
-                {processo.status}
-              </Badge>
-              <span className="text-sm text-white/80">{processo.area}</span>
-              <div className="w-px h-8 bg-white/20" />
-              <span className="text-sm text-white/80">{processo.responsavel_nome}</span>
+            <span className="w-px h-[38px] bg-white/[0.12] self-center" />
+
+            {/* CNJ */}
+            {processo.numero_cnj && (
+              <div>
+                <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/40 mb-1">Número CNJ</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono text-[12.5px] text-white/90">{processo.numero_cnj}</span>
+                  <button
+                    onClick={copyCNJ}
+                    title="Copiar"
+                    className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-white/55 hover:text-white transition-colors flex-shrink-0"
+                  >
+                    {copiedCNJ ? <Check className="w-2.5 h-2.5 text-[#9fdfbd]" /> : <Copy className="w-2.5 h-2.5" />}
+                  </button>
+                  {processo.link_tribunal && (
+                    <button
+                      onClick={() => window.open(processo.link_tribunal, '_blank')}
+                      title="Abrir no tribunal"
+                      className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-[#89bcbe] hover:text-white transition-colors flex-shrink-0"
+                    >
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex-1" />
+
+            {/* Valor da causa + Responsável */}
+            <div className="flex items-end gap-7">
+              <div className="text-right">
+                <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-white/45 mb-1">Valor da causa</div>
+                <div className="font-serif text-[22px] font-medium text-white tracking-[-0.025em] leading-none">
+                  {processo.valor_causa ? formatCurrency(processo.valor_causa) : '—'}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-[30px] h-[30px] rounded-full bg-gradient-to-br from-[#34495e] to-[#46627f] ring-1 ring-white/20 flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-white">
+                  {getIniciais(processo.responsavel_nome)}
+                </span>
+                <div>
+                  <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-white/45 mb-0.5">Responsável</div>
+                  <div className="text-[12.5px] font-semibold text-white">{processo.responsavel_nome}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

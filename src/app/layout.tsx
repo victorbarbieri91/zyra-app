@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, Fraunces } from 'next/font/google'
+import { Inter, Fraunces, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'sonner'
 import { RegisterSW } from '@/components/layout/RegisterSW'
@@ -20,6 +20,15 @@ const fraunces = Fraunces({
   style: ['normal', 'italic'],
   display: 'swap',
   variable: '--font-fraunces',
+})
+
+// JetBrains Mono — números operacionais tabulares (CNJ, nº da pasta,
+// valores e datas dos andamentos na ficha do processo).
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  display: 'swap',
+  variable: '--font-jetbrains',
 })
 
 export const viewport: Viewport = {
@@ -52,7 +61,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="pt-BR" className={`${inter.variable} ${fraunces.variable}`} suppressHydrationWarning>
+    <html lang="pt-BR" className={`${inter.variable} ${fraunces.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
       <body className={`${inter.className} antialiased`}>
         <ThemeProvider>
           <RegisterSW />

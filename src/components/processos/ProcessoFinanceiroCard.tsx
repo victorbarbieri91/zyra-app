@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   DollarSign,
@@ -12,7 +11,6 @@ import {
   Clock,
   Receipt,
   Banknote,
-  ChevronRight,
   Repeat,
 } from 'lucide-react'
 import { cn, formatCurrency, formatHoras } from '@/lib/utils'
@@ -117,7 +115,7 @@ export default function ProcessoFinanceiroCard({
   // ========================================
   if (loading) {
     return (
-      <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
+      <Card className="border-[#e6e3da] dark:border-[#253345] bg-white dark:bg-[#151e2b] rounded-xl shadow-none">
         <CardContent className="py-8">
           <div className="flex items-center justify-center">
             <Loader2 className="w-5 h-5 animate-spin text-[#89bcbe]" />
@@ -133,7 +131,7 @@ export default function ProcessoFinanceiroCard({
   if (!contratoInfo) {
     return (
       <>
-        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
+        <Card className="border-[#e6e3da] dark:border-[#253345] bg-white dark:bg-[#151e2b] rounded-xl shadow-none">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-[#89bcbe]" />
@@ -190,12 +188,14 @@ export default function ProcessoFinanceiroCard({
     displayValue: string
     count: number
     rank: number
+    icon: React.ComponentType<{ className?: string }>
   }> = {
     honorarios: {
       label: 'Honorários',
       displayValue: formatCurrency(totalHonorarios),
       count: honorarios.length,
       rank: totalHonorarios,
+      icon: Banknote,
     },
     timesheet: {
       label: 'Timesheet',
@@ -203,12 +203,14 @@ export default function ProcessoFinanceiroCard({
       count: timesheet.length,
       // horas ranqueiam junto com valores em R$ — fator aproximado R$100/h
       rank: horasTrab * 100,
+      icon: Clock,
     },
     despesas: {
       label: 'Despesas',
       displayValue: formatCurrency(totalDespesas),
       count: despesas.length,
       rank: totalDespesas,
+      icon: Receipt,
     },
   }
 
@@ -227,6 +229,7 @@ export default function ProcessoFinanceiroCard({
   const heroKey = ordered[0]
   const hero = metricas[heroKey]
   const secondaries = ordered.slice(1)
+  const HeroIcon = hero.icon
 
   const formatCountLabel = (count: number, key: MetricKey) => {
     if (count === 0) {
@@ -241,138 +244,95 @@ export default function ProcessoFinanceiroCard({
 
   return (
     <>
-      <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-        {/* Header */}
-        <CardHeader className="pb-3 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
-                <DollarSign className="w-3.5 h-3.5 text-[#89bcbe]" />
-              </div>
-              Financeiro
-            </CardTitle>
-          </div>
-
-          {/* Info do Contrato */}
-          <div className="flex items-center gap-2 mt-2">
-            <FileText className="w-3 h-3 text-slate-400" />
-            <span className="text-[11px] font-mono font-medium text-slate-600 dark:text-slate-400">
-              {contratoInfo.numero_contrato}
-            </span>
-            <span className="text-[11px] text-slate-400">•</span>
-            <Badge
-              variant="outline"
-              className="text-[10px] h-4 px-1.5 font-medium bg-white dark:bg-surface-0 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"
-            >
-              {MODALIDADE_LABELS[contratoInfo.forma_cobranca || ''] || 'Padrão'}
-            </Badge>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 px-2 ml-auto text-[11px] text-slate-500 hover:text-[#34495e] hover:bg-slate-100 dark:hover:bg-surface-2"
-              onClick={() => setVincularModalOpen(true)}
-            >
-              <Repeat className="w-3 h-3 mr-1" />
-              Trocar
-            </Button>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-0">
-          {/* Hero: Métrica com maior destaque (dinâmica) */}
+      <Card className="border-[#e6e3da] dark:border-[#253345] bg-white dark:bg-[#151e2b] rounded-xl shadow-none overflow-hidden">
+        {/* Header — ícone + Financeiro + contrato (à direita) */}
+        <div className="px-4 py-3 border-b border-[#f0ede3] dark:border-[#1d2a3c] flex items-center gap-2">
+          <DollarSign className="w-3.5 h-3.5 text-[#89bcbe] flex-shrink-0" />
+          <span className="text-[13px] font-semibold text-[#2c3e50] dark:text-slate-200 flex-1">Financeiro</span>
+          <span className="text-[10px] font-mono text-[#9aa1a8] dark:text-slate-500 truncate">
+            {contratoInfo.numero_contrato} · {MODALIDADE_LABELS[contratoInfo.forma_cobranca || ''] || 'Padrão'}
+          </span>
           <button
             type="button"
-            onClick={() => openDetalhesModal(heroKey)}
-            className="w-full text-left group px-5 pt-5 pb-4 hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors"
+            onClick={() => setVincularModalOpen(true)}
+            title="Trocar contrato"
+            className="text-[#9aa1a8] hover:text-[#34495e] dark:hover:text-slate-200 transition-colors flex-shrink-0"
           >
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                  {hero.label}
-                </p>
-                <p className="text-2xl font-bold text-[#34495e] dark:text-slate-100 leading-tight">
-                  {hero.displayValue}
-                </p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  {formatCountLabel(hero.count, heroKey)}
-                </p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-[#89bcbe] transition-colors mt-1 flex-shrink-0" />
-            </div>
+            <Repeat className="w-3 h-3" />
           </button>
+        </div>
 
-          {/* Métricas secundárias (compactas, ordenadas pelo rank) */}
-          {secondaries.map((key) => {
+        {/* Destaque — categoria mais movimentada (sozinha, maior, fundo sutil) */}
+        <button
+          type="button"
+          onClick={() => openDetalhesModal(heroKey)}
+          className="w-full text-left px-4 py-3.5 bg-[#faf8f2] dark:bg-[#0f141c] border-b border-[#f0ede3] dark:border-[#1d2a3c] hover:bg-[#f3f0e8] dark:hover:bg-[#141a24] transition-colors"
+        >
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <HeroIcon className="w-3 h-3 text-[#9aa1a8] dark:text-slate-500" />
+            <span className="text-[9.5px] font-bold uppercase tracking-[0.08em] text-[#9aa1a8] dark:text-slate-500">{hero.label}</span>
+          </div>
+          <div className="flex items-baseline justify-between gap-2.5">
+            <span className="font-mono text-[26px] font-semibold text-[#2c3e50] dark:text-slate-100 tracking-[-0.025em] leading-none">{hero.displayValue}</span>
+            <span className="text-[11px] text-[#9aa1a8] dark:text-slate-500">{formatCountLabel(hero.count, heroKey)}</span>
+          </div>
+        </button>
+
+        {/* Secundárias — duas restantes, lado a lado */}
+        <div className="grid grid-cols-2 border-b border-[#f0ede3] dark:border-[#1d2a3c]">
+          {secondaries.map((key, i) => {
             const m = metricas[key]
+            const SecIcon = m.icon
             return (
-              <div key={key}>
-                <div className="border-t border-slate-100 dark:border-slate-800" />
-                <button
-                  type="button"
-                  onClick={() => openDetalhesModal(key)}
-                  className="w-full text-left group px-5 py-3 hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        {m.label}
-                      </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        {formatCountLabel(m.count, key)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
-                        {m.displayValue}
-                      </span>
-                      <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 group-hover:text-[#89bcbe] transition-colors" />
-                    </div>
-                  </div>
-                </button>
-              </div>
+              <button
+                key={key}
+                type="button"
+                onClick={() => openDetalhesModal(key)}
+                className={cn(
+                  'text-left px-3.5 py-2.5 hover:bg-[#faf8f2] dark:hover:bg-[#1a212c] transition-colors',
+                  i > 0 && 'border-l border-[#f0ede3] dark:border-[#1d2a3c]',
+                )}
+              >
+                <div className="flex items-center gap-1.5 mb-1">
+                  <SecIcon className="w-2.5 h-2.5 text-[#9aa1a8] dark:text-slate-500" />
+                  <span className="text-[9.5px] font-bold uppercase tracking-[0.08em] text-[#9aa1a8] dark:text-slate-500">{m.label}</span>
+                </div>
+                <div className="font-mono text-[15px] font-medium text-[#2c3e50] dark:text-slate-200 tracking-[-0.02em] leading-none">{m.displayValue}</div>
+                <div className="text-[10px] text-[#9aa1a8] dark:text-slate-500 mt-1">{formatCountLabel(m.count, key)}</div>
+              </button>
             )
           })}
+        </div>
 
-          {/* Rodapé: Ações rápidas com gradientes coloridos */}
-          <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-surface-2/50 px-3 py-3">
-            <div
-              className={cn(
-                'grid gap-2',
-                podelancarHoras ? 'grid-cols-3' : 'grid-cols-2'
-              )}
+        {/* Botões coloridos (tom suave) */}
+        <div className={cn('px-3 py-2.5 grid gap-1.5', podelancarHoras ? 'grid-cols-3' : 'grid-cols-2')}>
+          {podelancarHoras && (
+            <button
+              type="button"
+              onClick={() => onLancarHoras?.()}
+              className="h-9 rounded-lg text-[11.5px] font-bold flex items-center justify-center gap-1.5 bg-[#e8f5f5] dark:bg-teal-500/15 text-[#3f7376] dark:text-teal-300 border border-[#cfe2e3] dark:border-teal-500/25 hover:bg-[#dcefef] dark:hover:bg-teal-500/20 transition-colors"
             >
-              {podelancarHoras && (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => onLancarHoras?.()}
-                  className="h-9 text-[11px] font-semibold text-white border-0 shadow-sm bg-gradient-to-br from-[#5a898c] to-[#73a3a5] hover:from-[#4e7b7e] hover:to-[#659697] hover:shadow-md transition-all"
-                >
-                  <Clock className="w-3.5 h-3.5 mr-1" />
-                  Horas
-                </Button>
-              )}
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => onLancarDespesa?.()}
-                className="h-9 text-[11px] font-semibold text-white border-0 shadow-sm bg-gradient-to-br from-[#7c5c46] to-[#9d7558] hover:from-[#6e5140] hover:to-[#8c6a4f] hover:shadow-md transition-all"
-              >
-                <Receipt className="w-3.5 h-3.5 mr-1" />
-                Despesa
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => onLancarHonorario?.()}
-                className="h-9 text-[11px] font-semibold text-white border-0 shadow-sm bg-gradient-to-br from-[#34654e] to-[#458768] hover:from-[#2c5a44] hover:to-[#3a785b] hover:shadow-md transition-all"
-              >
-                <Banknote className="w-3.5 h-3.5 mr-1" />
-                Honorário
-              </Button>
-            </div>
-          </div>
-        </CardContent>
+              <Clock className="w-3 h-3" />
+              Horas
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onLancarDespesa?.()}
+            className="h-9 rounded-lg text-[11.5px] font-bold flex items-center justify-center gap-1.5 bg-[#f7f0e7] dark:bg-amber-500/10 text-[#8a6438] dark:text-amber-300/90 border border-[#e8d4bc] dark:border-amber-500/20 hover:bg-[#f1e6d6] dark:hover:bg-amber-500/15 transition-colors"
+          >
+            <Receipt className="w-3 h-3" />
+            Despesa
+          </button>
+          <button
+            type="button"
+            onClick={() => onLancarHonorario?.()}
+            className="h-9 rounded-lg text-[11.5px] font-bold flex items-center justify-center gap-1.5 bg-[#eef5f1] dark:bg-emerald-500/10 text-[#3f6a54] dark:text-emerald-300 border border-[#c8e0d6] dark:border-emerald-500/20 hover:bg-[#e3efe8] dark:hover:bg-emerald-500/15 transition-colors"
+          >
+            <Banknote className="w-3 h-3" />
+            Honorário
+          </button>
+        </div>
       </Card>
 
       {/* Modal de Detalhes */}

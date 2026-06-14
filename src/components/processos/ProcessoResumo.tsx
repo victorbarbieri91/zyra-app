@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -14,27 +12,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  Copy,
-  Check,
-  Users,
-  MapPin,
-  Clock,
   FileText,
   Calendar,
-  CheckCircle,
   Plus,
   ListTodo,
   Gavel,
-  User,
   CalendarClock,
-  Tag,
   Pencil,
   Trash2,
   ChevronLeft,
   ChevronRight,
   Save,
   Loader2,
-  Info,
   Activity,
 } from 'lucide-react'
 import { format } from 'date-fns'
@@ -50,7 +39,6 @@ import TarefaDetailModal from '@/components/agenda/TarefaDetailModal'
 import EventoDetailModal from '@/components/agenda/EventoDetailModal'
 import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
 import AgendaCancelarModal, { TipoAgenda } from '@/components/agenda/AgendaCancelarModal'
-import ProcessoTimelineHorizontal from '@/components/processos/ProcessoTimelineHorizontal'
 import ProcessoFinanceiroCard from '@/components/processos/ProcessoFinanceiroCard'
 import ProcessoCobrancasCard from '@/components/processos/ProcessoCobrancasCard'
 import ProcessoCobrancaFixaCard from '@/components/processos/ProcessoCobrancaFixaCard'
@@ -77,7 +65,6 @@ interface Processo {
   sistema_tribunal?: import('@/lib/tribunais').SistemaTribunal | null
   comarca?: string
   vara?: string
-  juiz?: string
   data_distribuicao: string
   cliente_id: string
   cliente_nome: string
@@ -124,6 +111,64 @@ interface Movimentacao {
   origem?: string
   referencia_tipo?: string | null
   referencia_id?: string | null
+  lida?: boolean | null
+}
+
+// ── V4: chrome compartilhado dos cards da ficha do processo ──
+const V4_CARD = 'rounded-xl border border-[#e6e3da] dark:border-[#253345] bg-white dark:bg-[#151e2b] overflow-hidden'
+const V4_HEADER = 'px-5 py-3 bg-[#f3f0e8] dark:bg-[#0f141c] border-b border-[#e6e3da] dark:border-[#253345] flex items-center gap-2'
+const V4_HEADER_TITLE = 'text-[12.5px] font-bold text-[#2c3e50] dark:text-slate-200 tracking-[-0.01em]'
+const V4_LABEL = 'text-[9px] font-bold uppercase tracking-[0.16em] text-[#9aa1a8] dark:text-[#5a6675]'
+const V4_COUNT = 'text-[11px] font-bold text-white bg-[#89bcbe] rounded-lg px-[7px] min-w-[18px] text-center leading-[18px]'
+
+// Cores por tipo de andamento (timeline V4)
+const ANDAMENTO_TIPO: Record<string, { color: string; label: string }> = {
+  conclusao: { color: '#6b9e84', label: 'Tarefa concluída' },
+  andamento: { color: '#89bcbe', label: 'Andamento' },
+  documento: { color: '#8a6438', label: 'Documento' },
+  tribunal: { color: '#6a85a8', label: 'Tribunal' },
+}
+
+// Iniciais para avatar (1ª do primeiro + 1ª do último nome)
+function inic(nome: string): string {
+  const p = (nome || '').trim().split(/\s+/).filter(Boolean)
+  if (p.length === 0) return '—'
+  if (p.length === 1) return p[0].charAt(0).toUpperCase()
+  return (p[0].charAt(0) + p[p.length - 1].charAt(0)).toUpperCase()
+}
+
+// Dia da semana abreviado em 3 letras (ex.: "ter", "seg", "sáb")
+function diaSemana(d: Date): string {
+  return ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][d.getDay()] ?? ''
+}
+
+// Campo da ficha (span = nº de colunas dentro da grade de 6)
+function FichaField({ label, children, span = 1, mono = false }: { label: string; children: React.ReactNode; span?: number; mono?: boolean }) {
+  const spanClass = span === 2 ? 'col-span-3 sm:col-span-2' : span === 3 ? 'col-span-6 sm:col-span-3' : 'col-span-3 sm:col-span-1'
+  return (
+    <div className={`${spanClass} py-3.5 min-w-0`}>
+      <div className={`${V4_LABEL} mb-1.5`}>{label}</div>
+      <div className={`text-[13px] text-[#2c3e50] dark:text-slate-300 leading-snug ${mono ? 'font-mono tracking-[0.01em]' : ''}`}>{children}</div>
+    </div>
+  )
+}
+
+// Descreve um andamento do escritório para a timeline V4
+function describeEscritorio(mov: Movimentacao): { acao: string; autor: string | null; titulo: string; tipo: string } {
+  if (mov.referencia_tipo === 'agenda_tarefas') {
+    const m = mov.descricao.match(/^Tarefa "(.+)" conclu[ií]da por (.+)$/)
+    if (m) return { acao: 'concluiu a tarefa', autor: m[2], titulo: m[1], tipo: 'conclusao' }
+    return { acao: 'concluiu a tarefa', autor: null, titulo: mov.descricao, tipo: 'conclusao' }
+  }
+  if (mov.referencia_tipo === 'documentos') {
+    return { acao: 'adicionou documento', autor: null, titulo: mov.descricao, tipo: 'documento' }
+  }
+  return {
+    acao: 'registrou andamento',
+    autor: null,
+    titulo: mov.tipo_descricao || mov.descricao,
+    tipo: 'andamento',
+  }
 }
 
 export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot }: ProcessoResumoProps) {
@@ -277,8 +322,9 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
     loadDescricao()
   }, [selectedMovimentacao?.referencia_id, selectedMovimentacao?.referencia_tipo])
 
-  // Paginação de movimentações
+  // Paginação de movimentações + aba (Escritório / Tribunal)
   const [movimentacaoPage, setMovimentacaoPage] = useState(1)
+  const [andamentoTab, setAndamentoTab] = useState<'escritorio' | 'tribunal'>('escritorio')
   const movimentacoesPerPage = 5
 
   // Edição de movimentação
@@ -297,7 +343,7 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
       setLoadingMovimentacoes(true)
       const { data, error } = await supabase
         .from('processos_movimentacoes')
-        .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem, referencia_tipo, referencia_id')
+        .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem, referencia_tipo, referencia_id, lida')
         .eq('processo_id', processo.id)
         .order('data_movimento', { ascending: false })
 
@@ -571,7 +617,7 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
           descricao: novoAndamento.descricao,
           origem: 'manual'
         })
-        .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem, referencia_tipo, referencia_id')
+        .select('id, data_movimento, tipo_descricao, descricao, conteudo_completo, origem, referencia_tipo, referencia_id, lida')
         .single()
 
       if (error) throw error
@@ -595,10 +641,20 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
     }
   }
 
-  // Paginação de movimentações
-  const totalMovPages = Math.ceil(movimentacoes.length / movimentacoesPerPage)
+  // Divisão por origem: Escritório (equipe) x Tribunal (automático)
+  const movEscritorio = movimentacoes.filter((m) => m.origem === 'sistema' || m.origem === 'manual')
+  const movTribunal = movimentacoes.filter((m) => m.origem !== 'sistema' && m.origem !== 'manual')
+  const movAtivas = andamentoTab === 'escritorio' ? movEscritorio : movTribunal
+
+  // Paginação da aba ativa de movimentações
+  const totalMovPages = Math.ceil(movAtivas.length / movimentacoesPerPage)
   const movStartIndex = (movimentacaoPage - 1) * movimentacoesPerPage
-  const paginatedMovimentacoes = movimentacoes.slice(movStartIndex, movStartIndex + movimentacoesPerPage)
+  const paginatedMovimentacoes = movAtivas.slice(movStartIndex, movStartIndex + movimentacoesPerPage)
+
+  const trocarAndamentoTab = (tab: 'escritorio' | 'tribunal') => {
+    setAndamentoTab(tab)
+    setMovimentacaoPage(1)
+  }
 
   // Editar movimentação
   const handleEditMovimentacao = (mov: Movimentacao, e: React.MouseEvent) => {
@@ -677,473 +733,395 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
 
   return (
     <>
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_352px] gap-4 items-start">
 
-      {/* Coluna Principal - Ficha (8/12) */}
-      <div className="xl:col-span-8 space-y-6 min-w-0">
+      {/* Coluna Principal */}
+      <div className="space-y-3.5 min-w-0">
 
         {/* Card Principal - Informações Gerais */}
-        <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-          <CardHeader className="pb-3 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 border-b border-slate-100 dark:border-slate-800">
-            <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
-                <Info className="w-3.5 h-3.5 text-[#89bcbe]" />
+        {/* ── FICHA DO PROCESSO (V4: grade 6 colunas, alinhamento vertical) ── */}
+        {(() => {
+          const poloClienteAtivo = processo.polo_cliente === 'ativo'
+          const poloClienteLabel = poloClienteAtivo ? 'POLO ATIVO · AUTOR' : processo.polo_cliente === 'passivo' ? 'POLO PASSIVO · RÉU' : 'PARTE'
+          const poloContrariaLabel = poloClienteAtivo ? 'POLO PASSIVO · RÉU' : processo.polo_cliente === 'passivo' ? 'POLO ATIVO · AUTOR' : 'PARTE CONTRÁRIA'
+          const Sep = () => <div className="col-span-6 h-px bg-[#f0ede3] dark:bg-[#1d2a3c]" />
+          return (
+            <div className={V4_CARD}>
+              {/* header */}
+              <div className={cn(V4_HEADER, 'px-6')}>
+                <FileText className="w-3.5 h-3.5 text-[#89bcbe]" />
+                <span className={V4_HEADER_TITLE}>Ficha do processo</span>
+                <div className="flex-1" />
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#e0eeee] dark:bg-teal-500/15 text-[#3f7376] dark:text-teal-300 tracking-[0.06em]">
+                  {processo.area}
+                </span>
               </div>
-              Informações Gerais
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-7 py-7">
-            {(() => {
-              // Compõe o label de Fase/Instância só com valores preenchidos
-              const faseInstanciaParts = [processo.fase, processo.instancia]
-                .filter((v): v is string => !!v && v.trim() !== '')
-              const faseInstancia = faseInstanciaParts.join(' / ')
 
-              return (
-                <div className="grid grid-cols-12 gap-8">
-
-                  {/* Coluna Esquerda - Informações Principais */}
-                  <div className="col-span-7 space-y-5">
-
-                    {/* Partes */}
-                    <div className="grid grid-cols-2 gap-5">
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Cliente</p>
-                        <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200 truncate" title={processo.cliente_nome}>
-                          {processo.cliente_nome}
-                        </p>
-                      </div>
-
-                      {processo.parte_contraria && (
-                        <div className="min-w-0">
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Parte Contrária</p>
-                          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 truncate" title={processo.parte_contraria}>
-                            {processo.parte_contraria}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* CNJ — linha própria em largura cheia, clicável para abrir no tribunal */}
-                    {processo.numero_cnj && (
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Número CNJ</p>
-                        <CnjLink
-                          numeroCnj={processo.numero_cnj}
-                          processoId={processo.id}
-                          escritorioId={escritorioId}
-                          sistemaCache={processo.sistema_tribunal}
-                          linkManual={processo.link_tribunal}
-                        />
-                      </div>
-                    )}
-
-                    {/* Data de Distribuição + Fase/Instância (ou Rito) */}
-                    <div className="grid grid-cols-2 gap-5">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Data de Distribuição</p>
-                        <p className="text-sm text-slate-700 dark:text-slate-300">
-                          {format(new Date(processo.data_distribuicao), "dd/MM/yyyy", { locale: ptBR })}
-                        </p>
-                      </div>
-
-                      {faseInstancia && (
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Fase / Instância</p>
-                          <p className="text-sm text-slate-700 dark:text-slate-300 capitalize">
-                            {faseInstancia}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Rito — linha própria se preenchido */}
-                    {processo.rito && (
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Rito</p>
-                        <p className="text-sm text-slate-700 dark:text-slate-300 capitalize">{processo.rito}</p>
-                      </div>
-                    )}
-
-                    {/* Objeto da Ação */}
-                    {processo.objeto_acao && (
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Objeto da Ação</p>
-                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{processo.objeto_acao}</p>
-                      </div>
-                    )}
-
-                    {/* Valores */}
-                    <div className="pt-5 border-t border-slate-100 dark:border-slate-800">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Valores</p>
-                      <div className="space-y-2.5">
-                        <div className="flex justify-between items-baseline">
-                          <span className="text-xs text-slate-600 dark:text-slate-400">Valor da Causa</span>
-                          <span className="text-sm font-semibold text-[#34495e] dark:text-slate-200">
-                            {processo.valor_causa ? formatCurrency(processo.valor_causa) : '—'}
-                          </span>
-                        </div>
-
-                        {processo.valor_atualizado && processo.valor_atualizado !== processo.valor_causa && (
-                          <div className="flex justify-between items-baseline">
-                            <span className="text-xs text-slate-600 dark:text-slate-400">Valor Atualizado</span>
-                            <div className="text-right">
-                              <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-                                {formatCurrency(processo.valor_atualizado)}
-                              </span>
-                              {processo.data_ultima_atualizacao_monetaria && (
-                                <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                                  Atualizado em {format(new Date(processo.data_ultima_atualizacao_monetaria), "dd/MM/yyyy", { locale: ptBR })}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                  </div>
-
-                  {/* Coluna Direita - Localização (topo) + Responsável (centralizado no espaço restante) */}
-                  <div className="col-span-5 pl-7 border-l border-slate-100 dark:border-slate-800 flex flex-col">
-                    {/* Localização (no topo) */}
-                    <div className="flex items-start gap-3">
-                      <MapPin className="w-4 h-4 text-[#89bcbe] mt-0.5 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Localização</p>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                          {processo.tribunal && (
-                            <div>
-                              <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-0.5">Tribunal</p>
-                              {processo.link_tribunal ? (
-                                <Button
-                                  variant="link"
-                                  className="text-sm text-[#34495e] dark:text-slate-200 hover:text-[#89bcbe] font-medium p-0 h-auto"
-                                  onClick={() => window.open(processo.link_tribunal, '_blank')}
-                                >
-                                  {processo.tribunal} →
-                                </Button>
-                              ) : (
-                                <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">{processo.tribunal}</p>
-                              )}
-                            </div>
-                          )}
-                          {processo.comarca && (
-                            <div>
-                              <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-0.5">Comarca</p>
-                              <p className="text-sm text-slate-700 dark:text-slate-300">{processo.comarca}</p>
-                            </div>
-                          )}
-                          {processo.vara && (
-                            <div className="col-span-2">
-                              <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-0.5">Vara</p>
-                              <p className="text-sm text-slate-700 dark:text-slate-300">{processo.vara}</p>
-                            </div>
-                          )}
-                          {processo.juiz && (
-                            <div className="col-span-2">
-                              <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-0.5">Juiz</p>
-                              <p className="text-sm text-slate-700 dark:text-slate-300">{processo.juiz}</p>
-                            </div>
-                          )}
-                          {!processo.tribunal && !processo.comarca && !processo.vara && !processo.juiz && (
-                            <p className="text-xs text-slate-400 italic col-span-2">Localização não informada</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Responsável (cresce e centraliza verticalmente no espaço restante) */}
-                    <div className="flex-1 flex flex-col justify-center mt-5 pt-5 border-t border-slate-100 dark:border-slate-800">
-                      <div className="flex items-start gap-3">
-                        <Users className="w-4 h-4 text-[#89bcbe] mt-0.5 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Responsável</p>
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center flex-shrink-0 shadow-sm">
-                              <span className="text-xs font-semibold text-white">
-                                {processo.responsavel_nome.split(' ')[1]?.charAt(0) || processo.responsavel_nome.charAt(0)}
-                              </span>
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">{processo.responsavel_nome}</p>
-                              <p className="text-[10px] text-slate-500 dark:text-slate-400">Advogado responsável</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
+              {/* grade única de 6 colunas */}
+              <div className="grid grid-cols-6 gap-x-5 px-6">
+                {/* Partes */}
+                <div className="col-span-6 sm:col-span-3 py-4 min-w-0">
+                  <div className={`${V4_LABEL} mb-1.5`}>Cliente</div>
+                  <div className="text-sm font-semibold text-[#2c3e50] dark:text-slate-200 tracking-[-0.01em] mb-1.5 truncate" title={processo.cliente_nome}>{processo.cliente_nome}</div>
+                  <span className="inline-block text-[9.5px] font-bold px-[7px] py-0.5 rounded bg-[#e8f5f5] dark:bg-teal-500/15 text-[#3f7376] dark:text-teal-300 tracking-[0.05em]">{poloClienteLabel}</span>
                 </div>
-              )
-            })()}
-          </CardContent>
-        </Card>
-
-        {/* Slot para seções condicionais no topo (Partes adicionais + Vínculos) */}
-        {topSectionsSlot}
-
-        {/* Andamentos Processuais */}
-        <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-          <CardHeader className="pb-3 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 border-b border-slate-100 dark:border-slate-800">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
-                  <Activity className="w-3.5 h-3.5 text-[#89bcbe]" />
+                <div className="col-span-6 sm:col-span-3 py-4 min-w-0">
+                  <div className={`${V4_LABEL} mb-1.5`}>Parte contrária</div>
+                  <div className="text-sm font-semibold text-[#2c3e50] dark:text-slate-200 tracking-[-0.01em] mb-1.5 truncate" title={processo.parte_contraria || '—'}>{processo.parte_contraria || '—'}</div>
+                  <span className="inline-block text-[9.5px] font-bold px-[7px] py-0.5 rounded bg-[#f1ede2] dark:bg-[#1a212c] text-[#5a6775] dark:text-slate-400 tracking-[0.05em]">{poloContrariaLabel}</span>
                 </div>
-                Últimos Andamentos
-              </CardTitle>
 
-              <Dialog open={openNovoAndamento} onOpenChange={setOpenNovoAndamento}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 text-xs">
-                    <Plus className="w-3.5 h-3.5 mr-1.5" />
-                    Adicionar Andamento
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle className="text-lg font-semibold text-[#34495e] dark:text-slate-200">
-                      Novo Andamento Manual
-                    </DialogTitle>
-                  </DialogHeader>
+                <Sep />
 
-                  <div className="space-y-4 pt-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">
-                          Data
-                        </label>
-                        <Input
-                          type="date"
-                          value={novoAndamento.data}
-                          onChange={(e) => setNovoAndamento({ ...novoAndamento, data: e.target.value })}
-                          className="text-sm"
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">
-                          Tipo de Andamento
-                        </label>
-                        <Input
-                          placeholder="Ex: Atualização, Reunião com cliente, Análise..."
-                          value={novoAndamento.tipo}
-                          onChange={(e) => setNovoAndamento({ ...novoAndamento, tipo: e.target.value })}
-                          className="text-sm"
-                        />
-                      </div>
+                {/* CNJ + classificação */}
+                <div className="col-span-6 sm:col-span-3 py-3.5 min-w-0">
+                  <div className={`${V4_LABEL} mb-1.5`}>Número CNJ</div>
+                  {processo.numero_cnj ? (
+                    <CnjLink
+                      numeroCnj={processo.numero_cnj}
+                      processoId={processo.id}
+                      escritorioId={escritorioId}
+                      sistemaCache={processo.sistema_tribunal}
+                      linkManual={processo.link_tribunal}
+                    />
+                  ) : (
+                    <div className="text-[13px] text-slate-400">—</div>
+                  )}
+                </div>
+                <FichaField label="Fase">{processo.fase || '—'}</FichaField>
+                <FichaField label="Instância">{processo.instancia || '—'}</FichaField>
+                <FichaField label="Rito"><span className="capitalize">{processo.rito || '—'}</span></FichaField>
+
+                <Sep />
+
+                {/* Localização */}
+                <FichaField label="Tribunal">{processo.tribunal || '—'}</FichaField>
+                <FichaField label="Vara" span={2}>{processo.vara || '—'}</FichaField>
+                <FichaField label="Comarca">{processo.comarca || '—'}</FichaField>
+                <FichaField label="Distribuição" span={2} mono>
+                  {processo.data_distribuicao ? format(new Date(processo.data_distribuicao), 'dd/MM/yyyy', { locale: ptBR }) : '—'}
+                </FichaField>
+
+                <Sep />
+
+                {/* Valores */}
+                <div className="col-span-6 sm:col-span-3 pt-3.5 pb-4">
+                  <div className={`${V4_LABEL} mb-1.5`}>Valor da causa</div>
+                  <div className="font-serif text-[22px] font-medium text-[#2c3e50] dark:text-slate-100 tracking-[-0.025em] leading-none">
+                    {processo.valor_causa ? formatCurrency(processo.valor_causa) : '—'}
+                  </div>
+                </div>
+                {processo.valor_atualizado && processo.valor_atualizado !== processo.valor_causa ? (
+                  <div className="col-span-6 sm:col-span-3 pt-3.5 pb-4">
+                    <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#3f6a54] dark:text-emerald-400 mb-1.5">Valor atualizado</div>
+                    <div className="font-serif text-[22px] font-medium text-[#3f6a54] dark:text-emerald-400 tracking-[-0.025em] leading-none">
+                      {formatCurrency(processo.valor_atualizado)}
                     </div>
+                    {processo.data_ultima_atualizacao_monetaria && (
+                      <div className="text-[10.5px] text-[#9aa1a8] dark:text-slate-500 mt-1">
+                        em {format(new Date(processo.data_ultima_atualizacao_monetaria), 'dd/MM/yyyy', { locale: ptBR })}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="col-span-6 sm:col-span-3" />
+                )}
 
+                {/* Objeto da ação — linha larga */}
+                {processo.objeto_acao && (
+                  <>
+                    <Sep />
+                    <div className="col-span-6 py-3.5">
+                      <div className={`${V4_LABEL} mb-1.5`}>Objeto da ação</div>
+                      <div className="text-[13px] text-[#2c3e50] dark:text-slate-300 leading-relaxed">{processo.objeto_acao}</div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* rodapé — responsável + colaboradores */}
+              <div className="px-6 py-3.5 border-t border-[#f0ede3] dark:bg-[#0f141c] dark:border-[#1d2a3c] bg-[#faf8f2] flex items-center gap-5 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="w-[26px] h-[26px] rounded-full bg-gradient-to-br from-[#34495e] to-[#46627f] flex items-center justify-center text-[10px] font-bold text-white">{inic(processo.responsavel_nome)}</span>
+                  <div>
+                    <div className="text-[11.5px] font-semibold text-[#2c3e50] dark:text-slate-200">{processo.responsavel_nome}</div>
+                    <div className="text-[10px] text-[#9aa1a8] dark:text-slate-500">Advogado responsável</div>
+                  </div>
+                </div>
+                {processo.colaboradores_nomes.map((nome, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-[26px] h-[26px] rounded-full bg-gradient-to-br from-[#89bcbe] to-[#6ba9ab] flex items-center justify-center text-[10px] font-bold text-white">{inic(nome)}</span>
                     <div>
-                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">
-                        Descrição
-                      </label>
-                      <Textarea
-                        placeholder="Descreva o andamento..."
-                        value={novoAndamento.descricao}
-                        onChange={(e) => setNovoAndamento({ ...novoAndamento, descricao: e.target.value })}
-                        className="text-sm min-h-[120px]"
+                      <div className="text-[11.5px] font-medium text-[#5a6775] dark:text-slate-300">{nome}</div>
+                      <div className="text-[10px] text-[#9aa1a8] dark:text-slate-500">Colaborador</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* ── ANDAMENTOS (V4: timeline, toggle Escritório/Tribunal, paginação) ── */}
+        <div className={V4_CARD}>
+          <div className={V4_HEADER}>
+            <Activity className="w-3.5 h-3.5 text-[#89bcbe]" />
+            <span className={V4_HEADER_TITLE}>Andamentos</span>
+            <div className="flex-1" />
+            {/* toggle */}
+            <div className="flex gap-0.5 bg-[#ece9e2] dark:bg-[#1a212c] p-[3px] rounded-lg">
+              <button
+                onClick={() => trocarAndamentoTab('escritorio')}
+                className={cn(
+                  'px-[9px] py-[5px] rounded-md text-[11px] font-semibold transition-colors',
+                  andamentoTab === 'escritorio'
+                    ? 'bg-white dark:bg-[#2a3544] text-[#34495e] dark:text-slate-200 shadow-sm'
+                    : 'text-[#7c8693] dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
+                )}
+              >
+                Escritório
+              </button>
+              <button
+                onClick={() => trocarAndamentoTab('tribunal')}
+                className={cn(
+                  'px-[9px] py-[5px] rounded-md text-[11px] font-semibold transition-colors',
+                  andamentoTab === 'tribunal'
+                    ? 'bg-white dark:bg-[#2a3544] text-[#34495e] dark:text-slate-200 shadow-sm'
+                    : 'text-[#7c8693] dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
+                )}
+              >
+                Tribunal
+              </button>
+            </div>
+            <Dialog open={openNovoAndamento} onOpenChange={setOpenNovoAndamento}>
+              <DialogTrigger asChild>
+                <button className="h-[26px] px-[9px] rounded-md bg-transparent border border-[#e6e3da] dark:border-[#253345] text-[#5a6775] dark:text-slate-300 text-[10.5px] font-semibold inline-flex items-center gap-1 hover:bg-slate-50 dark:hover:bg-[#1a212c] transition-colors">
+                  <Plus className="w-2.5 h-2.5" />
+                  Registrar
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle className="text-lg font-semibold text-[#34495e] dark:text-slate-200">
+                    Novo Andamento Manual
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">Data</label>
+                      <Input
+                        type="date"
+                        value={novoAndamento.data}
+                        onChange={(e) => setNovoAndamento({ ...novoAndamento, data: e.target.value })}
+                        className="text-sm"
                       />
                     </div>
-
-                    <div className="flex justify-end gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => setOpenNovoAndamento(false)}
-                        disabled={salvandoAndamento}
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        onClick={handleAddAndamento}
-                        disabled={!novoAndamento.tipo || !novoAndamento.descricao || salvandoAndamento}
-                        className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e]"
-                      >
-                        {salvandoAndamento ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Salvando...
-                          </>
-                        ) : (
-                          'Adicionar Andamento'
-                        )}
-                      </Button>
+                    <div className="col-span-2">
+                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">Tipo de Andamento</label>
+                      <Input
+                        placeholder="Ex: Atualização, Reunião com cliente, Análise..."
+                        value={novoAndamento.tipo}
+                        onChange={(e) => setNovoAndamento({ ...novoAndamento, tipo: e.target.value })}
+                        className="text-sm"
+                      />
                     </div>
                   </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-3 pt-5">
-            {paginatedMovimentacoes.map((mov, index) => (
-              <div
-                key={mov.id}
-                id={`andamento-${mov.id}`}
-                className={`transition-colors duration-300 cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 rounded-md p-2 -mx-2 group ${index !== paginatedMovimentacoes.length - 1 ? 'pb-3 border-b border-slate-100 dark:border-slate-800' : ''}`}
-                onClick={() => setSelectedMovimentacao(mov)}
-              >
-                <div className="flex gap-3">
-                  {/* Data */}
-                  <div className="flex-shrink-0 w-20">
-                    <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                      {format(new Date(mov.data_movimento), "dd/MM/yyyy", { locale: ptBR })}
-                    </p>
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">Descrição</label>
+                    <Textarea
+                      placeholder="Descreva o andamento..."
+                      value={novoAndamento.descricao}
+                      onChange={(e) => setNovoAndamento({ ...novoAndamento, descricao: e.target.value })}
+                      className="text-sm min-h-[120px]"
+                    />
                   </div>
-
-                  {/* Conteúdo */}
-                  <div className="flex-1">
-                    <p className="text-xs font-semibold text-[#34495e] dark:text-slate-200 mb-0.5">
-                      {mov.tipo_descricao}
-                    </p>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-2">
-                      {mov.descricao}
-                    </p>
-                  </div>
-
-                  {/* Botões Editar/Excluir */}
-                  <div className="flex items-start gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => handleEditMovimentacao(mov, e)}
-                      className="h-7 w-7 p-0 text-slate-400 hover:text-[#34495e]"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="outline" onClick={() => setOpenNovoAndamento(false)} disabled={salvandoAndamento}>
+                      Cancelar
                     </Button>
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => handleDeleteMovimentacaoClick(mov.id, e)}
-                      className="h-7 w-7 p-0 text-slate-400 hover:text-red-600"
+                      onClick={handleAddAndamento}
+                      disabled={!novoAndamento.tipo || !novoAndamento.descricao || salvandoAndamento}
+                      className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e]"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      {salvandoAndamento ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</>) : 'Adicionar Andamento'}
                     </Button>
                   </div>
                 </div>
-              </div>
-            ))}
+              </DialogContent>
+            </Dialog>
+          </div>
 
-            {movimentacoes.length === 0 && (
+          {/* timeline */}
+          <div className="px-5 pt-1.5 pb-4">
+            {loadingMovimentacoes ? (
               <div className="text-center py-8">
-                <FileText className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-                <p className="text-sm text-slate-600 dark:text-slate-400">Nenhum andamento registrado</p>
+                <div className="w-5 h-5 mx-auto border-2 border-teal-200 border-t-teal-500 rounded-full animate-spin" />
               </div>
-            )}
-
-            {/* Paginação de Movimentações */}
-            {movimentacoes.length > movimentacoesPerPage && (
-              <div className="flex items-center justify-between pt-4 mt-2 border-t border-slate-100 dark:border-slate-800">
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {movStartIndex + 1}-{Math.min(movStartIndex + movimentacoesPerPage, movimentacoes.length)} de {movimentacoes.length}
+            ) : movAtivas.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="w-9 h-9 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {andamentoTab === 'escritorio' ? 'Nenhum andamento do escritório' : 'Nenhum andamento do tribunal'}
                 </p>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setMovimentacaoPage(p => Math.max(1, p - 1))}
-                    disabled={movimentacaoPage === 1}
-                    className="h-7 w-7 p-0"
-                  >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </Button>
-                  {Array.from({ length: totalMovPages }, (_, i) => i + 1).map(page => (
-                    <Button
-                      key={page}
-                      variant={movimentacaoPage === page ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setMovimentacaoPage(page)}
-                      className={`h-7 w-7 p-0 text-xs ${movimentacaoPage === page ? 'bg-[#34495e] hover:bg-[#46627f]' : ''}`}
-                    >
-                      {page}
-                    </Button>
-                  ))}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setMovimentacaoPage(p => Math.min(totalMovPages, p + 1))}
-                    disabled={movimentacaoPage === totalMovPages}
-                    className="h-7 w-7 p-0"
-                  >
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
               </div>
+            ) : (
+              paginatedMovimentacoes.map((mov, index) => {
+                const isEscritorio = andamentoTab === 'escritorio'
+                const desc = isEscritorio ? describeEscritorio(mov) : null
+                const tipo = isEscritorio ? (desc!.tipo) : 'tribunal'
+                const cfg = ANDAMENTO_TIPO[tipo] || ANDAMENTO_TIPO.andamento
+                const d = new Date(mov.data_movimento)
+                const isLast = index === paginatedMovimentacoes.length - 1
+                return (
+                  <div key={mov.id} id={`andamento-${mov.id}`} className="grid grid-cols-[52px_18px_1fr] gap-3.5" style={{ paddingTop: index === 0 ? 14 : 0 }}>
+                    {/* data */}
+                    <div className="pt-3 text-right">
+                      <div className="font-mono text-[13px] font-bold text-[#2c3e50] dark:text-slate-200 tracking-[-0.01em] leading-none">{format(d, 'dd/MM')}</div>
+                      <div className="text-[9.5px] font-bold uppercase tracking-[0.08em] text-[#9aa1a8] dark:text-slate-500 mt-0.5">{diaSemana(d)}</div>
+                    </div>
+                    {/* track */}
+                    <div className="flex flex-col items-center relative">
+                      <div className="w-[1.5px] h-3.5 bg-[#f0ede3] dark:bg-[#1d2a3c]" />
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 z-10 ring-[3px] ring-white dark:ring-[#151e2b]" style={{ background: cfg.color }} />
+                      {!isLast && <div className="flex-1 w-[1.5px] bg-[#f0ede3] dark:bg-[#1d2a3c] min-h-[20px]" />}
+                    </div>
+                    {/* conteúdo */}
+                    <div className={`min-w-0 pt-1.5 group ${isLast ? '' : 'pb-4'}`}>
+                      <div className="flex items-start gap-2">
+                        <div
+                          className="flex-1 min-w-0 cursor-pointer"
+                          onClick={() => setSelectedMovimentacao(mov)}
+                        >
+                          {isEscritorio ? (
+                            <>
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                {desc!.autor && (
+                                  <span className="w-5 h-5 rounded-full bg-gradient-to-br from-[#89bcbe] to-[#6ba9ab] flex items-center justify-center text-[8.5px] font-bold text-white flex-shrink-0">{inic(desc!.autor)}</span>
+                                )}
+                                <span className="text-[12.5px] text-[#2c3e50] dark:text-slate-300 leading-snug">
+                                  {desc!.autor && <strong className="font-semibold">{desc!.autor.split(' ')[0]}</strong>}
+                                  <span className="text-[#9aa1a8] dark:text-slate-500">{desc!.autor ? ' ' : ''}{desc!.acao}</span>
+                                </span>
+                              </div>
+                              <div className={`text-[12.5px] text-[#2c3e50] dark:text-slate-200 leading-relaxed tracking-[-0.005em] ${desc!.autor ? 'pl-[26px]' : ''}`}>{desc!.titulo}</div>
+                              <span className={`mt-1 inline-block text-[9px] font-bold px-1.5 py-0.5 rounded tracking-[0.06em] ${desc!.autor ? 'ml-[26px]' : ''}`} style={{ background: `${cfg.color}28`, color: cfg.color }}>{cfg.label}</span>
+                            </>
+                          ) : (
+                            <>
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span className="text-[13px] font-semibold text-[#2c3e50] dark:text-slate-200 tracking-[-0.01em]">{mov.tipo_descricao || 'Movimentação'}</span>
+                                {mov.lida === false && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#89bcbe] text-white tracking-[0.05em] flex-shrink-0">NOVO</span>
+                                )}
+                              </div>
+                              <div className="text-[12px] text-[#5a6775] dark:text-slate-400 leading-relaxed line-clamp-2">{mov.descricao}</div>
+                              <span className="mt-1 inline-block text-[9px] font-bold px-1.5 py-0.5 rounded tracking-[0.06em]" style={{ background: `${cfg.color}28`, color: cfg.color }}>{cfg.label}</span>
+                            </>
+                          )}
+                        </div>
+                        {/* editar/excluir (só andamentos do escritório) */}
+                        {isEscritorio && (
+                          <div className="flex items-start gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                            <button onClick={(e) => handleEditMovimentacao(mov, e)} className="h-6 w-6 rounded flex items-center justify-center text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200">
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                            <button onClick={(e) => handleDeleteMovimentacaoClick(mov.id, e)} className="h-6 w-6 rounded flex items-center justify-center text-slate-400 hover:text-red-600">
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
             )}
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Timeline Visual Horizontal */}
-        {movimentacoes.length > 0 && (
-          <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-            <CardContent className="pt-4 pb-4">
-              <ProcessoTimelineHorizontal
-                movimentacoes={movimentacoes}
-                onItemClick={(movId) => {
-                  // Abrir modal de detalhe da movimentação
-                  const mov = movimentacoes.find(m => m.id === movId)
-                  if (mov) {
-                    setSelectedMovimentacao(mov)
-                  }
-                }}
-              />
-            </CardContent>
-          </Card>
-        )}
+          {/* paginação */}
+          {movAtivas.length > movimentacoesPerPage && (
+            <div className="px-5 py-2.5 border-t border-[#f0ede3] dark:border-[#1d2a3c] flex items-center justify-between">
+              <span className="text-[11px] text-[#9aa1a8] dark:text-slate-500 font-mono">
+                {movStartIndex + 1}–{Math.min(movStartIndex + movimentacoesPerPage, movAtivas.length)} de {movAtivas.length}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setMovimentacaoPage((p) => Math.max(1, p - 1))}
+                  disabled={movimentacaoPage === 1}
+                  className="w-7 h-7 rounded-md border border-[#e6e3da] dark:border-[#253345] flex items-center justify-center text-[#5a6775] dark:text-slate-300 disabled:opacity-40 disabled:cursor-default hover:bg-slate-50 dark:hover:bg-[#1a212c] transition-colors"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <div className="flex gap-1.5 items-center">
+                  {Array.from({ length: totalMovPages }).map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setMovimentacaoPage(i + 1)}
+                      className="h-1.5 rounded-full transition-all"
+                      style={{ width: i + 1 === movimentacaoPage ? 20 : 6, background: i + 1 === movimentacaoPage ? '#89bcbe' : '#dcd8cd' }}
+                    />
+                  ))}
+                </div>
+                <button
+                  onClick={() => setMovimentacaoPage((p) => Math.min(totalMovPages, p + 1))}
+                  disabled={movimentacaoPage === totalMovPages}
+                  className="w-7 h-7 rounded-md border border-[#e6e3da] dark:border-[#253345] flex items-center justify-center text-[#5a6775] dark:text-slate-300 disabled:opacity-40 disabled:cursor-default hover:bg-slate-50 dark:hover:bg-[#1a212c] transition-colors"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Partes adicionais (colapsável) */}
+        {topSectionsSlot}
+
+        {/* Processos vinculados — recursos, incidentes, processo principal */}
+        {vinculosSlot}
 
         {/* Documentos — card inline com drag-drop (sempre visível) */}
         <ProcessoDocumentos processoId={processo.id} variant="inline" inlineLimit={5} />
 
-        {/* Processos Vinculados — recursos, incidentes, processo principal */}
-        {vinculosSlot}
-
-        {/* Depósitos — empty state compacto quando vazio, com botão para cadastrar */}
+        {/* Depósitos judiciais — seção retrátil abaixo dos documentos */}
         <ProcessoDepositos processoId={processo.id} />
 
       </div>
 
-      {/* Coluna Lateral (4/12) - Sticky */}
-      <div className="xl:col-span-4 space-y-6 xl:sticky xl:top-6 xl:self-start min-w-0">
+      {/* Coluna Lateral - Sticky (V4) */}
+      <div className="space-y-3 xl:sticky xl:top-6 xl:self-start min-w-0">
 
         {/* Agenda */}
-        <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-          <CardHeader className="pb-3 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 border-b border-slate-100 dark:border-slate-800">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
-                  <Calendar className="w-3.5 h-3.5 text-[#89bcbe]" />
-                </div>
-                Agenda
-              </CardTitle>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 hover:bg-[#89bcbe] hover:text-white transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => setShowTarefaWizard(true)}>
-                    <ListTodo className="w-4 h-4 mr-2 text-[#34495e]" />
-                    <span className="text-sm">Nova Tarefa</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowEventoWizard(true)}>
-                    <Calendar className="w-4 h-4 mr-2 text-[#89bcbe]" />
-                    <span className="text-sm">Novo Compromisso</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowAudienciaWizard(true)}>
-                    <Gavel className="w-4 h-4 mr-2 text-emerald-600" />
-                    <span className="text-sm">Nova Audiência</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-5">
+        <div className={V4_CARD}>
+          <div className={V4_HEADER}>
+            <Calendar className="w-3.5 h-3.5 text-[#89bcbe]" />
+            <span className={V4_HEADER_TITLE}>Agenda</span>
+            <div className="flex-1" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-[26px] h-[26px] rounded-md flex items-center justify-center text-[#9aa1a8] hover:bg-[#89bcbe] hover:text-white transition-colors">
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setShowTarefaWizard(true)}>
+                  <ListTodo className="w-4 h-4 mr-2 text-[#34495e]" />
+                  <span className="text-sm">Nova Tarefa</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowEventoWizard(true)}>
+                  <Calendar className="w-4 h-4 mr-2 text-[#89bcbe]" />
+                  <span className="text-sm">Novo Compromisso</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowAudienciaWizard(true)}>
+                  <Gavel className="w-4 h-4 mr-2 text-emerald-600" />
+                  <span className="text-sm">Nova Audiência</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <div className="py-1.5">
             {loadingAgenda ? (
               <div className="text-center py-3">
                 <div className="w-5 h-5 mx-auto border-2 border-teal-200 border-t-teal-500 rounded-full animate-spin"></div>
@@ -1153,22 +1131,13 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
                 <p className="text-xs text-slate-500 dark:text-slate-400">Nenhum agendamento vinculado</p>
               </div>
             ) : (
-              <div className="space-y-3.5">
+              <div>
                 {(() => {
                   // Paginação da agenda
-                  const totalAgendaPages = Math.ceil(agendaItems.length / agendaPerPage)
                   const agendaStartIndex = (agendaPage - 1) * agendaPerPage
                   const paginatedAgenda = agendaItems.slice(agendaStartIndex, agendaStartIndex + agendaPerPage)
                   return paginatedAgenda
                 })().map((item) => {
-                  const statusConfig: Record<string, { bg: string; text: string }> = {
-                    pendente: { bg: 'bg-amber-100 dark:bg-amber-500/10', text: 'text-amber-700 dark:text-amber-400' },
-                    em_andamento: { bg: 'bg-blue-100 dark:bg-blue-500/10', text: 'text-blue-700 dark:text-blue-400' },
-                    concluida: { bg: 'bg-emerald-100 dark:bg-emerald-500/10', text: 'text-emerald-700 dark:text-emerald-400' },
-                    agendada: { bg: 'bg-blue-100 dark:bg-blue-500/10', text: 'text-blue-700 dark:text-blue-400' },
-                  }
-                  const statusStyle = statusConfig[item.status] || statusConfig.pendente
-
                   const handleClick = async () => {
                     if (item.tipo_entidade === 'tarefa') {
                       // Buscar tarefa completa
@@ -1209,57 +1178,69 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
                     }
                   }
 
+                  const dataRef = new Date(item.data_inicio)
+                  const prazo = item.tipo_entidade === 'tarefa' ? item.prazo_data_limite : null
+                  const urgente = !!prazo && (new Date(prazo).getTime() - new Date().setHours(0, 0, 0, 0)) <= 3 * 86400000
+                  const barColor = urgente
+                    ? '#a85a3e'
+                    : item.tipo_entidade === 'audiencia'
+                      ? '#3f7376'
+                      : item.tipo_entidade === 'evento'
+                        ? '#6a85a8'
+                        : '#89bcbe'
+                  const resps: string[] = (item.responsaveis_nomes?.length > 0
+                    ? item.responsaveis_nomes
+                    : item.responsavel_nome ? [item.responsavel_nome] : [])
+
                   return (
                     <div
                       key={item.id}
                       onClick={handleClick}
-                      className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-[#89bcbe] hover:shadow-sm transition-all cursor-pointer"
+                      className="grid grid-cols-[54px_3px_1fr] gap-2.5 px-3.5 py-2.5 border-b border-[#f0ede3] dark:border-[#1d2a3c] last:border-0 cursor-pointer hover:bg-[#faf8f2] dark:hover:bg-[#1a212c] transition-colors items-start"
                     >
-                      {/* Header com título e status */}
-                      <div className="flex items-start gap-2.5 mb-2.5">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-[#34495e] dark:text-slate-200 leading-tight truncate">
-                            {item.titulo}
-                          </p>
+                      {/* data */}
+                      <div className="text-center pt-0.5">
+                        <div
+                          className="font-serif text-[19px] font-semibold leading-none tracking-[-0.025em]"
+                          style={{ color: urgente ? '#a85a3e' : undefined }}
+                        >
+                          <span className={urgente ? '' : 'text-[#2c3e50] dark:text-slate-200'}>{format(dataRef, 'dd')}</span>
                         </div>
-                        <Badge className={`text-[10px] h-4 px-1.5 flex-shrink-0 border ${statusStyle.bg} ${statusStyle.text}`}>
-                          {item.status}
-                        </Badge>
+                        <div className="text-[9.5px] font-bold uppercase tracking-[0.08em] mt-0.5" style={{ color: urgente ? '#c98080' : '#9aa1a8' }}>
+                          {diaSemana(dataRef)}
+                        </div>
                       </div>
-
-                      {/* Info adicional */}
-                      <div className="space-y-1.5">
-                        {/* Data/Horário - tarefas sem hora, eventos e audiências com hora */}
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-3 h-3 text-[#89bcbe]" />
-                          <span className="text-[10px] text-slate-600 dark:text-slate-400">
-                            {item.tipo_entidade === 'tarefa'
-                              ? formatBrazilDate(item.data_inicio)
-                              : formatBrazilDateTime(item.data_inicio)}
-                          </span>
+                      {/* barra colorida */}
+                      <div className="rounded-sm self-stretch min-h-[28px]" style={{ background: barColor }} />
+                      {/* conteúdo */}
+                      <div className="min-w-0">
+                        <div className="text-[12.5px] font-medium text-[#2c3e50] dark:text-slate-200 leading-snug tracking-[-0.005em] line-clamp-2">
+                          {item.titulo}
                         </div>
-
-                        {/* Responsáveis */}
-                        {(item.responsaveis_nomes?.length > 0 || item.responsavel_nome) && (
-                          <div className="flex items-center gap-1.5">
-                            <User className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
-                            <span className="text-[10px] text-slate-600 dark:text-slate-400 truncate">
-                              {item.responsaveis_nomes?.length > 0
-                                ? item.responsaveis_nomes.join(', ')
-                                : item.responsavel_nome}
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className="text-[10.5px] text-[#9aa1a8] dark:text-slate-500 font-mono">
+                            {item.tipo_entidade === 'tarefa' ? formatBrazilDate(item.data_inicio) : formatBrazilDateTime(item.data_inicio)}
+                          </span>
+                          {urgente && prazo && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#a85a3e]">
+                              <CalendarClock className="w-3 h-3" />
+                              Fatal {formatBrazilDate(prazo)}
                             </span>
-                          </div>
-                        )}
-
-                        {/* Prazo Fatal (apenas para tarefas) */}
-                        {item.tipo_entidade === 'tarefa' && item.prazo_data_limite && (
-                          <div className="flex items-center gap-1.5">
-                            <CalendarClock className="w-3 h-3 text-red-500" />
-                            <span className="text-[10px] text-red-600 font-medium">
-                              Fatal: {formatBrazilDate(item.prazo_data_limite)}
-                            </span>
-                          </div>
-                        )}
+                          )}
+                          {resps.length > 0 && (
+                            <div className="flex -space-x-1 ml-auto">
+                              {resps.slice(0, 3).map((nome, j) => (
+                                <span
+                                  key={j}
+                                  title={nome}
+                                  className="w-4 h-4 rounded-full bg-gradient-to-br from-[#89bcbe] to-[#6ba9ab] ring-[1.5px] ring-white dark:ring-[#151e2b] flex items-center justify-center text-[7.5px] font-bold text-white"
+                                >
+                                  {inic(nome)}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )
@@ -1307,17 +1288,18 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
               </div>
             )}
 
-            {agendaItems.length > 0 && (
-              <Button
-                variant="link"
-                className="text-xs text-[#89bcbe] hover:text-[#6ba9ab] p-0 h-auto mt-3 w-full"
+          </div>
+          {agendaItems.length > 0 && (
+            <div className="px-4 py-2.5 border-t border-[#f0ede3] dark:border-[#1d2a3c]">
+              <button
                 onClick={() => router.push(`/dashboard/agenda?processo_id=${processo.id}`)}
+                className="w-full flex items-center justify-center gap-1.5 text-[11.5px] font-semibold text-[#89bcbe] hover:text-[#6ba9ab] transition-colors"
               >
-                Ver agenda completa →
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+                Ver todos os agendamentos <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Card Financeiro */}
         <ProcessoFinanceiroCard

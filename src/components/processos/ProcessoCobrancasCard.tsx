@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -12,24 +11,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
 } from '@/components/ui/dialog'
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
-import {
-  Receipt,
   Loader2,
-  DollarSign,
   Check,
-  CheckCircle2,
   X,
-  AlertCircle,
-  ChevronDown,
   Pencil,
   Send,
+  ArrowRight,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -62,7 +51,7 @@ export default function ProcessoCobrancasCard({
   formasDisponiveis,
 }: ProcessoCobrancasCardProps) {
   const { escritorioAtivo } = useEscritorioAtivo()
-  const { loadAtosDisponiveis, cobrarAto } = useCobrancaAtos(escritorioAtivo)
+  const { loadAtosDisponiveis, cobrarAto, marcarAtoRecebido, desfazerAtoRecebido } = useCobrancaAtos(escritorioAtivo)
   const supabase = createClient()
 
   const [loading, setLoading] = useState(true)
@@ -74,6 +63,11 @@ export default function ProcessoCobrancasCard({
   // Modal de confirmação
   const [modalConfirmacao, setModalConfirmacao] = useState<AtoComEstado | null>(null)
   const [cobrando, setCobrando] = useState(false)
+
+  // Modal "já recebido" (desativa faturamento do item)
+  const [modalRecebido, setModalRecebido] = useState<AtoComEstado | null>(null)
+  const [recebendo, setRecebendo] = useState(false)
+  const [desfazendoId, setDesfazendoId] = useState<string | null>(null)
 
   // Carregar dados
   const loadData = useCallback(async () => {
@@ -224,6 +218,45 @@ export default function ProcessoCobrancasCard({
     }
   }
 
+  // Confirmar "já recebido" (marca como recebido fora do sistema, sem faturar)
+  const handleConfirmarRecebido = async () => {
+    if (!modalRecebido) return
+
+    setRecebendo(true)
+    try {
+      await marcarAtoRecebido(
+        processoId,
+        modalRecebido.id,
+        modalRecebido.valorFinal,
+        modalRecebido.nome
+      )
+      toast.success('Ato marcado como recebido — fora do faturamento')
+      setModalRecebido(null)
+      loadData()
+    } catch (error) {
+      console.error('Erro ao marcar ato como recebido:', error)
+      toast.error('Erro ao marcar como recebido')
+    } finally {
+      setRecebendo(false)
+    }
+  }
+
+  // Desfazer "já recebido" — devolve o ato à cobrança (one-click)
+  const handleDesfazerRecebido = async (ato: AtoComEstado) => {
+    if (!ato.receitaId) return
+    setDesfazendoId(ato.id)
+    try {
+      await desfazerAtoRecebido(ato.receitaId)
+      toast.success('Recebimento desfeito — ato voltou para cobrança')
+      loadData()
+    } catch (error) {
+      console.error('Erro ao desfazer recebimento:', error)
+      toast.error('Erro ao desfazer')
+    } finally {
+      setDesfazendoId(null)
+    }
+  }
+
   if (loading) {
     return null
   }
@@ -234,150 +267,128 @@ export default function ProcessoCobrancasCard({
     return null
   }
 
+  const cobradosCount = atosComEstado.filter(a => a.jaCobrado).length
+
   return (
     <>
-      <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-        <CardHeader className="pb-3 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 border-b border-slate-100 dark:border-slate-800">
-          <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
-              <Receipt className="w-3.5 h-3.5 text-[#89bcbe]" />
-            </div>
-            Cobrança de Atos
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-5">
-          <div className="space-y-3">
-            {atosComEstado.map(ato => (
-              <div
-                key={ato.id}
-                className={cn(
-                  "p-3 rounded-lg border",
-                  ato.jaCobrado
-                    ? "bg-slate-100/60 dark:bg-surface-2/60 border-slate-200/80 dark:border-slate-700/80"
-                    : "bg-slate-50 dark:bg-surface-0 border-slate-200 dark:border-slate-700"
-                )}
-              >
-                {/* Cabeçalho do Ato */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className={cn(
-                      "text-xs font-medium truncate",
-                      ato.jaCobrado ? "text-slate-500 dark:text-slate-400" : "text-[#34495e] dark:text-slate-200"
-                    )}>
-                      {ato.nome}
-                    </p>
+      <Card className="border-[#e6e3da] dark:border-[#253345] bg-white dark:bg-[#151e2b] rounded-xl shadow-none overflow-hidden">
+        <div className="px-4 pt-3.5 pb-1">
+          <div className="flex items-baseline justify-between">
+            <span className="text-[13px] font-semibold text-[#2c3e50] dark:text-slate-200">Cobrança de atos</span>
+            <span className="text-[10.5px] font-mono text-[#9aa1a8] dark:text-slate-500">
+              {cobradosCount}/{atosComEstado.length} faturado{cobradosCount !== 1 ? 's' : ''}
+            </span>
+          </div>
+        </div>
 
-                    {/* Info do Cálculo */}
-                    <div className="mt-2 space-y-1">
-                      {!ato.jaCobrado && (
-                        <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400">
-                          <span>
-                            {ato.percentual_contrato || ato.percentual_padrao}% de{' '}
-                            {formatCurrency(
-                              ato.usandoBaseAlternativa && ato.baseAlternativa
-                                ? parseFloat(ato.baseAlternativa)
-                                : (ato.base_calculo_padrao || valorCausa || 0)
-                            )}
-                          </span>
-                          {ato.calculoAtualizado.usouMinimo && (
-                            <Badge className="text-[8px] px-1 py-0 h-3.5 bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-700">
-                              mín. aplicado
-                            </Badge>
-                          )}
-                        </div>
+        <div className="px-4 pb-3">
+          {atosComEstado.map((ato, i) => {
+            const pct = ato.percentual_contrato || ato.percentual_padrao
+            const base = ato.usandoBaseAlternativa && ato.baseAlternativa
+              ? parseFloat(ato.baseAlternativa)
+              : (ato.base_calculo_padrao || valorCausa || 0)
+            const valor = ato.jaCobrado ? (ato.receitaValor ?? ato.valorFinal) : ato.valorFinal
+            const statusLabel = ato.receitaStatus === 'pago' ? 'RECEBIDO' : ato.receitaStatus === 'faturado' ? 'FATURADO' : 'ENVIADO'
+            const statusColor = ato.receitaStatus === 'enviado' ? '#8a6438' : '#3f6a54'
+            return (
+              <div key={ato.id} className={cn(i < atosComEstado.length - 1 && 'border-b border-[#f0ede3] dark:border-[#1d2a3c]')}>
+                <div className="grid grid-cols-[1fr_auto] gap-2.5 py-2.5 items-start">
+                  {/* esquerda: nome + base */}
+                  <div className="min-w-0">
+                    <div className={cn('text-[12.5px] font-semibold tracking-[-0.005em]', ato.jaCobrado ? 'text-[#9aa1a8] dark:text-slate-500' : 'text-[#2c3e50] dark:text-slate-200')}>
+                      {ato.nome}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-[10.5px] text-[#9aa1a8] dark:text-slate-500">{pct}% · {formatCurrency(base)}</span>
+                      {!ato.jaCobrado && ato.calculoAtualizado.usouMinimo && (
+                        <span className="text-[8.5px] font-bold px-1 py-0 rounded bg-[#f7f0e7] dark:bg-amber-500/10 text-[#8a6438] dark:text-amber-300">mín.</span>
                       )}
-                      <p className={cn(
-                        "text-sm font-semibold",
-                        ato.jaCobrado ? "text-slate-500 dark:text-slate-400" : "text-emerald-600 dark:text-emerald-400"
-                      )}>
-                        {formatCurrency(ato.jaCobrado ? (ato.receitaValor ?? ato.valorFinal) : ato.valorFinal)}
-                      </p>
                     </div>
                   </div>
 
-                  {ato.jaCobrado ? (
-                    /* Badge de Status */
-                    <div className={cn(
-                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[10px] font-medium shrink-0",
-                      ato.receitaStatus === 'pago'
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-700"
-                        : ato.receitaStatus === 'faturado'
-                          ? "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-700"
-                          : "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-700"
-                    )}>
-                      <CheckCircle2 className="w-3 h-3" />
-                      {ato.receitaStatus === 'pago' ? 'Pago'
-                        : ato.receitaStatus === 'faturado' ? 'Faturado'
-                        : 'Enviado'}
+                  {/* direita: valor + ação */}
+                  <div className="text-right">
+                    <div className={cn('text-[12px] font-semibold font-mono', ato.jaCobrado ? 'text-[#9aa1a8] dark:text-slate-500' : 'text-[#2c3e50] dark:text-slate-200')}>
+                      {formatCurrency(valor)}
                     </div>
-                  ) : (
-                    /* Botão Cobrar */
-                    <Button
-                      size="sm"
-                      onClick={() => handleAbrirConfirmacao(ato)}
-                      className="h-8 px-3 bg-emerald-500 hover:bg-emerald-600 text-white shrink-0"
-                    >
-                      <Send className="w-3.5 h-3.5 mr-1.5" />
-                      Cobrar
-                    </Button>
-                  )}
+                    {ato.jaCobrado ? (
+                      ato.recebidoForaSistema ? (
+                        <div className="flex items-center gap-1 justify-end">
+                          <span className="text-[9px] font-bold tracking-[0.08em] text-[#3f7376]">RECEBIDO</span>
+                          <button
+                            onClick={() => handleDesfazerRecebido(ato)}
+                            disabled={desfazendoId === ato.id}
+                            title="Desfazer — voltar a cobrar"
+                            className="text-[#9aa1a8] hover:text-[#834545] transition-colors disabled:opacity-40"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[9px] font-bold tracking-[0.08em]" style={{ color: statusColor }}>{statusLabel}</span>
+                      )
+                    ) : (
+                      <div className="flex flex-col items-end gap-1 mt-1">
+                        <button
+                          onClick={() => handleAbrirConfirmacao(ato)}
+                          className="h-6 px-2.5 rounded-md bg-gradient-to-br from-[#34495e] to-[#46627f] text-white text-[11px] font-bold inline-flex items-center gap-1 shadow-[0_2px_6px_-2px_rgba(52,73,94,0.3)] hover:from-[#46627f] hover:to-[#34495e] transition-colors"
+                        >
+                          Faturar <ArrowRight className="w-2.5 h-2.5" />
+                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setAtoExpandido(atoExpandido === ato.id ? null : ato.id)}
+                            className="text-[10px] text-[#9aa1a8] dark:text-slate-500 hover:text-[#5a6775] dark:hover:text-slate-300 underline underline-offset-2 inline-flex items-center gap-1"
+                          >
+                            <Pencil className="w-2.5 h-2.5" />
+                            {ato.usandoBaseAlternativa ? 'base ajustada' : 'ajustar base'}
+                          </button>
+                          <button
+                            onClick={() => setModalRecebido(ato)}
+                            className="text-[10px] text-[#9aa1a8] dark:text-slate-500 hover:text-[#5a6775] dark:hover:text-slate-300 underline underline-offset-2"
+                          >
+                            já recebido
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Opção de Alterar Base - só mostra se NÃO foi cobrado */}
-                {!ato.jaCobrado && (
-                  <Collapsible
-                    open={atoExpandido === ato.id}
-                    onOpenChange={(open) => setAtoExpandido(open ? ato.id : null)}
-                  >
-                    <CollapsibleTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="mt-2 h-6 px-2 text-[10px] text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 w-full justify-start"
-                      >
-                        <Pencil className="w-3 h-3 mr-1" />
-                        {ato.usandoBaseAlternativa ? 'Usando base alternativa' : 'Alterar base de cálculo'}
-                        <ChevronDown className={cn(
-                          "w-3 h-3 ml-auto transition-transform",
-                          atoExpandido === ato.id && "rotate-180"
-                        )} />
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pt-2">
-                      <div className="p-2.5 bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Label className="text-[10px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                            Base alternativa:
-                          </Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={ato.baseAlternativa}
-                            onChange={e => handleAlterarBase(ato.id, e.target.value)}
-                            placeholder={formatCurrency(ato.base_calculo_padrao || valorCausa || 0)}
-                            className="h-7 text-xs flex-1"
-                          />
-                        </div>
-                        {ato.usandoBaseAlternativa && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleBaseAlternativa(ato.id)}
-                            className="h-6 px-2 text-[10px] text-slate-500 dark:text-slate-400"
-                          >
-                            <X className="w-3 h-3 mr-1" />
-                            Usar valor da causa
-                          </Button>
-                        )}
+                {/* base alternativa — expande abaixo da linha */}
+                {!ato.jaCobrado && atoExpandido === ato.id && (
+                  <div className="pb-2.5 -mt-0.5">
+                    <div className="p-2.5 bg-[#faf8f2] dark:bg-[#0f141c] rounded-lg border border-[#f0ede3] dark:border-[#1d2a3c] space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-[10px] text-[#9aa1a8] dark:text-slate-400 whitespace-nowrap">Base alternativa:</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={ato.baseAlternativa}
+                          onChange={e => handleAlterarBase(ato.id, e.target.value)}
+                          placeholder={formatCurrency(ato.base_calculo_padrao || valorCausa || 0)}
+                          className="h-7 text-xs flex-1"
+                        />
                       </div>
-                    </CollapsibleContent>
-                  </Collapsible>
+                      {ato.usandoBaseAlternativa && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleBaseAlternativa(ato.id)}
+                          className="h-6 px-2 text-[10px] text-slate-500 dark:text-slate-400"
+                        >
+                          <X className="w-3 h-3 mr-1" />
+                          Usar valor da causa
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
-            ))}
-          </div>
-        </CardContent>
+            )
+          })}
+        </div>
       </Card>
 
       {/* Modal de Confirmação */}
@@ -433,6 +444,60 @@ export default function ProcessoCobrancasCard({
               className="bg-emerald-500 hover:bg-emerald-600 text-white"
             >
               {cobrando ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Check className="w-4 h-4 mr-1" />
+              )}
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal "já recebido" — desativa o faturamento do item */}
+      <Dialog open={!!modalRecebido} onOpenChange={() => setModalRecebido(null)}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle className="text-base flex items-center gap-2">
+              <Check className="w-4 h-4 text-[#3f7376]" />
+              Marcar como recebido
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="p-3 bg-slate-50 dark:bg-surface-0 rounded-lg space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Ato:</span>
+                <span className="text-xs font-medium text-[#34495e] dark:text-slate-200">
+                  {modalRecebido?.nome}
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
+                <span className="text-sm font-medium text-[#34495e] dark:text-slate-200">Valor:</span>
+                <span className="text-sm font-bold font-mono text-[#3f7376] dark:text-teal-300">
+                  {formatCurrency(modalRecebido?.valorFinal || 0)}
+                </span>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-3 text-center leading-relaxed">
+              O ato será registrado como recebido fora do sistema e <strong>não será enviado ao faturamento</strong>.
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setModalRecebido(null)}
+              disabled={recebendo}
+            >
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleConfirmarRecebido}
+              disabled={recebendo}
+              className="bg-[#3f7376] hover:bg-[#356164] text-white"
+            >
+              {recebendo ? (
                 <Loader2 className="w-4 h-4 mr-1 animate-spin" />
               ) : (
                 <Check className="w-4 h-4 mr-1" />

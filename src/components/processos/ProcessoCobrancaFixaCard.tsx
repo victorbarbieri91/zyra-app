@@ -167,8 +167,8 @@ export default function ProcessoCobrancaFixaCard({
 
   return (
     <>
-      <Card className="border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-        <CardHeader className="pb-3 bg-gradient-to-br from-[#f0f9f9] to-[#e8f5f5] dark:from-teal-500/5 dark:to-teal-500/10 border-b border-slate-100 dark:border-slate-800">
+      <Card className="border-[#e6e3da] dark:border-[#253345] bg-white dark:bg-[#151e2b] rounded-xl shadow-none overflow-hidden">
+        <CardHeader className="pb-3 bg-[#f3f0e8] dark:bg-[#0f141c] border-b border-[#e6e3da] dark:border-[#253345]">
           <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
               <DollarSign className="w-3.5 h-3.5 text-[#89bcbe]" />

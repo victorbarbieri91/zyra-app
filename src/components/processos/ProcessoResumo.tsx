@@ -1248,7 +1248,7 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
 
                 {/* Paginação da Agenda */}
                 {agendaItems.length > agendaPerPage && (
-                  <div className="flex items-center justify-between pt-3 mt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center justify-between px-3.5 pt-3 mt-1 border-t border-[#f0ede3] dark:border-[#1d2a3c]">
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       {((agendaPage - 1) * agendaPerPage) + 1}-{Math.min(agendaPage * agendaPerPage, agendaItems.length)} de {agendaItems.length}
                     </p>

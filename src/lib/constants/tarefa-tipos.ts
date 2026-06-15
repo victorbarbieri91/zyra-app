@@ -1,6 +1,6 @@
 import {
   Briefcase,
-  UserCheck,
+  Eye,
   Clock,
   FileText,
   ClipboardList,
@@ -41,14 +41,14 @@ export interface TipoChipStyle {
 export const CONTENCIOSO_TIPOS: Record<TipoTarefaContencioso, TipoTarefaConfig> = {
   prazo_processual: {
     label: 'Prazo Processual',
-    icon: Briefcase,
+    icon: Scale,
     color: 'red',
     description: 'Prazos judiciais',
     categoria: 'contencioso',
   },
   acompanhamento: {
     label: 'Acompanhamento',
-    icon: UserCheck,
+    icon: Eye,
     color: 'blue',
     description: 'Acompanhamento',
     categoria: 'contencioso',
@@ -69,7 +69,7 @@ export const CONTENCIOSO_TIPOS: Record<TipoTarefaContencioso, TipoTarefaConfig> 
   },
   outro: {
     label: 'Outro',
-    icon: ClipboardList,
+    icon: Briefcase,
     color: 'slate',
     description: 'Outras tarefas',
     categoria: 'contencioso',

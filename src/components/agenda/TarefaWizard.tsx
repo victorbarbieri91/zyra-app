@@ -1,36 +1,41 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { Calendar, CalendarClock, Clock, Link as LinkIcon, CheckSquare, Briefcase, UserCheck, FileText, ClipboardList, Zap, TrendingUp, ChevronRight, ChevronsRight, Repeat, ListTree, Pin, Mail, Loader2, Scale, Gavel, CheckCircle2, Lock, CalendarDays } from 'lucide-react'
-import { ModalWizard, WizardStep, ReviewCard } from '@/components/wizards'
-import { cn } from '@/lib/utils'
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
+import {
+  Calendar, CalendarClock, Search, X, Check, Loader2, Mail, Upload, CheckCircle2,
+  Lock, Plus, Repeat, Link as LinkIcon, CalendarDays, ChevronsRight, Zap, TrendingUp, ArrowDown,
+  Scale, MessageSquare, FileText, type LucideIcon,
+} from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { DateInput } from '@/components/ui/date-picker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
+import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
 import { useDropzone } from 'react-dropzone'
-import VinculacaoSelector from '@/components/agenda/VinculacaoSelector'
-import RecorrenciaConfig, { RecorrenciaData, getRecorrenciaSummary } from '@/components/agenda/RecorrenciaConfig'
-import ResponsaveisSelector from '@/components/agenda/ResponsaveisSelector'
+import type { Vinculacao } from '@/components/agenda/VinculacaoSelector'
+import { type RecorrenciaData } from '@/components/agenda/RecorrenciaConfig'
+import { useVinculacaoSearch, type ResultadoBusca } from '@/hooks/useVinculacaoSearch'
 import type { Tarefa, TarefaFormData } from '@/hooks/useTarefas'
-import type { WizardStep as WizardStepType } from '@/components/wizards/types'
-import { format, parse } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { format } from 'date-fns'
 import { useRecorrencias } from '@/hooks/useRecorrencias'
 import { useTarefas } from '@/hooks/useTarefas'
 import { useAgendaResponsaveis } from '@/hooks/useAgendaResponsaveis'
 import { useEscritorioMembros } from '@/hooks/useEscritorioMembros'
 import { createClient } from '@/lib/supabase/client'
-import { parseDateInBrazil, formatBrazilDateLong } from '@/lib/timezone'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import {
   CONTENCIOSO_TIPOS,
   CONSULTIVO_TIPOS,
-  getTipoLabel,
-  getTipoSelectedClasses,
   type TipoTarefaContencioso,
   type TipoTarefaConsultivo,
   type CategoriaTarefa,
@@ -46,11 +51,107 @@ interface TarefaWizardProps {
 
 type TipoTarefa = TipoTarefaContencioso | TipoTarefaConsultivo
 type Prioridade = 'alta' | 'media' | 'baixa'
-type PrazoTipo = 'recurso' | 'manifestacao' | 'cumprimento' | 'juntada' | 'pagamento' | 'outro'
+
+// ───────────────────────── helpers de UI (V4) ─────────────────────────
+const lbl = 'text-[11px] font-bold uppercase tracking-[0.1em] text-[#9aa1a8] dark:text-slate-500'
+
+function Section({ title, hint, children }: { title: string; hint?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-baseline justify-between">
+        <span className={lbl}>{title}</span>
+        {hint}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+interface SegOption<T extends string> {
+  v: T
+  l: string
+  Icon?: LucideIcon
+  activeBg?: string
+  activeText?: string
+}
+function Segmented<T extends string>({ value, onChange, options, className }: {
+  value: T
+  onChange: (v: T) => void
+  options: SegOption<T>[]
+  className?: string
+}) {
+  return (
+    <div className={cn('flex gap-1 p-[3px] rounded-[9px] bg-[#ece9e2] dark:bg-[#10151d]', className)}>
+      {options.map((o) => {
+        const on = value === o.v
+        return (
+          <button
+            key={o.v}
+            type="button"
+            onClick={() => onChange(o.v)}
+            className={cn(
+              'flex-1 h-[30px] rounded-[7px] inline-flex items-center justify-center gap-1.5 text-[12px] font-semibold transition-all',
+              on
+                ? cn('shadow-sm', o.activeBg || 'bg-white dark:bg-[#46627f]', o.activeText || 'text-[#34495e] dark:text-white')
+                : 'text-[#7c8693] dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200',
+            )}
+          >
+            {o.Icon && <o.Icon className="w-3.5 h-3.5" />}
+            {o.l}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// avatar com iniciais
+const AVATAR_CORES = ['#34495e', '#46627f', '#3f7376', '#6b9e84', '#8a6438', '#a85a3e', '#415a7e']
+function avatarCor(seed: string) {
+  let h = 0
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
+  return AVATAR_CORES[h % AVATAR_CORES.length]
+}
+function iniciais(nome: string) {
+  const partes = nome.trim().split(/\s+/)
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase()
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
+}
+function Avatar({ nome, size = 26 }: { nome: string; size?: number }) {
+  return (
+    <span
+      className="rounded-full text-white font-bold inline-flex items-center justify-center flex-shrink-0"
+      style={{ width: size, height: size, fontSize: size * 0.38, background: avatarCor(nome) }}
+    >
+      {iniciais(nome)}
+    </span>
+  )
+}
+
+const PRIOR_OPTS: SegOption<Prioridade>[] = [
+  { v: 'alta', l: 'Alta', Icon: Zap, activeBg: 'bg-[#f9ebe6] dark:bg-[#a85a3e]/25', activeText: 'text-[#a85a3e] dark:text-[#e0a085]' },
+  { v: 'media', l: 'Média', Icon: TrendingUp, activeBg: 'bg-[#f7f0e7] dark:bg-[#8a6438]/25', activeText: 'text-[#8a6438] dark:text-[#d4a574]' },
+  { v: 'baixa', l: 'Baixa', Icon: ArrowDown, activeBg: 'bg-[#e8f5f5] dark:bg-[#3f7376]/25', activeText: 'text-[#3f7376] dark:text-[#7fb8ba]' },
+]
+
+// Paleta quente V4 dos cartões de tipo (igual ao design). Classes estáticas p/ o Tailwind gerar.
+const TIPO_CORES: Record<string, { cardSel: string; chipBg: string; icon: string }> = {
+  // Contencioso
+  prazo_processual: { cardSel: 'bg-[#f9ebe6] text-[#a85a3e] border-[#a85a3e]/50 dark:bg-[#a85a3e]/20 dark:text-[#e0a085] dark:border-[#a85a3e]/50', chipBg: 'bg-[#f9ebe6] dark:bg-[#a85a3e]/15', icon: 'text-[#a85a3e] dark:text-[#e0a085]' },
+  acompanhamento: { cardSel: 'bg-[#e8f5f5] text-[#3f7376] border-[#3f7376]/50 dark:bg-[#3f7376]/20 dark:text-[#7fb8ba] dark:border-[#3f7376]/50', chipBg: 'bg-[#e8f5f5] dark:bg-[#3f7376]/15', icon: 'text-[#3f7376] dark:text-[#7fb8ba]' },
+  follow_up: { cardSel: 'bg-[#f7f0e7] text-[#8a6438] border-[#8a6438]/50 dark:bg-[#8a6438]/20 dark:text-[#d4a574] dark:border-[#8a6438]/50', chipBg: 'bg-[#f7f0e7] dark:bg-[#8a6438]/15', icon: 'text-[#8a6438] dark:text-[#d4a574]' },
+  administrativo: { cardSel: 'bg-[#edf1f7] text-[#415a7e] border-[#415a7e]/50 dark:bg-[#415a7e]/20 dark:text-[#9bb3d4] dark:border-[#415a7e]/50', chipBg: 'bg-[#edf1f7] dark:bg-[#415a7e]/15', icon: 'text-[#415a7e] dark:text-[#9bb3d4]' },
+  outro: { cardSel: 'bg-[#f1ede2] text-[#5a6775] border-[#5a6775]/50 dark:bg-[#5a6775]/20 dark:text-[#9aa7b8] dark:border-[#5a6775]/50', chipBg: 'bg-[#f1ede2] dark:bg-[#5a6775]/15', icon: 'text-[#5a6775] dark:text-[#9aa7b8]' },
+  // Consultivo (paleta quente equivalente)
+  cons_parecer: { cardSel: 'bg-[#f7f0e7] text-[#8a6438] border-[#8a6438]/50 dark:bg-[#8a6438]/20 dark:text-[#d4a574] dark:border-[#8a6438]/50', chipBg: 'bg-[#f7f0e7] dark:bg-[#8a6438]/15', icon: 'text-[#8a6438] dark:text-[#d4a574]' },
+  cons_contrato: { cardSel: 'bg-[#edf1f7] text-[#415a7e] border-[#415a7e]/50 dark:bg-[#415a7e]/20 dark:text-[#9bb3d4] dark:border-[#415a7e]/50', chipBg: 'bg-[#edf1f7] dark:bg-[#415a7e]/15', icon: 'text-[#415a7e] dark:text-[#9bb3d4]' },
+  cons_pesquisa: { cardSel: 'bg-[#e8f5f5] text-[#3f7376] border-[#3f7376]/50 dark:bg-[#3f7376]/20 dark:text-[#7fb8ba] dark:border-[#3f7376]/50', chipBg: 'bg-[#e8f5f5] dark:bg-[#3f7376]/15', icon: 'text-[#3f7376] dark:text-[#7fb8ba]' },
+  cons_providencia: { cardSel: 'bg-[#ebf3ee] text-[#6b9e84] border-[#6b9e84]/50 dark:bg-[#6b9e84]/20 dark:text-[#9ecbb0] dark:border-[#6b9e84]/50', chipBg: 'bg-[#ebf3ee] dark:bg-[#6b9e84]/15', icon: 'text-[#6b9e84] dark:text-[#9ecbb0]' },
+  cons_outro: { cardSel: 'bg-[#f1ede2] text-[#5a6775] border-[#5a6775]/50 dark:bg-[#5a6775]/20 dark:text-[#9aa7b8] dark:border-[#5a6775]/50', chipBg: 'bg-[#f1ede2] dark:bg-[#5a6775]/15', icon: 'text-[#5a6775] dark:text-[#9aa7b8]' },
+}
 
 export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreated, initialData }: TarefaWizardProps) {
   const { user } = useAuth()
-  const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Toggle Contencioso/Consultivo
@@ -64,7 +165,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   const [emailFileName, setEmailFileName] = useState<string | null>(null)
   const [emailProcessed, setEmailProcessed] = useState(false)
 
-  // Carregar membros do escritório para exibição na revisão
+  // Carregar membros do escritório (responsáveis + exibição na revisão/série)
   const { membros } = useEscritorioMembros(escritorioId)
 
   // Hook para criar tarefas diretamente
@@ -132,29 +233,25 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   >(null)
   const [escopoEdicao, setEscopoEdicao] = useState<'instancia' | 'em-diante' | 'serie'>('instancia')
 
-  // Estado unificado de vinculação para o novo componente
-  const [vinculacao, setVinculacao] = useState<{modulo: 'processo' | 'consultivo', modulo_registro_id: string, metadados?: any} | null>(() => {
+  // Estado unificado de vinculação
+  const [vinculacao, setVinculacao] = useState<Vinculacao | null>(() => {
     if (initialData?.processo_id) {
-      return {
-        modulo: 'processo',
-        modulo_registro_id: initialData.processo_id,
-      }
+      return { modulo: 'processo', modulo_registro_id: initialData.processo_id }
     }
     if (initialData?.consultivo_id) {
-      return {
-        modulo: 'consultivo',
-        modulo_registro_id: initialData.consultivo_id,
-      }
+      return { modulo: 'consultivo', modulo_registro_id: initialData.consultivo_id }
     }
     return null
   })
+
+  // Busca de vínculo (mesma lógica do VinculacaoSelector, via hook compartilhado)
+  const vsearch = useVinculacaoSearch()
 
   // Buscar metadados do processo/consultivo quando vem do initialData
   useEffect(() => {
     const loadMetadados = async () => {
       const supabase = createClient()
 
-      // Se tem processo_id no initialData mas vinculação não tem metadados
       if (initialData?.processo_id && (!vinculacao?.metadados || Object.keys(vinculacao.metadados).length === 0)) {
         const { data: processo } = await supabase
           .from('processos_processos')
@@ -193,7 +290,6 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
         }
       }
 
-      // Se tem consultivo_id no initialData mas vinculação não tem metadados
       if (initialData?.consultivo_id && (!vinculacao?.metadados || Object.keys(vinculacao.metadados).length === 0)) {
         const { data: consultivo } = await supabase
           .from('consultivo_consultas')
@@ -231,7 +327,6 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       if (vinculacao.modulo === 'processo') {
         setProcessoId(vinculacao.modulo_registro_id)
         setConsultivoId(null)
-        // Auto-switch para contencioso se estava em consultivo
         if (modoTipo === 'consultivo') {
           setModoTipo('contencioso')
           setTipo('outro')
@@ -239,7 +334,6 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       } else if (vinculacao.modulo === 'consultivo') {
         setConsultivoId(vinculacao.modulo_registro_id)
         setProcessoId(null)
-        // Auto-switch para consultivo se estava em contencioso
         if (modoTipo === 'contencioso') {
           setModoTipo('consultivo')
           setTipo('cons_parecer')
@@ -261,13 +355,11 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
     setEmailProcessed(false)
 
     try {
-      // Ler arquivo como ArrayBuffer
       const arrayBuffer = await file.arrayBuffer()
 
       let emailSubject = ''
       let emailBody = ''
 
-      // Tentar parsear .msg com msgreader
       try {
         const MsgReader = (await import('@kenjiuno/msgreader')).default
         const msgReader = new MsgReader(arrayBuffer)
@@ -276,10 +368,8 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
         emailSubject = msgData.subject || ''
         emailBody = msgData.body || ''
       } catch {
-        // Fallback: ler como texto bruto (pode ser .eml ou texto)
         const decoder = new TextDecoder('utf-8')
         const rawText = decoder.decode(arrayBuffer)
-        // Tentar extrair subject de headers
         const subjectMatch = rawText.match(/(?:Subject|Assunto):\s*(.+)/i)
         emailSubject = subjectMatch?.[1]?.trim() || ''
         emailBody = rawText
@@ -293,7 +383,6 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
         throw new Error('Não foi possível extrair texto do e-mail')
       }
 
-      // Enviar à edge function para processamento com IA
       const supabase = createClient()
       const { data, error } = await supabase.functions.invoke('processar-email-tarefa', {
         body: { email_text: emailText, modo: modoTipo },
@@ -304,10 +393,8 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
 
       const resultado = data.resultado
 
-      // Título = assunto exato do e-mail (não reinterpretado pela IA)
       setTitulo(emailSubject || resultado.titulo || '')
 
-      // Descrição = resumo da IA + conteúdo limpo do último e-mail
       const resumoIA = resultado.descricao || ''
       const conteudoLimpo = resultado.conteudo_ultimo_email || ''
       const partes = [resumoIA, conteudoLimpo].filter(Boolean)
@@ -331,7 +418,6 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
       setEmailProcessed(true)
       toast.success('E-mail processado! Campos preenchidos automaticamente.')
 
-      // Reset do estado visual após 3s
       setTimeout(() => {
         setEmailProcessed(false)
         setEmailFileName(null)
@@ -370,9 +456,6 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   }, [initialData?.id])
 
   // Carregar regra de recorrência quando editando uma instância recorrente.
-  // Popula o estado `recorrencia` com a config real (frequência, dias, etc.)
-  // e habilita o segmented control "Apenas esta / Toda a série".
-  // Ref garante que a regra é carregada uma única vez por id (evita loop com setRecorrencia).
   const regraLoadedRef = useRef<string | null>(null)
   useEffect(() => {
     const recorrenciaId = (initialData as any)?.recorrencia_id as string | undefined
@@ -419,60 +502,22 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
   }, [initialData?.id, (initialData as any)?.recorrencia_id, getRecorrencia])
 
   const isFixa = recorrencia?.isFixa === true
+  const recorrenteAtiva = recorrencia?.ativa === true
+  const isEditing = !!initialData?.id
 
-  // Step Definitions
-  const steps: WizardStepType[] = [
-    {
-      id: 'tipo-identificacao',
-      title: 'Tipo e Identificação',
-      subtitle: 'Qual tipo de tarefa você está criando?',
-      validate: () => (tipo as string) !== '' && titulo.trim().length >= 3,
-    },
-    {
-      id: 'quando-responsabilidade',
-      title: isFixa ? 'Responsabilidade' : 'Quando e Responsabilidade',
-      subtitle: isFixa ? 'Quem será responsável por esta tarefa fixa?' : 'Quando você vai fazer esta tarefa?',
-      validate: () => isFixa ? true : dataExecucao !== '',
-    },
-    {
-      id: 'vinculos',
-      title: 'Vínculos',
-      subtitle: isFixa ? 'Vincule a um processo ou consultivo (obrigatório para lançar horas)' : 'Vincule a processos ou consultivos',
-      isOptional: !isFixa,
-      validate: () => isFixa ? (!!processoId || !!consultivoId) : true,
-    },
-    {
-      id: 'recorrencia',
-      title: 'Recorrência',
-      subtitle: 'Esta tarefa se repete?',
-      isOptional: true,
-      validate: () => true,
-    },
-    {
-      id: 'revisao',
-      title: 'Revisão e Confirmação',
-      subtitle: 'Revise os dados antes de criar',
-      validate: () => true,
-    },
-  ]
-
-  // (steps removido — fixa agora é selecionada dentro do step de recorrência)
-
-  const handleComplete = async () => {
+  // ───────────────────────── submit (lógica preservada) ─────────────────────────
+  const handleComplete = async (closeAfter = true): Promise<boolean> => {
     if (responsaveisIds.length === 0) {
       toast.error('Selecione pelo menos um responsável')
-      return
+      return false
     }
     setIsSubmitting(true)
     try {
-      // Converter datas YYYY-MM-DD para ISO com horário meio-dia para evitar problemas de timezone
       const formatDateToISO = (dateStr: string) => {
         if (!dateStr) return undefined
-        // Adicionar horário 12:00:00 para evitar mudança de dia com timezone
         return `${dateStr}T12:00:00`
       }
 
-      // Tarefas fixas usam hoje como data_inicio (a view substituirá por CURRENT_DATE)
       const dataInicioFinal = isFixa
         ? format(new Date(), 'yyyy-MM-dd')
         : dataExecucao
@@ -486,25 +531,18 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
         data_inicio: formatDateToISO(dataInicioFinal),
         data_fim: (isFixa || !prazoFatal) ? undefined : formatDateToISO(prazoFatal),
         prioridade,
-        // Responsáveis: array direto + responsavel_id para retrocompatibilidade
         responsaveis_ids: responsaveisIds,
         responsavel_id: responsaveisIds.length > 0 ? responsaveisIds[0] : undefined,
         cor,
         processo_id: processoId,
         consultivo_id: consultivoId,
-        // Para prazos processuais, enviar prazo_data_limite (nunca para fixas)
         prazo_data_limite: (!isFixa && tipo === 'prazo_processual' && prazoFatal) ? prazoFatal : undefined,
       }
 
-      // Verificar se estamos editando (initialData tem id)
-      const isEditing = initialData?.id
+      const editing = initialData?.id
 
-      // Edição de instância recorrente: respeitar o escopo escolhido pelo usuário
-      if (isEditing && regraRecorrencia) {
+      if (editing && regraRecorrencia) {
         if ((escopoEdicao === 'serie' || escopoEdicao === 'em-diante') && recorrencia) {
-          // Atualizar a regra inteira ou "desta em diante" + propagar via RPC.
-          // dataCorte = null → toda a série (a partir de hoje)
-          // dataCorte = data_inicio da instância → desta em diante
           const dataCorte = escopoEdicao === 'em-diante'
             ? (initialData?.data_inicio ?? '').split('T')[0] || null
             : null
@@ -533,15 +571,13 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
           })
           toast.success(escopoEdicao === 'em-diante' ? 'Aplicado desta em diante' : 'Série atualizada')
         } else if (onSubmit) {
-          // "Apenas esta": UPDATE direto na instância via callback do pai
           await onSubmit(formData)
           toast.success('Tarefa atualizada')
         }
         if (onCreated) {
           await onCreated()
         }
-      } else if (recorrencia && recorrencia.ativa && !isEditing) {
-        // Criar nova recorrência (trigger SQL materializa instâncias)
+      } else if (recorrencia && recorrencia.ativa && !editing) {
         const templateComDisplay = {
           ...formData,
           _display: {
@@ -570,8 +606,7 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
           apenasUteis: recorrencia.apenasUteis,
         })
         toast.success('Tarefa recorrente criada com sucesso!')
-      } else if (isEditing) {
-        // Tarefa não-recorrente em edição
+      } else if (editing) {
         if (onSubmit) {
           await onSubmit(formData)
         }
@@ -579,492 +614,716 @@ export default function TarefaWizard({ escritorioId, onClose, onSubmit, onCreate
           await onCreated()
         }
       } else {
-        // Tarefa única nova - criar usando useTarefas diretamente
-        // responsaveis_ids já está incluído no formData e será salvo diretamente
         const tarefaCriada = await createTarefa(formData)
         toast.success(isFixa ? 'Tarefa fixa criada com sucesso!' : 'Tarefa criada com sucesso!')
-
-        // Callback opcional para o pai saber que foi criado (para atualizar listas)
         if (onCreated) {
           await onCreated(tarefaCriada)
         }
       }
 
-      onClose()
+      if (closeAfter) onClose()
+      return true
     } catch (error: any) {
       console.error('Erro ao criar tarefa:', error)
       toast.error(error?.message || 'Erro ao criar tarefa. Verifique os dados e tente novamente.')
+      return false
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const getLocalTipoLabel = (t: string) => getTipoLabel(t)
+  // ───────────────────────── validação + atalho ─────────────────────────
+  const tituloOk = titulo.trim().length >= 3
+  // Para recorrente, a data vem do "Início" da recorrência (no rail); para fixa não há data.
+  const dataOk = (isFixa || recorrenteAtiva) ? true : dataExecucao !== ''
+  const podeSalvar = tituloOk && responsaveisIds.length > 0 && dataOk
 
-  const getPrioridadeLabel = (p: Prioridade) => {
-    const labels = { alta: 'Alta', media: 'Média', baixa: 'Baixa' }
-    return labels[p]
+  const submitRef = useRef<() => void>(() => {})
+  submitRef.current = () => {
+    if (podeSalvar && !isSubmitting) handleComplete()
+  }
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault()
+        submitRef.current()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // "Salvar e criar outra" — mantém vínculo/natureza/responsáveis, limpa o que é por-tarefa
+  const handleCriarOutra = async () => {
+    const ok = await handleComplete(false)
+    if (!ok) return
+    setTitulo('')
+    setDescricao('')
+    setPrazoFatal('')
+    setRecorrencia(null)
+    setEmailFileName(null)
+    setEmailProcessed(false)
   }
 
-  // Toggle de escopo de edição (renderizado no header do modal quando editando recorrente).
-  // Estilo on/off: sem padding no container, botões sem radius próprio + overflow-hidden.
-  // O lado ativo preenche 100% do slot (sem revelar a borda cinza ao redor).
-  const escopoToggle = initialData?.id && regraRecorrencia ? (
-    <div className="inline-flex items-center bg-slate-100 dark:bg-surface-2 rounded-md overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setEscopoEdicao('instancia')}
-        className={cn(
-          'inline-flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium transition-colors',
-          escopoEdicao === 'instancia'
-            ? 'bg-[#34495e] text-white'
-            : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
-        )}
-      >
-        <CalendarDays className="w-3 h-3" />
-        Apenas esta
-      </button>
-      <button
-        type="button"
-        onClick={() => setEscopoEdicao('em-diante')}
-        className={cn(
-          'inline-flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium transition-colors',
-          escopoEdicao === 'em-diante'
-            ? 'bg-[#34495e] text-white'
-            : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
-        )}
-      >
-        <ChevronsRight className="w-3 h-3" />
-        Desta em diante
-      </button>
-      <button
-        type="button"
-        onClick={() => setEscopoEdicao('serie')}
-        className={cn(
-          'inline-flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium transition-colors',
-          escopoEdicao === 'serie'
-            ? 'bg-[#34495e] text-white'
-            : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
-        )}
-      >
-        <Repeat className="w-3 h-3" />
-        Toda a série
-      </button>
+  // ───────────────────────── handlers de natureza/tipo ─────────────────────────
+  const handleNatureza = (novo: CategoriaTarefa) => {
+    setModoTipo(novo)
+    if (novo === 'consultivo' && tipo in CONTENCIOSO_TIPOS) setTipo('cons_parecer')
+    if (novo === 'contencioso' && tipo in CONSULTIVO_TIPOS) setTipo('outro')
+  }
+
+  const handlePickVinculo = (r: ResultadoBusca) => {
+    setVinculacao({
+      modulo: r.modulo,
+      modulo_registro_id: r.id,
+      metadados: {
+        numero_pasta: r.numero_pasta,
+        numero_cnj: r.numero_cnj,
+        titulo: r.titulo,
+        partes: r.partes,
+        tipo: r.tipo,
+      },
+    })
+    vsearch.limpar()
+  }
+
+  const tiposAtuais = modoTipo === 'contencioso' ? CONTENCIOSO_TIPOS : CONSULTIVO_TIPOS
+
+  // Toggle de escopo de edição (header, quando editando recorrente)
+  const escopoToggle = isEditing && regraRecorrencia ? (
+    <div className="inline-flex items-center bg-slate-100 dark:bg-[#151e2b] rounded-md overflow-hidden">
+      {([
+        { v: 'instancia', l: 'Apenas esta', Icon: CalendarDays },
+        { v: 'em-diante', l: 'Desta em diante', Icon: ChevronsRight },
+        { v: 'serie', l: 'Toda a série', Icon: Repeat },
+      ] as const).map((o) => (
+        <button
+          key={o.v}
+          type="button"
+          onClick={() => setEscopoEdicao(o.v)}
+          className={cn(
+            'inline-flex items-center gap-1.5 py-1.5 px-3 text-xs font-medium transition-colors',
+            escopoEdicao === o.v
+              ? 'bg-[#34495e] text-white'
+              : 'text-slate-500 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-300',
+          )}
+        >
+          <o.Icon className="w-3 h-3" />
+          {o.l}
+        </button>
+      ))}
     </div>
-  ) : undefined
+  ) : null
 
   return (
-    <ModalWizard
-      steps={steps}
-      currentStep={currentStep}
-      onStepChange={setCurrentStep}
-      title={initialData?.id ? 'Editar Tarefa' : 'Nova Tarefa'}
-      headerRight={escopoToggle}
-      onClose={onClose}
-      onComplete={handleComplete}
-      isSubmitting={isSubmitting}
-      className="max-w-3xl"
-    >
+    <Dialog open onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent className="p-0 gap-0 flex flex-col max-h-[90vh] overflow-hidden w-[min(1060px,calc(100vw-2rem))] sm:max-w-[1060px] top-[5vh] translate-y-0 dark:bg-[#141922] dark:border-[#253345]">
+        {/* Header */}
+        <DialogHeader className="px-6 pt-4 pb-3.5 border-b border-[#f0ede3] dark:border-[#253345] flex-row items-center justify-between gap-3 space-y-0 pr-12">
+          <DialogTitle className="text-[18px] font-semibold text-[#2c3e50] dark:text-slate-200" style={{ fontFamily: 'var(--font-fraunces)', letterSpacing: '-0.02em' }}>
+            {isEditing ? 'Editar tarefa' : 'Nova tarefa'}
+          </DialogTitle>
+          <DialogDescription className="sr-only">{isEditing ? 'Editar tarefa' : 'Nova tarefa'}</DialogDescription>
+          {escopoToggle}
+        </DialogHeader>
 
-      {/* ETAPA 1: Tipo e Identificação */}
-      {steps[currentStep]?.id === 'tipo-identificacao' && (
-        <WizardStep title={steps[currentStep].title} subtitle={steps[currentStep].subtitle}>
-          <div className="space-y-5">
-            {/* Label + Switch inline */}
-            <div className="space-y-3">
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_322px]">
+            {/* ── Coluna principal ── */}
+            <div className="px-6 py-5 space-y-5">
+              {/* Natureza + Pessoal */}
               <div className="flex items-center gap-3">
-                <Label className="text-sm font-medium text-[#34495e] dark:text-slate-200">Tipo de Tarefa *</Label>
-                <div className="flex items-center gap-2">
-                  <span className={cn(
-                    'text-[11px] font-medium transition-colors',
-                    modoTipo === 'contencioso' ? 'text-[#34495e] dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'
-                  )}>
-                    Contencioso
-                  </span>
-                  <Switch
-                    checked={modoTipo === 'consultivo'}
-                    onCheckedChange={(checked) => {
-                      const novoModo = checked ? 'consultivo' : 'contencioso'
-                      setModoTipo(novoModo)
-                      if (checked && tipo in CONTENCIOSO_TIPOS) setTipo('cons_parecer')
-                      if (!checked && tipo in CONSULTIVO_TIPOS) setTipo('outro')
-                    }}
-                  />
-                  <span className={cn(
-                    'text-[11px] font-medium transition-colors',
-                    modoTipo === 'consultivo' ? 'text-[#34495e] dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'
-                  )}>
-                    Consultivo
-                  </span>
-                </div>
-
-                {/* Toggle Pessoal — discreto, alinhado à direita */}
-                <div className="ml-auto flex items-center gap-1.5">
-                  <Lock className={cn(
-                    'w-3 h-3 transition-colors',
-                    isPessoal ? 'text-[#89bcbe]' : 'text-slate-300 dark:text-slate-600'
-                  )} />
-                  <Label htmlFor="tarefa-pessoal" className={cn(
-                    'text-[11px] font-medium cursor-pointer transition-colors',
-                    isPessoal ? 'text-[#34495e] dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'
-                  )}>
-                    Pessoal
-                  </Label>
-                  <Switch
-                    id="tarefa-pessoal"
-                    checked={isPessoal}
-                    onCheckedChange={setIsPessoal}
+                <div className="flex-1 max-w-[320px]">
+                  <Segmented
+                    value={modoTipo}
+                    onChange={handleNatureza}
+                    options={[
+                      { v: 'contencioso', l: 'Contencioso', Icon: Scale },
+                      { v: 'consultivo', l: 'Consultivo', Icon: MessageSquare },
+                    ]}
                   />
                 </div>
+                <div className="flex-1" />
+                <button
+                  type="button"
+                  onClick={() => setIsPessoal(!isPessoal)}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] font-semibold border transition-colors',
+                    isPessoal
+                      ? 'bg-[#edf1f7] text-[#415a7e] border-[#415a7e]/30 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/30'
+                      : 'bg-white dark:bg-[#151e2b] text-[#7c8693] dark:text-slate-400 border-[#e6e3da] dark:border-[#253345] hover:border-[#89bcbe]',
+                  )}
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  Pessoal
+                </button>
               </div>
 
-              {/* Grid de tipos conforme modo */}
-              <div className="grid grid-cols-5 gap-2">
-                {Object.entries(modoTipo === 'contencioso' ? CONTENCIOSO_TIPOS : CONSULTIVO_TIPOS).map(
-                  ([key, config]) => {
+              {/* Tipo de tarefa */}
+              <Section title="Tipo de tarefa">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                  {Object.entries(tiposAtuais).map(([key, config]) => {
                     const Icon = config.icon
                     const selected = tipo === key
-
+                    const cores = TIPO_CORES[key] || TIPO_CORES.outro
                     return (
                       <button
                         key={key}
                         type="button"
                         onClick={() => setTipo(key as TipoTarefa)}
                         className={cn(
-                          'flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all',
+                          'flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-[11px] border text-center transition-all',
                           selected
-                            ? cn('border-current shadow-sm', getTipoSelectedClasses(config.color))
-                            : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600 dark:border-slate-700 dark:bg-surface-1 dark:text-slate-500 dark:hover:border-slate-600 dark:hover:text-slate-300'
+                            ? cn('shadow-sm', cores.cardSel)
+                            : 'border-[#e6e3da] dark:border-[#253345] bg-white dark:bg-[#151e2b] text-[#34495e] dark:text-slate-300 hover:border-[#89bcbe]',
                         )}
                       >
-                        <Icon className="w-5 h-5" />
-                        <span className="text-[10px] font-medium text-center leading-tight">
-                          {config.label}
+                        <span className={cn(
+                          'w-7 h-7 rounded-lg flex items-center justify-center',
+                          selected ? 'bg-white dark:bg-white/10' : cores.chipBg,
+                        )}>
+                          <Icon className={cn('w-[17px] h-[17px]', cores.icon)} />
                         </span>
+                        <span className="text-[11px] font-semibold leading-tight">{config.label}</span>
                       </button>
                     )
-                  }
-                )}
+                  })}
+                </div>
+              </Section>
+
+              {/* Importar de e-mail */}
+              <Section title="Importar de e-mail" hint={<span className="text-[10.5px] text-[#9aa1a8]">Opcional</span>}>
+                <div
+                  {...getRootProps()}
+                  className={cn(
+                    'flex items-center gap-2.5 px-3 py-2 rounded-[10px] border border-dashed cursor-pointer transition-all',
+                    isDragActive
+                      ? 'border-[#89bcbe] bg-[#f0f9f9] dark:bg-teal-500/5 dark:border-teal-500/40'
+                      : 'border-[#d5cfc3] dark:border-[#253345] bg-[#faf8f2] dark:bg-[#0f141c] hover:border-[#89bcbe]',
+                    emailProcessing && 'pointer-events-none opacity-70',
+                  )}
+                >
+                  <input {...getInputProps()} />
+                  <span className="w-7 h-7 rounded-lg bg-white dark:bg-[#151e2b] border border-[#e6e3da] dark:border-[#253345] flex items-center justify-center flex-shrink-0">
+                    {emailProcessing
+                      ? <Loader2 className="w-3.5 h-3.5 text-[#89bcbe] animate-spin" />
+                      : emailProcessed
+                        ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                        : <Mail className="w-3.5 h-3.5 text-[#3f7376]" />}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    {emailProcessing ? (
+                      <span className="block text-[12px] font-semibold text-[#34495e] dark:text-slate-200 truncate">Processando {emailFileName}…</span>
+                    ) : emailProcessed ? (
+                      <span className="block text-[12px] font-semibold text-emerald-600 dark:text-emerald-400">E-mail processado</span>
+                    ) : (
+                      <>
+                        <span className="block text-[12px] font-semibold text-[#34495e] dark:text-slate-200 leading-tight">
+                          {isDragActive ? 'Solte o e-mail aqui' : 'Arraste um e-mail do Outlook'}
+                        </span>
+                        <span className="block text-[10.5px] text-[#9aa1a8] dark:text-slate-500 leading-tight">ou clique para selecionar — preenche título e descrição</span>
+                      </>
+                    )}
+                  </div>
+                  {!emailProcessing && !emailProcessed && <Upload className="w-3.5 h-3.5 text-[#9aa1a8] flex-shrink-0" />}
+                </div>
+              </Section>
+
+              {/* Identificação */}
+              <Section title="Identificação">
+                <div className="space-y-1.5">
+                  <span className="text-[11.5px] font-semibold text-[#34495e] dark:text-slate-300">
+                    Título <span className="text-[#a85a3e]">*</span>
+                  </span>
+                  <Input
+                    value={titulo}
+                    onChange={(e) => setTitulo(e.target.value)}
+                    placeholder="Ex: Apresentar contestação"
+                    className="h-[42px] text-[14.5px] dark:bg-[#151e2b]"
+                  />
+                </div>
+                <Textarea
+                  value={descricao}
+                  onChange={(e) => setDescricao(e.target.value)}
+                  placeholder="Descrição (opcional) — pauta, observações, contexto…"
+                  className="mt-3 text-sm min-h-[80px] resize-y dark:bg-[#151e2b]"
+                />
+              </Section>
+
+              {/* Quando — só para tarefa única (fixa não tem data; recorrente usa o "Início" da recorrência) */}
+              {!isFixa && !recorrenteAtiva && (
+                <Section title="Quando">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="flex items-center gap-1.5 text-[11.5px] font-semibold text-[#34495e] dark:text-slate-300 mb-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-[#89bcbe]" />
+                        Data de execução <span className="text-[#a85a3e]">*</span>
+                      </label>
+                      <DateInput value={dataExecucao} onChange={setDataExecucao} className="dark:bg-[#151e2b]" />
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-1.5 text-[11.5px] font-semibold text-[#34495e] dark:text-slate-300 mb-1.5">
+                        <CalendarClock className="w-3.5 h-3.5 text-[#34495e] dark:text-slate-400" />
+                        Prazo fatal
+                        <span className="text-[10.5px] text-[#9aa1a8] font-normal">Opcional</span>
+                      </label>
+                      <DateInput value={prazoFatal} onChange={setPrazoFatal} className="dark:bg-[#151e2b]" />
+                    </div>
+                  </div>
+                </Section>
+              )}
+
+              {/* Prioridade */}
+              <div className="space-y-2.5">
+                <span className={lbl}>Prioridade</span>
+                <Segmented value={prioridade} onChange={setPrioridade} options={PRIOR_OPTS} />
               </div>
             </div>
 
-            {/* Dropzone de e-mail — faixa discreta */}
-            <div
-              {...getRootProps()}
-              className={cn(
-                'flex items-center gap-2 py-2 px-3 rounded-md border border-dashed cursor-pointer transition-all',
-                isDragActive
-                  ? 'border-[#89bcbe] bg-[#f0f9f9] dark:bg-teal-500/5 dark:border-teal-500/40'
-                  : 'border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600',
-                emailProcessing && 'pointer-events-none opacity-70'
-              )}
-            >
-              <input {...getInputProps()} />
-              {emailProcessing ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 text-[#89bcbe] animate-spin flex-shrink-0" />
-                  <span className="text-[11px] text-[#34495e] dark:text-slate-300 truncate">
-                    Processando {emailFileName}...
-                  </span>
-                </>
-              ) : emailProcessed ? (
-                <>
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                    E-mail processado
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Mail className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
-                  <span className="text-[11px] text-slate-400 dark:text-slate-500">
-                    {isDragActive ? 'Solte o e-mail aqui' : 'Arraste um e-mail do Outlook aqui ou clique para selecionar'}
-                  </span>
-                </>
-              )}
-            </div>
+            {/* ── Rail direito ── */}
+            <div className="px-6 py-5 space-y-5 border-t lg:border-t-0 lg:border-l border-[#e6e3da] dark:border-[#253345] bg-[#faf8f2] dark:bg-[#0f141c]">
+              {/* Responsáveis */}
+              <Section title="Responsáveis">
+                <ResponsaveisBlock
+                  membros={membros}
+                  selectedIds={responsaveisIds}
+                  currentUserId={user?.id}
+                  onChange={setResponsaveisIds}
+                />
+              </Section>
 
-            {/* Título */}
-            <div className="space-y-2">
-              <Label htmlFor="titulo" className="text-sm font-medium text-[#34495e] dark:text-slate-200">
-                Título da Tarefa *
-              </Label>
-              <Input
-                id="titulo"
-                placeholder="Ex: Apresentar contestação"
-                value={titulo}
-                onChange={(e) => setTitulo(e.target.value)}
-                className="text-sm"
-              />
-            </div>
+              {/* Vínculo */}
+              <Section title="Vínculo">
+                <VinculoBlock
+                  vinculacao={vinculacao}
+                  vsearch={vsearch}
+                  onPick={handlePickVinculo}
+                  onClear={() => setVinculacao(null)}
+                />
+              </Section>
 
-            {/* Descrição */}
-            <div className="space-y-2">
-              <Label htmlFor="descricao" className="text-sm font-medium text-[#34495e] dark:text-slate-200">
-                Descrição
-                <span className="text-xs text-slate-500 dark:text-slate-400 font-normal ml-2">(Opcional)</span>
-              </Label>
-              <Textarea
-                id="descricao"
-                placeholder="Descreva detalhes importantes sobre a tarefa..."
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                rows={4}
-                className="text-sm resize-none max-h-[120px]"
-              />
+              {/* Recorrência */}
+              <Section title="Recorrência">
+                <RecorrenciaRail value={recorrencia} onChange={setRecorrencia} />
+              </Section>
             </div>
           </div>
-        </WizardStep>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-[#f0ede3] dark:border-[#253345] bg-slate-50/60 dark:bg-[#0f141c]/60 flex items-center justify-between gap-2.5">
+          <div>
+            {!isEditing && (
+              <button
+                type="button"
+                onClick={handleCriarOutra}
+                disabled={!podeSalvar || isSubmitting}
+                className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[#46627f] dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <Repeat className="w-3.5 h-3.5" />
+                Salvar e criar outra
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2.5">
+            <Button variant="outline" onClick={onClose} disabled={isSubmitting}>Cancelar</Button>
+            <Button
+              onClick={() => handleComplete()}
+              disabled={!podeSalvar || isSubmitting}
+              className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e]"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Check className="w-4 h-4 mr-1.5" />}
+              {isEditing ? 'Salvar' : 'Criar tarefa'}
+              <span className="ml-2 text-[10px] font-mono bg-white/18 px-1.5 py-0.5 rounded">⌘↵</span>
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ═════════════════════════ Bloco: Responsáveis ═════════════════════════
+function ResponsaveisBlock({ membros, selectedIds, currentUserId, onChange }: {
+  membros: { user_id: string; nome: string }[]
+  selectedIds: string[]
+  currentUserId?: string
+  onChange: (ids: string[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const selecionados = selectedIds.map((id) => ({
+    id,
+    nome: membros.find((m) => m.user_id === id)?.nome || 'Usuário',
+  }))
+  const disponiveis = membros.filter((m) => !selectedIds.includes(m.user_id))
+
+  return (
+    <div className="space-y-1.5">
+      {selecionados.map((p) => (
+        <div key={p.id} className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-[9px] border border-[#e6e3da] dark:border-[#253345] bg-white dark:bg-[#151e2b]">
+          <Avatar nome={p.nome} size={26} />
+          <div className="flex-1 min-w-0">
+            <div className="text-[12px] font-semibold text-[#34495e] dark:text-slate-200 truncate">{p.nome}</div>
+            <div className="text-[10px] text-[#9aa1a8] dark:text-slate-500">
+              {p.id === currentUserId ? 'Você' : 'Colaborador'}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onChange(selectedIds.filter((x) => x !== p.id))}
+            className="text-[#9aa1a8] hover:text-red-500 transition-colors flex-shrink-0"
+            title="Remover responsável"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ))}
+
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            disabled={disponiveis.length === 0}
+            className="w-full flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-[9px] border border-dashed border-[#d5cfc3] dark:border-[#253345] text-[11.5px] font-semibold text-[#5a6775] dark:text-slate-400 hover:border-[#89bcbe] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <Plus className="w-3 h-3" />
+            Adicionar responsável
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-[260px] p-1 max-h-64 overflow-y-auto">
+          {disponiveis.length === 0 ? (
+            <div className="text-center py-3 text-[11px] text-slate-400">Nenhum membro disponível</div>
+          ) : (
+            disponiveis.map((m) => (
+              <button
+                key={m.user_id}
+                type="button"
+                onClick={() => { onChange([...selectedIds, m.user_id]); setOpen(false) }}
+                className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-surface-2 text-left transition-colors"
+              >
+                <Avatar nome={m.nome} size={24} />
+                <span className="text-[12.5px] text-[#34495e] dark:text-slate-200 truncate">{m.nome}</span>
+              </button>
+            ))
+          )}
+        </PopoverContent>
+      </Popover>
+    </div>
+  )
+}
+
+// ═════════════════════════ Bloco: Vínculo ═════════════════════════
+function VinculoBlock({ vinculacao, vsearch, onPick, onClear }: {
+  vinculacao: Vinculacao | null
+  vsearch: ReturnType<typeof useVinculacaoSearch>
+  onPick: (r: ResultadoBusca) => void
+  onClear: () => void
+}) {
+  const { buscaTexto, setBuscaTexto, resultados, resultadosProcessos, resultadosConsultivos, loading, mostrarResultados, setMostrarResultados } = vsearch
+
+  if (vinculacao) {
+    const m = vinculacao.metadados
+    return (
+      <div className="relative bg-white dark:bg-[#151e2b] border border-[#e6e3da] dark:border-[#253345] rounded-[10px] p-3 pr-8">
+        {m?.partes && <div className="text-[12.5px] font-semibold text-[#34495e] dark:text-slate-200 leading-snug">{m.partes}</div>}
+        {m?.titulo && !m?.partes && <div className="text-[12.5px] font-semibold text-[#34495e] dark:text-slate-200 leading-snug line-clamp-2">{m.titulo}</div>}
+        <div className="text-[11px] text-[#9aa1a8] dark:text-slate-500 mt-1 space-y-0.5">
+          <div className={cn(!m?.partes && !m?.titulo && 'text-[12.5px] font-semibold text-[#34495e] dark:text-slate-200')}>
+            Pasta {m?.numero_pasta || 'S/N'}
+          </div>
+          {m?.numero_cnj && <div className="font-mono text-[10px]">CNJ: {m.numero_cnj}</div>}
+          {m?.titulo && m?.partes && <div className="line-clamp-1">{m.titulo}</div>}
+        </div>
+        <button
+          type="button"
+          onClick={onClear}
+          className="absolute top-2.5 right-2.5 text-[#9aa1a8] hover:text-red-500 transition-colors"
+          title="Remover vínculo"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <Popover open={mostrarResultados} onOpenChange={(o) => { if (!o) setMostrarResultados(false) }}>
+      <PopoverAnchor asChild>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9aa1a8]" />
+          <Input
+            value={buscaTexto}
+            onChange={(e) => setBuscaTexto(e.target.value)}
+            onFocus={() => { if (buscaTexto.length >= 2 && resultados.length > 0) setMostrarResultados(true) }}
+            placeholder="Buscar processo ou cliente…"
+            className="pl-10 h-10 text-sm dark:bg-[#151e2b]"
+          />
+        </div>
+      </PopoverAnchor>
+
+      <PopoverContent
+        align="end"
+        sideOffset={6}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="w-[440px] max-w-[calc(100vw-2rem)] p-0 overflow-hidden"
+      >
+        <div className="max-h-80 overflow-y-auto">
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 p-5 text-[12px] text-slate-400">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Buscando…
+            </div>
+          ) : resultados.length > 0 ? (
+            <div>
+              {resultadosProcessos.length > 0 && (
+                <>
+                  <GrupoHead Icon={Scale} label="Processos" count={resultadosProcessos.length} cor="text-[#415a7e]" />
+                  {resultadosProcessos.map((r) => <VinculoRow key={r.id} r={r} onPick={onPick} />)}
+                </>
+              )}
+              {resultadosConsultivos.length > 0 && (
+                <>
+                  <GrupoHead Icon={FileText} label="Consultas" count={resultadosConsultivos.length} cor="text-[#3f7376]" />
+                  {resultadosConsultivos.map((r) => <VinculoRow key={r.id} r={r} onPick={onPick} />)}
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="p-5 text-center text-[12px] text-slate-400">Nenhum resultado encontrado</div>
+          )}
+        </div>
+      </PopoverContent>
+
+      {!buscaTexto && (
+        <div className="mt-2 flex items-center gap-2 px-3 py-2.5 rounded-[10px] border border-dashed border-[#e6e3da] dark:border-[#253345] text-[11.5px] text-[#9aa1a8] dark:text-slate-500">
+          <LinkIcon className="w-3.5 h-3.5 flex-shrink-0" />
+          Nenhum vínculo — opcional
+        </div>
+      )}
+    </Popover>
+  )
+}
+
+function GrupoHead({ Icon, label, count, cor }: { Icon: LucideIcon; label: string; count: number; cor: string }) {
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5 bg-[#faf8f2] dark:bg-[#0f141c]/60 border-y border-[#f0ede3] dark:border-[#253345]">
+      <Icon className={cn('w-3.5 h-3.5', cor)} />
+      <span className="text-[10px] font-bold uppercase tracking-wider text-[#5a6775] dark:text-slate-300">{label}</span>
+      <span className="ml-auto text-[10px] font-mono text-[#9aa1a8]">{count}</span>
+    </div>
+  )
+}
+
+function VinculoRow({ r, onPick }: { r: ResultadoBusca; onPick: (r: ResultadoBusca) => void }) {
+  const isProc = r.modulo === 'processo'
+  return (
+    <button
+      type="button"
+      onClick={() => onPick(r)}
+      className="w-full text-left px-3 py-2.5 hover:bg-[#89bcbe]/8 transition-colors border-b border-[#f0ede3] dark:border-[#253345] last:border-0"
+    >
+      <div className="text-[12.5px] font-semibold text-[#34495e] dark:text-slate-200 line-clamp-1">
+        {isProc ? (r.partes || `Pasta ${r.numero_pasta}`) : (r.titulo || `Pasta ${r.numero_pasta}`)}
+      </div>
+      <div className="text-[11px] text-[#9aa1a8] dark:text-slate-500 mt-0.5 truncate">
+        <span className={isProc ? '' : ''}>Pasta {r.numero_pasta}</span>
+        {isProc && r.numero_cnj && <span className="font-mono"> · {r.numero_cnj}</span>}
+        {!isProc && r.partes && <span> · {r.partes}</span>}
+      </div>
+    </button>
+  )
+}
+
+// ═════════════════════════ Bloco: Recorrência (3 modos → RecorrenciaData) ═════════════════════════
+type ModoRec = 'unica' | 'fixa' | 'recorrente'
+const DIAS_SEM = [
+  { l: 'D', v: 0 }, { l: 'S', v: 1 }, { l: 'T', v: 2 }, { l: 'Q', v: 3 }, { l: 'Q', v: 4 }, { l: 'S', v: 5 }, { l: 'S', v: 6 },
+]
+
+function RecorrenciaRail({ value, onChange }: { value: RecorrenciaData | null; onChange: (v: RecorrenciaData | null) => void }) {
+  const modo: ModoRec = value?.isFixa ? 'fixa' : value?.ativa ? 'recorrente' : 'unica'
+
+  const setModo = (novo: ModoRec) => {
+    if (novo === 'unica') {
+      onChange(null)
+    } else if (novo === 'fixa') {
+      onChange({
+        ativa: false,
+        isFixa: true,
+        frequencia: 'diaria',
+        intervalo: 1,
+        dataInicio: new Date().toISOString().split('T')[0],
+        terminoTipo: 'permanente',
+        horaPadrao: '09:00',
+      })
+    } else {
+      onChange({
+        ativa: true,
+        isFixa: false,
+        frequencia: 'semanal',
+        intervalo: 1,
+        diasSemana: [1, 2, 3, 4, 5],
+        dataInicio: new Date().toISOString().split('T')[0],
+        terminoTipo: 'permanente',
+        horaPadrao: '09:00',
+      })
+    }
+  }
+
+  const setField = (field: keyof RecorrenciaData, newValue: any) => {
+    if (!value) return
+    const updates: Partial<RecorrenciaData> = { [field]: newValue }
+
+    if (field === 'frequencia') {
+      const limites: Record<string, number> = { semanal: 3, mensal: 11 }
+      const novoMax = limites[newValue as string] ?? 1
+      if ((value.intervalo || 1) > novoMax) updates.intervalo = novoMax
+      if (newValue === 'semanal') {
+        updates.diaMes = undefined
+        updates.mes = undefined
+        if (!value.diasSemana || value.diasSemana.length === 0) updates.diasSemana = [1, 2, 3, 4, 5]
+      } else if (newValue === 'mensal') {
+        updates.diasSemana = undefined
+        updates.mes = undefined
+        if (!value.diaMes) updates.diaMes = 1
+      }
+    }
+    onChange({ ...value, ...updates })
+  }
+
+  const toggleDia = (dia: number) => {
+    if (!value) return
+    const atuais = value.diasSemana || []
+    const novos = atuais.includes(dia) ? atuais.filter((d) => d !== dia) : [...atuais, dia].sort()
+    setField('diasSemana', novos)
+  }
+
+  const freqValue = value?.frequencia === 'mensal' ? 'mensal' : 'semanal'
+  const maxIntervalo = freqValue === 'mensal' ? 11 : 3
+
+  return (
+    <div className="space-y-3">
+      <Segmented<ModoRec>
+        value={modo}
+        onChange={setModo}
+        options={[
+          { v: 'unica', l: 'Única' },
+          { v: 'fixa', l: 'Fixa' },
+          { v: 'recorrente', l: 'Recorrente' },
+        ]}
+      />
+
+      {modo === 'unica' && <p className="text-[11px] text-[#9aa1a8] dark:text-slate-500">Tarefa única, sem repetição.</p>}
+
+      {modo === 'fixa' && (
+        <p className="text-[11px] text-[#9aa1a8] dark:text-slate-500">Aparece todo dia automaticamente, sem acumular atrasos.</p>
       )}
 
-      {/* ETAPA 2: Quando e Responsabilidade */}
-      {steps[currentStep]?.id === 'quando-responsabilidade' && (
-        <WizardStep title={steps[currentStep].title} subtitle={steps[currentStep].subtitle}>
-          <div className="space-y-4">
-            {/* Info para tarefa fixa */}
-            {isFixa && (
-              <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 text-xs text-teal-700 dark:bg-teal-500/10 dark:border-teal-500/30 dark:text-teal-400">
-                <div className="flex items-center gap-2 font-medium mb-1">
-                  <Pin className="w-3.5 h-3.5" />
-                  Tarefa Fixa — aparece todo dia
-                </div>
-                <p className="text-teal-600 dark:text-teal-400">Não é necessário definir data. Esta tarefa aparecerá automaticamente no dia atual.</p>
-              </div>
-            )}
+      {modo === 'recorrente' && value && (
+        <div className="border border-[#e6e3da] dark:border-[#253345] rounded-[11px] p-3.5 space-y-3 bg-white dark:bg-[#0f141c]">
+          <Segmented
+            value={freqValue}
+            onChange={(v) => setField('frequencia', v)}
+            options={[{ v: 'semanal', l: 'Semanal' }, { v: 'mensal', l: 'Mensal' }]}
+          />
 
-            {/* Data de Execução (esconde para fixa) */}
-            {!isFixa && (
-              <div className="space-y-2">
-                <Label htmlFor="data-execucao" className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-[#89bcbe]" />
-                  Data que irei realizar *
-                </Label>
-                <DateInput
-                  value={dataExecucao}
-                  onChange={setDataExecucao}
-                />
-              </div>
-            )}
+          {/* intervalo */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[12px] text-[#5a6775] dark:text-slate-400">A cada</span>
+            <Input
+              type="number"
+              min={1}
+              max={maxIntervalo}
+              value={value.intervalo || 1}
+              onChange={(e) => {
+                const raw = parseInt(e.target.value) || 1
+                setField('intervalo', Math.max(1, Math.min(raw, maxIntervalo)))
+              }}
+              className="w-14 h-8 text-center font-mono dark:bg-[#151e2b]"
+            />
+            <span className="text-[12px] text-[#5a6775] dark:text-slate-400">
+              {freqValue === 'semanal' ? 'semana(s)' : 'mês(es)'}
+              <span className="text-[#9aa1a8]"> (máx. {maxIntervalo})</span>
+            </span>
+          </div>
 
-            {/* Prazo Fatal (esconde para fixa) */}
-            {!isFixa && (
-              <div className="space-y-2">
-                <Label htmlFor="prazo-fatal" className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2">
-                  <CalendarClock className="w-4 h-4 text-[#34495e]" />
-                  Prazo Fatal
-                  <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">(Opcional)</span>
-                </Label>
-                <DateInput
-                  value={prazoFatal}
-                  onChange={setPrazoFatal}
-                />
-              </div>
-            )}
-
-            {/* Prioridade */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#34495e] dark:text-slate-200">
-                Prioridade *
-              </Label>
-              <div className="grid grid-cols-3 gap-2">
-                {(['alta', 'media', 'baixa'] as Prioridade[]).map((p) => {
-                  const selected = prioridade === p
-                  const config = {
-                    alta: { color: 'red', label: 'Alta', Icon: Zap },
-                    media: { color: 'amber', label: 'Média', Icon: TrendingUp },
-                    baixa: { color: 'emerald', label: 'Baixa', Icon: ChevronRight },
-                  }[p]
-                  const IconComponent = config.Icon
-
+          {freqValue === 'semanal' ? (
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-semibold text-[#5a6775] dark:text-slate-400">Dias</span>
+              <div className="grid grid-cols-7 gap-1">
+                {DIAS_SEM.map((d, i) => {
+                  const on = value.diasSemana?.includes(d.v)
                   return (
                     <button
-                      key={p}
+                      key={i}
                       type="button"
-                      onClick={() => setPrioridade(p)}
+                      onClick={() => toggleDia(d.v)}
                       className={cn(
-                        'flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all',
-                        selected
-                          ? cn(
-                              'border-current shadow-sm',
-                              config.color === 'red' && 'bg-red-50 text-red-600 border-red-300 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/50',
-                              config.color === 'amber' && 'bg-amber-50 text-amber-600 border-amber-300 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/50',
-                              config.color === 'emerald' && 'bg-emerald-50 text-emerald-600 border-emerald-300 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/50'
-                            )
-                          : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600 dark:border-slate-700 dark:bg-surface-1 dark:text-slate-500 dark:hover:border-slate-600 dark:hover:text-slate-300'
+                        'h-8 rounded-md text-[11.5px] font-semibold border transition-all',
+                        on
+                          ? 'bg-[#89bcbe] border-[#89bcbe] text-white'
+                          : 'bg-white dark:bg-[#151e2b] border-[#e6e3da] dark:border-[#253345] text-[#5a6775] dark:text-slate-400 hover:border-[#89bcbe]',
                       )}
                     >
-                      <IconComponent className="w-5 h-5" />
-                      <span className="text-[10px] font-medium text-center leading-tight">
-                        {config.label}
-                      </span>
+                      {d.l}
                     </button>
                   )
                 })}
               </div>
             </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-[12px] text-[#5a6775] dark:text-slate-400">No dia</span>
+              <Select value={(value.diaMes ?? 1).toString()} onValueChange={(v) => setField('diaMes', parseInt(v))}>
+                <SelectTrigger className="w-[130px] h-8 dark:bg-[#151e2b]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((dia) => (
+                    <SelectItem key={dia} value={dia.toString()}>Dia {dia}</SelectItem>
+                  ))}
+                  <SelectItem value="99">Último dia</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-            {/* Responsáveis */}
-            <ResponsaveisSelector
-              escritorioId={escritorioId}
-              selectedIds={responsaveisIds}
-              onChange={setResponsaveisIds}
-              label="Responsáveis *"
-              placeholder="Selecionar responsáveis..."
-            />
-          </div>
-        </WizardStep>
-      )}
+          <div className="border-t border-[#f0ede3] dark:border-[#253345]" />
 
-      {/* ETAPA 3: Vínculos */}
-      {steps[currentStep]?.id === 'vinculos' && (
-        <WizardStep
-          title={steps[currentStep].title}
-          subtitle={steps[currentStep].subtitle}
-          isOptional={!isFixa}
-        >
-          <div className="space-y-4">
-            {/* Aviso para tarefa fixa */}
-            {isFixa && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-400">
-                Obrigatório vincular a um processo ou consultivo para poder lançar horas.
+          {/* início + término empilhados (largura total p/ a data não colidir com o ícone) */}
+          <div className="space-y-2.5">
+            <div>
+              <span className="text-[11px] font-semibold text-[#5a6775] dark:text-slate-400 mb-1 block">Início</span>
+              <DateInput value={value.dataInicio || ''} onChange={(d) => setField('dataInicio', d)} className="dark:bg-[#151e2b]" />
+            </div>
+            <div>
+              <span className="text-[11px] font-semibold text-[#5a6775] dark:text-slate-400 mb-1 block">Término</span>
+              <Select value={value.terminoTipo || 'permanente'} onValueChange={(v) => setField('terminoTipo', v)}>
+                <SelectTrigger className="h-9 dark:bg-[#151e2b]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="permanente">Nunca</SelectItem>
+                  <SelectItem value="data">Em uma data</SelectItem>
+                  <SelectItem value="ocorrencias">Após nº de ocorrências</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {value.terminoTipo === 'data' && (
+              <DateInput value={value.dataFim || ''} onChange={(d) => setField('dataFim', d)} className="dark:bg-[#151e2b]" />
+            )}
+            {value.terminoTipo === 'ocorrencias' && (
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  value={value.numeroOcorrencias || 10}
+                  onChange={(e) => setField('numeroOcorrencias', parseInt(e.target.value) || 10)}
+                  className="w-20 h-8 font-mono dark:bg-[#151e2b]"
+                />
+                <span className="text-[12px] text-[#5a6775] dark:text-slate-400">vezes</span>
               </div>
             )}
-            {/* Vínculos */}
-            <div className="space-y-2">
-              <VinculacaoSelector
-                vinculacao={vinculacao}
-                onChange={setVinculacao}
-              />
-            </div>
           </div>
-        </WizardStep>
+        </div>
       )}
-
-      {/* ETAPA 4: Recorrência */}
-      {steps[currentStep]?.id === 'recorrencia' && (
-        <WizardStep
-          title={steps[currentStep].title}
-          subtitle={steps[currentStep].subtitle}
-          isOptional
-        >
-          <RecorrenciaConfig
-            value={recorrencia}
-            onChange={setRecorrencia}
-            tipo="tarefa"
-          />
-        </WizardStep>
-      )}
-
-      {/* ETAPA 5: Revisão - Ficha Completa */}
-      {steps[currentStep]?.id === 'revisao' && (
-        <WizardStep title={steps[currentStep].title} subtitle={steps[currentStep].subtitle}>
-          <div className="bg-white border border-slate-200 rounded-lg p-4 dark:bg-surface-1 dark:border-slate-700">
-            {/* Grid de Informações */}
-            <div className="space-y-4">
-              {/* Tipo e Título */}
-              <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
-                <span className="text-slate-500 dark:text-slate-400">Tipo</span>
-                <span className="text-[#34495e] dark:text-slate-200 font-medium">
-                  {getLocalTipoLabel(tipo)}
-                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal ml-1.5">
-                    ({modoTipo === 'contencioso' ? 'Contencioso' : 'Consultivo'})
-                  </span>
-                </span>
-
-                {isFixa && (
-                  <>
-                    <span className="text-slate-500 dark:text-slate-400">Modo</span>
-                    <span className="text-teal-600 dark:text-teal-400 font-medium">Tarefa Fixa (todo dia)</span>
-                  </>
-                )}
-
-                <span className="text-slate-500 dark:text-slate-400">Título</span>
-                <span className="text-[#34495e] dark:text-slate-200 font-medium">{titulo}</span>
-
-                {descricao && (
-                  <>
-                    <span className="text-slate-500 dark:text-slate-400">Descrição</span>
-                    <span className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">{descricao}</span>
-                  </>
-                )}
-              </div>
-
-              <div className="border-t border-slate-100 dark:border-slate-800" />
-
-              {/* Datas e Prioridade */}
-              <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
-                <span className="text-slate-500 dark:text-slate-400">Execução</span>
-                <span className="text-[#34495e] dark:text-slate-200 font-medium">
-                  {isFixa ? 'Todo dia (tarefa fixa)' : (dataExecucao ? formatBrazilDateLong(parseDateInBrazil(dataExecucao, 'yyyy-MM-dd')) : 'Não definida')}
-                </span>
-
-                {!isFixa && prazoFatal && (
-                  <>
-                    <span className="text-slate-500 dark:text-slate-400">Prazo Fatal</span>
-                    <span className="text-red-600 dark:text-red-400 font-medium">
-                      {prazoFatal ? formatBrazilDateLong(parseDateInBrazil(prazoFatal, 'yyyy-MM-dd')) : 'Não definido'}
-                    </span>
-                  </>
-                )}
-
-                <span className="text-slate-500 dark:text-slate-400">Prioridade</span>
-                <span className={cn(
-                  "font-medium",
-                  prioridade === 'alta' && "text-red-600 dark:text-red-400",
-                  prioridade === 'media' && "text-amber-600 dark:text-amber-400",
-                  prioridade === 'baixa' && "text-emerald-600 dark:text-emerald-400"
-                )}>
-                  {getPrioridadeLabel(prioridade)}
-                </span>
-
-                {responsaveisIds.length > 0 && (
-                  <>
-                    <span className="text-slate-500 dark:text-slate-400">Responsáveis</span>
-                    <span className="text-[#34495e] dark:text-slate-200 font-medium">
-                      {responsaveisIds.map(id => membros.find(m => m.user_id === id)?.nome || 'Não encontrado').join(', ')}
-                    </span>
-                  </>
-                )}
-              </div>
-
-              {/* Vínculos (se houver) */}
-              {vinculacao && (
-                <>
-                  <div className="border-t border-slate-100 dark:border-slate-800" />
-
-                  <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
-                    <span className="text-slate-500 dark:text-slate-400">Vinculado a</span>
-                    <div className="text-[#34495e] dark:text-slate-200">
-                      <div className="font-medium">
-                        {vinculacao.metadados?.partes || vinculacao.metadados?.titulo || `Pasta ${vinculacao.metadados?.numero_pasta}`}
-                      </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        {vinculacao.metadados?.numero_pasta && `Pasta ${vinculacao.metadados.numero_pasta}`}
-                        {vinculacao.metadados?.numero_cnj && ` • CNJ: ${vinculacao.metadados.numero_cnj}`}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Recorrência (se houver) */}
-              {recorrencia?.ativa && (
-                <>
-                  <div className="border-t border-slate-100 dark:border-slate-800" />
-
-                  <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-2 text-xs">
-                    <span className="text-slate-500 dark:text-slate-400">Recorrência</span>
-                    <span className="text-[#34495e] dark:text-slate-200 font-medium flex items-center gap-1.5">
-                      <Repeat className="w-3.5 h-3.5 text-[#89bcbe]" />
-                      {getRecorrenciaSummary(recorrencia)}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </WizardStep>
-      )}
-    </ModalWizard>
+    </div>
   )
 }

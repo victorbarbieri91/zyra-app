@@ -860,10 +860,10 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
                 const d = new Date(mov.data_movimento)
                 const isLast = index === paginatedMovimentacoes.length - 1
                 return (
-                  <div key={mov.id} id={`andamento-${mov.id}`} className="grid grid-cols-[52px_18px_1fr] gap-3.5" style={{ paddingTop: index === 0 ? 14 : 0 }}>
+                  <div key={mov.id} id={`andamento-${mov.id}`} className="grid grid-cols-[64px_18px_1fr] gap-3.5" style={{ paddingTop: index === 0 ? 14 : 0 }}>
                     {/* data */}
                     <div className="pt-3 text-right">
-                      <div className="font-mono text-[13px] font-bold text-[#2c3e50] dark:text-slate-200 tracking-[-0.01em] leading-none">{format(d, 'dd/MM')}</div>
+                      <div className="font-mono text-[12.5px] font-bold text-[#2c3e50] dark:text-slate-200 tracking-[-0.02em] leading-none">{format(d, 'dd/MM/yy')}</div>
                       <div className="text-[9.5px] font-bold uppercase tracking-[0.08em] text-[#9aa1a8] dark:text-slate-500 mt-0.5">{diaSemana(d)}</div>
                     </div>
                     {/* track */}

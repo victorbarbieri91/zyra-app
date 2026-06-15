@@ -6,7 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,13 +20,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
-  Scale,
   User,
-  Calendar,
   Loader2,
   Search,
   AlertTriangle,
   Plus,
+  Upload,
+  X,
+  Check,
   FileText,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -36,6 +37,7 @@ import { PessoaWizardModal } from '@/components/crm/PessoaWizardModal'
 import { ContratoModal } from '@/components/financeiro/ContratoModal'
 import { useContratosHonorarios } from '@/hooks/useContratosHonorarios'
 import { AREAS_JURIDICAS_OPTIONS } from '@/lib/constants/areas-juridicas'
+import { TIPOS_CONSULTA, TIPOS_CONSULTA_LISTA, type TipoConsulta } from '@/lib/constants/consultivo-tipos'
 
 interface ConsultaWizardModalProps {
   open: boolean
@@ -65,11 +67,25 @@ interface Contrato {
 const AREAS = AREAS_JURIDICAS_OPTIONS
 
 const PRIORIDADES = [
-  { value: 'baixa', label: 'Baixa', color: 'bg-slate-100 text-slate-600' },
-  { value: 'media', label: 'Média', color: 'bg-blue-100 text-blue-700' },
-  { value: 'alta', label: 'Alta', color: 'bg-amber-100 text-amber-700' },
-  { value: 'urgente', label: 'Urgente', color: 'bg-red-100 text-red-700' },
+  { value: 'baixa', label: 'Baixa' },
+  { value: 'media', label: 'Média' },
+  { value: 'alta', label: 'Alta' },
+  { value: 'urgente', label: 'Urgente' },
 ]
+
+const MAX_FILE_SIZE = 52428800 // 50MB
+
+function inferTipoArquivo(file: File): string {
+  const m = file.type
+  if (m.includes('pdf')) return 'PDF'
+  if (m.includes('word')) return 'Word'
+  if (m.includes('sheet') || m.includes('excel')) return 'Excel'
+  if (m.includes('presentation') || m.includes('powerpoint')) return 'PowerPoint'
+  if (m.startsWith('image/')) return 'Imagem'
+  if (m.includes('zip')) return 'ZIP'
+  const ext = file.name.split('.').pop()?.toLowerCase() || ''
+  return ext.toUpperCase() || 'Documento'
+}
 
 export function ConsultaWizardModal({
   open,
@@ -85,11 +101,14 @@ export function ConsultaWizardModal({
     descricao: '',
     cliente_id: '',
     contrato_id: '',
+    tipo: '' as TipoConsulta | '',
     area: '',
     prioridade: 'media',
     prazo: '',
     responsavel_id: '',
   })
+  const [responsaveisExtras, setResponsaveisExtras] = useState<string[]>([])
+  const [arquivos, setArquivos] = useState<File[]>([])
 
   const { createContrato } = useContratosHonorarios()
 
@@ -235,7 +254,6 @@ export function ConsultaWizardModal({
         if (error) throw error
         setResponsaveis(data || [])
 
-        // Set current user as default responsavel
         if (currentUserId && !formData.responsavel_id) {
           setFormData(prev => ({ ...prev, responsavel_id: currentUserId }))
         }
@@ -251,30 +269,94 @@ export function ConsultaWizardModal({
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    // Clear error when field is modified
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }))
     }
   }
 
+  const toggleExtra = (id: string) => {
+    setResponsaveisExtras(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
+  }
+
+  const addArquivos = (files: FileList | null) => {
+    if (!files) return
+    const novos = Array.from(files).filter(f => {
+      if (f.size > MAX_FILE_SIZE) {
+        toast.error(`"${f.name}" excede o limite de 50MB`)
+        return false
+      }
+      return true
+    })
+    setArquivos(prev => [...prev, ...novos])
+  }
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.titulo.trim()) {
-      newErrors.titulo = 'Informe o título da consulta'
-    }
-    if (!formData.cliente_id) {
-      newErrors.cliente_id = 'Selecione o cliente'
-    }
-    if (!formData.area) {
-      newErrors.area = 'Selecione a área jurídica'
-    }
-    if (!formData.responsavel_id) {
-      newErrors.responsavel_id = 'Selecione o responsável'
-    }
+    if (!formData.titulo.trim()) newErrors.titulo = 'Informe o título da consulta'
+    if (!formData.cliente_id) newErrors.cliente_id = 'Selecione o cliente'
+    if (!formData.tipo) newErrors.tipo = 'Selecione o tipo'
+    if (!formData.area) newErrors.area = 'Selecione a área jurídica'
+    if (!formData.responsavel_id) newErrors.responsavel_id = 'Selecione o responsável'
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
+  }
+
+  // Upload dos arquivos depois que a consulta é criada (não bloqueia)
+  const uploadArquivos = async (consultaId: string, userId: string) => {
+    for (const file of arquivos) {
+      try {
+        const uniqueId = crypto.randomUUID()
+        const safeName = file.name
+          .normalize('NFD')
+          .replace(/[̀-ͯ]/g, '')
+          .replace(/[^\w.-]/g, '_')
+          .substring(0, 100)
+        const storagePath = `${currentEscritorioId}/${consultaId}/${uniqueId}-${safeName}`
+
+        const { error: upErr } = await supabase.storage
+          .from('documentos')
+          .upload(storagePath, file, { cacheControl: '3600', upsert: false, contentType: file.type || undefined })
+        if (upErr) throw upErr
+
+        const { data: doc, error: insErr } = await supabase
+          .from('documentos')
+          .insert({
+            escritorio_id: currentEscritorioId,
+            consulta_id: consultaId,
+            nome: file.name,
+            tipo: inferTipoArquivo(file),
+            tamanho: file.size,
+            mime_type: file.type || null,
+            storage_path: storagePath,
+            created_by: userId,
+          })
+          .select('id')
+          .single()
+        if (insErr) {
+          await supabase.storage.from('documentos').remove([storagePath])
+          throw insErr
+        }
+
+        await supabase.from('consultivo_movimentacoes').insert({
+          consulta_id: consultaId,
+          escritorio_id: currentEscritorioId,
+          data_movimento: new Date().toISOString(),
+          tipo_codigo: 'documento_anexado',
+          tipo_descricao: 'Documento anexado',
+          descricao: `Documento "${file.name}" anexado`,
+          origem: 'sistema',
+          created_by: userId,
+          referencia_tipo: 'documentos',
+          referencia_id: doc?.id ?? null,
+        })
+      } catch (e) {
+        console.error('Erro ao enviar documento na criação:', file.name, e)
+      }
+    }
   }
 
   const handleSave = async () => {
@@ -286,7 +368,7 @@ export function ConsultaWizardModal({
 
     setSaving(true)
     try {
-      const { error } = await supabase
+      const { data: nova, error } = await supabase
         .from('consultivo_consultas')
         .insert({
           escritorio_id: currentEscritorioId,
@@ -294,17 +376,24 @@ export function ConsultaWizardModal({
           descricao: formData.descricao.trim() || null,
           cliente_id: formData.cliente_id,
           contrato_id: formData.contrato_id || null,
+          tipo: formData.tipo || null,
           area: formData.area,
           prioridade: formData.prioridade,
           prazo: formData.prazo || null,
           responsavel_id: formData.responsavel_id,
+          responsaveis_ids: responsaveisExtras,
           created_by: currentUserId,
           status: 'ativo',
           anexos: [],
-          andamentos: [],
         })
+        .select('id')
+        .single()
 
       if (error) throw error
+
+      if (nova?.id && arquivos.length > 0 && currentUserId) {
+        await uploadArquivos(nova.id, currentUserId)
+      }
 
       toast.success('Consulta criada com sucesso')
       onSuccess?.()
@@ -317,14 +406,11 @@ export function ConsultaWizardModal({
     }
   }
 
-  // Handler para salvar novo contrato via modal
   const handleSaveContrato = async (data: any): Promise<string | null | boolean> => {
     try {
       const contratoId = await createContrato(data)
       if (contratoId) {
-        // Recarregar lista de contratos
         await loadContratosCliente(formData.cliente_id)
-        // Selecionar o novo contrato automaticamente
         handleChange('contrato_id', contratoId)
         toast.success('Contrato criado e vinculado!')
         setContratoModalOpen(false)
@@ -344,44 +430,47 @@ export function ConsultaWizardModal({
       descricao: '',
       cliente_id: '',
       contrato_id: '',
+      tipo: '',
       area: '',
       prioridade: 'media',
       prazo: '',
       responsavel_id: currentUserId || '',
     })
+    setResponsaveisExtras([])
+    setArquivos([])
     setErrors({})
     setClienteSearch('')
     setContratos([])
     onOpenChange(false)
   }
 
+  const lbl = 'text-[11px] font-bold uppercase tracking-[0.08em] text-[#9aa1a8] dark:text-slate-500 mb-1.5 block'
+  const tipoSel = formData.tipo ? TIPOS_CONSULTA[formData.tipo] : null
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[#34495e]">
-            <Scale className="w-5 h-5 text-[#89bcbe]" />
-            Nova Consulta
+      <DialogContent className="sm:max-w-3xl p-0 gap-0 overflow-visible">
+        <DialogHeader className="px-6 pt-6 pb-5 border-b border-[#f0ede3] dark:border-[#1d2a3c]">
+          <DialogTitle className="text-[19px] font-semibold text-[#2c3e50] dark:text-slate-200" style={{ fontFamily: 'var(--font-fraunces)', letterSpacing: '-0.02em' }}>
+            Abrir nova consulta
           </DialogTitle>
+          <DialogDescription className="text-[12.5px] text-[#9aa1a8] dark:text-slate-400">
+            Consultas, pareceres e análises consultivas. O número é gerado automaticamente.
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          {/* Linha 1: Cliente e Contrato */}
-          <div className="grid grid-cols-2 gap-4 items-start">
+        <div className="px-6 py-5 grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-5 max-h-[70vh] overflow-y-auto">
+          {/* ── Coluna esquerda: dados da consulta ── */}
+          <div className="space-y-4">
             {/* Cliente */}
-            <div className="space-y-1.5">
-              <Label htmlFor="cliente" className="text-xs font-medium h-4 flex items-center">
-                Cliente <span className="text-red-500 ml-0.5">*</span>
-              </Label>
-              <Select
-                value={formData.cliente_id}
-                onValueChange={(value) => handleChange('cliente_id', value)}
-              >
-                <SelectTrigger className={cn('h-9 text-sm', errors.cliente_id && 'border-red-300')}>
+            <div>
+              <Label className={lbl}>Cliente <span className="text-[#a85a3e]">*</span></Label>
+              <Select value={formData.cliente_id} onValueChange={(v) => handleChange('cliente_id', v)}>
+                <SelectTrigger className={cn('h-10 text-sm', errors.cliente_id && 'border-red-300')}>
                   <SelectValue placeholder="Selecione o cliente" />
                 </SelectTrigger>
                 <SelectContent>
-                  <div className="px-2 py-1.5 sticky top-0 bg-popover">
+                  <div className="px-2 py-1.5 sticky top-0 bg-popover z-10">
                     <div className="relative">
                       <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                       <Input
@@ -392,17 +481,12 @@ export function ConsultaWizardModal({
                       />
                     </div>
                   </div>
-                  {/* Botao para criar novo cliente */}
                   <div className="px-2 py-1.5 border-b border-border">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-full justify-start text-xs h-8 text-popover-foreground hover:bg-accent"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        setPessoaModalOpen(true)
-                      }}
+                      className="w-full justify-start text-xs h-8"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPessoaModalOpen(true) }}
                     >
                       <Plus className="w-3.5 h-3.5 mr-2" />
                       Criar novo cliente
@@ -413,17 +497,7 @@ export function ConsultaWizardModal({
                       <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
                     </div>
                   ) : clientes.length === 0 ? (
-                    <div className="text-center py-4 text-xs text-muted-foreground">
-                      Nenhum cliente encontrado.
-                      <br />
-                      <button
-                        type="button"
-                        onClick={() => setPessoaModalOpen(true)}
-                        className="text-[#89bcbe] hover:underline mt-1"
-                      >
-                        Clique aqui para criar
-                      </button>
-                    </div>
+                    <div className="text-center py-4 text-xs text-muted-foreground">Nenhum cliente encontrado.</div>
                   ) : (
                     clientes.map((cliente) => (
                       <SelectItem key={cliente.id} value={cliente.id} className="text-xs">
@@ -436,74 +510,216 @@ export function ConsultaWizardModal({
                   )}
                 </SelectContent>
               </Select>
-              {errors.cliente_id && (
-                <p className="text-[10px] text-red-600 flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" />
-                  {errors.cliente_id}
-                </p>
-              )}
+              {errors.cliente_id && <p className="text-[10px] text-red-600 mt-1 flex items-center gap-1"><AlertTriangle className="w-3 h-3" />{errors.cliente_id}</p>}
             </div>
 
-            {/* Contrato de Honorários */}
-            <div className="space-y-1.5">
-              <Label htmlFor="contrato" className="text-xs font-medium h-4 flex items-center">
-                Contrato de Honorários <span className="text-red-500 ml-0.5">*</span>
-              </Label>
-              <Select
-                value={formData.contrato_id}
-                onValueChange={(value) => handleChange('contrato_id', value)}
-                disabled={!formData.cliente_id}
-              >
-                <SelectTrigger className={cn('h-9 text-sm', !formData.cliente_id && 'opacity-50')}>
-                  <SelectValue placeholder={formData.cliente_id ? "Selecione o contrato..." : "Selecione o cliente primeiro"} />
+            {/* Título */}
+            <div>
+              <Label className={lbl}>Título / assunto <span className="text-[#a85a3e]">*</span></Label>
+              <Input
+                value={formData.titulo}
+                onChange={(e) => handleChange('titulo', e.target.value)}
+                placeholder="Ex: Análise de minuta de aditivo contratual"
+                className={cn('h-10 text-sm', errors.titulo && 'border-red-300')}
+              />
+              {errors.titulo && <p className="text-[10px] text-red-600 mt-1 flex items-center gap-1"><AlertTriangle className="w-3 h-3" />{errors.titulo}</p>}
+            </div>
+
+            {/* Tipo + Área */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className={lbl}>Tipo <span className="text-[#a85a3e]">*</span></Label>
+                <Select value={formData.tipo} onValueChange={(v) => handleChange('tipo', v)}>
+                  <SelectTrigger className={cn('h-10 text-sm', errors.tipo && 'border-red-300')}>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIPOS_CONSULTA_LISTA.map((t) => {
+                      const o = TIPOS_CONSULTA[t]
+                      return (
+                        <SelectItem key={t} value={t} className="text-xs">
+                          <div className="flex flex-col py-0.5">
+                            <span className="font-medium text-[#2c3e50] dark:text-slate-200">{o.label}</span>
+                            <span className="text-[10px] text-slate-500">{o.descricao}</span>
+                          </div>
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+                {errors.tipo && <p className="text-[10px] text-red-600 mt-1 flex items-center gap-1"><AlertTriangle className="w-3 h-3" />{errors.tipo}</p>}
+              </div>
+              <div>
+                <Label className={lbl}>Área <span className="text-[#a85a3e]">*</span></Label>
+                <Select value={formData.area} onValueChange={(v) => handleChange('area', v)}>
+                  <SelectTrigger className={cn('h-10 text-sm', errors.area && 'border-red-300')}>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AREAS.map((area) => (
+                      <SelectItem key={area.value} value={area.value} className="text-xs">{area.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.area && <p className="text-[10px] text-red-600 mt-1 flex items-center gap-1"><AlertTriangle className="w-3 h-3" />{errors.area}</p>}
+              </div>
+            </div>
+
+            {/* Descrição */}
+            <div>
+              <Label className={lbl}>Descrição</Label>
+              <Textarea
+                value={formData.descricao}
+                onChange={(e) => handleChange('descricao', e.target.value)}
+                placeholder="Descreva a consulta, contexto e perguntas específicas..."
+                className="text-sm min-h-[90px] resize-y"
+              />
+            </div>
+
+            {/* Documentos */}
+            <div>
+              <Label className={lbl}>Documentos</Label>
+              <label className="block border border-dashed border-[#d5cfc3] dark:border-[#2d4058] rounded-[10px] px-4 py-5 text-center cursor-pointer bg-[#faf8f2] dark:bg-[#0f141c] hover:border-[#89bcbe] transition-colors">
+                <input
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => { addArquivos(e.target.files); e.target.value = '' }}
+                />
+                <Upload className="w-5 h-5 text-[#9aa1a8] mx-auto mb-1.5" />
+                <span className="block text-[12px] text-[#5a6775] dark:text-slate-400">Contratos, minutas, e-mails ou legislação aplicável</span>
+                <span className="block text-[11px] text-[#89bcbe] font-semibold mt-0.5">Selecionar arquivos</span>
+              </label>
+              {arquivos.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {arquivos.map((f, i) => (
+                    <div key={i} className="flex items-center gap-2 text-[12px] text-[#46627f] dark:text-slate-300 bg-slate-50 dark:bg-surface-2 rounded-md px-2.5 py-1.5">
+                      <FileText className="w-3.5 h-3.5 text-[#89bcbe] flex-shrink-0" />
+                      <span className="flex-1 truncate">{f.name}</span>
+                      <span className="text-[10px] text-slate-400">{(f.size / 1024 / 1024).toFixed(1)}MB</span>
+                      <button type="button" onClick={() => setArquivos(prev => prev.filter((_, j) => j !== i))} className="text-slate-400 hover:text-red-500">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Coluna direita: atribuição e contrato ── */}
+          <div className="space-y-4">
+            {/* Prioridade + Prazo */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className={lbl}>Prioridade</Label>
+                <Select value={formData.prioridade} onValueChange={(v) => handleChange('prioridade', v)}>
+                  <SelectTrigger className="h-10 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {PRIORIDADES.map((p) => (
+                      <SelectItem key={p.value} value={p.value} className="text-xs">{p.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className={lbl}>Prazo</Label>
+                <Input
+                  type="date"
+                  value={formData.prazo}
+                  onChange={(e) => handleChange('prazo', e.target.value)}
+                  className="h-10 text-sm font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Responsável principal */}
+            <div>
+              <Label className={lbl}>Responsável <span className="text-[#a85a3e]">*</span></Label>
+              <Select value={formData.responsavel_id} onValueChange={(v) => handleChange('responsavel_id', v)}>
+                <SelectTrigger className={cn('h-10 text-sm', errors.responsavel_id && 'border-red-300')}>
+                  <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* Botão para criar novo contrato */}
+                  {loadingResponsaveis ? (
+                    <div className="flex items-center justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-slate-400" /></div>
+                  ) : (
+                    responsaveis.map((resp) => (
+                      <SelectItem key={resp.id} value={resp.id} className="text-xs">{resp.nome_completo}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {errors.responsavel_id && <p className="text-[10px] text-red-600 mt-1 flex items-center gap-1"><AlertTriangle className="w-3 h-3" />{errors.responsavel_id}</p>}
+            </div>
+
+            {/* Co-responsáveis */}
+            <div>
+              <Label className={lbl}>Outros responsáveis</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {responsaveis.filter(r => r.id !== formData.responsavel_id).length === 0 ? (
+                  <span className="text-[11px] text-slate-400">Nenhum outro membro disponível</span>
+                ) : (
+                  responsaveis.filter(r => r.id !== formData.responsavel_id).map((r) => {
+                    const on = responsaveisExtras.includes(r.id)
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => toggleExtra(r.id)}
+                        className={cn(
+                          'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors',
+                          on
+                            ? 'bg-[#34495e] text-white border-[#34495e]'
+                            : 'bg-white dark:bg-surface-1 text-[#5a6775] dark:text-slate-400 border-[#e6e3da] dark:border-[#253345] hover:border-[#89bcbe]',
+                        )}
+                      >
+                        {on && <Check className="w-3 h-3" />}
+                        {r.nome_completo}
+                      </button>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Contrato vinculado */}
+            <div>
+              <Label className={lbl}>Contrato vinculado</Label>
+              <Select
+                value={formData.contrato_id}
+                onValueChange={(v) => handleChange('contrato_id', v)}
+                disabled={!formData.cliente_id}
+              >
+                <SelectTrigger className={cn('h-10 text-sm', !formData.cliente_id && 'opacity-50')}>
+                  <SelectValue placeholder={formData.cliente_id ? 'Selecione o contrato...' : 'Selecione o cliente primeiro'} />
+                </SelectTrigger>
+                <SelectContent>
                   <div className="px-2 py-1.5 border-b border-border">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-full justify-start text-xs h-8 text-popover-foreground hover:bg-accent"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        setContratoModalOpen(true)
-                      }}
+                      className="w-full justify-start text-xs h-8"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setContratoModalOpen(true) }}
                     >
                       <Plus className="w-3.5 h-3.5 mr-2" />
                       Criar novo contrato
                     </Button>
                   </div>
                   {loadingContratos ? (
-                    <div className="flex items-center justify-center py-4">
-                      <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
-                    </div>
+                    <div className="flex items-center justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-slate-400" /></div>
                   ) : contratos.length === 0 ? (
-                    <div className="text-center py-4 text-xs text-muted-foreground">
-                      Nenhum contrato encontrado.
-                      <br />
-                      <button
-                        type="button"
-                        onClick={() => setContratoModalOpen(true)}
-                        className="text-[#89bcbe] hover:underline mt-1"
-                      >
-                        Clique aqui para criar
-                      </button>
-                    </div>
+                    <div className="text-center py-4 text-xs text-muted-foreground">Nenhum contrato encontrado.</div>
                   ) : (
                     contratos.map((contrato) => (
                       <SelectItem key={contrato.id} value={contrato.id} className="text-xs">
                         <div className="flex flex-col">
                           <span className="font-medium">{contrato.titulo}</span>
                           <span className="text-[10px] text-slate-500">
-                            {contrato.forma_cobranca === 'fixo' && contrato.valor_fixo && (
-                              <>Fixo: R$ {contrato.valor_fixo.toLocaleString('pt-BR')}</>
-                            )}
-                            {contrato.forma_cobranca === 'exito' && contrato.percentual_exito && (
-                              <>Êxito: {contrato.percentual_exito}%</>
-                            )}
-                            {contrato.forma_cobranca === 'por_hora' && <>Por Hora</>}
-                            {contrato.forma_cobranca === 'por_ato' && <>Por Ato</>}
+                            {contrato.forma_cobranca === 'fixo' && contrato.valor_fixo && (<>Fixo: R$ {contrato.valor_fixo.toLocaleString('pt-BR')}</>)}
+                            {contrato.forma_cobranca === 'exito' && contrato.percentual_exito && (<>Êxito: {contrato.percentual_exito}%</>)}
+                            {contrato.forma_cobranca === 'por_hora' && <>Por hora</>}
+                            {contrato.forma_cobranca === 'por_ato' && <>Por ato</>}
                           </span>
                         </div>
                       </SelectItem>
@@ -511,170 +727,33 @@ export function ConsultaWizardModal({
                   )}
                 </SelectContent>
               </Select>
-              <p className="text-[10px] text-slate-500">
-                Vincule um contrato para gerenciar a cobrança
-              </p>
+              <p className="text-[10px] text-slate-500 mt-1">A forma de cobrança vem do contrato vinculado.</p>
             </div>
-          </div>
 
-          {/* Linha 2: Título (full width) */}
-          <div className="space-y-1.5">
-            <Label htmlFor="titulo" className="text-xs font-medium">
-              Título da Consulta <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="titulo"
-              value={formData.titulo}
-              onChange={(e) => handleChange('titulo', e.target.value)}
-              placeholder="Ex: Análise de contrato de prestação de serviços"
-              className={cn('h-9 text-sm', errors.titulo && 'border-red-300')}
-            />
-            {errors.titulo && (
-              <p className="text-[10px] text-red-600 flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" />
-                {errors.titulo}
-              </p>
+            {/* resumo do tipo selecionado */}
+            {tipoSel && (
+              <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-[10px] bg-[#f0f9f9] border border-[#89bcbe]/40 dark:bg-teal-500/10 dark:border-teal-500/30">
+                <tipoSel.Icon className="w-4 h-4 text-[#3f7376] dark:text-teal-300 mt-0.5 flex-shrink-0" />
+                <div className="text-[12px] text-[#46627f] dark:text-slate-300">
+                  <strong className="text-[#34495e] dark:text-slate-200">{tipoSel.label}</strong> — {tipoSel.descricao}
+                </div>
+              </div>
             )}
-          </div>
-
-          {/* Linha 3: Área, Prioridade, Prazo, Responsável (4 colunas) */}
-          <div className="grid grid-cols-4 gap-3 items-start">
-            <div className="space-y-1.5">
-              <Label htmlFor="area" className="text-xs font-medium h-4 flex items-center">
-                Área <span className="text-red-500 ml-0.5">*</span>
-              </Label>
-              <Select
-                value={formData.area}
-                onValueChange={(value) => handleChange('area', value)}
-              >
-                <SelectTrigger className={cn('h-9 text-sm', errors.area && 'border-red-300')}>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {AREAS.map((area) => (
-                    <SelectItem key={area.value} value={area.value} className="text-xs">
-                      {area.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.area && (
-                <p className="text-[10px] text-red-600 flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" />
-                  {errors.area}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="prioridade" className="text-xs font-medium h-4 flex items-center">
-                Prioridade
-              </Label>
-              <Select
-                value={formData.prioridade}
-                onValueChange={(value) => handleChange('prioridade', value)}
-              >
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PRIORIDADES.map((p) => (
-                    <SelectItem key={p.value} value={p.value} className="text-xs">
-                      <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-medium', p.color)}>
-                        {p.label}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="prazo" className="text-xs font-medium h-4 flex items-center">
-                Prazo
-              </Label>
-              <Input
-                id="prazo"
-                type="date"
-                value={formData.prazo}
-                onChange={(e) => handleChange('prazo', e.target.value)}
-                className="h-9 text-sm"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="responsavel" className="text-xs font-medium h-4 flex items-center">
-                Responsável <span className="text-red-500 ml-0.5">*</span>
-              </Label>
-              <Select
-                value={formData.responsavel_id}
-                onValueChange={(value) => handleChange('responsavel_id', value)}
-              >
-                <SelectTrigger className={cn('h-9 text-sm', errors.responsavel_id && 'border-red-300')}>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {loadingResponsaveis ? (
-                    <div className="flex items-center justify-center py-4">
-                      <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
-                    </div>
-                  ) : (
-                    responsaveis.map((resp) => (
-                      <SelectItem key={resp.id} value={resp.id} className="text-xs">
-                        {resp.nome_completo}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {errors.responsavel_id && (
-                <p className="text-[10px] text-red-600 flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" />
-                  {errors.responsavel_id}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Linha 4: Descrição (full width, mais curto) */}
-          <div className="space-y-1.5">
-            <Label htmlFor="descricao" className="text-xs font-medium">
-              Descrição
-            </Label>
-            <Textarea
-              id="descricao"
-              value={formData.descricao}
-              onChange={(e) => handleChange('descricao', e.target.value)}
-              placeholder="Descreva os detalhes da consulta, questões específicas, documentos relevantes..."
-              className="text-sm min-h-[80px] resize-none"
-            />
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            disabled={saving}
-            className="h-9 text-xs"
-          >
-            Cancelar
-          </Button>
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-[#f0ede3] dark:border-[#1d2a3c] bg-slate-50/60 dark:bg-[#0f141c]/60 flex justify-end gap-2.5">
+          <Button variant="outline" onClick={handleClose} disabled={saving}>Cancelar</Button>
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="h-9 text-xs bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e]"
+            className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e]"
           >
-            {saving ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                Salvando...
-              </>
-            ) : (
-              'Criar Consulta'
-            )}
+            {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Check className="w-4 h-4 mr-1.5" />}
+            Abrir consulta
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
 
       {/* Modal para criar novo cliente */}
@@ -683,9 +762,8 @@ export function ConsultaWizardModal({
         onOpenChange={setPessoaModalOpen}
         onSave={async (data) => {
           try {
-            if (!currentEscritorioId) throw new Error('Escritorio nao encontrado')
+            if (!currentEscritorioId) throw new Error('Escritório não encontrado')
 
-            // Verificar se CPF/CNPJ ja existe no mesmo escritorio
             if (data.cpf_cnpj) {
               const cpfCnpjLimpo = data.cpf_cnpj.replace(/\D/g, '')
               if (cpfCnpjLimpo.length >= 11) {
@@ -697,7 +775,7 @@ export function ConsultaWizardModal({
                   .maybeSingle()
 
                 if (existente) {
-                  throw new Error(`Ja existe uma pessoa com este CPF/CNPJ: ${existente.nome_completo}`)
+                  throw new Error(`Já existe uma pessoa com este CPF/CNPJ: ${existente.nome_completo}`)
                 }
               }
             }
@@ -732,14 +810,8 @@ export function ConsultaWizardModal({
             if (error) throw error
 
             toast.success('Cliente criado com sucesso!')
-
-            // Recarregar lista de clientes
             await loadClientes()
-
-            // Selecionar automaticamente o novo cliente
-            if (novoCliente) {
-              handleChange('cliente_id', novoCliente.id)
-            }
+            if (novoCliente) handleChange('cliente_id', novoCliente.id)
           } catch (error: any) {
             console.error('Erro ao criar cliente:', error)
             toast.error(error.message || 'Erro ao criar cliente')

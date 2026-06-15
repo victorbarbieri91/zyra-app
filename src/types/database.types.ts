@@ -1972,8 +1972,10 @@ export type Database = {
           numero: string | null
           prazo: string | null
           prioridade: string
+          responsaveis_ids: string[]
           responsavel_id: string
           status: Database["public"]["Enums"]["status_consultivo"]
+          tipo: Database["public"]["Enums"]["tipo_consulta"] | null
           titulo: string
           updated_at: string | null
         }
@@ -1991,8 +1993,10 @@ export type Database = {
           numero?: string | null
           prazo?: string | null
           prioridade?: string
+          responsaveis_ids?: string[]
           responsavel_id: string
           status?: Database["public"]["Enums"]["status_consultivo"]
+          tipo?: Database["public"]["Enums"]["tipo_consulta"] | null
           titulo: string
           updated_at?: string | null
         }
@@ -2010,8 +2014,10 @@ export type Database = {
           numero?: string | null
           prazo?: string | null
           prioridade?: string
+          responsaveis_ids?: string[]
           responsavel_id?: string
           status?: Database["public"]["Enums"]["status_consultivo"]
+          tipo?: Database["public"]["Enums"]["tipo_consulta"] | null
           titulo?: string
           updated_at?: string | null
         }
@@ -2081,79 +2087,94 @@ export type Database = {
           },
         ]
       }
-      consultivo_timeline: {
+      consultivo_movimentacoes: {
         Row: {
           consulta_id: string
-          created_at: string | null
-          descricao: string | null
-          escritorio_id: string | null
+          created_at: string
+          created_by: string | null
+          data_movimento: string
+          descricao: string
+          escritorio_id: string
           id: string
-          metadata: Json | null
-          tipo_acao: string
-          user_id: string | null
+          origem: string
+          referencia_id: string | null
+          referencia_tipo: string | null
+          tipo_codigo: Database["public"]["Enums"]["consultivo_andamento_tipo"]
+          tipo_descricao: string | null
+          visivel_cliente: boolean
         }
         Insert: {
           consulta_id: string
-          created_at?: string | null
-          descricao?: string | null
-          escritorio_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_movimento?: string
+          descricao?: string
+          escritorio_id: string
           id?: string
-          metadata?: Json | null
-          tipo_acao: string
-          user_id?: string | null
+          origem?: string
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          tipo_codigo: Database["public"]["Enums"]["consultivo_andamento_tipo"]
+          tipo_descricao?: string | null
+          visivel_cliente?: boolean
         }
         Update: {
           consulta_id?: string
-          created_at?: string | null
-          descricao?: string | null
-          escritorio_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_movimento?: string
+          descricao?: string
+          escritorio_id?: string
           id?: string
-          metadata?: Json | null
-          tipo_acao?: string
-          user_id?: string | null
+          origem?: string
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          tipo_codigo?: Database["public"]["Enums"]["consultivo_andamento_tipo"]
+          tipo_descricao?: string | null
+          visivel_cliente?: boolean
         }
         Relationships: [
           {
-            foreignKeyName: "consultivo_timeline_consulta_id_fkey"
+            foreignKeyName: "consultivo_movimentacoes_consulta_id_fkey"
             columns: ["consulta_id"]
             isOneToOne: false
             referencedRelation: "consultivo_consultas"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "consultivo_timeline_consulta_id_fkey"
+            foreignKeyName: "consultivo_movimentacoes_consulta_id_fkey"
             columns: ["consulta_id"]
             isOneToOne: false
             referencedRelation: "v_consultivo_consultas"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "consultivo_timeline_consulta_id_fkey"
+            foreignKeyName: "consultivo_movimentacoes_consulta_id_fkey"
             columns: ["consulta_id"]
             isOneToOne: false
             referencedRelation: "vw_consultivo_processos_convertidos"
             referencedColumns: ["consultivo_id"]
           },
           {
-            foreignKeyName: "consultivo_timeline_escritorio_id_fkey"
-            columns: ["escritorio_id"]
-            isOneToOne: false
-            referencedRelation: "escritorios"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "consultivo_timeline_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "consultivo_movimentacoes_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "consultivo_timeline_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "consultivo_movimentacoes_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "usuarios_escritorio_ativo"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "consultivo_movimentacoes_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -5206,7 +5227,7 @@ export type Database = {
           categoria: string | null
           created_at: string | null
           descricao: string
-          despesa_id: string
+          despesa_id: string | null
           id: string
           nota_debito_id: string
           processo_titulo: string | null
@@ -5216,7 +5237,7 @@ export type Database = {
           categoria?: string | null
           created_at?: string | null
           descricao: string
-          despesa_id: string
+          despesa_id?: string | null
           id?: string
           nota_debito_id: string
           processo_titulo?: string | null
@@ -5226,7 +5247,7 @@ export type Database = {
           categoria?: string | null
           created_at?: string | null
           descricao?: string
-          despesa_id?: string
+          despesa_id?: string | null
           id?: string
           nota_debito_id?: string
           processo_titulo?: string | null
@@ -8672,6 +8693,7 @@ export type Database = {
           comentarios: string | null
           conteudo_completo: string | null
           created_at: string | null
+          created_by: string | null
           data_movimento: string
           descricao: string
           escritorio_id: string
@@ -8687,14 +8709,16 @@ export type Database = {
           processo_id: string
           referencia_id: string | null
           referencia_tipo: string | null
-          tipo_codigo: string | null
+          tipo_codigo: Database["public"]["Enums"]["andamento_tipo"] | null
           tipo_descricao: string | null
+          visivel_cliente: boolean
         }
         Insert: {
           codigo_cnj_movimento?: number | null
           comentarios?: string | null
           conteudo_completo?: string | null
           created_at?: string | null
+          created_by?: string | null
           data_movimento: string
           descricao: string
           escritorio_id: string
@@ -8710,14 +8734,16 @@ export type Database = {
           processo_id: string
           referencia_id?: string | null
           referencia_tipo?: string | null
-          tipo_codigo?: string | null
+          tipo_codigo?: Database["public"]["Enums"]["andamento_tipo"] | null
           tipo_descricao?: string | null
+          visivel_cliente?: boolean
         }
         Update: {
           codigo_cnj_movimento?: number | null
           comentarios?: string | null
           conteudo_completo?: string | null
           created_at?: string | null
+          created_by?: string | null
           data_movimento?: string
           descricao?: string
           escritorio_id?: string
@@ -8733,8 +8759,9 @@ export type Database = {
           processo_id?: string
           referencia_id?: string | null
           referencia_tipo?: string | null
-          tipo_codigo?: string | null
+          tipo_codigo?: Database["public"]["Enums"]["andamento_tipo"] | null
           tipo_descricao?: string | null
+          visivel_cliente?: boolean
         }
         Relationships: [
           {
@@ -14595,6 +14622,27 @@ export type Database = {
       }
     }
     Enums: {
+      andamento_tipo:
+        | "relatorio_cliente"
+        | "contato_cliente"
+        | "acompanhamento_processual"
+        | "analise_publicacao"
+        | "peticao_protocolo"
+        | "recurso"
+        | "audiencia"
+        | "acordo"
+        | "calculo"
+        | "diligencia"
+        | "reuniao_interna"
+        | "observacao_interna"
+        | "encerramento"
+        | "outro"
+        | "tarefa_concluida"
+        | "audiencia_realizada"
+        | "compromisso_concluido"
+        | "prazo_cumprido"
+        | "documento_anexado"
+        | "processo_encerrado"
       area_juridica_enum:
         | "civel"
         | "trabalhista"
@@ -14612,6 +14660,24 @@ export type Database = {
         | "imobiliario"
         | "propriedade_intelectual"
         | "compliance"
+      consultivo_andamento_tipo:
+        | "analise"
+        | "parecer"
+        | "documento_recebido"
+        | "reuniao"
+        | "contato_cliente"
+        | "diligencia"
+        | "negociacao"
+        | "acordo"
+        | "notificacao_extrajudicial"
+        | "observacao_interna"
+        | "outro"
+        | "consulta_criada"
+        | "tarefa_concluida"
+        | "compromisso_concluido"
+        | "documento_anexado"
+        | "transformada_processo"
+        | "arquivada"
       despesa_categoria_enum:
         | "custas"
         | "cartorio"
@@ -14739,6 +14805,17 @@ export type Database = {
         | "juiz"
         | "promotor"
         | "outros"
+      tipo_consulta:
+        | "consulta_simples"
+        | "parecer_tecnico"
+        | "analise_contratual"
+        | "elaboracao_contrato"
+        | "due_diligence"
+        | "opiniao_legal"
+        | "notificacao_extrajudicial"
+        | "acordo"
+        | "assessoria_recorrente"
+        | "outro"
       tipo_pessoa_enum: "pf" | "pj"
       uf_enum:
         | "AC"
@@ -14895,6 +14972,28 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      andamento_tipo: [
+        "relatorio_cliente",
+        "contato_cliente",
+        "acompanhamento_processual",
+        "analise_publicacao",
+        "peticao_protocolo",
+        "recurso",
+        "audiencia",
+        "acordo",
+        "calculo",
+        "diligencia",
+        "reuniao_interna",
+        "observacao_interna",
+        "encerramento",
+        "outro",
+        "tarefa_concluida",
+        "audiencia_realizada",
+        "compromisso_concluido",
+        "prazo_cumprido",
+        "documento_anexado",
+        "processo_encerrado",
+      ],
       area_juridica_enum: [
         "civel",
         "trabalhista",
@@ -14912,6 +15011,25 @@ export const Constants = {
         "imobiliario",
         "propriedade_intelectual",
         "compliance",
+      ],
+      consultivo_andamento_tipo: [
+        "analise",
+        "parecer",
+        "documento_recebido",
+        "reuniao",
+        "contato_cliente",
+        "diligencia",
+        "negociacao",
+        "acordo",
+        "notificacao_extrajudicial",
+        "observacao_interna",
+        "outro",
+        "consulta_criada",
+        "tarefa_concluida",
+        "compromisso_concluido",
+        "documento_anexado",
+        "transformada_processo",
+        "arquivada",
       ],
       despesa_categoria_enum: [
         "custas",
@@ -15052,6 +15170,18 @@ export const Constants = {
         "juiz",
         "promotor",
         "outros",
+      ],
+      tipo_consulta: [
+        "consulta_simples",
+        "parecer_tecnico",
+        "analise_contratual",
+        "elaboracao_contrato",
+        "due_diligence",
+        "opiniao_legal",
+        "notificacao_extrajudicial",
+        "acordo",
+        "assessoria_recorrente",
+        "outro",
       ],
       tipo_pessoa_enum: ["pf", "pj"],
       uf_enum: [

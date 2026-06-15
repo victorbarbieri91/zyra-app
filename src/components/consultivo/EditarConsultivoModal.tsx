@@ -27,11 +27,13 @@ import {
   Search,
   AlertTriangle,
   Save,
+  Check,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { AREAS_JURIDICAS_OPTIONS } from '@/lib/constants/areas-juridicas'
+import { TIPOS_CONSULTA, TIPOS_CONSULTA_LISTA, type TipoConsulta } from '@/lib/constants/consultivo-tipos'
 
 interface EditarConsultivoModalProps {
   open: boolean
@@ -47,6 +49,8 @@ interface EditarConsultivoModalProps {
     prazo: string | null
     responsavel_id: string
     responsavel_nome?: string
+    tipo?: string | null
+    responsaveis_ids?: string[] | null
   }
   onSuccess?: () => void
 }
@@ -83,11 +87,13 @@ export default function EditarConsultivoModal({
     titulo: consulta.titulo,
     descricao: consulta.descricao || '',
     cliente_id: consulta.cliente_id,
+    tipo: (consulta.tipo as TipoConsulta | '') || '',
     area: consulta.area,
     prioridade: consulta.prioridade,
     prazo: consulta.prazo || '',
     responsavel_id: consulta.responsavel_id,
   })
+  const [responsaveisExtras, setResponsaveisExtras] = useState<string[]>(consulta.responsaveis_ids || [])
 
   // States
   const [saving, setSaving] = useState(false)
@@ -109,11 +115,13 @@ export default function EditarConsultivoModal({
         titulo: consulta.titulo,
         descricao: consulta.descricao || '',
         cliente_id: consulta.cliente_id,
+        tipo: (consulta.tipo as TipoConsulta | '') || '',
         area: consulta.area,
         prioridade: consulta.prioridade,
         prazo: consulta.prazo || '',
         responsavel_id: consulta.responsavel_id,
       })
+      setResponsaveisExtras(consulta.responsaveis_ids || [])
 
       // Se temos cliente_nome, usar diretamente
       if (consulta.cliente_nome) {
@@ -233,6 +241,12 @@ export default function EditarConsultivoModal({
     }
   }
 
+  const toggleExtra = (id: string) => {
+    setResponsaveisExtras(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
+  }
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {}
 
@@ -241,6 +255,9 @@ export default function EditarConsultivoModal({
     }
     if (!formData.cliente_id) {
       newErrors.cliente_id = 'Selecione o cliente'
+    }
+    if (!formData.tipo) {
+      newErrors.tipo = 'Selecione o tipo'
     }
     if (!formData.area) {
       newErrors.area = 'Selecione a área jurídica'
@@ -264,10 +281,12 @@ export default function EditarConsultivoModal({
           titulo: formData.titulo.trim(),
           descricao: formData.descricao.trim() || null,
           cliente_id: formData.cliente_id,
+          tipo: formData.tipo || null,
           area: formData.area,
           prioridade: formData.prioridade,
           prazo: formData.prazo || null,
           responsavel_id: formData.responsavel_id,
+          responsaveis_ids: responsaveisExtras.filter(id => id !== formData.responsavel_id),
           updated_at: new Date().toISOString(),
         })
         .eq('id', consulta.id)
@@ -389,8 +408,41 @@ export default function EditarConsultivoModal({
             )}
           </div>
 
-          {/* Área e Prioridade */}
+          {/* Tipo e Área */}
           <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="tipo" className="text-xs font-medium">
+                Tipo <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.tipo}
+                onValueChange={(value) => handleChange('tipo', value)}
+              >
+                <SelectTrigger className={cn('h-9 text-sm', errors.tipo && 'border-red-300')}>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIPOS_CONSULTA_LISTA.map((t) => {
+                    const o = TIPOS_CONSULTA[t]
+                    return (
+                      <SelectItem key={t} value={t} className="text-xs">
+                        <div className="flex flex-col py-0.5">
+                          <span className="font-medium">{o.label}</span>
+                          <span className="text-[10px] text-slate-500">{o.descricao}</span>
+                        </div>
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+              {errors.tipo && (
+                <p className="text-[10px] text-red-600 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  {errors.tipo}
+                </p>
+              )}
+            </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="area" className="text-xs font-medium">
                 Área Jurídica <span className="text-red-500">*</span>
@@ -417,7 +469,10 @@ export default function EditarConsultivoModal({
                 </p>
               )}
             </div>
+          </div>
 
+          {/* Prioridade e Prazo */}
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="prioridade" className="text-xs font-medium">
                 Prioridade
@@ -440,10 +495,7 @@ export default function EditarConsultivoModal({
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          {/* Prazo e Responsável */}
-          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="prazo" className="text-xs font-medium flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5 text-slate-400" />
@@ -457,37 +509,68 @@ export default function EditarConsultivoModal({
                 className="h-9 text-sm"
               />
             </div>
+          </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="responsavel" className="text-xs font-medium">
-                Responsável <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                value={formData.responsavel_id}
-                onValueChange={(value) => handleChange('responsavel_id', value)}
-              >
-                <SelectTrigger className={cn('h-9 text-sm', errors.responsavel_id && 'border-red-300')}>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {loadingResponsaveis ? (
-                    <div className="flex items-center justify-center py-4">
-                      <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
-                    </div>
-                  ) : (
-                    responsaveis.map((resp) => (
-                      <SelectItem key={resp.id} value={resp.id} className="text-xs">
-                        {resp.nome_completo}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {errors.responsavel_id && (
-                <p className="text-[10px] text-red-600 flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" />
-                  {errors.responsavel_id}
-                </p>
+          {/* Responsável principal */}
+          <div className="space-y-1.5">
+            <Label htmlFor="responsavel" className="text-xs font-medium">
+              Responsável <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              value={formData.responsavel_id}
+              onValueChange={(value) => handleChange('responsavel_id', value)}
+            >
+              <SelectTrigger className={cn('h-9 text-sm', errors.responsavel_id && 'border-red-300')}>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {loadingResponsaveis ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                  </div>
+                ) : (
+                  responsaveis.map((resp) => (
+                    <SelectItem key={resp.id} value={resp.id} className="text-xs">
+                      {resp.nome_completo}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            {errors.responsavel_id && (
+              <p className="text-[10px] text-red-600 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                {errors.responsavel_id}
+              </p>
+            )}
+          </div>
+
+          {/* Co-responsáveis */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Outros responsáveis</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {responsaveis.filter(r => r.id !== formData.responsavel_id).length === 0 ? (
+                <span className="text-[11px] text-slate-400">Nenhum outro membro disponível</span>
+              ) : (
+                responsaveis.filter(r => r.id !== formData.responsavel_id).map((r) => {
+                  const on = responsaveisExtras.includes(r.id)
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => toggleExtra(r.id)}
+                      className={cn(
+                        'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors',
+                        on
+                          ? 'bg-[#34495e] text-white border-[#34495e]'
+                          : 'bg-white text-[#5a6775] border-slate-200 hover:border-[#89bcbe]',
+                      )}
+                    >
+                      {on && <Check className="w-3 h-3" />}
+                      {r.nome_completo}
+                    </button>
+                  )
+                })
               )}
             </div>
           </div>

@@ -37,7 +37,8 @@ import {
   User,
   CalendarClock,
   Gavel,
-  Clock
+  Clock,
+  Activity
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase/client'
@@ -55,7 +56,12 @@ import AudienciaDetailModal from '@/components/agenda/AudienciaDetailModal'
 import AgendaCancelarModal, { TipoAgenda } from '@/components/agenda/AgendaCancelarModal'
 import TransformarConsultivoWizard from '@/components/consultivo/TransformarConsultivoWizard'
 import EditarConsultivoModal from '@/components/consultivo/EditarConsultivoModal'
+import RegistrarAndamentoConsultivoModal from '@/components/consultivo/RegistrarAndamentoConsultivoModal'
+import ConsultaDocumentos from '@/components/consultivo/ConsultaDocumentos'
 import ConsultivoFinanceiroCard from '@/components/consultivo/ConsultivoFinanceiroCard'
+// (anexos agora vivem no componente ConsultaDocumentos)
+import { CONSULTIVO_ANDAMENTO_TIPOS, type ConsultivoAndamentoTipo } from '@/lib/constants/consultivo-andamento-tipos'
+import { TIPOS_CONSULTA, type TipoConsulta } from '@/lib/constants/consultivo-tipos'
 import ProcessoCobrancaFixaCard from '@/components/processos/ProcessoCobrancaFixaCard'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
 import DespesaModal from '@/components/financeiro/DespesaModal'
@@ -69,12 +75,14 @@ interface Consulta {
   descricao: string | null
   cliente_id: string
   cliente_nome: string
+  tipo: string | null
   area: string
   status: string
   prioridade: string
   prazo: string | null
   responsavel_id: string
   responsavel_nome: string
+  responsaveis_ids: string[] | null
   contrato_id: string | null
   anexos: any[]
   andamentos: any[]
@@ -91,6 +99,34 @@ interface Andamento {
   referencia_id?: string
 }
 
+interface Movimentacao {
+  id: string
+  data: string
+  tipo: string
+  tipo_descricao: string | null
+  descricao: string
+  origem: string
+  referencia_tipo: string | null
+  referencia_id: string | null
+  visivel_cliente: boolean
+}
+
+// ── Tokens e helpers do visual V4 (alinhados ao detalhe de Processos) ──
+const V4_CARD = 'rounded-xl border border-[#e6e3da] dark:border-[#253345] bg-white dark:bg-[#151e2b] overflow-hidden'
+const V4_HEADER = 'px-5 py-3 bg-[#f3f0e8] dark:bg-[#0f141c] border-b border-[#e6e3da] dark:border-[#253345] flex items-center gap-2'
+const V4_HEADER_TITLE = 'text-[12.5px] font-bold text-[#2c3e50] dark:text-slate-200 tracking-[-0.01em]'
+
+function inic(nome: string): string {
+  const p = (nome || '').trim().split(/\s+/).filter(Boolean)
+  if (p.length === 0) return '—'
+  if (p.length === 1) return p[0].charAt(0).toUpperCase()
+  return (p[0].charAt(0) + p[p.length - 1].charAt(0)).toUpperCase()
+}
+
+function diaSemana(d: Date): string {
+  return ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][d.getDay()] ?? ''
+}
+
 export default function ConsultaDetalhePage() {
   const params = useParams()
   const router = useRouter()
@@ -100,27 +136,24 @@ export default function ConsultaDetalhePage() {
   const [loading, setLoading] = useState(true)
   const [copiedId, setCopiedId] = useState(false)
 
-  // Estados para novo andamento
-  const [novoAndamentoOpen, setNovoAndamentoOpen] = useState(false)
-  const [novoAndamento, setNovoAndamento] = useState({
-    data: format(new Date(), 'yyyy-MM-dd'),
-    tipo: '',
-    descricao: ''
-  })
-  const [salvandoAndamento, setSalvandoAndamento] = useState(false)
+  // Andamentos (tabela consultivo_movimentacoes)
+  const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([])
+  const [loadingMovimentacoes, setLoadingMovimentacoes] = useState(true)
+  const [novoAndamentoModalOpen, setNovoAndamentoModalOpen] = useState(false)
 
-  // Estados para editar andamento
-  const [editandoAndamento, setEditandoAndamento] = useState<{ index: number; tipo: string; descricao: string } | null>(null)
+  // Editar andamento (apenas manuais)
+  const [editandoAndamento, setEditandoAndamento] = useState<{ id: string; descricao: string } | null>(null)
   const [editAndamentoOpen, setEditAndamentoOpen] = useState(false)
   const [salvandoEdicao, setSalvandoEdicao] = useState(false)
 
-  // Estados para excluir andamento
-  const [excluindoAndamentoIndex, setExcluindoAndamentoIndex] = useState<number | null>(null)
+  // Excluir andamento
+  const [excluindoAndamentoId, setExcluindoAndamentoId] = useState<string | null>(null)
   const [deleteAndamentoOpen, setDeleteAndamentoOpen] = useState(false)
 
-  // Estado para detalhe de andamento
-  const [selectedAndamento, setSelectedAndamento] = useState<Andamento | null>(null)
+  // Detalhe de andamento
+  const [selectedAndamento, setSelectedAndamento] = useState<Movimentacao | null>(null)
   const [andamentoTarefaDescricao, setAndamentoTarefaDescricao] = useState<string | null>(null)
+
 
   // Carregar descrição da tarefa vinculada quando o modal de andamento abre
   useEffect(() => {
@@ -278,6 +311,13 @@ export default function ConsultaDetalhePage() {
     }
   }, [params.id])
 
+  // Carregar andamentos (tabela)
+  useEffect(() => {
+    if (params.id) {
+      loadMovimentacoes()
+    }
+  }, [params.id])
+
   const loadAgenda = async () => {
     try {
       setLoadingAgenda(true)
@@ -341,65 +381,49 @@ export default function ConsultaDetalhePage() {
 
       setAgendaItems(activeItems)
       setLoadingAgenda(false)
+      // Conclusões de tarefa/compromisso geram andamento automático na tabela → recarrega a timeline
+      void loadMovimentacoes()
     } catch (error) {
       console.error('Erro ao carregar agenda:', error)
       setLoadingAgenda(false)
     }
   }
 
-  // Adicionar andamento
-  const handleAddAndamento = async () => {
-    if (!novoAndamento.tipo.trim() || !novoAndamento.descricao.trim()) {
-      toast.error('Preencha o tipo e a descrição')
-      return
-    }
-
-    setSalvandoAndamento(true)
-
+  // Carregar andamentos da tabela consultivo_movimentacoes (ordenados do mais recente)
+  const loadMovimentacoes = async () => {
+    if (!params.id) return
     try {
-      const dataAndamento = parseDateInBrazil(novoAndamento.data, 'yyyy-MM-dd')
-
-      const novoItem: Andamento = {
-        data: dataAndamento.toISOString(),
-        tipo: novoAndamento.tipo,
-        descricao: novoAndamento.descricao,
-        user_id: userId || undefined
-      }
-
-      const andamentosAtualizados = [...(consulta?.andamentos || []), novoItem]
-
-      const { error } = await supabase
-        .from('consultivo_consultas')
-        .update({ andamentos: andamentosAtualizados })
-        .eq('id', params.id)
+      setLoadingMovimentacoes(true)
+      const { data, error } = await supabase
+        .from('consultivo_movimentacoes')
+        .select('id, data_movimento, tipo_codigo, tipo_descricao, descricao, origem, referencia_tipo, referencia_id, visivel_cliente')
+        .eq('consulta_id', params.id)
+        .order('data_movimento', { ascending: false })
 
       if (error) throw error
 
-      setConsulta(prev => prev ? { ...prev, andamentos: andamentosAtualizados } : null)
-      setNovoAndamento({
-        data: format(new Date(), 'yyyy-MM-dd'),
-        tipo: '',
-        descricao: ''
-      })
-      setNovoAndamentoOpen(false)
-      toast.success('Andamento adicionado')
+      setMovimentacoes((data || []).map((m: any) => ({
+        id: m.id,
+        data: m.data_movimento,
+        tipo: m.tipo_codigo,
+        tipo_descricao: m.tipo_descricao,
+        descricao: m.descricao,
+        origem: m.origem,
+        referencia_tipo: m.referencia_tipo,
+        referencia_id: m.referencia_id,
+        visivel_cliente: m.visivel_cliente,
+      })))
     } catch (error) {
-      console.error('Erro ao adicionar andamento:', error)
-      toast.error('Erro ao adicionar andamento')
+      console.error('Erro ao carregar andamentos:', error)
     } finally {
-      setSalvandoAndamento(false)
+      setLoadingMovimentacoes(false)
     }
   }
 
-  // Editar andamento
-  const handleEditAndamento = (index: number) => {
-    const andamentos = consulta?.andamentos || []
-    const reversedIndex = andamentos.length - 1 - index // Ajustar para array reverso
-    const andamento = andamentos[reversedIndex]
-    if (andamento) {
-      setEditandoAndamento({ index: reversedIndex, tipo: andamento.tipo || '', descricao: andamento.descricao })
-      setEditAndamentoOpen(true)
-    }
+  // Editar andamento (apenas manuais)
+  const handleEditAndamento = (mov: Movimentacao) => {
+    setEditandoAndamento({ id: mov.id, descricao: mov.descricao })
+    setEditAndamentoOpen(true)
   }
 
   const handleSaveEditAndamento = async () => {
@@ -409,26 +433,18 @@ export default function ConsultaDetalhePage() {
     }
 
     setSalvandoEdicao(true)
-
     try {
-      const andamentosAtualizados = [...(consulta?.andamentos || [])]
-      andamentosAtualizados[editandoAndamento.index] = {
-        ...andamentosAtualizados[editandoAndamento.index],
-        tipo: editandoAndamento.tipo || undefined,
-        descricao: editandoAndamento.descricao
-      }
-
       const { error } = await supabase
-        .from('consultivo_consultas')
-        .update({ andamentos: andamentosAtualizados })
-        .eq('id', params.id)
+        .from('consultivo_movimentacoes')
+        .update({ descricao: editandoAndamento.descricao.trim() })
+        .eq('id', editandoAndamento.id)
 
       if (error) throw error
 
-      setConsulta(prev => prev ? { ...prev, andamentos: andamentosAtualizados } : null)
       setEditAndamentoOpen(false)
       setEditandoAndamento(null)
       toast.success('Andamento atualizado')
+      await loadMovimentacoes()
     } catch (error) {
       console.error('Erro ao editar andamento:', error)
       toast.error('Erro ao editar andamento')
@@ -438,36 +454,29 @@ export default function ConsultaDetalhePage() {
   }
 
   // Excluir andamento
-  const handleDeleteAndamentoClick = (index: number) => {
-    const andamentos = consulta?.andamentos || []
-    const reversedIndex = andamentos.length - 1 - index // Ajustar para array reverso
-    setExcluindoAndamentoIndex(reversedIndex)
+  const handleDeleteAndamentoClick = (id: string) => {
+    setExcluindoAndamentoId(id)
     setDeleteAndamentoOpen(true)
   }
 
   const handleConfirmDeleteAndamento = async () => {
-    if (excluindoAndamentoIndex === null) return
+    if (!excluindoAndamentoId) return
 
     try {
-      const andamentosAtualizados = (consulta?.andamentos || []).filter((_, i) => i !== excluindoAndamentoIndex)
-
       const { error } = await supabase
-        .from('consultivo_consultas')
-        .update({ andamentos: andamentosAtualizados })
-        .eq('id', params.id)
+        .from('consultivo_movimentacoes')
+        .delete()
+        .eq('id', excluindoAndamentoId)
 
       if (error) throw error
 
-      setConsulta(prev => prev ? { ...prev, andamentos: andamentosAtualizados } : null)
       setDeleteAndamentoOpen(false)
-      setExcluindoAndamentoIndex(null)
+      setExcluindoAndamentoId(null)
       toast.success('Andamento excluído')
 
-      // Ajustar página se necessário
-      const newTotal = Math.ceil(andamentosAtualizados.length / andamentosPerPage)
-      if (andamentoPage > newTotal && newTotal > 0) {
-        setAndamentoPage(newTotal)
-      }
+      const newTotal = Math.ceil((movimentacoes.length - 1) / andamentosPerPage)
+      if (andamentoPage > newTotal && newTotal > 0) setAndamentoPage(newTotal)
+      await loadMovimentacoes()
     } catch (error) {
       console.error('Erro ao excluir andamento:', error)
       toast.error('Erro ao excluir andamento')
@@ -770,233 +779,131 @@ export default function ConsultaDetalhePage() {
     )
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50/50 dark:from-surface-0 dark:via-surface-0 dark:to-surface-0 p-6">
-      <div className="max-w-[1600px] mx-auto space-y-6">
+  const iniciaisResp = (consulta.responsavel_nome || '?').trim().split(/\s+/).slice(0, 2).map((s) => s[0]).join('').toUpperCase()
 
-        {/* Header */}
-        <div className="bg-gradient-to-r from-[#34495e] to-[#46627f] rounded-lg p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/consultivo')} className="text-white/80 hover:text-white hover:bg-white/10 h-8">
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Voltar
-            </Button>
-            <div className="flex items-center gap-2">
-              {consulta.status === 'ativo' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setTransformarModalOpen(true)}
-                  className="h-8 text-emerald-300 hover:text-emerald-200 hover:bg-emerald-500/20 gap-2"
-                >
-                  <Scale className="w-4 h-4" />
-                  <ArrowRight className="w-3 h-3" />
-                  Transformar em Processo
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleToggleArchive}
-                className={cn(
-                  "h-8",
-                  consulta.status === 'arquivado'
-                    ? "text-emerald-300 hover:text-emerald-200 hover:bg-emerald-500/20"
-                    : "text-white/80 hover:text-white hover:bg-white/10"
-                )}
-              >
-                {consulta.status === 'arquivado' ? (
-                  <>
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Reativar
-                  </>
-                ) : (
-                  <>
-                    <Archive className="w-4 h-4 mr-2" />
-                    Arquivar
-                  </>
-                )}
+  return (
+    <div className="min-h-screen bg-[#fafaf7] dark:bg-[#0c1017] p-6">
+      <div className="max-w-[1400px] mx-auto space-y-5">
+
+        {/* Header V4 */}
+        <div className="bg-white dark:bg-[#111826] border border-[#e6e3da] dark:border-[#253345] rounded-[14px] px-6 py-5 shadow-sm">
+          {/* breadcrumb + ações */}
+          <div className="flex items-center justify-between gap-3 mb-3.5">
+            <div className="flex items-center gap-1.5 text-[12.5px] text-[#46627f] dark:text-slate-400 min-w-0">
+              <button onClick={() => router.push('/dashboard/consultivo')} className="flex items-center gap-1 font-medium hover:text-[#34495e] dark:hover:text-slate-200 transition-colors flex-shrink-0">
+                <ChevronLeft className="w-3.5 h-3.5" />Voltar
+              </button>
+              <span className="text-[#cfc8ba] flex-shrink-0">·</span>
+              <span className="cursor-pointer hover:text-[#34495e] dark:hover:text-slate-200 flex-shrink-0" onClick={() => router.push('/dashboard/consultivo')}>Consultivo</span>
+              <ChevronRight className="w-3 h-3 text-[#cfc8ba] flex-shrink-0" />
+              <span className="text-[#34495e] dark:text-slate-200 font-medium truncate">{formatArea(consulta.area)}</span>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button variant="outline" size="sm" onClick={handleToggleArchive} className="h-8 text-xs">
+                {consulta.status === 'arquivado' ? <><RotateCcw className="w-3.5 h-3.5 mr-1.5" />Reativar</> : <><Archive className="w-3.5 h-3.5 mr-1.5" />Arquivar</>}
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white/80 hover:text-white hover:bg-white/10 h-8"
-                onClick={() => setEditarModalOpen(true)}
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Editar
+              <Button variant="outline" size="sm" onClick={() => setEditarModalOpen(true)} className="h-8 text-xs">
+                <Edit className="w-3.5 h-3.5 mr-1.5" />Editar
               </Button>
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 min-w-0 flex-1">
-              <div className="flex-shrink-0">
-                <span className="text-xs font-medium text-white/60 uppercase tracking-wide">Consultivo</span>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-bold text-white">{consulta.numero || 'S/N'}</h1>
-                  {consulta.numero && (
-                    <Button variant="ghost" size="sm" onClick={copyId} className="h-6 w-6 p-0 hover:bg-white/10">
-                      {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5 text-white/60" />}
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <div className="w-px h-10 bg-white/20 flex-shrink-0" />
-              <div className="min-w-0 flex-1">
-                <h2 className="text-lg font-semibold text-white truncate" title={consulta.titulo}>{consulta.titulo}</h2>
-                <p className="text-sm text-white/70">{consulta.cliente_nome}</p>
-              </div>
-            </div>
+          {/* número da pasta */}
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="font-mono text-[13px] font-bold tracking-[0.1em] text-[#415a7e] dark:text-[#9eb1cc]">{consulta.numero || 'S/N'}</span>
+            {consulta.numero && (
+              <button onClick={copyId} className="text-[#9aa1a8] hover:text-[#46627f] transition-colors">
+                {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            )}
+          </div>
 
-            <div className="flex items-center gap-3">
-              {getStatusBadge(consulta.status)}
-              {getPrioridadeBadge(consulta.prioridade)}
-              <div className="w-px h-8 bg-white/20" />
-              <span className="text-sm text-white/80">{consulta.responsavel_nome}</span>
-            </div>
+          {/* título + cliente */}
+          <h1 className="font-serif text-[24px] font-medium tracking-[-0.02em] text-[#2c3e50] dark:text-slate-100 leading-[1.2]">{consulta.titulo}</h1>
+          <p className="text-[12.5px] text-[#46627f] dark:text-slate-400 mt-1">{consulta.cliente_nome}</p>
+
+          {/* meta row */}
+          <div className="flex flex-wrap items-start gap-y-3 pt-3.5 mt-3.5 border-t border-[#f0ede3] dark:border-[#1d2a3c]">
+            {[
+              { label: 'TIPO', node: <span className="text-[12.5px] font-medium text-[#2c3e50] dark:text-slate-200">{consulta.tipo ? (TIPOS_CONSULTA[consulta.tipo as TipoConsulta]?.label ?? '—') : 'Não classificado'}</span> },
+              { label: 'ÁREA', node: <span className="text-[12.5px] font-medium text-[#2c3e50] dark:text-slate-200">{formatArea(consulta.area)}</span> },
+              { label: 'RESPONSÁVEL', node: (
+                <span className="flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-[#46627f] text-white text-[8.5px] font-bold flex items-center justify-center flex-shrink-0">{iniciaisResp}</span>
+                  <span className="text-[12.5px] font-medium text-[#2c3e50] dark:text-slate-200">{consulta.responsavel_nome}</span>
+                </span>
+              ) },
+              { label: 'CRIADO EM', node: <span className="font-mono text-[12.5px] font-medium text-[#2c3e50] dark:text-slate-200">{format(new Date(consulta.created_at), 'dd/MM/yyyy')}</span> },
+              { label: 'STATUS', node: (
+                <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium" style={{ color: consulta.status === 'ativo' ? '#3f6a54' : '#6c757d' }}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: consulta.status === 'ativo' ? '#6b9e84' : '#9aa1a8' }} />
+                  {consulta.status === 'ativo' ? 'Ativo' : 'Arquivado'}
+                </span>
+              ) },
+              { label: 'PRAZO', node: consulta.prazo
+                ? <span className="font-mono text-[12.5px] font-medium text-[#2c3e50] dark:text-slate-200">{format(new Date(consulta.prazo + 'T00:00:00'), 'dd/MM/yyyy')}</span>
+                : <button onClick={() => setEditarModalOpen(true)} className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#46627f] border border-dashed border-[#c5bfb0] dark:border-[#2d3a4a] rounded-md px-2 py-0.5 hover:border-[#89bcbe] transition-colors"><Plus className="w-3 h-3" />Definir prazo</button> },
+            ].map((m, i, arr) => (
+              <div key={i} className={cn('pr-5', i < arr.length - 1 && 'border-r border-[#f0ede3] dark:border-[#1d2a3c] mr-5')}>
+                <div className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#9aa1a8] mb-1">{m.label}</div>
+                {m.node}
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Grid Principal */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_352px] gap-5 items-start">
 
-          {/* Coluna Principal (8/12) */}
-          <div className="xl:col-span-8 space-y-6">
+          {/* Coluna Principal */}
+          <div className="space-y-4 min-w-0">
 
-            {/* Informações Gerais */}
-            <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200">Informações da Consulta</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Cliente</p>
-                      <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">{consulta.cliente_nome}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Área</p>
-                      <p className="text-sm text-slate-700 dark:text-slate-300">{formatArea(consulta.area)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Prazo</p>
-                      <p className="text-sm text-slate-700 dark:text-slate-300">
-                        {consulta.prazo ? format(new Date(consulta.prazo + 'T00:00:00'), 'dd/MM/yyyy') : 'Não definido'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Responsável</p>
-                      <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200">{consulta.responsavel_nome}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Criado em</p>
-                      <p className="text-sm text-slate-700 dark:text-slate-300">{format(new Date(consulta.created_at), 'dd/MM/yyyy', { locale: ptBR })}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {consulta.descricao && (
-                  <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Descrição</p>
-                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{consulta.descricao}</p>
-                  </div>
+            {/* Card Consulta */}
+            <div className={V4_CARD}>
+              <div className={V4_HEADER}>
+                <FileText className="w-3.5 h-3.5 text-[#89bcbe]" />
+                <span className={V4_HEADER_TITLE}>Consulta</span>
+                <div className="flex-1" />
+                <button onClick={() => setEditarModalOpen(true)} className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#3f7376] dark:text-teal-400 hover:underline">
+                  <Edit className="w-3 h-3" />Editar
+                </button>
+              </div>
+              <div className="p-5">
+                {consulta.descricao ? (
+                  <p className="text-[13px] text-[#46627f] dark:text-slate-300 leading-relaxed mb-3">{consulta.descricao}</p>
+                ) : (
+                  <p className="text-[13px] text-slate-400 dark:text-slate-500 italic mb-3">Sem descrição.</p>
                 )}
-              </CardContent>
-            </Card>
+                <div className="flex flex-wrap gap-2">
+                  {consulta.tipo && (
+                    <span className="inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-md bg-[#eef5f1] text-[#3f6a54] border border-[#6b9e84]/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30">
+                      {TIPOS_CONSULTA[consulta.tipo as TipoConsulta]?.label}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-md bg-[#edf1f7] text-[#415a7e] border border-[#c8d6e8] dark:bg-[#46627f]/20 dark:text-[#9eb1cc] dark:border-[#46627f]/40">
+                    {formatArea(consulta.area)}
+                  </span>
+                </div>
+              </div>
+            </div>
 
             {/* Andamentos */}
-            <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between mb-1">
-                  <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200">
-                    Últimos Andamentos
-                  </CardTitle>
-                  <Dialog open={novoAndamentoOpen} onOpenChange={setNovoAndamentoOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-8 text-xs">
-                        <Plus className="w-3.5 h-3.5 mr-1.5" />
-                        Adicionar Andamento
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle className="text-lg font-semibold text-[#34495e] dark:text-slate-200">
-                          Novo Andamento
-                        </DialogTitle>
-                      </DialogHeader>
-
-                      <div className="space-y-4 pt-4">
-                        <div className="grid grid-cols-3 gap-4">
-                          <div>
-                            <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">
-                              Data
-                            </label>
-                            <Input
-                              type="date"
-                              value={novoAndamento.data}
-                              onChange={(e) => setNovoAndamento({ ...novoAndamento, data: e.target.value })}
-                              className="text-sm"
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">
-                              Tipo de Andamento
-                            </label>
-                            <Input
-                              placeholder="Ex: Atualização, Reunião com cliente, Análise..."
-                              value={novoAndamento.tipo}
-                              onChange={(e) => setNovoAndamento({ ...novoAndamento, tipo: e.target.value })}
-                              className="text-sm"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 block">
-                            Descrição
-                          </label>
-                          <Textarea
-                            placeholder="Descreva o andamento..."
-                            value={novoAndamento.descricao}
-                            onChange={(e) => setNovoAndamento({ ...novoAndamento, descricao: e.target.value })}
-                            className="text-sm min-h-[120px]"
-                          />
-                        </div>
-
-                        <div className="flex justify-end gap-2 pt-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => setNovoAndamentoOpen(false)}
-                            disabled={salvandoAndamento}
-                          >
-                            Cancelar
-                          </Button>
-                          <Button
-                            onClick={handleAddAndamento}
-                            disabled={!novoAndamento.tipo || !novoAndamento.descricao || salvandoAndamento}
-                            className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e]"
-                          >
-                            {salvandoAndamento ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Salvando...
-                              </>
-                            ) : (
-                              'Adicionar Andamento'
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {!consulta.andamentos || consulta.andamentos.length === 0 ? (
+            <div className={V4_CARD}>
+              <div className={V4_HEADER}>
+                <Activity className="w-3.5 h-3.5 text-[#89bcbe]" />
+                <span className={V4_HEADER_TITLE}>Andamentos</span>
+                <div className="flex-1" />
+                <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setNovoAndamentoModalOpen(true)}>
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />
+                  Adicionar
+                </Button>
+              </div>
+              <div className="p-4">
+                {loadingMovimentacoes ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="w-5 h-5 text-slate-300 dark:text-slate-600 mx-auto animate-spin" />
+                  </div>
+                ) : movimentacoes.length === 0 ? (
                   <div className="text-center py-8">
                     <FileText className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
                     <p className="text-sm text-slate-600 dark:text-slate-400">Nenhum andamento registrado</p>
@@ -1005,66 +912,72 @@ export default function ConsultaDetalhePage() {
                   <>
                     <div className="space-y-3">
                       {(() => {
-                        const reversed = [...consulta.andamentos].reverse()
                         const startIndex = (andamentoPage - 1) * andamentosPerPage
-                        const paginated = reversed.slice(startIndex, startIndex + andamentosPerPage)
+                        const paginated = movimentacoes.slice(startIndex, startIndex + andamentosPerPage)
 
-                        return paginated.map((andamento: Andamento, index) => (
-                          <div
-                            key={index}
-                            className="transition-colors duration-300 cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 rounded-md p-2 -mx-2 group border-b border-slate-100 dark:border-slate-800 last:border-0"
-                            onClick={() => setSelectedAndamento(andamento)}
-                          >
-                            <div className="flex gap-3">
-                              {/* Data */}
-                              <div className="flex-shrink-0 w-20">
-                                <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                                  {format(new Date(andamento.data), "dd/MM/yyyy", { locale: ptBR })}
-                                </p>
-                              </div>
-
-                              {/* Conteúdo */}
-                              <div className="flex-1">
-                                {andamento.tipo && (
-                                  <p className="text-xs font-semibold text-[#34495e] dark:text-slate-200 mb-0.5">
-                                    {formatTipoAndamento(andamento.tipo)}
+                        return paginated.map((andamento) => {
+                          const cfg = CONSULTIVO_ANDAMENTO_TIPOS[andamento.tipo as ConsultivoAndamentoTipo]
+                          const label = andamento.tipo_descricao || cfg?.label || andamento.tipo
+                          const cor = cfg?.cor || '#9aa1a8'
+                          const isManual = andamento.origem === 'manual'
+                          return (
+                            <div
+                              key={andamento.id}
+                              className="transition-colors duration-300 cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 rounded-md p-2 -mx-2 group border-b border-slate-100 dark:border-slate-800 last:border-0"
+                              onClick={() => setSelectedAndamento(andamento)}
+                            >
+                              <div className="flex gap-3">
+                                {/* Data */}
+                                <div className="flex-shrink-0 w-16">
+                                  <p className="text-xs font-medium text-slate-700 dark:text-slate-300 font-mono">
+                                    {format(new Date(andamento.data), "dd/MM/yy", { locale: ptBR })}
                                   </p>
-                                )}
-                                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-2">
-                                  {andamento.descricao}
-                                </p>
-                              </div>
+                                </div>
 
-                              {/* Botões Editar/Excluir */}
-                              <div className="flex items-start gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => { e.stopPropagation(); handleEditAndamento(startIndex + index) }}
-                                  className="h-7 w-7 p-0 text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200"
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteAndamentoClick(startIndex + index) }}
-                                  className="h-7 w-7 p-0 text-slate-400 hover:text-red-600 dark:hover:text-red-400"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
+                                {/* Conteúdo */}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold mb-0.5 flex items-center gap-1.5" style={{ color: cor }}>
+                                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: cor }} />
+                                    {label}
+                                  </p>
+                                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-2">
+                                    {andamento.descricao}
+                                  </p>
+                                </div>
+
+                                {/* Botões Editar/Excluir (apenas manuais) */}
+                                {isManual && (
+                                  <div className="flex items-start gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => { e.stopPropagation(); handleEditAndamento(andamento) }}
+                                      className="h-7 w-7 p-0 text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200"
+                                    >
+                                      <Pencil className="w-3.5 h-3.5" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteAndamentoClick(andamento.id) }}
+                                      className="h-7 w-7 p-0 text-slate-400 hover:text-red-600 dark:hover:text-red-400"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             </div>
-                          </div>
-                        ))
+                          )
+                        })
                       })()}
                     </div>
 
                     {/* Paginação de Andamentos */}
-                    {consulta.andamentos.length > andamentosPerPage && (
+                    {movimentacoes.length > andamentosPerPage && (
                       <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {Math.min((andamentoPage - 1) * andamentosPerPage + 1, consulta.andamentos.length)}-{Math.min(andamentoPage * andamentosPerPage, consulta.andamentos.length)} de {consulta.andamentos.length}
+                          {Math.min((andamentoPage - 1) * andamentosPerPage + 1, movimentacoes.length)}-{Math.min(andamentoPage * andamentosPerPage, movimentacoes.length)} de {movimentacoes.length}
                         </p>
                         <div className="flex items-center gap-1">
                           <Button
@@ -1076,7 +989,7 @@ export default function ConsultaDetalhePage() {
                           >
                             <ChevronLeft className="w-3.5 h-3.5" />
                           </Button>
-                          {Array.from({ length: Math.ceil(consulta.andamentos.length / andamentosPerPage) }, (_, i) => i + 1).map(page => (
+                          {Array.from({ length: Math.ceil(movimentacoes.length / andamentosPerPage) }, (_, i) => i + 1).map(page => (
                             <Button
                               key={page}
                               variant={andamentoPage === page ? 'default' : 'outline'}
@@ -1090,8 +1003,8 @@ export default function ConsultaDetalhePage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setAndamentoPage(p => Math.min(Math.ceil(consulta.andamentos.length / andamentosPerPage), p + 1))}
-                            disabled={andamentoPage === Math.ceil(consulta.andamentos.length / andamentosPerPage)}
+                            onClick={() => setAndamentoPage(p => Math.min(Math.ceil(movimentacoes.length / andamentosPerPage), p + 1))}
+                            disabled={andamentoPage === Math.ceil(movimentacoes.length / andamentosPerPage)}
                             className="h-7 w-7 p-0"
                           >
                             <ChevronRight className="w-3.5 h-3.5" />
@@ -1101,177 +1014,118 @@ export default function ConsultaDetalhePage() {
                     )}
                   </>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Anexos */}
-            <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200">Anexos ({consulta.anexos?.length || 0})</CardTitle>
-                  <Button variant="outline" size="sm" className="h-8 text-xs">
-                    <Upload className="w-3.5 h-3.5 mr-1.5" />
-                    Upload
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {!consulta.anexos || consulta.anexos.length === 0 ? (
-                  <div className="text-center py-8">
-                    <FileText className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Nenhum anexo</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Clique em Upload para adicionar arquivos</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {consulta.anexos.map((anexo: any, index: number) => (
-                      <div key={index} className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2">
-                        <div className="flex items-center gap-3">
-                          <FileText className="w-4 h-4 text-slate-400" />
-                          <div>
-                            <p className="text-sm font-medium text-[#34495e] dark:text-slate-200">{anexo.nome}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">{anexo.tamanho ? `${(anexo.tamanho / 1024).toFixed(0)} KB` : ''}</p>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <Download className="w-4 h-4 text-slate-400" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <ConsultaDocumentos consultaId={consulta.id} onChanged={loadMovimentacoes} />
           </div>
 
-          {/* Coluna Lateral (4/12) */}
-          <div className="xl:col-span-4 space-y-6">
+          {/* Coluna Lateral */}
+          <div className="space-y-4 min-w-0">
 
-            {/* Agenda */}
-            <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-[#34495e] dark:text-slate-200 flex items-center gap-2 mb-1">
-                    <Calendar className="w-4 h-4 text-[#89bcbe]" />
-                    Agenda
-                  </CardTitle>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 hover:bg-[#89bcbe] hover:text-white transition-colors"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => setShowTarefaWizard(true)}>
-                        <ListTodo className="w-4 h-4 mr-2 text-[#34495e] dark:text-slate-200" />
-                        <span className="text-sm">Nova Tarefa</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setShowEventoWizard(true)}>
-                        <Calendar className="w-4 h-4 mr-2 text-[#89bcbe]" />
-                        <span className="text-sm">Novo Compromisso</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setShowAudienciaWizard(true)}>
-                        <Gavel className="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-400" />
-                        <span className="text-sm">Nova Audiência</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent>
+            {/* Agenda — padrão V4 */}
+            <div className={V4_CARD}>
+              <div className={V4_HEADER}>
+                <Calendar className="w-3.5 h-3.5 text-[#89bcbe]" />
+                <span className={V4_HEADER_TITLE}>Agenda</span>
+                <div className="flex-1" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="w-[26px] h-[26px] rounded-md flex items-center justify-center text-[#9aa1a8] hover:bg-[#89bcbe] hover:text-white transition-colors">
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => setShowTarefaWizard(true)}>
+                      <ListTodo className="w-4 h-4 mr-2 text-[#34495e]" />
+                      <span className="text-sm">Nova Tarefa</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowEventoWizard(true)}>
+                      <Calendar className="w-4 h-4 mr-2 text-[#89bcbe]" />
+                      <span className="text-sm">Novo Compromisso</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div className="py-1.5">
                 {loadingAgenda ? (
                   <div className="text-center py-3">
-                    <div className="w-5 h-5 mx-auto border-2 border-teal-200 dark:border-teal-700 border-t-teal-500 dark:border-t-teal-400 rounded-full animate-spin"></div>
+                    <div className="w-5 h-5 mx-auto border-2 border-teal-200 dark:border-teal-700 border-t-teal-500 rounded-full animate-spin"></div>
                   </div>
                 ) : agendaItems.length === 0 ? (
                   <div className="text-center py-4">
                     <p className="text-xs text-slate-500 dark:text-slate-400">Nenhum agendamento vinculado</p>
                   </div>
                 ) : (
-                  <div className="space-y-3.5">
+                  <div>
                     {(() => {
-                      const totalAgendaPages = Math.ceil(agendaItems.length / agendaPerPage)
                       const agendaStartIndex = (agendaPage - 1) * agendaPerPage
-                      const paginatedAgenda = agendaItems.slice(agendaStartIndex, agendaStartIndex + agendaPerPage)
-                      return paginatedAgenda
+                      return agendaItems.slice(agendaStartIndex, agendaStartIndex + agendaPerPage)
                     })().map((item) => {
-                      const statusConfig: Record<string, { bg: string; text: string }> = {
-                        pendente: { bg: 'bg-amber-100 dark:bg-amber-500/10', text: 'text-amber-700 dark:text-amber-400' },
-                        em_andamento: { bg: 'bg-blue-100 dark:bg-blue-500/10', text: 'text-blue-700 dark:text-blue-400' },
-                        concluida: { bg: 'bg-emerald-100 dark:bg-emerald-500/10', text: 'text-emerald-700 dark:text-emerald-400' },
-                        agendada: { bg: 'bg-blue-100 dark:bg-blue-500/10', text: 'text-blue-700 dark:text-blue-400' },
-                      }
-                      const statusStyle = statusConfig[item.status] || statusConfig.pendente
-
                       const handleClick = async () => {
                         if (item.tipo_entidade === 'tarefa') {
-                          const { data: tarefa } = await supabase
-                            .from('agenda_tarefas').select('*').eq('id', item.id).single()
+                          const { data: tarefa } = await supabase.from('agenda_tarefas').select('*').eq('id', item.id).single()
                           if (tarefa) { setSelectedTarefa(tarefa); setTarefaDetailOpen(true) }
                         } else if (item.tipo_entidade === 'evento') {
-                          const { data: evento } = await supabase
-                            .from('agenda_eventos').select('*').eq('id', item.id).single()
+                          const { data: evento } = await supabase.from('agenda_eventos').select('*').eq('id', item.id).single()
                           if (evento) { setSelectedEvento(evento); setEventoDetailOpen(true) }
                         } else if (item.tipo_entidade === 'audiencia') {
-                          const { data: audiencia } = await supabase
-                            .from('agenda_audiencias').select('*').eq('id', item.id).single()
+                          const { data: audiencia } = await supabase.from('agenda_audiencias').select('*').eq('id', item.id).single()
                           if (audiencia) { setSelectedAudiencia(audiencia); setAudienciaDetailOpen(true) }
                         }
                       }
-
+                      const dataRef = new Date(item.data_inicio)
+                      const prazo = item.tipo_entidade === 'tarefa' ? item.prazo_data_limite : null
+                      const urgente = !!prazo && (new Date(prazo).getTime() - new Date().setHours(0, 0, 0, 0)) <= 3 * 86400000
+                      const barColor = urgente ? '#a85a3e' : item.tipo_entidade === 'audiencia' ? '#3f7376' : item.tipo_entidade === 'evento' ? '#6a85a8' : '#89bcbe'
+                      const resps: string[] = item.responsavel_nome ? [item.responsavel_nome] : []
                       return (
                         <div
                           key={item.id}
                           onClick={handleClick}
-                          className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-[#89bcbe] hover:shadow-sm transition-all cursor-pointer"
+                          className="grid grid-cols-[54px_3px_1fr] gap-2.5 px-3.5 py-2.5 border-b border-[#f0ede3] dark:border-[#1d2a3c] last:border-0 cursor-pointer hover:bg-[#faf8f2] dark:hover:bg-[#1a212c] transition-colors items-start"
                         >
-                          {/* Header com título e status */}
-                          <div className="flex items-start gap-2.5 mb-2.5">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-[#34495e] dark:text-slate-200 leading-tight truncate">
-                                {item.titulo}
-                              </p>
+                          {/* data */}
+                          <div className="text-center pt-0.5">
+                            <div className="font-serif text-[19px] font-semibold leading-none tracking-[-0.025em]" style={{ color: urgente ? '#a85a3e' : undefined }}>
+                              <span className={urgente ? '' : 'text-[#2c3e50] dark:text-slate-200'}>{format(dataRef, 'dd')}</span>
                             </div>
-                            <Badge className={`text-[10px] h-4 px-1.5 flex-shrink-0 border ${statusStyle.bg} ${statusStyle.text}`}>
-                              {item.status}
-                            </Badge>
+                            <div className="text-[9.5px] font-bold uppercase tracking-[0.08em] mt-0.5" style={{ color: urgente ? '#c98080' : '#9aa1a8' }}>
+                              {diaSemana(dataRef)}
+                            </div>
                           </div>
-
-                          {/* Info adicional */}
-                          <div className="space-y-1.5">
-                            {/* Data/Horário */}
-                            <div className="flex items-center gap-1.5">
-                              <Clock className="w-3 h-3 text-[#89bcbe]" />
-                              <span className="text-[10px] text-slate-600 dark:text-slate-400">
-                                {item.tipo_entidade === 'tarefa'
-                                  ? formatBrazilDate(item.data_inicio)
-                                  : formatBrazilDateTime(item.data_inicio)}
-                              </span>
+                          {/* barra colorida */}
+                          <div className="rounded-sm self-stretch min-h-[28px]" style={{ background: barColor }} />
+                          {/* conteúdo */}
+                          <div className="min-w-0">
+                            <div className="text-[12.5px] font-medium text-[#2c3e50] dark:text-slate-200 leading-snug tracking-[-0.005em] line-clamp-2">
+                              {item.titulo}
                             </div>
-
-                            {/* Responsável */}
-                            {item.responsavel_nome && (
-                              <div className="flex items-center gap-1.5">
-                                <User className="w-3 h-3 text-[#89bcbe] flex-shrink-0" />
-                                <span className="text-[10px] text-slate-600 dark:text-slate-400 truncate">
-                                  {item.responsavel_nome}
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <span className="text-[10.5px] text-[#9aa1a8] dark:text-slate-500 font-mono">
+                                {item.tipo_entidade === 'tarefa' ? formatBrazilDate(item.data_inicio) : formatBrazilDateTime(item.data_inicio)}
+                              </span>
+                              {urgente && prazo && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#a85a3e]">
+                                  <CalendarClock className="w-3 h-3" />
+                                  Fatal {formatBrazilDate(prazo)}
                                 </span>
-                              </div>
-                            )}
-
-                            {/* Prazo Fatal (apenas para tarefas) */}
-                            {item.tipo_entidade === 'tarefa' && item.prazo_data_limite && (
-                              <div className="flex items-center gap-1.5">
-                                <CalendarClock className="w-3 h-3 text-red-500 dark:text-red-400" />
-                                <span className="text-[10px] text-red-600 dark:text-red-400 font-medium">
-                                  Fatal: {formatBrazilDate(item.prazo_data_limite)}
-                                </span>
-                              </div>
-                            )}
+                              )}
+                              {resps.length > 0 && (
+                                <div className="flex -space-x-1 ml-auto">
+                                  {resps.slice(0, 3).map((nome, j) => (
+                                    <span
+                                      key={j}
+                                      title={nome}
+                                      className="w-4 h-4 rounded-full bg-gradient-to-br from-[#89bcbe] to-[#6ba9ab] ring-[1.5px] ring-white dark:ring-[#151e2b] flex items-center justify-center text-[7.5px] font-bold text-white"
+                                    >
+                                      {inic(nome)}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       )
@@ -1279,38 +1133,20 @@ export default function ConsultaDetalhePage() {
 
                     {/* Paginação da Agenda */}
                     {agendaItems.length > agendaPerPage && (
-                      <div className="flex items-center justify-between pt-3 mt-2 border-t border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center justify-between px-3.5 pt-3 mt-1 border-t border-[#f0ede3] dark:border-[#1d2a3c]">
                         <p className="text-xs text-slate-500 dark:text-slate-400">
                           {((agendaPage - 1) * agendaPerPage) + 1}-{Math.min(agendaPage * agendaPerPage, agendaItems.length)} de {agendaItems.length}
                         </p>
                         <div className="flex items-center gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setAgendaPage(p => Math.max(1, p - 1))}
-                            disabled={agendaPage === 1}
-                            className="h-6 w-6 p-0"
-                          >
+                          <Button variant="outline" size="sm" onClick={() => setAgendaPage(p => Math.max(1, p - 1))} disabled={agendaPage === 1} className="h-6 w-6 p-0">
                             <ChevronLeft className="w-3 h-3" />
                           </Button>
                           {Array.from({ length: Math.ceil(agendaItems.length / agendaPerPage) }, (_, i) => i + 1).slice(0, 5).map(page => (
-                            <Button
-                              key={page}
-                              variant={agendaPage === page ? 'default' : 'outline'}
-                              size="sm"
-                              onClick={() => setAgendaPage(page)}
-                              className={`h-6 w-6 p-0 text-[10px] ${agendaPage === page ? 'bg-[#34495e] hover:bg-[#46627f]' : ''}`}
-                            >
+                            <Button key={page} variant={agendaPage === page ? 'default' : 'outline'} size="sm" onClick={() => setAgendaPage(page)} className={`h-6 w-6 p-0 text-[10px] ${agendaPage === page ? 'bg-[#34495e] hover:bg-[#46627f]' : ''}`}>
                               {page}
                             </Button>
                           ))}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setAgendaPage(p => Math.min(Math.ceil(agendaItems.length / agendaPerPage), p + 1))}
-                            disabled={agendaPage === Math.ceil(agendaItems.length / agendaPerPage)}
-                            className="h-6 w-6 p-0"
-                          >
+                          <Button variant="outline" size="sm" onClick={() => setAgendaPage(p => Math.min(Math.ceil(agendaItems.length / agendaPerPage), p + 1))} disabled={agendaPage === Math.ceil(agendaItems.length / agendaPerPage)} className="h-6 w-6 p-0">
                             <ChevronRight className="w-3 h-3" />
                           </Button>
                         </div>
@@ -1318,18 +1154,40 @@ export default function ConsultaDetalhePage() {
                     )}
                   </div>
                 )}
-
-                {agendaItems.length > 0 && (
-                  <Button
-                    variant="link"
-                    className="text-xs text-[#89bcbe] hover:text-[#6ba9ab] p-0 h-auto mt-3 w-full"
+              </div>
+              {agendaItems.length > 0 && (
+                <div className="px-4 py-2.5 border-t border-[#f0ede3] dark:border-[#1d2a3c]">
+                  <button
                     onClick={() => router.push(`/dashboard/agenda?consultivo_id=${consulta.id}`)}
+                    className="w-full flex items-center justify-center gap-1.5 text-[11.5px] font-semibold text-[#89bcbe] hover:text-[#6ba9ab] transition-colors"
                   >
-                    Ver agenda completa →
+                    Ver agenda completa <ChevronRight className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Virou contencioso? */}
+            {consulta.status === 'ativo' && (
+              <Card className="border-[#e6e3da] dark:border-[#253345] shadow-sm rounded-[12px]">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#6b9e84]" />
+                    <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#9aa1a8]">Próximo passo</span>
+                  </div>
+                  <h4 className="text-[13.5px] font-semibold text-[#2c3e50] dark:text-slate-200 mb-1">Virou contencioso?</h4>
+                  <p className="text-[12px] text-[#46627f] dark:text-slate-400 leading-relaxed mb-3">
+                    Quando esta consulta evoluir para processo judicial, mantenha o histórico vinculado.
+                  </p>
+                  <Button
+                    onClick={() => setTransformarModalOpen(true)}
+                    className="w-full h-9 text-xs bg-gradient-to-br from-[#2d3f52] to-[#3d5269] hover:from-[#3d5269] hover:to-[#2d3f52] text-white gap-1.5"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5" />Transformar em processo
                   </Button>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Financeiro - Card Completo */}
             <ConsultivoFinanceiroCard
@@ -1509,13 +1367,29 @@ export default function ConsultaDetalhePage() {
             descricao: consulta.descricao,
             cliente_id: consulta.cliente_id,
             cliente_nome: consulta.cliente_nome,
+            tipo: consulta.tipo,
             area: consulta.area,
             prioridade: consulta.prioridade,
             prazo: consulta.prazo,
             responsavel_id: consulta.responsavel_id,
             responsavel_nome: consulta.responsavel_nome,
+            responsaveis_ids: consulta.responsaveis_ids,
           }}
           onSuccess={loadConsulta}
+        />
+      )}
+
+      {/* Modal Registrar Andamento */}
+      {consulta && (
+        <RegistrarAndamentoConsultivoModal
+          open={novoAndamentoModalOpen}
+          onOpenChange={setNovoAndamentoModalOpen}
+          consultaId={consulta.id}
+          escritorioId={escritorioId}
+          clienteNome={consulta.cliente_nome}
+          numero={consulta.numero || undefined}
+          area={consulta.area}
+          onSuccess={loadMovimentacoes}
         />
       )}
 
@@ -1655,7 +1529,7 @@ export default function ConsultaDetalhePage() {
                 {/* Header */}
                 <div className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
                   <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">
-                    {selectedAndamento.tipo ? formatTipoAndamento(selectedAndamento.tipo) : 'Andamento'}
+                    {selectedAndamento.tipo_descricao || CONSULTIVO_ANDAMENTO_TIPOS[selectedAndamento.tipo as ConsultivoAndamentoTipo]?.label || 'Andamento'}
                   </h2>
                   <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
                     <span>{format(new Date(selectedAndamento.data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
@@ -1765,15 +1639,6 @@ export default function ConsultaDetalhePage() {
             <DialogTitle className="text-base font-semibold text-[#34495e] dark:text-slate-200">Editar Andamento</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
-            <div>
-              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Tipo</label>
-              <Input
-                placeholder="Ex: Reunião, Análise, Parecer..."
-                value={editandoAndamento?.tipo || ''}
-                onChange={(e) => setEditandoAndamento(prev => prev ? { ...prev, tipo: e.target.value } : null)}
-                className="text-sm"
-              />
-            </div>
             <div>
               <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Descrição *</label>
               <Textarea

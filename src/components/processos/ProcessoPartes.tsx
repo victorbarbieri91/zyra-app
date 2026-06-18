@@ -113,6 +113,7 @@ export default function ProcessoPartes({
     terceiros,
     loading,
     saving,
+    derived,
     adicionarParte,
     editarParte,
     removerParte,
@@ -217,7 +218,7 @@ export default function ProcessoPartes({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className={cn('flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity', parte.derived && 'hidden')}>
           <Button
             variant="ghost"
             size="sm"
@@ -342,8 +343,8 @@ export default function ProcessoPartes({
           {renderFormInline(polo)}
         </div>
 
-        {/* Botão adicionar — sempre fica alinhado no fim da coluna */}
-        {form.polo !== polo && (
+        {/* Botão adicionar — oculto no modo derivado (read-only) */}
+        {form.polo !== polo && !derived && (
           <Button
             variant="ghost"
             size="sm"
@@ -380,10 +381,17 @@ export default function ProcessoPartes({
   const totalPartes = autores.length + reus.length + terceiros.length
 
   const gridContent = (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {renderColuna('autor', autores)}
-      {renderColuna('reu', reus)}
-      {renderColuna('terceiro', terceiros)}
+    <div>
+      {derived && (
+        <p className="text-[11px] text-slate-400 dark:text-slate-500 italic mb-4">
+          Partes do cadastro do processo (somente leitura). Para alterar, edite o processo.
+        </p>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {renderColuna('autor', autores)}
+        {renderColuna('reu', reus)}
+        {renderColuna('terceiro', terceiros)}
+      </div>
     </div>
   )
 

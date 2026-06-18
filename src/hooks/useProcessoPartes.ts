@@ -16,6 +16,9 @@ export interface ProcessoParte {
   observacoes: string | null
   ordem: number
   created_at: string
+  /** true quando a parte foi derivada das colunas autor/reu/parte_contraria/cliente
+   * (processo sem linhas em processos_partes, ex.: importado). É read-only. */
+  derived?: boolean
 }
 
 export interface NovaParteData {
@@ -49,8 +52,65 @@ export function useProcessoPartes(processoId: string) {
   const { escritorioAtivo } = useEscritorioAtivo()
   const supabase = createClient()
 
+  // Fallback: processos importados às vezes têm as partes apenas nas colunas de
+  // texto (autor/reu/parte_contraria) + cliente_id, sem linhas em processos_partes.
+  // Deriva partes read-only dessas colunas para a seção nunca ficar vazia.
+  const derivarPartesDoProcesso = useCallback(async (): Promise<ProcessoParte[]> => {
+    const { data: proc } = await supabase
+      .from('processos_processos')
+      .select('autor, reu, parte_contraria, polo_cliente, cliente_id, crm_pessoas!processos_processos_cliente_id_fkey(nome_completo, nome_fantasia)')
+      .eq('id', processoId)
+      .single()
+    if (!proc) return []
+
+    const autor = (proc.autor || '').trim()
+    const reu = (proc.reu || '').trim()
+    const parteContraria = (proc.parte_contraria || '').trim()
+    const clienteNome = ((proc as any).crm_pessoas?.nome_completo || (proc as any).crm_pessoas?.nome_fantasia || '').trim()
+    const polo = proc.polo_cliente as string | null
+
+    const itens: { tipo: ProcessoParte['tipo']; nome: string; ehCliente?: boolean }[] = []
+    const vistos = new Set<string>()
+    const add = (tipo: ProcessoParte['tipo'], nome: string, ehCliente = false) => {
+      const n = nome.trim()
+      if (!n || vistos.has(n.toLowerCase())) return
+      vistos.add(n.toLowerCase())
+      itens.push({ tipo, nome: n, ehCliente })
+    }
+
+    // autor/reu de texto têm prioridade; depois completa com cliente (pelo polo) e parte contrária.
+    if (autor) add('autor', autor)
+    if (reu) add('reu', reu)
+    if (clienteNome) {
+      const tipoCliente: ProcessoParte['tipo'] =
+        polo === 'passivo' ? 'reu' : polo === 'terceiro' ? 'terceiro_interessado' : 'autor'
+      add(tipoCliente, clienteNome, true)
+    }
+    if (parteContraria) {
+      const tipoContraria: ProcessoParte['tipo'] = polo === 'passivo' ? 'autor' : 'reu'
+      add(tipoContraria, parteContraria)
+    }
+
+    return itens.map((it, i) => ({
+      id: `derived-${i}`,
+      processo_id: processoId,
+      tipo: it.tipo,
+      cliente_id: it.ehCliente ? (proc.cliente_id || null) : null,
+      nome: it.nome,
+      cpf_cnpj: null,
+      qualificacao: null,
+      observacoes: null,
+      ordem: i,
+      created_at: '',
+      derived: true,
+    }))
+  }, [processoId, supabase])
+
   const carregarPartes = useCallback(async () => {
-    if (!processoId || !escritorioAtivo) return
+    if (!processoId || !escritorioAtivo) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     try {
       const { data, error } = await supabase
@@ -62,13 +122,18 @@ export function useProcessoPartes(processoId: string) {
         .order('ordem')
 
       if (error) throw error
-      setPartes(data || [])
+      if (data && data.length > 0) {
+        setPartes(data)
+      } else {
+        // Sem linhas estruturadas → deriva das colunas do processo (read-only)
+        setPartes(await derivarPartesDoProcesso())
+      }
     } catch (err) {
       console.error('Erro ao carregar partes:', err)
     } finally {
       setLoading(false)
     }
-  }, [processoId, escritorioAtivo, supabase])
+  }, [processoId, escritorioAtivo, supabase, derivarPartesDoProcesso])
 
   useEffect(() => {
     carregarPartes()
@@ -192,6 +257,9 @@ export function useProcessoPartes(processoId: string) {
   const reus = partes.filter(p => p.tipo === 'reu')
   const terceiros = partes.filter(p => !['autor', 'reu'].includes(p.tipo))
 
+  // true quando as partes exibidas são derivadas das colunas (read-only)
+  const derived = partes.some(p => p.derived)
+
   return {
     partes,
     autores,
@@ -199,6 +267,7 @@ export function useProcessoPartes(processoId: string) {
     terceiros,
     loading,
     saving,
+    derived,
     adicionarParte,
     editarParte,
     removerParte,

@@ -427,66 +427,70 @@ export default function ProcessoRelacionados({ processoId, processoPrincipalData
     }
   }, [loading, temRelacionados])
 
-  const headerContent = (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <ChevronRight className={`w-4 h-4 text-[#46627f] dark:text-slate-400 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
-        <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
-          <GitBranch className="w-3.5 h-3.5 text-[#89bcbe]" />
-        </div>
-        <span className="text-sm font-medium text-[#34495e] dark:text-slate-200">
-          Processos Vinculados
-        </span>
-        {todosFilhos.length > 0 && (
-          <Badge className="bg-[#89bcbe] text-white text-[10px] px-1.5 py-0">
-            {todosFilhos.length}
-          </Badge>
-        )}
+  const triggerLeft = (
+    <>
+      <ChevronRight className={`w-4 h-4 text-[#46627f] dark:text-slate-400 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
+      <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
+        <GitBranch className="w-3.5 h-3.5 text-[#89bcbe]" />
       </div>
+      <span className="text-sm font-medium text-[#34495e] dark:text-slate-200">
+        Processos Vinculados
+      </span>
+      {todosFilhos.length > 0 && (
+        <Badge className="bg-[#89bcbe] text-white text-[10px] px-1.5 py-0">
+          {todosFilhos.length}
+        </Badge>
+      )}
+    </>
+  )
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => e.stopPropagation()}
-            className="h-7 text-xs text-[#46627f] dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 hover:bg-[#f0f9f9] dark:hover:bg-teal-900/20 gap-1"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Adicionar
-            <ChevronDown className="w-3 h-3 opacity-60" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuItem onClick={() => setShowWizard('recurso')}>
-            <GitBranch className="w-3.5 h-3.5 mr-2 text-blue-500" />
-            Novo Recurso
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setShowWizard('incidente')}>
-            <GitBranch className="w-3.5 h-3.5 mr-2 text-violet-500" />
-            Novo Incidente
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setShowVincular(true)}>
-            <Link2 className="w-3.5 h-3.5 mr-2 text-slate-400" />
-            Vincular existente
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+  const addDropdown = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs text-[#46627f] dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-200 hover:bg-[#f0f9f9] dark:hover:bg-teal-900/20 gap-1 shrink-0"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Adicionar
+          <ChevronDown className="w-3 h-3 opacity-60" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuItem onClick={() => setShowWizard('recurso')}>
+          <GitBranch className="w-3.5 h-3.5 mr-2 text-blue-500" />
+          Novo Recurso
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setShowWizard('incidente')}>
+          <GitBranch className="w-3.5 h-3.5 mr-2 text-violet-500" />
+          Novo Incidente
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => setShowVincular(true)}>
+          <Link2 className="w-3.5 h-3.5 mr-2 text-slate-400" />
+          Vincular existente
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 
   return (
     <Card className="border-[#e6e3da] dark:border-[#253345] bg-white dark:bg-[#151e2b] rounded-xl overflow-hidden">
       <Collapsible open={expanded} onOpenChange={setExpanded}>
-        <CollapsibleTrigger asChild>
-          <button
-            type="button"
-            className="w-full px-6 py-4 bg-[#f3f0e8] dark:bg-[#0f141c] hover:bg-[#ece9e2] dark:hover:bg-[#141a24] transition-colors border-b border-[#e6e3da] dark:border-[#253345]"
-          >
-            {headerContent}
-          </button>
-        </CollapsibleTrigger>
+        {/* Barra é um div (não button); o gatilho de colapsar envolve só o título,
+            e o "Adicionar" fica como irmão — evita button-dentro-de-button (hidratação). */}
+        <div className="w-full px-6 py-4 bg-[#f3f0e8] dark:bg-[#0f141c] border-b border-[#e6e3da] dark:border-[#253345] flex items-center justify-between gap-2">
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex items-center gap-2 flex-1 min-w-0 text-left rounded-md hover:opacity-70 transition-opacity"
+            >
+              {triggerLeft}
+            </button>
+          </CollapsibleTrigger>
+          {addDropdown}
+        </div>
 
         <CollapsibleContent>
           <CardContent className="px-4 pt-5 pb-4">

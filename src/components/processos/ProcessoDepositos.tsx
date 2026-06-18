@@ -313,12 +313,14 @@ export default function ProcessoDepositos({ processoId, autoHide = false }: Proc
     <>
       <Card className="border-[#e6e3da] dark:border-[#253345] bg-white dark:bg-[#151e2b] rounded-xl shadow-none overflow-hidden">
         <Collapsible open={expanded} onOpenChange={setExpanded}>
-          <CollapsibleTrigger asChild>
-            <button
-              type="button"
-              className="w-full flex items-center justify-between px-6 py-4 bg-[#f3f0e8] dark:bg-[#0f141c] hover:bg-[#ece9e2] dark:hover:bg-[#141a24] transition-colors border-b border-[#e6e3da] dark:border-[#253345]"
-            >
-              <div className="flex items-center gap-2">
+          {/* Barra é um div; o gatilho de colapsar envolve só o título e o botão
+              "Registrar" fica como irmão — evita button-dentro-de-button (hidratação). */}
+          <div className="w-full flex items-center justify-between gap-2 px-6 py-4 bg-[#f3f0e8] dark:bg-[#0f141c] border-b border-[#e6e3da] dark:border-[#253345]">
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-2 flex-1 min-w-0 text-left rounded-md hover:opacity-70 transition-opacity"
+              >
                 <ChevronRight className={`w-4 h-4 text-[#46627f] dark:text-slate-400 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
                 <div className="w-7 h-7 rounded-lg bg-white dark:bg-surface-0 border border-[#89bcbe]/30 flex items-center justify-center shadow-sm">
                   <Landmark className="w-3.5 h-3.5 text-[#89bcbe]" />
@@ -331,22 +333,22 @@ export default function ProcessoDepositos({ processoId, autoHide = false }: Proc
                     {depositos.length}
                   </Badge>
                 )}
-              </div>
+              </button>
+            </CollapsibleTrigger>
 
-              <Button
-                size="sm"
-                variant={isEmpty ? 'outline' : 'default'}
-                onClick={(e) => { e.stopPropagation(); handleNovoDeposito() }}
-                className={isEmpty
-                  ? "h-7 text-xs bg-white/60 dark:bg-surface-0/60 border-[#89bcbe] text-[#34495e] dark:text-slate-200 hover:bg-white dark:hover:bg-surface-0 flex-shrink-0"
-                  : "h-7 px-3 text-xs bg-[#34495e] hover:bg-[#46627f] text-white flex-shrink-0"
-                }
-              >
-                <Plus className="w-3.5 h-3.5 mr-1.5" />
-                {isEmpty ? 'Registrar depósito' : 'Novo Depósito'}
-              </Button>
-            </button>
-          </CollapsibleTrigger>
+            <Button
+              size="sm"
+              variant={isEmpty ? 'outline' : 'default'}
+              onClick={() => handleNovoDeposito()}
+              className={isEmpty
+                ? "h-7 text-xs bg-white/60 dark:bg-surface-0/60 border-[#89bcbe] text-[#34495e] dark:text-slate-200 hover:bg-white dark:hover:bg-surface-0 flex-shrink-0"
+                : "h-7 px-3 text-xs bg-[#34495e] hover:bg-[#46627f] text-white flex-shrink-0"
+              }
+            >
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
+              {isEmpty ? 'Registrar depósito' : 'Novo Depósito'}
+            </Button>
+          </div>
 
           <CollapsibleContent>
             <CardContent className="space-y-4 pt-5">

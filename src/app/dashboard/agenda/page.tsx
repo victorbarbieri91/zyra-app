@@ -59,6 +59,29 @@ import { useRecorrencias } from '@/hooks/useRecorrencias'
 import { useUserPreferences } from '@/hooks/useUserPreferences'
 import { useTimer } from '@/contexts/TimerContext'
 
+// Conclui/altera o status de um item de agenda (evento ou audiência) confirmando que a gravação
+// realmente ocorreu. Quando a RLS bloqueia o UPDATE (ex.: usuário é só co-responsável sem
+// permissão), o Supabase retorna 0 linhas SEM erro — então checamos o retorno e lançamos um
+// erro de verdade, evitando o falso "concluído" que deixava o item preso na agenda.
+async function atualizarStatusAgenda(
+  tabela: 'agenda_eventos' | 'agenda_audiencias',
+  id: string,
+  status: string,
+): Promise<void> {
+  const { createClient } = await import('@/lib/supabase/client')
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from(tabela)
+    .update({ status })
+    .eq('id', id)
+    .select('id')
+
+  if (error) throw error
+  if (!data || data.length === 0) {
+    throw new Error('Você não tem permissão para alterar este item, ou ele não existe mais.')
+  }
+}
+
 export default function AgendaPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -642,13 +665,11 @@ export default function AgendaPage() {
           if (timerData?.timerId) {
             try { await descartarTimer(timerData.timerId) } catch {}
           }
-          const { createClient: createSb } = await import('@/lib/supabase/client')
-          const sb = createSb()
           if (entityType === 'evento') {
-            await sb.from('agenda_eventos').update({ status: 'realizado' }).eq('id', taskId)
+            await atualizarStatusAgenda('agenda_eventos', taskId, 'realizado')
             toast.success('Compromisso marcado como realizado!')
           } else {
-            await sb.from('agenda_audiencias').update({ status: 'realizada' }).eq('id', taskId)
+            await atualizarStatusAgenda('agenda_audiencias', taskId, 'realizada')
             toast.success('Audiência marcada como realizada!')
           }
           await reloadAgenda()
@@ -714,7 +735,7 @@ export default function AgendaPage() {
       }
     } catch (error) {
       console.error('Erro ao alterar status:', error)
-      toast.error('Erro ao alterar status')
+      toast.error(error instanceof Error ? error.message : 'Erro ao alterar status')
     }
   }
 
@@ -753,13 +774,11 @@ export default function AgendaPage() {
         }
 
         // Concluir conforme tipo de entidade
-        const { createClient: createSb } = await import('@/lib/supabase/client')
-        const sb = createSb()
         if (tipoEntidadeLancamento === 'evento') {
-          await sb.from('agenda_eventos').update({ status: 'realizado' }).eq('id', tarefaParaConcluir.id)
+          await atualizarStatusAgenda('agenda_eventos', tarefaParaConcluir.id, 'realizado')
           toast.success('Compromisso concluído!')
         } else if (tipoEntidadeLancamento === 'audiencia') {
-          await sb.from('agenda_audiencias').update({ status: 'realizada' }).eq('id', tarefaParaConcluir.id)
+          await atualizarStatusAgenda('agenda_audiencias', tarefaParaConcluir.id, 'realizada')
           toast.success('Audiência concluída!')
         } else {
           await concluirTarefa(tarefaParaConcluir.id)
@@ -768,7 +787,7 @@ export default function AgendaPage() {
         await reloadAgenda()
       } catch (error) {
         console.error('Erro ao concluir após timesheet:', error)
-        toast.error('Horas registradas, mas erro ao concluir')
+        toast.error(error instanceof Error ? `Horas registradas, mas ${error.message}` : 'Horas registradas, mas erro ao concluir')
       }
       setTarefaParaConcluir(null)
       setTimerDataParaConcluir(null)
@@ -818,14 +837,10 @@ export default function AgendaPage() {
 
         // Concluir conforme tipo de entidade
         if (tipoEntidadeLancamento === 'evento') {
-          const { createClient: createSb } = await import('@/lib/supabase/client')
-          const sb = createSb()
-          await sb.from('agenda_eventos').update({ status: 'realizado' }).eq('id', tarefaParaConcluir.id)
+          await atualizarStatusAgenda('agenda_eventos', tarefaParaConcluir.id, 'realizado')
           toast.success('Compromisso concluído!')
         } else if (tipoEntidadeLancamento === 'audiencia') {
-          const { createClient: createSb } = await import('@/lib/supabase/client')
-          const sb = createSb()
-          await sb.from('agenda_audiencias').update({ status: 'realizada' }).eq('id', tarefaParaConcluir.id)
+          await atualizarStatusAgenda('agenda_audiencias', tarefaParaConcluir.id, 'realizada')
           toast.success('Audiência concluída!')
         } else {
           await concluirTarefa(tarefaParaConcluir.id)
@@ -834,7 +849,7 @@ export default function AgendaPage() {
         await reloadAgenda()
       } catch (error) {
         console.error('Erro ao concluir:', error)
-        toast.error('Erro ao concluir')
+        toast.error(error instanceof Error ? error.message : 'Erro ao concluir')
       }
     }
     setTarefaParaConcluir(null)
@@ -1031,15 +1046,7 @@ export default function AgendaPage() {
     if (!confirm('Deseja marcar esta audiência como realizada?')) return
 
     try {
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-
-      const { error } = await supabase
-        .from('agenda_audiencias')
-        .update({ status: 'realizada' })
-        .eq('id', audienciaId)
-
-      if (error) throw error
+      await atualizarStatusAgenda('agenda_audiencias', audienciaId, 'realizada')
 
       setAudienciaDetailOpen(false)
       setAudienciaSelecionada(null)
@@ -1047,7 +1054,7 @@ export default function AgendaPage() {
       toast.success('Audiência marcada como realizada!')
     } catch (error) {
       console.error('Erro ao marcar audiência como realizada:', error)
-      toast.error('Erro ao marcar audiência como realizada')
+      toast.error(error instanceof Error ? error.message : 'Erro ao marcar audiência como realizada')
     }
   }
 
@@ -1077,15 +1084,7 @@ export default function AgendaPage() {
     if (!confirm('Deseja marcar este evento/prazo como cumprido?')) return
 
     try {
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-
-      const { error } = await supabase
-        .from('agenda_eventos')
-        .update({ status: 'realizado' })
-        .eq('id', eventoId)
-
-      if (error) throw error
+      await atualizarStatusAgenda('agenda_eventos', eventoId, 'realizado')
 
       setEventoDetailOpen(false)
       setEventoSelecionado(null)
@@ -1093,7 +1092,7 @@ export default function AgendaPage() {
       toast.success('Evento marcado como cumprido!')
     } catch (error) {
       console.error('Erro ao marcar evento como cumprido:', error)
-      toast.error('Erro ao marcar evento como cumprido')
+      toast.error(error instanceof Error ? error.message : 'Erro ao marcar evento como cumprido')
     }
   }
 

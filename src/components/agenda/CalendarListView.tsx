@@ -96,8 +96,15 @@ export default function CalendarListView({
       )
     }
 
+    // Em períodos de futuro/hoje, esconder itens já concluídos (igual à visão de mês).
+    // Nos períodos de passado ("últimos X dias") mantemos os concluídos para revisão.
+    if (!isPassado) {
+      const concluido = ['concluida', 'concluido', 'realizada', 'realizado']
+      filtered = filtered.filter((item) => !concluido.includes(item.status || ''))
+    }
+
     return filtered
-  }, [items, dataInicio, dataFim, userId])
+  }, [items, dataInicio, dataFim, userId, isPassado])
 
   // Agrupar por dia e ordenar
   const itemsAgrupados = useMemo(() => {

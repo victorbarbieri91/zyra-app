@@ -309,12 +309,18 @@ export function useTarefas(escritorioId?: string, options?: UseTarefasOptions) {
         updateData.fixa_status_data = format(getNowInBrazil(), 'yyyy-MM-dd')
       }
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('agenda_tarefas')
         .update(updateData)
         .eq('id', id)
+        .select('id')
 
       if (error) throw error
+      // RLS pode filtrar o UPDATE e retornar 0 linhas SEM erro — nesse caso a tarefa não foi
+      // concluída de fato. Lançamos erro para não exibir um falso "concluído".
+      if (!data || data.length === 0) {
+        throw new Error('Você não tem permissão para concluir esta tarefa, ou ela não existe mais.')
+      }
 
       await loadTarefas()
     } catch (err) {

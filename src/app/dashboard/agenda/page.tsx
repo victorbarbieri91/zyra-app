@@ -1568,6 +1568,7 @@ export default function AgendaPage() {
         onRescheduleTask={handleRescheduleTask}
         onProcessoClick={handleProcessoClick}
         onConsultivoClick={handleConsultivoClick}
+        onNavigateDay={(d) => setSelectedDate(d)}
       />
 
       {/* Modais de Detalhes */}

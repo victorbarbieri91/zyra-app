@@ -37,6 +37,7 @@ import {
   ExternalLink,
   Paperclip,
   CheckCircle2,
+  Building2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
@@ -64,6 +65,7 @@ export interface DespesaEditData {
   conta_bancaria_id?: string | null
   forma_pagamento?: string | null
   fornecedor?: string | null
+  escritorio_id?: string | null
 }
 
 interface DespesaModalProps {
@@ -74,6 +76,12 @@ interface DespesaModalProps {
   clienteId?: string | null
   onSuccess?: () => void
   editData?: DespesaEditData | null
+  /**
+   * Escritórios do MESMO grupo onde o usuário pode gerenciar financeiro.
+   * Quando informado e com mais de um item, exibe o seletor de escritório.
+   * Quando ausente/≤1 item, a despesa é gravada no escritório ativo (comportamento padrão).
+   */
+  escritoriosDisponiveis?: { id: string; nome: string }[]
 }
 
 interface ProcessoOption {
@@ -201,6 +209,7 @@ export default function DespesaModal({
   clienteId,
   onSuccess,
   editData,
+  escritoriosDisponiveis = [],
 }: DespesaModalProps) {
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
@@ -208,6 +217,11 @@ export default function DespesaModal({
 
   // IDs do grupo para visão consolidada
   const [grupoIds, setGrupoIds] = useState<string[]>([])
+
+  // Escritório do grupo onde a despesa será gravada. O seletor só aparece
+  // quando há mais de um escritório gerenciável (escritoriosDisponiveis).
+  const [escritorioSelecionado, setEscritorioSelecionado] = useState<string>('')
+  const mostrarSeletorEscritorio = escritoriosDisponiveis.length > 1
 
   useEffect(() => {
     const loadGrupo = async () => {
@@ -220,6 +234,13 @@ export default function DespesaModal({
     }
     loadGrupo()
   }, [escritorioAtivo])
+
+  // Define o escritório de destino ao abrir (e quando o ativo resolve):
+  // edição usa o escritório original; criação usa o ativo.
+  useEffect(() => {
+    if (!open) return
+    setEscritorioSelecionado(editData?.escritorio_id || escritorioAtivo || '')
+  }, [open, editData, escritorioAtivo])
 
   // Form state
   const [formData, setFormData] = useState<FormData>(makeInitialFormData(false))
@@ -566,7 +587,7 @@ export default function DespesaModal({
 
     const fileExt = formData.comprovante_file.name.split('.').pop()
     const fileName = `comprovante-${Date.now()}.${fileExt}`
-    const filePath = `${escritorioAtivo}/${fileName}`
+    const filePath = `${escritorioSelecionado || escritorioAtivo}/${fileName}`
 
     const { error } = await supabase.storage
       .from('comprovantes-despesas')
@@ -608,6 +629,9 @@ export default function DespesaModal({
       toast.error('Escritório não identificado')
       return
     }
+    // Escritório de destino do lançamento (do mesmo grupo). Sem seletor visível,
+    // cai no escritório ativo — comportamento padrão.
+    const escritorioDestino = escritorioSelecionado || escritorioAtivo
     if (formData.modalidade === 'parcelada' && (formData.numero_parcelas < 2 || formData.numero_parcelas > 60)) {
       toast.error('O número de parcelas deve ser entre 2 e 60')
       return
@@ -655,6 +679,16 @@ export default function DespesaModal({
           cliente_id: derivedClienteId || clienteId || null,
           fornecedor: formData.fornecedor.trim() || null,
           updated_at: new Date().toISOString(),
+        }
+
+        // Mover de escritório só quando o seletor está visível e o valor mudou.
+        // A trava no banco garante que origem e destino são do MESMO grupo.
+        if (
+          mostrarSeletorEscritorio &&
+          editData.escritorio_id &&
+          escritorioDestino !== editData.escritorio_id
+        ) {
+          updateData.escritorio_id = escritorioDestino
         }
 
         if (formData.ja_pago) {
@@ -714,7 +748,7 @@ export default function DespesaModal({
           const { data: regra, error: errRegra } = await supabase
             .from('financeiro_regras_recorrencia')
             .insert({
-              escritorio_id: escritorioAtivo,
+              escritorio_id: escritorioDestino,
               tipo_entidade: 'despesa',
               descricao: formData.descricao.trim(),
               categoria: formData.categoria,
@@ -773,7 +807,7 @@ export default function DespesaModal({
           // colunas — convivência durante migração).
           // ──────────────────────────────────────────────────
           const despesaData: Record<string, unknown> = {
-            escritorio_id: escritorioAtivo,
+            escritorio_id: escritorioDestino,
             processo_id: processoSelecionado?.id || null,
             consulta_id: consultivoIdSelecionado,
             consultivo_id: consultivoIdSelecionado,
@@ -1014,6 +1048,27 @@ export default function DespesaModal({
           {/* === SEÇÃO 2: INFORMAÇÕES === */}
           <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4 space-y-3">
             <p className="text-xs font-medium text-[#46627f] dark:text-slate-400 uppercase tracking-wide">Informações</p>
+          {/* Escritório (apenas para grupos com mais de um escritório gerenciável) */}
+          {mostrarSeletorEscritorio && (
+            <div>
+              <Label htmlFor="escritorio" className="flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-[#89bcbe]" />
+                Escritório *
+              </Label>
+              <Select value={escritorioSelecionado} onValueChange={setEscritorioSelecionado}>
+                <SelectTrigger id="escritorio" className="mt-1.5">
+                  <SelectValue placeholder="Selecione o escritório..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {escritoriosDisponiveis.map((esc) => (
+                    <SelectItem key={esc.id} value={esc.id}>
+                      {esc.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           {/* Categoria */}
           <div>
             <Label htmlFor="categoria">Categoria *</Label>
@@ -1274,7 +1329,7 @@ export default function DespesaModal({
                     <ContaBancariaSelect
                       value={formData.conta_bancaria_id}
                       onValueChange={(v) => updateField('conta_bancaria_id', v)}
-                      escritorioIds={grupoIds}
+                      escritorioIds={escritorioSelecionado ? [escritorioSelecionado] : grupoIds}
                     />
                   </div>
                 </div>

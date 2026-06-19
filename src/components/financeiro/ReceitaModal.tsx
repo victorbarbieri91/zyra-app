@@ -30,6 +30,7 @@ import {
   X,
   CheckCircle2,
   Info,
+  Building2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
@@ -56,6 +57,12 @@ interface ReceitaModalProps {
   consultaId?: string
   contratoId?: string
   onSuccess?: () => void
+  /**
+   * Escritórios do MESMO grupo onde o usuário pode gerenciar financeiro.
+   * Quando informado e com mais de um item, exibe o seletor de escritório.
+   * Quando ausente/≤1 item, a receita é gravada no escritório ativo (padrão).
+   */
+  escritoriosDisponiveis?: { id: string; nome: string }[]
 }
 
 interface FormData {
@@ -152,12 +159,18 @@ export default function ReceitaModal({
   consultaId,
   contratoId,
   onSuccess,
+  escritoriosDisponiveis = [],
 }: ReceitaModalProps) {
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
 
   // IDs do grupo para visão consolidada
   const [grupoIds, setGrupoIds] = useState<string[]>([])
+
+  // Escritório do grupo onde a receita será gravada. O seletor só aparece
+  // quando há mais de um escritório gerenciável (escritoriosDisponiveis).
+  const [escritorioSelecionado, setEscritorioSelecionado] = useState<string>('')
+  const mostrarSeletorEscritorio = escritoriosDisponiveis.length > 1
 
   useEffect(() => {
     const loadGrupo = async () => {
@@ -170,6 +183,12 @@ export default function ReceitaModal({
     }
     loadGrupo()
   }, [escritorioAtivo])
+
+  // Define o escritório de destino ao abrir (e quando o ativo resolve).
+  useEffect(() => {
+    if (!open) return
+    setEscritorioSelecionado(escritorioAtivo || '')
+  }, [open, escritorioAtivo])
 
   // Form state
   const [formData, setFormData] = useState<FormData>(makeInitialFormData())
@@ -555,6 +574,14 @@ export default function ReceitaModal({
         return
       }
 
+      // Escritório de destino do lançamento (do mesmo grupo). Sem seletor
+      // visível, cai no escritório ativo — comportamento padrão.
+      const escritorioDestino = escritorioSelecionado || escritorioAtivo
+      if (!escritorioDestino) {
+        toast.error('Escritório não identificado')
+        return
+      }
+
       const isParcelada = formData.modalidade === 'parcelada'
       const isRecorrente = formData.modalidade === 'recorrente'
       const modoParcela =
@@ -591,7 +618,7 @@ export default function ReceitaModal({
         const { data: regra, error: errRegra } = await supabase
           .from('financeiro_regras_recorrencia')
           .insert({
-            escritorio_id: escritorioAtivo,
+            escritorio_id: escritorioDestino,
             tipo_entidade: 'receita',
             descricao: formData.descricao,
             categoria: formData.categoria,
@@ -648,7 +675,7 @@ export default function ReceitaModal({
         // ÚNICA: insert direto sem regra
         // ──────────────────────────────────────────────────
         const { error } = await supabase.from('financeiro_receitas').insert({
-          escritorio_id: escritorioAtivo,
+          escritorio_id: escritorioDestino,
           tipo: formData.tipo,
           categoria: formData.categoria,
           descricao: formData.descricao,
@@ -870,6 +897,27 @@ export default function ReceitaModal({
           {/* === SEÇÃO 2: INFORMAÇÕES === */}
           <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4 space-y-3">
             <p className="text-xs font-medium text-[#46627f] dark:text-slate-400 uppercase tracking-wide">Informações</p>
+            {/* Escritório (apenas para grupos com mais de um escritório gerenciável) */}
+            {mostrarSeletorEscritorio && (
+              <div>
+                <Label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                  <Building2 className="w-3.5 h-3.5 text-[#89bcbe]" />
+                  Escritório *
+                </Label>
+                <Select value={escritorioSelecionado} onValueChange={setEscritorioSelecionado}>
+                  <SelectTrigger className="h-9 mt-1">
+                    <SelectValue placeholder="Selecione o escritório..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {escritoriosDisponiveis.map((esc) => (
+                      <SelectItem key={esc.id} value={esc.id}>
+                        {esc.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs text-slate-600 dark:text-slate-400">Tipo</Label>
@@ -1025,7 +1073,7 @@ export default function ReceitaModal({
                     <ContaBancariaSelect
                       value={formData.conta_bancaria_id}
                       onValueChange={(v) => updateField('conta_bancaria_id', v)}
-                      escritorioIds={grupoIds}
+                      escritorioIds={escritorioSelecionado ? [escritorioSelecionado] : grupoIds}
                     />
                   </div>
                 </div>

@@ -279,6 +279,10 @@ export default function ExtratoFinanceiroPage() {
   const [escritoriosGrupo, setEscritoriosGrupo] = useState<EscritorioComRole[]>([])
   const [escritoriosSelecionados, setEscritoriosSelecionados] = useState<string[]>([])
   const [seletorAberto, setSeletorAberto] = useState(false)
+  // Opções de escritório (do mesmo grupo) para os seletores dos modais de
+  // lançamento/edição. Qualquer membro do grupo pode lançar em qualquer um deles
+  // (RLS por grupo). A trava de banco impede mover entre grupos diferentes.
+  const escritoriosOpcoes = escritoriosGrupo.map((e) => ({ id: e.id, nome: e.nome }))
 
   // Paginação
   const [currentPage, setCurrentPage] = useState(1)
@@ -1393,9 +1397,10 @@ export default function ExtratoFinanceiroPage() {
           })
           .eq('id', item.origem_id)
 
-        // Criar nova receita para o saldo restante
+        // Criar nova receita para o saldo restante — mantém o MESMO escritório
+        // da receita original (não o ativo), preservando o isolamento por grupo.
         await supabase.from('financeiro_receitas').insert({
-          escritorio_id: escritorioAtivo,
+          escritorio_id: item.escritorio_id,
           tipo: 'saldo',
           cliente_id: item.cliente_id,
           processo_id: item.processo_id,
@@ -4527,7 +4532,7 @@ export default function ExtratoFinanceiroPage() {
         lancamento={lancamentoEditarRef}
         escritorioId={escritorioAtivo || null}
         contasBancarias={contasBancarias}
-        escritoriosDoGrupo={escritoriosGrupo.map((e) => ({ id: e.id, nome: e.nome }))}
+        escritoriosDoGrupo={escritoriosOpcoes}
         onSuccess={() => {
           loadExtrato()
         }}
@@ -5430,6 +5435,7 @@ export default function ExtratoFinanceiroPage() {
         open={modalReceita}
         onOpenChange={setModalReceita}
         onSuccess={() => loadExtrato()}
+        escritoriosDisponiveis={escritoriosOpcoes}
       />
 
       {/* Modal Nova Despesa */}
@@ -5437,6 +5443,7 @@ export default function ExtratoFinanceiroPage() {
         open={modalDespesa}
         onOpenChange={setModalDespesa}
         onSuccess={() => loadExtrato()}
+        escritoriosDisponiveis={escritoriosOpcoes}
       />
 
       {/* Modal Novo Levantamento */}

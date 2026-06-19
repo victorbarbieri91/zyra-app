@@ -1,6 +1,6 @@
 'use client'
 
-import { Calendar, LayoutGrid, Clock, List, Users, Scale, Plus, type LucideIcon } from 'lucide-react'
+import { Calendar, LayoutGrid, List, Users, Scale, Plus, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type ViewMode = 'month' | 'week' | 'day' | 'list'
@@ -9,7 +9,6 @@ type ViewMode = 'month' | 'week' | 'day' | 'list'
 const VIEW_TABS: { v: ViewMode; l: string; Icon: LucideIcon; show: string }[] = [
   { v: 'month', l: 'Mês', Icon: Calendar, show: 'hidden md:inline-flex' },
   { v: 'week', l: 'Kanban', Icon: LayoutGrid, show: 'hidden md:inline-flex' },
-  { v: 'day', l: 'Dia', Icon: Clock, show: 'inline-flex' },
   { v: 'list', l: 'Lista', Icon: List, show: 'inline-flex' },
 ]
 
